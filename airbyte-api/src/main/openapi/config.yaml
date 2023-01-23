@@ -1723,6 +1723,31 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_oauths/complete_oauth_return_secret:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecretId'
+        required: true
+      tags:
+        - source_oauth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteOAuthResponse'
+          description: Successful operation
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/InvalidInputResponse'
+      operationId: completeSourceOAuthReturnSecret
+      summary: >-
+        Given a source def ID generate an access/refresh token and save as a secret. Return the secret
+        ID.
   /v1/destination_oauths/get_consent_url:
     post:
       tags:
@@ -2206,26 +2231,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SaveStatsRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful Operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InternalOperationResult"
-  /v1/attempt/save_sync_config:
-    post:
-      tags:
-        - attempt
-        - internal
-      summary: For worker to save the AttemptSyncConfig for an attempt.
-      operationId: saveSyncConfig
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SaveAttemptSyncConfigRequestBody"
         required: true
       responses:
         "200":
@@ -2788,8 +2793,6 @@ components:
           type: string
           format: uuid
         disable_cache:
-          type: boolean
-        notifySchemaChange:
           type: boolean
     SourceUpdate:
       type: object
@@ -4189,7 +4192,6 @@ components:
         - config_error
         - system_error
         - manual_cancellation
-        - refresh_schema
     AttemptStatus:
       type: string
       enum:
@@ -4783,6 +4785,16 @@ components:
     CompleteOAuthResponse:
       type: object
       additionalProperties: true # Oauth parameters like refresh/access token etc.. will be different per API so we don't specify them in advance
+    SecretId:
+      description: >-
+        Secret ID returned when interacting with a service that stores a secret in Airbyte for later
+        use i.e. OAuth source creation.
+      type: object
+      properties:
+        secretId:
+          type: string
+      example:
+        secretId: uuid
     SetInstancewideSourceOauthParamsRequestBody:
       type: object
       required:
@@ -5048,31 +5060,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AttemptStreamStats"
-    AttemptSyncConfig:
-      type: object
-      required:
-        - sourceConfiguration
-        - destinationConfiguration
-      properties:
-        sourceConfiguration:
-          $ref: "#/components/schemas/SourceConfiguration"
-        destinationConfiguration:
-          $ref: "#/components/schemas/DestinationConfiguration"
-        state:
-          $ref: "#/components/schemas/ConnectionState"
-    SaveAttemptSyncConfigRequestBody:
-      type: object
-      required:
-        - jobId
-        - attemptNumber
-        - syncConfig
-      properties:
-        jobId:
-          $ref: "#/components/schemas/JobId"
-        attemptNumber:
-          $ref: "#/components/schemas/AttemptNumber"
-        syncConfig:
-          $ref: "#/components/schemas/AttemptSyncConfig"
     InternalOperationResult:
       type: object
       required:
