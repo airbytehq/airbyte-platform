@@ -5,10 +5,6 @@ plugins {
     id 'application'
 }
 
-configurations {
-    airbyteProtocol
-}
-
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
@@ -33,15 +29,13 @@ dependencies {
     implementation libs.bundles.datadog
 
     implementation project(':airbyte-api')
-    implementation project(':airbyte-commons')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-worker')
     implementation project(':airbyte-config:init')
-    implementation project(':airbyte-featureflag')
     implementation project(':airbyte-json-validation')
-    implementation libs.airbyte.protocol
+    implementation project(':airbyte-protocol:protocol-models')
     implementation project(':airbyte-metrics:metrics-lib')
     implementation project(':airbyte-worker-models')
 
@@ -54,9 +48,7 @@ dependencies {
     testImplementation libs.platform.testcontainers
     testImplementation libs.platform.testcontainers.postgresql
 
-    airbyteProtocol(libs.airbyte.protocol) {
-        transitive = false
-    }
+    testImplementation project(':airbyte-commons-docker')
 }
 
 application {
@@ -68,18 +60,12 @@ application {
 // Duplicated from :airbyte-worker, eventually, this should be handled in :airbyte-protocol
 task generateWellKnownTypes() {
     doLast {
-        def wellKnownTypesYamlPath = 'airbyte_protocol/well_known_types.yaml'
-        configurations.airbyteProtocol.getFiles().each {
-            def zip = new java.util.zip.ZipFile(it)
-            def entry = zip.getEntry(wellKnownTypesYamlPath)
-
-            def wellKnownTypesYaml = zip.getInputStream(entry).text
-            def parsedYaml = new YamlSlurper().parseText(wellKnownTypesYaml)
-            def wellKnownTypesJson = new JsonBuilder(parsedYaml).toPrettyString()
-            def targetFile = project.file("build/docker/WellKnownTypes.json")
-            targetFile.getParentFile().mkdirs()
-            targetFile.text = wellKnownTypesJson
-        }
+        def wellKnownTypesYaml = project(':airbyte-protocol').file('protocol-models/src/main/resources/airbyte_protocol/well_known_types.yaml').text
+        def parsedYaml = new YamlSlurper().parseText(wellKnownTypesYaml)
+        def wellKnownTypesJson = new JsonBuilder(parsedYaml).toPrettyString()
+        def targetFile = project.file("build/docker/WellKnownTypes.json")
+        targetFile.getParentFile().mkdirs()
+        targetFile.text = wellKnownTypesJson
     }
 }
 

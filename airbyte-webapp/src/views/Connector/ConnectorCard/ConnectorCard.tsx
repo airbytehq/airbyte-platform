@@ -21,8 +21,7 @@ import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { useTestConnector } from "./useTestConnector";
 import { useDocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
 import { ConnectorDefinitionTypeControl } from "../ConnectorForm/components/Controls/ConnectorServiceTypeControl";
-
-const FetchingConnectorError = React.lazy(() => import("../ConnectorForm/components/TestingConnectionError"));
+import { FetchingConnectorError } from "../ConnectorForm/components/TestingConnectionError";
 
 // TODO: need to clean up the ConnectorCard and ConnectorForm props,
 // since some of props are used in both components, and some of them used just as a prop-drill
@@ -34,7 +33,6 @@ interface ConnectorCardBaseProps {
   jobInfo?: SynchronousJobRead | null;
   additionalSelectorComponent?: React.ReactNode;
   onSubmit: (values: ConnectorCardValues) => Promise<void> | void;
-  reloadConfig?: () => void;
   onDeleteClick?: () => void;
   onConnectorDefinitionSelect?: (id: string) => void;
   availableConnectorDefinitions: ConnectorDefinition[];
@@ -74,7 +72,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   additionalSelectorComponent,
   selectedConnectorDefinitionId,
   fetchingConnectorError,
-  reloadConfig,
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
@@ -132,9 +129,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const testConnectorWithTracking = async (connectorCardValues?: ConnectorCardValues) => {
     trackTestConnectorStarted(selectedConnectorDefinition);
     try {
-      const response = await testConnector(connectorCardValues);
+      await testConnector(connectorCardValues);
       trackTestConnectorSuccess(selectedConnectorDefinition);
-      return response;
     } catch (e) {
       trackTestConnectorFailure(selectedConnectorDefinition);
       throw e;
@@ -165,12 +161,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     };
 
     try {
-      const response = await testConnectorWithTracking(connectorCardValues);
-      if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
-        reloadConfig();
-      } else {
-        onSubmit(connectorCardValues);
-      }
+      await testConnectorWithTracking(connectorCardValues);
+      onSubmit(connectorCardValues);
     } catch (e) {
       setErrorStatusRequest(e);
       setIsFormSubmitting(false);
@@ -228,35 +220,33 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       onSubmit={onHandleSubmit}
       formValues={formValues}
       connectorId={isEditMode ? getConnectorId(props.connector) : undefined}
-      renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
-        selectedConnectorDefinitionSpecification && (
-          <Controls
-            isEditMode={Boolean(isEditMode)}
-            isTestConnectionInProgress={isTestConnectionInProgress}
-            onCancelTesting={onStopTesting}
-            isSubmitting={isSubmitting || isTestConnectionInProgress}
-            errorMessage={error && generateMessageFromError(error)}
-            formType={props.formType}
-            hasDefinition={Boolean(selectedConnectorDefinitionId)}
-            onRetestClick={() => {
-              if (!selectedConnectorDefinitionId) {
-                return;
-              }
-              handleTestConnector(
-                isEditMode ? undefined : { ...getValues(), serviceType: selectedConnectorDefinitionId }
-              );
-            }}
-            onDeleteClick={onDeleteClick}
-            isValid={isValid}
-            dirty={dirty}
-            job={job ? job : undefined}
-            onCancelClick={() => {
-              resetConnectorForm();
-            }}
-            connectionTestSuccess={connectionTestSuccess}
-          />
-        )
-      }
+      renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) => (
+        <Controls
+          isEditMode={Boolean(isEditMode)}
+          isTestConnectionInProgress={isTestConnectionInProgress}
+          onCancelTesting={onStopTesting}
+          isSubmitting={isSubmitting || isTestConnectionInProgress}
+          errorMessage={error && generateMessageFromError(error)}
+          formType={props.formType}
+          hasDefinition={Boolean(selectedConnectorDefinitionId)}
+          onRetestClick={() => {
+            if (!selectedConnectorDefinitionId) {
+              return;
+            }
+            handleTestConnector(
+              isEditMode ? undefined : { ...getValues(), serviceType: selectedConnectorDefinitionId }
+            );
+          }}
+          onDeleteClick={onDeleteClick}
+          isValid={isValid}
+          dirty={dirty}
+          job={job ? job : undefined}
+          onCancelClick={() => {
+            resetConnectorForm();
+          }}
+          connectionTestSuccess={connectionTestSuccess}
+        />
+      )}
       renderWithCard
     />
   );

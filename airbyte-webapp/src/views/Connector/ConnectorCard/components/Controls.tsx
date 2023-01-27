@@ -36,12 +36,9 @@ export const Controls: React.FC<IProps> = ({
   onCancelClick,
   ...restProps
 }) => {
-  const showTestCard =
-    hasDefinition &&
-    (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
   return (
     <>
-      {showTestCard && (
+      {hasDefinition && (
         <TestCard
           {...restProps}
           dirty={dirty}

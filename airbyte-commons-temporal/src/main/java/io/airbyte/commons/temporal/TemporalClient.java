@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal;
@@ -16,7 +16,6 @@ import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
@@ -75,7 +74,6 @@ public class TemporalClient {
   private final WorkflowServiceStubs service;
   private final StreamResetPersistence streamResetPersistence;
   private final ConnectionManagerUtils connectionManagerUtils;
-  private final NotificationUtils notificationUtils;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
@@ -83,14 +81,12 @@ public class TemporalClient {
                         final WorkflowServiceStubs service,
                         final StreamResetPersistence streamResetPersistence,
                         final ConnectionManagerUtils connectionManagerUtils,
-                        final NotificationUtils notificationUtils,
                         final StreamResetRecordsHelper streamResetRecordsHelper) {
     this.workspaceRoot = workspaceRoot;
     this.client = client;
     this.service = service;
     this.streamResetPersistence = streamResetPersistence;
     this.connectionManagerUtils = connectionManagerUtils;
-    this.notificationUtils = notificationUtils;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
   }
 
@@ -342,7 +338,6 @@ public class TemporalClient {
 
   public TemporalResponse<ConnectorJobOutput> submitCheckConnection(final UUID jobId,
                                                                     final int attempt,
-                                                                    final String taskQueue,
                                                                     final JobCheckConnectionConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
@@ -357,12 +352,11 @@ public class TemporalClient {
         .withConnectionConfiguration(config.getConnectionConfiguration());
 
     return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+        () -> getWorkflowStub(CheckConnectionWorkflow.class, TemporalJobType.CHECK_CONNECTION).run(jobRunConfig, launcherConfig, input));
   }
 
   public TemporalResponse<ConnectorJobOutput> submitDiscoverSchema(final UUID jobId,
                                                                    final int attempt,
-                                                                   final String taskQueue,
                                                                    final JobDiscoverCatalogConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
     final IntegrationLauncherConfig launcherConfig = new IntegrationLauncherConfig()
@@ -375,14 +369,10 @@ public class TemporalClient {
         .withSourceId(config.getSourceId()).withConnectorVersion(config.getConnectorVersion()).withConfigHash(config.getConfigHash());
 
     return execute(jobRunConfig,
-        () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
+        () -> getWorkflowStub(DiscoverCatalogWorkflow.class, TemporalJobType.DISCOVER_SCHEMA).run(jobRunConfig, launcherConfig, input));
   }
 
-  public TemporalResponse<StandardSyncOutput> submitSync(final long jobId,
-                                                         final int attempt,
-                                                         final JobSyncConfig config,
-                                                         final AttemptSyncConfig attemptConfig,
-                                                         final UUID connectionId) {
+  public TemporalResponse<StandardSyncOutput> submitSync(final long jobId, final int attempt, final JobSyncConfig config, final UUID connectionId) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
     final IntegrationLauncherConfig sourceLauncherConfig = new IntegrationLauncherConfig()
@@ -403,11 +393,11 @@ public class TemporalClient {
         .withNamespaceDefinition(config.getNamespaceDefinition())
         .withNamespaceFormat(config.getNamespaceFormat())
         .withPrefix(config.getPrefix())
-        .withSourceConfiguration(attemptConfig.getSourceConfiguration())
-        .withDestinationConfiguration(attemptConfig.getDestinationConfiguration())
+        .withSourceConfiguration(config.getSourceConfiguration())
+        .withDestinationConfiguration(config.getDestinationConfiguration())
         .withOperationSequence(config.getOperationSequence())
         .withCatalog(config.getConfiguredAirbyteCatalog())
-        .withState(attemptConfig.getState())
+        .withState(config.getState())
         .withResourceRequirements(config.getResourceRequirements())
         .withSourceResourceRequirements(config.getSourceResourceRequirements())
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
@@ -476,10 +466,6 @@ public class TemporalClient {
     return client.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType));
   }
 
-  private <T> T getWorkflowStubWithTaskQueue(final Class<T> workflowClass, final String taskQueue) {
-    return client.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
-  }
-
   public ConnectionManagerWorkflow submitConnectionUpdaterAsync(final UUID connectionId) {
     log.info("Starting the scheduler temporal wf");
     final ConnectionManagerWorkflow connectionManagerWorkflow =
@@ -509,10 +495,6 @@ public class TemporalClient {
    */
   public void forceDeleteWorkflow(final UUID connectionId) {
     connectionManagerUtils.deleteWorkflowIfItExist(client, connectionId);
-  }
-
-  public void sendSchemaChangeNotification(final UUID connectionId, final String url) {
-    notificationUtils.sendSchemaChangeNotification(client, connectionId, url);
   }
 
   public void update(final UUID connectionId) {

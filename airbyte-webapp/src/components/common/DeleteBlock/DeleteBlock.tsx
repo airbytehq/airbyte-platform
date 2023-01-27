@@ -12,7 +12,6 @@ import styles from "./DeleteBlock.module.scss";
 interface IProps {
   type: "source" | "destination" | "connection";
   onDelete: () => Promise<unknown>;
-  modalAdditionalContent?: React.ReactNode;
 }
 
 export const DeleteBlock: React.FC<IProps> = ({ type, onDelete }) => {

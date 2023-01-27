@@ -1,8 +1,13 @@
 /*
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
-package io.airbyte.featureflag
 
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Destination
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Source
+import io.airbyte.featureflag.User
+import io.airbyte.featureflag.Workspace
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -72,6 +77,7 @@ class MultiTest {
             Multi(listOf())
         }
     }
+
 }
 
 class WorkspaceTest {

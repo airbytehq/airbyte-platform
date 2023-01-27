@@ -17,6 +17,7 @@ import { ConnectionStatus, JobStatus, JobWithAttemptsRead } from "core/request/A
 import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "hooks/services/Analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useResetConnection, useSyncConnection } from "hooks/services/useConnectionHook";
 import { useCancelJob, useListJobs } from "services/job/JobService";
 
@@ -86,6 +87,7 @@ export const ConnectionStatusPage: React.FC = () => {
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
+  const allowSync = useFeature(FeatureItem.AllowSync);
   const cancelJob = useCancelJob();
 
   const { mutateAsync: resetConnection } = useResetConnection();
@@ -160,24 +162,34 @@ export const ConnectionStatusPage: React.FC = () => {
         title={
           <div className={styles.title}>
             <FormattedMessage id="sources.syncHistory" />
-            {connection.status === ConnectionStatus.active && !activeJob?.action && (
+            {connection.status === ConnectionStatus.active && (
               <div className={styles.actions}>
-                <Button variant="secondary" onClick={onResetDataButtonClick}>
-                  <FormattedMessage id="connection.resetData" />
-                </Button>
-                <Button
-                  onClick={onSyncNowButtonClick}
-                  icon={<RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />}
-                >
-                  <FormattedMessage id="connection.startSync" />
-                </Button>
+                {!activeJob?.action && (
+                  <>
+                    <Button className={styles.resetButton} variant="secondary" onClick={onResetDataButtonClick}>
+                      <FormattedMessage id="connection.resetData" />
+                    </Button>
+                    <Button
+                      className={styles.syncButton}
+                      disabled={!allowSync}
+                      onClick={onSyncNowButtonClick}
+                      icon={
+                        <div className={styles.iconRotate}>
+                          <RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />
+                        </div>
+                      }
+                    >
+                      <FormattedMessage id="sources.syncNow" />
+                    </Button>
+                  </>
+                )}
+                {activeJob?.action && !activeJob.isCanceling && cancelJobBtn}
+                {activeJob?.action && activeJob.isCanceling && (
+                  <Tooltip control={cancelJobBtn} cursor="not-allowed">
+                    <FormattedMessage id="connection.canceling" />
+                  </Tooltip>
+                )}
               </div>
-            )}
-            {activeJob?.action && !activeJob.isCanceling && cancelJobBtn}
-            {activeJob?.action && activeJob.isCanceling && (
-              <Tooltip control={cancelJobBtn} cursor="not-allowed">
-                <FormattedMessage id="connection.canceling" />
-              </Tooltip>
             )}
           </div>
         }

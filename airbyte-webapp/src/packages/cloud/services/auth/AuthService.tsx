@@ -18,6 +18,7 @@ import { User } from "packages/cloud/lib/domain/users";
 import { useGetUserService } from "packages/cloud/services/users/UserService";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
+import { getUtmFromStorage } from "utils/utmStorage";
 
 import { FREE_EMAIL_SERVICE_PROVIDERS } from "./freeEmailProviders";
 import { actions, AuthServiceState, authStateReducer, initialState } from "./reducer";
@@ -61,7 +62,7 @@ interface AuthContextApi {
   loggedOut: boolean;
   providers: string[] | null;
   hasPasswordLogin: () => boolean;
-  hasCorporateEmail: (email?: string) => boolean;
+  hasCorporateEmail: () => boolean;
   login: AuthLogin;
   loginWithOAuth: (provider: OAuthProviders) => Observable<OAuthLoginState>;
   signUpWithEmailLink: (form: { name: string; email: string; password: string; news: boolean }) => Promise<void>;
@@ -115,9 +116,9 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       user_id: firebaseUser.uid,
       name: user.name,
       email: user.email,
-      isCorporate: ctx.hasCorporateEmail(user.email),
       // Which login provider was used, e.g. "password", "google.com", "github.com"
       provider: firebaseUser.providerData[0]?.providerId,
+      ...getUtmFromStorage(),
     });
 
     return user;
@@ -186,8 +187,8 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       hasPasswordLogin(): boolean {
         return !!state.providers?.includes("password");
       },
-      hasCorporateEmail(email: string | undefined = state.currentUser?.email): boolean {
-        return !FREE_EMAIL_SERVICE_PROVIDERS.some((provider) => email?.endsWith(`@${provider}`));
+      hasCorporateEmail(): boolean {
+        return !FREE_EMAIL_SERVICE_PROVIDERS.some((provider) => state.currentUser?.email.endsWith(`@${provider}`));
       },
       async login(values: { email: string; password: string }): Promise<void> {
         await authService.login(values.email, values.password);
@@ -244,7 +245,9 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         await authService.resetPassword(email);
       },
       async sendEmailVerification(): Promise<void> {
-        return authService.sendEmailVerifiedLink().catch((error) => {
+        try {
+          await authService.sendEmailVerifiedLink();
+        } catch (error) {
           switch (error.code) {
             case AuthErrorCodes.NETWORK_REQUEST_FAILED:
               registerNotification({
@@ -273,7 +276,8 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 type: ToastType.ERROR,
               });
           }
-        });
+          throw error;
+        }
       },
       async verifyEmail(code: string): Promise<void> {
         await authService.confirmEmailVerify(code);

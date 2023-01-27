@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
 import { Action, Namespace } from "core/analytics";
@@ -59,14 +58,6 @@ const useGetDestination = <T extends string | undefined | null>(
   return useSuspenseQuery(destinationsKeys.detail(destinationId ?? ""), () => service.get(destinationId ?? ""), {
     enabled: isDefined(destinationId),
   });
-};
-
-export const useInvalidateDestination = <T extends string | undefined | null>(destinationId: T): (() => void) => {
-  const queryClient = useQueryClient();
-
-  return useCallback(() => {
-    queryClient.invalidateQueries(destinationsKeys.detail(destinationId ?? ""));
-  }, [queryClient, destinationId]);
 };
 
 const useCreateDestination = () => {

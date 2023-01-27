@@ -30,12 +30,7 @@ export const CursorCell: React.FC<CursorCellProps> = ({
   const isCursorChecked = isCursor(row.original.path);
 
   const radioButton = (
-    <RadioButton
-      className={styles.radio}
-      checked={isCursorChecked}
-      onChange={() => onCursorSelect(row.original.path)}
-      disabled={!getValue()}
-    />
+    <RadioButton checked={isCursorChecked} onChange={() => onCursorSelect(row.original.path)} disabled={!getValue()} />
   );
 
   return !getValue() && isCursorChecked ? (

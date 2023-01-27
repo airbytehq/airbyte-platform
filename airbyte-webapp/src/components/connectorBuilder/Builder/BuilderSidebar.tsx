@@ -4,7 +4,6 @@ import classnames from "classnames";
 import { useFormikContext } from "formik";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
@@ -14,19 +13,13 @@ import { Text } from "components/ui/Text";
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { RoutePaths } from "pages/routePaths";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
-import {
-  BuilderFormValues,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES,
-  getInferredInputs,
-} from "../types";
+import { BuilderFormValues, DEFAULT_BUILDER_FORM_VALUES, getInferredInputs } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface ViewSelectButtonProps {
@@ -66,27 +59,24 @@ interface BuilderSidebarProps {
 }
 
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className, toggleYamlEditor }) => {
-  const navigate = useNavigate();
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { hasErrors } = useBuilderErrors();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { yamlManifest, selectedView, setSelectedView, setJsonManifest, setBuilderFormValues } =
-    useConnectorBuilderFormState();
-  const { values } = useFormikContext<BuilderFormValues>();
+  const { yamlManifest, selectedView, setSelectedView } = useConnectorBuilderFormState();
+  const { values, setValues } = useFormikContext<BuilderFormValues>();
   const handleResetForm = () => {
     openConfirmationModal({
       text: "connectorBuilder.resetModal.text",
       title: "connectorBuilder.resetModal.title",
       submitButtonText: "connectorBuilder.resetModal.submitButton",
       onSubmit: () => {
-        setBuilderFormValues(DEFAULT_BUILDER_FORM_VALUES, false);
-        setJsonManifest(DEFAULT_JSON_MANIFEST_VALUES);
+        setValues(DEFAULT_BUILDER_FORM_VALUES);
+        setSelectedView("global");
         closeConfirmationModal();
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.RESET_ALL, {
           actionDescription: "Connector Builder UI reset back to blank slate",
         });
-        navigate(RoutePaths.ConnectorBuilder);
       },
     });
   };
@@ -184,7 +174,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       </div>
 
       <DownloadYamlButton className={styles.downloadButton} yamlIsValid yaml={yamlManifest} />
-      <Button className={styles.resetButton} full variant="clear" onClick={handleResetForm}>
+      <Button className={styles.resetButton} full variant="clear" onClick={() => handleResetForm()}>
         <FormattedMessage id="connectorBuilder.resetAll" />
       </Button>
     </div>

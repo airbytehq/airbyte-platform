@@ -1,20 +1,15 @@
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useConfirmationModalService } from "./services/ConfirmationModal";
 
-export function useDeleteModal(
-  type: "source" | "destination" | "connection",
-  onDelete: () => Promise<unknown>,
-  additionalContent?: React.ReactNode
-) {
+export function useDeleteModal(type: "source" | "destination" | "connection", onDelete: () => Promise<unknown>) {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const navigate = useNavigate();
 
   return useCallback(() => {
     openConfirmationModal({
       text: `tables.${type}DeleteModalText`,
-      additionalContent,
       title: `tables.${type}DeleteConfirm`,
       submitButtonText: "form.delete",
       onSubmit: async () => {
@@ -24,5 +19,5 @@ export function useDeleteModal(
       },
       submitButtonDataId: "delete",
     });
-  }, [openConfirmationModal, type, additionalContent, onDelete, closeConfirmationModal, navigate]);
+  }, [closeConfirmationModal, onDelete, openConfirmationModal, navigate, type]);
 }

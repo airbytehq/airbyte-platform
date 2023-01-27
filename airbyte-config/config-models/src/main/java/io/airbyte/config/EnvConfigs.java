@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -47,7 +47,6 @@ public class EnvConfigs implements Configs {
   public static final String AIRBYTE_API_AUTH_HEADER_VALUE = "AIRBYTE_API_AUTH_HEADER_VALUE";
   public static final String WORKER_ENVIRONMENT = "WORKER_ENVIRONMENT";
   public static final String SPEC_CACHE_BUCKET = "SPEC_CACHE_BUCKET";
-  public static final String LOCAL_CONNECTOR_CATALOG_PATH = "LOCAL_CONNECTOR_CATALOG_PATH";
   public static final String GITHUB_STORE_BRANCH = "GITHUB_STORE_BRANCH";
   public static final String WORKSPACE_ROOT = "WORKSPACE_ROOT";
   public static final String WORKSPACE_DOCKER_MOUNT = "WORKSPACE_DOCKER_MOUNT";
@@ -87,8 +86,8 @@ public class EnvConfigs implements Configs {
   private static final String DEFAULT_SIDECAR_KUBE_CPU_LIMIT = "2.0";
   private static final String SIDECAR_KUBE_CPU_LIMIT = "SIDECAR_KUBE_CPU_LIMIT";
   public static final String JOB_KUBE_SOCAT_IMAGE = "JOB_KUBE_SOCAT_IMAGE";
-  public static final String SOCAT_KUBE_CPU_LIMIT = "SOCAT_KUBE_CPU_LIMIT";
-  public static final String SOCAT_KUBE_CPU_REQUEST = "SOCAT_KUBE_CPU_REQUEST";
+  private static final String SOCAT_KUBE_CPU_LIMIT = "SOCAT_KUBE_CPU_LIMIT";
+  private static final String SOCAT_KUBE_CPU_REQUEST = "SOCAT_KUBE_CPU_REQUEST";
   public static final String JOB_KUBE_BUSYBOX_IMAGE = "JOB_KUBE_BUSYBOX_IMAGE";
   public static final String JOB_KUBE_CURL_IMAGE = "JOB_KUBE_CURL_IMAGE";
   public static final String SYNC_JOB_MAX_ATTEMPTS = "SYNC_JOB_MAX_ATTEMPTS";
@@ -219,14 +218,9 @@ public class EnvConfigs implements Configs {
   private static final long DEFAULT_MAX_SYNC_WORKERS = 5;
   private static final long DEFAULT_MAX_NOTIFY_WORKERS = 5;
   private static final String DEFAULT_NETWORK = "host";
-  private static final Version DEFAULT_AIRBYTE_PROTOCOL_VERSION_MAX = new Version("0.3.0");
-  private static final Version DEFAULT_AIRBYTE_PROTOCOL_VERSION_MIN = new Version("0.0.0");
   private static final String AUTO_DETECT_SCHEMA = "AUTO_DETECT_SCHEMA";
   private static final String APPLY_FIELD_SELECTION = "APPLY_FIELD_SELECTION";
   private static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
-
-  private static final String STRICT_COMPARISON_NORMALIZATION_WORKSPACES = "STRICT_COMPARISON_NORMALIZATION_WORKSPACES";
-  private static final String STRICT_COMPARISON_NORMALIZATION_TAG = "STRICT_COMPARISON_NORMALIZATION_TAG";
 
   public static final Map<String, Function<EnvConfigs, String>> JOB_SHARED_ENVS = Map.of(
       AIRBYTE_VERSION, (instance) -> instance.getAirbyteVersion().serialize(),
@@ -238,9 +232,6 @@ public class EnvConfigs implements Configs {
 
   public static final int DEFAULT_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE = 100;
   public static final int DEFAULT_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE = 14;
-  public static final String LAUNCHDARKLY_KEY = "LAUNCHDARKLY_KEY";
-
-  public static final String FEATURE_FLAG_CLIENT = "FEATURE_FLAG_CLIENT";
 
   private final Function<String, String> getEnv;
   private final Supplier<Set<String>> getAllEnvKeys;
@@ -288,17 +279,17 @@ public class EnvConfigs implements Configs {
   }
 
   private Optional<CloudStorageConfigs> getStateStorageConfiguration() {
-    if (getEnv(STATE_STORAGE_GCS_BUCKET_NAME) != null && !getEnv(STATE_STORAGE_GCS_BUCKET_NAME).isBlank()) {
+    if (getEnv(STATE_STORAGE_GCS_BUCKET_NAME) != null) {
       return Optional.of(CloudStorageConfigs.gcs(new GcsConfig(
           getEnvOrDefault(STATE_STORAGE_GCS_BUCKET_NAME, ""),
           getEnvOrDefault(STATE_STORAGE_GCS_APPLICATION_CREDENTIALS, ""))));
-    } else if (getEnv(STATE_STORAGE_MINIO_ENDPOINT) != null && !getEnv(STATE_STORAGE_MINIO_ENDPOINT).isBlank()) {
+    } else if (getEnv(STATE_STORAGE_MINIO_ENDPOINT) != null) {
       return Optional.of(CloudStorageConfigs.minio(new MinioConfig(
           getEnvOrDefault(STATE_STORAGE_MINIO_BUCKET_NAME, ""),
           getEnvOrDefault(STATE_STORAGE_MINIO_ACCESS_KEY, ""),
           getEnvOrDefault(STATE_STORAGE_MINIO_SECRET_ACCESS_KEY, ""),
           getEnvOrDefault(STATE_STORAGE_MINIO_ENDPOINT, ""))));
-    } else if (getEnv(STATE_STORAGE_S3_REGION) != null && !getEnv(STATE_STORAGE_S3_REGION).isBlank()) {
+    } else if (getEnv(STATE_STORAGE_S3_REGION) != null) {
       return Optional.of(CloudStorageConfigs.s3(new S3Config(
           getEnvOrDefault(STATE_STORAGE_S3_BUCKET_NAME, ""),
           getEnvOrDefault(STATE_STORAGE_S3_ACCESS_KEY, ""),
@@ -323,12 +314,12 @@ public class EnvConfigs implements Configs {
 
   @Override
   public Version getAirbyteProtocolVersionMax() {
-    return DEFAULT_AIRBYTE_PROTOCOL_VERSION_MAX;
+    return new Version("0.3.0");
   }
 
   @Override
   public Version getAirbyteProtocolVersionMin() {
-    return DEFAULT_AIRBYTE_PROTOCOL_VERSION_MIN;
+    return new Version("0.0.0");
   }
 
   @Override
@@ -343,10 +334,6 @@ public class EnvConfigs implements Configs {
   @Override
   public String getSpecCacheBucket() {
     return getEnvOrDefault(SPEC_CACHE_BUCKET, DEFAULT_SPEC_CACHE_BUCKET);
-  }
-
-  public Optional<String> getLocalCatalogPath() {
-    return Optional.ofNullable(getEnv(LOCAL_CONNECTOR_CATALOG_PATH));
   }
 
   @Override
@@ -769,13 +756,13 @@ public class EnvConfigs implements Configs {
   /**
    * Returns the name of the secret to be used when pulling down docker images for jobs. Automatically
    * injected in the KubePodProcess class and used in the job pod templates.
-   * <p>
+   *
    * Can provide multiple strings seperated by comma(,) to indicate pulling from different
    * repositories. The empty string is a no-op value.
    */
   @Override
   public List<String> getJobKubeMainContainerImagePullSecrets() {
-    final String secrets = getEnvOrDefault(JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET, "");
+    String secrets = getEnvOrDefault(JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET, "");
     return Arrays.stream(secrets.split(",")).collect(Collectors.toList());
   }
 
@@ -857,16 +844,6 @@ public class EnvConfigs implements Configs {
   @Override
   public String getOtelCollectorEndpoint() {
     return getEnvOrDefault(OTEL_COLLECTOR_ENDPOINT, "");
-  }
-
-  @Override
-  public String getLaunchDarklyKey() {
-    return getEnvOrDefault(LAUNCHDARKLY_KEY, "");
-  }
-
-  @Override
-  public String getFeatureFlagClient() {
-    return getEnvOrDefault(FEATURE_FLAG_CLIENT, "");
   }
 
   /**
@@ -1158,16 +1135,6 @@ public class EnvConfigs implements Configs {
   @Override
   public String getFieldSelectionWorkspaces() {
     return getEnvOrDefault(FIELD_SELECTION_WORKSPACES, "");
-  }
-
-  @Override
-  public String getStrictComparisonNormalizationWorkspaces() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_WORKSPACES, "");
-  }
-
-  @Override
-  public String getStrictComparisonNormalizationTag() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison");
   }
 
   @Override

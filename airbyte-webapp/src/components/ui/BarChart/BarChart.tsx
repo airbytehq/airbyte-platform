@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useIntl } from "react-intl";
+import { FormattedNumber } from "react-intl";
 import {
   Bar,
   BarChart as BasicBarChart,
@@ -23,7 +23,6 @@ interface BarChartProps {
 }
 
 export const BarChart: React.FC<BarChartProps> = React.memo(({ data, legendLabels, xLabel, yLabel }) => {
-  const { formatNumber } = useIntl();
   const chartLinesColor = theme.grey100;
   const chartTicksColor = theme.grey;
   const chartHoverFill = theme.grey100;
@@ -68,14 +67,7 @@ export const BarChart: React.FC<BarChartProps> = React.memo(({ data, legendLabel
         <Tooltip
           cursor={{ fill: chartHoverFill }}
           formatter={(value: number) => {
-            // The type cast is unfortunately necessary, due to broken typing in recharts.
-            // What we return is a [string, string], and the library accepts this as well, but the types
-            // require the first element to be of the same type as value, which isn't what the formatter
-            // is supposed to do: https://github.com/recharts/recharts/issues/3008
-            return [formatNumber(value, { maximumFractionDigits: 2, minimumFractionDigits: 2 }), yLabel] as unknown as [
-              number,
-              string
-            ];
+            return [<FormattedNumber value={value} maximumFractionDigits={2} minimumFractionDigits={2} />, yLabel];
           }}
         />
         {legendLabels.map((barName, key) => (

@@ -84,13 +84,12 @@ export const TestCard: React.FC<IProps> = ({
               <FormattedMessage id={`form.${formType}RetestTitle`} />
             </Text>
           </FlexItem>
-          {isTestConnectionInProgress || !isEditMode ? (
+          {isTestConnectionInProgress ? (
             <Button
               className={styles.button}
               icon={<FontAwesomeIcon icon={faClose} />}
               variant="secondary"
               type="button"
-              disabled={!isTestConnectionInProgress}
               onClick={() => onCancelTesting?.()}
             >
               <FormattedMessage id="form.cancel" />
@@ -102,9 +101,9 @@ export const TestCard: React.FC<IProps> = ({
               variant="secondary"
               icon={<FontAwesomeIcon icon={faRefresh} />}
               // disable if there are changes in edit mode because the retest API can currently only test the saved state
-              disabled={!isValid || dirty}
+              disabled={!isValid || (isEditMode && dirty)}
             >
-              <FormattedMessage id={`form.${formType}Retest`} />
+              <FormattedMessage id={!isEditMode ? "form.test" : `form.${formType}Retest`} />
             </Button>
           )}
         </FlexContainer>
