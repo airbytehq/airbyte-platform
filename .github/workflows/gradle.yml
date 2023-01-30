@@ -20,7 +20,7 @@ on:
     - cron: "0 */1 * * *"
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 permissions: write-all
@@ -42,7 +42,7 @@ jobs:
     name: "Detect Modified Files"
     # The filtering action does not deal with well scheduled events so skip to avoid errors.
     # See https://github.com/dorny/paths-filter/issues/100 for more info.
-    # This is okay this workflow is only scheduled on master, where we want to build everything
+    # This is okay this workflow is only scheduled on main, where we want to build everything
     # so filtering is not required. Use always() in each start block to force the start task.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -103,9 +103,9 @@ jobs:
     name: "Frontend: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
     if: |
-      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/master'
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -227,9 +227,9 @@ jobs:
     name: "Frontend E2E Tests: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
     if: |
-      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/master'
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -362,8 +362,8 @@ jobs:
     name: "Platform: Start Build EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -504,7 +504,7 @@ jobs:
           attempt_delay: 5000 # in ms
 
       - name: Slow integration test
-        if: contains(github.ref, 'bump-version') || contains(github.ref, 'master')
+        if: contains(github.ref, 'bump-version') || contains(github.ref, 'main')
         uses: Wandalen/wretry.action@master
         with:
           command: SUB_BUILD=PLATFORM ./gradlew slowIntegrationTest
@@ -520,7 +520,7 @@ jobs:
 
       # todo (cgardens) - scope by platform.
       - name: Check documentation
-        if: success() && github.ref == 'refs/heads/master'
+        if: success() && github.ref == 'refs/heads/main'
         run: ./tools/site/link_checker.sh check_docs
 
       #       This is only required on the usual github runner. The usual runner does not contain enough disk space for our use.
@@ -640,8 +640,8 @@ jobs:
     name: "Platform: Start Kube Acceptance Test Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -868,8 +868,8 @@ jobs:
     name: "Platform: Start Helm Acceptance Test Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -1105,7 +1105,7 @@ jobs:
       - kube-acceptance-test
       # Todo: Kyryl turn this on.
       # - helm-acceptance-test
-    if: ${{ failure() && github.ref == 'refs/heads/master' }}
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout Airbyte
         uses: actions/checkout@v3
@@ -1123,7 +1123,7 @@ jobs:
           args: >-
             {\"channel\":\"C03BEADRPNY\", \"blocks\":[
             {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS Master failed! :bangbang: \n\n\"}},
+            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS main failed! :bangbang: \n\n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"<@${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}> \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-shocked: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-shocked: \n\"}},
@@ -1157,7 +1157,7 @@ jobs:
           args: >-
             {\"channel\":\"C03BEADRPNY\", \"blocks\":[
             {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS Master Fixed! :white_check_mark: \n\n\"}},
+            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS main Fixed! :white_check_mark: \n\n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n\"}},
             {\"type\":\"divider\"}]}
