@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.sync;
@@ -49,8 +49,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private static final int NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION = 1;
   private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
-  private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
-  private static final int USE_MINIMAL_NORM_INPUT_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -94,11 +92,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
       if (!sourceId.isEmpty() && refreshSchemaActivity.shouldRefreshSchema(sourceId.get())) {
         LOGGER.info("Refreshing source schema...");
-        try {
-          refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
-        } catch (final Exception e) {
-          return SyncOutputProvider.getRefreshSchemaFailure(e);
-        }
+        refreshSchemaActivity.refreshSchema(sourceId.get(), connectionId);
       }
 
       final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
@@ -188,14 +182,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput,
                                                         final StandardSyncOutput syncOutput) {
 
-    final int version = Workflow.getVersion(USE_MINIMAL_NORM_INPUT, Workflow.DEFAULT_VERSION, USE_MINIMAL_NORM_INPUT_VERSION);
-    if (version == Workflow.DEFAULT_VERSION) {
-      return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
-    } else {
-      return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
-          syncOutput.getOutputCatalog(),
-          syncInput.getWorkspaceId());
-    }
+    return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
   }
 
 }

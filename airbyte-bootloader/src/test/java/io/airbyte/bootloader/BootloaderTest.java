@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader;
@@ -82,8 +82,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.40.28.001";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.40.28.001";
+  private static final String CURRENT_MIGRATION_VERSION = "0.40.28.001";
 
   @BeforeEach
   void setup() {
@@ -131,7 +130,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider =
-          Optional.of(new LocalDefinitionsProvider());
+          Optional.of(new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
@@ -148,10 +147,10 @@ class BootloaderTest {
       bootloader.load();
 
       val jobsMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
-      assertEquals(CURRENT_JOBS_MIGRATION_VERSION, jobsMigrator.getLatestMigration().getVersion().getVersion());
+      assertEquals("0.40.26.001", jobsMigrator.getLatestMigration().getVersion().getVersion());
 
       val configsMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
-      assertEquals(CURRENT_CONFIGS_MIGRATION_VERSION, configsMigrator.getLatestMigration().getVersion().getVersion());
+      assertEquals(CURRENT_MIGRATION_VERSION, configsMigrator.getLatestMigration().getVersion().getVersion());
 
       assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get());
       assertEquals(new Version(PROTOCOL_VERSION_123), jobsPersistence.getAirbyteProtocolVersionMin().get());
@@ -185,7 +184,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider =
-          Optional.of(new LocalDefinitionsProvider());
+          Optional.of(new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
@@ -212,7 +211,7 @@ class BootloaderTest {
               runMigrationOnStartup, null, postLoadExecutor);
       initBootloader.load();
 
-      final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider();
+      final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS);
       configRepository.seedActorDefinitions(localDefinitions.getSourceDefinitions(), localDefinitions.getDestinationDefinitions());
 
       final String sourceSpecs = """
@@ -316,7 +315,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider = Optional.of(
-          new LocalDefinitionsProvider());
+          new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
@@ -376,7 +375,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider =
-          Optional.of(new LocalDefinitionsProvider());
+          Optional.of(new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));

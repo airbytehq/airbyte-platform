@@ -1,7 +1,6 @@
 import classNames from "classnames";
-import React, { useEffect, useRef, useState } from "react";
-import { useInView } from "react-intersection-observer";
-import { debounceTime, fromEvent } from "rxjs";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useWindowSize } from "react-use";
 
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -23,6 +22,14 @@ const sizeMap: Record<Sizes, string> = {
   large: styles.large,
 };
 
+const TooltipText: React.FC<{ textNodes: Element[] }> = ({ textNodes }) => {
+  if (!textNodes.length) {
+    return null;
+  }
+  const text = textNodes.map((t) => decodeURIComponent(t.innerHTML)).join(" | ");
+  return <div dangerouslySetInnerHTML={{ __html: text }} />;
+};
+
 export const CatalogTreeTableCell: React.FC<React.PropsWithChildren<CatalogTreeTableCellProps>> = ({
   size = "medium",
   withTooltip,
@@ -30,60 +37,49 @@ export const CatalogTreeTableCell: React.FC<React.PropsWithChildren<CatalogTreeT
   children,
 }) => {
   const [tooltipDisabled, setTooltipDisabled] = useState(true);
-  const cellContent = useRef<HTMLSpanElement | null>(null);
+  const [textNodes, setTextNodes] = useState<Element[]>([]);
+  const cell = useRef<HTMLDivElement | null>(null);
 
-  const { inView, ref: inViewRef } = useInView({ delay: 500 });
+  const { width: windowWidth } = useWindowSize();
+
+  const getTextNodes = useCallback(() => {
+    if (withTooltip && cell.current) {
+      setTextNodes(Array.from(cell.current.querySelectorAll(`[data-type="text"]`)));
+    }
+  }, [withTooltip]);
 
   useEffect(() => {
-    if (!inView || !withTooltip) {
-      // Only handle resize events on the window for this cell (to determine if the tooltip)
-      // needs to be shown if the cell is actually in view
-      return;
-    }
-
-    // Calculate based on any potentially truncated `<Text>` element inside this cell, whether
-    // the tooltip should show.
-    const calculateTooltipVisible = () => {
-      const hasEllipsisedElement = Array.from(cellContent.current?.querySelectorAll(`[data-type="text"]`) ?? []).some(
-        (el) => el.scrollWidth > el.clientWidth
+    // windowWidth is only here so this functionality changes based on window width
+    if (textNodes.length && windowWidth) {
+      const [scrollWidths, clientWidths] = textNodes.reduce(
+        ([scrollWidths, clientWidths], textNode) => {
+          if (textNode) {
+            scrollWidths += textNode.scrollWidth;
+            clientWidths += textNode.clientWidth;
+          }
+          return [scrollWidths, clientWidths];
+        },
+        [0, 0]
       );
-      setTooltipDisabled(!hasEllipsisedElement);
-    };
 
-    // Recalculate if tooltips should be visible for this cell if the (debounced) window size changes
-    const subscription = fromEvent(window, "resize", { passive: false })
-      // Debounce, since the resize event fires constantly while a user's still resizing the window
-      .pipe(debounceTime(500))
-      .subscribe(() => {
-        calculateTooltipVisible();
-      });
-
-    calculateTooltipVisible();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [inView, withTooltip]);
+      if (scrollWidths > clientWidths) {
+        setTooltipDisabled(false);
+      } else {
+        setTooltipDisabled(true);
+      }
+    }
+  }, [textNodes, windowWidth]);
 
   return (
-    <div className={classNames(styles.tableCell, className, sizeMap[size])}>
+    <div ref={cell} className={classNames(styles.tableCell, className, sizeMap[size])} onMouseEnter={getTextNodes}>
       {withTooltip ? (
         <Tooltip
           className={classNames(styles.noEllipsis, styles.fullWidthTooltip)}
-          control={
-            <span
-              ref={(el) => {
-                inViewRef(el);
-                cellContent.current = el;
-              }}
-            >
-              {children}
-            </span>
-          }
+          control={children}
           placement="bottom-start"
           disabled={tooltipDisabled}
         >
-          {cellContent.current?.textContent}
+          <TooltipText textNodes={textNodes} />
         </Tooltip>
       ) : (
         children

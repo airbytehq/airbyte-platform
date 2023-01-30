@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers;
@@ -75,11 +75,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * The web backend is an abstraction that allows the frontend to structure data in such a way that
- * it is easier for a react frontend to consume. It should NOT have direct access to the database.
- * It should operate exclusively by calling other endpoints that are exposed in the API.
- **/
 @Singleton
 public class WebBackendConnectionsHandler {
 
@@ -92,8 +87,7 @@ public class WebBackendConnectionsHandler {
   private final OperationsHandler operationsHandler;
   private final EventRunner eventRunner;
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
-  @Deprecated
-  private final ConfigRepository configRepositoryDoNotUse;
+  private final ConfigRepository configRepository;
 
   public WebBackendConnectionsHandler(final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
@@ -103,7 +97,7 @@ public class WebBackendConnectionsHandler {
                                       final SchedulerHandler schedulerHandler,
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
-                                      final ConfigRepository configRepositoryDoNotUse) {
+                                      final ConfigRepository configRepository) {
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
@@ -112,14 +106,14 @@ public class WebBackendConnectionsHandler {
     this.schedulerHandler = schedulerHandler;
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
-    this.configRepositoryDoNotUse = configRepositoryDoNotUse;
+    this.configRepository = configRepository;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
     final var workspaceId = webBackendWorkspaceState.getWorkspaceId();
-    final var connectionCount = configRepositoryDoNotUse.countConnectionsForWorkspace(workspaceId);
-    final var destinationCount = configRepositoryDoNotUse.countDestinationsForWorkspace(workspaceId);
-    final var sourceCount = configRepositoryDoNotUse.countSourcesForWorkspace(workspaceId);
+    final var connectionCount = configRepository.countConnectionsForWorkspace(workspaceId);
+    final var destinationCount = configRepository.countDestinationsForWorkspace(workspaceId);
+    final var sourceCount = configRepository.countSourcesForWorkspace(workspaceId);
 
     return new WebBackendWorkspaceStateResult()
         .hasConnections(connectionCount > 0)
@@ -141,7 +135,7 @@ public class WebBackendConnectionsHandler {
         // passing 'false' so that deleted connections are not included
         false);
 
-    final List<StandardSync> standardSyncs = configRepositoryDoNotUse.listWorkspaceStandardSyncs(query);
+    final List<StandardSync> standardSyncs = configRepository.listWorkspaceStandardSyncs(query);
     final List<UUID> sourceIds = standardSyncs.stream().map(StandardSync::getSourceId).toList();
     final List<UUID> destinationIds = standardSyncs.stream().map(StandardSync::getDestinationId).toList();
     final List<UUID> connectionIds = standardSyncs.stream().map(StandardSync::getConnectionId).toList();
@@ -154,7 +148,7 @@ public class WebBackendConnectionsHandler {
     // right status filtering for this.
     final Map<UUID, JobRead> runningJobByConnectionId = getRunningJobByConnectionId(connectionIds);
     final Map<UUID, ActorCatalogFetchEvent> newestFetchEventsByActorId =
-        configRepositoryDoNotUse.getMostRecentActorCatalogFetchEventForSources(sourceIds);
+        configRepository.getMostRecentActorCatalogFetchEventForSources(sourceIds);
 
     final List<WebBackendConnectionListItem> connectionItems = Lists.newArrayList();
 
@@ -183,14 +177,14 @@ public class WebBackendConnectionsHandler {
   }
 
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {
-    return configRepositoryDoNotUse.getSourceAndDefinitionsFromSourceIds(sourceIds)
+    return configRepository.getSourceAndDefinitionsFromSourceIds(sourceIds)
         .stream()
         .map(sourceAndDefinition -> SourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
         .collect(Collectors.toMap(SourceSnippetRead::getSourceId, Function.identity()));
   }
 
   private Map<UUID, DestinationSnippetRead> getDestinationSnippetReadById(final List<UUID> destinationIds) throws IOException {
-    return configRepositoryDoNotUse.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
+    return configRepository.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
         .stream()
         .map(destinationAndDefinition -> DestinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
             destinationAndDefinition.definition()))
@@ -216,7 +210,7 @@ public class WebBackendConnectionsHandler {
     });
 
     final Optional<ActorCatalogFetchEvent> mostRecentFetchEvent =
-        configRepositoryDoNotUse.getMostRecentActorCatalogFetchEventForSource(connectionRead.getSourceId());
+        configRepository.getMostRecentActorCatalogFetchEventForSource(connectionRead.getSourceId());
 
     final SchemaChange schemaChange = getSchemaChange(connectionRead, currentSourceCatalogId, mostRecentFetchEvent);
 
@@ -413,8 +407,7 @@ public class WebBackendConnectionsHandler {
     final SourceDiscoverSchemaRequestBody discoverSchemaReadReq = new SourceDiscoverSchemaRequestBody()
         .sourceId(sourceId)
         .disableCache(true)
-        .connectionId(connectionId)
-        .notifySchemaChange(false);
+        .connectionId(connectionId);
     final SourceDiscoverSchemaRead schemaRead = schedulerHandler.discoverSchemaForSourceFromSourceId(discoverSchemaReadReq);
     return Optional.ofNullable(schemaRead);
   }
@@ -546,15 +539,13 @@ public class WebBackendConnectionsHandler {
     if (webBackendConnectionPatch.getSyncCatalog() != null) {
       // Get the most recent actor catalog fetched for this connection's source and the newly updated sync
       // catalog
-      final Optional<ActorCatalog> mostRecentActorCatalog =
-          configRepositoryDoNotUse.getMostRecentActorCatalogForSource(originalConnectionRead.getSourceId());
-      final AirbyteCatalog newAirbyteCatalog = webBackendConnectionPatch.getSyncCatalog();
+      Optional<ActorCatalog> mostRecentActorCatalog = configRepository.getMostRecentActorCatalogForSource(originalConnectionRead.getSourceId());
+      AirbyteCatalog newAirbyteCatalog = webBackendConnectionPatch.getSyncCatalog();
       // Get the diff between these two catalogs to check for breaking changes
       if (mostRecentActorCatalog.isPresent()) {
         final io.airbyte.protocol.models.AirbyteCatalog mostRecentAirbyteCatalog =
             Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
-        final StandardSourceDefinition sourceDefinition =
-            configRepositoryDoNotUse.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
+        final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
         final CatalogDiff catalogDiff =
             connectionsHandler.getDiff(newAirbyteCatalog, CatalogConverter.toApi(mostRecentAirbyteCatalog, sourceDefinition),
                 CatalogConverter.toConfiguredProtocol(newAirbyteCatalog));
@@ -565,7 +556,7 @@ public class WebBackendConnectionsHandler {
     // before doing any updates, fetch the existing catalog so that it can be diffed
     // with the final catalog to determine which streams might need to be reset.
     final ConfiguredAirbyteCatalog oldConfiguredCatalog =
-        configRepositoryDoNotUse.getConfiguredCatalogForConnection(connectionId);
+        configRepository.getConfiguredCatalogForConnection(connectionId);
 
     final List<UUID> newAndExistingOperationIds = createOrUpdateOperations(originalConnectionRead, webBackendConnectionPatch);
 
@@ -628,7 +619,7 @@ public class WebBackendConnectionsHandler {
         final ConnectionStateType stateType = getStateType(connectionIdRequestBody);
 
         if (stateType == ConnectionStateType.LEGACY || stateType == ConnectionStateType.NOT_SET) {
-          streamsToReset = configRepositoryDoNotUse.getAllStreamsForConnection(connectionId);
+          streamsToReset = configRepository.getAllStreamsForConnection(connectionId);
         }
         eventRunner.resetConnection(
             connectionId,
@@ -737,7 +728,7 @@ public class WebBackendConnectionsHandler {
   @VisibleForTesting
   protected static ConnectionUpdate toConnectionPatch(final WebBackendConnectionUpdate webBackendConnectionPatch,
                                                       final List<UUID> finalOperationIds,
-                                                      final boolean breakingChange) {
+                                                      boolean breakingChange) {
     final ConnectionUpdate connectionPatch = new ConnectionUpdate();
 
     connectionPatch.connectionId(webBackendConnectionPatch.getConnectionId());
