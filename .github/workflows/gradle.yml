@@ -20,7 +20,7 @@ on:
     - cron: "0 */1 * * *"
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 permissions: write-all
@@ -42,15 +42,13 @@ jobs:
     name: "Detect Modified Files"
     # The filtering action does not deal with well scheduled events so skip to avoid errors.
     # See https://github.com/dorny/paths-filter/issues/100 for more info.
-    # This is okay this workflow is only scheduled on master, where we want to build everything
+    # This is okay this workflow is only scheduled on main, where we want to build everything
     # so filtering is not required. Use always() in each start block to force the start task.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       build: ${{ steps.filter.outputs.build }}
-      cli: ${{ steps.filter.outputs.cli }}
-      connectors: ${{ steps.filter.outputs.connectors }}
       db: ${{ steps.filter.outputs.db }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
@@ -63,7 +61,6 @@ jobs:
           filters: |
             backend:
               - 'airbyte-!(cdk|integrations|webapp|webapp-e2e-tests)/**'
-              - 'airbyte-integrations/connectors/(destination-jdbc|destination-postgres|source-jdbc|source-postgres)/**'
               - 'airbyte-config/init/src/main/resources/seed/(source|destination)_definitions.yaml'
               - 'docker-compose*.yaml'
               - '(charts|kube)/**'
@@ -73,14 +70,6 @@ jobs:
               - 'tools/**'
               - '*.gradle'
               - 'deps.toml'
-            cli:
-              - 'airbyte-api/**'
-              - 'octavia-cli/**'
-            connectors:
-              - 'airbyte-cdk/**'
-              - 'airbyte-protocol/**'
-              - 'airbyte-integrations/**'
-              - 'airbyte-commons-worker/**'
             db:
               - 'airbyte-db/**'
             frontend:
@@ -103,9 +92,9 @@ jobs:
     name: "Frontend: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
     if: |
-      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/master'
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -227,9 +216,9 @@ jobs:
     name: "Frontend E2E Tests: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
     if: |
-      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/master'
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -362,8 +351,8 @@ jobs:
     name: "Platform: Start Build EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -504,7 +493,7 @@ jobs:
           attempt_delay: 5000 # in ms
 
       - name: Slow integration test
-        if: contains(github.ref, 'bump-version') || contains(github.ref, 'master')
+        if: contains(github.ref, 'bump-version') || contains(github.ref, 'main')
         uses: Wandalen/wretry.action@master
         with:
           command: SUB_BUILD=PLATFORM ./gradlew slowIntegrationTest
@@ -520,7 +509,7 @@ jobs:
 
       # todo (cgardens) - scope by platform.
       - name: Check documentation
-        if: success() && github.ref == 'refs/heads/master'
+        if: success() && github.ref == 'refs/heads/main'
         run: ./tools/site/link_checker.sh check_docs
 
       #       This is only required on the usual github runner. The usual runner does not contain enough disk space for our use.
@@ -552,7 +541,7 @@ jobs:
         id: platform-results
         if: always()
         with:
-          junit_files: "/actions-runner/_work/airbyte/airbyte/*/build/test-results/*/*.xml\n/actions-runner/_work/airbyte/airbyte/*/*/build/test-results/*/*.xml"
+          junit_files: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml\n/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           comment_mode: failures
           json_file: platform_results.json
           json_test_case_results: true
@@ -584,7 +573,7 @@ jobs:
         with:
           name: Platform Test Report with Docker E2E Test
           # Specify top-level and second-level modules. Note there cannot be a space between the comma.
-          path: "/actions-runner/_work/airbyte/airbyte/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte/airbyte/*/*/build/test-results/*/*.xml"
+          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: 'false'
 
@@ -594,7 +583,7 @@ jobs:
         with:
           account: 59758427
           repository: 283046497
-          path: "/actions-runner/_work/airbyte/airbyte/*"
+          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*"
           key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
@@ -640,8 +629,8 @@ jobs:
     name: "Platform: Start Kube Acceptance Test Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -775,7 +764,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          junit_files: "/actions-runner/_work/airbyte/airbyte/*/build/test-results/*/*.xml\n/actions-runner/_work/airbyte/airbyte/*/*/build/test-results/*/*.xml"
+          junit_files: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml\n/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           comment_mode: failures
           json_file: kube_results.json
           json_test_case_results: true
@@ -806,7 +795,7 @@ jobs:
         if: always() # run this step even if previous step failed
         with:
           name: Platform Kubernetes E2E Test Report
-          path: "/actions-runner/_work/airbyte/airbyte/*/build/test-results/*/*.xml"
+          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: 'false'
 
@@ -816,7 +805,7 @@ jobs:
         with:
           account: 59758427
           repository: 283046497
-          path: "/actions-runner/_work/airbyte/airbyte/*"
+          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*"
           key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
@@ -868,8 +857,8 @@ jobs:
     name: "Platform: Start Helm Acceptance Test Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -906,15 +895,15 @@ jobs:
     timeout-minutes: 90
     defaults:
       run:
-        working-directory: "/actions-runner/_work/airbyte/airbyte"
+        working-directory: "/actions-runner/_work/airbyte-platform/airbyte-platform"
     env:
-      HOME: /actions-runner/_work/airbyte/airbyte
-      GITHUB_WORKSPACE: /actions-runner/_work/airbyte/airbyte
+      HOME: /actions-runner/_work/airbyte-platform/airbyte-platform
+      GITHUB_WORKSPACE: /actions-runner/_work/airbyte-platform/airbyte-platform
 
     steps:
       - name: Fix EC-2 Runner
         run: |
-          mkdir -p /actions-runner/_work/airbyte/airbyte && mkdir -p /actions-runner/_work/airbyte/airbyte/.kube
+          mkdir -p /actions-runner/_work/airbyte-platform/airbyte-platform && mkdir -p /actions-runner/_work/airbyte-platform/airbyte-platform/.kube
 
       - name: Checkout Airbyte
         uses: actions/checkout@v2
@@ -1051,7 +1040,7 @@ jobs:
         with:
           account: 59758427
           repository: 283046497
-          path: "/actions-runner/_work/airbyte/airbyte/*"
+          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*"
           key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
@@ -1105,7 +1094,7 @@ jobs:
       - kube-acceptance-test
       # Todo: Kyryl turn this on.
       # - helm-acceptance-test
-    if: ${{ failure() && github.ref == 'refs/heads/master' }}
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout Airbyte
         uses: actions/checkout@v3
@@ -1123,7 +1112,7 @@ jobs:
           args: >-
             {\"channel\":\"C03BEADRPNY\", \"blocks\":[
             {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS Master failed! :bangbang: \n\n\"}},
+            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS main failed! :bangbang: \n\n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"<@${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}> \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-shocked: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-shocked: \n\"}},
@@ -1133,9 +1122,7 @@ jobs:
     name: "Notify Slack Channel on Build Fixes"
     runs-on: ubuntu-latest
     needs:
-      - build-connectors-base
       - frontend-build
-      - octavia-cli-build
       - platform-build
       - kube-acceptance-test
       # Todo: Kyryl turn this on.
@@ -1157,7 +1144,7 @@ jobs:
           args: >-
             {\"channel\":\"C03BEADRPNY\", \"blocks\":[
             {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS Master Fixed! :white_check_mark: \n\n\"}},
+            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS main Fixed! :white_check_mark: \n\n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n\"}},
             {\"type\":\"divider\"}]}
