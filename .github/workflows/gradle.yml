@@ -49,8 +49,6 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       build: ${{ steps.filter.outputs.build }}
-      cli: ${{ steps.filter.outputs.cli }}
-      connectors: ${{ steps.filter.outputs.connectors }}
       db: ${{ steps.filter.outputs.db }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
@@ -63,7 +61,6 @@ jobs:
           filters: |
             backend:
               - 'airbyte-!(cdk|integrations|webapp|webapp-e2e-tests)/**'
-              - 'airbyte-integrations/connectors/(destination-jdbc|destination-postgres|source-jdbc|source-postgres)/**'
               - 'airbyte-config/init/src/main/resources/seed/(source|destination)_definitions.yaml'
               - 'docker-compose*.yaml'
               - '(charts|kube)/**'
@@ -73,14 +70,6 @@ jobs:
               - 'tools/**'
               - '*.gradle'
               - 'deps.toml'
-            cli:
-              - 'airbyte-api/**'
-              - 'octavia-cli/**'
-            connectors:
-              - 'airbyte-cdk/**'
-              - 'airbyte-protocol/**'
-              - 'airbyte-integrations/**'
-              - 'airbyte-commons-worker/**'
             db:
               - 'airbyte-db/**'
             frontend:
@@ -1133,9 +1122,7 @@ jobs:
     name: "Notify Slack Channel on Build Fixes"
     runs-on: ubuntu-latest
     needs:
-      - build-connectors-base
       - frontend-build
-      - octavia-cli-build
       - platform-build
       - kube-acceptance-test
       # Todo: Kyryl turn this on.
