@@ -24,7 +24,7 @@ jobs:
           token: ${{ secrets.GH_PAT_MAINTENANCE_OCTAVIA }}
           permission: write
           issue-type: pull-request
-          repository: airbytehq/airbyte-platform-internal
+          repository: airbytehq/oss-to-cloud-action-test
           dispatch-type: repository
           commands: |
             create-cloud-pr
