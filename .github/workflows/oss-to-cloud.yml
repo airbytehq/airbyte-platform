@@ -2,6 +2,7 @@ name: Create Cloud PR from OSS PR
 on:
   issue_comment:
     types: [created]
+
 jobs:
   check:
       if: startsWith(github.head_ref, 'main') != true
