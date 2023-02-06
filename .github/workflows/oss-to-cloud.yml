@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create a snapshot of an OSS PR to Cloud
-        uses: peter-evans/slash-command-dispatch
+        uses: peter-evans/slash-command-dispatch@v3
         id: slash-command-dispatch
         with:
           token: ${{ secrets.GH_PAT_MAINTENANCE_OCTAVIA }}
