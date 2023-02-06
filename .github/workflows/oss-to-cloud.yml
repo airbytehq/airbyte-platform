@@ -6,6 +6,8 @@ jobs:
   check:
       if: startsWith(github.head_ref, 'main') != true
       runs-on: ubuntu-18.04
+      outputs:
+        pull_request_branch: ${{ steps.comment-branch.outputs.head_ref }}
       steps:
         - uses: xt0rted/pull-request-comment-branch@v1
           id: comment-branch
@@ -34,7 +36,7 @@ jobs:
           dispatch-type: repository
           static-args: |
             repository=${{ github.repository }}
-            branch=${{ needs.check.steps.comment-branch.outputs.head_ref }}
+            branch=${{ needs.check.outputs.pull_request_branch }}
           commands: |
             create-cloud-pr
 
