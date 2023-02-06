@@ -1,4 +1,4 @@
-name: create-cloud-pr-command
+name: Create Cloud PR from OSS PR
 on:
   issue_comment:
     types: [created]
