@@ -9,10 +9,12 @@ jobs:
       steps:
         - uses: actions/checkout@v3
           with:
+            ref: ${{ github.event.pull_request_review_comment.pull_request.head.sha }}
             fetch-depth: 0 # needed to have the base branch available for the action below
         - uses: stefanluptak/check-branch-up-to-date@v1
           with:
             base_branch: 'main'
+            head_branch: ${{ github.event.pull_request_review_comment.pull_request.head.ref }}
 
   dispatch_command_to_cloud:
     needs: check
