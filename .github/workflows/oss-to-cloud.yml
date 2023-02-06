@@ -13,6 +13,9 @@ jobs:
             ref: ${{ github.event.inputs.gitref }}
             fetch-depth: 0 # needed to have the base branch available for the action below
         - uses: stefanluptak/check-branch-up-to-date@v1
+          with:
+            head_branch: ${{ github.events.inputs.gitref }}
+            base_branch: 'main'
 
   dispatch_command_to_cloud:
     needs: check
