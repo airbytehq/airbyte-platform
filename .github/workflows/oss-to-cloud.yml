@@ -7,6 +7,7 @@ jobs:
       if: startsWith(github.head_ref, 'main') != true
       runs-on: ubuntu-18.04
       steps:
+        - run: echo ${{ github.event }}
         - uses: actions/checkout@v3
           with:
             ref: ${{ github.event.issue_comment.issue.pull_request.head.sha }}
