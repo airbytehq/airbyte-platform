@@ -33,10 +33,8 @@ jobs:
           repository: airbytehq/oss-to-cloud-action-test
           dispatch-type: repository
           static-args: |
-            "repository=${{ github.repository }}",
-            "branch=${{ steps.comment-branch.outputs.head_ref }}"
-
-
+            repository=${{ github.repository }}
+            branch=${{ needs.check.comment-branch.outputs.head_ref }}
           commands: |
             create-cloud-pr
 
