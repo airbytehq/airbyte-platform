@@ -36,13 +36,13 @@ jobs:
           github-token: ${{ env.PAT }}
 
   generate-tags:
-    name: "Generate Dev and Main Tags"
+    name: "Generate Dev and Master Tags"
     runs-on: ubuntu-latest
     outputs:
       dev_tag: ${{ steps.set-outputs.outputs.dev_tag }}
-      main_tag: ${{ steps.set-outputs.outputs.main_tag }}
+      master_tag: ${{ steps.set-outputs.outputs.master_tag }}
     steps:
-      - name: Checkout Airbyte Platform
+      - name: Checkout Airbyte
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.oss_ref || github.ref }}
@@ -58,9 +58,9 @@ jobs:
           # AirbyteVersion.java allows versions that have a prefix of 'dev'
           echo "dev_tag=dev-${commit_sha}" >> $GITHUB_OUTPUT
 
-          # If this commit is on the main branch, also set main_tag
-          if $(git merge-base --is-ancestor "${commit_sha}" main); then
-            echo "main_tag=${commit_sha}" >> $GITHUB_OUTPUT
+          # If this commit is on the master branch, also set master_tag
+          if $(git merge-base --is-ancestor "${commit_sha}" master); then
+            echo "master_tag=${commit_sha}" >> $GITHUB_OUTPUT
           fi
           cat $GITHUB_OUTPUT || true # for the sake of investigation
 
@@ -76,20 +76,12 @@ jobs:
       - start-runner
       - generate-tags
     runs-on: ${{ needs.start-runner.outputs.label }}
+    environment: more-secrets
     steps:
       - name: Checkout Airbyte
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.oss_ref || github.ref }}
-
-      # TODO: Once we pull these from the metadata service, remove this step
-      - name: Copy docs from connectors repository
-        run: |
-          dir=$PWD
-          cd /tmp
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte 
-          cp -R airbyte/docs $dir/docs
-          ls -lah $dir/docs
 
       - name: Build Branch
         uses: ./.github/actions/build-branch
@@ -104,12 +96,12 @@ jobs:
         run: VERSION=${{ needs.generate-tags.outputs.dev_tag }} SUB_BUILD=PLATFORM ./gradlew publish
         shell: bash
 
-      - name: Publish main Jars
-        if: needs.generate-tags.outputs.main_tag != ''
+      - name: Publish Master Jars
+        if: needs.generate-tags.outputs.master_tag != ''
         env:
           CLOUDREPO_USER: ${{ secrets.CLOUDREPO_USER }}
           CLOUDREPO_PASSWORD: ${{ secrets.CLOUDREPO_PASSWORD }}
-        run: VERSION=${{ needs.generate-tags.outputs.main_tag }} SUB_BUILD=PLATFORM ./gradlew publish
+        run: VERSION=${{ needs.generate-tags.outputs.master_tag }} SUB_BUILD=PLATFORM ./gradlew publish
         shell: bash
 
   docker-push:
@@ -126,7 +118,7 @@ jobs:
       - oss-branch-build
     runs-on: ${{ needs.start-runner.outputs.label }}
     steps:
-      - name: Login to Docker (on main)
+      - name: Login to Docker (on Master)
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
@@ -157,7 +149,7 @@ jobs:
       - name: Push Docker Images
         env:
           VERSION: ${{ needs.generate-tags.outputs.dev_tag }}
-          ALT_TAG: ${{ needs.generate-tags.outputs.main_tag }}
+          ALT_TAG: ${{ needs.generate-tags.outputs.master_tag }}
         run: GIT_REVISION=$GIT_REVISION docker buildx bake -f docker-compose-cloud.buildx.yaml --push
         shell: bash
 

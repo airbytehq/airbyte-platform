@@ -39,7 +39,6 @@ export interface ConnectionsList {
 }
 
 export interface Destination {
-  name: string;
   destinationDefinitionId: string;
   destinationName: string;
   destinationId: string;
@@ -51,7 +50,6 @@ export interface DestinationsList {
 }
 
 export interface Source {
-  name: string;
   sourceDefinitionId: string;
   sourceName: string;
   sourceId: string;

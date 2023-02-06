@@ -1,9 +1,4 @@
-import {
-  ConnectionScheduleData,
-  ConnectionScheduleType,
-  SchemaChange,
-  WebBackendConnectionListItem,
-} from "../../core/request/AirbyteClient";
+import { ConnectionScheduleData, ConnectionScheduleType, SchemaChange } from "../../core/request/AirbyteClient";
 
 interface EntityTableDataItem {
   entityId: string;
@@ -35,7 +30,6 @@ interface ConnectionTableDataItem {
   lastSyncStatus: string | null;
   connectorIcon?: string;
   entityIcon?: string;
-  connection: WebBackendConnectionListItem;
 }
 
 const enum Status {

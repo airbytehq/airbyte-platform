@@ -4,18 +4,17 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Switch } from "components/ui/Switch";
 
-import { WebBackendConnectionListItem } from "core/request/AirbyteClient";
-import { useEnableConnection, useSyncConnection } from "hooks/services/useConnectionHook";
+import { useConnectionList, useEnableConnection, useSyncConnection } from "hooks/services/useConnectionHook";
 
 import styles from "./StatusCellControl.module.scss";
 
 interface StatusCellControlProps {
+  allowSync?: boolean;
   hasBreakingChange?: boolean;
   enabled?: boolean;
   isSyncing?: boolean;
   isManual?: boolean;
   id: string;
-  connection: WebBackendConnectionListItem;
 }
 
 export const StatusCellControl: React.FC<StatusCellControlProps> = ({
@@ -23,15 +22,17 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
   isManual,
   id,
   isSyncing,
+  allowSync,
   hasBreakingChange,
-  connection,
 }) => {
+  const { connections } = useConnectionList();
   const { mutateAsync: enableConnection, isLoading } = useEnableConnection();
   const { mutateAsync: syncConnection, isLoading: isSyncStarting } = useSyncConnection();
 
   const onRunManualSync = (event: React.SyntheticEvent) => {
     event.stopPropagation();
 
+    const connection = connections.find((c) => c.connectionId === id);
     if (connection) {
       syncConnection(connection);
     }
@@ -56,7 +57,7 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
         <Switch
           checked={enabled}
           onChange={onSwitchChange}
-          disabled={hasBreakingChange}
+          disabled={!allowSync || hasBreakingChange}
           loading={isLoading}
           data-testid="enable-connection-switch"
         />
@@ -76,7 +77,7 @@ export const StatusCellControl: React.FC<StatusCellControlProps> = ({
     <Button
       onClick={onRunManualSync}
       isLoading={isSyncStarting}
-      disabled={!enabled || hasBreakingChange || isSyncStarting}
+      disabled={!allowSync || !enabled || hasBreakingChange || isSyncStarting}
       data-testid="manual-sync-button"
     >
       <FormattedMessage id="connection.startSync" />

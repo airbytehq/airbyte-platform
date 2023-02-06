@@ -1,0 +1,423 @@
+{
+  "streams": [
+    {
+      "stream": {
+        "name": "adcreatives",
+        "json_schema": {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {
+              "$ref": "WellKnownTypes.json#/definitions/String"
+            },
+            "body": {
+              "$ref": "WellKnownTypes.json#/definitions/String"
+            },
+            "name": {
+              "$ref": "WellKnownTypes.json#/definitions/String"
+            },
+            "title": {
+              "$ref": "WellKnownTypes.json#/definitions/String"
+            },
+            "status": {
+              "$ref": "WellKnownTypes.json#/definitions/String"
+            },
+            "adlabels": {
+              "type": ["null", "array"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "WellKnownTypes.json#/definitions/String"
+                  },
+                  "name": {
+                    "$ref": "WellKnownTypes.json#/definitions/String"
+                  },
+                  "created_time": {
+                    "$ref": "WellKnownTypes.json#/definitions/TimestampWithoutTimezone"
+                  },
+                  "updated_time": {
+                    "$ref": "WellKnownTypes.json#/definitions/TimestampWithoutTimezone"
+                  }
+                }
+              }
+            },
+            "link_url": {
+              "$ref": "WellKnownTypes.json#/definitions/String"
+            },
+            "image_crops": {
+              "type": ["null", "object"],
+              "properties": {
+                "100x72": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                },
+                "90x160": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                },
+                "100x100": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                },
+                "191x100": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                },
+                "400x150": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                },
+                "400x500": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                },
+                "600x360": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "array"],
+                    "items": {
+                      "$ref": "WellKnownTypes.json#/definitions/Integer"
+                    }
+                  }
+                }
+              }
+            },
+            "object_story_spec": {
+              "type": ["null", "object"],
+              "properties": {
+                "page_id": {
+                  "$ref": "WellKnownTypes.json#/definitions/String"
+                },
+                "link_data": {
+                  "type": ["null", "object"],
+                  "properties": {
+                    "link": {
+                      "$ref": "WellKnownTypes.json#/definitions/String"
+                    },
+                    "name": {
+                      "$ref": "WellKnownTypes.json#/definitions/String"
+                    },
+                    "caption": {
+                      "$ref": "WellKnownTypes.json#/definitions/String"
+                    },
+                    "message": {
+                      "$ref": "WellKnownTypes.json#/definitions/String"
+                    },
+                    "image_crops": {
+                      "type": ["null", "object"],
+                      "properties": {
+                        "100x72": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        },
+                        "90x160": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        },
+                        "100x100": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        },
+                        "191x100": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        },
+                        "400x150": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        },
+                        "400x500": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        },
+                        "600x360": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": ["null", "array"],
+                            "items": {
+                              "$ref": "WellKnownTypes.json#/definitions/Integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "app_link_spec": {
+                      "type": ["null", "object"],
+                      "properties": {
+                        "ios": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_name": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_store_id": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              }
+                            }
+                          }
+                        },
+                        "ipad": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_name": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_store_id": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              }
+                            }
+                          }
+                        },
+                        "iphone": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_name": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_store_id": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              }
+                            }
+                          }
+                        },
+                        "android": {
+                          "type": ["null", "array"],
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "class": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "package": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              },
+                              "app_name": {
+                                "$ref": "WellKnownTypes.json#/definitions/String"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "text_data": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "message": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "photo_data": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "caption": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "image_hash": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "page_welcome_message": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "branded_content_sponsor_page_id": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "branded_content_sponsor_relationship": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "instagram_actor_id": {
+                    "$ref": "WellKnownTypes.json#/definitions/String"
+                  }
+                }
+              },
+              "template_url_spec": {
+                "type": ["null", "object"],
+                "properties": {
+                  "ios": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_name": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_store_id": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "web": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "should_fallback": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "ipad": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_name": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_store_id": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "config": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "app_id": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "iphone": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_name": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_store_id": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "android": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "package": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_name": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  },
+                  "windows_phone": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "url": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_id": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      },
+                      "app_name": {
+                        "$ref": "WellKnownTypes.json#/definitions/String"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "supported_sync_modes": ["full_refresh"],
+        "source_defined_cursor": false,
+        "default_cursor_field": []
+      },
+      "sync_mode": "full_refresh",
+      "cursor_field": [],
+      "destination_sync_mode": "overwrite"
+    }
+  ]
+}

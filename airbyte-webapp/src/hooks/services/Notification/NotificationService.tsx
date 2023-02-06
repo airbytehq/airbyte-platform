@@ -35,9 +35,6 @@ export const NotificationService = React.memo(({ children }: { children: React.R
         <Toast
           text={firstNotification.text}
           type={firstNotification.type}
-          actionBtnText={firstNotification.actionBtnText}
-          onAction={firstNotification.onAction}
-          data-testid={`notification-${firstNotification.id}`}
           onClose={
             firstNotification.nonClosable
               ? undefined
