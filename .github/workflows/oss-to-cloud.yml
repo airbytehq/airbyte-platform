@@ -4,7 +4,7 @@ on:
     types: [created]
 jobs:
   check:
-      if: startsWith(github.head_ref, 'main') != true
+      #if: startsWith(github.head_ref, 'main') != true
       runs-on: ubuntu-18.04
       steps:
         - uses: actions/checkout@v2
