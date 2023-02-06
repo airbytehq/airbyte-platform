@@ -9,8 +9,6 @@ jobs:
       steps:
         - uses: actions/checkout@v3
           with:
-            repository: ${{ github.event.inputs.repo }}
-            ref: ${{ github.event.inputs.gitref }}
             fetch-depth: 0 # needed to have the base branch available for the action below
         - uses: stefanluptak/check-branch-up-to-date@v1
           with:
