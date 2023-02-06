@@ -34,7 +34,7 @@ jobs:
           dispatch-type: repository
           static-args: |
             repository=${{ github.repository }}
-            branch=${{ needs.check.comment-branch.outputs.head_ref }}
+            branch=${{ needs.check.steps.comment-branch.outputs.head_ref }}
           commands: |
             create-cloud-pr
 
