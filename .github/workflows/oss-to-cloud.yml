@@ -7,8 +7,10 @@ jobs:
       if: startsWith(github.head_ref, 'main') != true
       runs-on: ubuntu-18.04
       steps:
-        - uses: actions/checkout@v2
+        - uses: actions/checkout@v3
           with:
+            repository: ${{ github.event.inputs.repo }}
+            ref: ${{ github.event.inputs.gitref }}
             fetch-depth: 0 # needed to have the base branch available for the action below
         - uses: stefanluptak/check-branch-up-to-date@v1
 
