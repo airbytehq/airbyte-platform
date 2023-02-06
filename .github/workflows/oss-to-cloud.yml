@@ -7,7 +7,11 @@ jobs:
       if: startsWith(github.head_ref, 'main') != true
       runs-on: ubuntu-18.04
       steps:
-        - run: echo ${{ github.event }}
+        - run: echo ${{ github.event.issue_comment }}
+        - run: echo ${{ github.event.issue_comment.issue }}
+        - run: echo ${{ github.event.issue_comment.issue.pull_request }}
+        - run: echo ${{ github.event.issue_comment.issue.pull_request.head }}
+        - run: echo ${{ github.event.issue_comment.issue.pull_request.head.sha }}
         - uses: actions/checkout@v3
           with:
             ref: ${{ github.event.issue_comment.issue.pull_request.head.sha }}
