@@ -7,6 +7,8 @@ jobs:
   check:
       if: startsWith(github.head_ref, 'main') != true
       runs-on: ubuntu-18.04
+      outputs:
+        pull_request_branch: ${{ steps.comment-branch.outputs.head_ref }}
       steps:
         - uses: xt0rted/pull-request-comment-branch@v1
           id: comment-branch
@@ -21,7 +23,7 @@ jobs:
 
   dispatch_command_to_cloud:
     needs: check
-    if: needs.check.outputs.up_to_date == 'true'
+    #if: needs.check.outputs.up_to_date == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Create a snapshot of an OSS PR to Cloud
@@ -33,12 +35,15 @@ jobs:
           issue-type: pull-request
           repository: airbytehq/oss-to-cloud-action-test
           dispatch-type: repository
+          static-args: |
+            repository=${{ github.repository }}
+            branch=${{ needs.check.outputs.pull_request_branch }}
           commands: |
             create-cloud-pr
 
       - name: Publish comment with error message
         if: steps.slash-command-dispatch.outputs.error-message
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@v2
         with:
           comment-id: ${{ github.event.comment.id }}
           body: |
