@@ -114,7 +114,6 @@ export const CreateConnectionPage: React.FC = () => {
       } else if (currentEntityStep === EntityStepsTypes.DESTINATION) {
         return (
           <>
-            {source && <InlineEnrollmentCallout withBottomMargin />}
             {type === EntityStepsTypes.CONNECTION && (
               <ExistingEntityForm type="destination" onSubmit={onSelectExistingDestination} />
             )}
@@ -214,6 +213,7 @@ export const CreateConnectionPage: React.FC = () => {
               }
             />
           )}
+          <InlineEnrollmentCallout withBottomMargin />
           {renderStep()}
         </FormPageContent>
       </ConnectorDocumentationWrapper>
