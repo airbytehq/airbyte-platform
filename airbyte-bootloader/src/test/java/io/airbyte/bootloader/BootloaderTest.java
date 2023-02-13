@@ -82,7 +82,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.40.28.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.40.32.001";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.40.28.001";
 
   @BeforeEach
@@ -131,7 +131,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider =
-          Optional.of(new LocalDefinitionsProvider());
+          Optional.of(new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
@@ -185,7 +185,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider =
-          Optional.of(new LocalDefinitionsProvider());
+          Optional.of(new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
@@ -212,7 +212,7 @@ class BootloaderTest {
               runMigrationOnStartup, null, postLoadExecutor);
       initBootloader.load();
 
-      final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider();
+      final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS);
       configRepository.seedActorDefinitions(localDefinitions.getSourceDefinitions(), localDefinitions.getDestinationDefinitions());
 
       final String sourceSpecs = """
@@ -316,7 +316,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider = Optional.of(
-          new LocalDefinitionsProvider());
+          new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
@@ -376,7 +376,7 @@ class BootloaderTest {
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
       val configsDatabaseMigrator = new ConfigsDatabaseMigrator(configDatabase, configsFlyway);
       final Optional<DefinitionsProvider> definitionsProvider =
-          Optional.of(new LocalDefinitionsProvider());
+          Optional.of(new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS));
       val jobsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val jobsDatabaseInitializer = DatabaseCheckFactory.createJobsDatabaseInitializer(jobsDslContext,
           jobsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH));
