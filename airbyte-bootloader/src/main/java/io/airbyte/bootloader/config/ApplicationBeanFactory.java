@@ -44,7 +44,7 @@ public class ApplicationBeanFactory {
 
   @Singleton
   public DefinitionsProvider localDefinitionsProvider() throws IOException {
-    return new LocalDefinitionsProvider();
+    return new LocalDefinitionsProvider(LocalDefinitionsProvider.DEFAULT_SEED_DEFINITION_RESOURCE_CLASS);
   }
 
   @Singleton

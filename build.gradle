@@ -113,6 +113,16 @@ def createSpotlessTarget = { pattern ->
             '.venv',
             '*.egg-info',
             'build',
+            'dbt-project-template',
+            'dbt-project-template-mssql',
+            'dbt-project-template-mysql',
+            'dbt-project-template-oracle',
+            'dbt-project-template-clickhouse',
+            'dbt-project-template-snowflake',
+            'dbt-project-template-tidb',
+            'dbt-project-template-duckdb',
+            'dbt_test_config',
+            'normalization_test_output',
             'tools',
             'secrets',
             'charts', // Helm charts often have injected template strings that will fail general linting. Helm linting is done separately.
@@ -372,6 +382,10 @@ subprojects { subproj ->
     }
 
     dependencies {
+        if (subproj.name != 'airbyte-commons') {
+            implementation project(':airbyte-commons')
+        }
+
         implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
         implementation(platform("org.glassfish.jersey:jersey-bom:2.31"))
 
@@ -445,6 +459,7 @@ subprojects { subproj ->
 }
 
 task('generate') {
+    dependsOn subprojects.collect { it.getTasksByName('generateProtocolClassFiles', true) }
     dependsOn subprojects.collect { it.getTasksByName('generateComponentManifestClassFiles', true) }
     dependsOn subprojects.collect { it.getTasksByName('generateJsonSchema2Pojo', true) }
 }
@@ -483,6 +498,11 @@ subprojects {
             flakeCheck.dependsOn licenseTask
         }
         blackFormat.dependsOn licenseTask
+
+        def generateFilesTask = project.tasks.findByName('generateProtocolClassFiles')
+        if (generateFilesTask != null) {
+            licenseTask.dependsOn generateFilesTask
+        }
 
         def generateManifestFilesTask = project.tasks.findByName('generateComponentManifestClassFiles')
         if (generateManifestFilesTask != null) {
