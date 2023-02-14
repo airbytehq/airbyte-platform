@@ -39,12 +39,19 @@ plugins {
     id 'maven-publish'
 }
 
-apply from: "$rootDir/publish-repositories.gradle"
-
 repositories {
     mavenCentral()
     maven {
         url 'https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/'
+    }
+
+    maven {
+        name = 'cloudrepo'
+        url = 'https://airbyte.mycloudrepo.io/repositories/airbyte-public-jars'
+        credentials {
+            username System.getenv('CLOUDREPO_USER')
+            password System.getenv('CLOUDREPO_PASSWORD')
+        }
     }
 }
 
@@ -113,6 +120,16 @@ def createSpotlessTarget = { pattern ->
             '.venv',
             '*.egg-info',
             'build',
+            'dbt-project-template',
+            'dbt-project-template-mssql',
+            'dbt-project-template-mysql',
+            'dbt-project-template-oracle',
+            'dbt-project-template-clickhouse',
+            'dbt-project-template-snowflake',
+            'dbt-project-template-tidb',
+            'dbt-project-template-duckdb',
+            'dbt_test_config',
+            'normalization_test_output',
             'tools',
             'secrets',
             'charts', // Helm charts often have injected template strings that will fail general linting. Helm linting is done separately.
@@ -372,6 +389,10 @@ subprojects { subproj ->
     }
 
     dependencies {
+        if (subproj.name != 'airbyte-commons') {
+            implementation project(':airbyte-commons')
+        }
+
         implementation(platform("com.fasterxml.jackson:jackson-bom:2.13.0"))
         implementation(platform("org.glassfish.jersey:jersey-bom:2.31"))
 
