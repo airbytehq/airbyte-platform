@@ -213,7 +213,7 @@ export const CreateConnectionPage: React.FC = () => {
               }
             />
           )}
-          <InlineEnrollmentCallout withBottomMargin />
+          {currentStep !== StepsTypes.CREATE_CONNECTION && <InlineEnrollmentCallout withBottomMargin />}
           {renderStep()}
         </FormPageContent>
       </ConnectorDocumentationWrapper>
