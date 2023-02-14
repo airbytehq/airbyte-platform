@@ -34,8 +34,8 @@ export type IconType =
 export interface IconProps {
   type: IconType;
   className?: string;
-  // We need to consider the implementation of a mechanism with predefined colors and sizes
-  // https://github.com/airbytehq/airbyte/issues/20133
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  color?: CSSStyleDeclaration["color"];
 }
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {

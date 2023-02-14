@@ -12,4 +12,6 @@ const Template: ComponentStory<typeof Icon> = (args) => <Icon {...args} />;
 export const ArrowRightIcon = Template.bind({});
 ArrowRightIcon.args = {
   type: "arrowRight",
+  size: "md",
+  color: "black",
 };
