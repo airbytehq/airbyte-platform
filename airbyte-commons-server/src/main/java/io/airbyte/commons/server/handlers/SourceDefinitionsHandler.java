@@ -27,7 +27,7 @@ import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
+import io.airbyte.commons.server.services.AirbyteGithubStore;
 import io.airbyte.commons.util.MoreLists;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
@@ -59,7 +59,7 @@ public class SourceDefinitionsHandler {
 
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
-  private final AirbyteRemoteOssCatalog remoteOssCatalog;
+  private final AirbyteGithubStore githubStore;
   private final SynchronousSchedulerClient schedulerSynchronousClient;
   private final SourceHandler sourceHandler;
   private final AirbyteProtocolVersionRange protocolVersionRange;
@@ -68,13 +68,13 @@ public class SourceDefinitionsHandler {
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
                                   final Supplier<UUID> uuidSupplier,
                                   final SynchronousSchedulerClient schedulerSynchronousClient,
-                                  final AirbyteRemoteOssCatalog remoteOssCatalog,
+                                  final AirbyteGithubStore githubStore,
                                   final SourceHandler sourceHandler,
                                   final AirbyteProtocolVersionRange protocolVersionRange) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.remoteOssCatalog = remoteOssCatalog;
+    this.githubStore = githubStore;
     this.sourceHandler = sourceHandler;
     this.protocolVersionRange = protocolVersionRange;
   }
@@ -87,7 +87,7 @@ public class SourceDefinitionsHandler {
     this.configRepository = configRepository;
     this.uuidSupplier = UUID::randomUUID;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.remoteOssCatalog = new AirbyteRemoteOssCatalog();
+    this.githubStore = AirbyteGithubStore.production();
     this.sourceHandler = sourceHandler;
     final Configs configs = new EnvConfigs();
     this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
@@ -107,7 +107,8 @@ public class SourceDefinitionsHandler {
           .protocolVersion(standardSourceDefinition.getProtocolVersion())
           .releaseStage(getReleaseStage(standardSourceDefinition))
           .releaseDate(getReleaseDate(standardSourceDefinition))
-          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()));
+          .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
+          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
 
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest source definitions list", e);
@@ -152,7 +153,11 @@ public class SourceDefinitionsHandler {
   }
 
   private List<StandardSourceDefinition> getLatestSources() {
-    return remoteOssCatalog.getSourceDefinitions();
+    try {
+      return githubStore.getLatestSources();
+    } catch (final InterruptedException e) {
+      throw new InternalServerKnownException("Request to retrieve latest destination definitions failed", e);
+    }
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)

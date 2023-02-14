@@ -2586,6 +2586,10 @@ components:
             - custom
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+        maxSecondsBetweenMessages:
+          description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
+          type: integer
+          format: int64
     SourceDefinitionReadList:
       type: object
       required:
@@ -2788,8 +2792,6 @@ components:
           type: string
           format: uuid
         disable_cache:
-          type: boolean
-        notifySchemaChange:
           type: boolean
     SourceUpdate:
       type: object
