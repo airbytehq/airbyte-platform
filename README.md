@@ -31,3 +31,5 @@
 We believe that only an **open-source** solution to data movement can cover the **long tail of data sources** while empowering data engineers to **customize existing connectors**. Our ultimate vision is to help you move data from any source to any destination. Airbyte already provides [300+ connectors](https://docs.airbyte.com/integrations/) for popular APIs, databases, data warehouses and data lakes.
 
 This repo is currently a work in progress acting as a staging branch for a refactor effort to split Airbyte Platform and Airbyte Connectors. Please refer to the [main repository](https://github.com/airbytehq/airbyte) to make changes.
+
+
