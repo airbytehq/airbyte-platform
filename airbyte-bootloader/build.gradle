@@ -18,7 +18,6 @@ dependencies {
         force = true
     }
 
-    implementation project(':airbyte-commons')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')

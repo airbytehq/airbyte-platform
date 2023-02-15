@@ -1,0 +1,24 @@
+plugins {
+    id 'airbyte-python'
+    id 'airbyte-docker'
+}
+
+airbytePython {
+    moduleDirectory 'airbyte_cdk'
+}
+
+task generateComponentManifestClassFiles(type: Exec) {
+    environment 'ROOT_DIR', rootDir.absolutePath
+    commandLine 'bin/generate-component-manifest-files.sh'
+    dependsOn ':tools:code-generator:airbyteDocker'
+}
+
+task validateSourceYamlManifest(type: Exec) {
+    environment 'ROOT_DIR', rootDir.absolutePath
+    commandLine 'bin/validate-yaml-schema.sh'
+}
+
+blackFormat.dependsOn generateComponentManifestClassFiles
+isortFormat.dependsOn generateComponentManifestClassFiles
+flakeCheck.dependsOn generateComponentManifestClassFiles
+installReqs.dependsOn generateComponentManifestClassFiles
