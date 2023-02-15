@@ -59,7 +59,7 @@ public class DestinationDefinitionsHandler {
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
   private final SynchronousSchedulerClient schedulerSynchronousClient;
-  private final AirbyteRemoteOssCatalog githubStore;
+  private final AirbyteRemoteOssCatalog remoteOssCatalog;
   private final DestinationHandler destinationHandler;
   private final AirbyteProtocolVersionRange protocolVersionRange;
 
@@ -67,13 +67,13 @@ public class DestinationDefinitionsHandler {
   public DestinationDefinitionsHandler(final ConfigRepository configRepository,
                                        final Supplier<UUID> uuidSupplier,
                                        final SynchronousSchedulerClient schedulerSynchronousClient,
-                                       final AirbyteRemoteOssCatalog githubStore,
+                                       final AirbyteRemoteOssCatalog remoteOssCatalog,
                                        final DestinationHandler destinationHandler,
                                        final AirbyteProtocolVersionRange protocolVersionRange) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.githubStore = githubStore;
+    this.remoteOssCatalog = remoteOssCatalog;
     this.destinationHandler = destinationHandler;
     this.protocolVersionRange = protocolVersionRange;
   }
@@ -86,7 +86,7 @@ public class DestinationDefinitionsHandler {
     this.configRepository = configRepository;
     this.uuidSupplier = UUID::randomUUID;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.githubStore = AirbyteRemoteOssCatalog.production();
+    this.remoteOssCatalog = AirbyteRemoteOssCatalog.production();
     this.destinationHandler = destinationHandler;
     final Configs configs = new EnvConfigs();
     this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
@@ -146,11 +146,7 @@ public class DestinationDefinitionsHandler {
   }
 
   private List<StandardDestinationDefinition> getLatestDestinations() {
-    try {
-      return githubStore.getDestinationDefinitions();
-    } catch (final InterruptedException e) {
-      throw new InternalServerKnownException("Request to retrieve latest destination definitions failed", e);
-    }
+      return remoteOssCatalog.getDestinationDefinitions();
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)

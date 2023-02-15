@@ -59,7 +59,7 @@ public class SourceDefinitionsHandler {
 
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
-  private final AirbyteRemoteOssCatalog githubStore;
+  private final AirbyteRemoteOssCatalog remoteOssCatalog;
   private final SynchronousSchedulerClient schedulerSynchronousClient;
   private final SourceHandler sourceHandler;
   private final AirbyteProtocolVersionRange protocolVersionRange;
@@ -68,13 +68,13 @@ public class SourceDefinitionsHandler {
   public SourceDefinitionsHandler(final ConfigRepository configRepository,
                                   final Supplier<UUID> uuidSupplier,
                                   final SynchronousSchedulerClient schedulerSynchronousClient,
-                                  final AirbyteRemoteOssCatalog githubStore,
+                                  final AirbyteRemoteOssCatalog remoteOssCatalog,
                                   final SourceHandler sourceHandler,
                                   final AirbyteProtocolVersionRange protocolVersionRange) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.githubStore = githubStore;
+    this.remoteOssCatalog = remoteOssCatalog;
     this.sourceHandler = sourceHandler;
     this.protocolVersionRange = protocolVersionRange;
   }
@@ -87,7 +87,7 @@ public class SourceDefinitionsHandler {
     this.configRepository = configRepository;
     this.uuidSupplier = UUID::randomUUID;
     this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.githubStore = AirbyteRemoteOssCatalog.production();
+    this.remoteOssCatalog = AirbyteRemoteOssCatalog.production();
     this.sourceHandler = sourceHandler;
     final Configs configs = new EnvConfigs();
     this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
@@ -152,11 +152,7 @@ public class SourceDefinitionsHandler {
   }
 
   private List<StandardSourceDefinition> getLatestSources() {
-    try {
-      return githubStore.getSourceDefinitions();
-    } catch (final InterruptedException e) {
-      throw new InternalServerKnownException("Request to retrieve latest destination definitions failed", e);
-    }
+    return remoteOssCatalog.getSourceDefinitions();
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)

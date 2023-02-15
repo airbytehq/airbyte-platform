@@ -98,7 +98,7 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public AirbyteRemoteOssCatalog airbyteGithubStore() {
+  public AirbyteRemoteOssCatalog remoteOssCatalog() {
     return AirbyteRemoteOssCatalog.production();
   }
 
