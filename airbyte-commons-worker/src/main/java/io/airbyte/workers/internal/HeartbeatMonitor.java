@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.internal;
@@ -20,8 +20,6 @@ import lombok.Getter;
  * It is ThreadSafe.
  */
 public class HeartbeatMonitor {
-
-  public static final Duration DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD = Duration.of(1, ChronoUnit.MILLIS);
 
   @Getter
   private final Duration heartbeatFreshnessThreshold;
