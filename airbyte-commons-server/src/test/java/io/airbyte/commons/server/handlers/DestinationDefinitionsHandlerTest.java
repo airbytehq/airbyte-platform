@@ -73,7 +73,7 @@ class DestinationDefinitionsHandlerTest {
   private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private Supplier<UUID> uuidSupplier;
   private SynchronousSchedulerClient schedulerSynchronousClient;
-  private AirbyteRemoteOssCatalog githubStore;
+  private AirbyteRemoteOssCatalog remoteOssCatalog;
   private DestinationHandler destinationHandler;
   private UUID workspaceId;
   private AirbyteProtocolVersionRange protocolVersionRange;
@@ -86,7 +86,7 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinition = generateDestinationDefinition();
     destinationDefinitionWithNormalization = generateDestinationDefinitionWithNormalization();
     schedulerSynchronousClient = spy(SynchronousSchedulerClient.class);
-    githubStore = mock(AirbyteRemoteOssCatalog.class);
+    remoteOssCatalog = mock(AirbyteRemoteOssCatalog.class);
     destinationHandler = mock(DestinationHandler.class);
     workspaceId = UUID.randomUUID();
     protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
@@ -95,7 +95,7 @@ class DestinationDefinitionsHandlerTest {
         configRepository,
         uuidSupplier,
         schedulerSynchronousClient,
-        githubStore,
+        remoteOssCatalog,
         destinationHandler,
         protocolVersionRange);
   }
@@ -653,7 +653,7 @@ class DestinationDefinitionsHandlerTest {
     @DisplayName("should return the latest list")
     void testCorrect() throws InterruptedException {
       final StandardDestinationDefinition destinationDefinition = generateDestinationDefinition();
-      when(githubStore.getDestinationDefinitions()).thenReturn(Collections.singletonList(destinationDefinition));
+      when(remoteOssCatalog.getDestinationDefinitions()).thenReturn(Collections.singletonList(destinationDefinition));
 
       final var destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions();
       assertEquals(1, destinationDefinitionReadList.size());
