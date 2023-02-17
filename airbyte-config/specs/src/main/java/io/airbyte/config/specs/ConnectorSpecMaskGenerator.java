@@ -48,7 +48,9 @@ public class ConnectorSpecMaskGenerator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorSpecMaskGenerator.class);
 
-  public static final String MASK_FILE = "specs_secrets_mask.yaml";
+  private static final String LOCAL_CONNECTOR_CATALOG_PATH = CatalogDefinitionsConfig.getLocalCatalogWritePath();
+  private static final String LOCAL_MASK_PATH = CatalogDefinitionsConfig.getLocalMasksPath();
+
   private static final Option PROJECT_ROOT_OPTION = Option.builder("p").longOpt("project-root").hasArg(true).required(true)
       .desc("path to what project to pull resources from").build();
   private static final Options OPTIONS = new Options().addOption(PROJECT_ROOT_OPTION);
@@ -59,12 +61,11 @@ public class ConnectorSpecMaskGenerator {
 
   public static void main(final String[] args) {
     final CommandLine parsed = Clis.parse(args, OPTIONS);
-    final String specRoot = parsed.getOptionValue(PROJECT_ROOT_OPTION.getOpt());
-    final String relativeWritePath = CatalogDefinitionsConfig.getLocalCatalogWritePath();
-    final Path catalogPath = getResourcePath(specRoot, relativeWritePath);
-    final Path maskWritePath = getResourcePath(specRoot, "seed/specs_secrets_mask.yaml");
+    final String projectRoot = parsed.getOptionValue(PROJECT_ROOT_OPTION.getOpt());
+    final Path catalogPath = getResourcePath(projectRoot, LOCAL_CONNECTOR_CATALOG_PATH);
+    final Path maskWritePath = getResourcePath(projectRoot, LOCAL_MASK_PATH);
 
-    LOGGER.info("Looking for catalog file at '{}'...", specRoot);
+    LOGGER.info("Looking for catalog file at '{}'...", projectRoot);
 
     final File inputFile = catalogPath.toFile();
 
@@ -86,7 +87,7 @@ public class ConnectorSpecMaskGenerator {
       final Path outputPath = IOs.writeFile(maskWritePath, outputString);
       LOGGER.info("Finished generating spec mask file '{}'.", outputPath);
     } else {
-      LOGGER.info("No spec files found in '{}'.  Nothing to generate.", specRoot);
+      LOGGER.info("No spec files found in '{}'.  Nothing to generate.", projectRoot);
     }
   }
 
