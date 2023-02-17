@@ -6,7 +6,6 @@ package io.airbyte.config.init;
 
 import com.google.common.io.Resources;
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
-import io.airbyte.config.CatalogDefinitionsConfig;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;

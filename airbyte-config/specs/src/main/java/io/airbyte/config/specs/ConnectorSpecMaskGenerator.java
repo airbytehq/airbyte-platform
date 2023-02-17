@@ -4,7 +4,6 @@
 
 package io.airbyte.config.specs;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.cli.Clis;
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
@@ -13,7 +12,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.CatalogDefinitionsConfig;
 import io.airbyte.config.CombinedConnectorCatalog;
-import io.airbyte.config.DockerImageSpec;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -21,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;

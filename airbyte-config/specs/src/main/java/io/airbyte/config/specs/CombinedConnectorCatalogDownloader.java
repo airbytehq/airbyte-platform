@@ -17,16 +17,16 @@ public class CombinedConnectorCatalogDownloader {
   private static final Logger LOGGER = LoggerFactory.getLogger(CombinedConnectorCatalogDownloader.class);
 
   /**
-   * This method is to create a path to the resource folder in the project.
-   * This is so that it's available at runtime via the getResource method.
+   * This method is to create a path to the resource folder in the project. This is so that it's
+   * available at runtime via the getResource method.
    */
   public static Path getResourcePath(final String projectPath, final String relativePath) {
     return Path.of(projectPath, "src/main/resources/", relativePath);
   }
 
   /**
-   * This method is to download the OSS catalog from the remote URL and save it to the local
-   * resource folder.
+   * This method is to download the OSS catalog from the remote URL and save it to the local resource
+   * folder.
    */
   public static void main(final String[] args) throws Exception {
     final String projectPath = args[0];
