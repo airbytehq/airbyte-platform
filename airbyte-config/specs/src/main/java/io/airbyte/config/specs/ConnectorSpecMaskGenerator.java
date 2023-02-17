@@ -7,6 +7,7 @@ package io.airbyte.config.specs;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.cli.Clis;
+import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
@@ -49,7 +50,6 @@ public class ConnectorSpecMaskGenerator {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorSpecMaskGenerator.class);
 
   private static final String LOCAL_CONNECTOR_CATALOG_PATH = CatalogDefinitionsConfig.getLocalCatalogWritePath();
-  private static final String LOCAL_MASK_PATH = CatalogDefinitionsConfig.getLocalMasksPath();
 
   private static final Option PROJECT_ROOT_OPTION = Option.builder("p").longOpt("project-root").hasArg(true).required(true)
       .desc("path to what project to pull resources from").build();
@@ -63,7 +63,7 @@ public class ConnectorSpecMaskGenerator {
     final CommandLine parsed = Clis.parse(args, OPTIONS);
     final String projectRoot = parsed.getOptionValue(PROJECT_ROOT_OPTION.getOpt());
     final Path catalogPath = getResourcePath(projectRoot, LOCAL_CONNECTOR_CATALOG_PATH);
-    final Path maskWritePath = getResourcePath(projectRoot, LOCAL_MASK_PATH);
+    final Path maskWritePath = getResourcePath(projectRoot, AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH);
 
     LOGGER.info("Looking for catalog file at '{}'...", projectRoot);
 
