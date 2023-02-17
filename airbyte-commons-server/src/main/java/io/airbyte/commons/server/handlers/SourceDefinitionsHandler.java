@@ -79,6 +79,20 @@ public class SourceDefinitionsHandler {
     this.protocolVersionRange = protocolVersionRange;
   }
 
+  // This should be deleted when cloud is migrated to micronaut
+  @Deprecated(forRemoval = true)
+  public SourceDefinitionsHandler(final ConfigRepository configRepository,
+                                  final SynchronousSchedulerClient schedulerSynchronousClient,
+                                  final SourceHandler sourceHandler) {
+    this.configRepository = configRepository;
+    this.uuidSupplier = UUID::randomUUID;
+    this.schedulerSynchronousClient = schedulerSynchronousClient;
+    this.remoteOssCatalog = new AirbyteRemoteOssCatalog();
+    this.sourceHandler = sourceHandler;
+    final Configs configs = new EnvConfigs();
+    this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
+  }
+
   @VisibleForTesting
   static SourceDefinitionRead buildSourceDefinitionRead(final StandardSourceDefinition standardSourceDefinition) {
     try {
