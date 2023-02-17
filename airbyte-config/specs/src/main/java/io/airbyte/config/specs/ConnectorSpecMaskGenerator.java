@@ -48,21 +48,21 @@ public class ConnectorSpecMaskGenerator {
 
   private static final String LOCAL_CONNECTOR_CATALOG_PATH = CatalogDefinitionsConfig.getLocalCatalogWritePath();
 
-  private static final Option PROJECT_ROOT_OPTION = Option.builder("p").longOpt("project-root").hasArg(true).required(true)
+  private static final Option RESOURCE_ROOT_OPTION = Option.builder("r").longOpt("resource-root").hasArg(true).required(true)
       .desc("path to what project to pull resources from").build();
-  private static final Options OPTIONS = new Options().addOption(PROJECT_ROOT_OPTION);
+  private static final Options OPTIONS = new Options().addOption(RESOURCE_ROOT_OPTION);
 
   public static Path getResourcePath(final String projectPath, final String relativePath) {
-    return Path.of(projectPath, "src/main/resources/", relativePath);
+    return Path.of(projectPath, relativePath);
   }
 
   public static void main(final String[] args) {
     final CommandLine parsed = Clis.parse(args, OPTIONS);
-    final String projectRoot = parsed.getOptionValue(PROJECT_ROOT_OPTION.getOpt());
-    final Path catalogPath = getResourcePath(projectRoot, LOCAL_CONNECTOR_CATALOG_PATH);
-    final Path maskWritePath = getResourcePath(projectRoot, AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH);
+    final String resource = parsed.getOptionValue(RESOURCE_ROOT_OPTION.getOpt());
+    final Path catalogPath = getResourcePath(resource, LOCAL_CONNECTOR_CATALOG_PATH);
+    final Path maskWritePath = getResourcePath(resource, AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH);
 
-    LOGGER.info("Looking for catalog file at '{}'...", projectRoot);
+    LOGGER.info("Looking for catalog file at '{}'...", catalogPath);
 
     final File inputFile = catalogPath.toFile();
 
@@ -84,7 +84,7 @@ public class ConnectorSpecMaskGenerator {
       final Path outputPath = IOs.writeFile(maskWritePath, outputString);
       LOGGER.info("Finished generating spec mask file '{}'.", outputPath);
     } else {
-      LOGGER.info("No spec files found in '{}'.  Nothing to generate.", projectRoot);
+      LOGGER.info("No spec files found in '{}'.  Nothing to generate.", resource);
     }
   }
 

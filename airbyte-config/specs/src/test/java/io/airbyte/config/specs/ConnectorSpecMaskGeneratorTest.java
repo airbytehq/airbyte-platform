@@ -4,7 +4,7 @@
 
 package io.airbyte.config.specs;
 
-import static io.airbyte.config.specs.ConnectorSpecMaskGenerator.MASK_FILE;
+import static io.airbyte.commons.constants.AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,23 +25,32 @@ import org.junit.jupiter.api.Test;
  */
 class ConnectorSpecMaskGeneratorTest {
 
+  private String getProjectAbsolutePath() {
+    return new File("").getAbsolutePath();
+  }
+
   @Test
   void testConnectorSpecMaskGenerator() throws IOException {
+//    final String directory = "src/test/resources/";
     final String directory = "src/test/resources/valid_specs";
-    final File outputFile = new File(directory, MASK_FILE);
-    final String[] args = {"--specs-root", directory};
+    final File outputFile = new File(directory,  LOCAL_SECRETS_MASKS_PATH);
+
+    final String[] args = {"--resource-root", directory};
+    // log output file path
+    System.out.println("put file here");
+    System.out.println(outputFile.getAbsolutePath());
     ConnectorSpecMaskGenerator.main(args);
     assertTrue(outputFile.exists());
 
     final JsonNode maskContents = Yamls.deserialize(FileUtils.readFileToString(outputFile, Charset.defaultCharset()));
-    assertEquals(Set.of("api_token", "auth_user_password"), Jsons.object(maskContents.get("properties"), new TypeReference<Set<String>>() {}));
+    assertEquals(Set.of("azure_blob_storage_account_key", "api_key"), Jsons.object(maskContents.get("properties"), new TypeReference<Set<String>>() {}));
   }
 
   @Test
-  void testConnectorSpecMaskGeneratorNoSpecs() throws IOException {
+  void testConnectorSpecMaskGeneratorNoSpecs() {
     final String directory = "src/test/resources/no_specs";
-    final File outputFile = new File(directory, MASK_FILE);
-    final String[] args = {"--specs-root", directory};
+    final File outputFile = new File(directory, LOCAL_SECRETS_MASKS_PATH);
+    final String[] args = {"--project-root", directory};
     ConnectorSpecMaskGenerator.main(args);
     assertFalse(outputFile.exists());
   }
