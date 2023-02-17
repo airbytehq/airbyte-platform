@@ -31,9 +31,9 @@ class ConnectorSpecMaskGeneratorTest {
 
   @Test
   void testConnectorSpecMaskGenerator() throws IOException {
-//    final String directory = "src/test/resources/";
+    // final String directory = "src/test/resources/";
     final String directory = "src/test/resources/valid_specs";
-    final File outputFile = new File(directory,  LOCAL_SECRETS_MASKS_PATH);
+    final File outputFile = new File(directory, LOCAL_SECRETS_MASKS_PATH);
 
     final String[] args = {"--resource-root", directory};
     // log output file path
@@ -43,7 +43,8 @@ class ConnectorSpecMaskGeneratorTest {
     assertTrue(outputFile.exists());
 
     final JsonNode maskContents = Yamls.deserialize(FileUtils.readFileToString(outputFile, Charset.defaultCharset()));
-    assertEquals(Set.of("azure_blob_storage_account_key", "api_key"), Jsons.object(maskContents.get("properties"), new TypeReference<Set<String>>() {}));
+    assertEquals(Set.of("azure_blob_storage_account_key", "api_key"),
+        Jsons.object(maskContents.get("properties"), new TypeReference<Set<String>>() {}));
   }
 
   @Test
