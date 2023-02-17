@@ -63,14 +63,9 @@ public class WebBackendCheckUpdatesHandler {
       return NO_CHANGES_FOUND;
     }
 
-    try {
-      newActorDefToDockerImageTag = remoteOssCatalog.getDestinationDefinitions()
-          .stream()
-          .collect(Collectors.toMap(StandardDestinationDefinition::getDestinationDefinitionId, StandardDestinationDefinition::getDockerImageTag));
-    } catch (final InterruptedException e) {
-      log.error("Failed to get latest list of standard destination definitions", e);
-      return NO_CHANGES_FOUND;
-    }
+    newActorDefToDockerImageTag = remoteOssCatalog.getDestinationDefinitions()
+        .stream()
+        .collect(Collectors.toMap(StandardDestinationDefinition::getDestinationDefinitionId, StandardDestinationDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);
   }
@@ -89,14 +84,9 @@ public class WebBackendCheckUpdatesHandler {
       return NO_CHANGES_FOUND;
     }
 
-    try {
-      newActorDefToDockerImageTag = remoteOssCatalog.getSourceDefinitions()
-          .stream()
-          .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, StandardSourceDefinition::getDockerImageTag));
-    } catch (final InterruptedException e) {
-      log.error("Failed to get latest list of standard source definitions", e);
-      return NO_CHANGES_FOUND;
-    }
+    newActorDefToDockerImageTag = remoteOssCatalog.getSourceDefinitions()
+        .stream()
+        .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, StandardSourceDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);
   }

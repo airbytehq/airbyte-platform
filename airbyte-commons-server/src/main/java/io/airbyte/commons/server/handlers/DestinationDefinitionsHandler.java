@@ -78,20 +78,6 @@ public class DestinationDefinitionsHandler {
     this.protocolVersionRange = protocolVersionRange;
   }
 
-  // This should be deleted when cloud is migrated to micronaut
-  @Deprecated(forRemoval = true)
-  public DestinationDefinitionsHandler(final ConfigRepository configRepository,
-                                       final SynchronousSchedulerClient schedulerSynchronousClient,
-                                       final DestinationHandler destinationHandler) {
-    this.configRepository = configRepository;
-    this.uuidSupplier = UUID::randomUUID;
-    this.schedulerSynchronousClient = schedulerSynchronousClient;
-    this.remoteOssCatalog = AirbyteRemoteOssCatalog.production();
-    this.destinationHandler = destinationHandler;
-    final Configs configs = new EnvConfigs();
-    this.protocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(), configs.getAirbyteProtocolVersionMax());
-  }
-
   @VisibleForTesting
   static DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition) {
     try {

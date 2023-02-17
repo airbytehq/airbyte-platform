@@ -98,11 +98,6 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public AirbyteRemoteOssCatalog remoteOssCatalog() {
-    return AirbyteRemoteOssCatalog.production();
-  }
-
-  @Singleton
   public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
                                                                  @Value("${airbyte.protocol.min-version}") final String minVersion,
                                                                  @Value("${airbyte.protocol.max-version}") final String maxVersion) {
