@@ -32,13 +32,13 @@ project(":airbyte-config:init").tasks.processTestResources.dependsOn(downloadCom
 project(":airbyte-config:init").tasks.test.dependsOn(downloadCombinedConnectorCatalog)
 
 
-task generateConnectorSpecsMask(type: JavaExec, dependsOn: generateSeedConnectorSpecs) {
+task generateConnectorSpecsMask(type: JavaExec, dependsOn: downloadCombinedConnectorCatalog) {
     classpath = sourceSets.main.runtimeClasspath
 
     mainClass = 'io.airbyte.config.specs.ConnectorSpecMaskGenerator'
 
-    args '--specs-root'
-    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources/seed')
+    args '--project-root'
+    args project(":airbyte-config:init").projectDir
 }
 
 project(":airbyte-config:init").tasks.processResources.dependsOn(generateConnectorSpecsMask)
