@@ -32,11 +32,11 @@ public class WebBackendCheckUpdatesHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   final ConfigRepository configRepositoryDoNotUse;
-  final AirbyteRemoteOssCatalog githubStore;
+  final AirbyteRemoteOssCatalog remoteOssCatalog;
 
-  public WebBackendCheckUpdatesHandler(final ConfigRepository configRepositoryDoNotUse, final AirbyteRemoteOssCatalog githubStore) {
+  public WebBackendCheckUpdatesHandler(final ConfigRepository configRepositoryDoNotUse, final AirbyteRemoteOssCatalog remoteOssCatalog) {
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
-    this.githubStore = githubStore;
+    this.remoteOssCatalog = remoteOssCatalog;
   }
 
   public WebBackendCheckUpdatesRead checkUpdates() {
@@ -64,7 +64,7 @@ public class WebBackendCheckUpdatesHandler {
     }
 
     try {
-      newActorDefToDockerImageTag = githubStore.getDestinationDefinitions()
+      newActorDefToDockerImageTag = remoteOssCatalog.getDestinationDefinitions()
           .stream()
           .collect(Collectors.toMap(StandardDestinationDefinition::getDestinationDefinitionId, StandardDestinationDefinition::getDockerImageTag));
     } catch (final InterruptedException e) {
@@ -90,7 +90,7 @@ public class WebBackendCheckUpdatesHandler {
     }
 
     try {
-      newActorDefToDockerImageTag = githubStore.getSourceDefinitions()
+      newActorDefToDockerImageTag = remoteOssCatalog.getSourceDefinitions()
           .stream()
           .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, StandardSourceDefinition::getDockerImageTag));
     } catch (final InterruptedException e) {
