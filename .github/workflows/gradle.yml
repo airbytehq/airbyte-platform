@@ -169,6 +169,7 @@ jobs:
           cd /tmp
           git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte 
           cp -R airbyte/docs $dir/docs
+          ls -lah $dir/docs
 
       - name: Build :airbyte-webapp
         uses: Wandalen/wretry.action@master
