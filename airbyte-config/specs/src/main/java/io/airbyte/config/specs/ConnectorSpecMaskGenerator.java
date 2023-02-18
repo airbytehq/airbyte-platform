@@ -66,7 +66,7 @@ public class ConnectorSpecMaskGenerator {
 
     final File inputFile = catalogPath.toFile();
 
-    if (inputFile != null) {
+    if (inputFile != null && inputFile.exists()) {
       LOGGER.info("Found catalog for processing.");
       final String jsonString = readFile(inputFile);
       final CombinedConnectorCatalog catalog = Jsons.deserialize(jsonString, CombinedConnectorCatalog.class);
@@ -84,7 +84,7 @@ public class ConnectorSpecMaskGenerator {
       final Path outputPath = IOs.writeFile(maskWritePath, outputString);
       LOGGER.info("Finished generating spec mask file '{}'.", outputPath);
     } else {
-      LOGGER.info("No spec files found in '{}'.  Nothing to generate.", resource);
+      throw new RuntimeException(String.format("No catalog files found in '%s'.  Nothing to generate.", resource));
     }
   }
 

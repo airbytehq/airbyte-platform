@@ -6,7 +6,7 @@ package io.airbyte.config.specs;
 
 import static io.airbyte.commons.constants.AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,20 +25,12 @@ import org.junit.jupiter.api.Test;
  */
 class ConnectorSpecMaskGeneratorTest {
 
-  private String getProjectAbsolutePath() {
-    return new File("").getAbsolutePath();
-  }
-
   @Test
   void testConnectorSpecMaskGenerator() throws IOException {
-    // final String directory = "src/test/resources/";
     final String directory = "src/test/resources/valid_specs";
     final File outputFile = new File(directory, LOCAL_SECRETS_MASKS_PATH);
-
     final String[] args = {"--resource-root", directory};
-    // log output file path
-    System.out.println("put file here");
-    System.out.println(outputFile.getAbsolutePath());
+
     ConnectorSpecMaskGenerator.main(args);
     assertTrue(outputFile.exists());
 
@@ -50,10 +42,8 @@ class ConnectorSpecMaskGeneratorTest {
   @Test
   void testConnectorSpecMaskGeneratorNoSpecs() {
     final String directory = "src/test/resources/no_specs";
-    final File outputFile = new File(directory, LOCAL_SECRETS_MASKS_PATH);
-    final String[] args = {"--project-root", directory};
-    ConnectorSpecMaskGenerator.main(args);
-    assertFalse(outputFile.exists());
+    final String[] args = {"--resource-root", directory};
+    assertThrows(RuntimeException.class, () -> ConnectorSpecMaskGenerator.main(args));
   }
 
 }
