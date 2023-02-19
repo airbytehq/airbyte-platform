@@ -297,6 +297,7 @@ subprojects { subproj ->
         showViolations = true
         toolVersion = '10.0'
     }
+    checkstyleMain.source = "src/main/java"
 
     pmd {
         consoleOutput = true
