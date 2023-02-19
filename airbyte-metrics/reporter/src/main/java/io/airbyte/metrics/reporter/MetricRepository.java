@@ -95,8 +95,8 @@ class MetricRepository {
   Map<String, Double> oldestPendingJobAgeSecsByGeography() {
     final var query =
         """
-        SELECT 
-          cast(connection.geography as varchar) AS geography, 
+        SELECT
+          cast(connection.geography as varchar) AS geography,
           MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at))) AS run_duration_seconds
         FROM jobs
         JOIN connection
@@ -275,7 +275,7 @@ class MetricRepository {
           -- Find if currently running time takes 2x more time than average running time,
           -- and it's 15 minutes (900 seconds) more than average running time so it won't alert on noises for quick sync jobs.
             current_running_attempts.running_time > greatest(
-              historic_avg_running_attempts.avg_run_sec * 2, 
+              historic_avg_running_attempts.avg_run_sec * 2,
               historic_avg_running_attempts.avg_run_sec + 900
             )
         """;

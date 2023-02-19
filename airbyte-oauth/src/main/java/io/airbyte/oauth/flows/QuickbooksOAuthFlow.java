@@ -18,10 +18,13 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Quickbooks OAuth.
+ */
 public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
 
-  final String CONSENT_URL = "https://appcenter.intuit.com/app/connect/oauth2";
-  final String TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
+  private static final String CONSENT_URL = "https://appcenter.intuit.com/app/connect/oauth2";
+  private static final String TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 
   public QuickbooksOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
     super(configRepository, httpClient);

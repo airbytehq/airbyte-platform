@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://developer.zendesk.com/documentation/live-chat/getting-started/auth/
+ * Following docs from https://developer.zendesk.com/documentation/live-chat/getting-started/auth/.
  */
 public class ZendeskChatOAuthFlow extends BaseOAuth2Flow {
 
