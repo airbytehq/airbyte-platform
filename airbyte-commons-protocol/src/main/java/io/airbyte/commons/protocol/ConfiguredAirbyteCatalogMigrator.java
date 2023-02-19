@@ -13,6 +13,9 @@ import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Catalog migrator.
+ */
 @Singleton
 public class ConfiguredAirbyteCatalogMigrator {
 
@@ -29,17 +32,17 @@ public class ConfiguredAirbyteCatalogMigrator {
 
   /**
    * Downgrade a message from the most recent version to the target version by chaining all the
-   * required migrations
+   * required migrations.
    */
-  public <PreviousVersion, CurrentVersion> PreviousVersion downgrade(final CurrentVersion message, final Version target) {
+  public <V0, V1> V0 downgrade(final V1 message, final Version target) {
     return migrationContainer.downgrade(message, target, ConfiguredAirbyteCatalogMigrator::applyDowngrade);
   }
 
   /**
    * Upgrade a message from the source version to the most recent version by chaining all the required
-   * migrations
+   * migrations.
    */
-  public <PreviousVersion, CurrentVersion> CurrentVersion upgrade(final PreviousVersion message, final Version source) {
+  public <V0, V1> V1 upgrade(final V0 message, final Version source) {
     return migrationContainer.upgrade(message, source, ConfiguredAirbyteCatalogMigrator::applyUpgrade);
   }
 
@@ -48,15 +51,15 @@ public class ConfiguredAirbyteCatalogMigrator {
   }
 
   // Helper function to work around type casting
-  private static <PreviousVersion, CurrentVersion> PreviousVersion applyDowngrade(final ConfiguredAirbyteCatalogMigration<PreviousVersion, CurrentVersion> migration,
-                                                                                  final Object message) {
-    return migration.downgrade((CurrentVersion) message);
+  private static <V0, V1> V0 applyDowngrade(final ConfiguredAirbyteCatalogMigration<V0, V1> migration,
+                                            final Object message) {
+    return migration.downgrade((V1) message);
   }
 
   // Helper function to work around type casting
-  private static <PreviousVersion, CurrentVersion> CurrentVersion applyUpgrade(final ConfiguredAirbyteCatalogMigration<PreviousVersion, CurrentVersion> migration,
-                                                                               final Object message) {
-    return migration.upgrade((PreviousVersion) message);
+  private static <V0, V1> V1 applyUpgrade(final ConfiguredAirbyteCatalogMigration<V0, V1> migration,
+                                          final Object message) {
+    return migration.upgrade((V0) message);
   }
 
   // Used for inspection of the injection

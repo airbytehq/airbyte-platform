@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Shared code for interacting with JSONSchema.
+ */
 // todo (cgardens) - we need the ability to identify jsonschemas that Airbyte considers invalid for
 // a connector (e.g. "not" keyword).
 @Slf4j
@@ -64,10 +67,15 @@ public class JsonSchemas {
     }
   }
 
-  /*
+  /**
    * JsonReferenceProcessor relies on all the json in consumes being in a file system (not in a jar).
    * This method copies all the json configs out of the jar into a temporary directory so that
    * JsonReferenceProcessor can find them.
+   *
+   * @param resourceDir location of the resource that contains the JSONSchema files
+   * @param klass class with which the resource is associated
+   * @param <T> type of class
+   * @return path to where the files have been copied
    */
   public static <T> Path prepareSchemas(final String resourceDir, final Class<T> klass) {
     try {
@@ -160,9 +168,8 @@ public class JsonSchemas {
   }
 
   /**
-   * Recursive, depth-first implementation of { @link JsonSchemas#traverseJsonSchema(final JsonNode
-   * jsonNode, final BiConsumer<JsonNode, List<String>> consumer) }. Takes path as argument so that
-   * the path can be passed to the consumer.
+   * Recursive, depth-first implementation of JsonSchemas#traverseJsonSchema(...). Takes path as
+   * argument so that the path can be passed to the consumer.
    *
    * @param jsonSchemaNode - jsonschema object to traverse.
    * @param consumer - consumer to be called at each node. it accepts the current node and the path to
@@ -211,6 +218,9 @@ public class JsonSchemas {
           } else {
             log.warn("The object is a properties key or a combo keyword. The traversal is silently stopped. Current schema: " + jsonSchemaNode);
           }
+        }
+        default -> {
+          // no op
         }
       }
     }
@@ -332,10 +342,10 @@ public class JsonSchemas {
 
     @Override
     public String toString() {
-      return "FieldNameOrList{" +
-          "fieldName='" + fieldName + '\'' +
-          ", isList=" + isList +
-          '}';
+      return "FieldNameOrList{"
+          + "fieldName='" + fieldName + '\''
+          + ", isList=" + isList
+          + '}';
     }
 
   }

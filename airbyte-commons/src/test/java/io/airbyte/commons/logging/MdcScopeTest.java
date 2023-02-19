@@ -36,7 +36,9 @@ class MdcScopeTest {
   @Test
   @DisplayName("The MDC context is properly restored")
   void testMDCRestore() {
-    try (final MdcScope ignored = new MdcScope(modificationInMDC)) {}
+    try (final MdcScope ignored = new MdcScope(modificationInMDC)) {
+      // no op
+    }
 
     final Map<String, String> mdcState = MDC.getCopyOfContextMap();
 

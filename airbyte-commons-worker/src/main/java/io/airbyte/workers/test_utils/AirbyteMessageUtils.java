@@ -27,6 +27,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Static utility methods for creating {@link AirbyteMessage}s.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 public class AirbyteMessageUtils {
 
   public static AirbyteMessage createRecordMessage(final String tableName,
@@ -39,16 +43,6 @@ public class AirbyteMessageUtils {
             .withData(record)
             .withStream(tableName)
             .withEmittedAt(timeExtracted.getEpochSecond()));
-  }
-
-  public static AirbyteMessage createLogMessage(final AirbyteLogMessage.Level level,
-                                                final String message) {
-
-    return new AirbyteMessage()
-        .withType(AirbyteMessage.Type.LOG)
-        .withLog(new AirbyteLogMessage()
-            .withLevel(level)
-            .withMessage(message));
   }
 
   public static AirbyteMessage createRecordMessage(final String tableName,
@@ -72,6 +66,16 @@ public class AirbyteMessageUtils {
     return new AirbyteMessage()
         .withType(AirbyteMessage.Type.RECORD)
         .withRecord(new AirbyteRecordMessage().withStream(streamName).withData(Jsons.jsonNode(recordData)));
+  }
+
+  public static AirbyteMessage createLogMessage(final AirbyteLogMessage.Level level,
+                                                final String message) {
+
+    return new AirbyteMessage()
+        .withType(AirbyteMessage.Type.LOG)
+        .withLog(new AirbyteLogMessage()
+            .withLevel(level)
+            .withMessage(message));
   }
 
   public static AirbyteMessage createStateMessage(final int stateData) {

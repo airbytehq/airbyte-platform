@@ -18,6 +18,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  */
 public class MoreMappers {
 
+  /**
+   * Init default {@link ObjectMapper}.
+   *
+   * @return object mapper
+   */
   public static ObjectMapper initMapper() {
     final ObjectMapper result = new ObjectMapper().registerModule(new JavaTimeModule());
     result.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -25,6 +30,12 @@ public class MoreMappers {
     return result;
   }
 
+  /**
+   * Init default yaml {@link ObjectMapper}.
+   *
+   * @param factory yaml object mapper factory
+   * @return object mapper
+   */
   public static ObjectMapper initYamlMapper(final YAMLFactory factory) {
     return new ObjectMapper(factory).registerModule(new JavaTimeModule());
   }

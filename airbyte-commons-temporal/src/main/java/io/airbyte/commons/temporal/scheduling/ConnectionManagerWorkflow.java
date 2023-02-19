@@ -13,6 +13,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Temporal workflow that manages running sync jobs for a connection. It handles scheduling, the
+ * whole job / attempt lifecycle, and executing the sync.
+ */
+// todo (cgardens) - ideally we could rebuild this to just manage scheduling and job lifecycle and
+// not know anything about syncs. Right now multiple concepts are smashed into this one house.
 @WorkflowInterface
 public interface ConnectionManagerWorkflow {
 
@@ -67,6 +73,9 @@ public interface ConnectionManagerWorkflow {
   @QueryMethod
   WorkflowState getState();
 
+  /**
+   * Job Attempt Information.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

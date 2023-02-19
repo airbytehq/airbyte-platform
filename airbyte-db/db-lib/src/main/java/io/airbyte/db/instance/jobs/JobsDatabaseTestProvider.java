@@ -15,6 +15,9 @@ import java.io.IOException;
 import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
 
+/**
+ * Jobs db test provider.
+ */
 public class JobsDatabaseTestProvider implements TestDatabaseProvider {
 
   private final DSLContext dslContext;

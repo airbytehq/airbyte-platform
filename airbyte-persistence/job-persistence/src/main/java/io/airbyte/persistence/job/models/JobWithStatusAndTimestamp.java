@@ -6,6 +6,9 @@ package io.airbyte.persistence.job.models;
 
 import java.util.Objects;
 
+/**
+ * Status, created at, and updated at for a job.
+ */
 public class JobWithStatusAndTimestamp {
 
   private final long id;
@@ -48,10 +51,10 @@ public class JobWithStatusAndTimestamp {
       return false;
     }
     final JobWithStatusAndTimestamp jobWithStatusAndTimestamp = (JobWithStatusAndTimestamp) o;
-    return id == jobWithStatusAndTimestamp.id &&
-        status == jobWithStatusAndTimestamp.status &&
-        createdAtInSecond == jobWithStatusAndTimestamp.createdAtInSecond &&
-        updatedAtInSecond == jobWithStatusAndTimestamp.updatedAtInSecond;
+    return id == jobWithStatusAndTimestamp.id
+        && status == jobWithStatusAndTimestamp.status
+        && createdAtInSecond == jobWithStatusAndTimestamp.createdAtInSecond
+        && updatedAtInSecond == jobWithStatusAndTimestamp.updatedAtInSecond;
   }
 
   @Override
@@ -61,12 +64,12 @@ public class JobWithStatusAndTimestamp {
 
   @Override
   public String toString() {
-    return "Job{" +
-        "id=" + id +
-        ", status=" + status +
-        ", createdAtInSecond=" + createdAtInSecond +
-        ", updatedAtInSecond=" + updatedAtInSecond +
-        '}';
+    return "Job{"
+        + "id=" + id
+        + ", status=" + status
+        + ", createdAtInSecond=" + createdAtInSecond
+        + ", updatedAtInSecond=" + updatedAtInSecond
+        + '}';
   }
 
 }

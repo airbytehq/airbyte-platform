@@ -49,14 +49,14 @@ public class AirbyteMessageSerDeProvider {
   }
 
   /**
-   * Returns the Deserializer for the version if known else empty
+   * Returns the Deserializer for the version if known else empty.
    */
   public Optional<AirbyteMessageDeserializer<?>> getDeserializer(final Version version) {
     return Optional.ofNullable(deserializers.get(version.getMajorVersion()));
   }
 
   /**
-   * Returns the Serializer for the version if known else empty
+   * Returns the Serializer for the version if known else empty.
    */
   public Optional<AirbyteMessageSerializer<?>> getSerializer(final Version version) {
     return Optional.ofNullable(serializers.get(version.getMajorVersion()));

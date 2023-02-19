@@ -118,13 +118,14 @@ import org.testcontainers.utility.MountableFile;
  * <li>kubernetes client</li>
  * <li>lists of UUIDS representing IDs of sources, destinations, connections, and operations</li>
  */
+@SuppressWarnings("MissingJavadocMethod")
 public class AirbyteAcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AirbyteAcceptanceTestHarness.class);
 
   private static final String DOCKER_COMPOSE_FILE_NAME = "docker-compose.yaml";
   // assume env file is one directory level up from airbyte-tests.
-  private final static File ENV_FILE = Path.of(System.getProperty("user.dir")).getParent().resolve(".env").toFile();
+  private static final File ENV_FILE = Path.of(System.getProperty("user.dir")).getParent().resolve(".env").toFile();
 
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:13-alpine");
 
@@ -317,8 +318,8 @@ public class AirbyteAcceptanceTestHarness {
     isGke = System.getenv().containsKey("IS_GKE");
     isMac = System.getProperty("os.name").startsWith("Mac");
     useExternalDeployment =
-        System.getenv("USE_EXTERNAL_DEPLOYMENT") != null &&
-            System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
+        System.getenv("USE_EXTERNAL_DEPLOYMENT") != null
+            && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
   }
 
   private WorkflowClient getWorkflowClient() {
@@ -465,8 +466,8 @@ public class AirbyteAcceptanceTestHarness {
    * Assert that the normalized destination matches the input records, only expecting a single id
    * column.
    *
-   * @param sourceRecords
-   * @throws Exception
+   * @param sourceRecords source records
+   * @throws Exception while retrieving sources
    */
   public void assertNormalizedDestinationContainsIdColumn(final List<JsonNode> sourceRecords) throws Exception {
     final Database destination = getDestinationDatabase();
@@ -900,6 +901,9 @@ public class AirbyteAcceptanceTestHarness {
     return mostRecentSyncJob;
   }
 
+  /**
+   * Connector type.
+   */
   public enum Type {
     SOURCE,
     DESTINATION

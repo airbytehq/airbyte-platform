@@ -11,6 +11,10 @@ import java.util.Queue;
 import java.util.UUID;
 import lombok.Value;
 
+/**
+ * Listen for changes to the WorkflowState so that they can be communicated to a running
+ * ConnectionManagerWorkflow.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME,
               include = JsonTypeInfo.As.PROPERTY,
               property = "type")
@@ -22,6 +26,9 @@ import lombok.Value;
 })
 public interface WorkflowStateChangedListener {
 
+  /**
+   * WorkflowState field types.
+   */
   enum StateField {
     CANCELLED,
     DELETED,
@@ -38,6 +45,9 @@ public interface WorkflowStateChangedListener {
     SKIP_SCHEDULING_NEXT_WORKFLOW,
   }
 
+  /**
+   * Container for transmitting changes to workflow state fields for a connection manager workflow.
+   */
   @Value
   class ChangedStateEvent {
 

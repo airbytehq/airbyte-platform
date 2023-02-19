@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
+/**
+ * Tests for the Airbyte API Client.
+ */
 public class AirbyteApiClientTest {
 
   // These set of configurations are so each test case takes ~3 secs.

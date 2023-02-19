@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Tracks metrics on state message. Tracking state messages emitted from the source and committed to
+ * the destination.
+ */
 public class StateMetricsTracker {
 
   private static final int STATE_HASH_SIZE = Integer.BYTES;
@@ -52,6 +56,14 @@ public class StateMetricsTracker {
     this.capacityExceeded = false;
   }
 
+  /**
+   * Add state to tracker.
+   *
+   * @param stateMessage state message to add.
+   * @param stateHash hash of state message
+   * @param timeEmitted time state message was emitted
+   * @throws StateMetricsTrackerOomException exception if state metrics take up too much memory.
+   */
   public synchronized void addState(final AirbyteStateMessage stateMessage, final int stateHash, final LocalDateTime timeEmitted)
       throws StateMetricsTrackerOomException {
     final long epochTime = timeEmitted.toEpochSecond(ZoneOffset.UTC);
@@ -71,6 +83,16 @@ public class StateMetricsTracker {
     }
   }
 
+  /**
+   * Update state stats when state is committed.
+   *
+   * @param stateMessage new state message
+   * @param stateHash has of state message
+   * @param timeCommitted time the state was committed
+   * @throws StateMetricsTrackerNoStateMatchException thrown if committed state is not in the stats.
+   *         This should not happen because if a state is committed that means it was emitted from the
+   *         Source and thus should already be stored in the stats as emitted.
+   */
   public synchronized void updateStates(final AirbyteStateMessage stateMessage, final int stateHash, final LocalDateTime timeCommitted)
       throws StateMetricsTrackerNoStateMatchException {
     final LocalDateTime startingTime;
@@ -159,7 +181,7 @@ public class StateMetricsTracker {
     return (long) result;
   }
 
-  public void updateMaxAndMeanSecondsToReceiveStateMessage(final LocalDateTime stateMessageReceivedAt) {
+  void updateMaxAndMeanSecondsToReceiveStateMessage(final LocalDateTime stateMessageReceivedAt) {
     final Long secondsSinceLastStateMessage = calculateSecondsSinceLastStateEmitted(stateMessageReceivedAt);
     if (maxSecondsToReceiveSourceStateMessage < secondsSinceLastStateMessage) {
       maxSecondsToReceiveSourceStateMessage = secondsSinceLastStateMessage;
@@ -243,7 +265,7 @@ public class StateMetricsTracker {
   }
 
   /**
-   * Thrown when the StateMetricsTracker exceeds its allotted memory
+   * Thrown when the StateMetricsTracker exceeds its allotted memory.
    */
   public static class StateMetricsTrackerOomException extends Exception {
 
@@ -254,7 +276,7 @@ public class StateMetricsTracker {
   }
 
   /**
-   * Thrown when the destination state message is not able to be matched to a source state message
+   * Thrown when the destination state message is not able to be matched to a source state message.
    */
   public static class StateMetricsTrackerNoStateMatchException extends Exception {
 

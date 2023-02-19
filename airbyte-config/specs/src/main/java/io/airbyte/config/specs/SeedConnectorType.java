@@ -4,6 +4,9 @@
 
 package io.airbyte.config.specs;
 
+/**
+ * Enum to handle fetching connector definitions with appropriate specs.
+ */
 public enum SeedConnectorType {
 
   SOURCE(
