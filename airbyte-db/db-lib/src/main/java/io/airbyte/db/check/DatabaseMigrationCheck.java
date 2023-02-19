@@ -76,7 +76,7 @@ public interface DatabaseMigrationCheck {
    *         cannot be discovered.
    */
   default String getCurrentVersion(final Flyway flyway) {
-    /**
+    /*
      * The database may be available, but not yet migrated. If this is the case, the Flyway object will
      * not be able to retrieve the current version of the schema. If that happens, return a fake version
      * so that the check will fail and try again.

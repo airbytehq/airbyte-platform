@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add temporal workflow id to attempt table.
+ */
 public class V0_29_15_001__Add_temporalWorkflowId_col_to_Attempts extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_29_15_001__Add_temporalWorkflowId_col_to_Attempts.class);

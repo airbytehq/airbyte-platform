@@ -11,6 +11,9 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add index on job and attempt statuses.
+ */
 public class V0_40_18_001__AddIndexToAttemptsAndJobsStatus extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_18_001__AddIndexToAttemptsAndJobsStatus.class);

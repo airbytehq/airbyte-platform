@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Tables in the config db.
+ */
 public enum ConfigsDatabaseTables {
 
   ACTOR,
@@ -19,11 +22,18 @@ public enum ConfigsDatabaseTables {
   STATE,
   WORKSPACE;
 
+  /**
+   * Get table name.
+   *
+   * @return name of table
+   */
   public String getTableName() {
     return name().toLowerCase();
   }
 
   /**
+   * Get table names.
+   *
    * @return table names in lower case
    */
   public static Set<String> getTableNames() {

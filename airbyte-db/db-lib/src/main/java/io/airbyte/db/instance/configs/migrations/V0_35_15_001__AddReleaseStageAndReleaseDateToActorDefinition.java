@@ -16,6 +16,9 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add release stage to actor definition migration.
+ */
 public class V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition.class);
@@ -34,19 +37,19 @@ public class V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition extend
     ctx.createType("release_stage").asEnum("alpha", "beta", "generally_available", "custom").execute();
   }
 
-  public static void addReleaseStageColumn(final DSLContext ctx) {
+  static void addReleaseStageColumn(final DSLContext ctx) {
     ctx.alterTable("actor_definition")
         .addColumnIfNotExists(DSL.field("release_stage", SQLDataType.VARCHAR.asEnumDataType(ReleaseStage.class).nullable(true)))
         .execute();
   }
 
-  public static void addReleaseDateColumn(final DSLContext ctx) {
+  static void addReleaseDateColumn(final DSLContext ctx) {
     ctx.alterTable("actor_definition")
         .addColumnIfNotExists(DSL.field("release_date", SQLDataType.DATE.nullable(true)))
         .execute();
   }
 
-  public enum ReleaseStage implements EnumType {
+  enum ReleaseStage implements EnumType {
 
     alpha("alpha"),
     beta("beta"),

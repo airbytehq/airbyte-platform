@@ -48,6 +48,9 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Migrate from config table to well-typed tables migration.
+ */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaMigration {
 
@@ -64,7 +67,7 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
   }
 
   @VisibleForTesting
-  public static void migrate(final DSLContext ctx) {
+  static void migrate(final DSLContext ctx) {
     createEnums(ctx);
     createAndPopulateWorkspace(ctx);
     createAndPopulateActorDefinition(ctx);
@@ -749,7 +752,7 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
         .collect(Collectors.toList());
   }
 
-  public enum SourceType implements EnumType {
+  enum SourceType implements EnumType {
 
     api("api"),
     file("file"),
@@ -785,7 +788,7 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
 
   }
 
-  public enum NamespaceDefinitionType implements EnumType {
+  enum NamespaceDefinitionType implements EnumType {
 
     source("source"),
     destination("destination"),
@@ -819,7 +822,7 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
 
   }
 
-  public enum StatusType implements EnumType {
+  enum StatusType implements EnumType {
 
     active("active"),
     inactive("inactive"),
@@ -851,9 +854,10 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
       return literal;
     }
 
+
   }
 
-  public enum OperatorType implements EnumType {
+  enum OperatorType implements EnumType {
 
     normalization("normalization"),
     dbt("dbt");
@@ -886,7 +890,7 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
 
   }
 
-  public enum ActorType implements EnumType {
+  enum ActorType implements EnumType {
 
     source("source"),
     destination("destination");

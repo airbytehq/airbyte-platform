@@ -7,6 +7,11 @@ package io.airbyte.db;
 import java.sql.SQLException;
 import org.jooq.DSLContext;
 
+/**
+ * Query.
+ *
+ * @param <T> return type of query
+ */
 @FunctionalInterface
 public interface ContextQueryFunction<T> {
 

@@ -1218,7 +1218,7 @@ public class DefaultJobPersistence implements JobPersistence {
             .filter(f -> "jsonb".equals(f.getDataType().getTypeName()))
             .map(Field::getName)
             .collect(Collectors.toSet());
-        final JsonNode row = Jsons.deserialize(record.formatJSON(JdbcUtils.getDefaultJSONFormat()));
+        final JsonNode row = Jsons.deserialize(record.formatJSON(JdbcUtils.getDefaultJsonFormat()));
         // for json fields, deserialize them so they are treated as objects instead of strings. this is to
         // get around that formatJson doesn't handle deserializing them for us.
         jsonFieldNames.forEach(jsonFieldName -> ((ObjectNode) row).replace(jsonFieldName, Jsons.deserialize(row.get(jsonFieldName).asText())));
