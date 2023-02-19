@@ -920,6 +920,15 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  public List<AttemptWithJobInfo> listAttemptsWithJobInfo(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
+    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, ZoneOffset.UTC);
+    return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
+        BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + " attempts.ended_at > ? ORDER BY attempts.ended_at ASC",
+        Sqls.toSqlName(configType),
+        timeConvertedIntoLocalDateTime)));
+  }
+
+  @Override
   public List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException {
     return jobDatabase
         .query(ctx -> ctx.select(ATTEMPTS.ATTEMPT_NUMBER, SYNC_STATS.RECORDS_COMMITTED, NORMALIZATION_SUMMARIES.FAILURES)

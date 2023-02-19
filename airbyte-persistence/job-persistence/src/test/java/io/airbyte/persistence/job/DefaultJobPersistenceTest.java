@@ -55,6 +55,7 @@ import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptStatus;
+import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -699,6 +700,67 @@ class DefaultJobPersistenceTest {
     assertEquals(0, jobPersistence.listJobs(ConfigType.SYNC, Instant.ofEpochSecond(maxEndedAtTimestampAfterSecondQuery)).size());
   }
 
+  @Test
+  @DisplayName("Should return correct list of AttemptWithJobInfo when querying on end timestamp, sorted by attempt end time")
+  void testListAttemptsWithJobInfo() throws IOException {
+    final Instant now = Instant.parse("2021-01-01T00:00:00Z");
+    final Supplier<Instant> timeSupplier = incrementingSecondSupplier(now);
+    jobPersistence = new DefaultJobPersistence(jobDatabase, timeSupplier, DEFAULT_MINIMUM_AGE_IN_DAYS, DEFAULT_EXCESSIVE_NUMBER_OF_JOBS,
+        DEFAULT_MINIMUM_RECENCY_COUNT);
+
+    final long job1 = jobPersistence.enqueueJob(SCOPE + "-1", SYNC_JOB_CONFIG).orElseThrow();
+    final long job2 = jobPersistence.enqueueJob(SCOPE + "-2", SYNC_JOB_CONFIG).orElseThrow();
+
+    final int job1Attempt1 = jobPersistence.createAttempt(job1, LOG_PATH.resolve("1"));
+    final int job2Attempt1 = jobPersistence.createAttempt(job2, LOG_PATH.resolve("2"));
+    jobPersistence.failAttempt(job1, job1Attempt1);
+    jobPersistence.failAttempt(job2, job2Attempt1);
+
+    final int job1Attempt2 = jobPersistence.createAttempt(job1, LOG_PATH.resolve("3"));
+    final int job2Attempt2 = jobPersistence.createAttempt(job2, LOG_PATH.resolve("4"));
+    jobPersistence.failAttempt(job2, job2Attempt2); // job 2 attempt 2 fails before job 1 attempt 2 fails
+    jobPersistence.failAttempt(job1, job1Attempt2);
+
+    final int job1Attempt3 = jobPersistence.createAttempt(job1, LOG_PATH.resolve("5"));
+    final int job2Attempt3 = jobPersistence.createAttempt(job2, LOG_PATH.resolve("6"));
+    jobPersistence.succeedAttempt(job1, job1Attempt3);
+    jobPersistence.succeedAttempt(job2, job2Attempt3);
+
+    final List<AttemptWithJobInfo> allAttempts = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC, Instant.ofEpochSecond(0));
+    assertEquals(6, allAttempts.size());
+
+    assertEquals(job1, allAttempts.get(0).getJobInfo().getId());
+    assertEquals(job1Attempt1, allAttempts.get(0).getAttempt().getAttemptNumber());
+
+    assertEquals(job2, allAttempts.get(1).getJobInfo().getId());
+    assertEquals(job2Attempt1, allAttempts.get(1).getAttempt().getAttemptNumber());
+
+    assertEquals(job2, allAttempts.get(2).getJobInfo().getId());
+    assertEquals(job2Attempt2, allAttempts.get(2).getAttempt().getAttemptNumber());
+
+    assertEquals(job1, allAttempts.get(3).getJobInfo().getId());
+    assertEquals(job1Attempt2, allAttempts.get(3).getAttempt().getAttemptNumber());
+
+    assertEquals(job1, allAttempts.get(4).getJobInfo().getId());
+    assertEquals(job1Attempt3, allAttempts.get(4).getAttempt().getAttemptNumber());
+
+    assertEquals(job2, allAttempts.get(5).getJobInfo().getId());
+    assertEquals(job2Attempt3, allAttempts.get(5).getAttempt().getAttemptNumber());
+
+    final List<AttemptWithJobInfo> attemptsAfterTimestamp = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC,
+        Instant.ofEpochSecond(allAttempts.get(2).getAttempt().getEndedAtInSecond().orElseThrow()));
+    assertEquals(3, attemptsAfterTimestamp.size());
+
+    assertEquals(job1, attemptsAfterTimestamp.get(0).getJobInfo().getId());
+    assertEquals(job1Attempt2, attemptsAfterTimestamp.get(0).getAttempt().getAttemptNumber());
+
+    assertEquals(job1, attemptsAfterTimestamp.get(1).getJobInfo().getId());
+    assertEquals(job1Attempt3, attemptsAfterTimestamp.get(1).getAttempt().getAttemptNumber());
+
+    assertEquals(job2, attemptsAfterTimestamp.get(2).getJobInfo().getId());
+    assertEquals(job2Attempt3, attemptsAfterTimestamp.get(2).getAttempt().getAttemptNumber());
+  }
+
   private static Supplier<Instant> incrementingSecondSupplier(final Instant startTime) {
     // needs to be an array to work with lambda
     final int[] intArray = {0};
@@ -1319,14 +1381,15 @@ class DefaultJobPersistenceTest {
     void testGetFirstSyncJobForConnectionId() throws IOException {
       final long jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH));
-      final Job job = jobPersistence.getJob(jobId1);
+      final List<AttemptWithJobInfo> attemptsWithJobInfo = jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH);
+      final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0).getAttempt());
 
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
       jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
 
       final Optional<Job> actual = jobPersistence.getFirstReplicationJob(CONNECTION_ID);
-      final Job expected = createJob(jobId1, SYNC_JOB_CONFIG, JobStatus.SUCCEEDED, job.getAttempts(), NOW.getEpochSecond());
+      final Job expected = createJob(jobId1, SYNC_JOB_CONFIG, JobStatus.SUCCEEDED, attempts, NOW.getEpochSecond());
 
       assertEquals(Optional.of(expected), actual);
     }

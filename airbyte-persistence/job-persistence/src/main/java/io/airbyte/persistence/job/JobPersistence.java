@@ -17,6 +17,7 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
+import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -287,6 +288,16 @@ public interface JobPersistence {
 
   Optional<Job> getNextJob() throws IOException;
 
+  /**
+   * List attempts after a certain type of a type. Used for cloud billing.
+   *
+   * @param configType The type of job
+   * @param attemptEndedAtTimestamp The timestamp after which you want the attempts
+   * @return List of attempts (with job attached) that ended after the provided timestamp, sorted by
+   *         attempts' endedAt in ascending order
+   * @throws IOException while interacting with the db.
+   */
+  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
   /// ARCHIVE
 
   /**
