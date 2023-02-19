@@ -15,6 +15,7 @@ import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings({"OneTopLevelClass", "OuterTypeFilename"})
 @Singleton
 final class NumPendingJobs extends Emitter {
 
@@ -31,6 +32,7 @@ final class NumPendingJobs extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class NumRunningJobs extends Emitter {
 
@@ -46,6 +48,7 @@ final class NumRunningJobs extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class NumOrphanRunningJobs extends Emitter {
 
@@ -59,6 +62,7 @@ final class NumOrphanRunningJobs extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class OldestRunningJob extends Emitter {
 
@@ -74,6 +78,7 @@ final class OldestRunningJob extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class OldestPendingJob extends Emitter {
 
@@ -89,6 +94,7 @@ final class OldestPendingJob extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class NumActiveConnectionsPerWorkspace extends Emitter {
 
@@ -104,6 +110,7 @@ final class NumActiveConnectionsPerWorkspace extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class NumAbnormalScheduledSyncs extends Emitter {
 
@@ -122,6 +129,7 @@ final class NumAbnormalScheduledSyncs extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class NumUnusuallyLongSyncs extends Emitter {
 
@@ -140,6 +148,7 @@ final class NumUnusuallyLongSyncs extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class TotalScheduledSyncs extends Emitter {
 
@@ -158,6 +167,7 @@ final class TotalScheduledSyncs extends Emitter {
 
 }
 
+@SuppressWarnings("OneTopLevelClass")
 @Singleton
 final class TotalJobRuntimeByTerminalState extends Emitter {
 
@@ -184,6 +194,7 @@ final class TotalJobRuntimeByTerminalState extends Emitter {
  * <p>
  * As this is a sealed class, all implementations of it are contained within this same file.
  */
+@SuppressWarnings("OneTopLevelClass")
 sealed class Emitter {
 
   protected static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
