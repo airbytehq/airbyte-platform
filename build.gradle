@@ -113,6 +113,7 @@ def createSpotlessTarget = { pattern ->
             '.venv',
             '*.egg-info',
             'build',
+            'infra',
             'tools',
             'secrets',
             'charts', // Helm charts often have injected template strings that will fail general linting. Helm linting is done separately.
@@ -271,6 +272,7 @@ subprojects { subproj ->
         return
     }
 
+    apply plugin: 'checkstyle'
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'com.github.spotbugs'
@@ -287,6 +289,13 @@ subprojects { subproj ->
         maven {
             url 'https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/'
         }
+    }
+
+    checkstyle {
+        configFile = rootProject.file('tools/gradle/checkstyle/checkstyle.xml')
+        ignoreFailures = false
+        showViolations = true
+        toolVersion = '10.0'
     }
 
     pmd {
@@ -433,6 +442,11 @@ subprojects { subproj ->
             xml.required = false
             html.required = true
         }
+    }
+
+    tasks.withType(Checkstyle) {
+        exclude '**/generated/**'
+        exclude '**/jooq/**'
     }
 
     tasks.withType(Pmd) {

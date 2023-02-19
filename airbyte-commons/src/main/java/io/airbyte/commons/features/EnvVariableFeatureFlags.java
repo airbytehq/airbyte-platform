@@ -8,6 +8,9 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Feature Flags pulled from Environment Variables. This is the old way of doing things.
+ */
 public class EnvVariableFeatureFlags implements FeatureFlags {
 
   private static final Logger log = LoggerFactory.getLogger(EnvVariableFeatureFlags.class);
@@ -77,6 +80,15 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
     return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison", (arg) -> arg);
   }
 
+  /**
+   * Get env variable.
+   *
+   * @param key name of env variable
+   * @param defaultValue default value if env variable is not present
+   * @param parser function to parse the env variable
+   * @param <T> type of the env variable
+   * @return the env variable
+   */
   // TODO: refactor in order to use the same method than the ones in EnvConfigs.java
   public <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser) {
     final String value = System.getenv(key);

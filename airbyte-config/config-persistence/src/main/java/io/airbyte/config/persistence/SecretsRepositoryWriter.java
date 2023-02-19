@@ -250,7 +250,7 @@ public class SecretsRepositoryWriter {
   public void writeWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException {
     // Get the schema for the webhook config so we can split out any secret fields.
-    final JsonNode webhookConfigSchema = Jsons.jsonNodeFromFile(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    final JsonNode webhookConfigSchema = Jsons.jsonNodeFromYamlFile(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
     // Check if there's an existing config, so we can re-use the secret coordinates.
     final var previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId(), false);
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();

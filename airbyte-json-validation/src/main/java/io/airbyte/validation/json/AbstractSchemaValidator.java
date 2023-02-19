@@ -8,6 +8,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.Set;
 
+/**
+ * This class is syntactic sugar on JsonSchemaValidator to reduce boilerplate code that needs to be
+ * written to set up and validate objects declared in ConfigSchema.
+ *
+ * @param <T> Enum where the object is declared.
+ */
 public abstract class AbstractSchemaValidator<T extends Enum<T>> implements ConfigSchemaValidator<T> {
 
   private final JsonSchemaValidator jsonSchemaValidator;

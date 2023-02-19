@@ -24,6 +24,9 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.util.Iterator;
 
+/**
+ * Shared code for interacting with Yaml and Yaml-representation of Jackson {@link JsonNode}.
+ */
 @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
 public class Yamls {
 
@@ -61,6 +64,14 @@ public class Yamls {
     }
   }
 
+  /**
+   * Deserialize a Yaml string to an object with a type.
+   *
+   * @param yamlString to deserialize
+   * @param klass of object
+   * @param <T> type of object
+   * @return deserialized string as type declare in klass
+   */
   public static <T> T deserialize(final String yamlString, final Class<T> klass) {
     try {
       return OBJECT_MAPPER.readValue(yamlString, klass);
@@ -69,6 +80,14 @@ public class Yamls {
     }
   }
 
+  /**
+   * Deserialize a Yaml string to an object with a type.
+   *
+   * @param yamlString to deserialize
+   * @param typeReference of object
+   * @param <T> type of object
+   * @return deserialized string as type declare in valueTypeRef
+   */
   public static <T> T deserialize(final String yamlString, final TypeReference<T> typeReference) {
     try {
       return OBJECT_MAPPER.readValue(yamlString, typeReference);
@@ -77,6 +96,12 @@ public class Yamls {
     }
   }
 
+  /**
+   * Deserialize a JSON string to a {@link JsonNode}.
+   *
+   * @param yamlString to deserialize
+   * @return JSON as JsonNode
+   */
   public static JsonNode deserialize(final String yamlString) {
     try {
       return OBJECT_MAPPER.readTree(yamlString);
@@ -85,6 +110,12 @@ public class Yamls {
     }
   }
 
+  /**
+   * Deserialize an {@link InputStream} from a list of Yaml.
+   *
+   * @param stream whose contents to deserialize
+   * @return stream as an {@link AutoCloseableIterator}
+   */
   public static AutoCloseableIterator<JsonNode> deserializeArray(final InputStream stream) {
     try {
       final YAMLParser parser = YAML_FACTORY.createParser(stream);
@@ -130,6 +161,12 @@ public class Yamls {
     return new YamlConsumer<>(writer, OBJECT_MAPPER);
   }
 
+  /**
+   * Yaml Consumer for reading large yaml lists incrementally (so that they don't fully need to be in
+   * memory all at once).
+   *
+   * @param <T> type value being consumed
+   */
   public static class YamlConsumer<T> implements CloseableConsumer<T> {
 
     private final SequenceWriter sequenceWriter;
