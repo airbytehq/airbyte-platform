@@ -49,6 +49,14 @@ public class DatabaseBeanFactory {
     return new Database(dslContext);
   }
 
+  /**
+   * Flyway configs db singleton.
+   *
+   * @param configFlywayConfigurationProperties config db flyway configuration
+   * @param configDataSource configs db data source
+   * @param baselineVersion baseline migration version
+   * @return flyway
+   */
   @Singleton
   @Named("configFlyway")
   public Flyway configFlyway(@Named("config") final FlywayConfigurationProperties configFlywayConfigurationProperties,
@@ -64,6 +72,14 @@ public class DatabaseBeanFactory {
         .load();
   }
 
+  /**
+   * Flyway jobs db singleton.
+   *
+   * @param jobsFlywayConfigurationProperties jobs flyway configuration
+   * @param jobsDataSource jobs data source
+   * @param baselineVersion base line migration version
+   * @return flyway
+   */
   @Singleton
   @Named("jobsFlyway")
   public Flyway jobsFlyway(@Named("jobs") final FlywayConfigurationProperties jobsFlywayConfigurationProperties,
@@ -89,6 +105,7 @@ public class DatabaseBeanFactory {
     return new DefaultJobPersistence(jobDatabase);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   @Named("configsDatabaseInitializer")
   public DatabaseInitializer configsDatabaseInitializer(@Named("config") final DSLContext configsDslContext,
@@ -98,6 +115,7 @@ public class DatabaseBeanFactory {
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   @Named("jobsDatabaseInitializer")
   public DatabaseInitializer jobsDatabaseInitializer(@Named("jobs") final DSLContext jobsDslContext,
