@@ -854,7 +854,6 @@ public class V0_32_8_001__AirbyteConfigDatabaseDenormalization extends BaseJavaM
       return literal;
     }
 
-
   }
 
   enum OperatorType implements EnumType {

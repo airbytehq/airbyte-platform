@@ -26,6 +26,12 @@ public abstract class AbstractSchemaValidator<T extends Enum<T>> implements Conf
     this.jsonSchemaValidator = jsonSchemaValidator;
   }
 
+  /**
+   * Get schema path for config.
+   *
+   * @param configType config type whose path to get
+   * @return path to config
+   */
   public abstract Path getSchemaPath(T configType);
 
   private JsonNode getSchemaJson(final T configType) {

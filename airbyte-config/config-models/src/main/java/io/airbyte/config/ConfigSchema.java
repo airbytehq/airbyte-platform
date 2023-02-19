@@ -9,6 +9,9 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.Function;
 
+/**
+ * Config db schema.
+ */
 @SuppressWarnings({"PMD.AvoidThrowingRawExceptionTypes", "PMD.NullAssignment"})
 public enum ConfigSchema implements AirbyteConfig {
 
