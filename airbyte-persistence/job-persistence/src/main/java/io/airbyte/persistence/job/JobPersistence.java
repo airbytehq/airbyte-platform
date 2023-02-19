@@ -17,7 +17,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
-import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
@@ -45,18 +44,23 @@ public interface JobPersistence {
   /**
    * Convenience POJO for various stats data structures.
    *
-   * @param combinedStats
-   * @param perStreamStats
+   * @param combinedStats stats for the job
+   * @param perStreamStats stats for each stream
    */
   record AttemptStats(SyncStats combinedStats, List<StreamSyncStats> perStreamStats) {}
 
+  /**
+   * Pair of the job id and attempt number.
+   *
+   * @param id job id
+   * @param attemptNumber attempt number
+   */
   record JobAttemptPair(long id, int attemptNumber) {}
 
   /**
    * Retrieve the combined and per stream stats for a single attempt.
    *
    * @return {@link AttemptStats}
-   * @throws IOException
    */
   AttemptStats getAttemptStats(long jobId, int attemptNumber) throws IOException;
 
@@ -67,9 +71,9 @@ public interface JobPersistence {
    * This implementation is intended to utilise complex joins under the hood to reduce the potential
    * N+1 database pattern.
    *
-   * @param jobIds
-   * @return
-   * @throws IOException
+   * @param jobIds job ids to fetch for
+   * @return attempt status for desired jobs
+   * @throws IOException while interacting with the db
    */
   Map<JobAttemptPair, AttemptStats> getAttemptStats(List<Long> jobIds) throws IOException;
 
@@ -204,14 +208,17 @@ public interface JobPersistence {
   void writeAttemptSyncConfig(long jobId, int attemptNumber, AttemptSyncConfig attemptSyncConfig) throws IOException;
 
   /**
+   * Get count of jobs beloging to the specified connection.
+   *
    * @param configTypes - the type of config, e.g. sync
    * @param connectionId - ID of the connection for which the job count should be retrieved
    * @return count of jobs belonging to the specified connection
-   * @throws IOException
    */
   Long getJobCount(final Set<ConfigType> configTypes, final String connectionId) throws IOException;
 
   /**
+   * List jobs of a connection. Pageable.
+   *
    * @param configTypes - type of config, e.g. sync
    * @param configId - id of that config
    * @return lists job in descending order by created_at
@@ -220,16 +227,19 @@ public interface JobPersistence {
   List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, String configId, int limit, int offset) throws IOException;
 
   /**
+   * List jobs of a config type after a certain time.
+   *
    * @param configType The type of job
    * @param attemptEndedAtTimestamp The timestamp after which you want the jobs
    * @return List of jobs that have attempts after the provided timestamp
-   * @throws IOException
    */
   List<Job> listJobs(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
 
   List<Job> listJobs(JobConfig.ConfigType configType, String configId, int limit, int offset) throws IOException;
 
   /**
+   * List jobs with id.
+   *
    * @param configTypes - type of config, e.g. sync
    * @param connectionId - id of the connection for which jobs should be retrieved
    * @param includingJobId - id of the job that should be the included in the list, if it exists in
@@ -239,7 +249,6 @@ public interface JobPersistence {
    * @return List of jobs in descending created_at order including the specified job. Will include
    *         multiple pages of jobs if required to include the specified job. If the specified job
    *         does not exist in the connection, the returned list will be empty.
-   * @throws IOException
    */
   List<Job> listJobsIncludingId(Set<JobConfig.ConfigType> configTypes, String connectionId, long includingJobId, int pagesize) throws IOException;
 
@@ -252,13 +261,14 @@ public interface JobPersistence {
   List<Job> listJobsForConnectionWithStatuses(UUID connectionId, Set<JobConfig.ConfigType> configTypes, Set<JobStatus> statuses) throws IOException;
 
   /**
+   * List job statuses and timestamps for connection id.
+   *
    * @param connectionId The ID of the connection
    * @param configTypes The types of jobs
    * @param jobCreatedAtTimestamp The timestamp after which you want the jobs
    * @return List of jobs that only include information regarding id, status, timestamps from a
    *         specific connection that have attempts after the provided timestamp, sorted by jobs'
    *         createAt in descending order
-   * @throws IOException
    */
   List<JobWithStatusAndTimestamp> listJobStatusAndTimestampWithConnection(UUID connectionId,
                                                                           Set<JobConfig.ConfigType> configTypes,
@@ -277,15 +287,6 @@ public interface JobPersistence {
 
   Optional<Job> getNextJob() throws IOException;
 
-  /**
-   * @param configType The type of job
-   * @param attemptEndedAtTimestamp The timestamp after which you want the attempts
-   * @return List of attempts (with job attached) that ended after the provided timestamp, sorted by
-   *         attempts' endedAt in ascending order
-   * @throws IOException
-   */
-  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
-
   /// ARCHIVE
 
   /**
@@ -294,32 +295,32 @@ public interface JobPersistence {
   Optional<String> getVersion() throws IOException;
 
   /**
-   * Set the airbyte version
+   * Set the airbyte version.
    */
   void setVersion(String airbyteVersion) throws IOException;
 
   /**
-   * Get the max supported Airbyte Protocol Version
+   * Get the max supported Airbyte Protocol Version.
    */
   Optional<Version> getAirbyteProtocolVersionMax() throws IOException;
 
   /**
-   * Set the max supported Airbyte Protocol Version
+   * Set the max supported Airbyte Protocol Version.
    */
   void setAirbyteProtocolVersionMax(Version version) throws IOException;
 
   /**
-   * Get the min supported Airbyte Protocol Version
+   * Get the min supported Airbyte Protocol Version.
    */
   Optional<Version> getAirbyteProtocolVersionMin() throws IOException;
 
   /**
-   * Set the min supported Airbyte Protocol Version
+   * Set the min supported Airbyte Protocol Version.
    */
   void setAirbyteProtocolVersionMin(Version version) throws IOException;
 
   /**
-   * Get the current Airbyte Protocol Version range if defined
+   * Get the current Airbyte Protocol Version range if defined.
    */
   Optional<AirbyteProtocolVersionRange> getCurrentProtocolVersionRange() throws IOException;
 
@@ -356,7 +357,7 @@ public interface JobPersistence {
   void purgeJobHistory();
 
   /**
-   * Check if the secret has been migrated to a new secret store from a plain text values
+   * Check if the secret has been migrated to a new secret store from a plain text values.
    */
   boolean isSecretMigrated() throws IOException;
 

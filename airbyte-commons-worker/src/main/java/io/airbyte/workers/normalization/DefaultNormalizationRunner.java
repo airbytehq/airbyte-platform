@@ -21,6 +21,7 @@ import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper;
+import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.ErrorMapKeys;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
 import io.airbyte.protocol.models.AirbyteErrorTraceMessage.FailureType;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -213,8 +214,8 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
   }
 
   private String buildInternalErrorMessageFromDbtStackTrace() {
-    final Map<SentryExceptionHelper.ERROR_MAP_KEYS, String> errorMap = SentryExceptionHelper.getUsefulErrorMessageAndTypeFromDbtError(dbtErrorStack);
-    return errorMap.get(SentryExceptionHelper.ERROR_MAP_KEYS.ERROR_MAP_MESSAGE_KEY);
+    final Map<ErrorMapKeys, String> errorMap = SentryExceptionHelper.getUsefulErrorMessageAndTypeFromDbtError(dbtErrorStack);
+    return errorMap.get(ErrorMapKeys.ERROR_MAP_MESSAGE_KEY);
   }
 
 }
