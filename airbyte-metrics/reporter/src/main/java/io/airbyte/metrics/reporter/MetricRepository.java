@@ -32,8 +32,8 @@ class MetricRepository {
   // otherwise datadog will use previous reported value.
   // Another option we didn't use here is to build this into SQL query - it will lead SQL much less
   // readable while not decreasing any complexity.
-  private final static List<String> REGISTERED_ATTEMPT_QUEUE = List.of("SYNC", "AWS_PARIS_SYNC", "null");
-  private final static List<String> REGISTERED_GEOGRAPHY = List.of("US", "AUTO", "EU");
+  private static final List<String> REGISTERED_ATTEMPT_QUEUE = List.of("SYNC", "AWS_PARIS_SYNC", "null");
+  private static final List<String> REGISTERED_GEOGRAPHY = List.of("US", "AUTO", "EU");
 
   MetricRepository(final DSLContext ctx) {
     this.ctx = ctx;
@@ -95,7 +95,9 @@ class MetricRepository {
   Map<String, Double> oldestPendingJobAgeSecsByGeography() {
     final var query =
         """
-        SELECT cast(connection.geography as varchar) AS geography, MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at))) AS run_duration_seconds
+        SELECT 
+          cast(connection.geography as varchar) AS geography, 
+          MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at))) AS run_duration_seconds
         FROM jobs
         JOIN connection
         ON jobs.scope::uuid = connection.id
@@ -231,7 +233,7 @@ class MetricRepository {
             current_running_attempts.running_time,
             historic_avg_running_attempts.avg_run_sec
             from
-            	(
+              (
              -- Sub-query-1: query the currently running attempt's running time.
                 (
                   select
@@ -272,7 +274,10 @@ class MetricRepository {
           where
           -- Find if currently running time takes 2x more time than average running time,
           -- and it's 15 minutes (900 seconds) more than average running time so it won't alert on noises for quick sync jobs.
-            current_running_attempts.running_time > greatest(historic_avg_running_attempts.avg_run_sec * 2, historic_avg_running_attempts.avg_run_sec + 900)
+            current_running_attempts.running_time > greatest(
+              historic_avg_running_attempts.avg_run_sec * 2, 
+              historic_avg_running_attempts.avg_run_sec + 900
+            )
         """;
     final var queryResults = ctx.fetch(query);
     return queryResults.getValues("connection_id").size();

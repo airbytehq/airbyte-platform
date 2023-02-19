@@ -43,7 +43,7 @@ class EmitterTest {
     when(repo.numberOfPendingJobsByGeography()).thenReturn(value);
 
     final var emitter = new NumPendingJobs(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).numberOfPendingJobsByGeography();
@@ -60,7 +60,7 @@ class EmitterTest {
     when(repo.numberOfRunningJobsByTaskQueue()).thenReturn(value);
 
     final var emitter = new NumRunningJobs(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).numberOfRunningJobsByTaskQueue();
@@ -77,7 +77,7 @@ class EmitterTest {
     when(repo.numberOfOrphanRunningJobs()).thenReturn(value);
 
     final var emitter = new NumOrphanRunningJobs(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).numberOfOrphanRunningJobs();
@@ -91,7 +91,7 @@ class EmitterTest {
     when(repo.oldestRunningJobAgeSecsByTaskQueue()).thenReturn(value);
 
     final var emitter = new OldestRunningJob(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).oldestRunningJobAgeSecsByTaskQueue();
@@ -108,7 +108,7 @@ class EmitterTest {
     when(repo.oldestPendingJobAgeSecsByGeography()).thenReturn(value);
 
     final var emitter = new OldestPendingJob(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).oldestPendingJobAgeSecsByGeography();
@@ -126,7 +126,7 @@ class EmitterTest {
     when(repo.numberOfActiveConnPerWorkspace()).thenReturn(values);
 
     final var emitter = new NumActiveConnectionsPerWorkspace(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).numberOfActiveConnPerWorkspace();
@@ -142,7 +142,7 @@ class EmitterTest {
     when(repo.numberOfJobsNotRunningOnScheduleInLastDay()).thenReturn((long) value);
 
     final var emitter = new NumAbnormalScheduledSyncs(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofHours(1), emitter.getDuration());
     verify(repo).numberOfJobsNotRunningOnScheduleInLastDay();
@@ -156,7 +156,7 @@ class EmitterTest {
     when(repo.numScheduledActiveConnectionsInLastDay()).thenReturn((long) value);
 
     final var emitter = new TotalScheduledSyncs(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofHours(1), emitter.getDuration());
     verify(repo).numScheduledActiveConnectionsInLastDay();
@@ -171,7 +171,7 @@ class EmitterTest {
     when(repo.overallJobRuntimeForTerminalJobsInLastHour()).thenReturn(values);
 
     final var emitter = new TotalJobRuntimeByTerminalState(client, repo);
-    emitter.Emit();
+    emitter.emit();
 
     assertEquals(Duration.ofHours(1), emitter.getDuration());
     verify(repo).overallJobRuntimeForTerminalJobsInLastHour();

@@ -30,7 +30,7 @@ public class DogStatsDMetricSingleton {
    * Traditional singleton initialize call. Please invoke this before using any methods in this class.
    * Usually called in the main class of the application attempting to publish metrics.
    */
-  public synchronized static void initialize(final MetricEmittingApp app, final DatadogClientConfiguration config) {
+  public static synchronized void initialize(final MetricEmittingApp app, final DatadogClientConfiguration config) {
     if (statsDClient != null) {
       throw new RuntimeException("You cannot initialize configuration more than once.");
     }
@@ -51,7 +51,7 @@ public class DogStatsDMetricSingleton {
   }
 
   @VisibleForTesting
-  public synchronized static void flush() {
+  public static synchronized void flush() {
     statsDClient = null;
     instancePublish = false;
   }
@@ -59,9 +59,9 @@ public class DogStatsDMetricSingleton {
   /**
    * Increment or decrement a counter.
    *
-   * @param metric
+   * @param metric to count
    * @param amt to adjust.
-   * @param tags
+   * @param tags additional tags
    */
   public static void count(final MetricsRegistry metric, final double amt, final String... tags) {
     if (instancePublish) {

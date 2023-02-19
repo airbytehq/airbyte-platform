@@ -202,7 +202,7 @@ sealed class Emitter {
    *
    * @TODO: replace log message with a published error-event of some kind.
    */
-  public void Emit() {
+  public void emit() {
     try {
       callable.call();
       client.count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
