@@ -15,7 +15,7 @@ import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings({"OneTopLevelClass", "OuterTypeFilename"})
+@SuppressWarnings({"OneTopLevelClass", "OuterTypeFilename", "PMD.AvoidDuplicateLiterals"})
 @Singleton
 final class NumPendingJobs extends Emitter {
 
