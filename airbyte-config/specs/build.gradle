@@ -12,15 +12,6 @@ dependencies {
     implementation project(':airbyte-json-validation')
 }
 
-task generateSeedConnectorSpecs(type: JavaExec, dependsOn: compileJava) {
-    classpath = sourceSets.main.runtimeClasspath
-
-    mainClass = 'io.airbyte.config.specs.SeedConnectorSpecGenerator'
-
-    args '--seed-root'
-    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources/seed')
-}
-
 task downloadCombinedConnectorCatalog(type: JavaExec, dependsOn: compileJava) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.airbyte.config.specs.CombinedConnectorCatalogDownloader'
@@ -32,13 +23,13 @@ project(":airbyte-config:init").tasks.processTestResources.dependsOn(downloadCom
 project(":airbyte-config:init").tasks.test.dependsOn(downloadCombinedConnectorCatalog)
 
 
-task generateConnectorSpecsMask(type: JavaExec, dependsOn: generateSeedConnectorSpecs) {
+task generateConnectorSpecsMask(type: JavaExec, dependsOn: downloadCombinedConnectorCatalog) {
     classpath = sourceSets.main.runtimeClasspath
 
     mainClass = 'io.airbyte.config.specs.ConnectorSpecMaskGenerator'
 
-    args '--specs-root'
-    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources/seed')
+    args '--resource-root'
+    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources')
 }
 
 project(":airbyte-config:init").tasks.processResources.dependsOn(generateConnectorSpecsMask)
