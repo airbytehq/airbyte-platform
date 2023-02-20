@@ -13,22 +13,13 @@ DST_REPO=${DST_REPO:-airbytehq/airbyte-platform}
 # The destination branch
 DST_BRANCH="${SRC_REPO}/${SRC_BRANCH}"
 
-# Create a snapshot of the `airbytehq/airbyte` PR branch
-gitxmod mirror ref \
-    --auth-pass=$AUTH_TOKEN \
-    --src="https://github.com/${SRC_REPO}.git" \
-    --src-ref=$SRC_BRANCH \
-    --dst="https://github.com/${DST_REPO}.git" \
-    --dst-ref=$SRC_BRANCH \
-    --push
 
-# Create a snapshot of the `airbytehq/airbyte` PR
-gitxmod mirror pr \
-    --token=$AUTH_TOKEN \
-    --src-repo-owner=${SRC_REPO%/*} \
-    --src-repo-name=${SRC_REPO##*/} \
-    --dst-repo-owner=${DST_REPO%/*} \
-    --dst-repo-name=${DST_REPO##*/} \
-    --pr=$SRC_PR_NUM \
-    --ref=$DST_BRANCH
+# Checkout destination
+mkdir workspace
+cd workspace
+git clone https://x-access-token:${AUTH_TOKEN}@github.com/${DST_REPO}.git
+cd ${DST_REPO##*/}
 
+# Copy the branch from `airbytehq/airbyte`
+gitx-copy branch https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git . --src-ref=$SRC_BRANCH --push
+gitx-copy pr https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git  https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git $SRC_PR_NUM --branch=${DST_BRANCH} --token=$AUTH_TOKEN
