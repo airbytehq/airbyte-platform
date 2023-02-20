@@ -48,6 +48,9 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Check connection activity temporal implementation for the control plane.
+ */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class CheckConnectionActivityImpl implements CheckConnectionActivity {
@@ -131,6 +134,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
     return output.getCheckConnection();
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<StandardCheckConnectionInput, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                                 final IntegrationLauncherConfig launcherConfig) {
     return () -> {

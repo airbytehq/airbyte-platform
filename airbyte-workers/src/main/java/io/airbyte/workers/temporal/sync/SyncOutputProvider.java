@@ -4,15 +4,19 @@
 
 package io.airbyte.workers.temporal.sync;
 
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.SyncStats;
 import java.util.List;
 
+/**
+ * Static helpers for handling sync output.
+ */
 public class SyncOutputProvider {
 
-  public final static StandardSyncSummary EMPTY_FAILED_SYNC = new StandardSyncSummary()
+  private static final StandardSyncSummary EMPTY_FAILED_SYNC = new StandardSyncSummary()
       .withStatus(StandardSyncSummary.ReplicationStatus.FAILED)
       .withStartTime(System.currentTimeMillis())
       .withEndTime(System.currentTimeMillis())
@@ -25,6 +29,21 @@ public class SyncOutputProvider {
           .withDestinationStateMessagesEmitted(0L)
           .withRecordsCommitted(0L));
 
+  /**
+   * Get an empty failure output.
+   *
+   * @return empty failure output.
+   */
+  public static StandardSyncSummary getEmptyFailedSyncOutput() {
+    return Jsons.clone(EMPTY_FAILED_SYNC);
+  }
+
+  /**
+   * Get refresh schema failure.
+   *
+   * @param e exception that caused the failure
+   * @return sync output
+   */
   public static StandardSyncOutput getRefreshSchemaFailure(final Exception e) {
     return new StandardSyncOutput()
         .withFailures(List.of(new FailureReason()
@@ -33,7 +52,7 @@ public class SyncOutputProvider {
             .withExternalMessage("Failed to detect if there is a schema change. If the error persist please contact the support team.")
             .withInternalMessage("Failed to launch the refresh schema activity because of: " + e.getMessage())
             .withStacktrace(e.toString())))
-        .withStandardSyncSummary(EMPTY_FAILED_SYNC);
+        .withStandardSyncSummary(getEmptyFailedSyncOutput());
   }
 
 }

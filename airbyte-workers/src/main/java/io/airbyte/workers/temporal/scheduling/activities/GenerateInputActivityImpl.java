@@ -56,6 +56,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * GenerateInputActivityImpl.
+ */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class GenerateInputActivityImpl implements GenerateInputActivity {
@@ -65,7 +68,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
   private final FeatureFlags featureFlags;
-  private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final OAuthConfigSupplier oauthConfigSupplier;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GenerateInputActivity.class);
 
@@ -74,13 +77,13 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
                                    final StateApi stateApi,
                                    final AttemptApi attemptApi,
                                    final FeatureFlags featureFlags,
-                                   final OAuthConfigSupplier oAuthConfigSupplier) {
+                                   final OAuthConfigSupplier oauthConfigSupplier) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.stateApi = stateApi;
     this.attemptApi = attemptApi;
     this.featureFlags = featureFlags;
-    this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.oauthConfigSupplier = oauthConfigSupplier;
   }
 
   private Optional<State> getCurrentConnectionState(final UUID connectionId) {
@@ -88,8 +91,9 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         () -> stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId)),
         "get state");
 
-    if (state.getStateType() == ConnectionStateType.NOT_SET)
+    if (state.getStateType() == ConnectionStateType.NOT_SET) {
       return Optional.empty();
+    }
 
     final StateWrapper internalState = StateConverter.clientToInternal(state);
     return Optional.of(StateMessageHelper.getState(internalState));
@@ -127,7 +131,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       if (ConfigType.SYNC.equals(jobConfigType)) {
         config = job.getConfig().getSync();
         final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
-        final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
+        final JsonNode sourceConfiguration = oauthConfigSupplier.injectSourceOAuthParameters(
             source.getSourceDefinitionId(),
             source.getWorkspaceId(),
             source.getConfiguration());
@@ -165,7 +169,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
-      final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
+      final JsonNode destinationConfiguration = oauthConfigSupplier.injectDestinationOAuthParameters(
           destination.getDestinationDefinitionId(),
           destination.getWorkspaceId(),
           destination.getConfiguration());
@@ -177,8 +181,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final StandardDestinationDefinition destinationDefinition =
           configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
       final String destinationNormalizationDockerImage = destinationDefinition.getNormalizationConfig() != null
-          ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":" +
-              destinationDefinition.getNormalizationConfig().getNormalizationTag()
+          ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":"
+              + destinationDefinition.getNormalizationConfig().getNormalizationTag()
           : null;
       final String normalizationIntegrationType =
           destinationDefinition.getNormalizationConfig() != null ? destinationDefinition.getNormalizationConfig().getNormalizationIntegrationType()

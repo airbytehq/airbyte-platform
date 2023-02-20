@@ -86,6 +86,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * ConnectionManagerWorkflowImpl.
+ */
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
@@ -578,7 +581,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   /**
-   * Similar to runMandatoryActivityWithOutput but for methods that don't return
+   * Similar to runMandatoryActivityWithOutput but for methods that don't return.
    */
   private <INPUT> void runMandatoryActivity(final Consumer<INPUT> consumer, final INPUT input) {
     runMandatoryActivityWithOutput((inputInternal) -> {
@@ -639,7 +642,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   /**
-   * Create a new attempt for a given jobId
+   * Create a new attempt for a given jobId.
    *
    * @param jobId - the jobId associated with the new attempt
    *
@@ -729,7 +732,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   /**
-   * Set the internal status as failed and save the failures reasons
+   * Set the internal status as failed and save the failures reasons.
    *
    * @return True if the job failed, false otherwise
    */
@@ -744,8 +747,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
     // catch normalization failure reasons
     final NormalizationSummary normalizationSummary = standardSyncOutput.getNormalizationSummary();
-    if (normalizationSummary != null && normalizationSummary.getFailures() != null &&
-        !normalizationSummary.getFailures().isEmpty()) {
+    if (normalizationSummary != null && normalizationSummary.getFailures() != null
+        && !normalizationSummary.getFailures().isEmpty()) {
       workflowInternalState.getFailures().addAll(normalizationSummary.getFailures());
       return true;
     }
@@ -753,7 +756,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return false;
   }
 
-  /**
+  /*
    * Set a job as cancel and continue to the next job if and continue as a reset if needed
    */
   private void reportCancelledAndContinueWith(final boolean skipSchedulingNextRun, final ConnectionUpdaterInput connectionUpdaterInput) {
