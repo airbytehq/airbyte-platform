@@ -5,6 +5,7 @@
 package io.airbyte.config.init;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -72,14 +73,14 @@ class LocalDefinitionsProviderTest {
   @Test
   void testGetSourceDefinitions() {
     final List<StandardSourceDefinition> sourceDefinitions = localDefinitionsProvider.getSourceDefinitions();
-    assertTrue(sourceDefinitions.size() > 0);
+    assertFalse(sourceDefinitions.isEmpty());
     assertTrue(sourceDefinitions.stream().allMatch(sourceDef -> sourceDef.getProtocolVersion().length() > 0));
   }
 
   @Test
   void testGetDestinationDefinitions() {
     final List<StandardDestinationDefinition> destinationDefinitions = localDefinitionsProvider.getDestinationDefinitions();
-    assertTrue(destinationDefinitions.size() > 0);
+    assertFalse(destinationDefinitions.isEmpty());
     assertTrue(destinationDefinitions.stream().allMatch(sourceDef -> sourceDef.getProtocolVersion().length() > 0));
   }
 
