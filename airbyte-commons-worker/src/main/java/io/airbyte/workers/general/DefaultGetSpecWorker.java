@@ -31,6 +31,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Default Get Spec Worker. Calls the spec method on a connectors.
+ */
 public class DefaultGetSpecWorker implements GetSpecWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultGetSpecWorker.class);

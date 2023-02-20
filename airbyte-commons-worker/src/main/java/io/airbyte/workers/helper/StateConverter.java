@@ -20,10 +20,13 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
+/**
+ * Converters for state.
+ */
 public class StateConverter {
 
   /**
-   * Converts internal representation of state to API representation
+   * Converts internal representation of state to API representation.
    *
    * @param connectionId connection associated with the state
    * @param stateWrapper internal state representation to convert
@@ -39,7 +42,7 @@ public class StateConverter {
   }
 
   /**
-   * Converts internal representation of state to client representation
+   * Converts internal representation of state to client representation.
    *
    * @param connectionId connection associated with the state
    * @param stateWrapper internal state representation to convert
@@ -55,7 +58,7 @@ public class StateConverter {
   }
 
   /**
-   * Converts API representation of state to internal representation
+   * Converts API representation of state to internal representation.
    *
    * @param apiConnectionState api representation of state
    * @return internal representation of state
@@ -69,6 +72,12 @@ public class StateConverter {
 
   }
 
+  /**
+   * Api connection state to platform state representation.
+   *
+   * @param clientConnectionState api client state
+   * @return platform state representation
+   */
   public static StateWrapper clientToInternal(final @Nullable io.airbyte.api.client.model.generated.ConnectionState clientConnectionState) {
     return new StateWrapper()
         .withStateType(clientConnectionState != null ? convertClientStateTypeToInternal(clientConnectionState.getStateType()) : null)
@@ -78,6 +87,13 @@ public class StateConverter {
 
   }
 
+  /**
+   * Convert api connection state type to internal model.
+   *
+   * @param connectionStateType api state type
+   * @return internal state type
+   */
+  @SuppressWarnings("LineLength")
   public static StateType convertClientStateTypeToInternal(final @Nullable io.airbyte.api.client.model.generated.ConnectionStateType connectionStateType) {
     if (connectionStateType == null || connectionStateType.equals(io.airbyte.api.client.model.generated.ConnectionStateType.NOT_SET)) {
       return null;
@@ -201,6 +217,7 @@ public class StateConverter {
     }
   }
 
+  @SuppressWarnings("LineLength")
   private static Optional<AirbyteStateMessage> clientGlobalStateToInternal(final @Nullable io.airbyte.api.client.model.generated.ConnectionState connectionState) {
     if (connectionState != null
         && connectionState.getStateType() == io.airbyte.api.client.model.generated.ConnectionStateType.GLOBAL
@@ -278,6 +295,7 @@ public class StateConverter {
     }
   }
 
+  @SuppressWarnings("LineLength")
   private static Optional<List<AirbyteStateMessage>> clientStreamStateToInternal(final @Nullable io.airbyte.api.client.model.generated.ConnectionState connectionState) {
     if (connectionState != null && connectionState.getStateType() == io.airbyte.api.client.model.generated.ConnectionStateType.STREAM
         && connectionState.getStreamState() != null) {
