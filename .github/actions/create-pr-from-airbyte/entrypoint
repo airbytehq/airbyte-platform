@@ -22,4 +22,4 @@ cd ${DST_REPO##*/}
 
 # Copy the branch from `airbytehq/airbyte`
 gitx-copy branch https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git . --src-ref=$SRC_BRANCH --push
-gitx-copy pr https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git  https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git $SRC_PR_NUM --branch=${DST_BRANCH} --token=$AUTH_TOKEN
+gitx-copy pr https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git  https://x-access-token:${AUTH_TOKEN}@github.com/${DST_REPO}.git $SRC_PR_NUM --branch=${DST_BRANCH} --token=$AUTH_TOKEN
