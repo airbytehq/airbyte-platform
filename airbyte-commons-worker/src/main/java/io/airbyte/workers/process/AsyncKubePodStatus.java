@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.process;
 
+/**
+ * Kube pod statues.
+ */
 public enum AsyncKubePodStatus {
   NOT_STARTED, // Pod hasn't been started yet.
   INITIALIZING, // On-start container started but not completed
