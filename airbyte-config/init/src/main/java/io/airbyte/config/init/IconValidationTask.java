@@ -5,7 +5,7 @@
 package io.airbyte.config.init;
 
 import com.google.common.io.Resources;
-import io.airbyte.config.CatalogDefinitionsConfig;
+import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -22,11 +22,9 @@ import java.util.stream.Collectors;
  */
 public class IconValidationTask {
 
-  private static String ICON_SUB_DIRECTORY = CatalogDefinitionsConfig.getIconSubdirectory();
-
   private static Path getIconDirectoryPath() {
     try {
-      final URI localIconsUri = Resources.getResource(ICON_SUB_DIRECTORY).toURI();
+      final URI localIconsUri = Resources.getResource(AirbyteCatalogConstants.ICON_SUBDIRECTORY).toURI();
       return Path.of(localIconsUri);
     } catch (final URISyntaxException e) {
       throw new RuntimeException("Failed to fetch local icon directory path", e);
