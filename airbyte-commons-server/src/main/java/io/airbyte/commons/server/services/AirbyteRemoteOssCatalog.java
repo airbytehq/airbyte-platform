@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.services;
 
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
-import io.airbyte.config.CatalogDefinitionsConfig;
 import io.airbyte.config.init.RemoteDefinitionsProvider;
 import io.airbyte.config.specs.CombinedConnectorCatalogDownloader;
 import jakarta.inject.Singleton;
@@ -20,6 +19,7 @@ import org.slf4j.LoggerFactory;
 @Deprecated(forRemoval = true)
 @Singleton
 public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
+
   private static final long TIMEOUT = 30000;
   private static final Logger LOGGER = LoggerFactory.getLogger(CombinedConnectorCatalogDownloader.class);
 
