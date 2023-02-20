@@ -22,7 +22,9 @@ inputs:
   source_pull_request:
     description: The source pull request number.
     required: true
-
+  github_access_token:
+    description: A github access token
+    required: true
   
 outputs:
   pull_request_branch:
@@ -32,7 +34,7 @@ runs:
   using: 'docker'
   image: 'Dockerfile' 
   env:
-    AUTH_TOKEN: ${{ secrets.GITXMOD_AUTOMATION_PAT }}
+    AUTH_TOKEN: ${{ inputs.github_access_token }}
     SRC_REPO: ${{ inputs.source_repo }}
     SRC_BRANCH: ${{ inputs.source_branch }}
     SRC_PR_NUM: ${{ inputs.source_pull_request }}
