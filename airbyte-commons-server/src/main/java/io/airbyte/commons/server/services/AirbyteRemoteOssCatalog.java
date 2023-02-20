@@ -13,6 +13,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Convenience class for retrieving the remote OSS Catalog.
  */
+// This should be deleted, in favour of the DefinitionsProvider Singleton when cloud is migrated to
+// micronaut
+@Deprecated(forRemoval = true)
 @SuppressWarnings("PMD.AvoidCatchingThrowable")
 public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
 

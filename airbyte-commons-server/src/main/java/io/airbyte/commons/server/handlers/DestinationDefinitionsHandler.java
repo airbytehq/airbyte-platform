@@ -146,7 +146,7 @@ public class DestinationDefinitionsHandler {
   }
 
   private List<StandardDestinationDefinition> getLatestDestinations() {
-      return remoteOssCatalog.getDestinationDefinitions();
+    return remoteOssCatalog.getDestinationDefinitions();
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
