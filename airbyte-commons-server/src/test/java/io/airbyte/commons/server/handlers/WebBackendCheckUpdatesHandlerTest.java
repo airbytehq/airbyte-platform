@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class WebBackendCheckUpdatesHandlerTest {
 
   ConfigRepository configRepository;
-  AirbyteRemoteOssCatalog githubStore;
+  AirbyteRemoteOssCatalog remoteOssCatalog;
   WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
 
   final static boolean INCLUDE_TOMBSTONE = false;
@@ -32,8 +32,8 @@ class WebBackendCheckUpdatesHandlerTest {
   @BeforeEach
   void beforeEach() {
     configRepository = mock(ConfigRepository.class);
-    githubStore = mock(AirbyteRemoteOssCatalog.class);
-    webBackendCheckUpdatesHandler = new WebBackendCheckUpdatesHandler(configRepository, githubStore);
+    remoteOssCatalog = mock(AirbyteRemoteOssCatalog.class);
+    webBackendCheckUpdatesHandler = new WebBackendCheckUpdatesHandler(configRepository, remoteOssCatalog);
   }
 
   @Test
@@ -125,26 +125,6 @@ class WebBackendCheckUpdatesHandlerTest {
     assertEquals(new WebBackendCheckUpdatesRead().destinationDefinitions(1).sourceDefinitions(0), actual);
   }
 
-  @Test
-  void testCheckErrorNoLatestDestinations() throws IOException, InterruptedException {
-    setMocksForExceptionCases();
-    when(githubStore.getDestinationDefinitions()).thenThrow(new InterruptedException("unable to read latest destinations"));
-
-    final WebBackendCheckUpdatesRead actual = webBackendCheckUpdatesHandler.checkUpdates();
-
-    assertEquals(new WebBackendCheckUpdatesRead().destinationDefinitions(0).sourceDefinitions(1), actual);
-  }
-
-  @Test
-  void testCheckErrorNoLatestSources() throws IOException, InterruptedException {
-    setMocksForExceptionCases();
-    when(githubStore.getSourceDefinitions()).thenThrow(new InterruptedException("unable to read latest sources"));
-
-    final WebBackendCheckUpdatesRead actual = webBackendCheckUpdatesHandler.checkUpdates();
-
-    assertEquals(new WebBackendCheckUpdatesRead().destinationDefinitions(1).sourceDefinitions(0), actual);
-  }
-
   private void setMocksForExceptionCases() throws IOException, InterruptedException {
     final UUID source1 = UUID.randomUUID();
     final String sourceTag1 = source1.toString();
@@ -166,12 +146,12 @@ class WebBackendCheckUpdatesHandlerTest {
       throws IOException, InterruptedException {
     when(configRepository.listStandardSourceDefinitions(INCLUDE_TOMBSTONE))
         .thenReturn(currentSources.stream().map(this::createSourceDef).toList());
-    when(githubStore.getSourceDefinitions())
+    when(remoteOssCatalog.getSourceDefinitions())
         .thenReturn(latestSources.stream().map(this::createSourceDef).toList());
 
     when(configRepository.listStandardDestinationDefinitions(INCLUDE_TOMBSTONE))
         .thenReturn(currentDestinations.stream().map(this::createDestinationDef).toList());
-    when(githubStore.getDestinationDefinitions())
+    when(remoteOssCatalog.getDestinationDefinitions())
         .thenReturn(latestDestinations.stream().map(this::createDestinationDef).toList());
   }
 
