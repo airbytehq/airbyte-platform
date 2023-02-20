@@ -6,16 +6,13 @@ package io.airbyte.commons.server.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.io.Resources;
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSourceDefinition;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.BeforeEach;
