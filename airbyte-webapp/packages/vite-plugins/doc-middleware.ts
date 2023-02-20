@@ -70,7 +70,7 @@ export function docMiddleware(): Plugin {
   console.log(
     `📃 To work with local docs checkout ${chalk.bold.gray(
       "https://github.com/airbytehq/airbyte"
-    )} into ${chalk.bold.gray(path.resolve(__dirname, "../../../../airbyte"))}.\n`
+    )} into ${chalk.bold.gray(AIRBYTE_REPO_PATH)}.\n`
   );
   return remoteDocMiddleware();
 }
