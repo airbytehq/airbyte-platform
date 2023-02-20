@@ -7,21 +7,6 @@
   position: relative;
 }
 
-.readonly {
-  pointer-events: none;
-}
-
-.leftFieldCol {
-  flex: 1;
-  max-width: 640px;
-  padding-right: 30px;
-}
-
-.rightFieldCol {
-  flex: 1;
-  max-width: 300px;
-}
-
 .namespaceFormatLabel {
   flex: 5 0 0;
   display: flex;
