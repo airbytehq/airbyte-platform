@@ -4,11 +4,11 @@ import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { DropDown } from "components/ui/DropDown";
-import { FlexContainer } from "components/ui/Flex";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import styles from "./NamespaceDefinitionField.module.scss";
+import { FormFieldWrapper } from "./FormFieldWrapper";
 
 export const StreamOptions = [
   {
@@ -30,26 +30,24 @@ export const StreamOptions = [
 
 export const NamespaceDefinitionField: React.FC<FieldProps<string>> = ({ field, form }) => {
   const [, meta] = useField(field.name);
+  const { mode } = useConnectionFormService();
 
   return (
-    <FlexContainer alignItems="center">
-      <div className={styles.leftFieldCol}>
-        <ControlLabels
-          nextLine
-          error={!!meta.error && meta.touched}
-          label={<FormattedMessage id="connectionForm.namespaceDefinition.title" />}
-          infoTooltipContent={<FormattedMessage id="connectionForm.namespaceDefinition.subtitle" />}
-        />
-      </div>
-      <div className={styles.rightFieldCol}>
-        <DropDown
-          name="namespaceDefinition"
-          error={!!meta.error && meta.touched}
-          options={StreamOptions}
-          value={field.value}
-          onChange={({ value }) => form.setFieldValue(field.name, value)}
-        />
-      </div>
-    </FlexContainer>
+    <FormFieldWrapper>
+      <ControlLabels
+        nextLine
+        error={!!meta.error && meta.touched}
+        label={<FormattedMessage id="connectionForm.namespaceDefinition.title" />}
+        infoTooltipContent={<FormattedMessage id="connectionForm.namespaceDefinition.subtitle" />}
+      />
+      <DropDown
+        name="namespaceDefinition"
+        error={!!meta.error && meta.touched}
+        options={StreamOptions}
+        value={field.value}
+        isDisabled={form.isSubmitting || mode === "readonly"}
+        onChange={({ value }) => form.setFieldValue(field.name, value)}
+      />
+    </FormFieldWrapper>
   );
 };
