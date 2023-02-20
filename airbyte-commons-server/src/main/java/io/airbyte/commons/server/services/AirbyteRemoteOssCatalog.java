@@ -24,7 +24,11 @@ public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
   private static final Logger LOGGER = LoggerFactory.getLogger(CombinedConnectorCatalogDownloader.class);
 
   public AirbyteRemoteOssCatalog() {
-    super(AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL, TIMEOUT);
+    this(AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL);
+  }
+
+  public AirbyteRemoteOssCatalog(String remoteCatalogUrl) {
+    super(remoteCatalogUrl, TIMEOUT);
     LOGGER.info("Initializing OSS catalog from {} with timeout {}", AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL, TIMEOUT);
   }
 
