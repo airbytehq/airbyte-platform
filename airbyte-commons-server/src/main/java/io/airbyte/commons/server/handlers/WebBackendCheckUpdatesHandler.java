@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
-import io.airbyte.commons.server.services.AirbyteGithubStore;
+import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -32,11 +32,11 @@ public class WebBackendCheckUpdatesHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   final ConfigRepository configRepositoryDoNotUse;
-  final AirbyteGithubStore githubStore;
+  final AirbyteRemoteOssCatalog remoteOssCatalog;
 
-  public WebBackendCheckUpdatesHandler(final ConfigRepository configRepositoryDoNotUse, final AirbyteGithubStore githubStore) {
+  public WebBackendCheckUpdatesHandler(final ConfigRepository configRepositoryDoNotUse, final AirbyteRemoteOssCatalog remoteOssCatalog) {
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
-    this.githubStore = githubStore;
+    this.remoteOssCatalog = remoteOssCatalog;
   }
 
   public WebBackendCheckUpdatesRead checkUpdates() {
@@ -63,14 +63,9 @@ public class WebBackendCheckUpdatesHandler {
       return NO_CHANGES_FOUND;
     }
 
-    try {
-      newActorDefToDockerImageTag = githubStore.getLatestDestinations()
-          .stream()
-          .collect(Collectors.toMap(StandardDestinationDefinition::getDestinationDefinitionId, StandardDestinationDefinition::getDockerImageTag));
-    } catch (final InterruptedException e) {
-      log.error("Failed to get latest list of standard destination definitions", e);
-      return NO_CHANGES_FOUND;
-    }
+    newActorDefToDockerImageTag = remoteOssCatalog.getDestinationDefinitions()
+        .stream()
+        .collect(Collectors.toMap(StandardDestinationDefinition::getDestinationDefinitionId, StandardDestinationDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);
   }
@@ -89,14 +84,9 @@ public class WebBackendCheckUpdatesHandler {
       return NO_CHANGES_FOUND;
     }
 
-    try {
-      newActorDefToDockerImageTag = githubStore.getLatestSources()
-          .stream()
-          .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, StandardSourceDefinition::getDockerImageTag));
-    } catch (final InterruptedException e) {
-      log.error("Failed to get latest list of standard source definitions", e);
-      return NO_CHANGES_FOUND;
-    }
+    newActorDefToDockerImageTag = remoteOssCatalog.getSourceDefinitions()
+        .stream()
+        .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, StandardSourceDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);
   }
