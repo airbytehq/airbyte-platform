@@ -31,7 +31,7 @@ outputs:
 
 runs:
   using: 'docker'
-  image: airbyte/gitx
+  image: 'Dockerfile' 
   env:
     AUTH_TOKEN: ${{ inputs.github_access_token }}
     SRC_REPO: ${{ inputs.source_repo }}
