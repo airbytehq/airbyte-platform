@@ -18,7 +18,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class AirbyteRemoteOssCatalogTest {
+class AirbyteRemoteOssCatalogTest {
 
   private MockWebServer webServer;
   private MockResponse validCatalogResponse;
