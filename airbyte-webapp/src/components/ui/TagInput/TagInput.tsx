@@ -1,18 +1,10 @@
 import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
-import { ComponentType, KeyboardEventHandler, useMemo, useState } from "react";
+import { KeyboardEventHandler, useMemo, useState } from "react";
 import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig, components, InputProps } from "react-select";
 import CreatableSelect from "react-select/creatable";
 
 import styles from "./TagInput.module.scss";
-
-const overwrittenComponents = {
-  DropdownIndicator: null,
-};
-
-const NumberInput: ComponentType<InputProps<Tag, true, GroupBase<Tag>>> = (
-  props: InputProps<Tag, true, GroupBase<Tag>>
-) => <components.Input {...props} type="number" className={classNames(props.className, styles.hideArrowButtons)} />;
 
 const customStyles: StylesConfig<Tag, true, GroupBase<Tag>> = {
   multiValue: (provided) => ({
@@ -149,16 +141,27 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     }
   };
 
+  const overwrittenComponents = useMemo(
+    () => ({
+      DropdownIndicator: null,
+      Input: (props: InputProps<Tag, true, GroupBase<Tag>>) => (
+        <components.Input
+          {...props}
+          type={itemType === "number" || itemType === "integer" ? "number" : "text"}
+          data-testid={`tag-input-${name}`}
+          className={classNames(props.className, styles.hideArrowButtons)}
+        />
+      ),
+    }),
+    [itemType, name]
+  );
+
   return (
     <div data-testid="tag-input" onBlur={onBlurControl}>
       <CreatableSelect
         inputId={id}
         name={name}
-        components={
-          itemType === "number" || itemType === "integer"
-            ? { ...overwrittenComponents, Input: NumberInput }
-            : overwrittenComponents
-        }
+        components={overwrittenComponents}
         inputValue={inputValue}
         placeholder=""
         aria-invalid={Boolean(error)}
