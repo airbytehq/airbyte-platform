@@ -33,7 +33,7 @@ public class V0_40_32_001__AddSourceHeartbeatConfiguration extends BaseJavaMigra
         .execute();
 
     ctx.commentOnColumn(DSL.name("actor_definition", "max_seconds_between_messages"))
-        .is("Define the number of seconds allowed between 2 messages emitted by the connector before ")
+        .is("Define the number of seconds allowed between 2 messages emitted by the connector before timing out")
         .execute();
   }
 
