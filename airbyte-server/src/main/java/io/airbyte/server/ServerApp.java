@@ -298,7 +298,7 @@ public class ServerApp implements ServerRunnable {
     final AirbyteProtocolVersionRange airbyteProtocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(),
         configs.getAirbyteProtocolVersionMax());
 
-    final AirbyteRemoteOssCatalog airbyteRemoteOssCatalog = AirbyteRemoteOssCatalog.production();
+    final AirbyteRemoteOssCatalog airbyteRemoteOssCatalog = new AirbyteRemoteOssCatalog();
 
     final DestinationDefinitionsHandler destinationDefinitionsHandler = new DestinationDefinitionsHandler(configRepository,
         () -> UUID.randomUUID(),
@@ -363,7 +363,7 @@ public class ServerApp implements ServerRunnable {
     final WebBackendGeographiesHandler webBackendGeographiesHandler = new WebBackendGeographiesHandler();
 
     final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler =
-        new WebBackendCheckUpdatesHandler(configRepository, AirbyteRemoteOssCatalog.production());
+        new WebBackendCheckUpdatesHandler(configRepository, airbyteRemoteOssCatalog);
 
     LOGGER.info("Starting server...");
 
