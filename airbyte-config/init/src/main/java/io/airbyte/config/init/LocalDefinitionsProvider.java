@@ -64,7 +64,7 @@ final public class LocalDefinitionsProvider implements DefinitionsProvider {
   public StandardSourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException {
     final StandardSourceDefinition definition = getSourceDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException(SeedType.STANDARD_SOURCE_DEFINITION.name(), definitionId.toString());
+      throw new ConfigNotFoundException("local_catalog:source_def", definitionId.toString());
     }
     return definition;
   }
@@ -78,8 +78,7 @@ final public class LocalDefinitionsProvider implements DefinitionsProvider {
   public StandardDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException {
     final StandardDestinationDefinition definition = getDestinationDefinitionsMap().get(definitionId);
     if (definition == null) {
-      // TODO remove the reference to the enum
-      throw new ConfigNotFoundException(SeedType.STANDARD_DESTINATION_DEFINITION.name(), definitionId.toString());
+      throw new ConfigNotFoundException("local_catalog:destination_def", definitionId.toString());
     }
     return definition;
   }
