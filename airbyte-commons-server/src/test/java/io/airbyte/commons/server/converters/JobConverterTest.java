@@ -11,10 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
-import io.airbyte.api.model.generated.AttemptFailureOrigin;
-import io.airbyte.api.model.generated.AttemptFailureReason;
 import io.airbyte.api.model.generated.AttemptFailureSummary;
-import io.airbyte.api.model.generated.AttemptFailureType;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStats;
@@ -144,9 +141,9 @@ class JobConverterTest {
                   .createdAt(CREATED_AT)
                   .endedAt(CREATED_AT)
                   .failureSummary(new AttemptFailureSummary()
-                      .failures(Lists.newArrayList(new AttemptFailureReason()
-                          .failureOrigin(AttemptFailureOrigin.SOURCE)
-                          .failureType(AttemptFailureType.SYSTEM_ERROR)
+                      .failures(Lists.newArrayList(new io.airbyte.api.model.generated.AttemptFailureReason()
+                          .failureOrigin(io.airbyte.api.model.generated.AttemptFailureOrigin.SOURCE)
+                          .failureType(io.airbyte.api.model.generated.AttemptFailureType.SYSTEM_ERROR)
                           .externalMessage(FAILURE_EXTERNAL_MESSAGE)
                           .stacktrace(FAILURE_STACKTRACE)
                           .timestamp(FAILURE_TIMESTAMP)))
