@@ -197,7 +197,7 @@ public class JobHistoryHandler {
   }
 
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {
-    Optional<Job> job = jobPersistence.getLastReplicationJob(connectionIdRequestBody.getConnectionId());
+    final Optional<Job> job = jobPersistence.getLastReplicationJob(connectionIdRequestBody.getConnectionId());
     if (job.isEmpty()) {
       return new JobOptionalRead();
     } else {

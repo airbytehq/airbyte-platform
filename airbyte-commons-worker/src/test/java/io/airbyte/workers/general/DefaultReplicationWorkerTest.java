@@ -41,8 +41,11 @@ import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteLogMessage.Level;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
@@ -57,8 +60,12 @@ import io.airbyte.workers.helper.ConnectorConfigUpdater;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.exception.DestinationException;
+import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import java.io.IOException;
@@ -70,6 +77,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -78,6 +86,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -116,6 +125,7 @@ class DefaultReplicationWorkerTest {
   private MetricClient metricClient;
   private WorkerMetricReporter workerMetricReporter;
   private ConnectorConfigUpdater connectorConfigUpdater;
+  private HeartbeatTimeoutChaperone heartbeatTimeoutChaperone;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -139,6 +149,11 @@ class DefaultReplicationWorkerTest {
     metricClient = MetricClientFactory.getMetricClient();
     workerMetricReporter = new WorkerMetricReporter(metricClient, "docker_image:v1.0.0");
 
+    final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
+
+    heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
+
     when(source.isFinished()).thenReturn(false, false, false, true);
     when(destination.isFinished()).thenReturn(false, false, false, true);
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.empty(), Optional.of(RECORD_MESSAGE2));
@@ -155,9 +170,8 @@ class DefaultReplicationWorkerTest {
     MDC.clear();
   }
 
-  @Test
-  void test() throws Exception {
-    final ReplicationWorker worker = new DefaultReplicationWorker(
+  private ReplicationWorker getReplicationWorker(final boolean fieldSelectionEnabled) {
+    return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
         source,
@@ -166,7 +180,14 @@ class DefaultReplicationWorkerTest {
         messageTracker,
         recordSchemaValidator,
         workerMetricReporter,
-        connectorConfigUpdater, false);
+        connectorConfigUpdater,
+        fieldSelectionEnabled,
+        heartbeatTimeoutChaperone);
+  }
+
+  @Test
+  void test() throws Exception {
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     worker.run(syncInput, jobRoot);
 
@@ -186,17 +207,7 @@ class DefaultReplicationWorkerTest {
   void testInvalidSchema() throws Exception {
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.of(RECORD_MESSAGE2), Optional.of(RECORD_MESSAGE3));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater,
-        false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     worker.run(syncInput, jobRoot);
 
@@ -218,16 +229,7 @@ class DefaultReplicationWorkerTest {
   @Test
   void testSourceNonZeroExitValue() throws Exception {
     when(source.getExitValue()).thenReturn(1);
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
     assertTrue(output.getFailures().stream().anyMatch(f -> f.getFailureOrigin().equals(FailureOrigin.SOURCE)));
@@ -239,16 +241,7 @@ class DefaultReplicationWorkerTest {
 
     when(source.attemptRead()).thenThrow(new RuntimeException(SOURCE_ERROR_MESSAGE));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -260,16 +253,7 @@ class DefaultReplicationWorkerTest {
   void testReplicationRunnableSourceUpdateConfig() throws Exception {
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.of(CONFIG_MESSAGE), Optional.empty());
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
@@ -285,16 +269,7 @@ class DefaultReplicationWorkerTest {
     final String PERSIST_ERROR_MESSAGE = "there was a problem persisting the new config";
     doThrow(new RuntimeException(PERSIST_ERROR_MESSAGE)).when(connectorConfigUpdater).updateSource(Mockito.any(), Mockito.any());
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
@@ -307,16 +282,7 @@ class DefaultReplicationWorkerTest {
     when(destination.attemptRead()).thenReturn(Optional.of(STATE_MESSAGE), Optional.of(CONFIG_MESSAGE));
     when(destination.isFinished()).thenReturn(false, false, true);
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
@@ -332,16 +298,7 @@ class DefaultReplicationWorkerTest {
     final String PERSIST_ERROR_MESSAGE = "there was a problem persisting the new config";
     doThrow(new RuntimeException(PERSIST_ERROR_MESSAGE)).when(connectorConfigUpdater).updateDestination(Mockito.any(), Mockito.any());
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.COMPLETED, output.getReplicationAttemptSummary().getStatus());
@@ -355,16 +312,7 @@ class DefaultReplicationWorkerTest {
 
     doThrow(new RuntimeException(DESTINATION_ERROR_MESSAGE)).when(destination).accept(Mockito.any());
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -377,16 +325,7 @@ class DefaultReplicationWorkerTest {
     final FailureReason failureReason = FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, Long.valueOf(JOB_ID), JOB_ATTEMPT);
     when(messageTracker.errorTraceMessageFailure(Long.valueOf(JOB_ID), JOB_ATTEMPT)).thenReturn(failureReason);
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertTrue(output.getFailures().stream()
@@ -400,16 +339,7 @@ class DefaultReplicationWorkerTest {
 
     doThrow(new RuntimeException(WORKER_ERROR_MESSAGE)).when(messageTracker).acceptFromSource(Mockito.any());
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -427,16 +357,7 @@ class DefaultReplicationWorkerTest {
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.of(LOG_MESSAGE), Optional.of(TRACE_MESSAGE),
         Optional.of(RECORD_MESSAGE2));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     worker.run(syncInput, jobRoot);
 
@@ -462,16 +383,7 @@ class DefaultReplicationWorkerTest {
     recordSchemaValidator = new RecordSchemaValidator(new TestClient(), syncInput.getWorkspaceId(),
         Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
             sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, true);
+    final ReplicationWorker worker = getReplicationWorker(true);
 
     worker.run(syncInput, jobRoot);
 
@@ -494,16 +406,7 @@ class DefaultReplicationWorkerTest {
     recordSchemaValidator = new RecordSchemaValidator(new TestClient(), syncInput.getWorkspaceId(),
         Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
             sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     worker.run(syncInput, jobRoot);
 
@@ -516,16 +419,7 @@ class DefaultReplicationWorkerTest {
   void testDestinationNonZeroExitValue() throws Exception {
     when(destination.getExitValue()).thenReturn(1);
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -538,16 +432,7 @@ class DefaultReplicationWorkerTest {
 
     doThrow(new RuntimeException(DESTINATION_ERROR_MESSAGE)).when(destination).notifyEndOfInput();
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -561,16 +446,7 @@ class DefaultReplicationWorkerTest {
 
     doThrow(new RuntimeException(WORKER_ERROR_MESSAGE)).when(messageTracker).acceptFromDestination(Mockito.any());
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput output = worker.run(syncInput, jobRoot);
     assertEquals(ReplicationStatus.FAILED, output.getReplicationAttemptSummary().getStatus());
@@ -585,16 +461,7 @@ class DefaultReplicationWorkerTest {
     final Path jobRoot = Files.createTempDirectory(Path.of("/tmp"), "mdc_test");
     LogClientSingleton.getInstance().setJobMdc(WorkerEnvironment.DOCKER, LogConfigs.EMPTY, jobRoot);
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     worker.run(syncInput, jobRoot);
 
@@ -627,16 +494,7 @@ class DefaultReplicationWorkerTest {
     when(source.isFinished()).thenReturn(false);
     when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(STATE_MESSAGE.getState().getData())));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final Thread workerThread = new Thread(() -> {
       try {
@@ -676,16 +534,7 @@ class DefaultReplicationWorkerTest {
     when(messageTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(6L));
     when(messageTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(3L));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
     final ReplicationOutput replicationOutput = new ReplicationOutput()
@@ -744,16 +593,7 @@ class DefaultReplicationWorkerTest {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
     when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(STATE_MESSAGE.getState().getData())));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
     assertNotNull(actual);
@@ -764,16 +604,7 @@ class DefaultReplicationWorkerTest {
   void testRetainsStateOnFailureIfNewStateNotAvailable() throws Exception {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
 
@@ -799,16 +630,7 @@ class DefaultReplicationWorkerTest {
     when(messageTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(12L));
     when(messageTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(11L));
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
     final SyncStats expectedTotalStats = new SyncStats()
@@ -846,16 +668,7 @@ class DefaultReplicationWorkerTest {
 
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
 
     final ReplicationOutput actual = worker.run(syncInputWithoutState, jobRoot);
 
@@ -867,17 +680,51 @@ class DefaultReplicationWorkerTest {
   void testDoesNotPopulateOnIrrecoverableFailure() {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(messageTracker).getTotalRecordsEmitted();
 
-    final ReplicationWorker worker = new DefaultReplicationWorker(
-        JOB_ID,
-        JOB_ATTEMPT,
-        source,
-        mapper,
-        destination,
-        messageTracker,
-        recordSchemaValidator,
-        workerMetricReporter,
-        connectorConfigUpdater, false);
+    final ReplicationWorker worker = getReplicationWorker(false);
     assertThrows(WorkerException.class, () -> worker.run(syncInput, jobRoot));
+  }
+
+  @Test
+  void testSourceFailingTimeout() throws Exception {
+    final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
+    final UUID connectionId = UUID.randomUUID();
+    final MetricClient mMetricClient = mock(MetricClient.class);
+    heartbeatTimeoutChaperone =
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
+            connectionId, mMetricClient);
+
+    source = mock(AirbyteSource.class);
+    when(source.isFinished()).thenReturn(false);
+    when(source.attemptRead()).thenAnswer((Answer<Optional<AirbyteMessage>>) invocation -> {
+      sleep(100);
+      return Optional.of(RECORD_MESSAGE1);
+    });
+
+    final ReplicationWorker worker = getReplicationWorker(false);
+
+    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
+
+    verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    assertEquals(1, actual.getFailures().size());
+    assertEquals(FailureOrigin.SOURCE, actual.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureReason.FailureType.HEARTBEAT_TIMEOUT, actual.getFailures().get(0).getFailureType());
+  }
+
+  @Test
+  void testGetFailureReason() {
+    final long jobId = 1;
+    final int attempt = 1;
+    FailureReason failureReason = DefaultReplicationWorker.getFailureReason(new SourceException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
+    failureReason = DefaultReplicationWorker.getFailureReason(new DestinationException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
+    failureReason = DefaultReplicationWorker.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
+    assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
+    failureReason = DefaultReplicationWorker.getFailureReason(new RuntimeException(), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
   }
 
 }
