@@ -16,7 +16,7 @@ import io.airbyte.commons.server.handlers.*;
 import io.airbyte.commons.server.scheduler.DefaultSynchronousSchedulerClient;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
-import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
+import io.airbyte.commons.server.services.AirbyteGithubStore;
 import io.airbyte.commons.temporal.ConnectionManagerUtils;
 import io.airbyte.commons.temporal.NotificationUtils;
 import io.airbyte.commons.temporal.StreamResetRecordsHelper;
@@ -172,7 +172,7 @@ public class ServerApp implements ServerRunnable {
     final SecretsHydrator secretsHydrator = SecretPersistence.getSecretsHydrator(configsDslContext, configs);
     final Optional<SecretPersistence> secretPersistence = SecretPersistence.getLongLived(configsDslContext, configs);
     final Optional<SecretPersistence> ephemeralSecretPersistence = SecretPersistence.getEphemeral(configsDslContext, configs);
-    final ConfigRepository configRepository = new ConfigRepository(configsDatabase);
+    final ConfigRepository configRepository = new ConfigRepository(configsDatabase, 10800);
     final SecretsRepositoryReader secretsRepositoryReader = new SecretsRepositoryReader(configRepository, secretsHydrator);
     final SecretsRepositoryWriter secretsRepositoryWriter = new SecretsRepositoryWriter(configRepository, secretPersistence,
         ephemeralSecretPersistence);
@@ -276,12 +276,12 @@ public class ServerApp implements ServerRunnable {
     final AirbyteProtocolVersionRange airbyteProtocolVersionRange = new AirbyteProtocolVersionRange(configs.getAirbyteProtocolVersionMin(),
         configs.getAirbyteProtocolVersionMax());
 
-    final AirbyteRemoteOssCatalog airbyteRemoteOssCatalog = new AirbyteRemoteOssCatalog();
+    final AirbyteGithubStore airbyteGithubStore = AirbyteGithubStore.production();
 
     final DestinationDefinitionsHandler destinationDefinitionsHandler = new DestinationDefinitionsHandler(configRepository,
         () -> UUID.randomUUID(),
         syncSchedulerClient,
-        airbyteRemoteOssCatalog,
+        airbyteGithubStore,
         destinationHandler,
         airbyteProtocolVersionRange);
 
@@ -298,7 +298,7 @@ public class ServerApp implements ServerRunnable {
         oAuthConfigSupplier);
 
     final SourceDefinitionsHandler sourceDefinitionsHandler =
-        new SourceDefinitionsHandler(configRepository, () -> UUID.randomUUID(), syncSchedulerClient, airbyteRemoteOssCatalog, sourceHandler,
+        new SourceDefinitionsHandler(configRepository, () -> UUID.randomUUID(), syncSchedulerClient, airbyteGithubStore, sourceHandler,
             airbyteProtocolVersionRange);
 
     final JobHistoryHandler jobHistoryHandler = new JobHistoryHandler(
@@ -340,7 +340,7 @@ public class ServerApp implements ServerRunnable {
     final WebBackendGeographiesHandler webBackendGeographiesHandler = new WebBackendGeographiesHandler();
 
     final WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler =
-        new WebBackendCheckUpdatesHandler(configRepository, airbyteRemoteOssCatalog);
+        new WebBackendCheckUpdatesHandler(configRepository, AirbyteGithubStore.production());
 
     LOGGER.info("Starting server...");
 
