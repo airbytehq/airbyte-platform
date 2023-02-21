@@ -39,12 +39,18 @@ plugins {
     id 'maven-publish'
 }
 
-apply from: "$rootDir/publish-repositories.gradle"
-
 repositories {
     mavenCentral()
     maven {
         url 'https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars/'
+    }
+    maven {
+        name = 'cloudrepo'
+        url = 'https://airbyte.mycloudrepo.io/repositories/airbyte-public-jars'
+        credentials {
+            username System.getenv('CLOUDREPO_USER')
+            password System.getenv('CLOUDREPO_PASSWORD')
+        }
     }
 }
 
@@ -186,9 +192,11 @@ def Task getPublishArtifactsTask(String buildVersion, Project subproject) {
 allprojects {
     apply plugin: 'com.bmuschko.docker-remote-api'
 
-    task copyDocker(type: Sync) {
-        from "${project.projectDir}/Dockerfile"
-        into "build/docker/"
+    if (!tasks.findByName('copyDocker')) {
+        task copyDocker(type: Sync) {
+            from "${project.projectDir}/Dockerfile"
+            into "build/docker/"
+        }
     }
 }
 
@@ -489,7 +497,9 @@ subprojects {
             licenseTask.dependsOn generateManifestFilesTask
         }
     }
-    task listAllDependencies(type: DependencyReportTask) {}
+    if (!tasks.findByName('listAllDependencies')) {
+        task listAllDependencies(type: DependencyReportTask) {}
+    }
 }
 
 task('generate-docker') {
