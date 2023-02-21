@@ -22,15 +22,15 @@ export const goToConnectorBuilderPage = () => {
 };
 
 export const startFromScratch = () => {
-  cy.get(startFromScratchButton).click();
+  cy.get(startFromScratchButton).click({ force: true });
 };
 
 export const enterName = (name: string) => {
-  cy.get(nameInput).clear().type(name);
+  cy.get(nameInput).clear().type(name, { force: true });
 };
 
 export const enterUrlBase = (urlBase: string) => {
-  cy.get(urlBaseInput).type(urlBase);
+  cy.get(urlBaseInput).type(urlBase, { force: true });
 };
 
 export const enterRecordSelector = (recordSelector: string) => {
@@ -56,7 +56,7 @@ export const openTestInputs = () => {
 };
 
 export const enterTestInputs = ({ apiKey }: { apiKey: string }) => {
-  cy.get(apiKeyInput).type(apiKey);
+  cy.get(apiKeyInput).type(apiKey, { force: true });
 };
 
 export const goToTestPage = (page: number) => {
@@ -88,14 +88,14 @@ export const disableStreamSlicer = () => {
 };
 
 export const configureOffsetPagination = (limit: string, into: string, fieldName: string) => {
-  cy.get(limitInput).type(limit);
+  cy.get(limitInput).type(limit, { force: true });
   selectFromDropdown(injectOffsetInto, into);
-  cy.get(injectOffsetFieldName).type(fieldName);
+  cy.get(injectOffsetFieldName).type(fieldName, { force: true });
 };
 
 export const configureListStreamSlicer = (values: string, cursor_field: string) => {
-  cy.get('[data-testid="tag-input-streams[0].streamSlicer.slice_values"] input[type="text"]').type(values);
-  cy.get("[name='streams[0].streamSlicer.cursor_field']").type(cursor_field);
+  cy.get('[data-testid="tag-input-streams[0].streamSlicer.slice_values"] input[type="text"]').type(values, { force: true });
+  cy.get("[name='streams[0].streamSlicer.cursor_field']").type(cursor_field, { force: true });
 };
 
 export const addStream = () => {
@@ -103,15 +103,15 @@ export const addStream = () => {
 };
 
 export const enterStreamName = (streamName: string) => {
-  cy.get(streamNameInput).type(streamName);
+  cy.get(streamNameInput).type(streamName, { force: true });
 };
 
 export const enterUrlPathFromForm = (urlPath: string) => {
-  cy.get(streamUrlPath).type(urlPath);
+  cy.get(streamUrlPath).type(urlPath, { force: true });
 };
 
 export const enterUrlPath = (urlPath: string) => {
-  cy.get('[name="streams[0].urlPath"]').focus().clear().type(urlPath);
+  cy.get('[name="streams[0].urlPath"]').focus().clear().type(urlPath, { force: true });
 };
 
 export const submitForm = () => {

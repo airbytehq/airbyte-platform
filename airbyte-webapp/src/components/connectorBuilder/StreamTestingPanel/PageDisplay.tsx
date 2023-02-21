@@ -93,7 +93,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
             </Tab>
           ))}
           {inferredSchema && (
-            <Tab className={styles.tab} data-testid={`tag-tab-detected-schema`}>
+            <Tab className={styles.tab} data-testid="tag-tab-detected-schema">
               {({ selected }) => (
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">

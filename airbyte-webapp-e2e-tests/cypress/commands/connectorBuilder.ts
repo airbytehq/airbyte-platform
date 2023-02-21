@@ -59,7 +59,7 @@ export const configureStreamSlicer = (numberOfSlices: number) => {
 
 export const cleanUp = () => {
   goToView("0");
-  cy.get('[data-testid="tag-tab-stream-configuration"]').click();
+  cy.get('[data-testid="tag-tab-stream-configuration"] button').click({ force: true });
   disablePagination();
   disableStreamSlicer();
 }
@@ -133,7 +133,7 @@ export const assertSchema = () => {
 const SCHEMA_WITH_MISMATCH = '{{}"$schema": "http://json-schema.org/schema#", "properties": {{}"name": {{}"type": "number"}}, "type": "object"}'
 export const acceptSchemaWithMismatch = () => {
   cy.get('[data-testid="tag-tab-stream-schema"] button').click();
-  cy.get('textarea').type(SCHEMA_WITH_MISMATCH);
+  cy.get('textarea').type(SCHEMA_WITH_MISMATCH, { force: true });
 };
 
 export const assertSchemaMismatch = () => {
