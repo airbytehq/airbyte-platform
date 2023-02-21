@@ -14,6 +14,7 @@ import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -32,7 +33,9 @@ class FeatureFlagFetchActivityTest {
   void setUp() throws ApiException {
     final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
 
-    featureFlagClient = new TestClient(Map.of(FieldSelectionEnabled.INSTANCE.getKey(), true));
+    featureFlagClient = mock(TestClient.class);
+    when(featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+
     featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(workspaceApi, featureFlagClient);
 
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
