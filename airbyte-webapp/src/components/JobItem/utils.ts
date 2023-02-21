@@ -1,4 +1,4 @@
-import { FailureReason, FailureType, AttemptRead, JobStatus, SynchronousJobRead } from "core/request/AirbyteClient";
+import { AttemptRead, FailureReason, FailureType, JobStatus, SynchronousJobRead } from "core/request/AirbyteClient";
 
 import { JobsWithJobs } from "./types";
 
