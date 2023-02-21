@@ -35,7 +35,7 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
-import io.airbyte.commons.server.services.AirbyteGithubStore;
+import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
@@ -73,7 +73,7 @@ class DestinationDefinitionsHandlerTest {
   private DestinationDefinitionsHandler destinationDefinitionsHandler;
   private Supplier<UUID> uuidSupplier;
   private SynchronousSchedulerClient schedulerSynchronousClient;
-  private AirbyteGithubStore githubStore;
+  private AirbyteRemoteOssCatalog remoteOssCatalog;
   private DestinationHandler destinationHandler;
   private UUID workspaceId;
   private AirbyteProtocolVersionRange protocolVersionRange;
@@ -86,7 +86,7 @@ class DestinationDefinitionsHandlerTest {
     destinationDefinition = generateDestinationDefinition();
     destinationDefinitionWithNormalization = generateDestinationDefinitionWithNormalization();
     schedulerSynchronousClient = spy(SynchronousSchedulerClient.class);
-    githubStore = mock(AirbyteGithubStore.class);
+    remoteOssCatalog = mock(AirbyteRemoteOssCatalog.class);
     destinationHandler = mock(DestinationHandler.class);
     workspaceId = UUID.randomUUID();
     protocolVersionRange = new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
@@ -95,7 +95,7 @@ class DestinationDefinitionsHandlerTest {
         configRepository,
         uuidSupplier,
         schedulerSynchronousClient,
-        githubStore,
+        remoteOssCatalog,
         destinationHandler,
         protocolVersionRange);
   }
@@ -653,7 +653,7 @@ class DestinationDefinitionsHandlerTest {
     @DisplayName("should return the latest list")
     void testCorrect() throws InterruptedException {
       final StandardDestinationDefinition destinationDefinition = generateDestinationDefinition();
-      when(githubStore.getLatestDestinations()).thenReturn(Collections.singletonList(destinationDefinition));
+      when(remoteOssCatalog.getDestinationDefinitions()).thenReturn(Collections.singletonList(destinationDefinition));
 
       final var destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions();
       assertEquals(1, destinationDefinitionReadList.size());

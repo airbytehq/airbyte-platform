@@ -1,0 +1,101 @@
+{
+  "destinations": [
+    {
+      "destinationDefinitionId": "b4c5d105-31fd-4817-96b6-cb923bfc04cb",
+      "name": "Azure Blob Storage",
+      "dockerRepository": "airbyte/destination-azure-blob-storage",
+      "dockerImageTag": "0.1.6",
+      "documentationUrl": "https://docs.airbyte.com/integrations/destinations/azureblobstorage",
+      "icon": "azureblobstorage.svg",
+      "spec": {
+        "documentationUrl": "https://docs.airbyte.com/integrations/destinations/azureblobstorage",
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "AzureBlobStorage Destination Spec",
+          "type": "object",
+          "required": [
+            "azure_blob_storage_account_name",
+            "azure_blob_storage_account_key",
+            "format"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "azure_blob_storage_account_name": {
+              "title": "Azure Blob Storage account name",
+              "type": "string",
+              "description": "The account's name of the Azure Blob Storage.",
+              "examples": ["airbyte5storage"]
+            },
+            "azure_blob_storage_account_key": {
+              "title": "Azure Blob Storage account key",
+              "description": "The Azure blob storage account key.",
+              "airbyte_secret": true,
+              "type": "string",
+              "examples": [
+                "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
+              ]
+            }
+          }
+        },
+        "supportsIncremental": true,
+        "supportsNormalization": false,
+        "supportsDBT": false,
+        "supported_destination_sync_modes": ["overwrite", "append"]
+      },
+      "tombstone": false,
+      "public": true,
+      "custom": false,
+      "releaseStage": "alpha",
+      "resourceRequirements": {
+        "jobSpecific": [
+          {
+            "jobType": "sync",
+            "resourceRequirements": {
+              "memory_request": "1Gi",
+              "memory_limit": "1Gi"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sources": [
+    {
+      "sourceDefinitionId": "9f32dab3-77cb-45a1-9d33-347aa5fbe363",
+      "name": "ActiveCampaign",
+      "dockerRepository": "airbyte/source-activecampaign",
+      "dockerImageTag": "0.1.0",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/activecampaign",
+      "icon": "activecampaign.svg",
+      "sourceType": "api",
+      "spec": {
+        "documentationUrl": "https://docs.airbyte.com/integrations/sources/activecampaign",
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "Activecampaign Spec",
+          "type": "object",
+          "required": ["api_key", "account_username"],
+          "additionalProperties": true,
+          "properties": {
+            "api_key": {
+              "type": "string",
+              "description": "API Key",
+              "airbyte_secret": true
+            },
+            "account_username": {
+              "type": "string",
+              "description": "Account Username"
+            }
+          }
+        },
+        "supportsNormalization": false,
+        "supportsDBT": false,
+        "supported_destination_sync_modes": []
+      },
+      "tombstone": false,
+      "public": true,
+      "custom": false,
+      "releaseStage": "alpha"
+    }
+  ]
+}
