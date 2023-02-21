@@ -12,8 +12,6 @@ dependencies {
     implementation project(':airbyte-json-validation')
 }
 
-
-
 task downloadCombinedConnectorCatalog(type: JavaExec, dependsOn: compileJava) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.airbyte.config.specs.CombinedConnectorCatalogDownloader'
