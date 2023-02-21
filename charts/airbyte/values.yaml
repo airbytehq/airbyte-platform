@@ -1243,6 +1243,7 @@ postgresql:
 ##  externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the DB password
 ##  externalDatabase.database Database name
 ##  externalDatabase.port Database port number
+##  externalDatabase.jdbcUrl Database full JDBL URL (ex: jdbc:postgresql://host:port/db?parameters)
 ##
 externalDatabase:
   host: localhost
@@ -1252,6 +1253,7 @@ externalDatabase:
   existingSecretPasswordKey: ""
   database: db-airbyte
   port: 5432
+  jdbcUrl: ""
 
 ## @section Logs parameters
 
