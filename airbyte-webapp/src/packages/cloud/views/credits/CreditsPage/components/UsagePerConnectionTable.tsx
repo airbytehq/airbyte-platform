@@ -3,15 +3,20 @@ import classNames from "classnames";
 import queryString from "query-string";
 import React, { useCallback } from "react";
 import { FormattedMessage, FormattedNumber } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
+import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { SortOrderEnum } from "components/EntityTable/types";
+import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
+import { FlexContainer } from "components/ui/Flex";
 import { NextTable } from "components/ui/NextTable";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
+import { useExperiment } from "hooks/services/Experiment";
 import { useQuery } from "hooks/useQuery";
 import { CreditConsumptionByConnector } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 
@@ -29,7 +34,9 @@ type FullTableProps = CreditConsumptionByConnector & {
   destinationIcon?: string;
 };
 
-const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ creditConsumption }) => {
+export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ creditConsumption }) => {
+  const isBillingInsightsEnabled = useExperiment("billingPage.billingInsights", false);
+
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const navigate = useNavigate();
   const { sourceDefinitions } = useSourceDefinitionList();
@@ -55,7 +62,7 @@ const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ credi
     });
   }, [creditConsumption, sourceDefinitions, destinationDefinitions]);
 
-  const sortBy = query.sortBy || "connection";
+  const sortBy = query.sortBy || "connectionName";
   const sortOrder = query.order || SortOrderEnum.ASC;
 
   const onSortClick = useCallback(
@@ -77,12 +84,12 @@ const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ credi
 
   const sortData = useCallback(
     (a, b) => {
-      const result =
-        sortBy === "usage"
-          ? a.creditsConsumed - b.creditsConsumed
-          : `${a.sourceDefinitionName}${a.destinationDefinitionName}`
-              .toLowerCase()
-              .localeCompare(`${b.sourceDefinitionName}${b.destinationDefinitionName}`.toLowerCase());
+      let result;
+      if (sortBy === "usage") {
+        result = a.creditsConsumed - b.creditsConsumed;
+      } else {
+        result = a[sortBy].toLowerCase().localeCompare(b[sortBy].toLowerCase());
+      }
 
       if (sortOrder === SortOrderEnum.DESC) {
         return -1 * result;
@@ -105,6 +112,160 @@ const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ credi
 
   const columnHelper = createColumnHelper<FullTableProps>();
 
+  /**
+   * TODO:
+   * [x] only calculate this if the flag is on!
+   * [x] link to connection from connection name
+   * [x] sizing of columns
+   * [x] alignment of headers/cells
+   * [x] sorting
+   * [x] horizontal overflow
+   * [ ] cells should truncate + show a tooltip? (long connection/connector names are a problem currently)
+   * [ ] convert link to new Link component once it's merged
+   * [ ] if we want the source and destination names to link to their pages, we'll need the
+   *     source/destination id's (not their definition id's)
+   * [ ] page header in designs has a link; confirm target and add!
+   * [ ] integrate free connector program data
+   * [ ] daily breakdown per connection
+   * */
+
+  const billingInsightsColumns = React.useMemo(() => {
+    return !isBillingInsightsEnabled
+      ? null
+      : [
+          columnHelper.accessor("connectionName", {
+            header: () => (
+              <SortableTableHeader
+                onClick={() => onSortClick("connectionName")}
+                isActive={sortBy === "connectionName"}
+                isAscending={sortOrder === SortOrderEnum.ASC}
+              >
+                <FormattedMessage id="credits.connection" />
+              </SortableTableHeader>
+            ),
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+            cell: (props) => (
+              <div className={styles.cell}>
+                <NavLink to={`${RoutePaths.Connections}/${props.row.original.connectionId}`}>
+                  <Text size="sm" className={styles.cellText}>
+                    {props.cell.getValue()}
+                  </Text>
+                </NavLink>
+              </div>
+            ),
+          }),
+          columnHelper.accessor("sourceConnectionName", {
+            header: () => (
+              <SortableTableHeader
+                onClick={() => onSortClick("sourceConnectionName")}
+                isActive={sortBy === "sourceConnectionName"}
+                isAscending={sortOrder === SortOrderEnum.ASC}
+              >
+                <FormattedMessage id="credits.source" />
+              </SortableTableHeader>
+            ),
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+            cell: (props) => (
+              <FlexContainer className={styles.cell} alignItems="center">
+                <ConnectorIcon icon={props.row.original.sourceIcon} />
+                <Text size="sm" className={styles.cellText}>
+                  {props.cell.getValue()}
+                </Text>
+              </FlexContainer>
+            ),
+          }),
+          columnHelper.display({
+            id: "arrow",
+            cell: () => <ArrowRightIcon />,
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+          }),
+          columnHelper.accessor("destinationConnectionName", {
+            header: () => (
+              <SortableTableHeader
+                onClick={() => onSortClick("destinationConnectionName")}
+                isActive={sortBy === "destinationConnectionName"}
+                isAscending={sortOrder === SortOrderEnum.ASC}
+              >
+                <FormattedMessage id="credits.destination" />
+              </SortableTableHeader>
+            ),
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+            cell: (props) => (
+              <FlexContainer className={styles.cell} alignItems="center">
+                <ConnectorIcon icon={props.row.original.destinationIcon} />
+                <Text size="sm">{props.cell.getValue()}</Text>
+              </FlexContainer>
+            ),
+          }),
+          columnHelper.display({
+            id: "schedule",
+            header: () => (
+              <SortableTableHeader
+                onClick={() => {
+                  return null;
+                }}
+                isActive={false}
+                isAscending={false}
+              >
+                <FormattedMessage id="credits.schedule" />
+              </SortableTableHeader>
+            ),
+            cell: () => (
+              <FlexContainer className={styles.cell} alignItems="center">
+                <Text size="sm" className={styles.cellText}>
+                  Every 6 hours
+                </Text>
+              </FlexContainer>
+            ),
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+          }),
+          columnHelper.accessor("creditsConsumedPercent", {
+            header: () => (
+              <SortableTableHeader
+                onClick={() => onSortClick("usage")}
+                isActive={sortBy === "usage"}
+                isAscending={sortOrder === SortOrderEnum.ASC}
+              >
+                <FormattedMessage id="credits.usage" />
+              </SortableTableHeader>
+            ),
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+            cell: (props) => <UsageCell percent={props.cell.getValue()} />,
+          }),
+          columnHelper.accessor("creditsConsumed", {
+            header: "",
+            meta: {
+              thClassName: classNames(styles.header, styles.light),
+              responsive: true,
+            },
+            cell: (props) => (
+              <FlexContainer className={styles.cell} alignItems="center">
+                <Text className={styles.usageValue} size="lg">
+                  <FormattedNumber value={props.cell.getValue()} maximumFractionDigits={2} minimumFractionDigits={2} />
+                </Text>
+              </FlexContainer>
+            ),
+          }),
+        ];
+  }, [columnHelper, isBillingInsightsEnabled, onSortClick, sortBy, sortOrder]);
   const columns = React.useMemo(
     () => [
       columnHelper.accessor("sourceDefinitionName", {
@@ -168,9 +329,7 @@ const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ credi
 
   return (
     <div className={styles.content}>
-      <NextTable columns={columns} data={sortingData} light />
+      <NextTable columns={billingInsightsColumns ?? columns} data={sortingData} light />
     </div>
   );
 };
-
-export default UsagePerConnectionTable;
