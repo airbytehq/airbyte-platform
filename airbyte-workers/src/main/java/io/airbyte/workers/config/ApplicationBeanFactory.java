@@ -42,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Factory
 @Slf4j
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ApplicationBeanFactory {
 
   @Singleton

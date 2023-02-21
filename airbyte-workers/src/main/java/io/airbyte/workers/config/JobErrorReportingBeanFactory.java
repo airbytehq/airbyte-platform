@@ -24,7 +24,7 @@ import java.util.Optional;
  * Micronaut bean factory for job error reporting-related singletons.
  */
 @Factory
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class JobErrorReportingBeanFactory {
 
   @Singleton

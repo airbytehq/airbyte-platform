@@ -27,9 +27,6 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Submit a sync job.
- */
 @AllArgsConstructor
 public class TemporalWorkerRunFactory {
 
@@ -45,7 +42,7 @@ public class TemporalWorkerRunFactory {
     return WorkerRun.create(workspaceRoot, job.getId(), attemptId, createSupplier(job, attemptId), airbyteVersionOrWarnings);
   }
 
-  private CheckedSupplier<OutputAndStatus<JobOutput>, Exception> createSupplier(final Job job, final int attemptId) {
+  public CheckedSupplier<OutputAndStatus<JobOutput>, Exception> createSupplier(final Job job, final int attemptId) {
     final TemporalJobType temporalJobType = toTemporalJobType(job.getConfigType());
     final UUID connectionId = UUID.fromString(job.getScope());
 

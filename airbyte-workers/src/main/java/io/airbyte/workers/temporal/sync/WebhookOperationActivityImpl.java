@@ -25,9 +25,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Webhoo operation activity temporal impl.
- */
 @Singleton
 public class WebhookOperationActivityImpl implements WebhookOperationActivity {
 

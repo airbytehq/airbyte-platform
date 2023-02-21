@@ -40,7 +40,6 @@ import java.nio.file.Path;
 @Factory
 public class TemporalBeanFactory {
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public TrackingClient trackingClient(final TrackingStrategy trackingStrategy,
@@ -63,14 +62,12 @@ public class TemporalBeanFactory {
     return TrackingClientSingleton.get();
   }
 
-  @SuppressWarnings("MethodName")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public OAuthConfigSupplier oAuthConfigSupplier(final ConfigRepository configRepository, final TrackingClient trackingClient) {
     return new OAuthConfigSupplier(configRepository, trackingClient);
   }
 
-  @SuppressWarnings({"ParameterName", "MissingJavadocMethod"})
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public SyncJobFactory jobFactory(
@@ -88,7 +85,6 @@ public class TemporalBeanFactory {
         new WorkspaceHelper(configRepository, jobPersistence));
   }
 
-  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public TemporalWorkerRunFactory temporalWorkerRunFactory(

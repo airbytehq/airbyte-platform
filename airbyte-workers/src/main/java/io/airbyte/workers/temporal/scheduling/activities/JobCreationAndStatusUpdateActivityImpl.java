@@ -79,9 +79,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * JobCreationAndStatusUpdateActivityImpl.
- */
 @Slf4j
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
@@ -98,7 +95,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   private final JobCreator jobCreator;
   private final StreamResetPersistence streamResetPersistence;
   private final JobErrorReporter jobErrorReporter;
-  private final OAuthConfigSupplier oauthConfigSupplier;
+  private final OAuthConfigSupplier oAuthConfigSupplier;
 
   public JobCreationAndStatusUpdateActivityImpl(final SyncJobFactory jobFactory,
                                                 final JobPersistence jobPersistence,
@@ -111,7 +108,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
                                                 final JobCreator jobCreator,
                                                 final StreamResetPersistence streamResetPersistence,
                                                 final JobErrorReporter jobErrorReporter,
-                                                final OAuthConfigSupplier oauthConfigSupplier) {
+                                                final OAuthConfigSupplier oAuthConfigSupplier) {
     this.jobFactory = jobFactory;
     this.jobPersistence = jobPersistence;
     this.temporalWorkerRunFactory = temporalWorkerRunFactory;
@@ -123,7 +120,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     this.jobCreator = jobCreator;
     this.streamResetPersistence = streamResetPersistence;
     this.jobErrorReporter = jobErrorReporter;
-    this.oauthConfigSupplier = oauthConfigSupplier;
+    this.oAuthConfigSupplier = oAuthConfigSupplier;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -145,7 +142,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       if (!streamsToReset.isEmpty()) {
         final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
 
-        final JsonNode destinationConfiguration = oauthConfigSupplier.injectDestinationOAuthParameters(
+        final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
             destination.getDestinationDefinitionId(),
             destination.getWorkspaceId(),
             destination.getConfiguration());

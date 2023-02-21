@@ -32,9 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * PersistStateActivityImpl.
- */
 @Singleton
 public class PersistStateActivityImpl implements PersistStateActivity {
 
@@ -92,7 +89,7 @@ public class PersistStateActivityImpl implements PersistStateActivity {
   private void validate(final ConfiguredAirbyteCatalog configuredCatalog,
                         final Optional<StateWrapper> newState,
                         final ConnectionState previousState) {
-    /*
+    /**
      * If state validation is enabled and the previous state exists and is not empty, make sure that
      * state will not be lost as part of the migration from legacy -> per stream.
      *

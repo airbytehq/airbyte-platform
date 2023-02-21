@@ -7,9 +7,6 @@ package io.airbyte.workers.temporal.scheduling;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * ManualSyncOutput.
- */
 @Data
 @NoArgsConstructor
 public class ManualSyncOutput {

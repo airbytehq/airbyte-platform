@@ -12,9 +12,6 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * NotifySchemaChangeActivityImpl.
- */
 @Singleton
 public class NotifySchemaChangeActivityImpl implements NotifySchemaChangeActivity {
 

@@ -14,9 +14,6 @@ import jakarta.inject.Singleton;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * SlackConfigActivityImpl.
- */
 @Singleton
 public class SlackConfigActivityImpl implements SlackConfigActivity {
 

@@ -11,15 +11,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * StreamResetActivity.
- */
 @ActivityInterface
 public interface StreamResetActivity {
 
-  /**
-   * DeleteStreamResetRecordsForJobInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -31,7 +25,7 @@ public interface StreamResetActivity {
   }
 
   /**
-   * Deletes the stream_reset record corresponding to each stream descriptor passed in.
+   * Deletes the stream_reset record corresponding to each stream descriptor passed in
    */
   @ActivityMethod
   void deleteStreamResetRecordsForJob(DeleteStreamResetRecordsForJobInput input);

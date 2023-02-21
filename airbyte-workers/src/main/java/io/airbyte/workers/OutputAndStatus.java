@@ -8,12 +8,6 @@ import java.util.Objects;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-/**
- * Output and status for a job.
- *
- * @param <OutputType> type of job
- */
-@SuppressWarnings("ClassTypeParameterName")
 public class OutputAndStatus<OutputType> {
 
   private final OutputType output;
@@ -51,8 +45,8 @@ public class OutputAndStatus<OutputType> {
       return false;
     }
     final OutputAndStatus<?> that = (OutputAndStatus<?>) o;
-    return Objects.equals(output, that.output)
-        && status == that.status;
+    return Objects.equals(output, that.output) &&
+        status == that.status;
   }
 
   @Override

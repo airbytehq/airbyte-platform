@@ -8,9 +8,6 @@ import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.util.UUID;
 
-/**
- * RefreshSchemaActivity.
- */
 @ActivityInterface
 public interface RefreshSchemaActivity {
 

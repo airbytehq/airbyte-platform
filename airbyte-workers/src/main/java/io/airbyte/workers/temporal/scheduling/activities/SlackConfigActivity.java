@@ -11,9 +11,6 @@ import io.temporal.activity.ActivityMethod;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * SlackConfigActivity.
- */
 @ActivityInterface
 public interface SlackConfigActivity {
 

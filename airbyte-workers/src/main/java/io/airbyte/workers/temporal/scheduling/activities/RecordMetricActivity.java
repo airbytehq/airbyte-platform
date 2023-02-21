@@ -20,9 +20,6 @@ import lombok.NoArgsConstructor;
 @ActivityInterface
 public interface RecordMetricActivity {
 
-  /**
-   * FailureCause.
-   */
   enum FailureCause {
     ACTIVITY,
     CANCELED,
@@ -31,9 +28,6 @@ public interface RecordMetricActivity {
     WORKFLOW
   }
 
-  /**
-   * RecordMetricInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

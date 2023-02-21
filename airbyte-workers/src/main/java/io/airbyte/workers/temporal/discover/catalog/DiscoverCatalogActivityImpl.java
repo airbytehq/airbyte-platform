@@ -48,9 +48,6 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * DiscoverCatalogActivityImpl.
- */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 @Slf4j
@@ -128,7 +125,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
     return temporalAttemptExecution.get();
   }
 
-  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<StandardDiscoverCatalogInput, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                                 final IntegrationLauncherConfig launcherConfig) {
     return () -> {

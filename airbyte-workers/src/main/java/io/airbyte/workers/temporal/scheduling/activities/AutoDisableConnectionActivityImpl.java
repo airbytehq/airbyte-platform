@@ -34,9 +34,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-/**
- * AutoDisableConnectionActivityImpl.
- */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionActivity {
@@ -48,7 +45,6 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
   private final Integer maxFailedJobsInARowBeforeConnectionDisable;
   private final JobNotifier jobNotifier;
 
-  @SuppressWarnings("LineLength")
   public AutoDisableConnectionActivityImpl(final ConfigRepository configRepository,
                                            final JobPersistence jobPersistence,
                                            final FeatureFlags featureFlags,
@@ -177,16 +173,14 @@ public class AutoDisableConnectionActivityImpl implements AutoDisableConnectionA
                                                   final Job firstJob,
                                                   final List<JobWithStatusAndTimestamp> jobs) {
     // no previous warning sent if there was no previous failure
-    if (numFailures <= 1 || jobs.size() <= 1) {
+    if (numFailures <= 1 || jobs.size() <= 1)
       return false;
-    }
 
     // get previous failed job (skipping first job since that's considered "current" job)
     JobWithStatusAndTimestamp prevFailedJob = jobs.get(1);
     for (int i = 2; i < jobs.size(); i++) {
-      if (prevFailedJob.getStatus() == JobStatus.FAILED) {
+      if (prevFailedJob.getStatus() == JobStatus.FAILED)
         break;
-      }
       prevFailedJob = jobs.get(i);
     }
 

@@ -78,13 +78,12 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
    */
   @VisibleForTesting
   boolean isExitTrace(final MutableSpan trace) {
-    if (trace == null) {
+    if (trace == null)
       return false;
-    }
 
-    return trace.isError()
-        && EXIT_ERROR_MESSAGE.equalsIgnoreCase(trace.getTags().getOrDefault(ERROR_MESSAGE_TAG_KEY, "").toString())
-        && (safeEquals(trace.getOperationName(), WORKFLOW_TRACE_OPERATION_NAME)
+    return trace.isError() &&
+        EXIT_ERROR_MESSAGE.equalsIgnoreCase(trace.getTags().getOrDefault(ERROR_MESSAGE_TAG_KEY, "").toString()) &&
+        (safeEquals(trace.getOperationName(), WORKFLOW_TRACE_OPERATION_NAME)
             || safeEquals(trace.getResourceName(), CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME)
             || safeEquals(trace.getResourceName(), SYNC_WORKFLOW_IMPL_RESOURCE_NAME));
   }

@@ -12,15 +12,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * AutoDisableConnectionActivity.
- */
 @ActivityInterface
 public interface AutoDisableConnectionActivity {
 
-  /**
-   * AutoDisableConnectionActivityInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -32,9 +26,6 @@ public interface AutoDisableConnectionActivity {
 
   }
 
-  /**
-   * AutoDisableConnectionOutput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -47,7 +38,7 @@ public interface AutoDisableConnectionActivity {
   /**
    * Disable a connection if no successful sync jobs in the last MAX_FAILURE_JOBS_IN_A_ROW job
    * attempts or the last MAX_DAYS_OF_STRAIGHT_FAILURE days (minimum 1 job attempt): disable
-   * connection to prevent wasting resources.
+   * connection to prevent wasting resources
    */
   @ActivityMethod
   AutoDisableConnectionOutput autoDisableFailingConnection(AutoDisableConnectionActivityInput input);

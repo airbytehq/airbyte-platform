@@ -11,9 +11,6 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
-/**
- * DbtTransformationActivity.
- */
 @ActivityInterface
 public interface DbtTransformationActivity {
 

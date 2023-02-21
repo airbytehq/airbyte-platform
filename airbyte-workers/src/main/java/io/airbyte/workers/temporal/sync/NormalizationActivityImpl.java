@@ -56,9 +56,6 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Normalization temporal activity impl.
- */
 @Singleton
 @Slf4j
 public class NormalizationActivityImpl implements NormalizationActivity {
@@ -179,13 +176,13 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         () -> context);
   }
 
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  @Deprecated(forRemoval = true)
   /**
    * This activity is deprecated. It is using a big payload which is not needed, it has been replace
    * by generateNormalizationInputWithMinimumPayload
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  @Deprecated(forRemoval = true)
   public NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput) {
     return new NormalizationInput()
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
@@ -229,7 +226,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     destinationLauncherConfig.setNormalizationDockerImage(String.join(":", imageComponents));
   }
 
-  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<NormalizationInput, NormalizationSummary>, Exception> getLegacyWorkerFactory(
                                                                                                               final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                               final JobRunConfig jobRunConfig) {
@@ -243,7 +239,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         workerEnvironment);
   }
 
-  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<NormalizationInput, NormalizationSummary>, Exception> getContainerLauncherWorkerFactory(
                                                                                                                          final WorkerConfigs workerConfigs,
                                                                                                                          final IntegrationLauncherConfig destinationLauncherConfig,

@@ -21,8 +21,6 @@ import jakarta.inject.Singleton;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class CloudStorageBeanFactory {
 
-  @SuppressWarnings("LineLength")
-
   @Singleton
   @Requires(property = "airbyte.cloud.storage.logs.type",
             pattern = "(?i)^gcs$")
@@ -57,8 +55,6 @@ public class CloudStorageBeanFactory {
     return CloudStorageConfigs.s3(new S3Config(s3LogBucket, awsAccessKeyId, awsSecretAccessKey, s3LogBucketRegion));
   }
 
-  @SuppressWarnings("LineLength")
-
   @Singleton
   @Requires(property = "airbyte.cloud.storage.state.type",
             pattern = "(?i)^gcs$")
@@ -68,8 +64,6 @@ public class CloudStorageBeanFactory {
                                                           @Value("${airbyte.cloud.storage.state.gcs.application-credentials}") final String gcsApplicationCredentials) {
     return CloudStorageConfigs.gcs(new GcsConfig(gcsBucketName, gcsApplicationCredentials));
   }
-
-  @SuppressWarnings("LineLength")
 
   @Singleton
   @Requires(property = "airbyte.cloud.storage.state.type",

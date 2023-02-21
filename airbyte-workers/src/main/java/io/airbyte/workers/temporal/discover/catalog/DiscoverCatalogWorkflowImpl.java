@@ -19,9 +19,6 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import java.util.Map;
 
-/**
- * DiscoverCatalogWorkflowImpl.
- */
 public class DiscoverCatalogWorkflowImpl implements DiscoverCatalogWorkflow {
 
   @TemporalActivityStub(activityOptionsBeanName = "discoveryActivityOptions")

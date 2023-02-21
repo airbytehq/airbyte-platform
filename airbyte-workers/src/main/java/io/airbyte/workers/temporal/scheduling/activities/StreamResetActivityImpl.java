@@ -17,9 +17,6 @@ import jakarta.inject.Singleton;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * StreamResetActivityImpl.
- */
 @Slf4j
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)

@@ -14,15 +14,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * JobCreationAndStatusUpdateActivity.
- */
 @ActivityInterface
 public interface JobCreationAndStatusUpdateActivity {
 
-  /**
-   * JobCreationInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -32,9 +26,6 @@ public interface JobCreationAndStatusUpdateActivity {
 
   }
 
-  /**
-   * JobCreationOutput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -45,7 +36,7 @@ public interface JobCreationAndStatusUpdateActivity {
   }
 
   /**
-   * Creates a new job.
+   * Creates a new job
    *
    * @param input - POJO that contains the connections
    * @return a POJO that contains the jobId
@@ -53,9 +44,6 @@ public interface JobCreationAndStatusUpdateActivity {
   @ActivityMethod
   JobCreationOutput createNewJob(JobCreationInput input);
 
-  /**
-   * AttemptCreationInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -65,9 +53,6 @@ public interface JobCreationAndStatusUpdateActivity {
 
   }
 
-  /**
-   * AttemptNumberCreationOutput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -78,7 +63,7 @@ public interface JobCreationAndStatusUpdateActivity {
   }
 
   /**
-   * Create a new attempt for a given job ID.
+   * Create a new attempt for a given job ID
    *
    * @param input POJO containing the jobId
    * @return A POJO containing the attemptNumber
@@ -86,9 +71,6 @@ public interface JobCreationAndStatusUpdateActivity {
   @ActivityMethod
   AttemptNumberCreationOutput createNewAttemptNumber(AttemptCreationInput input) throws RetryableException;
 
-  /**
-   * JobSuccessInputWithAttemptNumber.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -102,14 +84,11 @@ public interface JobCreationAndStatusUpdateActivity {
   }
 
   /**
-   * Set a job status as successful.
+   * Set a job status as successful
    */
   @ActivityMethod
   void jobSuccessWithAttemptNumber(JobSuccessInputWithAttemptNumber input);
 
-  /**
-   * JobFailureInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -123,14 +102,11 @@ public interface JobCreationAndStatusUpdateActivity {
   }
 
   /**
-   * Set a job status as failed.
+   * Set a job status as failed
    */
   @ActivityMethod
   void jobFailure(JobFailureInput input);
 
-  /**
-   * AttemptNumberFailureInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -145,14 +121,11 @@ public interface JobCreationAndStatusUpdateActivity {
   }
 
   /**
-   * Set an attempt status as failed.
+   * Set an attempt status as failed
    */
   @ActivityMethod
   void attemptFailureWithAttemptNumber(AttemptNumberFailureInput input);
 
-  /**
-   * JobCancelledInputWithAttemptNumber.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -166,14 +139,11 @@ public interface JobCreationAndStatusUpdateActivity {
   }
 
   /**
-   * Set a job status as cancelled.
+   * Set a job status as cancelled
    */
   @ActivityMethod
   void jobCancelledWithAttemptNumber(JobCancelledInputWithAttemptNumber input);
 
-  /**
-   * ReportJobStartInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -187,9 +157,6 @@ public interface JobCreationAndStatusUpdateActivity {
   @ActivityMethod
   void reportJobStart(ReportJobStartInput reportJobStartInput);
 
-  /**
-   * EnsureCleanJobStateInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -202,9 +169,6 @@ public interface JobCreationAndStatusUpdateActivity {
   @ActivityMethod
   void ensureCleanJobState(EnsureCleanJobStateInput input);
 
-  /**
-   * JobCheckFailureInput.
-   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

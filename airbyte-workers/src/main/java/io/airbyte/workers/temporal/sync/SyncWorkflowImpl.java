@@ -39,9 +39,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Sync temporal workflow impl.
- */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class SyncWorkflowImpl implements SyncWorkflow {
 

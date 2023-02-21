@@ -8,9 +8,6 @@ import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.util.Optional;
 
-/**
- * Normalization summary check temporal activity interface.
- */
 @ActivityInterface
 public interface NormalizationSummaryCheckActivity {
 

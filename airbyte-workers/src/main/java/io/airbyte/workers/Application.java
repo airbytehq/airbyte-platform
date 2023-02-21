@@ -6,9 +6,6 @@ package io.airbyte.workers;
 
 import io.micronaut.runtime.Micronaut;
 
-/**
- * Worker micronaut application.
- */
 public class Application {
 
   public static void main(final String[] args) {

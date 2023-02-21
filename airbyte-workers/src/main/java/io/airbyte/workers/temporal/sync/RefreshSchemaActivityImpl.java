@@ -22,9 +22,6 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Refresh schema temporal activity impl.
- */
 @Slf4j
 @Singleton
 public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
@@ -77,7 +74,7 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
       if (mostRecentFetchEvent.getUpdatedAt() == null) {
         return false;
       }
-      return mostRecentFetchEvent.getUpdatedAt() > OffsetDateTime.now().minusHours(24L).toEpochSecond();
+      return mostRecentFetchEvent.getUpdatedAt() > OffsetDateTime.now().minusHours(24l).toEpochSecond();
     } catch (final ApiException e) {
       ApmTraceUtils.addExceptionToTrace(e);
       // catching this exception because we don't want to block replication due to a failed schema refresh
