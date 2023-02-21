@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
-import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -26,18 +26,19 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
   private final WorkspaceApi workspaceApi;
   private final FeatureFlagClient featureFlagClient;
 
-  public FeatureFlagFetchActivityImpl(WorkspaceApi workspaceApi,
-                                      FeatureFlagClient featureFlagClient) {
+  public FeatureFlagFetchActivityImpl(final WorkspaceApi workspaceApi,
+                                      final FeatureFlagClient featureFlagClient) {
     this.workspaceApi = workspaceApi;
     this.featureFlagClient = featureFlagClient;
   }
 
   public UUID getWorkspaceId(final UUID connectionId) {
-    final WorkspaceRead workspace = AirbyteApiClient.retryWithJitter(
-        () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)),
-        "get workspace");
-
-    return workspace.getWorkspaceId();
+    try {
+      final WorkspaceRead workspace = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      return workspace.getWorkspaceId();
+    } catch (final ApiException e) {
+      throw new RuntimeException("Unable to get workspace ID for connection", e);
+    }
   }
 
   @Override
@@ -48,7 +49,7 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
     // activity up and running
     final List<Flag> workspaceFlags = List.of(FieldSelectionEnabled.INSTANCE);
     final Map<String, Boolean> featureFlags = new HashMap<>();
-    for (Flag flag : workspaceFlags) {
+    for (final Flag flag : workspaceFlags) {
       featureFlags.put(flag.getKey(), featureFlagClient.enabled(flag, new Workspace(workspaceId)));
     }
 
