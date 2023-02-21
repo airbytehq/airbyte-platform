@@ -3,6 +3,26 @@
 
 .content {
   padding: 0 variables.$spacing-lg;
+
+  a {
+    text-decoration: none;
+  }
+}
+
+th.header {
+  padding-left: variables.$spacing-sm;
+
+  &:first-child {
+    padding-left: variables.$spacing-sm;
+  }
+
+  &:last-child {
+    padding-left: variables.$spacing-sm;
+  }
+
+  &.light {
+    background-color: colors.$white;
+  }
 }
 
 .usageValue {
@@ -10,6 +30,13 @@
   min-width: 53px;
 }
 
+.cellText {
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// todo: remove after cutover
 %lightBackgroundOverride {
   &.light {
     background-color: colors.$white;
