@@ -69,10 +69,10 @@ public class OAuthHandler {
   private final SecretsRepositoryWriter secretsRepositoryWriter;
 
   public OAuthHandler(final ConfigRepository configRepository,
-      final HttpClient httpClient,
-      final TrackingClient trackingClient,
-      final SecretsRepositoryReader secretsRepositoryReader,
-      final SecretsRepositoryWriter secretsRepositoryWriter) {
+                      final HttpClient httpClient,
+                      final TrackingClient trackingClient,
+                      final SecretsRepositoryReader secretsRepositoryReader,
+                      final SecretsRepositoryWriter secretsRepositoryWriter) {
     this.configRepository = configRepository;
     this.oAuthImplementationFactory = new OAuthImplementationFactory(configRepository, httpClient);
     this.trackingClient = trackingClient;
@@ -311,8 +311,8 @@ public class OAuthHandler {
   }
 
   private JsonNode getOAuthInputConfigurationForConsent(final ConnectorSpecification spec,
-      final JsonNode hydratedSourceConnectionConfiguration,
-      final JsonNode oAuthInputConfiguration) {
+                                                        final JsonNode hydratedSourceConnectionConfiguration,
+                                                        final JsonNode oAuthInputConfiguration) {
     final Map<String, String> fieldsToGet =
         buildJsonPathFromOAuthFlowInitParameters(OAuthPathExtractor.extractOauthConfigurationPaths(
             spec.getAdvancedAuth().getOauthConfigSpecification().getOauthUserInputFromConnectorConfigSpecification()));
@@ -380,14 +380,16 @@ public class OAuthHandler {
   }
 
   /**
-   * Given an OAuth response, writes a secret and returns the secret Coordinate in the appropriate format.
+   * Given an OAuth response, writes a secret and returns the secret Coordinate in the appropriate
+   * format.
    * <p>
-   * Unlike our regular source creation flow, the OAuth credentials created and stored this way will be stored in a singular secret as a string. When
-   * these secrets are used, the user will be expected to use the specification to rehydrate the connection configuration with the secret values prior
-   * to saving a source/destination.
+   * Unlike our regular source creation flow, the OAuth credentials created and stored this way will
+   * be stored in a singular secret as a string. When these secrets are used, the user will be
+   * expected to use the specification to rehydrate the connection configuration with the secret
+   * values prior to saving a source/destination.
    * <p>
-   * The singular secret was chosen to optimize UX for public API consumers (passing them one secret to keep track of > passing them a set of
-   * secrets).
+   * The singular secret was chosen to optimize UX for public API consumers (passing them one secret
+   * to keep track of > passing them a set of secrets).
    * <p>
    * See https://github.com/airbytehq/airbyte/pull/22151#discussion_r1104856648 for full discussion.
    */
