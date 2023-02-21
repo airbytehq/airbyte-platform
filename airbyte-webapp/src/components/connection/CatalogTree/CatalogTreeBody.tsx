@@ -45,7 +45,7 @@ export const CatalogTreeBody: React.FC<CatalogTreeBodyProps> = ({ streams, chang
   );
 
   return (
-    <div>
+    <div data-testid="catalog-tree-table-body">
       <div className={styles.header}>
         {isNewTableDesignEnabled ? (
           <>

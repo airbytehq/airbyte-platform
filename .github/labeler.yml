@@ -4,8 +4,6 @@ area/platform:
   - airbyte-api/**/*
   - airbyte-persistence/*
   - airbyte-persistence/**/*
-  - airbyte-protocol/*
-  - airbyte-protocol/**/*
   - airbyte-server/*
   - airbyte-server/**/*
   - airbyte-workers/*
@@ -29,10 +27,6 @@ area/server:
   - airbyte-server/*
   - airbyte-server/**/*
 
-area/protocol:
-  - airbyte-protocol/*
-  - airbyte-protocol/**/*
-
 area/worker:
   - airbyte-workers/*
   - airbyte-workers/**/*
@@ -43,19 +37,3 @@ kubernetes:
   - charts/*
   - charts/**/*
 
-area/connectors:
-  - airbyte-integrations/connectors/*
-  - airbyte-integrations/connectors/**/*
-  - airbyte-integrations/builds.md
-
-area/documentation:
-  - docs/*
-  - docs/**/*
-
-CDK:
-  - airbyte-cdk/*
-  - airbyte-cdk/**/*
-
-normalization:
-  - airbyte-integrations/bases/base-normalization/*
-  - airbyte-integrations/bases/base-normalization/**/*

@@ -5,7 +5,8 @@ dependencies {
     implementation libs.bundles.micronaut.annotation
     testImplementation libs.bundles.micronaut.test
 
-    implementation project(':airbyte-protocol:protocol-models')
+    implementation project(':airbyte-commons')
+    implementation libs.airbyte.protocol
     implementation project(':airbyte-json-validation')
 }
 
