@@ -47,6 +47,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.GeneratedJobInput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
+import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
@@ -84,11 +85,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
+
+  private static final String GENERATE_CHECK_INPUT_TAG = "generate_check_input";
+  private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
 
   private WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -208,18 +213,28 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
 
-      final GeneratedJobInput jobInputs = getJobInput();
+      final int generateCheckInputVersion =
+          Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
+
+      GeneratedJobInput jobInputs = null;
+      if (generateCheckInputVersion < GENERATE_CHECK_INPUT_CURRENT_VERSION) {
+        jobInputs = getJobInput();
+      }
 
       reportJobStarting(connectionUpdaterInput.getConnectionId());
       StandardSyncOutput standardSyncOutput = null;
 
       try {
-        final SyncCheckConnectionFailure syncCheckConnectionFailure = checkConnections(jobInputs);
-        if (syncCheckConnectionFailure.isFailed()) {
-          final StandardSyncOutput checkFailureOutput = syncCheckConnectionFailure.buildFailureOutput();
+        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs);
+        if (syncCheckConnectionResult.isFailed()) {
+          final StandardSyncOutput checkFailureOutput = syncCheckConnectionResult.buildFailureOutput();
           workflowState.setFailed(getFailStatus(checkFailureOutput));
           reportFailure(connectionUpdaterInput, checkFailureOutput, FailureCause.CONNECTION);
         } else {
+          if (generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION) {
+            jobInputs = getJobInput();
+          }
+
           standardSyncOutput = runChildWorkflow(jobInputs);
           workflowState.setFailed(getFailStatus(standardSyncOutput));
 
@@ -336,62 +351,96 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return runMandatoryActivityWithOutput(checkActivity::runWithJobOutput, checkInput);
   }
 
-  private SyncCheckConnectionFailure checkConnections(final GenerateInputActivity.GeneratedJobInput jobInputs) {
-    final JobRunConfig jobRunConfig = jobInputs.getJobRunConfig();
+  private SyncJobCheckConnectionInputs getCheckConnectionInputFromSync(final GenerateInputActivity.GeneratedJobInput jobInputs) {
     final StandardSyncInput syncInput = jobInputs.getSyncInput();
     final JsonNode sourceConfig = syncInput.getSourceConfiguration();
     final JsonNode destinationConfig = syncInput.getDestinationConfiguration();
     final IntegrationLauncherConfig sourceLauncherConfig = jobInputs.getSourceLauncherConfig();
     final IntegrationLauncherConfig destinationLauncherConfig = jobInputs.getDestinationLauncherConfig();
-    final SyncCheckConnectionFailure checkFailure = new SyncCheckConnectionFailure(jobRunConfig);
 
     final StandardCheckConnectionInput standardCheckInputSource = new StandardCheckConnectionInput()
         .withActorType(ActorType.SOURCE)
         .withActorId(syncInput.getSourceId())
         .withConnectionConfiguration(sourceConfig);
-    final CheckConnectionInput checkSourceInput = new CheckConnectionInput(jobRunConfig, sourceLauncherConfig, standardCheckInputSource);
+
+    final StandardCheckConnectionInput standardCheckInputDestination = new StandardCheckConnectionInput()
+        .withActorType(ActorType.DESTINATION)
+        .withActorId(syncInput.getDestinationId())
+        .withConnectionConfiguration(destinationConfig);
+
+    return new SyncJobCheckConnectionInputs(
+        sourceLauncherConfig,
+        destinationLauncherConfig,
+        standardCheckInputSource,
+        standardCheckInputDestination);
+  }
+
+  private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
+                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs) {
+    final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
     final JobCheckFailureInput jobStateInput =
         new JobCheckFailureInput(Long.parseLong(jobRunConfig.getJobId()), jobRunConfig.getAttemptId().intValue(), connectionId);
     final boolean isLastJobOrAttemptFailure =
         runMandatoryActivityWithOutput(jobCreationAndStatusUpdateActivity::isLastJobOrAttemptFailure, jobStateInput);
-    if (isResetJob(sourceLauncherConfig) || checkFailure.isFailed() || !isLastJobOrAttemptFailure) {
+
+    if (!isLastJobOrAttemptFailure) {
+      log.info("SOURCE CHECK: Skipped, last attempt was not a failure");
+      log.info("DESTINATION CHECK: Skipped, last attempt was not a failure");
+      return checkConnectionResult;
+    }
+
+    final int generateCheckInputVersion =
+        Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
+
+    final SyncJobCheckConnectionInputs checkInputs;
+    if (generateCheckInputVersion < GENERATE_CHECK_INPUT_CURRENT_VERSION && jobInputs != null) {
+      checkInputs = getCheckConnectionInputFromSync(jobInputs);
+    } else {
+      checkInputs = getCheckConnectionInput();
+    }
+
+    final IntegrationLauncherConfig sourceLauncherConfig = checkInputs.getSourceLauncherConfig();
+    final CheckConnectionInput checkSourceInput = new CheckConnectionInput(
+        jobRunConfig,
+        sourceLauncherConfig,
+        checkInputs.getSourceCheckConnectionInput());
+
+    if (isResetJob(sourceLauncherConfig) || checkConnectionResult.isFailed()) {
       // reset jobs don't need to connect to any external source, so check connection is unnecessary
-      log.info("SOURCE CHECK: Skipped");
+      log.info("SOURCE CHECK: Skipped, reset job");
     } else {
       log.info("SOURCE CHECK: Starting");
       final ConnectorJobOutput sourceCheckResponse = getCheckResponse(checkSourceInput);
-      if (SyncCheckConnectionFailure.isOutputFailed(sourceCheckResponse)) {
-        checkFailure.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
-        checkFailure.setFailureOutput(sourceCheckResponse);
+      if (SyncCheckConnectionResult.isOutputFailed(sourceCheckResponse)) {
+        checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
+        checkConnectionResult.setFailureOutput(sourceCheckResponse);
         log.info("SOURCE CHECK: Failed");
       } else {
         log.info("SOURCE CHECK: Successful");
       }
     }
 
-    final StandardCheckConnectionInput standardCheckInputDestination = new StandardCheckConnectionInput()
-        .withActorType(ActorType.DESTINATION)
-        .withActorId(syncInput.getDestinationId())
-        .withConnectionConfiguration(destinationConfig);
-    final CheckConnectionInput checkDestinationInput =
-        new CheckConnectionInput(jobRunConfig, destinationLauncherConfig, standardCheckInputDestination);
+    final CheckConnectionInput checkDestinationInput = new CheckConnectionInput(
+        jobRunConfig,
+        checkInputs.getDestinationLauncherConfig(),
+        checkInputs.getDestinationCheckConnectionInput());
 
-    if (checkFailure.isFailed() || !isLastJobOrAttemptFailure) {
-      log.info("DESTINATION CHECK: Skipped");
+    if (checkConnectionResult.isFailed()) {
+      log.info("DESTINATION CHECK: Skipped, source check failed");
     } else {
       log.info("DESTINATION CHECK: Starting");
       final ConnectorJobOutput destinationCheckResponse = getCheckResponse(checkDestinationInput);
-      if (SyncCheckConnectionFailure.isOutputFailed(destinationCheckResponse)) {
-        checkFailure.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
-        checkFailure.setFailureOutput(destinationCheckResponse);
+      if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
+        checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
+        checkConnectionResult.setFailureOutput(destinationCheckResponse);
         log.info("DESTINATION CHECK: Failed");
       } else {
         log.info("DESTINATION CHECK: Successful");
       }
     }
 
-    return checkFailure;
+    return checkConnectionResult;
   }
 
   private boolean isResetJob(final IntegrationLauncherConfig sourceLauncherConfig) {
@@ -654,6 +703,12 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return attemptNumberCreationOutput.getAttemptNumber();
   }
 
+  private JobRunConfig getJobRunConfig() {
+    final Long jobId = workflowInternalState.getJobId();
+    final Integer attemptNumber = workflowInternalState.getAttemptNumber();
+    return TemporalWorkflowUtils.createJobRunConfig(jobId, attemptNumber);
+  }
+
   /**
    * Generate the input that is needed by the job. It will generate the configuration needed by the
    * job and will generate a different output if the job is a sync or a reset.
@@ -671,6 +726,24 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         getSyncInputActivitySyncInput);
 
     return syncWorkflowInputs;
+  }
+
+  /**
+   * Generate the input that is needed by the checks that run prior to the sync workflow.
+   */
+  private SyncJobCheckConnectionInputs getCheckConnectionInput() {
+    final Long jobId = workflowInternalState.getJobId();
+    final Integer attemptNumber = workflowInternalState.getAttemptNumber();
+
+    final SyncInputWithAttemptNumber getSyncInputActivitySyncInput = new SyncInputWithAttemptNumber(
+        attemptNumber,
+        jobId);
+
+    final SyncJobCheckConnectionInputs checkConnectionInputs = runMandatoryActivityWithOutput(
+        getSyncInputActivity::getCheckConnectionInputs,
+        getSyncInputActivitySyncInput);
+
+    return checkConnectionInputs;
   }
 
   private String getSyncTaskQueue() {
