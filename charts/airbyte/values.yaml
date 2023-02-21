@@ -826,6 +826,9 @@ worker:
 
   maxNotifyWorkers: 5
 
+  strictComparisonNormalizationTag: "strict_comparison"
+  strictComparisonNormalizationWorkspaces: ""
+
 ## @section Metrics parameters
 metrics:
   enabled: false
