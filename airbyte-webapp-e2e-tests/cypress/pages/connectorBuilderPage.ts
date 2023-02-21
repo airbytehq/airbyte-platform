@@ -63,14 +63,39 @@ export const goToTestPage = (page: number) => {
   cy.get(testPageItem).contains(page).click();
 };
 
-export const togglePagination = () => {
-  cy.get(toggleInput).first().click({ force: true });
+const getPaginationCheckbox = () => {
+  return cy.get(toggleInput).first();
+};
+
+export const enablePagination = () => {
+  getPaginationCheckbox().check({ force: true });
+};
+
+export const disablePagination = () => {
+  getPaginationCheckbox().uncheck({ force: true });
+};
+
+const getStreamSlicerCheckbox = () => {
+  return cy.get(toggleInput).eq(1);
+};
+
+export const enableStreamSlicer = () => {
+  getStreamSlicerCheckbox().check({ force: true });
+};
+
+export const disableStreamSlicer = () => {
+  getStreamSlicerCheckbox().uncheck({ force: true });
 };
 
 export const configureOffsetPagination = (limit: string, into: string, fieldName: string) => {
   cy.get(limitInput).type(limit);
   selectFromDropdown(injectOffsetInto, into);
   cy.get(injectOffsetFieldName).type(fieldName);
+};
+
+export const configureListStreamSlicer = (values: string, cursor_field: string) => {
+  cy.get('[data-testid="tag-input-streams[0].streamSlicer.slice_values"] input[type="text"]').type(values);
+  cy.get("[name='streams[0].streamSlicer.cursor_field']").type(cursor_field);
 };
 
 export const addStream = () => {
@@ -81,8 +106,12 @@ export const enterStreamName = (streamName: string) => {
   cy.get(streamNameInput).type(streamName);
 };
 
-export const enterUrlPath = (urlPath: string) => {
+export const enterUrlPathFromForm = (urlPath: string) => {
   cy.get(streamUrlPath).type(urlPath);
+};
+
+export const enterUrlPath = (urlPath: string) => {
+  cy.get('[name="streams[0].urlPath"]').focus().clear().type(urlPath);
 };
 
 export const submitForm = () => {
@@ -94,3 +123,12 @@ export const testStream = () => {
   cy.wait(500);
   cy.get(testStreamButton).click();
 };
+
+const GO_BACK_AND_GO_NEXT_BUTTONS = 2
+export const assertHasNumberOfPages = (numberOfPages: number) => {
+  for (var i = 0; i < numberOfPages; i++) {
+    cy.get(testPageItem).contains(i + 1).should('exist')
+  }
+
+  cy.get(testPageItem).should('have.length', numberOfPages + GO_BACK_AND_GO_NEXT_BUTTONS)
+}

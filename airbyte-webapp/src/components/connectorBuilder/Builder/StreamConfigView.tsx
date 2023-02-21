@@ -167,18 +167,22 @@ const StreamControls = ({
   };
   return (
     <div className={styles.controls}>
-      <StreamTab
-        label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
-        selected={selectedTab === "configuration"}
-        onSelect={() => setSelectedTab("configuration")}
-      />
-      <StreamTab
-        label={formatMessage({ id: "connectorBuilder.streamSchema" })}
-        selected={selectedTab === "schema"}
-        onSelect={() => setSelectedTab("schema")}
-        showErrorIndicator={hasSchemaErrors}
-        showSchemaConflictIndicator={Boolean(formattedDetectedSchema && schema.value !== formattedDetectedSchema)}
-      />
+      <div data-testid="tag-tab-stream-configuration">
+        <StreamTab
+          label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
+          selected={selectedTab === "configuration"}
+          onSelect={() => setSelectedTab("configuration")}
+        />
+      </div>
+      <div data-testid="tag-tab-stream-schema">
+        <StreamTab
+          label={formatMessage({ id: "connectorBuilder.streamSchema" })}
+          selected={selectedTab === "schema"}
+          onSelect={() => setSelectedTab("schema")}
+          showErrorIndicator={hasSchemaErrors}
+          showSchemaConflictIndicator={Boolean(formattedDetectedSchema && schema.value !== formattedDetectedSchema)}
+        />
+      </div>
       <AddStreamButton
         onAddStream={(addedStreamNum) => {
           setSelectedView(addedStreamNum);

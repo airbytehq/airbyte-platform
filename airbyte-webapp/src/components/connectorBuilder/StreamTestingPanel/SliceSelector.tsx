@@ -60,13 +60,15 @@ export const SliceSelector: React.FC<SliceSelectorProps> = ({ className, slices,
   );
 
   return (
-    <ListBox
-      className={className}
-      options={options}
-      selectedValue={selectedSliceIndex}
-      onSelect={(selected) => onSelect(selected)}
-      buttonClassName={styles.button}
-      controlButton={ControlButton}
-    />
+    <div data-testid={`tag-select-slice`}>
+      <ListBox
+        className={className}
+        options={options}
+        selectedValue={selectedSliceIndex}
+        onSelect={(selected) => onSelect(selected)}
+        buttonClassName={styles.button}
+        controlButton={ControlButton}
+      />
+    </div>
   );
 };
