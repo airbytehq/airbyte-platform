@@ -7,6 +7,7 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
@@ -31,10 +32,14 @@ public class SmartsheetsOAuthFlow extends BaseOAuth2Flow {
     this.clock = Clock.systemUTC();
   }
 
-  @VisibleForTesting
   public SmartsheetsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
     super(configRepository, httpClient, stateSupplier);
     this.clock = Clock.systemUTC();
+  }
+
+  public SmartsheetsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
+    super(configRepository, httpClient, stateSupplier);
+    this.clock = clock;
   }
 
   @Override
@@ -61,6 +66,20 @@ public class SmartsheetsOAuthFlow extends BaseOAuth2Flow {
   }
 
   @Override
+  protected Map<String, String> getAccessTokenQueryParameters(final String clientId,
+                                                              final String clientSecret,
+                                                              final String authCode,
+                                                              final String redirectUrl) {
+    return ImmutableMap.<String, String>builder()
+        // required
+        .put("grant_type", "authorization_code")
+        .put("client_id", clientId)
+        .put("client_secret", clientSecret)
+        .put("code", authCode)
+        .build();
+  }
+
+  @Override
   protected Map<String, Object> extractOAuthOutput(final JsonNode data, final String accessTokenUrl) throws IOException {
     final Map<String, Object> result = new HashMap<>();
     if (data.has("refresh_token")) {
@@ -83,17 +102,13 @@ public class SmartsheetsOAuthFlow extends BaseOAuth2Flow {
   }
 
   @Override
-  protected Map<String, String> getAccessTokenQueryParameters(final String clientId,
-                                                              final String clientSecret,
-                                                              final String authCode,
-                                                              final String redirectUrl) {
-    return ImmutableMap.<String, String>builder()
-        // required
-        .put("grant_type", "authorization_code")
-        .put("client_id", clientId)
-        .put("client_secret", clientSecret)
-        .put("code", authCode)
-        .build();
+  @Deprecated
+  public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
+                                                 final UUID sourceDefinitionId,
+                                                 final Map<String, Object> queryParams,
+                                                 final String redirectUrl)
+      throws IOException, ConfigNotFoundException {
+    throw new IOException("Deprecated API not supported by this connector");
   }
 
 }
