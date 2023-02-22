@@ -4,6 +4,7 @@ micronaut:
   executors:
     io:
       type: fixed
+      n-threads: 10  # Match the data source max pool size below
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -15,6 +16,10 @@ micronaut:
         web:
           allowedOrigins:
             - ^.*$
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+
 airbyte:
   cloud:
     storage:

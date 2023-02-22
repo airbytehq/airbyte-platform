@@ -61,6 +61,7 @@ public class DestinationApiController implements DestinationApi {
   }
 
   @Post(uri = "/clone")
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationRead cloneDestination(@Body final DestinationCloneRequestBody destinationCloneRequestBody) {
     return ApiHelper.execute(() -> destinationHandler.cloneDestination(destinationCloneRequestBody));
@@ -69,6 +70,7 @@ public class DestinationApiController implements DestinationApi {
   @Post(uri = "/create")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationRead createDestination(@Body final DestinationCreate destinationCreate) {
     return ApiHelper.execute(() -> destinationHandler.createDestination(destinationCreate));
@@ -77,6 +79,7 @@ public class DestinationApiController implements DestinationApi {
   @Post(uri = "/delete")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteDestination(@Body final DestinationIdRequestBody destinationIdRequestBody) {
@@ -89,6 +92,7 @@ public class DestinationApiController implements DestinationApi {
   @Post(uri = "/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationRead getDestination(@Body final DestinationIdRequestBody destinationIdRequestBody) {
     return ApiHelper.execute(() -> destinationHandler.getDestination(destinationIdRequestBody));
@@ -97,12 +101,14 @@ public class DestinationApiController implements DestinationApi {
   @Post(uri = "/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationReadList listDestinationsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody));
   }
 
   @Post(uri = "/search")
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationReadList searchDestinations(@Body final DestinationSearch destinationSearch) {
     return ApiHelper.execute(() -> destinationHandler.searchDestinations(destinationSearch));
@@ -111,6 +117,7 @@ public class DestinationApiController implements DestinationApi {
   @Post(uri = "/update")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationRead updateDestination(@Body final DestinationUpdate destinationUpdate) {
     return ApiHelper.execute(() -> destinationHandler.updateDestination(destinationUpdate));

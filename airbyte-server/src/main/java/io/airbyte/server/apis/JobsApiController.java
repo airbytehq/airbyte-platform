@@ -53,6 +53,7 @@ public class JobsApiController implements JobsApi {
 
   @Post("/get_normalization_status")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getAttemptNormalizationStatuses(jobIdRequestBody));
@@ -70,6 +71,7 @@ public class JobsApiController implements JobsApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfo(jobIdRequestBody));
@@ -78,6 +80,7 @@ public class JobsApiController implements JobsApi {
   @Post("/get_light")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoLight(jobIdRequestBody));
@@ -85,6 +88,7 @@ public class JobsApiController implements JobsApi {
 
   @Post("/get_last_replication_job")
   @Secured({READER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
@@ -93,6 +97,7 @@ public class JobsApiController implements JobsApi {
   @Post("/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public JobReadList listJobsFor(final JobListRequestBody jobListRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsFor(jobListRequestBody));
