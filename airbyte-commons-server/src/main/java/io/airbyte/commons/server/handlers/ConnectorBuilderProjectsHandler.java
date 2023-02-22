@@ -26,7 +26,6 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-@SuppressWarnings("PMD.AvoidCatchingNPE")
 @Singleton
 public class ConnectorBuilderProjectsHandler {
 
@@ -71,7 +70,7 @@ public class ConnectorBuilderProjectsHandler {
     return new ConnectorBuilderProjectIdWithWorkspaceId().workspaceId(project.getWorkspaceId()).builderProjectId(project.getBuilderProjectId());
   }
 
-  public void validateWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
+  private void validateWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(projectId, false);
     final UUID actualWorkspaceId = project.getWorkspaceId();
     if (!actualWorkspaceId.equals(workspaceId)) {
@@ -102,7 +101,7 @@ public class ConnectorBuilderProjectsHandler {
     configRepository.deleteBuilderProject(projectDelete.getBuilderProjectId());
   }
 
-  public ConnectorBuilderProjectRead getBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
+  public ConnectorBuilderProjectRead getConnectorBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
       throws IOException, ConfigNotFoundException {
     validateWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
@@ -116,7 +115,7 @@ public class ConnectorBuilderProjectsHandler {
     return response;
   }
 
-  public ConnectorBuilderProjectReadList listConnectorBuilderProject(final WorkspaceIdRequestBody workspaceIdRequestBody)
+  public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
 
     final Stream<ConnectorBuilderProject> projects = configRepository.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());

@@ -4,9 +4,9 @@
 
 package io.airbyte.config.persistence;
 
+import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,7 +47,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testReadNotExists() throws IOException {
+  void testReadNotExists() {
     assertThrows(ConfigNotFoundException.class, () -> configRepository.getConnectorBuilderProject(UUID.randomUUID(), false));
   }
 
@@ -60,7 +60,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project2.setManifestDraft(null);
 
     assertEquals(new ArrayList<>(
-        Arrays.asList(project1, project2)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+        // project2 comes first due to alphabetical ordering
+        Arrays.asList(project2, project1)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
   }
 
   @Test
@@ -78,7 +79,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project2.setHasDraft(true);
 
     assertEquals(new ArrayList<>(
-        Arrays.asList(project1, project2)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+        // project2 comes first due to alphabetical ordering
+        Arrays.asList(project2, project1)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
   }
 
   @Test
@@ -104,19 +106,23 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     mainWorkspace = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();
 
-    project1 = createConnectorBuilderProject(mainWorkspace);
-    project2 = createConnectorBuilderProject(mainWorkspace);
+    project1 = createConnectorBuilderProject(mainWorkspace, "Z project", false);
+    project2 = createConnectorBuilderProject(mainWorkspace, "A project", false);
+
+    // deleted project, should not show up in listing
+    createConnectorBuilderProject(mainWorkspace, "Deleted project", true);
 
     // unreachable project, should not show up in listing
-    createConnectorBuilderProject(workspaceId2);
+    createConnectorBuilderProject(workspaceId2, "Other workspace project", false);
   }
 
-  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace)
+  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace, final String name, final boolean deleted)
       throws IOException {
     final UUID projectId = UUID.randomUUID();
     final ConnectorBuilderProject project = new ConnectorBuilderProject()
         .withBuilderProjectId(projectId)
-        .withName("project " + projectId)
+        .withName(name)
+        .withTombstone(deleted)
         .withManifestDraft(new ObjectMapper().readTree("{\"the_id\": \"" + projectId + "\"}"))
         .withHasDraft(true)
         .withWorkspaceId(workspace);

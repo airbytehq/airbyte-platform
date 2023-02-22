@@ -150,6 +150,7 @@ create table "public"."connector_builder_project"(
   "name" varchar(256) not null,
   "manifest_draft" jsonb null,
   "actor_definition_id" uuid null,
+  "tombstone" bool not null default false,
   "created_at" timestamptz(35) not null default null,
   "updated_at" timestamptz(35) not null default null,
   constraint "connector_builder_project_pkey"
