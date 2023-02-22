@@ -9,7 +9,6 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import io.airbyte.api.generated.LogsApi;
 import io.airbyte.api.model.generated.LogsRequestBody;
 import io.airbyte.commons.server.handlers.LogsHandler;
-import io.micronaut.context.annotation.Context;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.TaskExecutors;
@@ -19,7 +18,6 @@ import io.micronaut.security.rules.SecurityRule;
 import java.io.File;
 
 @Controller("/api/v1/logs")
-@Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class LogsApiController implements LogsApi {
 

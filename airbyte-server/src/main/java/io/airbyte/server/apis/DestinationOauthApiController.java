@@ -14,7 +14,6 @@ import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.OAuthHandler;
-import io.micronaut.context.annotation.Context;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.TaskExecutors;
@@ -24,7 +23,6 @@ import io.micronaut.security.rules.SecurityRule;
 import java.util.Map;
 
 @Controller("/api/v1/destination_oauths")
-@Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class DestinationOauthApiController implements DestinationOauthApi {
 
