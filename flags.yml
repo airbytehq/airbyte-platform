@@ -5,3 +5,5 @@ flags:
     enabled: false
   - name: normalization.strictComparisonNormalizationEnabled
     enabled: false
+  - name: platform.commitStatesAsap
+    enabled: false
