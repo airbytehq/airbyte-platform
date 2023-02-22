@@ -24,6 +24,7 @@ inputs:
     required: true
   github_access_token:
     description: A github access token
+    required: true
   
 outputs:
   pull_request_branch:
@@ -31,7 +32,7 @@ outputs:
 
 runs:
   using: 'docker'
-  image: 'Dockerfile'
+  image: 'Dockerfile' 
   env:
     AUTH_TOKEN: ${{ inputs.github_access_token }}
     SRC_REPO: ${{ inputs.source_repo }}
