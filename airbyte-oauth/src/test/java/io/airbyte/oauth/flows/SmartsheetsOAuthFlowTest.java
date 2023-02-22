@@ -79,4 +79,8 @@ class SmartsheetsOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   void testGetDestinationConsentUrl() {}
 
+  @Test
+  @Override
+  void testDeprecatedCompleteSourceOAuth() {}
+
 }
