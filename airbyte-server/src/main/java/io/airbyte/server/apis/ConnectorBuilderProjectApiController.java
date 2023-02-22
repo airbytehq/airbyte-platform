@@ -39,7 +39,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.CREATED)
   @Secured({EDITOR})
   @SecuredWorkspace
-  public ConnectorBuilderProjectIdWithWorkspaceId createProject(final ConnectorBuilderProjectWithWorkspaceId connectorBuilderProjectWithWorkspaceId) {
+  public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(final ConnectorBuilderProjectWithWorkspaceId connectorBuilderProjectWithWorkspaceId) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createConnectorBuilderProject(connectorBuilderProjectWithWorkspaceId));
   }
 
@@ -48,7 +48,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR})
   @SecuredWorkspace
-  public void deleteProject(final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProjectIdWithWorkspaceId) {
+  public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProjectIdWithWorkspaceId) {
     ApiHelper.execute(() -> {
       connectorBuilderProjectsHandler.deleteConnectorBuilderProject(connectorBuilderProjectIdWithWorkspaceId);
       return null;
@@ -78,7 +78,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR})
   @SecuredWorkspace
-  public void updateProject(final ExistingConnectorBuilderProjectWithWorkspaceId existingConnectorBuilderProjectWithWorkspaceId) {
+  public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId existingConnectorBuilderProjectWithWorkspaceId) {
     ApiHelper.execute(() -> {
       connectorBuilderProjectsHandler.updateConnectorBuilderProject(existingConnectorBuilderProjectWithWorkspaceId);
       return null;
