@@ -499,7 +499,7 @@ describe("Connection sync modes", () => {
     isPrimaryKeyNonExist(streamName);
     selectPrimaryKeyField(streamName, ["city_code"]);
 
-    submitButtonClick();
+    submitButtonClick(true);
     confirmStreamConfigurationChangedPopup();
 
     waitForUpdateConnectionRequest().then((interception) => {
