@@ -4,8 +4,9 @@
 
 package io.airbyte.config.persistence;
 
+import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,7 +14,6 @@ import io.airbyte.config.ConnectorBuilderProject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,15 +34,14 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testRead() throws IOException {
+  void testRead() throws IOException, ConfigNotFoundException {
     createBaseObjects();
-    assertEquals(project1, configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), mainWorkspace).get());
+    assertEquals(project1, configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true));
   }
 
   @Test
-  void testReadNotExists() throws IOException {
-    final Optional<ConnectorBuilderProject> projectOptional = configRepository.getConnectorBuilderProject(UUID.randomUUID(), mainWorkspace);
-    assertFalse(projectOptional.isPresent());
+  void testReadNotExists() {
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.getConnectorBuilderProject(UUID.randomUUID(), false));
   }
 
   @Test
@@ -58,41 +57,45 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testUpdate() throws IOException {
+  void testUpdate() throws IOException, ConfigNotFoundException {
     createBaseObjects();
     project1.setName("Updated name");
     project1.setManifestDraft(new ObjectMapper().readTree("{}"));
     configRepository.writeBuilderProject(project1);
-    assertEquals(project1, configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), mainWorkspace).get());
+    assertEquals(project1, configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true));
   }
 
   @Test
-  void testDelete() throws IOException {
+  void testDelete() throws IOException, ConfigNotFoundException {
     createBaseObjects();
 
-    final boolean deleted = configRepository.deleteBuilderProject(project1.getBuilderProjectId(), mainWorkspace);
+    final boolean deleted = configRepository.deleteBuilderProject(project1.getBuilderProjectId());
     assertTrue(deleted);
-    assertFalse(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), mainWorkspace).isPresent());
-    assertTrue(configRepository.getConnectorBuilderProject(project2.getBuilderProjectId(), mainWorkspace).isPresent());
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), false));
+    assertNotNull(configRepository.getConnectorBuilderProject(project2.getBuilderProjectId(), false));
   }
 
   private void createBaseObjects() throws IOException {
     mainWorkspace = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();
 
-    project1 = createConnectorBuilderProject(mainWorkspace);
-    project2 = createConnectorBuilderProject(mainWorkspace);
+    project1 = createConnectorBuilderProject(mainWorkspace, false);
+    project2 = createConnectorBuilderProject(mainWorkspace, false);
+
+    // deleted project, should not show up in listing
+    createConnectorBuilderProject(mainWorkspace, true);
 
     // unreachable project, should not show up in listing
-    createConnectorBuilderProject(workspaceId2);
+    createConnectorBuilderProject(workspaceId2, false);
   }
 
-  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace)
+  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace, final boolean deleted)
       throws IOException {
     final UUID projectId = UUID.randomUUID();
     final ConnectorBuilderProject project = new ConnectorBuilderProject()
         .withBuilderProjectId(projectId)
         .withName("project " + projectId)
+        .withTombstone(deleted)
         .withManifestDraft(new ObjectMapper().readTree("{\"the_id\": \"" + projectId + "\"}"))
         .withWorkspaceId(workspace);
     configRepository.writeBuilderProject(project);
