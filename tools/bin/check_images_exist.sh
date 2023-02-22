@@ -80,50 +80,15 @@ checkPlatformImages() {
   check_compose_image_exist docker-compose.yaml $VERSION
 }
 
-checkNormalizationImages() {
-  echo -e "$blue_text""Checking Normalization images exist...""$default_text"
-  local image_version;
-  definition_file_path=airbyte-config/init/src/main/resources/seed/destination_definitions.yaml
-  # -f True if file exists and is a regular file
-  if ! test -f $definition_file_path; then
-    echo -e "$red_text""Destination definition file not found at path! H4LP!!!""$default_text"
-  fi
-  normalization_image_versions=$(cat $definition_file_path | grep 'normalizationTag:' | cut -d":" -f2 | sed 's:;::' | sed -e 's:"::g' | sed -e 's:[[:space:]]::g')
-  IFS=' ' read -r -a array <<< "$normalization_image_versions"
-  # Get the first value of the normalization tag
-  normalization_image=${array[0]}
-  echo -e "$blue_text""Checking normalization images with version $normalization_image exist...""$default_text"
-  VERSION=$normalization_image
-  check_compose_image_exist airbyte-integrations/bases/base-normalization/docker-compose.yaml $VERSION
-}
-
-checkConnectorImages() {
-  echo -e "$blue_text""Checking connector images exist...""$default_text"
-  CONNECTOR_DEFINITIONS=$(grep "dockerRepository" -h -A1 airbyte-config/init/src/main/resources/seed/*.yaml | grep -v -- "^--$" | tr -d ' ')
-  [ -z "CONNECTOR_DEFINITIONS" ] && echo "ERROR: Could not find any connector definition." && exit 1
-
-  while IFS=":" read -r _ REPO; do
-      IFS=":" read -r _ TAG
-      printf "\t${REPO}: ${TAG}\n"
-      if docker_tag_exists "$REPO" "$TAG"; then
-          printf "\tSTATUS: found\n\n"
-      else
-          printf "\tERROR: not found!\n\n" && exit 1
-      fi
-  done <<< "${CONNECTOR_DEFINITIONS}"
-  echo -e "$blue_text""Success! All connector images exist!""$default_text"
-}
 
 main() {
   assert_root
 
   SUBSET=${1:-all} # default to all.
-  [[ ! "$SUBSET" =~ ^(all|platform|connectors)$ ]] && echo "Usage ./tools/bin/check_image_exists.sh [all|platform|connectors]" && exit 1
+  [[ ! "$SUBSET" =~ ^(all|platform)$ ]] && echo "Usage ./tools/bin/check_image_exists.sh [all|platform]" && exit 1
   echo -e "$blue_text""checking images for: $SUBSET""$default_text"
 
   [[ "$SUBSET" =~ ^(all|platform)$ ]] && checkPlatformImages
-  [[ "$SUBSET" =~ ^(all|platform|connectors)$ ]] && checkNormalizationImages
-  [[ "$SUBSET" =~ ^(all|connectors)$ ]] && checkConnectorImages
   echo -e "$blue_text""Image check complete.""$default_text"
   test -f header.txt     && rm header.txt
 }
