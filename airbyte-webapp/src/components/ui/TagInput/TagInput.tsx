@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
 import { KeyboardEventHandler, useMemo, useState } from "react";
 import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig, components, InputProps } from "react-select";
@@ -96,18 +95,26 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     onChange(updatedTags.map((tag) => generateStringFromTag(tag)));
   };
 
+  function normalizeInput(input: string) {
+    if (itemType !== "number" && itemType !== "integer") {
+      return input.trim();
+    }
+    const parsedInput = itemType === "integer" ? Number.parseInt(input) : Number.parseFloat(input);
+    if (Number.isNaN(parsedInput)) {
+      return "";
+    }
+    return parsedInput.toString();
+  }
+
   // handle when a user types OR pastes in the input
   const handleInputChange = (inputValue: string) => {
     setInputValue(inputValue);
 
     delimiters.forEach((delimiter) => {
       if (inputValue.includes(delimiter)) {
-        const newTagStrings = inputValue
-          .split(delimiter)
-          .map((tag) => tag.trim())
-          .filter(Boolean);
+        const newTagStrings = inputValue.split(delimiter).map(normalizeInput).filter(Boolean);
 
-        inputValue.trim().length > 1 && onChange([...fieldValue, ...newTagStrings]);
+        newTagStrings.length > 0 && onChange([...fieldValue, ...newTagStrings]);
         setInputValue("");
       }
     });
@@ -121,7 +128,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     switch (event.key) {
       case "Enter":
       case "Tab":
-        const normalizedInput = inputValue.trim();
+        const normalizedInput = normalizeInput(inputValue);
         normalizedInput.length >= 1 && onChange([...fieldValue, normalizedInput]);
 
         event.preventDefault();
@@ -134,7 +141,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
    * This needs to be implemented outside of the onBlur prop of react-select because it's not default behavior.
    */
   const onBlurControl = () => {
-    const normalizedInput = inputValue.trim();
+    const normalizedInput = normalizeInput(inputValue);
     if (normalizedInput) {
       onChange([...fieldValue, normalizedInput]);
       setInputValue("");
@@ -145,15 +152,10 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     () => ({
       DropdownIndicator: null,
       Input: (props: InputProps<Tag, true, GroupBase<Tag>>) => (
-        <components.Input
-          {...props}
-          type={itemType === "number" || itemType === "integer" ? "number" : "text"}
-          data-testid={`tag-input-${name}`}
-          className={classNames(props.className, styles.hideArrowButtons)}
-        />
+        <components.Input {...props} data-testid={`tag-input-${name}`} />
       ),
     }),
-    [itemType, name]
+    [name]
   );
 
   return (

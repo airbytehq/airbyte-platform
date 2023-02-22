@@ -37,19 +37,3 @@ kubernetes:
   - charts/*
   - charts/**/*
 
-area/connectors:
-  - airbyte-integrations/connectors/*
-  - airbyte-integrations/connectors/**/*
-  - airbyte-integrations/builds.md
-
-area/documentation:
-  - docs/*
-  - docs/**/*
-
-CDK:
-  - airbyte-cdk/*
-  - airbyte-cdk/**/*
-
-normalization:
-  - airbyte-integrations/bases/base-normalization/*
-  - airbyte-integrations/bases/base-normalization/**/*
