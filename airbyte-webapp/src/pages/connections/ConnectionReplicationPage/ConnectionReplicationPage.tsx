@@ -30,7 +30,6 @@ import { equal } from "utils/objects";
 
 import styles from "./ConnectionReplicationPage.module.scss";
 import { ResetWarningModal } from "./ResetWarningModal";
-import { StickyEditControlsContainer } from "./StickyEditControlsContainer";
 
 const ValidateFormOnSchemaRefresh: React.FC = () => {
   const { schemaHasBeenRefreshed } = useConnectionEditService();
@@ -188,7 +187,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                   isSubmitting={isSubmitting}
                   dirty={dirty || schemaHasBeenRefreshed}
                 />
-                <StickyEditControlsContainer>
+                <div className={styles.editControlsContainer}>
                   <EditControls
                     hidden={!status.editControlsVisible}
                     isSubmitting={isSubmitting}
@@ -202,7 +201,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                     errorMessage={getErrorMessage(isValid, dirty)}
                     enableControls={schemaHasBeenRefreshed || dirty}
                   />
-                </StickyEditControlsContainer>
+                </div>
               </Form>
             </SchemaChangeBackdrop>
           )}
