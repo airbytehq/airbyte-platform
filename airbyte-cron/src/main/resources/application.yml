@@ -12,7 +12,7 @@ airbyte:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
     canary-monitor:
-      enabled: ${CANARY_MONITOR_CRON_ENABLED:false}
+      enabled: ${CANARY_MONITOR_CRON_ENABLED:true}
       monitored-workspace-ids: ${CANARY_MONITOR_WORKSPACE_IDS:}
       monitored-connection-ids: ${CANARY_MONITOR_CONNECTION_IDS:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
