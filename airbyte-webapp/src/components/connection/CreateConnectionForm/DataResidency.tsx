@@ -10,7 +10,7 @@ import { Geography } from "core/request/AirbyteClient";
 import { useAvailableGeographies } from "packages/cloud/services/geographies/GeographiesService";
 import { links } from "utils/links";
 
-import { FormFieldWrapper } from "../ConnectionForm/FormFieldWrapper";
+import { FormFieldLayout } from "../ConnectionForm/FormFieldLayout";
 
 interface DataResidencyProps {
   name?: string;
@@ -25,7 +25,7 @@ export const DataResidency: React.FC<DataResidencyProps> = ({ name = "geography"
     <Section title={formatMessage({ id: "connection.geographyTitle" })}>
       <Field name={name}>
         {({ field, form }: FieldProps<Geography>) => (
-          <FormFieldWrapper>
+          <FormFieldLayout>
             <ControlLabels
               nextLine
               optional
@@ -54,7 +54,7 @@ export const DataResidency: React.FC<DataResidencyProps> = ({ name = "geography"
               value={field.value}
               onChange={(geography) => setFieldValue(name, geography)}
             />
-          </FormFieldWrapper>
+          </FormFieldLayout>
         )}
       </Field>
     </Section>

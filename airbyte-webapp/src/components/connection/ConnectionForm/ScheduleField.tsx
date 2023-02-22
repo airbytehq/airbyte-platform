@@ -16,7 +16,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { links } from "utils/links";
 
 import { FormikConnectionFormValues, useFrequencyDropdownData } from "./formConfig";
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 import styles from "./ScheduleField.module.scss";
 
 const CRON_DEFAULT_VALUE = {
@@ -136,7 +136,7 @@ export const ScheduleField: React.FC = () => {
     <Field name="scheduleData">
       {({ field, meta, form }: FieldProps<ConnectionScheduleData>) => (
         <>
-          <FormFieldWrapper>
+          <FormFieldLayout>
             <ControlLabels
               className={styles.connectorLabel}
               nextLine
@@ -157,9 +157,9 @@ export const ScheduleField: React.FC = () => {
               value={getBasicScheduleValue(field.value, form)}
               isDisabled={form.isSubmitting || mode === "readonly"}
             />
-          </FormFieldWrapper>
+          </FormFieldLayout>
           {isCron(form) && (
-            <FormFieldWrapper>
+            <FormFieldLayout>
               <ControlLabels
                 className={styles.connectorLabel}
                 nextLine
@@ -206,7 +206,7 @@ export const ScheduleField: React.FC = () => {
                   <FormattedMessage id={cronValidationError} />
                 </Text>
               )}
-            </FormFieldWrapper>
+            </FormFieldLayout>
           )}
         </>
       )}

@@ -8,7 +8,7 @@ import { DropDown } from "components/ui/DropDown";
 import { NonBreakingChangesPreference } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 
 const SUPPORTED_PREFERENCES = [NonBreakingChangesPreference.ignore, NonBreakingChangesPreference.disable];
 
@@ -26,7 +26,7 @@ export const NonBreakingChangesPreferenceField: React.FC<FieldProps<string>> = (
   const { mode } = useConnectionFormService();
 
   return (
-    <FormFieldWrapper>
+    <FormFieldLayout>
       <ControlLabels
         nextLine
         label={formatMessage({
@@ -45,6 +45,6 @@ export const NonBreakingChangesPreferenceField: React.FC<FieldProps<string>> = (
         isDisabled={form.isSubmitting || mode === "readonly"}
         onChange={({ value }) => form.setFieldValue(field.name, value)}
       />
-    </FormFieldWrapper>
+    </FormFieldLayout>
   );
 };

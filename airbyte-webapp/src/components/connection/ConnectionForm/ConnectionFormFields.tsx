@@ -19,7 +19,7 @@ import { ValuesProps } from "hooks/services/useConnectionHook";
 
 import styles from "./ConnectionFormFields.module.scss";
 import { FormikConnectionFormValues } from "./formConfig";
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 import { NamespaceDefinitionField } from "./NamespaceDefinitionField";
 import { NonBreakingChangesPreferenceField } from "./NonBreakingChangesPreferenceField";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
@@ -66,7 +66,7 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
             {values.namespaceDefinition === NamespaceDefinitionType.customformat && (
               <Field name="namespaceFormat">
                 {({ field, meta }: FieldProps<string>) => (
-                  <FormFieldWrapper>
+                  <FormFieldLayout>
                     <ControlLabels
                       className={styles.namespaceFormatLabel}
                       nextLine
@@ -82,13 +82,13 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
                         id: "connectionForm.namespaceFormat.placeholder",
                       })}
                     />
-                  </FormFieldWrapper>
+                  </FormFieldLayout>
                 )}
               </Field>
             )}
             <Field name="prefix">
               {({ field }: FieldProps<string>) => (
-                <FormFieldWrapper>
+                <FormFieldLayout>
                   <ControlLabels
                     nextLine
                     optional
@@ -108,7 +108,7 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
                     })}
                     data-testid="prefixInput"
                   />
-                </FormFieldWrapper>
+                </FormFieldLayout>
               )}
             </Field>
           </Section>

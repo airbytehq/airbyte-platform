@@ -8,7 +8,7 @@ import { DropDown } from "components/ui/DropDown";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 
 export const StreamOptions = [
   {
@@ -33,7 +33,7 @@ export const NamespaceDefinitionField: React.FC<FieldProps<string>> = ({ field, 
   const { mode } = useConnectionFormService();
 
   return (
-    <FormFieldWrapper>
+    <FormFieldLayout>
       <ControlLabels
         nextLine
         error={!!meta.error && meta.touched}
@@ -48,6 +48,6 @@ export const NamespaceDefinitionField: React.FC<FieldProps<string>> = ({ field, 
         isDisabled={form.isSubmitting || mode === "readonly"}
         onChange={({ value }) => form.setFieldValue(field.name, value)}
       />
-    </FormFieldWrapper>
+    </FormFieldLayout>
   );
 };

@@ -5,7 +5,7 @@ import { Section } from "components/connection/ConnectionForm/Section";
 import { ControlLabels } from "components/LabeledControl";
 import { Input } from "components/ui/Input";
 
-import { FormFieldWrapper } from "../ConnectionForm/FormFieldWrapper";
+import { FormFieldLayout } from "../ConnectionForm/FormFieldLayout";
 
 export const CreateConnectionNameField = () => {
   const { formatMessage } = useIntl();
@@ -14,7 +14,7 @@ export const CreateConnectionNameField = () => {
     <Section title={<FormattedMessage id="connection.title" />}>
       <Field name="name">
         {({ field, meta, form }: FieldProps<string>) => (
-          <FormFieldWrapper>
+          <FormFieldLayout>
             <ControlLabels
               nextLine
               error={!!meta.error && meta.touched}
@@ -32,7 +32,7 @@ export const CreateConnectionNameField = () => {
                 id: "form.connectionName.placeholder",
               })}
             />
-          </FormFieldWrapper>
+          </FormFieldLayout>
         )}
       </Field>
     </Section>

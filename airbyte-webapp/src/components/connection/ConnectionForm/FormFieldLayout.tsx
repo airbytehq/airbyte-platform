@@ -1,10 +1,15 @@
-import React from "react";
+import React, { ReactElement } from "react";
 
+import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 
 import styles from "./FormFieldWrapper.module.scss";
 
-export const FormFieldWrapper: React.FC = ({ children }) => {
+interface FormFieldLayoutProps {
+  children: [ReactElement<typeof ControlLabels>, ...React.ReactNode[]];
+}
+
+export const FormFieldLayout: React.FC<FormFieldLayoutProps> = ({ children }) => {
   const [label, ...restControls] = React.Children.toArray(children);
 
   return (
