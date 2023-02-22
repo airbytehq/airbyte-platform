@@ -19,6 +19,7 @@ import { CreditConsumptionByConnector } from "packages/cloud/lib/domain/cloudWor
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
+import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import ConnectionCell from "./ConnectionCell";
 import UsageCell from "./UsageCell";
@@ -36,6 +37,7 @@ type FullTableProps = CreditConsumptionByConnector & {
 
 export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ creditConsumption }) => {
   const isBillingInsightsEnabled = useExperiment("billingPage.billingInsights", false);
+  const { workspaceId } = useCurrentWorkspace();
 
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const navigate = useNavigate();
@@ -131,13 +133,13 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               responsive: true,
             },
             cell: (props) => (
-              <div className={styles.cell}>
-                <NavLink to={`${RoutePaths.Connections}/${props.row.original.connectionId}`}>
-                  <Text size="sm" className={styles.cellText}>
-                    {props.cell.getValue()}
-                  </Text>
-                </NavLink>
-              </div>
+              <NavLink
+                to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${props.row.original.connectionId}`}
+              >
+                <Text size="sm" className={styles.cellText}>
+                  {props.cell.getValue()}
+                </Text>
+              </NavLink>
             ),
           }),
           columnHelper.accessor("sourceConnectionName", {
@@ -155,12 +157,16 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               responsive: true,
             },
             cell: (props) => (
-              <FlexContainer className={styles.cell} alignItems="center">
-                <ConnectorIcon icon={props.row.original.sourceIcon} />
-                <Text size="sm" className={styles.cellText}>
-                  {props.cell.getValue()}
-                </Text>
-              </FlexContainer>
+              <NavLink
+                to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${props.row.original.sourceId}`}
+              >
+                <FlexContainer direction="row" alignItems="center">
+                  <ConnectorIcon icon={props.row.original.sourceIcon} />
+                  <Text size="sm" className={styles.cellText}>
+                    {props.cell.getValue()}
+                  </Text>{" "}
+                </FlexContainer>
+              </NavLink>
             ),
           }),
           columnHelper.display({
@@ -186,10 +192,14 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               responsive: true,
             },
             cell: (props) => (
-              <FlexContainer className={styles.cell} alignItems="center">
-                <ConnectorIcon icon={props.row.original.destinationIcon} />
-                <Text size="sm">{props.cell.getValue()}</Text>
-              </FlexContainer>
+              <NavLink
+                to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${props.row.original.destinationId}`}
+              >
+                <FlexContainer direction="row" alignItems="center">
+                  <ConnectorIcon icon={props.row.original.destinationIcon} />
+                  <Text size="sm">{props.cell.getValue()}</Text>
+                </FlexContainer>{" "}
+              </NavLink>
             ),
           }),
           columnHelper.display({
@@ -248,7 +258,8 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
             ),
           }),
         ];
-  }, [columnHelper, isBillingInsightsEnabled, onSortClick, sortBy, sortOrder]);
+  }, [columnHelper, isBillingInsightsEnabled, onSortClick, sortBy, sortOrder, workspaceId]);
+
   const columns = React.useMemo(
     () => [
       columnHelper.accessor("sourceDefinitionName", {
