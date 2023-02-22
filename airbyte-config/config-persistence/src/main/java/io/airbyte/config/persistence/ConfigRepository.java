@@ -1635,6 +1635,7 @@ public class ConfigRepository {
             .select(baseConnectorBuilderProjectColumns)
             .from(CONNECTOR_BUILDER_PROJECT)
             .where(matchByWorkspace.andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
+            .orderBy(CONNECTOR_BUILDER_PROJECT.NAME.asc())
             .fetch())
         .map(DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
         .stream();

@@ -60,7 +60,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project2.setManifestDraft(null);
 
     assertEquals(new ArrayList<>(
-        Arrays.asList(project1, project2)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+        // project2 comes first due to alphabetical ordering
+        Arrays.asList(project2, project1)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
   }
 
   @Test
@@ -104,17 +105,17 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     mainWorkspace = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();
 
-    project1 = createConnectorBuilderProject(mainWorkspace, false);
-    project2 = createConnectorBuilderProject(mainWorkspace, false);
+    project1 = createConnectorBuilderProject(mainWorkspace, "Z project", false);
+    project2 = createConnectorBuilderProject(mainWorkspace, "A project", false);
 
     // deleted project, should not show up in listing
-    createConnectorBuilderProject(mainWorkspace, true);
+    createConnectorBuilderProject(mainWorkspace, "Deleted project", true);
 
     // unreachable project, should not show up in listing
-    createConnectorBuilderProject(workspaceId2, false);
+    createConnectorBuilderProject(workspaceId2, "Other workspace project", false);
   }
 
-  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace, final boolean deleted)
+  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace, final String name, final boolean deleted)
       throws IOException {
     final UUID projectId = UUID.randomUUID();
     final ConnectorBuilderProject project = new ConnectorBuilderProject()
