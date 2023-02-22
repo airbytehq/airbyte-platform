@@ -1607,13 +1607,13 @@ public class ConfigRepository {
     final Optional<ConnectorBuilderProject> projectOptional = database.query(ctx -> {
       final List columnsToFetch =
           new ArrayList(Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
-              CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID));
+              CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE));
       if (fetchManifestDraft) {
         columnsToFetch.add(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT);
       }
       return ctx.select(columnsToFetch)
           .from(CONNECTOR_BUILDER_PROJECT)
-          .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId))
+          .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId).andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
           .fetch()
           .map(fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
           .stream()
@@ -1623,23 +1623,22 @@ public class ConfigRepository {
   }
 
   public Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(final UUID workspaceId) throws IOException {
-    final Condition matchByIds = CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId);
+    final Condition matchByWorkspace = CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId);
 
     return database
         .query(ctx -> ctx
             .select(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
-                CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID)
+                CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE)
             .from(CONNECTOR_BUILDER_PROJECT)
-            .where(matchByIds)
+            .where(matchByWorkspace.andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
             .fetch())
         .map(DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
         .stream();
   }
 
   public boolean deleteBuilderProject(final UUID builderProjectId) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(CONNECTOR_BUILDER_PROJECT))
-        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId))
-        .execute() > 0;
+    return database.transaction(ctx -> ctx.update(CONNECTOR_BUILDER_PROJECT).set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, true)
+        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)).execute()) > 0;
   }
 
   public void writeBuilderProject(final ConnectorBuilderProject builderProject) throws IOException {
@@ -1656,8 +1655,9 @@ public class ConfigRepository {
             .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, builderProject.getWorkspaceId())
             .set(CONNECTOR_BUILDER_PROJECT.NAME, builderProject.getName())
             .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, builderProject.getActorDefinitionId())
+            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, builderProject.getTombstone() != null && builderProject.getTombstone())
             .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT, JSONB.valueOf(Jsons.serialize(builderProject.getManifestDraft())))
-            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
             .where(matchId)
             .execute();
       } else {
@@ -1666,9 +1666,10 @@ public class ConfigRepository {
             .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, builderProject.getWorkspaceId())
             .set(CONNECTOR_BUILDER_PROJECT.NAME, builderProject.getName())
             .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, builderProject.getActorDefinitionId())
+            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, builderProject.getTombstone() != null && builderProject.getTombstone())
             .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT, JSONB.valueOf(Jsons.serialize(builderProject.getManifestDraft())))
-            .set(WORKSPACE.CREATED_AT, timestamp)
-            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
             .execute();
       }
       return null;

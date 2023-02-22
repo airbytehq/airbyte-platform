@@ -41,12 +41,14 @@ public class V0_41_00_001__AddConnectorBuilderProjectTable extends BaseJavaMigra
     final Field<String> name = DSL.field("name", SQLDataType.VARCHAR(256).nullable(false));
     final Field<JSONB> manifestDraft = DSL.field("manifest_draft", SQLDataType.JSONB.nullable(true));
     final Field<UUID> actorDefinitionId = DSL.field("actor_definition_id", SQLDataType.UUID.nullable(true));
+    final Field<Boolean> tombstone = DSL.field("tombstone", SQLDataType.BOOLEAN.nullable(false).defaultValue(false));
     final Field<OffsetDateTime> createdAt =
         DSL.field("created_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(currentOffsetDateTime()));
     final Field<OffsetDateTime> updatedAt =
         DSL.field("updated_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(currentOffsetDateTime()));
 
-    ctx.createTableIfNotExists("connector_builder_project").columns(id, workspaceId, name, manifestDraft, actorDefinitionId, createdAt, updatedAt)
+    ctx.createTableIfNotExists("connector_builder_project")
+        .columns(id, workspaceId, name, manifestDraft, actorDefinitionId, tombstone, createdAt, updatedAt)
         .constraints(primaryKey(id)).execute();
     ctx.createIndexIfNotExists("connector_builder_project_workspace_idx").on("connector_builder_project", "workspace_id").execute();
   }

@@ -4,9 +4,9 @@
 
 package io.airbyte.config.persistence;
 
+import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +40,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testReadNotExists() throws IOException {
+  void testReadNotExists() {
     assertThrows(ConfigNotFoundException.class, () -> configRepository.getConnectorBuilderProject(UUID.randomUUID(), false));
   }
 
@@ -79,19 +79,23 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     mainWorkspace = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();
 
-    project1 = createConnectorBuilderProject(mainWorkspace);
-    project2 = createConnectorBuilderProject(mainWorkspace);
+    project1 = createConnectorBuilderProject(mainWorkspace, false);
+    project2 = createConnectorBuilderProject(mainWorkspace, false);
+
+    // deleted project, should not show up in listing
+    createConnectorBuilderProject(mainWorkspace, true);
 
     // unreachable project, should not show up in listing
-    createConnectorBuilderProject(workspaceId2);
+    createConnectorBuilderProject(workspaceId2, false);
   }
 
-  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace)
+  private ConnectorBuilderProject createConnectorBuilderProject(final UUID workspace, final boolean deleted)
       throws IOException {
     final UUID projectId = UUID.randomUUID();
     final ConnectorBuilderProject project = new ConnectorBuilderProject()
         .withBuilderProjectId(projectId)
         .withName("project " + projectId)
+        .withTombstone(deleted)
         .withManifestDraft(new ObjectMapper().readTree("{\"the_id\": \"" + projectId + "\"}"))
         .withWorkspaceId(workspace);
     configRepository.writeBuilderProject(project);
