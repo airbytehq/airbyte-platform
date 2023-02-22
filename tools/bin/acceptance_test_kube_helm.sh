@@ -106,7 +106,7 @@ if [ -n "$CI" ]; then
 fi
  docker system df
 
-trap "restore_dir_structure" ERR
+trap "restore_dir_structure" EXIT
 
 echo "Running e2e tests via gradle..."
 KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan
