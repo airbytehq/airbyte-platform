@@ -40,7 +40,8 @@ public class SynchronousResponse<T> {
         configId,
         jobOutput != null ? jobOutput.getConnectorConfigurationUpdated() : false,
         createdAt,
-        endedAt);
+        endedAt,
+        jobOutput != null ? jobOutput.getFailureReason() : null);
     return new SynchronousResponse<>(responseOutput, metadata);
   }
 
