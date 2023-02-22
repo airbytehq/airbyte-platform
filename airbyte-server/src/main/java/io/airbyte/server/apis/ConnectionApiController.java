@@ -21,19 +21,18 @@ import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
 import io.micronaut.context.annotation.Context;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
 @Controller("/api/v1/connections")
-@Context()
-@Requires(property = "airbyte.deployment-mode",
-          value = "OSS")
+@Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class ConnectionApiController implements ConnectionApi {
 
@@ -53,6 +52,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/create")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionRead createConnection(@Body final ConnectionCreate connectionCreate) {
     return ApiHelper.execute(() -> connectionsHandler.createConnection(connectionCreate));
   }
@@ -61,6 +61,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/update")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionRead updateConnection(@Body final ConnectionUpdate connectionUpdate) {
     return ApiHelper.execute(() -> connectionsHandler.updateConnection(connectionUpdate));
   }
@@ -77,6 +78,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/list_all")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionReadList listAllConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listAllConnectionsForWorkspace(workspaceIdRequestBody));
   }
@@ -91,6 +93,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionRead getConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnection(connectionIdRequestBody.getConnectionId()));
   }
@@ -100,6 +103,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public void deleteConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     ApiHelper.execute(() -> {
       operationsHandler.deleteOperationsForConnection(connectionIdRequestBody);
@@ -112,6 +116,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/sync")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public JobInfoRead syncConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.syncConnection(connectionIdRequestBody));
   }
@@ -120,6 +125,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/reset")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public JobInfoRead resetConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
   }
