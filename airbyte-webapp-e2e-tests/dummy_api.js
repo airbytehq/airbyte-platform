@@ -15,7 +15,7 @@ const paginateResults = function(result, offset, page_size) {
 
 const generateResults = function(item_id, count) {
   key = "subitem" + item_id
-  return Array.from(Array(10).keys()).map(count => ({ key: "subitem" + count }))
+  return Array.from(Array(count).keys()).map(i => ({ key: "subitem" + i }))
 }
 
 const requestListener = function (req, res) {

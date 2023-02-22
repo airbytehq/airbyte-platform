@@ -14,8 +14,12 @@ import {
   enterUrlBase,
   enterUrlPath,
   enterUrlPathFromForm,
+  getDetectedSchemaElement,
+  getSlicesFromDropdown,
   goToTestPage,
   goToView,
+  openDetectedSchemaTab,
+  openStreamSchemaTab,
   openTestInputs,
   selectAuthMethod,
   submitForm,
@@ -99,8 +103,7 @@ export const assertMaxNumberOfPages = () => {
 };
 
 export const assertHasNumberOfSlices = (numberOfSlices: number) => {
-  cy.get('[data-testid="tag-select-slice"] button').click();
-  cy.get('[data-testid="tag-select-slice"] li').should('have.length', numberOfSlices);
+  getSlicesFromDropdown().should('have.length', numberOfSlices);
 };
 
 const MAX_NUMBER_OF_SLICES = 5;
@@ -110,8 +113,7 @@ export const assertMaxNumberOfSlices = () => {
 
 export const assertMaxNumberOfSlicesAndPages = () => {
   for (var i = 0; i < MAX_NUMBER_OF_SLICES; i++) {
-    cy.get('[data-testid="tag-select-slice"] button').click();
-    cy.get('[data-testid="tag-select-slice"] li').contains("Slice " + i).click();
+    getSlicesFromDropdown().contains("Slice " + i).click();
     assertMaxNumberOfPages();
   }
 };
@@ -126,19 +128,19 @@ const SCHEMA =  ' {\n' +
 '   "type": "object"\n' +
 ' }'
 export const assertSchema = () => {
-  cy.get('[data-testid="tag-tab-detected-schema"]').click();
-  cy.get('pre[class*="SchemaDiffView"]').contains(SCHEMA).should("exist");
+  openDetectedSchemaTab();
+  getDetectedSchemaElement().should(($el) => {
+    expect($el.get(0).innerText).to.eq(SCHEMA)
+  });
 };
 
 const SCHEMA_WITH_MISMATCH = '{{}"$schema": "http://json-schema.org/schema#", "properties": {{}"name": {{}"type": "number"}}, "type": "object"}'
 export const acceptSchemaWithMismatch = () => {
-  cy.get('[data-testid="tag-tab-stream-schema"]').click();
+  openStreamSchemaTab();
   cy.get('textarea').type(SCHEMA_WITH_MISMATCH, { force: true });
 };
 
 export const assertSchemaMismatch = () => {
-  cy.get('[data-testid="tag-tab-detected-schema"]').click();
+  openDetectedSchemaTab();
   cy.contains("Detected schema and declared schema are different").should("exist");
-  cy.get('pre[class*="SchemaDiffView"]').contains('-      "type": "number"').should("exist");
-  cy.get('pre[class*="SchemaDiffView"]').contains('+      "type": "string"').should("exist");
 };

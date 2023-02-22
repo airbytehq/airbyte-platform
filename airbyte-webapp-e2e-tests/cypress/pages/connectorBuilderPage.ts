@@ -15,6 +15,8 @@ const injectOffsetFieldName = "[name='streams[0].paginator.pageTokenOption.field
 const testPageItem = "[data-testid='test-pages'] li";
 const submit = "button[type='submit']";
 const testStreamButton = "button[data-testid='read-stream']";
+const schemaDiff = 'pre[class*="SchemaDiffView"]'
+const sliceDropdown = '[data-testid="tag-select-slice"]'
 
 export const goToConnectorBuilderPage = () => {
   cy.visit("/connector-builder");
@@ -75,6 +77,12 @@ export const disablePagination = () => {
   getPaginationCheckbox().uncheck({ force: true });
 };
 
+export const configureOffsetPagination = (limit: string, into: string, fieldName: string) => {
+  cy.get(limitInput).type(limit, { force: true });
+  selectFromDropdown(injectOffsetInto, into);
+  cy.get(injectOffsetFieldName).type(fieldName, { force: true });
+};
+
 const getStreamSlicerCheckbox = () => {
   return cy.get(toggleInput).eq(1);
 };
@@ -87,15 +95,26 @@ export const disableStreamSlicer = () => {
   getStreamSlicerCheckbox().uncheck({ force: true });
 };
 
-export const configureOffsetPagination = (limit: string, into: string, fieldName: string) => {
-  cy.get(limitInput).type(limit, { force: true });
-  selectFromDropdown(injectOffsetInto, into);
-  cy.get(injectOffsetFieldName).type(fieldName, { force: true });
-};
-
 export const configureListStreamSlicer = (values: string, cursor_field: string) => {
   cy.get('[data-testid="tag-input-streams[0].streamSlicer.slice_values"] input[type="text"]').type(values, { force: true });
   cy.get("[name='streams[0].streamSlicer.cursor_field']").type(cursor_field, { force: true });
+};
+
+export const getSlicesFromDropdown = () => {
+  cy.get(sliceDropdown + ' button').click();
+  return cy.get(sliceDropdown + ' li')
+};
+
+export const openStreamSchemaTab = () => {
+  cy.get('[data-testid="tag-tab-stream-schema"]').click();
+};
+
+export const openDetectedSchemaTab = () => {
+  cy.get('[data-testid="tag-tab-detected-schema"]').click();
+};
+
+export const getDetectedSchemaElement = () => {
+  return cy.get('pre[class*="SchemaDiffView"]');
 };
 
 export const addStream = () => {

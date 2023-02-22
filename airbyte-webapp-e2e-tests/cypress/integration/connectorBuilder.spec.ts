@@ -17,7 +17,6 @@ import {
   configurePagination,
   configureStream,
   configureStreamSlicer,
-  invalidAuth,
 } from "commands/connectorBuilder";
 
 import { initialSetupCompleted } from "commands/workspaces";
