@@ -1,0 +1,33 @@
+@use "scss/colors";
+
+.container {
+  width: 100%;
+  max-width: 370px;
+  height: 19px;
+  border: 1px solid colors.$grey;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  display: inline-block;
+
+  .filling {
+    width: 100%;
+    height: 100%;
+
+    &.onTrack {
+      background: colors.$green;
+    }
+
+    &.behind {
+      background: colors.$grey;
+    }
+
+    &.error {
+      background: colors.$red;
+    }
+
+    &.disabled {
+      background: colors.$grey;
+    }
+  }
+}

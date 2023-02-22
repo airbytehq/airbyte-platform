@@ -16,6 +16,7 @@ import { ConnectorNameCell } from "./components/ConnectorNameCell";
 import { FrequencyCell } from "./components/FrequencyCell";
 import { LastSyncCell } from "./components/LastSyncCell";
 import { StatusCell } from "./components/StatusCell";
+import { StreamsStatusCell } from "./components/StreamStatusCell";
 import styles from "./ConnectionTable.module.scss";
 import { ConnectionTableDataItem, SortOrderEnum } from "./types";
 import { NextTable } from "../ui/NextTable";
@@ -75,6 +76,10 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
 
   const columns = React.useMemo(
     () => [
+      columnHelper.display({
+        id: "stream-status",
+        cell: StreamsStatusCell,
+      }),
       columnHelper.accessor("name", {
         header: () => (
           <SortableTableHeader
