@@ -32,6 +32,16 @@ task generateConnectorSpecsMask(type: JavaExec, dependsOn: downloadCombinedConne
     args new File(project(":airbyte-config:init").projectDir, '/src/main/resources')
 }
 
+// TODO (ben): Remove once cloud is no longer depenedant on this.
+task generateSeedConnectorSpecs(type: JavaExec, dependsOn: generateConnectorSpecsMask) {
+    classpath = sourceSets.main.runtimeClasspath
+
+    mainClass = 'io.airbyte.config.specs.SeedConnectorSpecGenerator'
+
+    args '--seed-root'
+    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources/seed')
+}
+
 project(":airbyte-config:init").tasks.processResources.dependsOn(generateConnectorSpecsMask)
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

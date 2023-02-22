@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
@@ -65,6 +66,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/clone")
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead cloneSource(final SourceCloneRequestBody sourceCloneRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.cloneSource(sourceCloneRequestBody));
@@ -73,6 +75,7 @@ public class SourceApiController implements SourceApi {
   @Post("/create")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead createSource(final SourceCreate sourceCreate) {
     return ApiHelper.execute(() -> sourceHandler.createSource(sourceCreate));
@@ -81,6 +84,7 @@ public class SourceApiController implements SourceApi {
   @Post("/delete")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteSource(final SourceIdRequestBody sourceIdRequestBody) {
@@ -102,6 +106,7 @@ public class SourceApiController implements SourceApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.getSource(sourceIdRequestBody));
@@ -110,6 +115,7 @@ public class SourceApiController implements SourceApi {
   @Post("/most_recent_source_actor_catalog")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalog(final SourceIdRequestBody sourceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody));
@@ -118,6 +124,7 @@ public class SourceApiController implements SourceApi {
   @Post("/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody));
@@ -132,12 +139,15 @@ public class SourceApiController implements SourceApi {
   @Post("/update")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead updateSource(final SourceUpdate sourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSource(sourceUpdate));
   }
 
   @Post("/write_discover_catalog_result")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request) {
     return ApiHelper.execute(() -> sourceHandler.writeDiscoverCatalogResult(request));

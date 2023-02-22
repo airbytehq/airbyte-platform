@@ -4757,6 +4757,10 @@ components:
           additionalProperties: true # Oauth parameters like code, state, etc.. will be different per API so we don't specify them in advance
         oAuthInputConfiguration:
           $ref: "#/components/schemas/OAuthInputConfiguration"
+        returnSecretCoordinate:
+          type: boolean
+          description: If set to true, returns a secret coordinate which references the stored tokens. By default, returns raw tokens.
+          default: false
         sourceId:
           $ref: "#/components/schemas/SourceId"
     CompleteDestinationOAuthRequest:
