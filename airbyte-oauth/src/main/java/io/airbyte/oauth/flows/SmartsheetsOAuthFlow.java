@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -37,7 +36,10 @@ public class SmartsheetsOAuthFlow extends BaseOAuth2Flow {
     this.clock = Clock.systemUTC();
   }
 
-  public SmartsheetsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
+  public SmartsheetsOAuthFlow(final ConfigRepository configRepository,
+                              final HttpClient httpClient,
+                              final Supplier<String> stateSupplier,
+                              Clock clock) {
     super(configRepository, httpClient, stateSupplier);
     this.clock = clock;
   }

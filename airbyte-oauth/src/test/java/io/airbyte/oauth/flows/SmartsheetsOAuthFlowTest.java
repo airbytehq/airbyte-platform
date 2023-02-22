@@ -10,7 +10,6 @@ import io.airbyte.oauth.MoreOAuthParameters;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
