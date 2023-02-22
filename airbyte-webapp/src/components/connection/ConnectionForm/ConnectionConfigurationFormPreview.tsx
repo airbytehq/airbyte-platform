@@ -1,15 +1,11 @@
 import { useFormikContext } from "formik";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import {
-  ConnectionScheduleData,
-  ConnectionScheduleType,
-  NamespaceDefinitionType,
-  NonBreakingChangesPreference,
-} from "core/request/AirbyteClient";
+import { ConnectionScheduleType, NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import styles from "./ConnectionConfigurationFormPreview.module.scss";
@@ -17,15 +13,10 @@ import { FormikConnectionFormValues } from "./formConfig";
 import { namespaceDefinitionOptions } from "./types";
 
 export const ConnectionConfigurationFormPreview: React.FC = () => {
-  const { getFieldMeta } = useFormikContext<FormikConnectionFormValues>();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-
-  const scheduleType = getFieldMeta<ConnectionScheduleType>("scheduleType").value;
-  const scheduleData = getFieldMeta<ConnectionScheduleData>("scheduleData").value;
-  const nonBreakingChangesPreference = getFieldMeta<NonBreakingChangesPreference>("nonBreakingChangesPreference").value;
-  const destNamespaceDef = getFieldMeta("namespaceDefinition").value as NamespaceDefinitionType;
-  const destNamespaceFormat = getFieldMeta("namespaceFormat").value;
-  const destPrefix = getFieldMeta("prefix").value;
+  const {
+    values: { scheduleType, scheduleData, nonBreakingChangesPreference, namespaceDefinition, namespaceFormat, prefix },
+  } = useFormikContext<FormikConnectionFormValues>();
 
   const frequency = (
     <div>
@@ -56,11 +47,14 @@ export const ConnectionConfigurationFormPreview: React.FC = () => {
         <FormattedMessage id="connectionForm.namespaceDefinition.title" />:
       </Text>
       <Text size="md" color="grey">
-        <FormattedMessage id={`connectionForm.${namespaceDefinitionOptions[destNamespaceDef]}`} />
-        {namespaceDefinitionOptions[destNamespaceDef] === namespaceDefinitionOptions.customformat && (
+        <FormattedMessage
+          id={`connectionForm.${namespaceDefinitionOptions[namespaceDefinition as NamespaceDefinitionType]}`}
+        />
+        {namespaceDefinitionOptions[namespaceDefinition as NamespaceDefinitionType] ===
+          namespaceDefinitionOptions.customformat && (
           <>
             {" - "}
-            {destNamespaceFormat}
+            {namespaceFormat}
           </>
         )}
       </Text>
@@ -73,10 +67,10 @@ export const ConnectionConfigurationFormPreview: React.FC = () => {
         <FormattedMessage id="form.prefix" />:
       </Text>
       <Text size="md" color="grey">
-        {destPrefix === "" ? (
+        {prefix === "" ? (
           <FormattedMessage id="connectionForm.modal.destinationStreamNames.radioButton.mirror" />
         ) : (
-          destPrefix
+          prefix
         )}
       </Text>
     </div>
