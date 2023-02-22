@@ -112,9 +112,6 @@ class ConnectorBuilderProjectsHandlerTest {
   @DisplayName("updateConnectorBuilderProject should update an existing project removing the draft")
   void testUpdateConnectorBuilderProjectWipeDraft() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
-    project.setManifestDraft(null);
-    // hasDraft is not set when writing
-    project.setHasDraft(null);
 
     when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
@@ -124,6 +121,9 @@ class ConnectorBuilderProjectsHandlerTest {
 
     connectorBuilderProjectsHandler.updateConnectorBuilderProject(update);
 
+    // validate project was written without manifest
+    project.setManifestDraft(null);
+    project.setHasDraft(null);
     verify(configRepository, times(1))
         .writeBuilderProject(
             project);
