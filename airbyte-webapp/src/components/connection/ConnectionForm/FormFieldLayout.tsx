@@ -13,7 +13,7 @@ export const FormFieldLayout: React.FC<FormFieldLayoutProps> = ({ children }) =>
   const [label, ...restControls] = React.Children.toArray(children);
 
   return (
-    <FlexContainer alignItems="center">
+    <FlexContainer alignItems="center" gap="xl">
       <div className={styles.leftFieldCol}>{label}</div>
       <div className={styles.rightFieldCol}>{restControls}</div>
     </FlexContainer>
