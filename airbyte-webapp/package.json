@@ -38,8 +38,6 @@
     "@fortawesome/react-fontawesome": "^0.1.18",
     "@headlessui/react": "^1.6.5",
     "@monaco-editor/react": "^4.4.5",
-    "@sentry/react": "^6.19.6",
-    "@sentry/tracing": "^6.19.6",
     "@tanstack/react-table": "^8.7.0",
     "@types/diff": "^5.0.2",
     "@types/node-fetch": "^2.6.2",
