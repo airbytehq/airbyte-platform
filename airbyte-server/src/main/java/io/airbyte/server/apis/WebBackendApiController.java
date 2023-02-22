@@ -51,6 +51,7 @@ public class WebBackendApiController implements WebBackendApi {
   @Post("/state/get_type")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public ConnectionStateType getStateType(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> webBackendConnectionsHandler.getStateType(connectionIdRequestBody));
@@ -58,6 +59,7 @@ public class WebBackendApiController implements WebBackendApi {
 
   @Post("/check_updates")
   @Secured({READER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WebBackendCheckUpdatesRead webBackendCheckUpdates() {
     return ApiHelper.execute(webBackendCheckUpdatesHandler::checkUpdates);
@@ -101,6 +103,7 @@ public class WebBackendApiController implements WebBackendApi {
 
   @Post("/geographies/list")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WebBackendGeographiesListResult webBackendListGeographies() {
     return ApiHelper.execute(webBackendGeographiesHandler::listGeographiesOSS);
