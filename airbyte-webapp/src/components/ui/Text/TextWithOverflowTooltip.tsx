@@ -25,7 +25,7 @@ export const TextWithOverflowTooltip: React.FC<React.PropsWithChildren<TextWithO
       }
     }, [inView, onlyCheckForSizeIfInView]);
 
-    const { ref } = useResizeDetector<HTMLElement>({
+    const { ref: resizeRef } = useResizeDetector<HTMLElement>({
       onResize,
       refreshMode: "debounce",
       handleHeight: false,
@@ -38,7 +38,7 @@ export const TextWithOverflowTooltip: React.FC<React.PropsWithChildren<TextWithO
           <Text
             ref={(element) => {
               textRef.current = element;
-              ref.current = element;
+              resizeRef.current = element;
               inViewRef(element);
             }}
             className={classNames(className, styles.overflowText)}
