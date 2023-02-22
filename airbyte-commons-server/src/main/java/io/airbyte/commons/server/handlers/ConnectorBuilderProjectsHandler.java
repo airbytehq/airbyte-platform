@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-@SuppressWarnings("PMD.AvoidCatchingNPE")
 @Singleton
 public class ConnectorBuilderProjectsHandler {
 
@@ -58,7 +57,7 @@ public class ConnectorBuilderProjectsHandler {
     return new ConnectorBuilderProjectIdWithWorkspaceId().workspaceId(project.getWorkspaceId()).builderProjectId(project.getBuilderProjectId());
   }
 
-  public void validateWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
+  private void validateWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(projectId, false);
     final UUID actualWorkspaceId = project.getWorkspaceId();
     if (!actualWorkspaceId.equals(workspaceId)) {
