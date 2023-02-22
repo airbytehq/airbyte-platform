@@ -72,6 +72,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Post("/get_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinitionForWorkspace(sourceDefinitionIdWithWorkspaceId));
@@ -86,6 +87,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/list_latest")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionReadList listLatestSourceDefinitions() {
     return ApiHelper.execute(sourceDefinitionsHandler::listLatestSourceDefinitions);
@@ -108,6 +110,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Post("/list_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(workspaceIdRequestBody));
