@@ -13,5 +13,5 @@ export const ArrowRightIcon = Template.bind({});
 ArrowRightIcon.args = {
   type: "arrowRight",
   size: "md",
-  color: "black",
+  color: "primary",
 };

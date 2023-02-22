@@ -1,6 +1,8 @@
+import classNames from "classnames";
 import React from "react";
 
-import { IconProps, Icons } from "./types";
+import styles from "./Icon.module.scss";
+import { IconColor, IconProps, Icons } from "./types";
 
 const sizeMap: Record<Exclude<IconProps["size"], undefined>, number> = {
   xs: 0.25,
@@ -10,12 +12,23 @@ const sizeMap: Record<Exclude<IconProps["size"], undefined>, number> = {
   xl: 4,
 } as const;
 
-export const Icon: React.FC<IconProps> = React.memo(({ type, color, size = "md", ...props }) => {
+const colorMap: Record<IconColor, string> = {
+  action: styles.action,
+  warning: styles.warning,
+  success: styles.success,
+  primary: styles.primary,
+  error: styles.error,
+  grey: styles.grey,
+  darkBlue: styles.darkBlue,
+};
+
+export const Icon: React.FC<IconProps> = React.memo(({ type, color, size = "md", className, ...props }) => {
+  const classes = classNames(className, color ? colorMap[color] : undefined);
   return React.createElement(Icons[type], {
     ...props,
+    className: classes,
     style: {
       transform: `scale(${sizeMap[size]})`,
-      color,
     },
   });
 });

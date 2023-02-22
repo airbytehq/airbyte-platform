@@ -37,7 +37,7 @@ export interface IconProps {
   type: IconType;
   className?: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
-  color?: CSSStyleDeclaration["color"];
+  color?: IconColor;
 }
 
 export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {

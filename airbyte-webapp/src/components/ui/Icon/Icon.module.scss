@@ -1,0 +1,29 @@
+@use "scss/colors";
+
+.primary {
+  color: colors.$blue;
+}
+
+.darkBlue {
+  color: colors.$dark-blue;
+}
+
+.action {
+  color: colors.$dark-blue-50;
+}
+
+.grey {
+  color: colors.$grey;
+}
+
+.success {
+  color: colors.$green;
+}
+
+.error {
+  color: colors.$red;
+}
+
+.warning {
+  color: colors.$yellow;
+}
