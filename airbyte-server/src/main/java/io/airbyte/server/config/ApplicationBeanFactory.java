@@ -9,7 +9,6 @@ import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
-import io.airbyte.commons.server.services.AirbyteGithubStore;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -27,6 +26,7 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.UUID;
@@ -98,15 +98,15 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
-  public AirbyteGithubStore airbyteGithubStore() {
-    return AirbyteGithubStore.production();
-  }
-
-  @Singleton
   public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
                                                                  @Value("${airbyte.protocol.min-version}") final String minVersion,
                                                                  @Value("${airbyte.protocol.max-version}") final String maxVersion) {
     return new AirbyteProtocolVersionRange(new Version(minVersion), new Version(maxVersion));
+  }
+
+  @Singleton
+  public HttpClient httpClient() {
+    return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
   }
 
   private <T> T convertToEnum(final String value, final Function<String, T> creatorFunction, final T defaultValue) {
