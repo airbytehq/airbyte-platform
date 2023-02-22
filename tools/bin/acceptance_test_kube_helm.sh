@@ -45,7 +45,7 @@ helm upgrade --install --values tools/bin/fluent_values.yaml --set env[1].name="
  --set env[2].name="AWS_SECRET_ACCESS_KEY" --set env[2].value=$(echo "$AWS_S3_INTEGRATION_TEST_CREDS" | jq -r .aws_secret_access_key) \
  --set env[3].name="AWS_S3_BUCKET" --set env[3].value=${AWS_S3_BUCKET} \
  --set env[4].name="SUITE_TYPE" --set env[4].value="helm-logs" \
- --generate-name fluent/fluent-bit
+ fluentbitci fluent/fluent-bit
 fi
 
 echo "Replacing default Chart.yaml and values.yaml with a test one"
