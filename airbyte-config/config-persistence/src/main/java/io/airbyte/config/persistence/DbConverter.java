@@ -289,6 +289,7 @@ public class DbConverter {
         .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
         .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
         .withHasDraft((Boolean) record.get("hasDraft"))
+        .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
         .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID));
   }
 

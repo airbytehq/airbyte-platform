@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -102,8 +101,9 @@ class ConnectorBuilderProjectsHandlerTest {
 
     connectorBuilderProjectsHandler.updateConnectorBuilderProject(update);
 
-    verify(uuidSupplier, never()).get();
-    verify(configRepository, atMostOnce())
+    // hasDraft is not set when writing
+    project.setHasDraft(null);
+    verify(configRepository, times(1))
         .writeBuilderProject(
             project);
   }
@@ -113,6 +113,8 @@ class ConnectorBuilderProjectsHandlerTest {
   void testUpdateConnectorBuilderProjectWipeDraft() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
     project.setManifestDraft(null);
+    // hasDraft is not set when writing
+    project.setHasDraft(null);
 
     when(configRepository.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
 
@@ -122,8 +124,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
     connectorBuilderProjectsHandler.updateConnectorBuilderProject(update);
 
-    verify(uuidSupplier, never()).get();
-    verify(configRepository, atMostOnce())
+    verify(configRepository, times(1))
         .writeBuilderProject(
             project);
   }
@@ -172,7 +173,6 @@ class ConnectorBuilderProjectsHandlerTest {
     connectorBuilderProjectsHandler.deleteConnectorBuilderProject(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
 
-    verify(uuidSupplier, never()).get();
     verify(configRepository, times(1))
         .deleteBuilderProject(
             project.getBuilderProjectId());

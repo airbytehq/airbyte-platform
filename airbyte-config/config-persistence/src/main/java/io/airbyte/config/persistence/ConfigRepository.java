@@ -1605,7 +1605,8 @@ public class ConfigRepository {
 
   private static final List<Field<?>> baseConnectorBuilderProjectColumns =
       Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
-          CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"));
+          CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE,
+          field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"));
 
   public ConnectorBuilderProject getConnectorBuilderProject(final UUID builderProjectId, final boolean fetchManifestDraft)
       throws IOException, ConfigNotFoundException {
@@ -1617,7 +1618,7 @@ public class ConfigRepository {
       }
       return ctx.select(columnsToFetch)
           .from(CONNECTOR_BUILDER_PROJECT)
-          .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId))
+          .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId).andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
           .fetch()
           .map(fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
           .stream()
@@ -1627,22 +1628,21 @@ public class ConfigRepository {
   }
 
   public Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(final UUID workspaceId) throws IOException {
-    final Condition matchByIds = CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId);
+    final Condition matchByWorkspace = CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId);
 
     return database
         .query(ctx -> ctx
             .select(baseConnectorBuilderProjectColumns)
             .from(CONNECTOR_BUILDER_PROJECT)
-            .where(matchByIds)
+            .where(matchByWorkspace.andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
             .fetch())
         .map(DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
         .stream();
   }
 
   public boolean deleteBuilderProject(final UUID builderProjectId) throws IOException {
-    return database.transaction(ctx -> ctx.deleteFrom(CONNECTOR_BUILDER_PROJECT))
-        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId))
-        .execute() > 0;
+    return database.transaction(ctx -> ctx.update(CONNECTOR_BUILDER_PROJECT).set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, true)
+        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)).execute()) > 0;
   }
 
   public void writeBuilderProject(final ConnectorBuilderProject builderProject) throws IOException {
@@ -1662,6 +1662,7 @@ public class ConfigRepository {
             .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
                 builderProject.getManifestDraft() == null ? null : JSONB.valueOf(Jsons.serialize(builderProject.getManifestDraft())))
             .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, builderProject.getTombstone() != null && builderProject.getTombstone())
             .where(matchId)
             .execute();
       } else {
@@ -1672,8 +1673,9 @@ public class ConfigRepository {
             .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, builderProject.getActorDefinitionId())
             .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
                 builderProject.getManifestDraft() == null ? null : JSONB.valueOf(Jsons.serialize(builderProject.getManifestDraft())))
-            .set(WORKSPACE.CREATED_AT, timestamp)
-            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
+            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, builderProject.getTombstone() != null && builderProject.getTombstone())
             .execute();
       }
       return null;
