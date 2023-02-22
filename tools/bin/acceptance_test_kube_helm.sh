@@ -2,9 +2,19 @@
 
 set -e
 
+trap 'catch $? $LINENO' EXIT
+
 . tools/lib/lib.sh
 
 assert_root
+
+catch() {
+  echo "catching!"
+  if [ "$1" != "0" ]; then
+    echo "Error $1 occurred on $2"
+    restore_dir_structure()
+  fi
+}
 
 restore_dir_structure(){
   echo "Reverting changes back"
@@ -106,9 +116,7 @@ if [ -n "$CI" ]; then
 fi
  docker system df
 
-trap "restore_dir_structure" EXIT
-
 echo "Running e2e tests via gradle..."
 KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan
 
-restore_dir_structure()
+catch()
