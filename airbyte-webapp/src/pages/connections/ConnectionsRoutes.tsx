@@ -17,7 +17,7 @@ const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransf
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 
 export const ConnectionsRoutes: React.FC = () => {
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI", true);
+  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI", false);
   return (
     <Suspense fallback={<LoadingPage />}>
       <Routes>

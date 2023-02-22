@@ -30,7 +30,7 @@ export const ConnectionPageTitle: React.FC = () => {
 
   const { connection } = useConnectionEditService();
 
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI", true);
+  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI", false);
 
   const steps = useMemo(() => {
     const steps = [
