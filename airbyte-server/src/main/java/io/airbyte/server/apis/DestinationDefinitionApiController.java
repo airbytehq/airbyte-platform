@@ -51,6 +51,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/delete")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
@@ -62,6 +63,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/get")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody));
@@ -78,6 +80,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/grant_definition")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     return ApiHelper
@@ -86,6 +89,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/list")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listDestinationDefinitions() {
     return ApiHelper.execute(destinationDefinitionsHandler::listDestinationDefinitions);
@@ -94,6 +98,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   @Post(uri = "/list_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(workspaceIdRequestBody));
@@ -109,6 +114,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/list_private")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.listPrivateDestinationDefinitions(workspaceIdRequestBody));
@@ -116,6 +122,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/revoke_definition")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     ApiHelper.execute(() -> {
@@ -126,6 +133,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/update")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.updateDestinationDefinition(destinationDefinitionUpdate));

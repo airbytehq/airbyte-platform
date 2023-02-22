@@ -72,6 +72,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Post("/get_by_slug")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceBySlug(@Body final SlugRequestBody slugRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceBySlug(slugRequestBody));
@@ -88,6 +89,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Post("/update")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WorkspaceRead updateWorkspace(@Body final WorkspaceUpdate workspaceUpdate) {
     return ApiHelper.execute(() -> workspacesHandler.updateWorkspace(workspaceUpdate));
@@ -96,6 +98,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Post("/tag_feedback_status_as_done")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public void updateWorkspaceFeedback(@Body final WorkspaceGiveFeedback workspaceGiveFeedback) {
     ApiHelper.execute(() -> {
@@ -107,6 +110,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Post("/update_name")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WorkspaceRead updateWorkspaceName(@Body final WorkspaceUpdateName workspaceUpdateName) {
     return ApiHelper.execute(() -> workspacesHandler.updateWorkspaceName(workspaceUpdateName));
