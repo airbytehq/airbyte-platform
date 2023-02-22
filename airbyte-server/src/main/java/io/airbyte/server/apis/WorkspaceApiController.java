@@ -25,6 +25,8 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
@@ -61,6 +63,7 @@ public class WorkspaceApiController implements WorkspaceApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspace(workspaceIdRequestBody));
@@ -76,6 +79,7 @@ public class WorkspaceApiController implements WorkspaceApi {
 
   @Post("/list")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WorkspaceReadList listWorkspaces() {
     return ApiHelper.execute(workspacesHandler::listWorkspaces);
@@ -110,6 +114,7 @@ public class WorkspaceApiController implements WorkspaceApi {
 
   @Post("/get_by_connection_id")
   @Secured({READER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public WorkspaceRead getWorkspaceByConnectionId(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
