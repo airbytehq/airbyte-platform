@@ -22,17 +22,16 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler;
 import io.micronaut.context.annotation.Context;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
 @Controller("/api/v1/source_definitions")
-@Requires(property = "airbyte.deployment-mode",
-          value = "OSS")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class SourceDefinitionApiController implements SourceDefinitionApi {
@@ -46,6 +45,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Post("/create_custom")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.createCustomSourceDefinition(customSourceDefinitionCreate));
@@ -53,6 +53,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/delete")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
@@ -64,6 +65,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/get")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionRead getSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinition(sourceDefinitionIdRequestBody));
@@ -72,6 +74,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Post("/get_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionRead getSourceDefinitionForWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.getSourceDefinitionForWorkspace(sourceDefinitionIdWithWorkspaceId));
@@ -79,6 +82,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/grant_definition")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public PrivateSourceDefinitionRead grantSourceDefinitionToWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.grantSourceDefinitionToWorkspace(sourceDefinitionIdWithWorkspaceId));
@@ -86,6 +90,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/list_latest")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionReadList listLatestSourceDefinitions() {
     return ApiHelper.execute(sourceDefinitionsHandler::listLatestSourceDefinitions);
@@ -93,6 +98,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/list_private")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.listPrivateSourceDefinitions(workspaceIdRequestBody));
@@ -100,6 +106,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/list")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionReadList listSourceDefinitions() {
     return ApiHelper.execute(sourceDefinitionsHandler::listSourceDefinitions);
@@ -108,6 +115,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
   @Post("/list_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(workspaceIdRequestBody));
@@ -115,6 +123,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/revoke_definition")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void revokeSourceDefinitionFromWorkspace(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
@@ -126,6 +135,7 @@ public class SourceDefinitionApiController implements SourceDefinitionApi {
 
   @Post("/update")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate) {
     return ApiHelper.execute(() -> sourceDefinitionsHandler.updateSourceDefinition(sourceDefinitionUpdate));
