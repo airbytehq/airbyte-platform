@@ -1,26 +1,20 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    id "org.openapi.generator" version "5.3.1"
+    id "org.openapi.generator" version "6.3.0"
     id 'airbyte-python-docker'
     id 'airbyte-docker'
 }
 
-airbytePythonDocker {
-    moduleDirectory 'connector_builder'
-}
-
 task generateOpenApiPythonServer(type: GenerateTask) {
-    outputs.upToDateWhen { false }
-
     def generatedCodeDir = "$buildDir/airbyte_connector_builder_server"
     inputSpec = "$rootDir.absolutePath/airbyte-connector-builder-server/src/main/openapi/openapi.yaml"
-    outputDir = generatedCodeDir
 
     generatorName = "python-fastapi"
     configFile = "$projectDir/openapi/generator_config.yaml"
     templateDir = "$projectDir/openapi/templates"
     packageName = "connector_builder.generated"
+    outputDir = generatedCodeDir
 
     // After we generate, we're only interested in the API declaration and the generated pydantic models.
     // So we copy those from the build/ directory
@@ -41,6 +35,10 @@ task generateOpenApiPythonServer(type: GenerateTask) {
     }
 }
 
+// it's important to explicitly say that the AirbyteDocker task (which takes as input all files in this directory)
+// dependsOn any task which manipulates files in this directory, or else Gradle will disable incremental builds on those
+// tasks to preserve build correctness. More info at https://docs.gradle.org/7.6/userguide/validation_problems.html#implicit_dependency
+airbyteDocker.dependsOn(generateOpenApiPythonServer)
 project.build.dependsOn(generateOpenApiPythonServer)
 
 // java modules such as airbyte-server can use copyGeneratedTar to copy the files to the docker image
