@@ -31,6 +31,8 @@ export type IconType =
   | "plus"
   | "rotate";
 
+export type IconColor = "primary" | "darkBlue" | "action" | "grey" | "success" | "error" | "warning";
+
 export interface IconProps {
   type: IconType;
   className?: string;
