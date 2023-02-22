@@ -9,7 +9,7 @@ import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { NextTable } from "components/ui/NextTable";
 import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
@@ -135,7 +135,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
           </FlexContainer>
         ),
         cell: ({ getValue, row }) => (
-          <CatalogTreeTableCell size="small" withTooltip>
+          <CatalogTreeTableCell size="small">
             <FlexContainer alignItems="center">
               {isColumnSelectionEnabled && (
                 <SyncFieldCell
@@ -150,7 +150,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
                   destinationSyncMode={config?.destinationSyncMode}
                 />
               )}
-              <Text size="sm">{pathDisplayName(getValue())}</Text>
+              <TextWithOverflowTooltip size="sm">{pathDisplayName(getValue())}</TextWithOverflowTooltip>
             </FlexContainer>
           </CatalogTreeTableCell>
         ),
@@ -232,8 +232,8 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         id: "destinationPath",
         header: () => <FormattedMessage id="form.field.name" />,
         cell: ({ getValue }) => (
-          <CatalogTreeTableCell size="small" withTooltip>
-            <Text size="sm">{pathDisplayName(getValue())}</Text>
+          <CatalogTreeTableCell size="small">
+            <TextWithOverflowTooltip size="sm">{pathDisplayName(getValue())}</TextWithOverflowTooltip>
           </CatalogTreeTableCell>
         ),
         meta: {
