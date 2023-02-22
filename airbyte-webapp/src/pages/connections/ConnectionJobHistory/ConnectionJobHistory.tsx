@@ -20,7 +20,7 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { useResetConnection, useSyncConnection } from "hooks/services/useConnectionHook";
 import { useCancelJob, useListJobs } from "services/job/JobService";
 
-import styles from "./ConnectionStatusPage.module.scss";
+import styles from "./ConnectionJobHistory.module.scss";
 import JobsList from "./JobsList";
 
 const JOB_PAGE_SIZE_INCREMENT = 25;
@@ -43,7 +43,7 @@ const getJobRunningOrPending = (jobs: JobWithAttemptsRead[]) => {
   });
 };
 
-export const ConnectionStatusPage: React.FC = () => {
+export const ConnectionJobHistory: React.FC = () => {
   const { connection } = useConnectionEditService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_STATUS);
   const [activeJob, setActiveJob] = useState<ActiveJob>();

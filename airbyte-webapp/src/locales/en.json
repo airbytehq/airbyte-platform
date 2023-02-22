@@ -163,6 +163,7 @@
   "connectionForm.nonBreakingChangesPreference.ignore": "Ignore",
   "connectionForm.nonBreakingChangesPreference.disable": "Disable connection",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
+  "connectionForm.jobHistory": "Job History",
 
   "connectionForm.modal.destinationNamespace.title": "Destination namespace",
   "connectionForm.modal.destinationNamespace.option.source": "Mirror source structure",
