@@ -101,7 +101,7 @@ public class ConnectorBuilderProjectsHandler {
     configRepository.deleteBuilderProject(projectDelete.getBuilderProjectId());
   }
 
-  public ConnectorBuilderProjectRead getBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
+  public ConnectorBuilderProjectRead getConnectorBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
       throws IOException, ConfigNotFoundException {
     validateWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
@@ -115,7 +115,7 @@ public class ConnectorBuilderProjectsHandler {
     return response;
   }
 
-  public ConnectorBuilderProjectReadList listConnectorBuilderProject(final WorkspaceIdRequestBody workspaceIdRequestBody)
+  public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
 
     final Stream<ConnectorBuilderProject> projects = configRepository.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());

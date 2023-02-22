@@ -562,7 +562,7 @@ paths:
       tags:
         - connector_builder_project
       summary: List connector builder projects for workspace
-      operationId: listProjects
+      operationId: listConnectorBuilderProjects
       requestBody:
         content:
           application/json:
@@ -581,7 +581,7 @@ paths:
       tags:
         - connector_builder_project
       summary: Get a connector builder project with draft manifest
-      operationId: getProject
+      operationId: getConnectorBuilderProject
       requestBody:
         content:
           application/json:

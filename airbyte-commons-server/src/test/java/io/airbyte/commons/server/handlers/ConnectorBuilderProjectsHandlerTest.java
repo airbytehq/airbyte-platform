@@ -188,7 +188,7 @@ class ConnectorBuilderProjectsHandlerTest {
     when(configRepository.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(Stream.of(project1, project2));
 
     final ConnectorBuilderProjectReadList response =
-        connectorBuilderProjectsHandler.listConnectorBuilderProject(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        connectorBuilderProjectsHandler.listConnectorBuilderProjects(new WorkspaceIdRequestBody().workspaceId(workspaceId));
 
     assertEquals(project1.getBuilderProjectId(), response.getProjects().get(0).getBuilderProjectId());
     assertEquals(project2.getBuilderProjectId(), response.getProjects().get(1).getBuilderProjectId());
@@ -209,7 +209,7 @@ class ConnectorBuilderProjectsHandlerTest {
     when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
 
     final ConnectorBuilderProjectRead response =
-        connectorBuilderProjectsHandler.getBuilderProjectWithManifest(
+        connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
             new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
 
     assertEquals(project.getBuilderProjectId(), response.getBuilderProject().getBuilderProjectId());
@@ -227,7 +227,7 @@ class ConnectorBuilderProjectsHandlerTest {
     when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
 
     final ConnectorBuilderProjectRead response =
-        connectorBuilderProjectsHandler.getBuilderProjectWithManifest(
+        connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
             new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
 
     assertEquals(project.getBuilderProjectId(), response.getBuilderProject().getBuilderProjectId());

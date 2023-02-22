@@ -79,7 +79,8 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     project2.setHasDraft(true);
 
     assertEquals(new ArrayList<>(
-        Arrays.asList(project1, project2)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
+        // project2 comes first due to alphabetical ordering
+        Arrays.asList(project2, project1)), configRepository.getConnectorBuilderProjectsByWorkspace(mainWorkspace).toList());
   }
 
   @Test
@@ -120,7 +121,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     final UUID projectId = UUID.randomUUID();
     final ConnectorBuilderProject project = new ConnectorBuilderProject()
         .withBuilderProjectId(projectId)
-        .withName("project " + projectId)
+        .withName(name)
         .withTombstone(deleted)
         .withManifestDraft(new ObjectMapper().readTree("{\"the_id\": \"" + projectId + "\"}"))
         .withHasDraft(true)

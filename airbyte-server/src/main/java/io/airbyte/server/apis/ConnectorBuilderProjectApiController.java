@@ -60,8 +60,8 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.OK)
   @Secured({EDITOR})
   @SecuredWorkspace
-  public ConnectorBuilderProjectRead getProject(final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProjectIdWithWorkspaceId) {
-    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getBuilderProjectWithManifest(connectorBuilderProjectIdWithWorkspaceId));
+  public ConnectorBuilderProjectRead getConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProjectIdWithWorkspaceId) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(connectorBuilderProjectIdWithWorkspaceId));
   }
 
   @Override
@@ -69,8 +69,8 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.OK)
   @Secured({EDITOR})
   @SecuredWorkspace
-  public ConnectorBuilderProjectReadList listProjects(final WorkspaceIdRequestBody workspaceIdRequestBody) {
-    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.listConnectorBuilderProject(workspaceIdRequestBody));
+  public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.listConnectorBuilderProjects(workspaceIdRequestBody));
   }
 
   @Override
