@@ -6,6 +6,13 @@ set -e
 
 assert_root
 
+restore_dir_structure(){
+  echo "Reverting changes back"
+  mv charts/airbyte/Chart.yaml charts/airbyte/Chart.yaml.test
+  mv charts/airbyte/Chart.yaml.old charts/airbyte/Chart.yaml
+  mv charts/airbyte/values.yaml charts/airbyte/values.yaml.test
+  mv charts/airbyte/values.yaml.old charts/airbyte/values.yaml
+}
 
 echo "Getting docker internal host ip"
 DOCKER_HOST_IP=$(ip -f inet add show docker0 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
@@ -99,11 +106,9 @@ if [ -n "$CI" ]; then
 fi
  docker system df
 
+trap "restore_dir_structure" ERR
+
 echo "Running e2e tests via gradle..."
 KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan
 
-echo "Reverting changes back"
-mv charts/airbyte/Chart.yaml charts/airbyte/Chart.yaml.test
-mv charts/airbyte/Chart.yaml.old charts/airbyte/Chart.yaml
-mv charts/airbyte/values.yaml charts/airbyte/values.yaml.test
-mv charts/airbyte/values.yaml.old charts/airbyte/values.yaml
+restore_dir_structure()
