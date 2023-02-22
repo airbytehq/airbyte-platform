@@ -513,7 +513,7 @@ paths:
       tags:
         - connector_builder_project
       summary: Create new connector builder project
-      operationId: createProject
+      operationId: createConnectorBuilderProject
       requestBody:
         content:
           application/json:
@@ -532,7 +532,7 @@ paths:
       tags:
         - connector_builder_project
       summary: Update connector builder project
-      operationId: updateProject
+      operationId: updateConnectorBuilderProject
       requestBody:
         content:
           application/json:
@@ -547,7 +547,7 @@ paths:
       tags:
         - connector_builder_project
       summary: Deletes connector builder project
-      operationId: deleteProject
+      operationId: deleteConnectorBuilderProject
       requestBody:
         content:
           application/json:
