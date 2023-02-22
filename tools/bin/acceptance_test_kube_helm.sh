@@ -100,7 +100,7 @@ fi
  docker system df
 
 echo "Running e2e tests via gradle..."
-KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan
+KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTests --scan
 
 echo "Reverting changes back"
 mv charts/airbyte/Chart.yaml charts/airbyte/Chart.yaml.test
