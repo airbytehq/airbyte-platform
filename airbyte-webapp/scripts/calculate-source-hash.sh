@@ -14,5 +14,12 @@ fi
 # Hash of all files tracked by git
 SOURCE_HASHES="$(git ls-files | xargs openssl sha1)"
 
+# On CI output all hashes for better debugging
+if [ -n "${CI}" ]; then
+  echo "# Calculated build hashes:"
+  printf "${GENERATED_CLIENT_HASHES}\n${SOURCE_HASHES}"
+  echo ""
+fi
+
 # Build a single hash over all the hashes of all files and export it for usage in other programs
 export SOURCE_HASH="$(printf "${GENERATED_CLIENT_HASHES}\n${SOURCE_HASHES}" | openssl sha1 | sed 's/  -//')"
