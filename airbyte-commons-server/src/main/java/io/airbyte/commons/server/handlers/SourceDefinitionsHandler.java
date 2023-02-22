@@ -108,7 +108,7 @@ public class SourceDefinitionsHandler {
           .releaseStage(getReleaseStage(standardSourceDefinition))
           .releaseDate(getReleaseDate(standardSourceDefinition))
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardSourceDefinition.getResourceRequirements()))
-              .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
+          .maxSecondsBetweenMessages(standardSourceDefinition.getMaxSecondsBetweenMessages());
 
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest source definitions list", e);

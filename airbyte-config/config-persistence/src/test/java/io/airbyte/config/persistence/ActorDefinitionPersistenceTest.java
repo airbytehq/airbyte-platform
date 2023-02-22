@@ -43,8 +43,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     configRepository = spy(new ConfigRepository(
         database,
         new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
-            mock(StandardSyncPersistence.class),
-            MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES));
+        mock(StandardSyncPersistence.class),
+        MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES));
   }
 
   @Test
@@ -78,10 +78,10 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private void assertReturnsSrcDefDefaultMaxSecondsBetweenMessages(final StandardSourceDefinition srcDef)
-          throws ConfigNotFoundException, IOException, JsonValidationException {
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     configRepository.writeStandardSourceDefinition(srcDef);
     assertEquals(srcDef.withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES),
-            configRepository.getStandardSourceDefinition(srcDef.getSourceDefinitionId()));
+        configRepository.getStandardSourceDefinition(srcDef.getSourceDefinitionId()));
   }
 
   @Test
@@ -285,13 +285,13 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final UUID id = UUID.randomUUID();
 
     return new StandardSourceDefinition()
-            .withName("source-def-" + id)
-            .withDockerRepository("source-image-" + id)
-            .withDockerImageTag("0.0.1")
-            .withSourceDefinitionId(id)
-            .withProtocolVersion("0.2.0")
-            .withTombstone(false)
-            .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+        .withName("source-def-" + id)
+        .withDockerRepository("source-image-" + id)
+        .withDockerImageTag("0.0.1")
+        .withSourceDefinitionId(id)
+        .withProtocolVersion("0.2.0")
+        .withTombstone(false)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   private static StandardSourceDefinition createBaseSourceDefWithoutMaxSecondsBetweenMessages() {

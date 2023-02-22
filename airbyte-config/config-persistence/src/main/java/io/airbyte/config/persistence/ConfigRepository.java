@@ -112,7 +112,7 @@ public class ConfigRepository {
 
   public ConfigRepository(final Database database, final long defaultMaxSecondsBetweenMessages) {
     this(database, new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)), new StandardSyncPersistence(database),
-            defaultMaxSecondsBetweenMessages);
+        defaultMaxSecondsBetweenMessages);
   }
 
   ConfigRepository(final Database database,
@@ -316,7 +316,7 @@ public class ConfigRepository {
   public List<StandardSourceDefinition> listPublicSourceDefinitions(final boolean includeTombstone) throws IOException {
     return listStandardActorDefinitions(
         ActorType.source,
-            record -> DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages),
+        record -> DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
         ACTOR_DEFINITION.PUBLIC.eq(true));
   }
@@ -327,7 +327,7 @@ public class ConfigRepository {
         workspaceId,
         JoinType.JOIN,
         ActorType.source,
-        DbConverter::buildStandardSourceDefinition,
+        record -> DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
 
@@ -338,7 +338,7 @@ public class ConfigRepository {
         workspaceId,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.source,
-        record -> actorDefinitionWithGrantStatus(record, DbConverter::buildStandardSourceDefinition),
+        record -> actorDefinitionWithGrantStatus(record, entry -> DbConverter.buildStandardSourceDefinition(entry, defaultMaxSecondsBetweenMessages)),
         ACTOR_DEFINITION.CUSTOM.eq(false),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
@@ -1465,6 +1465,13 @@ public class ConfigRepository {
    * metrics without exposing the underlying database connection.
    */
 
+  public List<ReleaseStage> getSrcIdAndDestIdToReleaseStages(final UUID srcId, final UUID dstId) throws IOException {
+    return database.query(ctx -> MetricQueries.srcIdAndDestIdToReleaseStages(ctx, srcId, dstId));
+  }
+
+  public List<ReleaseStage> getJobIdToReleaseStages(final long jobId) throws IOException {
+    return database.query(ctx -> MetricQueries.jobIdToReleaseStages(ctx, jobId));
+  }
 
   private Condition includeTombstones(final Field<Boolean> tombstoneField, final boolean includeTombstones) {
     if (includeTombstones) {

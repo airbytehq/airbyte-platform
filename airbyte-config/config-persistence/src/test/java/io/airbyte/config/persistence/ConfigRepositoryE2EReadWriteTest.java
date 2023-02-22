@@ -76,8 +76,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     configRepository = spy(new ConfigRepository(
         database,
         new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
-            new StandardSyncPersistence(database),
-            MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES));
+        new StandardSyncPersistence(database),
+        MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }
