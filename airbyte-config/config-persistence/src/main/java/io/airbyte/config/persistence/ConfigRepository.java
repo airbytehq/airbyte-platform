@@ -1676,11 +1676,6 @@ public class ConfigRepository {
     });
   }
 
-  private Condition getBuilderProjectIdCondition(final UUID builderProjectId, final UUID workspaceId) {
-    return CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)
-        .and(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId));
-  }
-
   /**
    * Deletes all records with given id. If it deletes anything, returns true. Otherwise, false.
    *
