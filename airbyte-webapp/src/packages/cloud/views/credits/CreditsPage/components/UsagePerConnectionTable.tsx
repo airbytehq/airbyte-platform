@@ -112,23 +112,6 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
 
   const columnHelper = createColumnHelper<FullTableProps>();
 
-  /**
-   * TODO:
-   * [x] only calculate this if the flag is on!
-   * [x] link to connection from connection name
-   * [x] sizing of columns
-   * [x] alignment of headers/cells
-   * [x] sorting
-   * [x] horizontal overflow
-   * [ ] cells should truncate + show a tooltip? (long connection/connector names are a problem currently)
-   * [ ] convert link to new Link component once it's merged
-   * [ ] if we want the source and destination names to link to their pages, we'll need the
-   *     source/destination id's (not their definition id's)
-   * [ ] page header in designs has a link; confirm target and add!
-   * [ ] integrate free connector program data
-   * [ ] daily breakdown per connection
-   * */
-
   const billingInsightsColumns = React.useMemo(() => {
     return !isBillingInsightsEnabled
       ? null
