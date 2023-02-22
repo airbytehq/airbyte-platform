@@ -53,13 +53,17 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
   if (props.pathType === "sourceDefined") {
     if (withSourceDefinedPill) {
       return (
-        <PillButton disabled variant={variant} className={styles.streamPathSelect}>
+        <PillButton disabled variant={variant} className={styles.streamPathSelect} withOverflowTooltip>
           {SourceDefinedNode}
         </PillButton>
       );
     }
     return (
-      <InfoText variant={INFO_TEXT_VARIANT_BY_PILL_VARIANT[variant]} className={styles.streamPathSelect}>
+      <InfoText
+        variant={INFO_TEXT_VARIANT_BY_PILL_VARIANT[variant]}
+        className={styles.streamPathSelect}
+        withOverflowTooltip
+      >
         {SourceDefinedNode}
       </InfoText>
     );

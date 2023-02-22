@@ -9,13 +9,6 @@ $large: 200px;
     flex-shrink: 0;
   }
 
-  &:not(.withOverflow) [data-type="text"] {
-    word-break: break-word;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   &.xsmall {
     flex-basis: $xsmall;
     min-width: $xsmall;
@@ -35,12 +28,4 @@ $large: 200px;
     flex-basis: $large;
     min-width: $large;
   }
-}
-
-.noEllipsis > * {
-  overflow: visible;
-}
-
-.fullWidthTooltip {
-  max-width: none;
 }
