@@ -26,10 +26,14 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
   className,
   collapsible = false,
   collapsedPreviewInfo,
-  collapsedInitially = collapsible,
+  collapsedInitially = false,
   testId,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(collapsedInitially);
+
+  if (collapsedInitially && !collapsible) {
+    console.warn("Section cannot be collapsed initially if it is not collapsible");
+  }
 
   return (
     <Card>
