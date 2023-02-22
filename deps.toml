@@ -16,6 +16,7 @@ micronaut = "3.8.3"
 micronaut-data = "3.9.4"
 micronaut-jaxrs = "3.4.0"
 micronaut-jdbc = "4.7.2"
+micronaut-micrometer = "4.8.0"
 micronaut-security = "3.9.2"
 micronaut-test = "3.8.0"
 platform-testcontainers = "1.17.3"
@@ -112,6 +113,8 @@ micronaut-jdbc = { module = "io.micronaut.sql:micronaut-jdbc", version.ref = "mi
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari", version = "2.2.6" }
 micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq", version.ref = "micronaut-jdbc" }
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
+micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
+micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
@@ -127,6 +130,7 @@ log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-security", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
 micronaut-annotation = ["jakarta-inject", "micronaut-inject-java"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor"]
+micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]
