@@ -18,12 +18,10 @@ import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.CancellationHandler;
-import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogConfigs;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -37,7 +35,6 @@ import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
 import io.temporal.activity.ActivityExecutionContext;
@@ -49,7 +46,6 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 @Singleton
-@Requires(env = WorkerMode.CONTROL_PLANE)
 @Slf4j
 public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
@@ -61,14 +57,12 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final LogConfigs logConfigs;
   private final AirbyteApiClient airbyteApiClient;
   private final String airbyteVersion;
-  private final ConfigRepository configRepository;
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
   public DiscoverCatalogActivityImpl(@Named("discoverWorkerConfigs") final WorkerConfigs workerConfigs,
                                      @Named("discoverProcessFactory") final ProcessFactory processFactory,
-                                     final ConfigRepository configRepository,
                                      final SecretsHydrator secretsHydrator,
                                      @Named("workspaceRoot") final Path workspaceRoot,
                                      final WorkerEnvironment workerEnvironment,
@@ -78,7 +72,6 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags) {
-    this.configRepository = configRepository;
     this.workerConfigs = workerConfigs;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;

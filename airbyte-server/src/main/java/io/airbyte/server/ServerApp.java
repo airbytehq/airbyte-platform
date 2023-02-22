@@ -251,7 +251,8 @@ public class ServerApp implements ServerRunnable {
         streamResetRecordsHelper);
 
     final OAuthConfigSupplier oAuthConfigSupplier = new OAuthConfigSupplier(configRepository, trackingClient);
-    final RouterService routerService = new RouterService(configRepository, taskQueueMapper);
+    final RouterService routerService = new RouterService(configRepository, taskQueueMapper,
+        envVariableFeatureFlags);
     final DefaultSynchronousSchedulerClient syncSchedulerClient =
         new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier, routerService);
     final HttpClient httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();

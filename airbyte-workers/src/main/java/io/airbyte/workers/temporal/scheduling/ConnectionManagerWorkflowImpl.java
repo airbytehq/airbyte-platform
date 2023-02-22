@@ -44,6 +44,9 @@ import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionAc
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput;
+import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
+import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput;
+import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.GeneratedJobInput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
@@ -94,6 +97,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private final WorkflowInternalState workflowInternalState = new WorkflowInternalState();
 
+  private static final String GET_FEATURE_FLAGS_TAG = "get_feature_flags";
+  private static final int GET_FEATURE_FLAGS_CURRENT_VERSION = 1;
+
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private GenerateInputActivity getSyncInputActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -112,6 +118,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private WorkflowConfigActivity workflowConfigActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private FeatureFlagFetchActivity featureFlagFetchActivity;
 
   private CancellationScope cancellableSyncWorkflow;
 
@@ -169,7 +177,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
-  @SuppressWarnings("PMD.EmptyIfStmt")
+  @SuppressWarnings({"PMD.EmptyIfStmt", "PMD.UnusedLocalVariable"})
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
       connectionId = connectionUpdaterInput.getConnectionId();
@@ -204,6 +212,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         // Act as a return
         prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
       }
+
+      // TODO (pedroslopez): The feature flags will actually be used in a future PR
+      Map<String, Boolean> featureFlags = getFeatureFlags(connectionUpdaterInput.getConnectionId());
 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
@@ -636,6 +647,19 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     connectionUpdaterInput.setJobId(jobCreationOutput.getJobId());
 
     return jobCreationOutput.getJobId();
+  }
+
+  private Map<String, Boolean> getFeatureFlags(final UUID connectionId) {
+    final int getFeatureFlagsVersion =
+        Workflow.getVersion(GET_FEATURE_FLAGS_TAG, Workflow.DEFAULT_VERSION, GET_FEATURE_FLAGS_CURRENT_VERSION);
+
+    if (getFeatureFlagsVersion < GET_FEATURE_FLAGS_CURRENT_VERSION) {
+      return Map.of();
+    }
+
+    final FeatureFlagFetchOutput getFlagsOutput =
+        runMandatoryActivityWithOutput(featureFlagFetchActivity::getFeatureFlags, new FeatureFlagFetchInput(connectionId));
+    return getFlagsOutput.getFeatureFlags();
   }
 
   /**

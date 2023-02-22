@@ -27,7 +27,7 @@ export const ConnectionPageTitle: React.FC = () => {
   const navigate = useNavigate();
   const currentStep = params["*"] || ConnectionRoutePaths.Status;
 
-  const { connection } = useConnectionEditService();
+  const { connection, schemaRefreshing } = useConnectionEditService();
 
   const steps = useMemo(() => {
     const steps = [
@@ -85,7 +85,7 @@ export const ConnectionPageTitle: React.FC = () => {
           {fcpEnabled && <InlineEnrollmentCallout />}
         </FlexContainer>
       </div>
-      <StepsMenu lightMode data={steps} onSelect={onSelectStep} activeStep={currentStep} />
+      <StepsMenu lightMode data={steps} onSelect={onSelectStep} activeStep={currentStep} disabled={schemaRefreshing} />
     </div>
   );
 };

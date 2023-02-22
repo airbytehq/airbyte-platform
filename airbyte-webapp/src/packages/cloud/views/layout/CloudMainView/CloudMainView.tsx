@@ -1,11 +1,12 @@
 import classNames from "classnames";
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { Link, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
+import { Link } from "components/ui/Link";
 
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";

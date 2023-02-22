@@ -64,7 +64,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
         text: formatMessage({ id: "connection.updateSchema.noDiff" }),
       });
     }
-  }, [connectionId]);
+  });
 
   const discardRefreshedSchema = useCallback(() => {
     setConnection((connection) => ({

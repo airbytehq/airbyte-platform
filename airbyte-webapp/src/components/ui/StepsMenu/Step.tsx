@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import styled from "styled-components";
 
 interface StepProps {
@@ -9,12 +9,14 @@ interface StepProps {
   isActive?: boolean;
   icon?: React.ReactNode;
   num: number;
+  disabled?: boolean;
 }
 
 const StepView = styled.div<{
   isActive?: boolean;
   lightMode?: boolean;
   nonClickable?: boolean;
+  hidden?: boolean;
 }>`
   width: ${({ lightMode }) => (lightMode ? "auto" : "212px")};
   min-width: ${({ lightMode }) => (lightMode ? "100px" : "auto")};
@@ -34,6 +36,8 @@ const StepView = styled.div<{
   flex-direction: row;
   align-items: center;
   justify-content: center;
+  pointer-events: ${({ nonClickable }) => (nonClickable ? "none" : "initial")};
+  opacity: ${({ nonClickable }) => (nonClickable ? "0.5" : "1")};
 `;
 
 const Num = styled.div<{ isActive?: boolean }>`
@@ -51,17 +55,13 @@ const Num = styled.div<{ isActive?: boolean }>`
   box-shadow: 0 1px 2px 0 ${({ theme }) => theme.shadowColor};
 `;
 
-export const Step: React.FC<StepProps> = ({ name, id, isActive, onClick, num, lightMode, icon }) => {
-  const onItemClickItem = () => {
-    if (onClick) {
-      onClick(id);
-    }
-  };
+export const Step: React.FC<StepProps> = ({ name, id, isActive, onClick, num, lightMode, icon, disabled }) => {
+  const onItemClickItem = useCallback(() => onClick?.(id), [id, onClick]);
 
   return (
     <StepView
       data-id={`${id.toLowerCase()}-step`}
-      nonClickable={!onClick}
+      nonClickable={!onClick || disabled}
       onClick={onItemClickItem}
       isActive={isActive}
       lightMode={lightMode}

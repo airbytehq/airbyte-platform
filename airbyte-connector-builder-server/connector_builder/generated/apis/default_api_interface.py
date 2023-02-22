@@ -73,7 +73,7 @@ class DefaultApi(ABC):
         resolve_manifest_request_body: ResolveManifestRequestBody = Body(None, description=""),
     ) -> ResolveManifest:
         """
-        Given a JSON manifest, returns a JSON manifest with all of the $refs and $options resolved and flattened
+        Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
         """
 
 
@@ -165,7 +165,7 @@ def initialize_router(api: DefaultApi) -> APIRouter:
             422: {"model": InvalidInputExceptionInfo, "description": "Input failed validation"},
         },
         tags=["default"],
-        summary="Given a JSON manifest, returns a JSON manifest with all of the $refs and $options resolved and flattened",
+        summary="Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened",
         response_model_by_alias=True,
     )
 

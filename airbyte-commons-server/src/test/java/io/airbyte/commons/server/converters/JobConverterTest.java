@@ -11,10 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
-import io.airbyte.api.model.generated.AttemptFailureOrigin;
-import io.airbyte.api.model.generated.AttemptFailureReason;
 import io.airbyte.api.model.generated.AttemptFailureSummary;
-import io.airbyte.api.model.generated.AttemptFailureType;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptRead;
 import io.airbyte.api.model.generated.AttemptStats;
@@ -144,9 +141,9 @@ class JobConverterTest {
                   .createdAt(CREATED_AT)
                   .endedAt(CREATED_AT)
                   .failureSummary(new AttemptFailureSummary()
-                      .failures(Lists.newArrayList(new AttemptFailureReason()
-                          .failureOrigin(AttemptFailureOrigin.SOURCE)
-                          .failureType(AttemptFailureType.SYSTEM_ERROR)
+                      .failures(Lists.newArrayList(new io.airbyte.api.model.generated.FailureReason()
+                          .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
+                          .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
                           .externalMessage(FAILURE_EXTERNAL_MESSAGE)
                           .stacktrace(FAILURE_STACKTRACE)
                           .timestamp(FAILURE_TIMESTAMP)))
@@ -238,7 +235,7 @@ class JobConverterTest {
     assertTrue(Enums.isCompatible(JobConfig.ConfigType.class, JobConfigType.class));
     assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
     assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
-    assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.AttemptFailureOrigin.class));
+    assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
   }
 
   // this test intentionally only looks at the reset config as the rest is the same here.

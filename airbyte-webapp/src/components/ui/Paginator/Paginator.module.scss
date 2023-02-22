@@ -29,7 +29,11 @@ $containerHeight: 23px;
     user-select: none;
   }
 
-  &:hover:not(.active) {
+  &:hover:is(.disabled) {
+    cursor: default;
+  }
+
+  &:hover:not(.active, .disabled) {
     background-color: colors.$grey-100;
   }
 }
@@ -48,6 +52,10 @@ $containerHeight: 23px;
   justify-self: flex-end;
   margin-right: 0;
   margin-left: auto;
+}
+
+.disabled {
+  color: colors.$grey;
 }
 
 .active {

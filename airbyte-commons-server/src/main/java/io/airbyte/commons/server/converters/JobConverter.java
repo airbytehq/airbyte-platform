@@ -4,10 +4,7 @@
 
 package io.airbyte.commons.server.converters;
 
-import io.airbyte.api.model.generated.AttemptFailureOrigin;
-import io.airbyte.api.model.generated.AttemptFailureReason;
 import io.airbyte.api.model.generated.AttemptFailureSummary;
-import io.airbyte.api.model.generated.AttemptFailureType;
 import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptNormalizationStatusRead;
 import io.airbyte.api.model.generated.AttemptRead;
@@ -15,6 +12,9 @@ import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptStatus;
 import io.airbyte.api.model.generated.AttemptStreamStats;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
+import io.airbyte.api.model.generated.FailureOrigin;
+import io.airbyte.api.model.generated.FailureReason;
+import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobDebugRead;
 import io.airbyte.api.model.generated.JobInfoLightRead;
@@ -211,9 +211,9 @@ public class JobConverter {
     }
 
     return new AttemptFailureSummary()
-        .failures(failureSummary.getFailures().stream().map(failure -> new AttemptFailureReason()
-            .failureOrigin(Enums.convertTo(failure.getFailureOrigin(), AttemptFailureOrigin.class))
-            .failureType(Enums.convertTo(failure.getFailureType(), AttemptFailureType.class))
+        .failures(failureSummary.getFailures().stream().map(failure -> new FailureReason()
+            .failureOrigin(Enums.convertTo(failure.getFailureOrigin(), FailureOrigin.class))
+            .failureType(Enums.convertTo(failure.getFailureType(), FailureType.class))
             .externalMessage(failure.getExternalMessage())
             .internalMessage(failure.getInternalMessage())
             .stacktrace(failure.getStacktrace())
