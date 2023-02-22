@@ -61,11 +61,6 @@ public class TemporalBeanFactory {
   }
 
   @Singleton
-  public ConfigInjector configInjector(final ConfigRepository configRepository) {
-    return new ConfigInjector(configRepository);
-  }
-
-  @Singleton
   public TaskQueueMapper taskQueueMapper() {
     return new DefaultTaskQueueMapper();
   }

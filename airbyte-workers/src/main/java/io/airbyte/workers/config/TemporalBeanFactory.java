@@ -71,12 +71,6 @@ public class TemporalBeanFactory {
 
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
-  public ConfigInjector configInjector(final ConfigRepository configRepository) {
-    return new ConfigInjector(configRepository);
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
   public SyncJobFactory jobFactory(
                                    final ConfigRepository configRepository,
                                    final JobPersistence jobPersistence,
