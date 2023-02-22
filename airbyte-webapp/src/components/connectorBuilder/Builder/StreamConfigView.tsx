@@ -167,22 +167,20 @@ const StreamControls = ({
   };
   return (
     <div className={styles.controls}>
-      <div data-testid="tag-tab-stream-configuration">
-        <StreamTab
-          label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
-          selected={selectedTab === "configuration"}
-          onSelect={() => setSelectedTab("configuration")}
-        />
-      </div>
-      <div data-testid="tag-tab-stream-schema">
-        <StreamTab
-          label={formatMessage({ id: "connectorBuilder.streamSchema" })}
-          selected={selectedTab === "schema"}
-          onSelect={() => setSelectedTab("schema")}
-          showErrorIndicator={hasSchemaErrors}
-          showSchemaConflictIndicator={Boolean(formattedDetectedSchema && schema.value !== formattedDetectedSchema)}
-        />
-      </div>
+      <StreamTab
+        data-testid="tag-tab-stream-configuration"
+        label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
+        selected={selectedTab === "configuration"}
+        onSelect={() => setSelectedTab("configuration")}
+      />
+      <StreamTab
+        data-testid="tag-tab-stream-schema"
+        label={formatMessage({ id: "connectorBuilder.streamSchema" })}
+        selected={selectedTab === "schema"}
+        onSelect={() => setSelectedTab("schema")}
+        showErrorIndicator={hasSchemaErrors}
+        showSchemaConflictIndicator={Boolean(formattedDetectedSchema && schema.value !== formattedDetectedSchema)}
+      />
       <AddStreamButton
         onAddStream={(addedStreamNum) => {
           setSelectedView(addedStreamNum);
@@ -207,14 +205,21 @@ const StreamTab = ({
   onSelect,
   showErrorIndicator,
   showSchemaConflictIndicator,
+  "data-testid": testId,
 }: {
   selected: boolean;
   label: string;
   onSelect: () => void;
   showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
+  "data-testid": string;
 }) => (
-  <button type="button" className={classNames(styles.tab, { [styles.selectedTab]: selected })} onClick={onSelect}>
+  <button
+    data-testid={testId}
+    type="button"
+    className={classNames(styles.tab, { [styles.selectedTab]: selected })}
+    onClick={onSelect}
+  >
     {label}
     {showErrorIndicator && <Indicator />}
     {showSchemaConflictIndicator && <SchemaConflictIndicator />}
