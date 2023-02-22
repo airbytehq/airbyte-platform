@@ -6,7 +6,7 @@ import styles from "./text.module.scss";
 type TextSize = "xs" | "sm" | "md" | "lg";
 type TextElementType = "p" | "span" | "div";
 
-interface TextProps {
+export interface TextProps {
   className?: string;
   centered?: boolean;
   as?: TextElementType;
@@ -16,6 +16,7 @@ interface TextProps {
   title?: string;
   color?: "default" | "grey-300";
   gradient?: boolean;
+  ref?: React.Ref<HTMLElement>;
 }
 
 const getTextClassNames = ({
@@ -42,29 +43,36 @@ const getTextClassNames = ({
   });
 };
 
-export const Text: React.FC<React.PropsWithChildren<TextProps>> = React.memo(
-  ({
-    as = "p",
-    bold = false,
-    centered = false,
-    children,
-    className: classNameProp,
-    size = "md",
-    inverseColor = false,
-    color = "default",
-    gradient = false,
-    ...remainingProps
-  }) => {
-    const className = classNames(
-      getTextClassNames({ centered, size, bold, inverseColor, gradient, color }),
-      classNameProp
-    );
+export const Text: React.FC<React.PropsWithRef<React.PropsWithChildren<TextProps>>> = React.memo(
+  React.forwardRef(
+    (
+      {
+        as = "p",
+        bold = false,
+        centered = false,
+        children,
+        className: classNameProp,
+        size = "md",
+        inverseColor = false,
+        color = "default",
 
-    return React.createElement(as, {
-      ...remainingProps,
-      "data-type": "text",
-      className,
-      children,
-    });
-  }
+        gradient = false,
+        ...remainingProps
+      },
+      ref
+    ) => {
+      const className = classNames(
+        getTextClassNames({ centered, size, bold, inverseColor, gradient, color }),
+        classNameProp
+      );
+
+      return React.createElement(as, {
+        ...remainingProps,
+        "data-type": "text",
+        className,
+        children,
+        ref,
+      });
+    }
+  )
 );
