@@ -5,7 +5,7 @@ import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Row } from "components/SimpleTableComponents";
 import { CheckBox } from "components/ui/CheckBox";
 import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
 
@@ -76,21 +76,21 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           124567
         </Text>
       </CatalogTreeTableCell> */}
-      <CatalogTreeTableCell withTooltip>
-        <Text size="md" className={styles.cellText}>
+      <CatalogTreeTableCell>
+        <TextWithOverflowTooltip size="md" className={styles.cellText}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
-        </Text>
+        </TextWithOverflowTooltip>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
-        <Text size="md" className={styles.cellText}>
+      <CatalogTreeTableCell>
+        <TextWithOverflowTooltip size="md" className={styles.cellText}>
           {stream.stream?.name}
-        </Text>
+        </TextWithOverflowTooltip>
       </CatalogTreeTableCell>
       <CatalogTreeTableCell size="fixed" className={styles.syncModeCell}>
         {disabled ? (
-          <Text size="md" className={styles.cellText}>
+          <TextWithOverflowTooltip size="md" className={styles.cellText}>
             {syncSchema.syncMode}
-          </Text>
+          </TextWithOverflowTooltip>
         ) : (
           <SyncModeSelect
             options={availableSyncModes}
@@ -112,7 +112,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           />
         )}
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip={pkType === "sourceDefined"}>
+      <CatalogTreeTableCell>
         {pkType && (
           <StreamPathSelect
             pathType={pkType}
@@ -128,15 +128,15 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
-        <Text size="md" className={styles.cellText}>
+      <CatalogTreeTableCell>
+        <TextWithOverflowTooltip size="md" className={styles.cellText}>
           {destNamespace}
-        </Text>
+        </TextWithOverflowTooltip>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
-        <Text size="md" className={styles.cellText}>
+      <CatalogTreeTableCell>
+        <TextWithOverflowTooltip size="md" className={styles.cellText}>
           {destName}
-        </Text>
+        </TextWithOverflowTooltip>
       </CatalogTreeTableCell>
     </Row>
   );

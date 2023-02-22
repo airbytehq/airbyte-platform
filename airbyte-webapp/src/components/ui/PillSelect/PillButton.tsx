@@ -4,7 +4,7 @@ import classNames from "classnames";
 import { Children } from "react";
 
 import styles from "./PillButton.module.scss";
-import { Text } from "../Text";
+import { Text, TextWithOverflowTooltip } from "../Text";
 
 export type PillButtonVariant = "grey" | "blue" | "green" | "red" | "strong-red" | "strong-blue";
 
@@ -21,6 +21,7 @@ interface PillButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   active?: boolean;
   variant?: PillButtonVariant;
   hasError?: boolean;
+  withOverflowTooltip?: boolean;
 }
 
 export const PillButton: React.FC<PillButtonProps> = ({
@@ -28,6 +29,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
   active,
   variant = "grey",
   hasError = false,
+  withOverflowTooltip = false,
   ...buttonProps
 }) => {
   const arrayChildren = Children.toArray(children);
@@ -47,9 +49,15 @@ export const PillButton: React.FC<PillButtonProps> = ({
       {Children.map(arrayChildren, (child, index) => (
         <>
           <div key={index} className={styles.labelContainer}>
-            <Text as="span" size="xs" className={styles.text}>
-              {child}
-            </Text>
+            {withOverflowTooltip ? (
+              <TextWithOverflowTooltip as="span" size="xs" className={styles.text}>
+                {child}
+              </TextWithOverflowTooltip>
+            ) : (
+              <Text as="span" size="xs" className={styles.text}>
+                {child}
+              </Text>
+            )}
           </div>
           {index !== arrayChildren?.length - 1 && <div className={styles.divider} />}
         </>
