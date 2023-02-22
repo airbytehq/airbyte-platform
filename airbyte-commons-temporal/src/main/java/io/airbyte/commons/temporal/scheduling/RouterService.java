@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Decides which Task Queue should be used for a given connection's sync operations, based on the
- * configured {@link Geography}
+ * configured {@link Geography}.
  */
 @Singleton
 @Slf4j

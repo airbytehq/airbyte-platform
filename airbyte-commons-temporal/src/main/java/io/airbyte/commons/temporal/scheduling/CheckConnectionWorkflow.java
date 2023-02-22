@@ -11,6 +11,9 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
+/**
+ * Runs an airbyte check connection method in temporal.
+ */
 @WorkflowInterface
 public interface CheckConnectionWorkflow {
 
