@@ -73,7 +73,21 @@ Our SCSS color variables compile to `rgb(X, Y, Z)`, which is an invalid value in
 
 ## Folder Structure
 
-TODO: Summarize the rest beside react components.
+> The Airbyte team is currently restructuring how folders are organized in the codebase. This section describes the current folder structure and may be subject to change.
+
+* components - All React components except for page components. See section below for details
+* config - Config system
+* core - General modules used by the app
+* hooks - Shared hooks
+* locales - i18n files.
+* packages - Folder deprecated. Sub-folders will be moved out in the future
+* pages - React components that represents the app routes and pages. See section below
+* scss - Global SCSS files
+* services -
+* test-utils - Unit testing utilities
+* types - Shared TypeScript types and external module type definitions
+* utils - Shared utilities
+* views - Folder deprecated. Includes React components that will be moved to `components/` in the future
 
 ## React Components
 
@@ -99,9 +113,9 @@ When using supporting components, the folder could become rather full of them. I
 
 Here's a hypothetical example: The app has a streams panel with a lot of sub-components including a streams table. Instead of placing all the components under `src/components/connection/StreamsPanel`, the table should be broken out into it's own sub-folder as a child of the `connection` folder.
 
-```
-// Don't:
+❌ Incorrect - While StreamsTable is only used in the StreamsPanel, it also has its own sub-components.
 
+```
 src/
   components/
     connection/
@@ -115,9 +129,11 @@ src/
         StreamsTableCell.tsx
         StreamsTableHeader.tsx
         StreamsTableRow.tsx
+```
 
-// Do:
+✅ Correct - StreamsTable is separated into its own folder alongside StreamsPanel
 
+```
 src/
   components/
     connection/
@@ -137,4 +153,28 @@ src/
 
 ### Pages Structure
 
-TODO
+> The Airbyte team is currently restructuring how pages are organized in the codebase. This describes the ideal structure for the `pages/` folder.
+
+React components that represent pages and routes are split from the rest of the components in order to provide a clear way to identify the individual pages that are available in the app.
+
+Each sub-folder in `pages/` corresponds to the domain path in the url. For example. `/workspaces/{workspaceId}/connections/*` pages are available in `pages/connections/`.
+
+Pages are not nested within sub-folders. Instead, all pages are alongside each other and the nesting is configured in the routes file.
+
+The page React component is intended to put together a series of more heavy-hitting components. The components that support the page are part of the `components/` folder. Smaller components that support the page component can be created in the page's folder.
+
+Here's an example using the connections pages:
+
+```
+components/
+  connection/
+    ConnectionsTable/ - Used by AllConnectionsPage
+pages
+  connections/
+    AllConnectionsPage/ - The page that renders the list of connections. Uses `components/connection/ConnectionsTable`
+    ConnectionPage/ - The individual connection page
+    ConnectionReplicationPage/ - A sub-page of the ConnectionPage that renders the replication "tab"
+    ConnectionRoutes.tsx - Defines entire route structure for connections
+routePaths.tsx - Global routing constants
+routes.tsx - Global routing file
+```
