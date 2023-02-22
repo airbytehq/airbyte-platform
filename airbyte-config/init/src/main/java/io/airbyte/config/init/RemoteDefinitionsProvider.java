@@ -46,11 +46,19 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   private final Duration timeout;
 
   public RemoteDefinitionsProvider(@Value("${airbyte.platform.remote-connector-catalog.url}") final String remoteCatalogUrl,
-                                   @Value("${airbyte.platform.remote-connector-catalog.timeout-ms}") final long remoteCatalogTimeoutMs)
-      throws URISyntaxException {
+                                   @Value("${airbyte.platform.remote-connector-catalog.timeout-ms}") final long remoteCatalogTimeoutMs) {
     log.info("Creating remote definitions provider for URL '{}'...", remoteCatalogUrl);
-    this.remoteDefinitionCatalogUrl = new URI(remoteCatalogUrl);
-    this.timeout = Duration.ofMillis(remoteCatalogTimeoutMs);
+    if (remoteCatalogUrl == null || remoteCatalogUrl.isEmpty()) {
+      throw new IllegalArgumentException("Remote catalog URL cannot be null or empty.");
+    }
+
+    try {
+      this.remoteDefinitionCatalogUrl = new URI(remoteCatalogUrl);
+      this.timeout = Duration.ofMillis(remoteCatalogTimeoutMs);
+    } catch (URISyntaxException e) {
+      log.error("Invalid remote catalog URL: {}", remoteCatalogUrl);
+      throw new IllegalArgumentException("Remote catalog URL Must be a valid URI.", e);
+    }
   }
 
   private Map<UUID, StandardSourceDefinition> getSourceDefinitionsMap() {
@@ -73,7 +81,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   public StandardSourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException {
     final StandardSourceDefinition definition = getSourceDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException(SeedType.STANDARD_SOURCE_DEFINITION.name(), definitionId.toString());
+      throw new ConfigNotFoundException("remote_catalog:source_def", definitionId.toString());
     }
     return definition;
   }
@@ -87,7 +95,7 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
   public StandardDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException {
     final StandardDestinationDefinition definition = getDestinationDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException(SeedType.STANDARD_DESTINATION_DEFINITION.name(), definitionId.toString());
+      throw new ConfigNotFoundException("remote_catalog:destination_def", definitionId.toString());
     }
     return definition;
   }

@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.logging;
 
+import static io.airbyte.commons.constants.AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.airbyte.commons.constants.AirbyteSecretConstants;
 import io.airbyte.commons.json.Jsons;
@@ -48,7 +50,7 @@ public class MaskedDataInterceptor implements RewritePolicy {
   @PluginFactory
   public static MaskedDataInterceptor createPolicy(
                                                    @PluginAttribute(value = "specMaskFile",
-                                                                    defaultString = "/seed/specs_secrets_mask.yaml") final String specMaskFile) {
+                                                                    defaultString = LOCAL_SECRETS_MASKS_PATH) final String specMaskFile) {
     return new MaskedDataInterceptor(specMaskFile);
   }
 

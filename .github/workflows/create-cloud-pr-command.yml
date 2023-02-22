@@ -14,7 +14,7 @@ jobs:
         id: create-branch-snapshot
         uses: ./.github/actions/create-pr-from-airbyte
         with: 
-          github_access_token: ${{ secrets.GH_PAT_ROOT_ACCESS_OCTAVIA }}
+          github_access_token: ${{ secrets.GITXMOD_AUTOMATION_PAT }}
           source_repo: ${{ github.event.client_payload.slash_command.args.named.repository }}
           source_branch: ${{ github.event.client_payload.slash_command.args.named.branch }}
           source_pull_request: ${{ github.event.client_payload.slash_command.args.named.pr_number }}
