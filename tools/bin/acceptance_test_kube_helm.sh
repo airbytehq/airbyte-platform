@@ -2,27 +2,30 @@
 
 set -e
 
-trap 'catch $? $LINENO' EXIT
 
 . tools/lib/lib.sh
 
 assert_root
 
-catch() {
-  echo "catching!"
-  if [ "$1" != "0" ]; then
-    echo "Error $1 occurred on $2"
-    restore_dir_structure()
-  fi
-}
+trap 'catch $? $LINENO' EXIT
 
-restore_dir_structure(){
+restore_dir_structure () {
   echo "Reverting changes back"
   mv charts/airbyte/Chart.yaml charts/airbyte/Chart.yaml.test
   mv charts/airbyte/Chart.yaml.old charts/airbyte/Chart.yaml
   mv charts/airbyte/values.yaml charts/airbyte/values.yaml.test
   mv charts/airbyte/values.yaml.old charts/airbyte/values.yaml
 }
+
+catch () {
+  echo "catching!"
+  if [ "$1" != "0" ];
+  then
+    echo "Error $1 occurred on $2"
+    restore_dir_structure
+  fi
+}
+
 
 echo "Getting docker internal host ip"
 DOCKER_HOST_IP=$(ip -f inet add show docker0 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
@@ -119,4 +122,4 @@ fi
 echo "Running e2e tests via gradle..."
 KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan
 
-catch()
+catch
