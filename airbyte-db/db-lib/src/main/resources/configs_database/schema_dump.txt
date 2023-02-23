@@ -112,7 +112,7 @@ create table "public"."connection" (
   "source_catalog_id" uuid,
   "schedule_type" "public"."schedule_type",
   "schedule_data" jsonb,
-  "geography" geography_type not null default cast('AUTO' as geography_type),
+  "geography" "public"."geography_type" not null default cast('AUTO' as geography_type),
   "notify_schema_changes" boolean not null default true,
   "non_breaking_change_preference" varchar(7) not null default cast('ignore' as varchar),
   "breaking_change" boolean not null default false,
@@ -164,7 +164,7 @@ create table "public"."state" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "stream_name" text,
   "namespace" text,
-  "type" state_type not null default cast('LEGACY' as state_type),
+  "type" "public"."state_type" not null default cast('LEGACY' as state_type),
   constraint "state_pkey"
     primary key ("id", "connection_id"),
   constraint "state__connection_id__stream_name__namespace__uq"
