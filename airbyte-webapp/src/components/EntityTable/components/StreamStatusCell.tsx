@@ -23,11 +23,12 @@ const getStatusColor = (connection: WebBackendConnectionRead) => {
       connection.scheduleType !== "manual" &&
       connection.latestSyncJobCreatedAt &&
       connection.scheduleData?.basicSchedule?.units &&
-      connection.latestSyncJobCreatedAt <
+      // x1000 for a JS datetime
+      connection.latestSyncJobCreatedAt * 1000 <
         dayjs()
+          // Subtract 2x the scheduled interval and compare it to last sync time
           .subtract(connection.scheduleData.basicSchedule.units, connection.scheduleData.basicSchedule.timeUnit)
-          .valueOf() /
-          1000 // Subtract 2x the scheduled interval and compare it to last sync time
+          .valueOf()
     ) {
       return statusMap.behind;
     }
