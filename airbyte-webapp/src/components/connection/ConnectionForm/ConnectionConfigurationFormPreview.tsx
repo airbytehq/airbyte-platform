@@ -12,13 +12,12 @@ import styles from "./ConnectionConfigurationFormPreview.module.scss";
 import { FormikConnectionFormValues } from "./formConfig";
 import { namespaceDefinitionOptions } from "./types";
 
-export const ConnectionConfigurationFormPreview: React.FC = () => {
-  const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
+const Frequency: React.FC = () => {
   const {
-    values: { scheduleType, scheduleData, nonBreakingChangesPreference, namespaceDefinition, namespaceFormat, prefix },
+    values: { scheduleType, scheduleData },
   } = useFormikContext<FormikConnectionFormValues>();
 
-  const frequency = (
+  return (
     <div>
       <Text size="xs" color="grey">
         <FormattedMessage id="form.frequency" />:
@@ -40,8 +39,14 @@ export const ConnectionConfigurationFormPreview: React.FC = () => {
       </Text>
     </div>
   );
+};
 
-  const destinationNamespace = (
+const DestinationNamespace: React.FC = () => {
+  const {
+    values: { namespaceDefinition, namespaceFormat },
+  } = useFormikContext<FormikConnectionFormValues>();
+
+  return (
     <div>
       <Text size="xs" color="grey">
         <FormattedMessage id="connectionForm.namespaceDefinition.title" />:
@@ -60,8 +65,14 @@ export const ConnectionConfigurationFormPreview: React.FC = () => {
       </Text>
     </div>
   );
+};
 
-  const destinationPrefix = (
+const DestinationPrefix: React.FC = () => {
+  const {
+    values: { prefix },
+  } = useFormikContext<FormikConnectionFormValues>();
+
+  return (
     <div>
       <Text size="xs" color="grey">
         <FormattedMessage id="form.prefix" />:
@@ -75,8 +86,16 @@ export const ConnectionConfigurationFormPreview: React.FC = () => {
       </Text>
     </div>
   );
+};
 
-  const nonBreakingChanges = allowAutoDetectSchema && (
+const NonBreakingChanges: React.FC<{
+  allowAutoDetectSchema: boolean;
+}> = ({ allowAutoDetectSchema }) => {
+  const {
+    values: { nonBreakingChangesPreference },
+  } = useFormikContext<FormikConnectionFormValues>();
+
+  return allowAutoDetectSchema ? (
     <div>
       <Text size="xs" color="grey">
         <FormattedMessage id="connectionForm.nonBreakingChangesPreference.label" />:
@@ -85,14 +104,18 @@ export const ConnectionConfigurationFormPreview: React.FC = () => {
         <FormattedMessage id={`connectionForm.nonBreakingChangesPreference.${nonBreakingChangesPreference}`} />
       </Text>
     </div>
-  );
+  ) : null;
+};
+
+export const ConnectionConfigurationFormPreview: React.FC = () => {
+  const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
 
   return (
     <FlexContainer className={styles.container}>
-      {frequency}
-      {destinationNamespace}
-      {destinationPrefix}
-      {nonBreakingChanges}
+      <Frequency />
+      <DestinationNamespace />
+      <DestinationPrefix />
+      <NonBreakingChanges allowAutoDetectSchema={allowAutoDetectSchema} />
     </FlexContainer>
   );
 };
