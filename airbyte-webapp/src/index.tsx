@@ -5,13 +5,11 @@ import "react-reflex/styles.css";
 import { isCloudApp } from "utils/app";
 import { loadDatadog } from "utils/datadog";
 import { loadOsano } from "utils/dataPrivacy";
-import { loadSentry } from "utils/sentry";
 
 import "./dayjs-setup";
 import "./scss/global.scss";
 
-// We do not follow default config approach since we want to init sentry/datadog asap
-loadSentry();
+// We do not follow default config approach since we want to init datadog asap
 loadDatadog();
 
 // In Cloud load the Osano script (GDPR consent tool before anything else)

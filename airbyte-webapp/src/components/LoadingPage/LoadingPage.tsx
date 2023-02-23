@@ -1,25 +1,16 @@
 import React from "react";
-import styled from "styled-components";
+import { useIntl } from "react-intl";
 
-import { Spinner } from "components/ui/Spinner";
+import { FlexContainer } from "components/ui/Flex";
 
-interface IProps {
-  full?: boolean;
-}
+import styles from "./LoadingPage.module.scss";
+import logoAnimationUrl from "./logo-animation.svg";
 
-const Container = styled.div<IProps>`
-  width: 100%;
-  height: 100%;
-  padding: 20px 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-`;
-
-const LoadingPage: React.FC<IProps> = ({ full }) => (
-  <Container full={full}>
-    <Spinner />
-  </Container>
-);
-
-export default LoadingPage;
+export const LoadingPage: React.FC = () => {
+  const { formatMessage } = useIntl();
+  return (
+    <FlexContainer alignItems="center" justifyContent="center" className={styles.loadingPage}>
+      <img src={logoAnimationUrl} alt={formatMessage({ id: "ui.loading" })} />
+    </FlexContainer>
+  );
+};
