@@ -46,7 +46,7 @@
   }
 
   &:first-child {
-    padding-left: calc(variables.$spacing-xl + variables.$spacing-sm);
+    padding-left: calc(variables.$spacing-2xl + variables.$spacing-sm);
     border-radius: variables.$border-radius-md 0 0;
   }
 
@@ -73,7 +73,7 @@
 // --------- <td/> ---------
 
 .td {
-  padding: variables.$spacing-lg;
+  padding: variables.$spacing-lg calc(variables.$spacing-md + variables.$spacing-xs);
   font-size: 12px;
   line-height: 15px;
   font-weight: normal;
