@@ -36,7 +36,7 @@ dependencies {
     implementation 'net.java.dev.jna:jna-platform:5.8.0'
 
     testImplementation project(':airbyte-test-utils')
-    testImplementation 'org.apache.commons:commons-lang3:3.11'
+    testImplementation libs.apache.commons.lang
     testImplementation libs.platform.testcontainers.postgresql
 
 }
