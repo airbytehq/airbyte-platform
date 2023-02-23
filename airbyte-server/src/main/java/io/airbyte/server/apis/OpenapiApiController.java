@@ -10,6 +10,8 @@ import io.airbyte.api.generated.OpenapiApi;
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.io.File;
@@ -26,6 +28,7 @@ public class OpenapiApiController implements OpenapiApi {
 
   @Get(produces = "text/plain")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public File getOpenApiSpec() {
     return ApiHelper.execute(openApiConfigHandler::getFile);
