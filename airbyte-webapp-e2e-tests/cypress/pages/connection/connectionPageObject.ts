@@ -4,10 +4,16 @@ import { getWorkspaceId } from "commands/api/workspace";
 const replicationTab = "div[data-id='replication-step']";
 const syncEnabledSwitch = "[data-testid='enabledControl-switch']";
 
-export const visit = (connection: Connection, tab = "") => {
-  cy.intercept("**/web_backend/connections/get").as("getConnection");
+export const visit = (connection: Connection, tab = "", waitForGetConnection = true) => {
+  if (waitForGetConnection) {
+    cy.intercept({ url: "**/web_backend/connections/get", times: 1 }).as("getConnection");
+  }
+
   cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connection.connectionId}/${tab}`);
-  cy.wait("@getConnection", { timeout: 20000 });
+
+  if (waitForGetConnection) {
+    cy.wait("@getConnection", { timeout: 20000 });
+  }
 };
 
 export const goToReplicationTab = () => {

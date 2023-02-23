@@ -96,6 +96,12 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
     });
   }
 
+  checkPreFilledCursorField(streamName: string, expectedValue: string): void {
+    cy.get(getRowTestId("public", streamName)).within(() => {
+      cy.get(getSourceDefinedTestId("cursor")).contains(expectedValue);
+    });
+  }
+
   hasEmptyCursorSelect(namespace: string, streamName: string): void {
     cy.get(getRowTestId(namespace, streamName)).within(() => {
       const button = getFieldSelectButtonTestId(streamName, "cursor");

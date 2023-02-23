@@ -68,10 +68,33 @@ export interface SourcesList {
 }
 
 export interface SyncCatalog {
-  streams: SyncCatalogStream[];
+  streams: SyncCatalogStreamAndConfig[];
 }
 
 export interface SyncCatalogStream {
-  config: Record<string, unknown>;
-  stream: Record<string, unknown>;
+  name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  jsonSchema?: any;
+  supportedSyncModes?: "full_refresh" | "incremental";
+  sourceDefinedCursor?: boolean;
+  defaultCursorField?: string[];
+  sourceDefinedPrimaryKey?: string[][];
+  namespace?: string;
+}
+
+export interface SyncCatalogStreamConfig {
+  syncMode: "full_refresh" | "incremental";
+  cursorField?: string[];
+  destinationSyncMode: "append" | "overwrite" | "append_dedup";
+  primaryKey?: string[][];
+  aliasName?: string;
+  selected?: boolean;
+  suggested?: boolean;
+  fieldSelectionEnabled?: boolean;
+  selectedFields?: Array<{ fieldPath?: string }>;
+}
+
+export interface SyncCatalogStreamAndConfig {
+  config: SyncCatalogStreamConfig;
+  stream: SyncCatalogStream;
 }

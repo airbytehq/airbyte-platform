@@ -15,8 +15,10 @@ import { Connection, Destination, Source } from "commands/api/types";
 import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
+  createAccountsTableQuery,
   createUserCarsTableQuery,
   createUsersTableQuery,
+  dropAccountsTableQuery,
   dropUserCarsTableQuery,
   dropUsersTableQuery,
 } from "commands/db/queries";
@@ -24,8 +26,9 @@ import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
+import { modifySyncCatalogStream } from "utils/connection";
 
-describe.skip("Connection - sync modes", () => {
+describe("Connection - sync modes", () => {
   const streamsTable = new NewStreamsTablePageObject();
 
   let source: Source;
@@ -35,8 +38,11 @@ describe.skip("Connection - sync modes", () => {
   before(() => {
     initialSetupCompleted();
     runDbQuery(dropUsersTableQuery);
+    runDbQuery(dropAccountsTableQuery);
     runDbQuery(dropUserCarsTableQuery);
+
     runDbQuery(createUsersTableQuery);
+    runDbQuery(createAccountsTableQuery);
     runDbQuery(createUserCarsTableQuery);
 
     requestWorkspaceId()
@@ -67,7 +73,26 @@ describe.skip("Connection - sync modes", () => {
         });
       })
       .then(() => {
-        connectionPage.visit(connection, "replication");
+        cy.intercept({ method: 'POST', url: '**/connections/get', times: 1 }, (request) => {
+          request.reply((response) => {
+            const body: Connection = modifySyncCatalogStream({
+              connection: response.body,
+              namespace: 'public',
+              streamName: 'accounts',
+              modifyStream: (stream) => ({
+                ...stream,
+                sourceDefinedCursor: true,
+                defaultCursorField: ['updated_at']
+              })
+            });
+  
+            response.send(body);
+          });
+        }).as('getConnectionWithModifiedStream');
+  
+        connectionPage.visit(connection, "replication", false);
+        cy.wait("@getConnectionWithModifiedStream", { timeout: 20000 });
+
         streamsTable.searchStream("users");
       });
   });
@@ -84,6 +109,7 @@ describe.skip("Connection - sync modes", () => {
     }
 
     runDbQuery(dropUsersTableQuery);
+    runDbQuery(dropAccountsTableQuery);
     runDbQuery(dropUserCarsTableQuery);
   });
 
@@ -104,6 +130,26 @@ describe.skip("Connection - sync modes", () => {
 
       it("has source-defined primary key", () => {
         streamsTable.checkPreFilledPrimaryKeyField("users", "id");
+      });
+    });
+
+    describe("with source-defined cursors and primary keys", () => {
+      before(() => {
+        streamsTable.searchStream('accounts');
+        streamsTable.selectSyncMode("Incremental", "Deduped + history");
+      });
+
+      after(() => {
+        replicationPage.clickCancelEditButton();
+        streamsTable.searchStream('users');
+      });
+
+      it("has source-defined cursor", () => {
+        streamsTable.checkPreFilledCursorField('accounts', 'updated_at');
+      });
+
+      it("has source-defined primary key", () => {
+        streamsTable.checkPreFilledPrimaryKeyField("accounts", "id");
       });
     });
 

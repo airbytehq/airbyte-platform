@@ -55,6 +55,17 @@ export const createUserCarsTableQuery = createTable("public.user_cars", [
 
 export const dropUserCarsTableQuery = dropTable("public.user_cars");
 
+// Accounts table
+
+export const createAccountsTableQuery = createTable("public.accounts", [
+  "id SERIAL",
+  "name VARCHAR(200) NULL",
+  "updated_at TIMESTAMP",
+  "CONSTRAINT accounts_pkey PRIMARY KEY (id)",
+]);
+
+export const dropAccountsTableQuery = dropTable("public.accounts");
+
 // Cities table
 export const createCitiesTableQuery = createTable("public.cities", ["city_code VARCHAR(8)", "city VARCHAR(200)"]);
 
