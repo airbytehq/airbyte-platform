@@ -3,12 +3,13 @@ import classNames from "classnames";
 import queryString from "query-string";
 import React, { useCallback } from "react";
 import { FormattedMessage, FormattedNumber } from "react-intl";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
+import { Link } from "components/ui/Link";
 import { NextTable } from "components/ui/NextTable";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -133,13 +134,13 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               responsive: true,
             },
             cell: (props) => (
-              <NavLink
+              <Link
                 to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${props.row.original.connectionId}`}
               >
                 <Text size="sm" className={styles.cellText}>
                   {props.cell.getValue()}
                 </Text>
-              </NavLink>
+              </Link>
             ),
           }),
           columnHelper.accessor("sourceConnectionName", {
@@ -157,16 +158,14 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               responsive: true,
             },
             cell: (props) => (
-              <NavLink
-                to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${props.row.original.sourceId}`}
-              >
+              <Link to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${props.row.original.sourceId}`}>
                 <FlexContainer direction="row" alignItems="center">
                   <ConnectorIcon icon={props.row.original.sourceIcon} />
                   <Text size="sm" className={styles.cellText}>
                     {props.cell.getValue()}
                   </Text>
                 </FlexContainer>
-              </NavLink>
+              </Link>
             ),
           }),
           columnHelper.display({
@@ -192,14 +191,14 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               responsive: true,
             },
             cell: (props) => (
-              <NavLink
+              <Link
                 to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${props.row.original.destinationId}`}
               >
                 <FlexContainer direction="row" alignItems="center">
                   <ConnectorIcon icon={props.row.original.destinationIcon} />
                   <Text size="sm">{props.cell.getValue()}</Text>
                 </FlexContainer>
-              </NavLink>
+              </Link>
             ),
           }),
           columnHelper.display({
