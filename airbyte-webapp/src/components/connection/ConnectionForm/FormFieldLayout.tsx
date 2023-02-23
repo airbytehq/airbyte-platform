@@ -3,7 +3,7 @@ import React, { ReactElement } from "react";
 import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 
-import styles from "./FormFieldWrapper.module.scss";
+import styles from "./FormFieldLayout.module.scss";
 
 interface FormFieldLayoutProps {
   children: [ReactElement<typeof ControlLabels>, ...React.ReactNode[]];
