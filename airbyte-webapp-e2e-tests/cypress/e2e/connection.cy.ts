@@ -18,6 +18,8 @@ import { goToReplicationTab } from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import streamsTablePageObject from "pages/connection/streamsTablePageObject";
 
+const sourceNamespace = "public";
+
 describe("Connection - creation, updating connection replication settings, deletion", () => {
   beforeEach(() => {
     initialSetupCompleted();
@@ -353,7 +355,7 @@ describe("Connection - stream details", () => {
     goToReplicationTab();
 
     streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.expandStreamDetailsByName(streamName);
+    streamsTablePageObject.expandStreamDetailsByName(sourceNamespace, streamName);
     streamsTablePageObject.checkStreamFields(collectionNames, collectionTypes);
 
     deleteSource(sourceName);
@@ -470,7 +472,7 @@ describe("Connection sync modes", () => {
     streamsTablePageObject.searchStream(streamName);
     streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
     streamsTablePageObject.selectCursorField(streamName, "city");
-    streamsTablePageObject.isPrimaryKeyNonExist(streamName);
+    streamsTablePageObject.isPrimaryKeyNonExist(sourceNamespace, streamName);
     streamsTablePageObject.selectPrimaryKeyField(streamName, ["city_code"]);
 
     submitButtonClick(true);
@@ -538,7 +540,7 @@ describe("Connection - detect source schema changes in source", () => {
 
     catalogDiffModal.clickCloseButton();
 
-    streamsTablePageObject.toggleStreamEnabledState("cars");
+    streamsTablePageObject.toggleStreamEnabledState(sourceNamespace, "cars");
 
     submitButtonClick();
     replicationPage.resetModalSaveBtnClick();

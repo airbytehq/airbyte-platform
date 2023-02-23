@@ -1,4 +1,5 @@
 import { submitButtonClick } from "commands/common";
+import { getTestId } from "utils/selectors";
 
 const resetModalSaveButton = "[data-testid='resetModal-save']";
 const successResult = "div[data-id='success-result']";
@@ -10,6 +11,8 @@ const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
 const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference']";
 const nonBreakingChangesPreferenceValue = (value: string) => `div[data-testid='nonBreakingChangesPreference-${value}']`;
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
+const cancelButton = getTestId("cancel-edit-button", "button");
+const saveButton = getTestId("save-button", "button");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");
@@ -66,3 +69,11 @@ export const selectNonBreakingChangesPreference = (preference: "ignore" | "disab
 };
 
 export const resetModalSaveBtnClick = () => cy.get(resetModalSaveButton).click();
+
+export const clickCancelEditButton = () => {
+  cy.get(cancelButton).click({ force: true });
+};
+
+export const getSaveButton = () => {
+  return cy.get(saveButton);
+};

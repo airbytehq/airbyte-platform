@@ -3,10 +3,16 @@ export const createTable = (tableName: string, columns: string[]): string =>
 
 export const dropTable = (tableName: string) => `DROP TABLE IF EXISTS ${tableName}`;
 
-export const alterTable = (tableName: string, params: { add?: string[]; drop?: string[] }): string => {
+export const alterTable = (
+  tableName: string,
+  params: { add?: string[]; drop?: string[]; dropConstraints?: string[] }
+): string => {
   const adds = params.add ? params.add.map((add) => `ADD COLUMN ${add}`) : [];
   const drops = params.drop ? params.drop.map((columnName) => `DROP COLUMN ${columnName}`) : [];
-  const alterations = [...adds, ...drops];
+  const dropConstraints = params.dropConstraints
+    ? params.dropConstraints.map((constraint) => `DROP CONSTRAINT ${constraint}`)
+    : [];
+  const alterations = [...adds, ...drops, ...dropConstraints];
 
   return `ALTER TABLE ${tableName} ${alterations.join(", ")};`;
 };
@@ -38,6 +44,16 @@ export const insertUsersTableQuery = insertMultipleIntoTable("public.users", [
 ]);
 
 export const dropUsersTableQuery = dropTable("public.users");
+
+// User cars
+
+export const createUserCarsTableQuery = createTable("public.user_cars", [
+  "user_id INTEGER",
+  "car_id INTEGER",
+  "created_at TIMESTAMP",
+]);
+
+export const dropUserCarsTableQuery = dropTable("public.user_cars");
 
 // Cities table
 export const createCitiesTableQuery = createTable("public.cities", ["city_code VARCHAR(8)", "city VARCHAR(200)"]);

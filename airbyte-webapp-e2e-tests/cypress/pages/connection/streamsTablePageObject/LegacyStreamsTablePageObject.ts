@@ -61,7 +61,7 @@ const checkDropdownField = (streamName: string, dropdownType: Dropdown, expected
 };
 
 export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase implements IStreamsTablePageObject {
-  expandStreamDetailsByName(streamName: string) {
+  expandStreamDetailsByName(namespace: string, streamName: string) {
     cy.get(getExpandStreamArrowBtn(streamName)).click();
   }
 
@@ -121,11 +121,11 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
     cy.get(getPreFilledPrimaryKeyText(streamName)).contains(expectedValue);
   }
 
-  isPrimaryKeyNonExist(streamName: string) {
+  isPrimaryKeyNonExist(namespace: string, streamName: string) {
     cy.get(getPreFilledPrimaryKeyText(streamName)).should("not.exist");
   }
 
-  toggleStreamEnabledState(streamName: string) {
+  toggleStreamEnabledState(namespace: string, streamName: string) {
     cy.get(streamSyncEnabledSwitch(streamName)).check({ force: true });
   }
 }

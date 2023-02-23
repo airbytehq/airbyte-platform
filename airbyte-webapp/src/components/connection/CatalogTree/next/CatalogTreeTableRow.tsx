@@ -68,7 +68,13 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         )}
       </CatalogTreeTableCell>
       <CatalogTreeTableCell size="fixed" className={styles.syncCell}>
-        <Switch size="sm" checked={stream.config?.selected} onChange={onSelectStream} disabled={disabled} />
+        <Switch
+          size="sm"
+          checked={stream.config?.selected}
+          onChange={onSelectStream}
+          disabled={disabled}
+          data-testid="selected-switch"
+        />
       </CatalogTreeTableCell>
       {/* TODO: Replace with actual field count for column selection */}
       {/* <CatalogTreeTableCell size="fixed" className={styles.fieldsCell}>
@@ -103,6 +109,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell withTooltip>
         {cursorType && (
           <StreamPathSelect
+            type="cursor"
             pathType={cursorType}
             paths={paths}
             path={cursorType === "sourceDefined" ? defaultCursorField : cursorField}
@@ -115,6 +122,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell withTooltip={pkType === "sourceDefined"}>
         {pkType && (
           <StreamPathSelect
+            type="primary-key"
             pathType={pkType}
             paths={paths}
             path={primaryKey}
