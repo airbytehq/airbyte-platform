@@ -1,7 +1,8 @@
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import React, { useState } from "react";
+import React from "react";
+import { useToggle } from "react-use";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -29,7 +30,7 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
   collapsedInitially = false,
   testId,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(collapsedInitially);
+  const [isCollapsed, setIsCollapsed] = useToggle(collapsedInitially);
 
   if (collapsedInitially && !collapsible) {
     console.warn("Section cannot be collapsed initially if it is not collapsible");
@@ -47,7 +48,7 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
           {collapsible && (
             <Button
               variant="clear"
-              onClick={() => setIsCollapsed((prevState) => !prevState)}
+              onClick={setIsCollapsed}
               data-testid={`${testId}-section-expand-arrow`}
               type="button"
             >
