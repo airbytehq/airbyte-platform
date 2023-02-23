@@ -8,6 +8,7 @@ import { MoonIcon } from "components/icons/MoonIcon";
 import { PauseIcon } from "components/icons/PauseIcon";
 
 import { CircleLoader } from "./CircleLoader";
+import { Tooltip } from "../Tooltip";
 
 export type StatusIconStatus = "sleep" | "inactive" | "success" | "warning" | "loading" | "error" | "cancelled";
 
@@ -84,17 +85,23 @@ export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error",
   }
 
   return (
-    <Badge {...props} status={status}>
-      {status === "inactive" ? (
-        <PauseIcon title={title} />
-      ) : status === "sleep" ? (
-        <MoonIcon title={title} />
-      ) : status === "error" ? (
-        <CrossIcon title={title} />
-      ) : (
-        <FontAwesomeIcon icon={_iconByStatus[status]} title={title} />
-      )}
-      {valueElement}
-    </Badge>
+    <Tooltip
+      control={
+        <Badge {...props} status={status}>
+          {status === "inactive" ? (
+            <PauseIcon title={title} />
+          ) : status === "sleep" ? (
+            <MoonIcon title={title} />
+          ) : status === "error" ? (
+            <CrossIcon title={title} />
+          ) : (
+            <FontAwesomeIcon icon={_iconByStatus[status]} title={title} />
+          )}
+          {valueElement}
+        </Badge>
+      }
+    >
+      {title}
+    </Tooltip>
   );
 };
