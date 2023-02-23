@@ -2,6 +2,8 @@ import { CellContext } from "@tanstack/react-table";
 import classNames from "classnames";
 import dayjs from "dayjs";
 
+import { Tooltip } from "components/ui/Tooltip";
+
 import { WebBackendConnectionRead } from "core/request/AirbyteClient";
 import { useGetConnection } from "hooks/services/useConnectionHook";
 
@@ -40,9 +42,17 @@ export const StreamsStatusCell: React.FC<CellContext<ConnectionTableDataItem, un
   const connection = useGetConnection(row.original.connectionId);
   const filling = classNames(styles.filling, getStatusColor(connection));
   return (
-    <div className={styles.container}>
-      <div className={filling} />
-    </div>
+    <Tooltip
+      control={
+        <div className={styles.container}>
+          <div className={filling} />
+        </div>
+      }
+    >
+      <div className={styles.container} style={{ width: "100px" }}>
+        <div className={filling} />
+      </div>
+    </Tooltip>
   );
   // return <>{connection.syncCatalog.streams.length}</>;
 };
