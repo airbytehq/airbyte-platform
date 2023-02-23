@@ -16,7 +16,7 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ se
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
 
-  const negativeCreditsStatus = useMemo(() => {
+  const negativeCreditStatus = useMemo(() => {
     return (
       cloudWorkspace.creditStatus &&
       [
@@ -27,7 +27,7 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ se
     );
   }, [cloudWorkspace.creditStatus]);
   const workspaceCreditsBannerContent = useMemo(() => {
-    if (negativeCreditsStatus) {
+    if (negativeCreditStatus) {
       return (
         <FormattedMessage
           id="credits.creditsProblem"
@@ -57,7 +57,7 @@ export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({ se
     }
 
     return null;
-  }, [cloudWorkspace, negativeCreditsStatus]);
+  }, [cloudWorkspace, negativeCreditStatus]);
 
   setHasWorkspaceCreditsBanner(!!workspaceCreditsBannerContent);
 
