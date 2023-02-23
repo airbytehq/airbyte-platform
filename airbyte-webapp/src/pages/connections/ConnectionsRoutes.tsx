@@ -12,7 +12,7 @@ const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
 const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage"));
-const ConnectionJobHistory = React.lazy(() => import("./ConnectionJobHistory"));
+const ConnectionJobHistory = React.lazy(() => import("./ConnectionJobHistoryPage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 
