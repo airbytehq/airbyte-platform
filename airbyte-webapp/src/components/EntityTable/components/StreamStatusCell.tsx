@@ -10,14 +10,16 @@ import { useGetConnection } from "hooks/services/useConnectionHook";
 import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
 
-const statusMap = {
+type StatusType = "active" | "disabled" | "error" | "behind";
+
+const statusMap: Readonly<Record<StatusType, string>> = {
   active: styles.onTrack,
   disabled: styles.disabled,
   error: styles.error,
   behind: styles.behind,
 };
 
-const getStatusColor = (connection: WebBackendConnectionRead) => {
+const getStatusType = (connection: WebBackendConnectionRead): StatusType => {
   if (connection.status === "active" && connection.latestSyncJobStatus !== "failed") {
     if (
       connection.scheduleType !== "manual" &&
@@ -30,18 +32,18 @@ const getStatusColor = (connection: WebBackendConnectionRead) => {
           .subtract(connection.scheduleData.basicSchedule.units, connection.scheduleData.basicSchedule.timeUnit)
           .valueOf()
     ) {
-      return statusMap.behind;
+      return "behind";
     }
-    return statusMap.active;
+    return "active";
   } else if (connection.latestSyncJobStatus === "failed") {
-    return statusMap.error;
+    return "error";
   }
-  return statusMap.disabled;
+  return "disabled";
 };
 
 export const StreamsStatusCell: React.FC<CellContext<ConnectionTableDataItem, unknown>> = ({ row }) => {
   const connection = useGetConnection(row.original.connectionId);
-  const filling = classNames(styles.filling, getStatusColor(connection));
+  const filling = classNames(styles.filling, statusMap[getStatusType(connection)]);
   return (
     <Tooltip
       control={
