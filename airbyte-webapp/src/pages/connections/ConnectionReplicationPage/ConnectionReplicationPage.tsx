@@ -187,8 +187,9 @@ export const ConnectionReplicationPage: React.FC = () => {
                   isSubmitting={isSubmitting}
                   dirty={dirty || schemaHasBeenRefreshed}
                 />
-                {status.editControlsVisible && (
+                <div className={styles.editControlsContainer}>
                   <EditControls
+                    hidden={!status.editControlsVisible}
                     isSubmitting={isSubmitting}
                     submitDisabled={!isValid}
                     dirty={dirty}
@@ -200,7 +201,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                     errorMessage={getErrorMessage(isValid, dirty)}
                     enableControls={schemaHasBeenRefreshed || dirty}
                   />
-                )}
+                </div>
               </Form>
             </SchemaChangeBackdrop>
           )}
