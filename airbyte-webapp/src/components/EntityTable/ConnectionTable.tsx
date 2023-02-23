@@ -1,4 +1,4 @@
-import { createColumnHelper } from "@tanstack/react-table";
+import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
 import queryString from "query-string";
 import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { SortableTableHeader } from "components/ui/Table";
 
 import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useQuery } from "hooks/useQuery";
 
@@ -31,6 +32,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
   const navigate = useNavigate();
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
+  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI", false);
 
   const sortBy = query.sortBy || "entityName";
   const sortOrder = query.order || SortOrderEnum.ASC;
@@ -74,34 +76,11 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
 
-  const columns = React.useMemo(
-    () => [
-      columnHelper.display({
-        id: "stream-status",
-        cell: StreamsStatusCell,
-      }),
-      columnHelper.accessor("name", {
-        header: () => (
-          <SortableTableHeader
-            onClick={() => onSortClick("name")}
-            isActive={sortBy === "name"}
-            isAscending={sortOrder === SortOrderEnum.ASC}
-          >
-            <FormattedMessage id="tables.name" />
-          </SortableTableHeader>
-        ),
-        meta: {
-          thClassName: styles.width30,
-          responsive: true,
-        },
-        cell: (props) => (
-          <ConnectionStatusCell
-            status={props.row.original.lastSyncStatus}
-            value={props.cell.getValue()}
-            enabled={props.row.original.enabled}
-          />
-        ),
-      }),
+  const columns = React.useMemo(() => {
+    // ColumnDef requires explicit typing to unshift down below, but each column has explicit
+    // typing so we need an `any` to accommodate for varied column types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const columns: Array<ColumnDef<ConnectionTableDataItem, any>> = [
       columnHelper.accessor("entityName", {
         header: () => (
           <SortableTableHeader
@@ -194,9 +173,44 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         },
         cell: (props) => <ConnectionSettingsCell id={props.cell.getValue()} />,
       }),
-    ],
-    [columnHelper, sortBy, sortOrder, onSortClick, entity, allowAutoDetectSchema]
-  );
+    ];
+
+    if (streamCentricUIEnabled) {
+      columns.unshift(
+        columnHelper.display({
+          id: "stream-status",
+          cell: StreamsStatusCell,
+        })
+      );
+    } else {
+      columns.unshift(
+        columnHelper.accessor("name", {
+          header: () => (
+            <SortableTableHeader
+              onClick={() => onSortClick("name")}
+              isActive={sortBy === "name"}
+              isAscending={sortOrder === SortOrderEnum.ASC}
+            >
+              <FormattedMessage id="tables.name" />
+            </SortableTableHeader>
+          ),
+          meta: {
+            thClassName: styles.width30,
+            responsive: true,
+          },
+          cell: (props) => (
+            <ConnectionStatusCell
+              status={props.row.original.lastSyncStatus}
+              value={props.cell.getValue()}
+              enabled={props.row.original.enabled}
+            />
+          ),
+        })
+      );
+    }
+
+    return columns;
+  }, [columnHelper, sortBy, sortOrder, onSortClick, entity, allowAutoDetectSchema]);
 
   return <NextTable columns={columns} data={sortingData} onClickRow={onClickRow} testId="connectionsTable" />;
 };
