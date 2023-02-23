@@ -23,6 +23,8 @@ object CommitStatesAsap : Temporary(key = "platform.commitStatesAsap")
 
 object FieldSelectionEnabled : Temporary(key="connection.columnSelection")
 
+object CheckInputGeneration : Temporary(key="connectionManagerWorkflow.checkInputGeneration")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
     override fun enabled(ctx: Context): Boolean {
