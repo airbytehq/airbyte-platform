@@ -1,7 +1,8 @@
-import { faArrowRight, faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 
+import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { ModificationIcon } from "components/icons/ModificationIcon";
 
 import { FieldTransform } from "core/request/AirbyteClient";
@@ -13,7 +14,7 @@ interface FieldRowProps {
 }
 
 export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
-  const fieldName = transform.fieldName[transform.fieldName.length - 1];
+  const fieldName = transform.fieldName.join(".");
   const diffType = transform.transformType.includes("add")
     ? "add"
     : transform.transformType.includes("remove")
@@ -36,9 +37,14 @@ export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
   });
 
   const updateCellStyle = classnames(styles.cell, styles.update);
+  const hasTypeChange = oldType && newType;
 
   return (
-    <tr className={styles.row}>
+    <tr
+      className={classnames(styles.row, {
+        [styles.withType]: hasTypeChange,
+      })}
+    >
       <td className={contentStyle}>
         <div className={styles.iconContainer}>
           {diffType === "add" ? (
@@ -51,13 +57,15 @@ export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
             </div>
           )}
         </div>
-        {fieldName}
+        <div title={fieldName} className={styles.fieldName}>
+          {fieldName}
+        </div>
       </td>
-      {oldType && newType && (
+      {hasTypeChange && (
         <td className={contentStyle}>
           <div className={updateCellStyle}>
-            <span>
-              {oldType} <FontAwesomeIcon icon={faArrowRight} /> {newType}
+            <span className={styles.dataType}>
+              {oldType} <ArrowRightIcon /> {newType}
             </span>
           </div>
         </td>

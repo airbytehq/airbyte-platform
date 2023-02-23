@@ -12,11 +12,12 @@ jooq = "3.13.4"
 junit-jupiter = "5.9.1"
 log4j = "2.17.2"
 lombok = "1.18.24"
-micronaut = "3.8.3"
-micronaut-data = "3.9.4"
+micronaut = "3.8.5"
+micronaut-data = "3.9.6"
 micronaut-jaxrs = "3.4.0"
+micronaut-jdbc = "4.7.2"
 micronaut-security = "3.9.2"
-micronaut-test = "3.8.0"
+micronaut-test = "3.8.2"
 platform-testcontainers = "1.17.3"
 postgresql = "42.3.5"
 reactor = "3.5.2"
@@ -100,22 +101,22 @@ micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffei
 micronaut-data-processor = { module = "io.micronaut.data:micronaut-data-processor", version.ref = "micronaut-data" }
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
 micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "5.4.1" }
-micronaut-inject = { module = "io.micronaut:micronaut-inject" }
+micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut" }
-micronaut-http-client = { module = "io.micronaut:micronaut-http-client" }
+micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut" }
 micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty", version.ref = "micronaut" }
 micronaut-inject-java = { module = "io.micronaut:micronaut-inject-java", version.ref = "micronaut" }
 micronaut-jaxrs-processor = { module = "io.micronaut.jaxrs:micronaut-jaxrs-processor", version.ref = "micronaut-jaxrs" }
 micronaut-jaxrs-server = { module = "io.micronaut.jaxrs:micronaut-jaxrs-server", version.ref = "micronaut-jaxrs" }
-micronaut-jdbc = { module = "io.micronaut.sql:micronaut-jdbc", version = "4.7.2" }
-micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari" }
-micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq" }
-micronaut-management = { module = "io.micronaut:micronaut-management" }
-micronaut-runtime = { module = "io.micronaut:micronaut-runtime" }
+micronaut-jdbc = { module = "io.micronaut.sql:micronaut-jdbc", version.ref = "micronaut-jdbc" }
+micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari", version = "2.2.6" }
+micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq", version.ref = "micronaut-jdbc" }
+micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
+micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", version.ref = "micronaut-test" }
-micronaut-validation = { module = "io.micronaut:micronaut-validation" }
+micronaut-validation = { module = "io.micronaut:micronaut-validation", version.ref = "micronaut" }
 
 [bundles]
 apache = ["apache-commons", "apache-commons-lang"]
