@@ -38,6 +38,7 @@ public class DockerProcessFactory implements ProcessFactory {
   private static final Path DATA_MOUNT_DESTINATION = Path.of("/data");
   private static final Path LOCAL_MOUNT_DESTINATION = Path.of("/local");
   private static final String IMAGE_EXISTS_SCRIPT = "image_exists.sh";
+  private static final String DD_ENV_VAR = "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
 
   private final String workspaceMountSource;
   private final WorkerConfigs workerConfigs;
@@ -146,6 +147,11 @@ public class DockerProcessFactory implements ProcessFactory {
       for (final Map.Entry<String, String> envEntry : allEnvMap.entrySet()) {
         cmd.add("-e");
         cmd.add(envEntry.getKey() + "=" + envEntry.getValue());
+      }
+
+      if (imageName.contains("source-postgres")) {
+        cmd.add("-e");
+        cmd.add("JAVA_OPTS" + "=" + DD_ENV_VAR);
       }
 
       if (!Strings.isNullOrEmpty(entrypoint)) {

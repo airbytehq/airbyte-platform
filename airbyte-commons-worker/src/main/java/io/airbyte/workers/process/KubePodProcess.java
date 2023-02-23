@@ -116,6 +116,8 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
+  public static final String DD_ENV_VAR =
+          "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
 
   private static final String PIPES_DIR = "/pipes";
   private static final String STDIN_PIPE_FILE = PIPES_DIR + "/stdin";
@@ -224,6 +226,19 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
+    if (image.contains("source-postgres")) {
+      LOGGER.error("----- Image name - {}", image);
+      envVars.add(new EnvVar("JAVA_OPTS", DD_ENV_VAR, null));
+
+      if (System.getenv("DD_AGENT_HOST") != null) {
+        envVars.add(new EnvVar("DD_AGENT_HOST", System.getenv("DD_AGENT_HOST"), null));
+      }
+      if (System.getenv("DD_DOGSTATSD_PORT") != null) {
+        envVars.add(new EnvVar("DD_DOGSTATSD_PORT", System.getenv("DD_DOGSTATSD_PORT"), null));
+      }
+      addServerNameAndVersion(image, envVars);
+    }
+
     final ContainerBuilder containerBuilder = new ContainerBuilder()
         .withName(MAIN_CONTAINER_NAME)
         .withPorts(containerPorts)
@@ -239,6 +254,15 @@ public class KubePodProcess implements KubePod {
       containerBuilder.withResources(resourceRequirementsBuilder.build());
     }
     return containerBuilder.build();
+  }
+
+  private static void addServerNameAndVersion(String image, List<EnvVar> envVars) {
+    String[] imageNameAndVersion = image.split(":");
+    int expectedCount = 2;
+    if (imageNameAndVersion.length == expectedCount) {
+      envVars.add(new EnvVar("DD_SERVICE", imageNameAndVersion[0], null));
+      envVars.add(new EnvVar("DD_VERSION", imageNameAndVersion[1], null));
+    }
   }
 
   public static List<ContainerPort> createContainerPortList(final Map<Integer, Integer> internalToExternalPorts) {
