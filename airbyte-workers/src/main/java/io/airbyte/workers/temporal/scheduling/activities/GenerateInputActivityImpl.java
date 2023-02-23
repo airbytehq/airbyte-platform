@@ -122,8 +122,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         .withAttemptId((long) attempt)
         .withDockerImage(config.getSourceDockerImage())
         .withProtocolVersion(config.getSourceProtocolVersion())
-        .withIsCustomConnector(config.getIsSourceCustomConnector())
-        .withAllowedHosts(configReplacer.getAllowedHosts(sourceDefinition.getAllowedHosts(), sourceConfiguration));
+        .withIsCustomConnector(config.getIsSourceCustomConnector());
 
     if (!ConfigType.RESET_CONNECTION.equals(configType)) {
       sourceLauncherConfig.setAllowedHosts(configReplacer.getAllowedHosts(sourceDefinition.getAllowedHosts(), sourceConfiguration));
