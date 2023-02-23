@@ -1,4 +1,5 @@
 import { Field, FieldProps, useFormikContext } from "formik";
+import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -23,23 +24,33 @@ export const DestinationStreamPrefixName = () => {
   const { openModal, closeModal } = useModalService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
 
-  const destinationStreamNamesChange = (value: DestinationStreamNamesFormValueType) => {
-    formikProps.setFieldValue(
-      "prefix",
-      value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : ""
-    );
-  };
-
-  const destinationModalContent = (
-    <DestinationStreamNamesModal
-      initialValues={{
-        prefix: formikProps.values.prefix,
-      }}
-      onCloseModal={closeModal}
-      onSubmit={destinationStreamNamesChange}
-    />
+  const destinationStreamNamesChange = useCallback(
+    (value: DestinationStreamNamesFormValueType) => {
+      formikProps.setFieldValue(
+        "prefix",
+        value.streamNameDefinition === StreamNameDefinitionValueType.Prefix ? value.prefix : ""
+      );
+    },
+    [formikProps]
   );
 
+  const openDestinationStreamNamesModal = useCallback(
+    () =>
+      openModal({
+        size: "sm",
+        title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
+        content: () => (
+          <DestinationStreamNamesModal
+            initialValues={{
+              prefix: formikProps.values.prefix,
+            }}
+            onCloseModal={closeModal}
+            onSubmit={destinationStreamNamesChange}
+          />
+        ),
+      }),
+    [closeModal, destinationStreamNamesChange, formikProps.values.prefix, openModal]
+  );
   return (
     <Field name="prefix">
       {({ field }: FieldProps<string>) => (
@@ -64,13 +75,7 @@ export const DestinationStreamPrefixName = () => {
               type="button"
               variant="secondary"
               disabled={mode === "readonly"}
-              onClick={() =>
-                openModal({
-                  size: "sm",
-                  title: <FormattedMessage id="connectionForm.modal.destinationStreamNames.title" />,
-                  content: () => destinationModalContent,
-                })
-              }
+              onClick={openDestinationStreamNamesModal}
             >
               <FormattedMessage id="form.edit" />
             </Button>

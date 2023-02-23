@@ -1,4 +1,5 @@
 import { Field, FieldProps, useFormikContext } from "formik";
+import { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -29,25 +30,41 @@ export const NamespaceDefinitionFieldNext = () => {
 
   const formikProps = useFormikContext<FormikConnectionFormValues>();
 
-  const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
-    formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
+  const destinationNamespaceChange = useCallback(
+    (value: DestinationNamespaceFormValueType) => {
+      formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
 
-    if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
-      formikProps.setFieldValue("namespaceFormat", value.namespaceFormat);
-    }
-  };
-
-  const destinationModalContent = (
-    <DestinationNamespaceModal
-      initialValues={{
-        namespaceDefinition: formikProps.values.namespaceDefinition,
-        namespaceFormat: formikProps.values.namespaceFormat,
-      }}
-      onCloseModal={closeModal}
-      onSubmit={destinationNamespaceChange}
-    />
+      if (value.namespaceDefinition === NamespaceDefinitionType.customformat) {
+        formikProps.setFieldValue("namespaceFormat", value.namespaceFormat);
+      }
+    },
+    [formikProps]
   );
 
+  const openDestinationNamespaceModal = useCallback(
+    () =>
+      openModal({
+        size: "lg",
+        title: <FormattedMessage id="connectionForm.modal.destinationNamespace.title" />,
+        content: () => (
+          <DestinationNamespaceModal
+            initialValues={{
+              namespaceDefinition: formikProps.values.namespaceDefinition,
+              namespaceFormat: formikProps.values.namespaceFormat,
+            }}
+            onCloseModal={closeModal}
+            onSubmit={destinationNamespaceChange}
+          />
+        ),
+      }),
+    [
+      closeModal,
+      destinationNamespaceChange,
+      formikProps.values.namespaceDefinition,
+      formikProps.values.namespaceFormat,
+      openModal,
+    ]
+  );
   return (
     <Field name="namespaceDefinition">
       {({ field }: FieldProps<NamespaceDefinitionType>) => (
@@ -64,13 +81,7 @@ export const NamespaceDefinitionFieldNext = () => {
               type="button"
               variant="secondary"
               disabled={mode === "readonly"}
-              onClick={() =>
-                openModal({
-                  size: "lg",
-                  title: <FormattedMessage id="connectionForm.modal.destinationNamespace.title" />,
-                  content: () => destinationModalContent,
-                })
-              }
+              onClick={openDestinationNamespaceModal}
             >
               <FormattedMessage id="form.edit" />
             </Button>
