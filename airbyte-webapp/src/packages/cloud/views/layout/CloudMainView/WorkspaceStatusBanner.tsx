@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { Link } from "react-router-dom";
 
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
+import { Link } from "components/ui/Link";
 
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { CreditStatus, WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
