@@ -63,7 +63,7 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
             </Button>
           )}
         </div>
-        {isCollapsed && collapsedPreviewInfo}
+        {collapsible && isCollapsed && collapsedPreviewInfo}
         {collapsible ? !isCollapsed && children : children}
       </div>
     </Card>
