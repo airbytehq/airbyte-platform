@@ -130,7 +130,6 @@ create table "public"."connection_operation" (
   constraint "connection_operation_pkey"
     primary key ("id", "connection_id", "operation_id")
 );
-<<<<<<< HEAD
 create table "public"."connector_builder_project"(
   "id" uuid not null,
   "workspace_id" uuid not null,
@@ -144,9 +143,6 @@ create table "public"."connector_builder_project"(
     primary key ("id")
 );
 create table "public"."operation"(
-=======
-create table "public"."operation" (
->>>>>>> c9bf051448 (Update to latest jOOQ release)
   "id" uuid not null,
   "workspace_id" uuid not null,
   "name" varchar(256) not null,
