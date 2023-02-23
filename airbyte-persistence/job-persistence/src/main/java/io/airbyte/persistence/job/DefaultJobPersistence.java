@@ -1245,7 +1245,7 @@ public class DefaultJobPersistence implements JobPersistence {
       // for json fields, deserialize them so they are treated as objects instead of strings. this is to
       // get around that formatJson doesn't handle deserializing them for us.
       jsonFieldNames.forEach(jsonFieldName -> {
-        // Ensure that missing fields are converted into an empty JSON object in order to pass JASON
+        // Ensure that missing fields are converted into an empty JSON object in order to pass JSON
         // validation
         final String jsonFieldValue = Jsons.serialize(row.get(jsonFieldName));
         final JsonNode jsonFieldNode =
