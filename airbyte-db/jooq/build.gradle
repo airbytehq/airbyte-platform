@@ -21,7 +21,10 @@ dependencies {
 
     // The jOOQ code generator only has access to classes added to the jooqGenerator configuration
     jooqGenerator project(':airbyte-db:db-lib')
-    jooqGenerator libs.platform.testcontainers.postgresql
+    jooqGenerator(libs.platform.testcontainers.postgresql) {
+        // Force to avoid updated version brought in transitively from Micronaut
+        force = true
+    }
 }
 
 jooq {

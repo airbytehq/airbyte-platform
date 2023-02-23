@@ -23,7 +23,10 @@ dependencies {
     implementation project(':airbyte-config:config-models')
     implementation libs.flyway.core
 
-    migrations libs.platform.testcontainers.postgresql
+    migrations (libs.platform.testcontainers.postgresql) {
+        // Force to avoid updated version brought in transitively from Micronaut
+        force = true
+    }
     migrations sourceSets.main.output
 
     // Mark as compile only to avoid leaking transitively to connectors
@@ -37,8 +40,10 @@ dependencies {
 
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.apache.commons.lang
-    testImplementation libs.platform.testcontainers.postgresql
-
+    testImplementation (libs.platform.testcontainers.postgresql) {
+        // Force to avoid updated version brought in transitively from Micronaut
+        force = true
+    }
 }
 
 task(newConfigsMigration, dependsOn: 'classes', type: JavaExec) {
