@@ -36,7 +36,7 @@ type FullTableProps = CreditConsumptionByConnector & {
 };
 
 export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ creditConsumption }) => {
-  const isBillingInsightsEnabled = useExperiment("billingPage.billingInsights", false);
+  const isBillingInsightsEnabled = useExperiment("billing.billingInsights", false);
   const { workspaceId } = useCurrentWorkspace();
 
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
@@ -164,7 +164,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
                   <ConnectorIcon icon={props.row.original.sourceIcon} />
                   <Text size="sm" className={styles.cellText}>
                     {props.cell.getValue()}
-                  </Text>{" "}
+                  </Text>
                 </FlexContainer>
               </NavLink>
             ),
@@ -198,23 +198,13 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
                 <FlexContainer direction="row" alignItems="center">
                   <ConnectorIcon icon={props.row.original.destinationIcon} />
                   <Text size="sm">{props.cell.getValue()}</Text>
-                </FlexContainer>{" "}
+                </FlexContainer>
               </NavLink>
             ),
           }),
           columnHelper.display({
             id: "schedule",
-            header: () => (
-              <SortableTableHeader
-                onClick={() => {
-                  return null;
-                }}
-                isActive={false}
-                isAscending={false}
-              >
-                <FormattedMessage id="credits.schedule" />
-              </SortableTableHeader>
-            ),
+            header: () => <FormattedMessage id="credits.schedule" />,
             cell: () => (
               <FlexContainer className={styles.cell} alignItems="center">
                 <Text size="sm" className={styles.cellText}>
