@@ -53,6 +53,7 @@ public class JobsApiController implements JobsApi {
 
   @Post("/get_normalization_status")
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getAttemptNormalizationStatuses(jobIdRequestBody));
