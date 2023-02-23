@@ -6,6 +6,7 @@ package io.airbyte.workers.internal.sync_persistence;
 
 import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.STREAM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -68,7 +69,7 @@ class SyncPersistenceImplTest {
     stateApi = mock(StateApi.class);
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
     when(featureFlags.useStreamCapableState()).thenReturn(true);
-    syncPersistence = new SyncPersistenceImpl(connectionId, stateApi, new StateAggregatorFactory(featureFlags), executorService, FLUSH_PERIOD);
+    syncPersistence = new SyncPersistenceImpl(stateApi, new StateAggregatorFactory(featureFlags), executorService, FLUSH_PERIOD);
   }
 
   @AfterEach
@@ -79,7 +80,7 @@ class SyncPersistenceImplTest {
   @Test
   void testPersistHappyPath() throws ApiException {
     final AirbyteStateMessage stateA1 = getStreamState("A", 1);
-    syncPersistence.persist(stateA1);
+    syncPersistence.persist(connectionId, stateA1);
     verify(executorService).scheduleAtFixedRate(any(Runnable.class), eq(0L), eq(FLUSH_PERIOD), eq(TimeUnit.SECONDS));
     clearInvocations(executorService);
 
@@ -90,8 +91,8 @@ class SyncPersistenceImplTest {
 
     final AirbyteStateMessage stateB1 = getStreamState("B", 1);
     final AirbyteStateMessage stateC2 = getStreamState("C", 2);
-    syncPersistence.persist(stateB1);
-    syncPersistence.persist(stateC2);
+    syncPersistence.persist(connectionId, stateB1);
+    syncPersistence.persist(connectionId, stateC2);
 
     // Forcing a second flush
     actualFlushMethod.getValue().run();
@@ -110,7 +111,7 @@ class SyncPersistenceImplTest {
   @Test
   void testPersistWithApiFailures() throws ApiException {
     final AirbyteStateMessage stateF1 = getStreamState("F", 1);
-    syncPersistence.persist(stateF1);
+    syncPersistence.persist(connectionId, stateF1);
 
     // Set API call to fail
     when(stateApi.createOrUpdateState(any())).thenThrow(new ApiException());
@@ -122,7 +123,7 @@ class SyncPersistenceImplTest {
 
     // Adding more states
     final AirbyteStateMessage stateG1 = getStreamState("G", 1);
-    syncPersistence.persist(stateG1);
+    syncPersistence.persist(connectionId, stateG1);
 
     // Flushing again
     actualFlushMethod.getValue().run();
@@ -131,7 +132,7 @@ class SyncPersistenceImplTest {
 
     // Adding more states
     final AirbyteStateMessage stateF2 = getStreamState("F", 2);
-    syncPersistence.persist(stateF2);
+    syncPersistence.persist(connectionId, stateF2);
 
     // Flushing again
     actualFlushMethod.getValue().run();
@@ -156,7 +157,7 @@ class SyncPersistenceImplTest {
   void testClose() throws InterruptedException, ApiException {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     final AirbyteStateMessage stateA2 = getStreamState("A", 2);
-    syncPersistence.persist(stateA2);
+    syncPersistence.persist(connectionId, stateA2);
 
     // Shutdown, we expect the executor service to be stopped and an stateApi to be called
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
@@ -169,14 +170,14 @@ class SyncPersistenceImplTest {
   void testCloseMergeStatesFromPreviousFailure() throws ApiException, InterruptedException {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     final AirbyteStateMessage stateA2 = getStreamState("closeA", 2);
-    syncPersistence.persist(stateA2);
+    syncPersistence.persist(connectionId, stateA2);
 
     // Trigger a failure
     when(stateApi.createOrUpdateState(any())).thenThrow(new ApiException());
     actualFlushMethod.getValue().run();
 
     final AirbyteStateMessage stateB1 = getStreamState("closeB", 1);
-    syncPersistence.persist(stateB1);
+    syncPersistence.persist(connectionId, stateB1);
 
     // Final flush
     reset(stateApi);
@@ -188,7 +189,7 @@ class SyncPersistenceImplTest {
   @Test
   void testCloseShouldAttemptToRetryFinalFlush() throws ApiException, InterruptedException {
     final AirbyteStateMessage state = getStreamState("final retry", 2);
-    syncPersistence.persist(state);
+    syncPersistence.persist(connectionId, state);
 
     // Setup some API failures
     when(stateApi.createOrUpdateState(any()))
@@ -203,7 +204,7 @@ class SyncPersistenceImplTest {
 
   @Test
   void testCloseWhenFailBecauseFlushTookTooLong() throws InterruptedException, ApiException {
-    syncPersistence.persist(getStreamState("oops", 42));
+    syncPersistence.persist(connectionId, getStreamState("oops", 42));
 
     // Simulates a flush taking too long to terminate
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(false);
@@ -216,7 +217,7 @@ class SyncPersistenceImplTest {
 
   @Test
   void testCloseWhenFailBecauseThreadInterrupted() throws InterruptedException, ApiException {
-    syncPersistence.persist(getStreamState("oops", 42));
+    syncPersistence.persist(connectionId, getStreamState("oops", 42));
 
     // Simulates a flush taking too long to terminate
     when(executorService.awaitTermination(anyLong(), any())).thenThrow(new InterruptedException());
@@ -234,6 +235,14 @@ class SyncPersistenceImplTest {
     syncPersistence.close();
     verify(executorService).shutdown();
     verify(stateApi, never()).createOrUpdateState(any());
+  }
+
+  @Test
+  void testPreventMixingDataFromDifferentConnections() {
+    final AirbyteStateMessage message = getStreamState("stream", 5);
+    syncPersistence.persist(connectionId, message);
+
+    assertThrows(IllegalArgumentException.class, () -> syncPersistence.persist(UUID.randomUUID(), message));
   }
 
   private void verifyStateUpdateApiCall(final List<AirbyteStateMessage> expectedStateMessages) {

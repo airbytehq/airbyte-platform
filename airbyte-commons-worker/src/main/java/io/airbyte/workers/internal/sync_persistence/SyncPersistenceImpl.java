@@ -28,7 +28,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   final long RUN_IMMEDIATELY = 0;
   final long FLUSH_TERMINATION_TIMEOUT_IN_SECONDS = 60;
 
-  private final UUID connectionId;
+  private UUID connectionId;
   private final StateApi stateApi;
   private final StateAggregatorFactory stateAggregatorFactory;
 
@@ -38,12 +38,10 @@ public class SyncPersistenceImpl implements SyncPersistence {
   private ScheduledFuture<?> stateFlushFuture;
   private final long stateFlushPeriodInSeconds;
 
-  public SyncPersistenceImpl(final UUID connectionId,
-                             final StateApi stateApi,
+  public SyncPersistenceImpl(final StateApi stateApi,
                              final StateAggregatorFactory stateAggregatorFactory,
                              final ScheduledExecutorService scheduledExecutorService,
-                             long stateFlushPeriodInSeconds) {
-    this.connectionId = connectionId;
+                             final long stateFlushPeriodInSeconds) {
     this.stateApi = stateApi;
     this.stateAggregatorFactory = stateAggregatorFactory;
     this.stateFlushExecutorService = scheduledExecutorService;
@@ -52,7 +50,12 @@ public class SyncPersistenceImpl implements SyncPersistence {
   }
 
   @Override
-  public void persist(AirbyteStateMessage stateMessage) {
+  public void persist(final UUID connectionId, final AirbyteStateMessage stateMessage) {
+    if (this.connectionId == null) {
+      this.connectionId = connectionId;
+    } else if (!this.connectionId.equals(connectionId)) {
+      throw new IllegalArgumentException("Invalid connectionId " + connectionId + ", expected " + this.connectionId);
+    }
     stateBuffer.ingest(stateMessage);
     startBackgroundFlushStateTask();
   }
@@ -73,11 +76,11 @@ public class SyncPersistenceImpl implements SyncPersistence {
 
   /**
    * Stop background data flush thread and attempt to flush pending data
-   *
+   * <p>
    * If there is already flush in progress, wait for it to terminate. If it didn't terminate during
    * the allocated time, we exit rather than attempting a concurrent write that could lead to
    * non-deterministic behavior.
-   *
+   * <p>
    * For the final flush, we will retry in case of failures since there is no more "scheduled" attempt
    * after this.
    */
@@ -123,7 +126,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
 
   /**
    * FlushState method for the ScheduledExecutorService
-   *
+   * <p>
    * This method is swallowing exceptions on purpose. We do not want to fail or retry in a regular
    * run, the retry is deferred to the next run which will merge the data from the previous failed
    * attempt and the recent buffered data.

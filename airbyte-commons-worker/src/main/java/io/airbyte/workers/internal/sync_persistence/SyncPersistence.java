@@ -5,9 +5,10 @@
 package io.airbyte.workers.internal.sync_persistence;
 
 import io.airbyte.protocol.models.AirbyteStateMessage;
+import java.util.UUID;
 
 public interface SyncPersistence extends AutoCloseable {
 
-  void persist(final AirbyteStateMessage stateMessage);
+  void persist(final UUID connectionId, final AirbyteStateMessage stateMessage);
 
 }
