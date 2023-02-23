@@ -2605,6 +2605,16 @@ components:
       type: object
       required:
         - name
+      properties:
+        name:
+          type: string
+        draftManifest:
+          type: object
+          additionalProperties: true
+    ConnectorBuilderProjectDetailsRead:
+      type: object
+      required:
+        - name
         - builderProjectId
         - hasDraft
       properties:
@@ -2614,9 +2624,6 @@ components:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
         hasDraft:
           type: boolean
-        draftManifest:
-          type: object
-          additionalProperties: true
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:
@@ -2656,7 +2663,7 @@ components:
         - builderProject
       properties:
         builderProject:
-          $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     ConnectorBuilderProjectReadList:
@@ -2667,7 +2674,7 @@ components:
         projects:
           type: array
           items:
-            $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+            $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
     # SourceDefinition
     SourceDefinitionId:
       type: string
@@ -4311,19 +4318,19 @@ components:
         failures:
           type: array
           items:
-            $ref: "#/components/schemas/AttemptFailureReason"
+            $ref: "#/components/schemas/FailureReason"
         partialSuccess:
           description: True if the number of committed records for this attempt was greater than 0. False if 0 records were committed. If not set, the number of committed records is unknown.
           type: boolean
-    AttemptFailureReason:
+    FailureReason:
       type: object
       required:
         - timestamp
       properties:
         failureOrigin:
-          $ref: "#/components/schemas/AttemptFailureOrigin"
+          $ref: "#/components/schemas/FailureOrigin"
         failureType:
-          $ref: "#/components/schemas/AttemptFailureType"
+          $ref: "#/components/schemas/FailureType"
         externalMessage:
           type: string
         internalMessage:
@@ -4336,7 +4343,7 @@ components:
         timestamp:
           type: integer
           format: int64
-    AttemptFailureOrigin:
+    FailureOrigin:
       description: Indicates where the error originated. If not set, the origin of error is not well known.
       type: string
       enum:
@@ -4348,7 +4355,7 @@ components:
         - dbt
         - airbyte_platform
         - unknown
-    AttemptFailureType:
+    FailureType:
       description: Categorizes well known errors into types for programmatic handling. If not set, the type of error is not well known.
       type: string
       enum:
@@ -4923,6 +4930,10 @@ components:
           additionalProperties: true # Oauth parameters like code, state, etc.. will be different per API so we don't specify them in advance
         oAuthInputConfiguration:
           $ref: "#/components/schemas/OAuthInputConfiguration"
+        returnSecretCoordinate:
+          type: boolean
+          description: If set to true, returns a secret coordinate which references the stored tokens. By default, returns raw tokens.
+          default: false
         sourceId:
           $ref: "#/components/schemas/SourceId"
     CompleteDestinationOAuthRequest:

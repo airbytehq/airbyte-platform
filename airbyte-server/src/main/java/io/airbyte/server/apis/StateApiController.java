@@ -41,6 +41,7 @@ public class StateApiController implements StateApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public ConnectionState getState(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> stateHandler.getState(connectionIdRequestBody));
