@@ -2605,6 +2605,16 @@ components:
       type: object
       required:
         - name
+      properties:
+        name:
+          type: string
+        draftManifest:
+          type: object
+          additionalProperties: true
+    ConnectorBuilderProjectDetailsRead:
+      type: object
+      required:
+        - name
         - builderProjectId
         - hasDraft
       properties:
@@ -2656,7 +2666,7 @@ components:
         - builderProject
       properties:
         builderProject:
-          $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     ConnectorBuilderProjectReadList:
@@ -2667,7 +2677,7 @@ components:
         projects:
           type: array
           items:
-            $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+            $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
     # SourceDefinition
     SourceDefinitionId:
       type: string
