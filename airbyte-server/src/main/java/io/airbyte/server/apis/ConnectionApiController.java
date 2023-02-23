@@ -70,6 +70,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionReadList listConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody));
   }
@@ -85,6 +86,7 @@ public class ConnectionApiController implements ConnectionApi {
 
   @Override
   @Post(uri = "/search")
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionReadList searchConnections(@Body final ConnectionSearch connectionSearch) {
     return ApiHelper.execute(() -> connectionsHandler.searchConnections(connectionSearch));
   }
