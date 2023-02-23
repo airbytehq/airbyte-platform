@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -39,6 +40,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -95,6 +97,19 @@ public class SourceHandler {
             .build(),
         new ConfigurationUpdate(configRepository, secretsRepositoryReader),
         oAuthConfigSupplier);
+  }
+
+  // TODO - add optional param to SourceCreate for secretId
+  public SourceRead createSourceHandleSecret(final SourceCreate sourceCreate) throws JsonValidationException, ConfigNotFoundException, IOException {
+    if (!sourceCreate.getSecretId().isBlank()) {
+      // Hydrate secret
+      Map<String, Object> hydratedSecret = OAuthSecretHelper.hydrateOAuthResponseSecret(sourceCreate.getSecretId());
+      final StandardSourceDefinition sourceDefinition = configRepository
+          .getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
+      sourceCreate.setConnectionConfiguration(
+          OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, sourceCreate.getConnectionConfiguration()));
+    }
+    return createSource(sourceCreate);
   }
 
   public SourceRead createSource(final SourceCreate sourceCreate)
