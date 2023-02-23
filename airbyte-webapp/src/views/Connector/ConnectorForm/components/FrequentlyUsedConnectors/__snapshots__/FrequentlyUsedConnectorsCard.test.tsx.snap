@@ -91,7 +91,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                           >
                             Google Sheets
                           </div>
-                          <span
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
                             <div
@@ -99,7 +99,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                             >
                               Alpha
                             </div>
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -142,7 +142,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                           >
                             BigQuery
                           </div>
-                          <span
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
                             <svg
@@ -162,7 +162,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                                 fill-rule="evenodd"
                               />
                             </svg>
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -247,7 +247,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                           >
                             MongoDB
                           </div>
-                          <span
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
                             <div
@@ -255,7 +255,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                             >
                               Custom
                             </div>
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -298,7 +298,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                           >
                             Postgres
                           </div>
-                          <span
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
                             <div
@@ -306,7 +306,7 @@ exports[`<mockFrequentlyUsedConnectors /> should renders with mock data without 
                             >
                               Alpha
                             </div>
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </div>
