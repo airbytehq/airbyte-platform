@@ -2624,9 +2624,6 @@ components:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
         hasDraft:
           type: boolean
-        draftManifest:
-          type: object
-          additionalProperties: true
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:
