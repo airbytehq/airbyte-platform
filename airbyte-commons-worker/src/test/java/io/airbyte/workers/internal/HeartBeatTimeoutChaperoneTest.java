@@ -47,8 +47,8 @@ class HeartBeatTimeoutChaperoneTest {
       } catch (final InterruptedException e) {
         throw new RuntimeException(e);
       }
-    })).get())
-        .hasCauseInstanceOf(HeartbeatTimeoutChaperone.HeartbeatTimeoutException.class);
+    })))
+        .isInstanceOf(HeartbeatTimeoutChaperone.HeartbeatTimeoutException.class);
 
   }
 
@@ -66,7 +66,7 @@ class HeartBeatTimeoutChaperoneTest {
             throw new RuntimeException(e);
           }
         }));
-    assertDoesNotThrow(() -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {})).get());
+    assertDoesNotThrow(() -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {})));
   }
 
   @Test
@@ -84,7 +84,7 @@ class HeartBeatTimeoutChaperoneTest {
       } catch (final InterruptedException e) {
         throw new RuntimeException(e);
       }
-    })).get());
+    })));
   }
 
   @Test

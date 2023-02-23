@@ -220,27 +220,33 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           });
 
-      final CompletableFuture<?> readSrcAndWriteDstThread = srcHeartbeatTimeoutChaperone
-          .runWithHeartbeatThread(CompletableFuture.runAsync(readFromSrcAndWriteToDstRunnable(
-              source,
-              destination,
-              sourceConfig.getCatalog(),
-              cancelled,
-              mapper,
-              messageTracker,
-              connectorConfigUpdater,
-              mdc,
-              recordSchemaValidator,
-              metricReporter,
-              timeTracker,
-              sourceConfig.getSourceId(),
-              fieldSelectionEnabled), executors))
+      final CompletableFuture<Void> readSrcAndWriteDstThread = CompletableFuture.runAsync(readFromSrcAndWriteToDstRunnable(
+          source,
+          destination,
+          sourceConfig.getCatalog(),
+          cancelled,
+          mapper,
+          messageTracker,
+          connectorConfigUpdater,
+          mdc,
+          recordSchemaValidator,
+          metricReporter,
+          timeTracker,
+          sourceConfig.getSourceId(),
+          fieldSelectionEnabled), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
-              ApmTraceUtils.addExceptionToTrace((Throwable) ex);
-              replicationRunnableFailureRef.set(getFailureReason(((Throwable) ex).getCause(), Long.parseLong(jobId), attempt));
+              ApmTraceUtils.addExceptionToTrace(ex);
+              replicationRunnableFailureRef.set(getFailureReason(ex.getCause(), Long.parseLong(jobId), attempt));
             }
           });
+
+      try {
+        srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
+      } catch (HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
+        ApmTraceUtils.addExceptionToTrace(ex);
+        replicationRunnableFailureRef.set(getFailureReason(ex, Long.parseLong(jobId), attempt));
+      }
 
       LOGGER.info("Waiting for source and destination threads to complete.");
       // CompletableFuture#allOf waits until all futures finish before returning, even if one throws an

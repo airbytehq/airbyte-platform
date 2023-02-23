@@ -70,7 +70,7 @@ public class HeartbeatTimeoutChaperone {
     this.customMonitor = customMonitor;
   }
 
-  public CompletableFuture runWithHeartbeatThread(final CompletableFuture<Void> runnableFuture) throws InterruptedException {
+  public void runWithHeartbeatThread(final CompletableFuture<Void> runnableFuture) throws ExecutionException {
     LOGGER.info("Starting source heartbeat check. Will check every {} minutes.", timeoutCheckDuration.toMinutes());
     final CompletableFuture<Void> heartbeatFuture = CompletableFuture.runAsync(customMonitor.orElse(this::monitor), executorService);
 
@@ -78,13 +78,13 @@ public class HeartbeatTimeoutChaperone {
       CompletableFuture.anyOf(runnableFuture, heartbeatFuture).get();
     } catch (final InterruptedException e) {
       LOGGER.error("Heartbeat chaperone thread was interrupted.", e);
-      return getContinue();
+      return;
     } catch (final ExecutionException e) {
       // this should check explicitly for source and destination exceptions
       if (e.getCause() instanceof RuntimeException) {
-        return raiseException((RuntimeException) e.getCause());
+        throw (RuntimeException) e.getCause();
       } else {
-        return raiseException(new RuntimeException(e));
+        throw e;
       }
     }
 
@@ -93,19 +93,17 @@ public class HeartbeatTimeoutChaperone {
     if (heartbeatFuture.isDone() && !runnableFuture.isDone()) {
       if (featureFlagClient.enabled(ShouldFailSyncIfHeartbeatFailure.INSTANCE, new Workspace(workspaceId))) {
         runnableFuture.cancel(true);
-        return raiseException(
-            new HeartbeatTimeoutException(String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
+        throw new HeartbeatTimeoutException(
+            String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",
                 heartbeatMonitor.getHeartbeatFreshnessThreshold().getSeconds(),
-                heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds())));
+                heartbeatMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).getSeconds()));
       } else {
         LOGGER.info("Do not return because the feature flag is disable");
-        return runnableFuture;
+        return;
       }
     }
 
     heartbeatFuture.cancel(true);
-
-    return getContinue();
   }
 
   @SuppressWarnings("BusyWait")
@@ -124,16 +122,6 @@ public class HeartbeatTimeoutChaperone {
         return;
       }
     }
-  }
-
-  private CompletableFuture getContinue() {
-    return CompletableFuture.runAsync(() -> {}, executorService);
-  }
-
-  private CompletableFuture raiseException(final RuntimeException e) {
-    return CompletableFuture.runAsync(() -> {
-      throw e;
-    }, executorService);
   }
 
   public static class HeartbeatTimeoutException extends RuntimeException {
