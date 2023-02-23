@@ -29,6 +29,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.featureflag.CheckInputGeneration;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -182,7 +183,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
-  @SuppressWarnings({"PMD.EmptyIfStmt", "PMD.UnusedLocalVariable"})
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
       connectionId = connectionUpdaterInput.getConnectionId();
@@ -218,17 +218,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
       }
 
-      // TODO (pedroslopez): The feature flags will actually be used in a future PR
-      Map<String, Boolean> featureFlags = getFeatureFlags(connectionUpdaterInput.getConnectionId());
+      final Map<String, Boolean> featureFlags = getFeatureFlags(connectionUpdaterInput.getConnectionId());
+      workflowInternalState.setFeatureFlags(featureFlags);
 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
 
-      final int generateCheckInputVersion =
-          Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
-
       GeneratedJobInput jobInputs = null;
-      if (generateCheckInputVersion < GENERATE_CHECK_INPUT_CURRENT_VERSION) {
+      final boolean isCheckInputGenerationEnabled = isCheckInputGenerationEnabled();
+      if (!isCheckInputGenerationEnabled()) {
         jobInputs = getJobInput();
       }
 
@@ -242,7 +240,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
           workflowState.setFailed(getFailStatus(checkFailureOutput));
           reportFailure(connectionUpdaterInput, checkFailureOutput, FailureCause.CONNECTION);
         } else {
-          if (generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION) {
+          if (isCheckInputGenerationEnabled) {
             jobInputs = getJobInput();
           }
 
@@ -358,6 +356,21 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
+  /**
+   * Returns whether the new check input generation activity should be called, depending on the
+   * presence of a feature flag and workflow versioning. This should be removed once the new activity
+   * is fully rolled out.
+   */
+  private boolean isCheckInputGenerationEnabled() {
+    final boolean ffEnabled = workflowInternalState.getFeatureFlags().getOrDefault(CheckInputGeneration.INSTANCE.getKey(), false);
+    if (!ffEnabled)
+      return false;
+
+    final int generateCheckInputVersion =
+        Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
+    return generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION;
+  }
+
   private ConnectorJobOutput getCheckResponse(final CheckConnectionInput checkInput) {
     return runMandatoryActivityWithOutput(checkActivity::runWithJobOutput, checkInput);
   }
@@ -401,11 +414,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       return checkConnectionResult;
     }
 
-    final int generateCheckInputVersion =
-        Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
-
     final SyncJobCheckConnectionInputs checkInputs;
-    if (generateCheckInputVersion < GENERATE_CHECK_INPUT_CURRENT_VERSION && jobInputs != null) {
+    if (!isCheckInputGenerationEnabled() && jobInputs != null) {
       checkInputs = getCheckConnectionInputFromSync(jobInputs);
     } else {
       checkInputs = getCheckConnectionInput();
@@ -568,6 +578,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private void prepareForNextRunAndContinueAsNew(final ConnectionUpdaterInput connectionUpdaterInput) {
     // Continue the workflow as new
     workflowInternalState.getFailures().clear();
+    workflowInternalState.getFeatureFlags().clear();
     workflowInternalState.setPartialSuccess(null);
     final boolean isDeleted = workflowState.isDeleted();
     if (workflowState.isSkipSchedulingNextWorkflow()) {

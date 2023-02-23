@@ -5,7 +5,9 @@
 package io.airbyte.commons.temporal.scheduling.state;
 
 import io.airbyte.config.FailureReason;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +23,7 @@ public class WorkflowInternalState {
 
   // StandardSyncOutput standardSyncOutput = null;
   private Set<FailureReason> failures = new HashSet<>();
+  private Map<String, Boolean> featureFlags = new HashMap<>();
   private Boolean partialSuccess = null;
 
 }
