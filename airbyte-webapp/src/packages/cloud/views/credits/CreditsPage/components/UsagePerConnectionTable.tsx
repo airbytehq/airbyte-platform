@@ -231,16 +231,9 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
               thClassName: classNames(styles.header, styles.light),
               responsive: true,
             },
-            cell: (props) => <UsageCell percent={props.cell.getValue()} />,
-          }),
-          columnHelper.accessor("creditsConsumed", {
-            header: "",
-            meta: {
-              thClassName: classNames(styles.header, styles.light),
-              responsive: true,
-            },
             cell: (props) => (
-              <FlexContainer className={styles.cell} alignItems="center">
+              <FlexContainer>
+                <UsageCell percent={props.cell.getValue()} />
                 <Text className={styles.usageValue} size="lg">
                   <FormattedNumber value={props.cell.getValue()} maximumFractionDigits={2} minimumFractionDigits={2} />
                 </Text>
