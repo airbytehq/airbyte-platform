@@ -66,6 +66,7 @@ public class SourceApiController implements SourceApi {
   }
 
   @Post("/clone")
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead cloneSource(final SourceCloneRequestBody sourceCloneRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.cloneSource(sourceCloneRequestBody));
@@ -123,6 +124,7 @@ public class SourceApiController implements SourceApi {
   @Post("/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody));
@@ -137,6 +139,7 @@ public class SourceApiController implements SourceApi {
   @Post("/update")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead updateSource(final SourceUpdate sourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSource(sourceUpdate));

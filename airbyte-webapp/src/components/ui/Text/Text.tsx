@@ -16,6 +16,7 @@ interface TextProps {
   bold?: boolean;
   inverseColor?: boolean;
   title?: string;
+  // color?: "default" | "grey-300";
   gradient?: boolean;
 }
 
@@ -29,6 +30,7 @@ const sizes: Record<TextSize, string> = {
 const colors: Record<TextColor, string> = {
   darkBlue: styles.darkBlue,
   grey: styles.grey,
+  "grey-300": styles["text--color-grey-300"],
 };
 
 const getTextClassNames = ({

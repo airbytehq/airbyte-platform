@@ -1,19 +1,12 @@
-import {
-  AttemptFailureReason,
-  AttemptFailureType,
-  AttemptRead,
-  JobStatus,
-  SynchronousJobRead,
-} from "core/request/AirbyteClient";
+import { AttemptRead, FailureReason, FailureType, JobStatus, SynchronousJobRead } from "core/request/AirbyteClient";
 
 import { JobsWithJobs } from "./types";
 
-export const getFailureFromAttempt = (attempt: AttemptRead): AttemptFailureReason | undefined =>
+export const getFailureFromAttempt = (attempt: AttemptRead): FailureReason | undefined =>
   attempt.failureSummary?.failures[0];
 
 export const isCancelledAttempt = (attempt: AttemptRead): boolean =>
-  attempt.failureSummary?.failures.some(({ failureType }) => failureType === AttemptFailureType.manual_cancellation) ??
-  false;
+  attempt.failureSummary?.failures.some(({ failureType }) => failureType === FailureType.manual_cancellation) ?? false;
 
 export const didJobSucceed = (job: SynchronousJobRead | JobsWithJobs): boolean =>
   "succeeded" in job ? job.succeeded : getJobStatus(job) !== "failed";

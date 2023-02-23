@@ -7,6 +7,10 @@
   &.inverse {
     color: colors.$white;
   }
+
+  &--color-grey-300 {
+    color: colors.$grey-300;
+  }
 }
 
 .sm,

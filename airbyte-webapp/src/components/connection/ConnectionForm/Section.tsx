@@ -18,6 +18,7 @@ export interface SectionProps {
   collapsedPreviewInfo?: React.ReactNode;
   collapsedInitially?: boolean;
   testId?: string;
+  flexHeight?: boolean;
 }
 
 export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
@@ -29,6 +30,7 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
   collapsedPreviewInfo,
   collapsedInitially = false,
   testId,
+  flexHeight,
 }) => {
   const [isCollapsed, setIsCollapsed] = useToggle(collapsedInitially);
 
@@ -37,8 +39,10 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
   }
 
   return (
-    <Card>
-      <div className={classNames(styles.section, { [styles.flush]: flush }, className)}>
+    <Card className={classNames({ [styles.flexHeight]: flexHeight })}>
+      <div
+        className={classNames(styles.section, { [styles.flush]: flush, [styles.flexHeight]: flexHeight }, className)}
+      >
         <div className={styles.header}>
           {title && (
             <Heading as="h2" size="sm">
