@@ -22,7 +22,7 @@ class HttpResponse(BaseModel):
     """
 
     status: int
-    body: Optional[Dict[str, Any]] = None
+    body: Optional[str] = None
     headers: Optional[Dict[str, Any]] = None
 
 HttpResponse.update_forward_refs()
