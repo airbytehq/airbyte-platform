@@ -54,7 +54,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
       !isEqual(initialStoredFormValues.current, DEFAULT_BUILDER_FORM_VALUES) ||
       !isEqual(initialStoredManifest.current, DEFAULT_JSON_MANIFEST_VALUES)
     ) {
-      navigate(ConnectorBuilderRoutePaths.Edit);
+      navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
     }
   }, [navigate]);
 
@@ -111,7 +111,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           } catch (e) {
             setStoredEditorView("yaml");
             setStoredManifest(json);
-            navigate(ConnectorBuilderRoutePaths.Edit);
+            navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_INCOMPATIBLE_YAML_IMPORTED, {
               actionDescription: "A YAML manifest that's incompatible with the Builder UI was imported",
               error_message: e.message,
@@ -133,7 +133,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           }
           setStoredEditorView("ui");
           setStoredFormValues(convertedFormValues);
-          navigate(ConnectorBuilderRoutePaths.Edit);
+          navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_COMPATIBLE_YAML_IMPORTED, {
             actionDescription: "A YAML manifest that's compatible with the Builder UI was imported",
           });
@@ -197,7 +197,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           buttonText="connectorBuilder.createPage.startFromScratch.button"
           onClick={() => {
             setStoredEditorView("ui");
-            navigate(ConnectorBuilderRoutePaths.Edit);
+            navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
               actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });

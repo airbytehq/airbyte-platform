@@ -773,6 +773,10 @@
   "connectorBuilder.builderPrompt.description": "Build your source with our {adjective} {noun}",
   "connectorBuilder.builderPrompt.adjective": "low-code",
   "connectorBuilder.builderPrompt.noun": "connector builder",
+  "connectorBuilder.listPage.name": "Name",
+  "connectorBuilder.listPage.version": "Version",
+  "connectorBuilder.listPage.heading": "{count} custom {count, plural, one {connector} other {connectors}}",
+  "connectorBuilder.listPage.newConnector": "New custom connector",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

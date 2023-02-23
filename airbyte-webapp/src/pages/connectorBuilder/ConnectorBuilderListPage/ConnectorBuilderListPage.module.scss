@@ -1,0 +1,10 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  padding: variables.$spacing-xl;
+}
+
+.draft {
+  color: colors.$grey-400;
+}
