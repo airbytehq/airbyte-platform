@@ -12,6 +12,9 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.SourceDefinitionApi;
+import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlagHelper;
 import io.airbyte.commons.features.FeatureFlags;
@@ -43,6 +46,8 @@ import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
+import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -53,6 +58,7 @@ import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -71,6 +77,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
   private final JobRunConfig jobRunConfig;
   private final SourceApi sourceApi;
   private final DestinationApi destinationApi;
+  private final SourceDefinitionApi sourceDefinitionApi;
 
   public ReplicationJobOrchestrator(final Configs configs,
                                     final ProcessFactory processFactory,
@@ -80,7 +87,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
                                     final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                     final JobRunConfig jobRunConfig,
                                     final SourceApi sourceApi,
-                                    final DestinationApi destinationApi) {
+                                    final DestinationApi destinationApi,
+                                    final SourceDefinitionApi sourceDefinitionApi) {
     this.configs = configs;
     this.processFactory = processFactory;
     this.featureFlags = featureFlags;
@@ -90,6 +98,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
     this.jobRunConfig = jobRunConfig;
     this.sourceApi = sourceApi;
     this.destinationApi = destinationApi;
+    this.sourceDefinitionApi = sourceDefinitionApi;
   }
 
   @Override
@@ -147,18 +156,31 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         featureFlags);
 
     log.info("Setting up source...");
+
+    final UUID sourceDefinitionId = sourceApi.getSource(new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId();
+
+    final long maxSecondsBetweenMessages = sourceDefinitionApi
+        .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))
+        .getMaxSecondsBetweenMessages();
     // reset jobs use an empty source to induce resetting all data in destination.
+    final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(Duration.ofMillis(maxSecondsBetweenMessages));
+
     final var airbyteSource =
         WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB.equals(sourceLauncherConfig.getDockerImage()) ? new EmptyAirbyteSource(
             featureFlags.useStreamCapableState())
             : new DefaultAirbyteSource(sourceLauncher,
                 getStreamFactory(sourceLauncherConfig.getProtocolVersion(), syncInput.getCatalog(), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
-                migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()), featureFlags);
+                heartbeatMonitor,
+                migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
+                featureFlags);
 
     MetricClientFactory.initialize(MetricEmittingApps.WORKER);
     final var metricClient = MetricClientFactory.getMetricClient();
     final var metricReporter = new WorkerMetricReporter(metricClient,
         sourceLauncherConfig.getDockerImage());
+
+    final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
+        HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION, featureFlagClient, syncInput.getWorkspaceId());
 
     log.info("Setting up replication worker...");
     final UUID workspaceId = syncInput.getWorkspaceId();
@@ -183,7 +205,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(), WorkerUtils.mapStreamNamesToSchemas(syncInput)),
         metricReporter,
         new ConnectorConfigUpdater(sourceApi, destinationApi),
-        fieldSelectionEnabled);
+        fieldSelectionEnabled,
+        heartbeatTimeoutChaperone);
 
     log.info("Running replication worker...");
     final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),

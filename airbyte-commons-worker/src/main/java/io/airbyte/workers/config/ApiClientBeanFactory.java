@@ -14,6 +14,7 @@ import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
@@ -106,6 +107,11 @@ public class ApiClientBeanFactory {
   @Singleton
   public StateApi stateApi(final ApiClient apiClient) {
     return new StateApi(apiClient);
+  }
+
+  @Singleton
+  public SourceDefinitionApi sourceDefinitionApi(final ApiClient apiClient) {
+    return new SourceDefinitionApi(apiClient);
   }
 
   @Singleton
