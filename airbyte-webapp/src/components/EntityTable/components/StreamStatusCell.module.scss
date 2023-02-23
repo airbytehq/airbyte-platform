@@ -1,6 +1,6 @@
 @use "scss/colors";
 
-.container {
+.bar {
   width: 100%;
   max-width: 370px;
   height: 19px;
@@ -19,7 +19,7 @@
     }
 
     &.behind {
-      background: colors.$grey;
+      background: colors.$blue;
     }
 
     &.error {
@@ -29,5 +29,23 @@
     &.disabled {
       background: colors.$grey;
     }
+  }
+}
+
+.tooltipContainer {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+
+  .bar {
+    width: 80%;
+  }
+
+  .tooltipText {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
   }
 }
