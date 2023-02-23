@@ -226,7 +226,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
       GeneratedJobInput jobInputs = null;
       final boolean isCheckInputGenerationEnabled = isCheckInputGenerationEnabled();
-      if (!isCheckInputGenerationEnabled()) {
+      if (!isCheckInputGenerationEnabled) {
         jobInputs = getJobInput();
       }
 
