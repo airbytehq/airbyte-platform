@@ -7,15 +7,8 @@ package io.airbyte.config.persistence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.SourceConnection;
-import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.config.persistence.split_secrets.SecretCoordinateToPayload;
-import io.airbyte.config.persistence.split_secrets.SecretPersistence;
-import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
-import io.airbyte.config.persistence.split_secrets.SplitSecretConfig;
+import io.airbyte.config.*;
+import io.airbyte.config.persistence.split_secrets.*;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
@@ -278,6 +271,14 @@ public class SecretsRepositoryWriter {
     } catch (final JsonValidationException | IOException | ConfigNotFoundException e) {
       return Optional.empty();
     }
+  }
+
+  /**
+   * No frills, given a coordinate, just store the payload
+   */
+  public SecretCoordinate storeSecret(final SecretCoordinate secretCoordinate, final String payload) {
+    longLivedSecretPersistence.get().write(secretCoordinate, payload);
+    return secretCoordinate;
   }
 
 }
