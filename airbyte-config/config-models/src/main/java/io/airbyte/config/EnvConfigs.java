@@ -1167,7 +1167,7 @@ public class EnvConfigs implements Configs {
 
   @Override
   public String getStrictComparisonNormalizationTag() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison");
+    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison2");
   }
 
   @Override
