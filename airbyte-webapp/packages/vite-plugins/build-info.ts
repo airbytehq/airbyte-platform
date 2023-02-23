@@ -3,15 +3,16 @@ import type { Plugin } from "vite";
 import fs from "fs";
 import path from "path";
 
-import { v4 as uuidV4 } from "uuid";
+import chalk from "chalk";
 
-const buildHash = uuidV4();
+const buildHash = process.env.SOURCE_HASH || "-dev-";
 
 /**
  * A Vite plugin that will generate on every build a new random UUID and write that to the `/buildInfo.json`
  * file as well as make it available as `process.env.BUILD_HASH` in code.
  */
 export function buildInfo(): Plugin {
+  console.log(`🔨 Use build hash ${chalk.cyan(buildHash)}\n`);
   return {
     name: "airbyte/build-info",
     buildStart() {
