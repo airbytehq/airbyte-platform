@@ -2,14 +2,14 @@
 
 exports[`SchemaChangesBackdrop renders with breaking changes and prevents background interaction 1`] = `
 <div
-  class="schemaChangeBackdropContainer"
+  class="<removed-for-snapshot-test>"
   data-testid="schemaChangesBackdrop"
 >
   <div
-    class="backdrop"
+    class="<removed-for-snapshot-test>"
   >
     <div
-      class="contentContainer"
+      class="<removed-for-snapshot-test>"
     >
       <div>
         <svg
@@ -83,7 +83,7 @@ exports[`SchemaChangesBackdrop renders with breaking changes and prevents backgr
         </svg>
       </div>
       <p
-        class="text md text"
+        class="<removed-for-snapshot-test>"
         data-type="text"
       >
         Please review the schema updates before making changes to the connection
