@@ -219,14 +219,14 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       }
 
       final Map<String, Boolean> featureFlags = getFeatureFlags(connectionUpdaterInput.getConnectionId());
-      workflowInternalState.setFeatureFlags(featureFlags);
+      final boolean featureFlagCheckInputGeneration = featureFlags.getOrDefault(CheckInputGeneration.INSTANCE.getKey(), false);
 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
 
       GeneratedJobInput jobInputs = null;
-      final boolean isCheckInputGenerationEnabled = isCheckInputGenerationEnabled();
-      if (!isCheckInputGenerationEnabled) {
+      final boolean shouldRunCheckInputGeneration = shouldRunCheckInputGeneration(featureFlagCheckInputGeneration);
+      if (!shouldRunCheckInputGeneration) {
         jobInputs = getJobInput();
       }
 
@@ -234,13 +234,13 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       StandardSyncOutput standardSyncOutput = null;
 
       try {
-        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs);
+        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs, featureFlagCheckInputGeneration);
         if (syncCheckConnectionResult.isFailed()) {
           final StandardSyncOutput checkFailureOutput = syncCheckConnectionResult.buildFailureOutput();
           workflowState.setFailed(getFailStatus(checkFailureOutput));
           reportFailure(connectionUpdaterInput, checkFailureOutput, FailureCause.CONNECTION);
         } else {
-          if (isCheckInputGenerationEnabled) {
+          if (shouldRunCheckInputGeneration) {
             jobInputs = getJobInput();
           }
 
@@ -361,9 +361,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * presence of a feature flag and workflow versioning. This should be removed once the new activity
    * is fully rolled out.
    */
-  private boolean isCheckInputGenerationEnabled() {
-    final boolean ffEnabled = workflowInternalState.getFeatureFlags().getOrDefault(CheckInputGeneration.INSTANCE.getKey(), false);
-    if (!ffEnabled)
+  private boolean shouldRunCheckInputGeneration(final boolean featureFlagEnabled) {
+    if (!featureFlagEnabled)
       return false;
 
     final int generateCheckInputVersion =
@@ -400,7 +399,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
-                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs) {
+                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs,
+                                                     final boolean checkInputGenerationFeatureFlagEnabled) {
     final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
     final JobCheckFailureInput jobStateInput =
@@ -415,7 +415,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     final SyncJobCheckConnectionInputs checkInputs;
-    if (!isCheckInputGenerationEnabled() && jobInputs != null) {
+    if (!shouldRunCheckInputGeneration(checkInputGenerationFeatureFlagEnabled) && jobInputs != null) {
       checkInputs = getCheckConnectionInputFromSync(jobInputs);
     } else {
       checkInputs = getCheckConnectionInput();
@@ -578,7 +578,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private void prepareForNextRunAndContinueAsNew(final ConnectionUpdaterInput connectionUpdaterInput) {
     // Continue the workflow as new
     workflowInternalState.getFailures().clear();
-    workflowInternalState.getFeatureFlags().clear();
     workflowInternalState.setPartialSuccess(null);
     final boolean isDeleted = workflowState.isDeleted();
     if (workflowState.isSkipSchedulingNextWorkflow()) {
