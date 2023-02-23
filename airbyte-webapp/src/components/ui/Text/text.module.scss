@@ -7,10 +7,6 @@
   &.inverse {
     color: colors.$white;
   }
-
-  &--color-grey-300 {
-    color: colors.$grey-300;
-  }
 }
 
 .sm,
@@ -43,6 +39,10 @@
 
 .grey {
   color: colors.$grey;
+}
+
+.grey300 {
+  color: colors.$grey-300;
 }
 
 .centered {

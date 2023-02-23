@@ -4,7 +4,7 @@ import React from "react";
 import styles from "./text.module.scss";
 
 type TextSize = "xs" | "sm" | "md" | "lg";
-type TextColor = "darkBlue" | "grey";
+type TextColor = "darkBlue" | "grey" | "grey300";
 type TextElementType = "p" | "span" | "div";
 
 interface TextProps {
@@ -16,7 +16,6 @@ interface TextProps {
   bold?: boolean;
   inverseColor?: boolean;
   title?: string;
-  // color?: "default" | "grey-300";
   gradient?: boolean;
 }
 
@@ -30,7 +29,7 @@ const sizes: Record<TextSize, string> = {
 const colors: Record<TextColor, string> = {
   darkBlue: styles.darkBlue,
   grey: styles.grey,
-  "grey-300": styles["text--color-grey-300"],
+  grey300: styles.grey300,
 };
 
 const getTextClassNames = ({
