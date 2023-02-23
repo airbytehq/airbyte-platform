@@ -72,7 +72,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
               class="<removed-for-snapshot-test>"
             />
             <div>
-              <span
+              <div
                 class="<removed-for-snapshot-test>"
               >
                 <button
@@ -103,7 +103,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
                     />
                   </svg>
                 </button>
-              </span>
+              </div>
             </div>
           </div>
         </div>
@@ -134,7 +134,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
               class="<removed-for-snapshot-test>"
             />
             <div>
-              <span
+              <div
                 class="<removed-for-snapshot-test>"
               >
                 <button
@@ -168,7 +168,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
                     />
                   </svg>
                 </button>
-              </span>
+              </div>
             </div>
           </div>
         </div>
@@ -199,7 +199,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
               class="<removed-for-snapshot-test>"
             />
             <div>
-              <span
+              <div
                 class="<removed-for-snapshot-test>"
               >
                 <button
@@ -233,7 +233,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
                     />
                   </svg>
                 </button>
-              </span>
+              </div>
             </div>
           </div>
         </div>
