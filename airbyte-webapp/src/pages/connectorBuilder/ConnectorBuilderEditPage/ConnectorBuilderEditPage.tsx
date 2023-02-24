@@ -68,7 +68,7 @@ export const ConnectorBuilderEditPage: React.FC = () => (
   <ConnectorBuilderLocalStorageProvider>
     <ConnectorBuilderFormStateProvider>
       <ConnectorBuilderTestStateProvider>
-        <HeadTitle titles={[{ id: "connectorBuilder.editPage.title" }]} />
+        <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
         <ConnectorBuilderEditPageInner />
       </ConnectorBuilderTestStateProvider>
     </ConnectorBuilderFormStateProvider>

@@ -32,14 +32,14 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
 import { ReactComponent as AirbyteLogo } from "./airbyte-logo.svg";
-import styles from "./ConnectorBuilderLandingPage.module.scss";
+import styles from "./ConnectorBuilderCreatePage.module.scss";
 import { ReactComponent as ImportYamlImage } from "./import-yaml.svg";
 import { ReactComponent as StartFromScratchImage } from "./start-from-scratch.svg";
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
 
-const ConnectorBuilderLandingPageInner: React.FC = () => {
+const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
   const { storedFormValues, setStoredFormValues, storedManifest, setStoredManifest, setStoredEditorView } =
     useConnectorBuilderLocalStorage();
@@ -54,7 +54,7 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
       !isEqual(initialStoredFormValues.current, DEFAULT_BUILDER_FORM_VALUES) ||
       !isEqual(initialStoredManifest.current, DEFAULT_JSON_MANIFEST_VALUES)
     ) {
-      navigate(ConnectorBuilderRoutePaths.Edit, { replace: true });
+      navigate(`../${ConnectorBuilderRoutePaths.Edit}`, { replace: true });
     }
   }, [navigate]);
 
@@ -65,7 +65,7 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
 
   useEffect(() => {
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_START, {
-      actionDescription: "Connector Builder UI landing page opened",
+      actionDescription: "Connector Builder UI create page opened",
     });
   }, [analyticsService]);
 
@@ -98,7 +98,7 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
                 type: ToastType.ERROR,
               });
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.INVALID_YAML_UPLOADED, {
-                actionDescription: "A file with invalid YAML syntax was uploaded to the Connector Builder landing page",
+                actionDescription: "A file with invalid YAML syntax was uploaded to the Connector Builder create page",
                 error_message: e.reason,
               });
             }
@@ -111,7 +111,7 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
           } catch (e) {
             setStoredEditorView("yaml");
             setStoredManifest(json);
-            navigate(ConnectorBuilderRoutePaths.Edit);
+            navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_INCOMPATIBLE_YAML_IMPORTED, {
               actionDescription: "A YAML manifest that's incompatible with the Builder UI was imported",
               error_message: e.message,
@@ -133,7 +133,7 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
           }
           setStoredEditorView("ui");
           setStoredFormValues(convertedFormValues);
-          navigate(ConnectorBuilderRoutePaths.Edit);
+          navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_COMPATIBLE_YAML_IMPORTED, {
             actionDescription: "A YAML manifest that's compatible with the Builder UI was imported",
           });
@@ -170,19 +170,19 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
       <FlexContainer direction="column" gap="md" alignItems="center" className={styles.titleContainer}>
         <AirbyteLogo />
         <Heading as="h1" size="lg" className={styles.title}>
-          <FormattedMessage id="connectorBuilder.landingPage.title" />
+          <FormattedMessage id="connectorBuilder.title" />
         </Heading>
       </FlexContainer>
       <Heading as="h1" size="lg">
-        <FormattedMessage id="connectorBuilder.landingPage.prompt" />
+        <FormattedMessage id="connectorBuilder.createPage.prompt" />
       </Heading>
       <FlexContainer direction="row" gap="2xl">
         <input type="file" accept=".yml,.yaml" ref={fileInputRef} onChange={handleYamlUpload} hidden />
         <Tile
           image={<ImportYamlImage />}
-          title="connectorBuilder.landingPage.importYaml.title"
-          description="connectorBuilder.landingPage.importYaml.description"
-          buttonText="connectorBuilder.landingPage.importYaml.button"
+          title="connectorBuilder.createPage.importYaml.title"
+          description="connectorBuilder.createPage.importYaml.description"
+          buttonText="connectorBuilder.createPage.importYaml.button"
           buttonProps={{ isLoading: importYamlLoading }}
           onClick={() => {
             unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
@@ -192,14 +192,14 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
         />
         <Tile
           image={<StartFromScratchImage />}
-          title="connectorBuilder.landingPage.startFromScratch.title"
-          description="connectorBuilder.landingPage.startFromScratch.description"
-          buttonText="connectorBuilder.landingPage.startFromScratch.button"
+          title="connectorBuilder.createPage.startFromScratch.title"
+          description="connectorBuilder.createPage.startFromScratch.description"
+          buttonText="connectorBuilder.createPage.startFromScratch.button"
           onClick={() => {
             setStoredEditorView("ui");
-            navigate(ConnectorBuilderRoutePaths.Edit);
+            navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
-              actionDescription: "User selected Start From Scratch on the Connector Builder landing page",
+              actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });
           }}
           dataTestId="start-from-scratch"
@@ -209,10 +209,10 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
   );
 };
 
-export const ConnectorBuilderLandingPage: React.FC = () => (
+export const ConnectorBuilderCreatePage: React.FC = () => (
   <ConnectorBuilderLocalStorageProvider>
-    <HeadTitle titles={[{ id: "connectorBuilder.landingPage.title" }]} />
-    <ConnectorBuilderLandingPageInner />
+    <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+    <ConnectorBuilderCreatePageInner />
   </ConnectorBuilderLocalStorageProvider>
 );
 
