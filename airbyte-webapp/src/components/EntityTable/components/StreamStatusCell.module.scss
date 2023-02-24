@@ -9,7 +9,7 @@
   border-radius: variables.$border-radius-xs;
   overflow: hidden;
   position: relative;
-  display: inline-block;
+  display: flex;
 
   .filling {
     width: 100%;
