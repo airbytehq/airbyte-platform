@@ -123,7 +123,9 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: true
+    enabled: false
+    jdbc:
+      enabled: false
     sensitive: false
   info:
     enabled: true
