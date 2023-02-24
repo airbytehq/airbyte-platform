@@ -4,12 +4,12 @@
 .bar {
   width: 100%;
   max-width: 370px;
-  height: 19px;
-  border: variables.$border-thin solid colors.$grey;
+  height: 23px;
   border-radius: variables.$border-radius-xs;
   overflow: hidden;
   position: relative;
   display: flex;
+  gap: 1px;
 
   .filling {
     width: 100%;
