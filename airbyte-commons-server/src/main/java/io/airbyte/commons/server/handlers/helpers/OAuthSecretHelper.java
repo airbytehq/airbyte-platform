@@ -69,15 +69,17 @@ public class OAuthSecretHelper {
   @VisibleForTesting
   public static Map<String, List<String>> buildKeyToPathInConnectorConfigMap(JsonNode specification) {
     final Map<String, List<String>> result = new HashMap<>();
-    Iterator<Entry<String, JsonNode>> it = specification.fields();
+    Iterator<Entry<String, JsonNode>> it = specification.get("properties").fields();
     while (it.hasNext()) {
       Entry<String, JsonNode> node = it.next();
-      JsonPointer pathInConnectorConfig = JsonPointer.valueOf("/path_in_connector_config");
-      JsonNode pathInConnectorConfigNode = node.getValue().at(pathInConnectorConfig);
+      System.out.println("node: " + node);
+      JsonNode pathInConnectorConfigNode = node.getValue().at("/path_in_connector_config");
+      System.out.println("path_in_connector_config node: " + pathInConnectorConfigNode);
       List<String> pathList = new ArrayList<String>();
       if (pathInConnectorConfigNode.isArray()) {
         for (final JsonNode pathNode : pathInConnectorConfigNode) {
           // pathList.isValueNode() should == true for all of these.
+          System.out.println("pathNode textValue: " + pathNode.textValue());
           pathList.add(pathNode.textValue());
         }
       }
