@@ -21,7 +21,7 @@ public final class AirbyteCatalogConstants {
 
   public static final String LOCAL_CONNECTOR_CATALOG_FILE_NAME = "oss_catalog.json";
   public static final String LOCAL_SECRETS_MASKS_FILE_NAME = "specs_secrets_mask.yaml";
-  public static final String DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH =
+  public static final String DEFAULT_LOCAL_CONNECTOR_CATALOG =
       SEED_SUBDIRECTORY + LOCAL_CONNECTOR_CATALOG_FILE_NAME;
   public static final String LOCAL_SECRETS_MASKS_PATH = SEED_SUBDIRECTORY + LOCAL_SECRETS_MASKS_FILE_NAME;
 

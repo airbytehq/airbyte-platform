@@ -15,7 +15,7 @@ public class CatalogDefinitionsConfig {
    */
   public static String getLocalConnectorCatalogPath() {
     final Optional<String> customCatalogPath = new EnvConfigs().getLocalCatalogPath();
-    return customCatalogPath.orElse(AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH);
+    return customCatalogPath.orElse(AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG);
   }
 
   /**
@@ -26,7 +26,7 @@ public class CatalogDefinitionsConfig {
    * file in the event we are using a custom catalog path.
    */
   public static String getLocalCatalogWritePath() {
-    return AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH;
+    return AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG;
   }
 
 }

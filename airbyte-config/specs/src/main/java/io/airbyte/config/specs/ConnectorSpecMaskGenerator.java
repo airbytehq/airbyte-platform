@@ -46,7 +46,7 @@ public class ConnectorSpecMaskGenerator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorSpecMaskGenerator.class);
 
-  private static final String LOCAL_CONNECTOR_CATALOG_PATH = CatalogDefinitionsConfig.getLocalCatalogWritePath();
+  private static final String LOCAL_CONNECTOR_CATALOG = CatalogDefinitionsConfig.getLocalCatalogWritePath();
 
   private static final Option RESOURCE_ROOT_OPTION = Option.builder("r").longOpt("resource-root").hasArg(true).required(true)
       .desc("path to what project to pull resources from").build();
@@ -59,7 +59,7 @@ public class ConnectorSpecMaskGenerator {
   public static void main(final String[] args) {
     final CommandLine parsed = Clis.parse(args, OPTIONS);
     final String resource = parsed.getOptionValue(RESOURCE_ROOT_OPTION.getOpt());
-    final Path catalogPath = getResourcePath(resource, LOCAL_CONNECTOR_CATALOG_PATH);
+    final Path catalogPath = getResourcePath(resource, LOCAL_CONNECTOR_CATALOG);
     final Path maskWritePath = getResourcePath(resource, AirbyteCatalogConstants.LOCAL_SECRETS_MASKS_PATH);
 
     LOGGER.info("Looking for catalog file at '{}'...", catalogPath);

@@ -28,7 +28,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USER=${DATABASE_USER}
       - LOG_LEVEL=${LOG_LEVEL}
-      - LOCAL_CONNECTOR_CATALOG_PATH=${LOCAL_CONNECTOR_CATALOG_PATH}
+      - LOCAL_CONNECTOR_CATALOG=${LOCAL_CONNECTOR_CATALOG}
     networks:
       - airbyte_internal
     depends_on:
