@@ -276,10 +276,25 @@ class JobConverterTest {
 
     private SynchronousJobMetadata metadata;
     private static final UUID JOB_ID = UUID.randomUUID();
-    private static final ConfigType CONFIG_TYPE = ConfigType.DISCOVER_SCHEMA;
+    private static final JobConfig.ConfigType CONFIG_TYPE = ConfigType.DISCOVER_SCHEMA;
     private static final Optional<UUID> CONFIG_ID = Optional.empty();
     private static final boolean JOB_SUCCEEDED = true;
-    private static final boolean CONNECTOR_CONFIG_IS_UPDATED = false;
+    private static final boolean CONNECTOR_CONFIG_UPDATED = false;
+    private static SynchronousJobRead SYNCHRONOUS_JOB_INFO = new SynchronousJobRead()
+            .id(JOB_ID)
+            .configType(JobConfigType.DISCOVER_SCHEMA)
+            .configId(String.valueOf(CONFIG_ID))
+            .createdAt(CREATED_AT)
+            .endedAt(CREATED_AT)
+            .succeeded(JOB_SUCCEEDED)
+            .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)
+            .logs(new LogRead().logLines(new ArrayList<>()))
+            .failureReason(new io.airbyte.api.model.generated.FailureReason()
+                .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
+                .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
+                .externalMessage(FAILURE_EXTERNAL_MESSAGE)
+                .stacktrace(FAILURE_STACKTRACE)
+                .timestamp(FAILURE_TIMESTAMP));
 
     @BeforeEach
     public void setUp() {
@@ -291,14 +306,13 @@ class JobConverterTest {
       when(metadata.getCreatedAt()).thenReturn(CREATED_AT);
       when(metadata.getEndedAt()).thenReturn(CREATED_AT);
       when(metadata.isSucceeded()).thenReturn(JOB_SUCCEEDED);
-      when(metadata.isConnectorConfigurationUpdated()).thenReturn(CONNECTOR_CONFIG_IS_UPDATED);
+      when(metadata.isConnectorConfigurationUpdated()).thenReturn(CONNECTOR_CONFIG_UPDATED);
       when(metadata.getLogPath()).thenReturn(LOG_PATH);
       when(metadata.getFailureReason()).thenReturn(FAILURE_REASON);
     }
     @Test
     void testSynchronousJobRead() {
-      // TODO
-      // assertEquals(SYNCHRONOUS_JOB_INFO, jobConverter.getSynchonousJobRead(metadata));
+      assertEquals(SYNCHRONOUS_JOB_INFO, jobConverter.getSynchronousJobRead(metadata));
     }
 
   }
