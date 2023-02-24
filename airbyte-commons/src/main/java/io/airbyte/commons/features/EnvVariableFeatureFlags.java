@@ -92,7 +92,7 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
 
   @Override
   public String strictComparisonNormalizationTag() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison", (arg) -> arg);
+    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison2", (arg) -> arg);
   }
 
   // TODO: refactor in order to use the same method than the ones in EnvConfigs.java

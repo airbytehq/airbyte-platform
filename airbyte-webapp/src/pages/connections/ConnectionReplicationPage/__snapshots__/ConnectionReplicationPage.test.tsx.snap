@@ -18,11 +18,15 @@ exports[`ConnectionReplicationPage should render 1`] = `
             <div
               class="<removed-for-snapshot-test>"
             >
-              <h2
+              <div
                 class="<removed-for-snapshot-test>"
               >
-                Transfer
-              </h2>
+                <h2
+                  class="<removed-for-snapshot-test>"
+                >
+                  Configuration
+                </h2>
+              </div>
               <div
                 class="<removed-for-snapshot-test>"
               >
@@ -276,11 +280,15 @@ exports[`ConnectionReplicationPage should render 1`] = `
             <div
               class="<removed-for-snapshot-test>"
             >
-              <h2
+              <div
                 class="<removed-for-snapshot-test>"
               >
-                Streams
-              </h2>
+                <h2
+                  class="<removed-for-snapshot-test>"
+                >
+                  Streams
+                </h2>
+              </div>
               <span
                 class=""
               >
@@ -479,6 +487,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
             <div
               class="<removed-for-snapshot-test>"
             >
+              <div
+                class="<removed-for-snapshot-test>"
+              />
               <div
                 class="<removed-for-snapshot-test>"
               >
