@@ -21,7 +21,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 public class CatalogMigrationV1Helper {
 
   /**
-   * Performs an in-place migration of the schema from v0 to v1 if v0 data types are detected
+   * Performs an in-place migration of the schema from v0 to v1 if v0 data types are detected.
    *
    * @param configuredAirbyteCatalog to migrate
    */
@@ -32,7 +32,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v0 to v1 if v0 data types are detected
+   * Performs an in-place migration of the schema from v0 to v1 if v0 data types are detected.
    *
    * @param airbyteCatalog to migrate
    */
@@ -43,7 +43,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v0 to v1
+   * Performs an in-place migration of the schema from v0 to v1.
    *
    * @param configuredAirbyteCatalog to migrate
    */
@@ -54,7 +54,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v0 to v1
+   * Performs an in-place migration of the schema from v0 to v1.
    *
    * @param airbyteCatalog to migrate
    */
@@ -65,7 +65,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Returns true if catalog contains v0 data types
+   * Returns true if catalog contains v0 data types.
    */
   private static boolean containsV0DataTypes(final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
     if (configuredAirbyteCatalog == null) {
@@ -81,7 +81,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Returns true if catalog contains v0 data types
+   * Returns true if catalog contains v0 data types.
    */
   private static boolean containsV0DataTypes(final AirbyteCatalog airbyteCatalog) {
     if (airbyteCatalog == null) {
@@ -119,7 +119,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v1 to v0 if v1 data types are detected
+   * Performs an in-place migration of the schema from v1 to v0 if v1 data types are detected.
    *
    * @param configuredAirbyteCatalog to migrate
    */
@@ -130,7 +130,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v1 to v0 if v1 data types are detected
+   * Performs an in-place migration of the schema from v1 to v0 if v1 data types are detected.
    *
    * @param airbyteCatalog to migrate
    */
@@ -141,7 +141,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v1 to v0
+   * Performs an in-place migration of the schema from v1 to v0.
    *
    * @param configuredAirbyteCatalog to migrate
    */
@@ -152,7 +152,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Performs an in-place migration of the schema from v1 to v0
+   * Performs an in-place migration of the schema from v1 to v0.
    *
    * @param airbyteCatalog to migrate
    */
@@ -163,7 +163,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Returns true if catalog contains v1 data types
+   * Returns true if catalog contains v1 data types.
    */
   private static boolean containsV1DataTypes(final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
     if (configuredAirbyteCatalog == null) {
@@ -179,7 +179,7 @@ public class CatalogMigrationV1Helper {
   }
 
   /**
-   * Returns true if catalog contains v1 data types
+   * Returns true if catalog contains v1 data types.
    */
   private static boolean containsV1DataTypes(final AirbyteCatalog airbyteCatalog) {
     if (airbyteCatalog == null) {

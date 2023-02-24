@@ -16,9 +16,18 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 import org.apache.logging.log4j.core.util.Throwables;
 
+/**
+ * Exception mapper for when an input value is not valid.
+ */
 @Provider
 public class InvalidInputExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
 
+  /**
+   * Static factory for invalid input.
+   *
+   * @param cve exception with invalidity info
+   * @return exception
+   */
   public static InvalidInputExceptionInfo infoFromConstraints(final ConstraintViolationException cve) {
     final InvalidInputExceptionInfo exceptionInfo = new InvalidInputExceptionInfo()
         .exceptionClassName(cve.getClass().getName())

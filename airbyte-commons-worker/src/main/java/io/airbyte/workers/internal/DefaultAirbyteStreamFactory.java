@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAirbyteStreamFactory.class);
-  private final double MAX_SIZE_RATIO = 0.8;
+  private static final double MAX_SIZE_RATIO = 0.8;
 
   private final MdcScope.Builder containerLogMdcBuilder;
   private final AirbyteProtocolPredicate protocolValidator;
@@ -98,7 +98,8 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
             if (messageSize > maxMemory * MAX_SIZE_RATIO) {
               try {
                 final String errorMessage = String.format(
-                    "Airbyte has received a message at %s UTC which is larger than %s (size: %s). The sync has been failed to prevent running out of memory.",
+                    "Airbyte has received a message at %s UTC which is larger than %s (size: %s). "
+                        + "The sync has been failed to prevent running out of memory.",
                     DateTime.now(),
                     humanReadableByteCountSI(maxMemory),
                     humanReadableByteCountSI(messageSize));

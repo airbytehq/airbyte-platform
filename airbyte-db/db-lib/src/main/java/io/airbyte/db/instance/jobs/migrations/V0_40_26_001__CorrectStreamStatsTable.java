@@ -14,6 +14,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Fix stream stats migration.
+ */
 public class V0_40_26_001__CorrectStreamStatsTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_26_001__CorrectStreamStatsTable.class);

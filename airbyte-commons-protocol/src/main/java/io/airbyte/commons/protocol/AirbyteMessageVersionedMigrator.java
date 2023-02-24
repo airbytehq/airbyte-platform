@@ -10,9 +10,11 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.util.Optional;
 
 /**
- * Wraps message migration from a fixed version to the most recent version
+ * Wraps message migration from a fixed version to the most recent version.
+ *
+ * M is the original message type.
  */
-public class AirbyteMessageVersionedMigrator<OriginalMessageType> {
+public class AirbyteMessageVersionedMigrator<M> {
 
   private final AirbyteMessageMigrator migrator;
   private final Version version;
@@ -22,11 +24,11 @@ public class AirbyteMessageVersionedMigrator<OriginalMessageType> {
     this.version = version;
   }
 
-  public OriginalMessageType downgrade(final AirbyteMessage message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+  public M downgrade(final AirbyteMessage message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
     return migrator.downgrade(message, version, configuredAirbyteCatalog);
   }
 
-  public AirbyteMessage upgrade(final OriginalMessageType message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+  public AirbyteMessage upgrade(final M message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
     return migrator.upgrade(message, version, configuredAirbyteCatalog);
   }
 

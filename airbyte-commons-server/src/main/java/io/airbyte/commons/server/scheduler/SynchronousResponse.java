@@ -11,6 +11,11 @@ import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
+/**
+ * Response wrapper for synchronous temporal jobs.
+ *
+ * @param <T> output type of the job
+ */
 public class SynchronousResponse<T> {
 
   private final T output;
@@ -24,6 +29,22 @@ public class SynchronousResponse<T> {
     return new SynchronousResponse<>(output, metadata);
   }
 
+  /**
+   * Response from synchronous temporal job.
+   *
+   * @param temporalResponse response from temporal client
+   * @param jobOutput output of the job
+   * @param responseOutput return value of the job
+   * @param id job id
+   * @param configType job type
+   * @param configId id of resource for job type (i.e. if configType is discover config id is going to
+   *        be a source id)
+   * @param createdAt time the job was created
+   * @param endedAt time the job ended
+   * @param <T> output for job type
+   * @param <U> output type for job type of temporal job
+   * @return response
+   */
   public static <T, U> SynchronousResponse<T> fromTemporalResponse(final TemporalResponse<U> temporalResponse,
                                                                    @Nullable final ConnectorJobOutput jobOutput,
                                                                    @Nullable final T responseOutput,
@@ -81,10 +102,10 @@ public class SynchronousResponse<T> {
 
   @Override
   public String toString() {
-    return "SynchronousResponse{" +
-        "output=" + output +
-        ", metadata=" + metadata +
-        '}';
+    return "SynchronousResponse{"
+        + "output=" + output
+        + ", metadata=" + metadata
+        + '}';
   }
 
 }

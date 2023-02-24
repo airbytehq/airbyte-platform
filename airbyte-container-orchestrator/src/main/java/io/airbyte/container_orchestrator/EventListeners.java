@@ -22,6 +22,9 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Listen for changes in env variables.
+ */
 @Singleton
 public class EventListeners {
 
@@ -40,7 +43,7 @@ public class EventListeners {
   }
 
   /**
-   * Exists only for overriding the default property setter for testing
+   * Exists only for overriding the default property setter for testing.
    */
   EventListeners(@Named("envVars") final Map<String, String> envVars,
                  final EnvConfigs configs,

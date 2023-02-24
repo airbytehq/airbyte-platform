@@ -84,6 +84,10 @@ import java.util.UUID;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 @Slf4j
 public class SchedulerHandler {
@@ -365,6 +369,7 @@ public class SchedulerHandler {
     return specRead;
   }
 
+  @SuppressWarnings("LineLength")
   public DestinationDefinitionSpecificationRead getDestinationSpecification(
                                                                             final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
@@ -466,8 +471,9 @@ public class SchedulerHandler {
       checkConnectionRead
           .status(Enums.convertTo(response.getOutput().getStatus(), StatusEnum.class))
           .message(response.getOutput().getMessage());
-    } else { // TODO (Ella): Update logic - 'status' should no longer be necessary, as is the case for the other
-             // two synchronous jobs.
+    } else {
+      // TODO (Ella): Update logic - 'status' should no longer be necessary, as is the case for the other
+      // two synchronous jobs.
       checkConnectionRead
           .status(StatusEnum.FAILED)
           .message("Check Connection Failed!");

@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Sentry implementation for job error reporting.
+ */
 public class SentryJobErrorReportingClient implements JobErrorReportingClient {
 
   static final String STACKTRACE_PARSE_ERROR_TAG_KEY = "stacktrace_parse_error";
@@ -51,7 +54,7 @@ public class SentryJobErrorReportingClient implements JobErrorReportingClient {
   }
 
   /**
-   * Reports a Connector Job FailureReason to Sentry
+   * Reports a Connector Job FailureReason to Sentry.
    *
    * @param workspace - Workspace where this failure occurred
    * @param failureReason - FailureReason to report

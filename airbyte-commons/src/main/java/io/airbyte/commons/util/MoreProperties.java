@@ -9,6 +9,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+/**
+ * Common code for parsing {@link Properties} objects.
+ */
 public class MoreProperties {
 
   /**

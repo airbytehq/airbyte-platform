@@ -6,6 +6,9 @@ package io.airbyte.commons.protocol.migrations;
 
 import io.airbyte.commons.version.Version;
 
+/**
+ * Migration for Protocol Version.
+ */
 public interface Migration {
 
   /**

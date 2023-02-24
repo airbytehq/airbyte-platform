@@ -16,6 +16,9 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Unanticipated exception. Treat it like an Internal Server Error.
+ */
 @Produces
 @Singleton
 @Requires(classes = Throwable.class)

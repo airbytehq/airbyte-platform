@@ -10,6 +10,11 @@ import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import java.util.UUID;
 
+/**
+ * A deployment describes a deployed instance of Airbyte. It is meant to retain its identity through
+ * the upgrade process. i.e. Airbyte running on the same VM at version 0.40.1 and then upgraded to
+ * 0.40.2 is still the same deployment.
+ */
 public class Deployment {
 
   /**
