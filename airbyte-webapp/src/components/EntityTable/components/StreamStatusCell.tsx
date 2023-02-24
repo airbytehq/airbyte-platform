@@ -71,7 +71,7 @@ const StreamStatusCellTooltipContent = ({
         <div className={styles.streamsDetail}>
           {iconMap[statusType]} <b>{connection.syncCatalog.streams.length}</b> {statusType}
         </div>
-        {connection.isSyncing || true ? (
+        {connection.isSyncing ? (
           <div className={styles.syncContainer}>
             <Syncing className={styles.syncing} /> {connection.syncCatalog.streams.length}
           </div>
