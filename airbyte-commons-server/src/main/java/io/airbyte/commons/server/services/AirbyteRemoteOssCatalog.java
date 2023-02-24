@@ -10,7 +10,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.init.RemoteDefinitionsProvider;
 import io.airbyte.config.specs.CombinedConnectorCatalogDownloader;
 import jakarta.inject.Singleton;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
