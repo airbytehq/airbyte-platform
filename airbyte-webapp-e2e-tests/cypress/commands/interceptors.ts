@@ -1,8 +1,8 @@
 import { RouteHandler } from "cypress/types/net-stubbing";
 
-export const interceptGetConnectionRequest = () =>
-  cy.intercept("/api/v1/web_backend/connections/get").as("getConnection");
-export const waitForGetConnectionRequest = () => cy.wait("@getConnection");
+export const interceptGetConnectionRequest = (response?: RouteHandler) =>
+  cy.intercept("/api/v1/web_backend/connections/get", response).as("getConnection");
+export const waitForGetConnectionRequest = () => cy.wait("@getConnection", { timeout: 20000 });
 
 export const interceptUpdateConnectionRequest = (response?: RouteHandler) =>
   cy.intercept("/api/v1/web_backend/connections/update", response).as("updateConnection");

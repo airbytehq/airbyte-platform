@@ -38,7 +38,7 @@ const dropTables = () => {
   );
 };
 
-const modifyAccountsTable: RouteHandler = (request) => {
+const modifyAccountsTableInterceptHandler: RouteHandler = (request) => {
   request.reply((response) => {
     const body: Connection = modifySyncCatalogStream({
       connection: response.body,
@@ -58,22 +58,24 @@ const modifyAccountsTable: RouteHandler = (request) => {
 const saveConnectionAndAssertStreams = (
   ...expectedSyncModes: Array<{ namespace: string; name: string; config: Partial<SyncCatalogStreamConfig> }>
 ) => {
-  replicationPage.clickSaveButton({ interceptUpdateHandler: modifyAccountsTable }).then((connection) => {
-    expectedSyncModes.forEach((expected) => {
-      const stream = connection.syncCatalog.streams.find(
-        ({ stream }) => stream.namespace === expected.namespace && stream.name === expected.name
-      );
+  replicationPage
+    .clickSaveButton({ interceptUpdateHandler: modifyAccountsTableInterceptHandler })
+    .then((connection) => {
+      expectedSyncModes.forEach((expected) => {
+        const stream = connection.syncCatalog.streams.find(
+          ({ stream }) => stream.namespace === expected.namespace && stream.name === expected.name
+        );
 
-      expect(stream).to.exist;
-      expect(stream?.config).to.contain({
-        syncMode: expected.config.syncMode,
-        destinationSyncMode: expected.config.destinationSyncMode,
+        expect(stream).to.exist;
+        expect(stream?.config).to.contain({
+          syncMode: expected.config.syncMode,
+          destinationSyncMode: expected.config.destinationSyncMode,
+        });
+        if (expected.config.cursorField) {
+          expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
+        }
       });
-      if (expected.config.cursorField) {
-        expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
-      }
     });
-  });
 };
 
 describe("Connection - sync modes", () => {
@@ -123,25 +125,7 @@ describe("Connection - sync modes", () => {
         });
       })
       .then(() => {
-        cy.intercept({ method: "POST", url: "**/connections/get", times: 1 }, (request) => {
-          request.reply((response) => {
-            const body: Connection = modifySyncCatalogStream({
-              connection: response.body,
-              namespace: "public",
-              streamName: "accounts",
-              modifyStream: (stream) => ({
-                ...stream,
-                sourceDefinedCursor: true,
-                defaultCursorField: ["updated_at"],
-              }),
-            });
-
-            response.send(body);
-          });
-        }).as("getConnectionWithModifiedStream");
-
-        connectionPage.visit(connection, "replication", false);
-        cy.wait("@getConnectionWithModifiedStream", { timeout: 20000 });
+        connectionPage.visit(connection, "replication", { interceptGetHandler: modifyAccountsTableInterceptHandler });
       });
   });
 
