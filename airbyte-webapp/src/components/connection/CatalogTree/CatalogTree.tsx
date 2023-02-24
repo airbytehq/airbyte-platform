@@ -75,8 +75,6 @@ const CatalogTreeComponent: React.FC<React.PropsWithChildren<CatalogTreeProps>> 
     [initialValues.syncCatalog.streams, streams]
   );
 
-  console.log({ filteredStreams });
-
   return (
     <BulkEditServiceProvider nodes={filteredStreams} update={onBatchStreamsChanged}>
       <LoadingBackdrop loading={isLoading}>

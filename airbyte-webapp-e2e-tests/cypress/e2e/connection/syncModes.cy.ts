@@ -11,22 +11,70 @@ import {
   requestSourceDiscoverSchema,
   requestWorkspaceId,
 } from "commands/api";
-import { Connection, Destination, Source } from "commands/api/types";
+import { Connection, Destination, Source, SyncCatalogStreamConfig } from "commands/api/types";
 import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createAccountsTableQuery,
   createUserCarsTableQuery,
-  createUsersTableQuery,
   dropAccountsTableQuery,
   dropUserCarsTableQuery,
-  dropUsersTableQuery,
+  getCreateUsersTableQuery,
+  getDropUsersTableQuery,
 } from "commands/db/queries";
 import { initialSetupCompleted } from "commands/workspaces";
+import { RouteHandler } from "cypress/types/net-stubbing";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
 import { modifySyncCatalogStream } from "utils/connection";
+
+const dropTables = () => {
+  runDbQuery(
+    getDropUsersTableQuery("users"),
+    getDropUsersTableQuery("users2"),
+    dropAccountsTableQuery,
+    dropUserCarsTableQuery
+  );
+};
+
+const modifyAccountsTable: RouteHandler = (request) => {
+  request.reply((response) => {
+    const body: Connection = modifySyncCatalogStream({
+      connection: response.body,
+      namespace: "public",
+      streamName: "accounts",
+      modifyStream: (stream) => ({
+        ...stream,
+        sourceDefinedCursor: true,
+        defaultCursorField: ["updated_at"],
+      }),
+    });
+
+    response.send(body);
+  });
+};
+
+const saveConnectionAndAssertStreams = (
+  ...expectedSyncModes: Array<{ namespace: string; name: string; config: Partial<SyncCatalogStreamConfig> }>
+) => {
+  replicationPage.clickSaveButton({ interceptUpdateHandler: modifyAccountsTable }).then((connection) => {
+    expectedSyncModes.forEach((expected) => {
+      const stream = connection.syncCatalog.streams.find(
+        ({ stream }) => stream.namespace === expected.namespace && stream.name === expected.name
+      );
+
+      expect(stream).to.exist;
+      expect(stream?.config).to.contain({
+        syncMode: expected.config.syncMode,
+        destinationSyncMode: expected.config.destinationSyncMode,
+      });
+      if (expected.config.cursorField) {
+        expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
+      }
+    });
+  });
+};
 
 describe("Connection - sync modes", () => {
   const streamsTable = new NewStreamsTablePageObject();
@@ -36,14 +84,16 @@ describe("Connection - sync modes", () => {
   let connection: Connection;
 
   before(() => {
-    initialSetupCompleted();
-    runDbQuery(dropUsersTableQuery);
-    runDbQuery(dropAccountsTableQuery);
-    runDbQuery(dropUserCarsTableQuery);
+    dropTables();
 
-    runDbQuery(createUsersTableQuery);
-    runDbQuery(createAccountsTableQuery);
-    runDbQuery(createUserCarsTableQuery);
+    runDbQuery(
+      getCreateUsersTableQuery("users"),
+      getCreateUsersTableQuery("users2"),
+      createAccountsTableQuery,
+      createUserCarsTableQuery
+    );
+
+    initialSetupCompleted();
 
     requestWorkspaceId()
       .then(() => {
@@ -92,8 +142,6 @@ describe("Connection - sync modes", () => {
 
         connectionPage.visit(connection, "replication", false);
         cy.wait("@getConnectionWithModifiedStream", { timeout: 20000 });
-
-        streamsTable.searchStream("users");
       });
   });
 
@@ -108,28 +156,85 @@ describe("Connection - sync modes", () => {
       requestDeleteDestination(destination.destinationId);
     }
 
-    runDbQuery(dropUsersTableQuery);
-    runDbQuery(dropAccountsTableQuery);
-    runDbQuery(dropUserCarsTableQuery);
+    dropTables();
+  });
+
+  describe("Full refresh | Overwrite", () => {
+    it("selects sync mode", () => {
+      streamsTable.searchStream("users");
+      streamsTable.selectSyncMode("Full refresh", "Overwrite");
+    });
+
+    it("does not require primary key or cursor", () => {
+      streamsTable.isCursorNonExist("public", "users");
+      streamsTable.isPrimaryKeyNonExist("public", "users");
+    });
+
+    it("saves", () => {
+      saveConnectionAndAssertStreams({
+        namespace: "public",
+        name: "users",
+        config: {
+          syncMode: "full_refresh",
+          destinationSyncMode: "overwrite",
+        },
+      });
+    });
+  });
+
+  describe("Full refresh | Append", () => {
+    before(() => {
+      streamsTable.searchStream("users");
+    });
+
+    it("selects sync mode", () => {
+      streamsTable.selectSyncMode("Full refresh", "Append");
+    });
+
+    it("does not require primary key or cursor", () => {
+      streamsTable.isCursorNonExist("public", "users");
+      streamsTable.isPrimaryKeyNonExist("public", "users");
+    });
+
+    it("saves", () => {
+      saveConnectionAndAssertStreams({
+        namespace: "public",
+        name: "users",
+        config: {
+          syncMode: "full_refresh",
+          destinationSyncMode: "append",
+        },
+      });
+    });
   });
 
   describe("Incremental | Deduped + history", () => {
     describe("with source-defined primary keys", () => {
       before(() => {
+        streamsTable.searchStream("users2");
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
       });
 
-      after(() => {
-        replicationPage.clickCancelEditButton();
-      });
-
       it("should be able to select cursor", () => {
-        streamsTable.hasEmptyCursorSelect("public", "users");
-        streamsTable.selectCursorField("users", "updated_at");
+        streamsTable.hasEmptyCursorSelect("public", "users2");
+        streamsTable.selectCursorField("users2", "updated_at");
       });
 
       it("has source-defined primary key", () => {
-        streamsTable.checkPreFilledPrimaryKeyField("users", "id");
+        streamsTable.checkPreFilledPrimaryKeyField("users2", "id");
+      });
+
+      it("saves", () => {
+        saveConnectionAndAssertStreams({
+          namespace: "public",
+          name: "users2",
+          config: {
+            syncMode: "incremental",
+            destinationSyncMode: "append_dedup",
+            cursorField: ["updated_at"],
+            primaryKey: [["id"]],
+          },
+        });
       });
     });
 
@@ -139,11 +244,6 @@ describe("Connection - sync modes", () => {
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
       });
 
-      after(() => {
-        replicationPage.clickCancelEditButton();
-        streamsTable.searchStream("users");
-      });
-
       it("has source-defined cursor", () => {
         streamsTable.checkPreFilledCursorField("accounts", "updated_at");
       });
@@ -151,17 +251,25 @@ describe("Connection - sync modes", () => {
       it("has source-defined primary key", () => {
         streamsTable.checkPreFilledPrimaryKeyField("accounts", "id");
       });
+
+      it("saves", () => {
+        saveConnectionAndAssertStreams({
+          namespace: "public",
+          name: "accounts",
+          config: {
+            syncMode: "incremental",
+            destinationSyncMode: "append_dedup",
+            cursorField: ["updated_at"],
+            primaryKey: [["id"]],
+          },
+        });
+      });
     });
 
     describe("with selectable primary keys", () => {
       before(() => {
         streamsTable.searchStream("user_cars");
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
-      });
-
-      after(() => {
-        replicationPage.clickCancelEditButton();
-        streamsTable.searchStream("users");
       });
 
       it("has empty cursor and primary key selects", () => {
@@ -187,12 +295,25 @@ describe("Connection - sync modes", () => {
       it("can select multiple primary keys", () => {
         streamsTable.selectPrimaryKeyField("user_cars", ["car_id", "user_id"]);
       });
+
+      it("saves", () => {
+        saveConnectionAndAssertStreams({
+          namespace: "public",
+          name: "user_cars",
+          config: {
+            syncMode: "incremental",
+            destinationSyncMode: "append_dedup",
+            cursorField: ["created_at"],
+            primaryKey: [["car_id"], ["user_id"]],
+          },
+        });
+      });
     });
   });
 
   describe("Incremental | Append", () => {
-    after(() => {
-      replicationPage.clickCancelEditButton();
+    before(() => {
+      streamsTable.searchStream("users");
     });
 
     it("selects sync mode", () => {
@@ -211,41 +332,23 @@ describe("Connection - sync modes", () => {
     it("can save when stream is disabled", () => {
       streamsTable.disableStream("public", "users");
       replicationPage.getSaveButton().should("be.enabled");
-      streamsTable.disableStream("public", "users");
+      streamsTable.enableStream("public", "users");
     });
 
     it("selects cursor", () => {
       streamsTable.selectCursorField("users", "updated_at");
     });
-  });
 
-  describe("Full refresh | Overwrite", () => {
-    after(() => {
-      replicationPage.clickCancelEditButton();
-    });
-
-    it("selects sync mode", () => {
-      streamsTable.selectSyncMode("Full refresh", "Overwrite");
-    });
-
-    it("does not require primary key or cursor", () => {
-      streamsTable.isCursorNonExist("public", "users");
-      streamsTable.isPrimaryKeyNonExist("public", "users");
-    });
-  });
-
-  describe("Full refresh | Append", () => {
-    after(() => {
-      replicationPage.clickCancelEditButton();
-    });
-
-    it("selects sync mode", () => {
-      streamsTable.selectSyncMode("Full refresh", "Append");
-    });
-
-    it("does not require primary key or cursor", () => {
-      streamsTable.isCursorNonExist("public", "users");
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+    it("saves", () => {
+      saveConnectionAndAssertStreams({
+        namespace: "public",
+        name: "users",
+        config: {
+          syncMode: "incremental",
+          destinationSyncMode: "append",
+          cursorField: ["updated_at"],
+        },
+      });
     });
   });
 });

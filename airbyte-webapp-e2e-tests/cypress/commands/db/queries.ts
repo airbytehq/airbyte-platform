@@ -30,20 +30,26 @@ export const insertMultipleIntoTable = (tableName: string, valuesByColumns: Arra
   valuesByColumns.map((valuesByColumn) => insertIntoTable(tableName, valuesByColumn)).join("\n");
 
 // Users table
-export const createUsersTableQuery = createTable("public.users", [
-  "id SERIAL",
-  "name VARCHAR(200) NULL",
-  "email VARCHAR(200) NULL",
-  "updated_at TIMESTAMP",
-  "CONSTRAINT users_pkey PRIMARY KEY (id)",
-]);
+
+export const getCreateUsersTableQuery = (tableName: string) =>
+  createTable(`public.${tableName}`, [
+    "id SERIAL",
+    "name VARCHAR(200) NULL",
+    "email VARCHAR(200) NULL",
+    "updated_at TIMESTAMP",
+    `CONSTRAINT ${tableName}_pkey PRIMARY KEY (id)`,
+  ]);
+
+export const createUsersTableQuery = getCreateUsersTableQuery("users");
 export const insertUsersTableQuery = insertMultipleIntoTable("public.users", [
   { name: "Abigail", email: "abigail@example.com", updated_at: "2022-12-19 00:00:00" },
   { name: "Andrew", email: "andrew@example.com", updated_at: "2022-12-19 00:00:00" },
   { name: "Kat", email: "kat@example.com", updated_at: "2022-12-19 00:00:00" },
 ]);
 
-export const dropUsersTableQuery = dropTable("public.users");
+export const getDropUsersTableQuery = (tableName: string) => dropTable(`public.${tableName}`);
+
+export const dropUsersTableQuery = getDropUsersTableQuery("users");
 
 // User cars
 

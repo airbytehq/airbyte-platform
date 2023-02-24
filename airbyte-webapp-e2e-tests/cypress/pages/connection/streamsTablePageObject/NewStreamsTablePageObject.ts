@@ -12,6 +12,8 @@ const getRowTestId = (namespace: string, streamName: string, childTestId?: strin
 const getFieldSelectButtonTestId = (streamName: string, type: SyncFieldType) =>
   joinTestIds(getTestId(`${type}-select`), getTestId("pill-select-button"));
 const getSourceDefinedTestId = (type: SyncFieldType) => getTestId(`${type}-text`);
+const getStreamSwitchTestId = (namespace: string, streamName: string) =>
+  getRowTestId(namespace, streamName, getTestId("selected-switch"));
 const dropDownOverlayContainer = getTestId("overlayContainer");
 
 const streamSourceFieldName = getTestId("stream-source-field-name");
@@ -129,10 +131,10 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
   }
 
   enableStream(namespace: string, streamName: string): void {
-    cy.get(getRowTestId(namespace, streamName, getTestId("selected-switch"))).check({ force: true });
+    cy.get(getStreamSwitchTestId(namespace, streamName)).check({ force: true });
   }
 
   disableStream(namespace: string, streamName: string): void {
-    cy.get(getRowTestId(namespace, streamName, getTestId("selected-switch"))).uncheck({ force: true });
+    cy.get(getStreamSwitchTestId(namespace, streamName)).uncheck({ force: true });
   }
 }
