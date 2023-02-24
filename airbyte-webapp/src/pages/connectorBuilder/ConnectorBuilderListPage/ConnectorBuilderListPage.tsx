@@ -87,7 +87,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
           </SortableTableHeader>
         ),
         cell: (props) => (
-          <FlexContainer alignItems="center">
+          <FlexContainer alignItems="center" className={styles.nameCell}>
             {/* TODO: replace with custom logos once available */}
             <DefaultLogoCatalog />
             <Text>{props.cell.getValue()}</Text>
@@ -97,7 +97,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
       columnHelper.accessor("version", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.version" />,
         cell: (props) => (
-          <Text className={classNames({ [styles.draft]: props.cell.getValue() === "draft" })}>
+          <Text className={classNames(styles.versionCell, { [styles.draft]: props.cell.getValue() === "draft" })}>
             {props.cell.getValue()}
           </Text>
         ),

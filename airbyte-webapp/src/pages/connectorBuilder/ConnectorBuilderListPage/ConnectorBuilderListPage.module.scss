@@ -3,8 +3,20 @@
 
 .container {
   padding: variables.$spacing-xl;
+
+  > table > thead > tr > th:first-of-type {
+    padding-left: variables.$spacing-lg;
+  }
 }
 
 .draft {
   color: colors.$grey-400;
+}
+
+.nameCell {
+  padding-left: variables.$spacing-md;
+}
+
+.versionCell {
+  padding-left: variables.$spacing-sm;
 }
