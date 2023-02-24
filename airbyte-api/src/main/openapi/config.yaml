@@ -2606,15 +2606,9 @@ components:
       type: object
       required:
         - name
-        - builderProjectId
-        - hasDraft
       properties:
         name:
           type: string
-        builderProjectId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
-        hasDraft:
-          type: boolean
         draftManifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     ConnectorBuilderProjectDetailsRead:
