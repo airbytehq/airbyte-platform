@@ -162,14 +162,14 @@ jobs:
           org.gradle.workers.max=8
           org.gradle.vfs.watch=false
           EOF
-      # TODO: Once we pull these from the metadata service, remove this step
+      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
+      #       since docs are not pulled when running gradle locally.
       - name: Copy docs from connectors repository
         run: |
-          dir=$PWD
-          cd /tmp
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte 
-          cp -R airbyte/docs $dir/docs
-          ls -lah $dir/docs
+          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
+          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
+          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
+          [ -f "./docs/integrations/sources/NOT_google-ads.md" ] || { echo "::error Failed to copy docs from airbyte repository"; exit 21 }
 
       - name: Build :airbyte-webapp
         uses: Wandalen/wretry.action@master
