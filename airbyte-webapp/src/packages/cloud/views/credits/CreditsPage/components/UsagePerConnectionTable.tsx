@@ -133,7 +133,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
             ),
             meta: {
               thClassName: classNames(styles.header, styles.light, {
-                [styles.header__sorted]: sortBy === "connectionName",
+                [styles.headerSorted]: sortBy === "connectionName",
               }),
               responsive: true,
             },
@@ -159,7 +159,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
             ),
             meta: {
               thClassName: classNames(styles.header, styles.light, {
-                [styles.header__sorted]: sortBy === "sourceConnectionName",
+                [styles.headerSorted]: sortBy === "sourceConnectionName",
               }),
               responsive: true,
             },
@@ -194,7 +194,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
             ),
             meta: {
               thClassName: classNames(styles.header, styles.light, {
-                [styles.header__sorted]: sortBy === "destinationConnectionName",
+                [styles.headerSorted]: sortBy === "destinationConnectionName",
               }),
               responsive: true,
             },
@@ -240,7 +240,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
             ),
             meta: {
               thClassName: classNames(styles.header, styles.light, {
-                [styles.header__sorted]: sortBy === "usage",
+                [styles.headerSorted]: sortBy === "usage",
               }),
               responsive: true,
             },
