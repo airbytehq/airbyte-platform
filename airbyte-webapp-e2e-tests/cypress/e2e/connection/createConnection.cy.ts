@@ -31,10 +31,12 @@ import {
   createDummyTablesQuery,
   dropDummyTablesQuery,
 } from "commands/db/queries";
-import streamsTablePageObject from "pages/connection/streamsTablePageObject";
+import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
+
+const streamsTable = new NewStreamsTablePageObject();
 
 // TODO: Enable this test when the new stream table will be turned on
-describe.skip("Connection - Create new connection", () => {
+describe("Connection - Create new connection", () => {
   let source: Source;
   let destination: Destination;
   let connectionId: string;
@@ -133,12 +135,12 @@ describe.skip("Connection - Create new connection", () => {
     });
 
     it("should filter table by stream name", () => {
-      streamsTablePageObject.searchStream("dummy_table_10");
+      streamsTable.searchStream("dummy_table_10");
       newConnectionPage.checkAmountOfStreamTableRows(1);
     });
 
     it("should clear stream search input field and show all available streams", () => {
-      streamsTablePageObject.clearStreamSearch();
+      streamsTable.clearStreamSearch();
       newConnectionPage.checkAmountOfStreamTableRows(21);
     });
   });
