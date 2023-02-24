@@ -5,7 +5,7 @@ import classNames from "classnames";
 import queryString from "query-string";
 import { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 import { MainPageWithScroll } from "components";
 import { DefaultLogoCatalog } from "components/common/DefaultLogoCatalog";
@@ -107,7 +107,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
     [columnHelper, onSortClick, sortBy, sortOrder]
   );
 
-  return (
+  return projects.length ? (
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "connectorBuilder.title" }]} />}
       pageTitle={
@@ -128,5 +128,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
     >
       <NextTable columns={columns} data={sortedProjects} className={styles.table} />
     </MainPageWithScroll>
+  ) : (
+    <Navigate to={ConnectorBuilderRoutePaths.Create} />
   );
 };
