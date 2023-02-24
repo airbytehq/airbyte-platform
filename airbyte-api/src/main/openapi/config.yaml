@@ -2594,11 +2594,12 @@ components:
       type: string
       format: uuid
     DeclarativeManifest:
+      description: Low code CDK manifest JSON object
+    DeclarativeManifestRead:
       type: object
       properties:
         manifest:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/DeclarativeManifest"
         isDraft:
           type: boolean
     ConnectorBuilderProjectDetails:
@@ -2609,8 +2610,7 @@ components:
         name:
           type: string
         draftManifest:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/DeclarativeManifest"
     ConnectorBuilderProjectDetailsRead:
       type: object
       required:
@@ -2665,7 +2665,7 @@ components:
         builderProject:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
         declarativeManifest:
-          $ref: "#/components/schemas/DeclarativeManifest"
+          $ref: "#/components/schemas/DeclarativeManifestRead"
     ConnectorBuilderProjectReadList:
       type: object
       required:
