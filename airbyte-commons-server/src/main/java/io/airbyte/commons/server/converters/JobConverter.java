@@ -224,6 +224,9 @@ public class JobConverter {
   }
 
   public static FailureReason getFailureReason(final io.airbyte.config.FailureReason failureReason) {
+    if (failureReason == null) {
+      return null;
+    }
     return new FailureReason()
         .failureOrigin(Enums.convertTo(failureReason.getFailureOrigin(), FailureOrigin.class))
         .failureType(Enums.convertTo(failureReason.getFailureType(), FailureType.class))
@@ -249,7 +252,8 @@ public class JobConverter {
         .endedAt(metadata.getEndedAt())
         .succeeded(metadata.isSucceeded())
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
-        .logs(getLogRead(metadata.getLogPath()));
+        .logs(getLogRead(metadata.getLogPath()))
+        .failureReason(getFailureReason(metadata.getFailureReason()));
   }
 
   public static AttemptNormalizationStatusRead convertAttemptNormalizationStatus(
