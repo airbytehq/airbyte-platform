@@ -47,8 +47,24 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
 
   const hasError = !!meta.error && meta.touched;
 
-  const errorValues = meta.error === "form.pattern.error" ? { pattern: property.pattern } : undefined;
-  const errorMessage = <FormattedMessage id={meta.error} values={errorValues} />;
+  const errorMessage = Array.isArray(meta.error) ? (
+    <>
+      {meta.error.map((error, index) => {
+        const errorValues = error === "form.pattern.error" ? { pattern: property.pattern } : undefined;
+        return (
+          <React.Fragment key={index}>
+            <FormattedMessage id={error} values={errorValues} />
+            <br />
+          </React.Fragment>
+        );
+      })}
+    </>
+  ) : (
+    <FormattedMessage
+      id={meta.error}
+      values={meta.error === "form.pattern.error" ? { pattern: property.pattern } : undefined}
+    />
+  );
 
   return (
     <PropertyLabel className={styles.defaultLabel} property={property} label={labelText}>
