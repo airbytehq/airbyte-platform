@@ -42,6 +42,7 @@ public class OAuthSecretHelper {
       final String key = entry.getKey();
       final List<String> jsonPathArray = entry.getValue();
       String jsonPointer = "/" + String.join("/", jsonPathArray);
+      // TODO - remove debug
       System.out.println("Key: " + key);
       System.out.println("val: " + hydratedSecret.get(key));
       System.out.println("JsonPointer: " + jsonPointer);
