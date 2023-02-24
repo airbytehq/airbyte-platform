@@ -280,15 +280,18 @@ public class AirbyteAcceptanceTestHarness {
         }
       }
       database.query(context -> context.execute(query.toString()));
+
+      sourceDataSource = GKEPostgresConfig.getSourceDataSource();
+      destinationDataSource = GKEPostgresConfig.getDestinationeDataSource();
     } else {
       PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource(postgresSqlInitFile), sourcePsql);
 
       destinationPsql = new PostgreSQLContainer("postgres:13-alpine");
       destinationPsql.start();
-    }
 
-    sourceDataSource = DatabaseConnectionHelper.createDataSource(sourcePsql);
-    destinationDataSource = DatabaseConnectionHelper.createDataSource(destinationPsql);
+      sourceDataSource = DatabaseConnectionHelper.createDataSource(sourcePsql);
+      destinationDataSource = DatabaseConnectionHelper.createDataSource(destinationPsql);
+    }
   }
 
   public void cleanup() {
@@ -389,16 +392,10 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public Database getSourceDatabase() {
-    if (isKube && isGke) {
-      return GKEPostgresConfig.getSourceDatabase();
-    }
     return getDatabase(sourceDataSource);
   }
 
   public Database getDestinationDatabase() {
-    if (isKube && isGke) {
-      return GKEPostgresConfig.getDestinationDatabase();
-    }
     return getDatabase(destinationDataSource);
   }
 
