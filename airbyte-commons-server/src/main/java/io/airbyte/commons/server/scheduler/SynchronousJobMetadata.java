@@ -145,7 +145,7 @@ public class SynchronousJobMetadata {
     final boolean succeeded = true;
     final boolean connectorConfigurationUpdated = false;
     final Path logPath = null;
-    final FailureReason failureReason = new FailureReason();
+    final FailureReason failureReason = null;
 
     return new SynchronousJobMetadata(
         UUID.randomUUID(),

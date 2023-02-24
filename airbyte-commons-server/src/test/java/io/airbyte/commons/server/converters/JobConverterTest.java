@@ -278,7 +278,7 @@ class JobConverterTest {
     private static final UUID JOB_ID = UUID.randomUUID();
     private static final JobConfig.ConfigType CONFIG_TYPE = ConfigType.DISCOVER_SCHEMA;
     private static final Optional<UUID> CONFIG_ID = Optional.empty();
-    private static final boolean JOB_SUCCEEDED = true;
+    private static final boolean JOB_SUCCEEDED = false;
     private static final boolean CONNECTOR_CONFIG_UPDATED = false;
     private static SynchronousJobRead SYNCHRONOUS_JOB_INFO = new SynchronousJobRead()
         .id(JOB_ID)
