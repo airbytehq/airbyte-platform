@@ -44,15 +44,13 @@ const selectFieldOption = (streamName: string, dropdownType: SyncFieldType, valu
   });
 };
 
-const checkFieldSelectedValue = (streamName: string, dropdownType: SyncFieldType, expectedValue: string | string[]) => {
+const checkFieldSelectedValue = (streamName: string, type: SyncFieldType, expectedValue: string | string[]) => {
   const container = getRowTestId("public", streamName);
-  const button = getFieldSelectButtonTestId(streamName, dropdownType);
-  const isButtonContainsExactValue = (value: string) => cy.get(button).contains(new RegExp(`^${value}$`));
+  const button = getFieldSelectButtonTestId(streamName, type);
+  const expected = Array.isArray(expectedValue) ? expectedValue.join(", ") : expectedValue;
 
   cy.get(container).within(() => {
-    Array.isArray(expectedValue)
-      ? expectedValue.every((value) => isButtonContainsExactValue(value))
-      : isButtonContainsExactValue(expectedValue);
+    cy.get(button).contains(new RegExp(`^${expected}$`));
   });
 };
 

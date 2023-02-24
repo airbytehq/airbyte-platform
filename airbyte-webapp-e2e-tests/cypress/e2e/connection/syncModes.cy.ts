@@ -74,6 +74,9 @@ const saveConnectionAndAssertStreams = (
         if (expected.config.cursorField) {
           expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
         }
+        if (expected.config.primaryKey) {
+          expect(stream?.config?.cursorField).to.eql(expected.config.cursorField);
+        }
       });
     });
 };
@@ -163,6 +166,9 @@ describe("Connection - sync modes", () => {
           destinationSyncMode: "overwrite",
         },
       });
+
+      streamsTable.isCursorNonExist("public", "users");
+      streamsTable.isPrimaryKeyNonExist("public", "users");
     });
   });
 
@@ -189,11 +195,17 @@ describe("Connection - sync modes", () => {
           destinationSyncMode: "append",
         },
       });
+
+      streamsTable.isCursorNonExist("public", "users");
+      streamsTable.isPrimaryKeyNonExist("public", "users");
     });
   });
 
   describe("Incremental | Deduped + history", () => {
     describe("with source-defined primary keys", () => {
+      const cursor = "updated_at";
+      const primaryKey = "id";
+
       before(() => {
         streamsTable.searchStream("users2");
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
@@ -201,11 +213,12 @@ describe("Connection - sync modes", () => {
 
       it("should be able to select cursor", () => {
         streamsTable.hasEmptyCursorSelect("public", "users2");
-        streamsTable.selectCursorField("users2", "updated_at");
+        streamsTable.selectCursorField("users2", cursor);
+        streamsTable.checkCursorField("users2", cursor);
       });
 
       it("has source-defined primary key", () => {
-        streamsTable.checkPreFilledPrimaryKeyField("users2", "id");
+        streamsTable.checkPreFilledPrimaryKeyField("users2", primaryKey);
       });
 
       it("saves", () => {
@@ -215,25 +228,31 @@ describe("Connection - sync modes", () => {
           config: {
             syncMode: "incremental",
             destinationSyncMode: "append_dedup",
-            cursorField: ["updated_at"],
-            primaryKey: [["id"]],
+            cursorField: [cursor],
+            primaryKey: [[primaryKey]],
           },
         });
+
+        streamsTable.checkCursorField("users2", cursor);
+        streamsTable.checkPreFilledPrimaryKeyField("users2", primaryKey);
       });
     });
 
     describe("with source-defined cursor and primary keys", () => {
+      const cursor = "updated_at";
+      const primaryKey = "id";
+
       before(() => {
         streamsTable.searchStream("accounts");
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
       });
 
       it("has source-defined cursor", () => {
-        streamsTable.checkPreFilledCursorField("accounts", "updated_at");
+        streamsTable.checkPreFilledCursorField("accounts", cursor);
       });
 
       it("has source-defined primary key", () => {
-        streamsTable.checkPreFilledPrimaryKeyField("accounts", "id");
+        streamsTable.checkPreFilledPrimaryKeyField("accounts", primaryKey);
       });
 
       it("saves", () => {
@@ -247,10 +266,16 @@ describe("Connection - sync modes", () => {
             primaryKey: [["id"]],
           },
         });
+
+        streamsTable.checkPreFilledCursorField("accounts", cursor);
+        streamsTable.checkPreFilledPrimaryKeyField("accounts", primaryKey);
       });
     });
 
     describe("with selectable primary keys", () => {
+      const cursorValue = "created_at";
+      const primaryKeyValue = ["car_id", "user_id"];
+
       before(() => {
         streamsTable.searchStream("user_cars");
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
@@ -269,15 +294,22 @@ describe("Connection - sync modes", () => {
       });
 
       it("should be able to select cursor", () => {
-        streamsTable.selectCursorField("user_cars", "created_at");
+        streamsTable.selectCursorField("user_cars", cursorValue);
+        streamsTable.checkCursorField("user_cars", cursorValue);
       });
 
       it("can select single primary key", () => {
-        streamsTable.selectPrimaryKeyField("user_cars", ["car_id"]);
+        const singlePrimaryKeyValue = [primaryKeyValue[0]];
+        streamsTable.selectPrimaryKeyField("user_cars", singlePrimaryKeyValue);
+        streamsTable.checkPrimaryKey("user_cars", singlePrimaryKeyValue);
+
+        // Unchecks:
+        streamsTable.selectPrimaryKeyField("user_cars", singlePrimaryKeyValue);
       });
 
       it("can select multiple primary keys", () => {
-        streamsTable.selectPrimaryKeyField("user_cars", ["car_id", "user_id"]);
+        streamsTable.selectPrimaryKeyField("user_cars", primaryKeyValue);
+        streamsTable.checkPrimaryKey("user_cars", primaryKeyValue);
       });
 
       it("saves", () => {
@@ -287,15 +319,20 @@ describe("Connection - sync modes", () => {
           config: {
             syncMode: "incremental",
             destinationSyncMode: "append_dedup",
-            cursorField: ["created_at"],
-            primaryKey: [["car_id"], ["user_id"]],
+            cursorField: [cursorValue],
+            primaryKey: [primaryKeyValue],
           },
         });
+
+        streamsTable.checkCursorField("user_cars", cursorValue);
+        streamsTable.checkPrimaryKey("user_cars", primaryKeyValue);
       });
     });
   });
 
   describe("Incremental | Append", () => {
+    const cursor = "updated_at";
+
     before(() => {
       streamsTable.searchStream("users");
     });
@@ -320,7 +357,8 @@ describe("Connection - sync modes", () => {
     });
 
     it("selects cursor", () => {
-      streamsTable.selectCursorField("users", "updated_at");
+      streamsTable.selectCursorField("users", cursor);
+      streamsTable.checkCursorField("users", cursor);
     });
 
     it("saves", () => {
@@ -333,6 +371,9 @@ describe("Connection - sync modes", () => {
           cursorField: ["updated_at"],
         },
       });
+
+      streamsTable.checkCursorField("users", cursor);
+      streamsTable.isPrimaryKeyNonExist("public", "users");
     });
   });
 });
