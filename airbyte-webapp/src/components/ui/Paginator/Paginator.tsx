@@ -38,6 +38,7 @@ export const Paginator: React.FC<PaginatorProps> = ({ className, numPages, onPag
     pageClassName={classNames(styles.button, styles.page)}
     breakClassName={classNames(styles.button, styles.break)}
     activeClassName={styles.active}
+    disabledClassName={styles.disabled}
     previousClassName={classNames(styles.button, styles.previous)}
     nextClassName={classNames(styles.button, styles.next)}
   />
