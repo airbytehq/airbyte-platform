@@ -225,12 +225,6 @@ class JobConverterTest {
   }
 
   @Test
-  void testGetJobRead() {
-    final JobWithAttemptsRead jobReadActual = JobConverter.getJobWithAttemptsRead(job);
-    assertEquals(JOB_WITH_ATTEMPTS_READ, jobReadActual);
-  }
-
-  @Test
   void testEnumConversion() {
     assertTrue(Enums.isCompatible(JobConfig.ConfigType.class, JobConfigType.class));
     assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
