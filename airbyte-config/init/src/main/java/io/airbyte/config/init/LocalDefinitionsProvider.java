@@ -29,12 +29,12 @@ final public class LocalDefinitionsProvider implements DefinitionsProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalDefinitionsProvider.class);
 
-  private static final String LOCAL_CONNECTOR_CATALOG = CatalogDefinitionsConfig.getLocalConnectorCatalogPath();
+  private static final String LOCAL_CONNECTOR_CATALOG_PATH = CatalogDefinitionsConfig.getLocalConnectorCatalogPath();
 
   public CombinedConnectorCatalog getLocalDefinitionCatalog() {
     try {
-      final URL url = Resources.getResource(LOCAL_CONNECTOR_CATALOG);
-      LOGGER.info("Loading local connector catalog definitions from {}", url);
+      final URL url = Resources.getResource(LOCAL_CONNECTOR_CATALOG_PATH);
+      LOGGER.info("Loading {} local connector catalog definitions from {}", LOCAL_CONNECTOR_CATALOG_PATH, url);
 
       final String jsonString = Resources.toString(url, StandardCharsets.UTF_8);
       return Jsons.deserialize(jsonString, CombinedConnectorCatalog.class);

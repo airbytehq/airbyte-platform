@@ -5,7 +5,6 @@
 package io.airbyte.config;
 
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
-import java.util.Optional;
 
 public class CatalogDefinitionsConfig {
 
@@ -14,8 +13,7 @@ public class CatalogDefinitionsConfig {
    * Airbyte developers to test out changes to the catalog locally.
    */
   public static String getLocalConnectorCatalogPath() {
-    final Optional<String> customCatalogPath = new EnvConfigs().getLocalCatalogPath();
-    return customCatalogPath.orElse(AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG);
+    return new EnvConfigs().getLocalCatalogPath();
   }
 
   /**
@@ -26,7 +24,7 @@ public class CatalogDefinitionsConfig {
    * file in the event we are using a custom catalog path.
    */
   public static String getLocalCatalogWritePath() {
-    return AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG;
+    return AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH;
   }
 
 }
