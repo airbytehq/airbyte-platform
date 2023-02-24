@@ -3,6 +3,7 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { LabeledSwitch } from "components";
+import { FlexContainer } from "components/ui/Flex";
 
 import { FormBaseItem } from "core/form/types";
 
@@ -16,6 +17,20 @@ interface PropertySectionProps {
   path?: string;
   disabled?: boolean;
 }
+
+const ErrorMessage = ({ error, property }: { error?: string; property: FormBaseItem }) => {
+  if (!error) {
+    return null;
+  }
+  return (
+    <PropertyError>
+      <FormattedMessage
+        id={error}
+        values={error === "form.pattern.error" ? { pattern: property.pattern } : undefined}
+      />
+    </PropertyError>
+  );
+};
 
 export const PropertySection: React.FC<PropertySectionProps> = ({ property, path, disabled }) => {
   const propertyPath = path ?? property.path;
@@ -48,28 +63,19 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
   const hasError = !!meta.error && meta.touched;
 
   const errorMessage = Array.isArray(meta.error) ? (
-    <>
-      {meta.error.map((error, index) => {
-        const errorValues = error === "form.pattern.error" ? { pattern: property.pattern } : undefined;
-        return (
-          <React.Fragment key={index}>
-            <FormattedMessage id={error} values={errorValues} />
-            <br />
-          </React.Fragment>
-        );
+    <FlexContainer direction="column" gap="none">
+      {meta.error.filter(Boolean).map((error, index) => {
+        return <ErrorMessage key={index} error={error} property={property} />;
       })}
-    </>
+    </FlexContainer>
   ) : (
-    <FormattedMessage
-      id={meta.error}
-      values={meta.error === "form.pattern.error" ? { pattern: property.pattern } : undefined}
-    />
+    <ErrorMessage error={meta.error} property={property} />
   );
 
   return (
     <PropertyLabel className={styles.defaultLabel} property={property} label={labelText}>
       <Control property={property} name={propertyPath} disabled={disabled} error={hasError} />
-      {hasError && <PropertyError>{errorMessage}</PropertyError>}
+      {hasError && errorMessage}
     </PropertyLabel>
   );
 };
