@@ -7,6 +7,9 @@ import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { DropdownMenu } from "components/ui/DropdownMenu";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud";
 import { DbtCloudJob, isSameJob } from "packages/cloud/services/dbtCloud";
@@ -61,25 +64,32 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                     title={
                       <span className={styles.cardTitle}>
                         <FormattedMessage id="connection.dbtCloudJobs.cardTitle" />
-                        <DropdownMenu
-                          options={
-                            availableDbtCloudJobs
+                        {availableDbtCloudJobs.lenght > 0 ? (
+                          <DropdownMenu
+                            options={availableDbtCloudJobs
                               .filter((remoteJob) => !values.jobs.some((savedJob) => isSameJob(remoteJob, savedJob)))
-                              .map((job) => ({ displayName: job.jobName, value: job })) ?? {
-                              displayName: <FormattedMessage id="connection.dbtCloudJobs.noJobsFoundForAccount" />,
-                              value: null,
-                            }
-                          }
-                          onChange={(selection) => {
-                            push(selection.value);
-                          }}
-                        >
-                          {() => (
-                            <Button variant="secondary" icon={<FontAwesomeIcon icon={faPlus} />}>
-                              <FormattedMessage id="connection.dbtCloudJobs.addJob" />
-                            </Button>
-                          )}
-                        </DropdownMenu>
+                              .map((job) => ({ displayName: job.jobName, value: job }))}
+                            onChange={(selection) => {
+                              push(selection.value);
+                            }}
+                          >
+                            {() => (
+                              <Button variant="secondary" icon={<FontAwesomeIcon icon={faPlus} />}>
+                                <FormattedMessage id="connection.dbtCloudJobs.addJob" />
+                              </Button>
+                            )}
+                          </DropdownMenu>
+                        ) : (
+                          <FlexContainer alignItems="center">
+                            <Tooltip
+                              control={
+                                <Text color="grey">
+                                  <FormattedMessage id="connection.dbtCloudJobs.noJobsFoundForAccount" />
+                                </Text>
+                              }
+                            />
+                          </FlexContainer>
+                        )}
                       </span>
                     }
                   >
