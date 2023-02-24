@@ -25,6 +25,7 @@ import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import ConnectionCell from "./ConnectionCell";
 import UsageCell from "./UsageCell";
 import styles from "./UsagePerConnectionTable.module.scss";
+import { BillingPageQueryParams } from "../BillingPage";
 
 interface UsagePerConnectionTableProps {
   creditConsumption: CreditConsumptionByConnector[];
@@ -40,7 +41,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
   const isBillingInsightsEnabled = useExperiment("billing.billingInsights", false);
   const { workspaceId } = useCurrentWorkspace();
 
-  const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
+  const query = useQuery<BillingPageQueryParams>();
 
   const navigate = useNavigate();
   const { sourceDefinitions } = useSourceDefinitionList();

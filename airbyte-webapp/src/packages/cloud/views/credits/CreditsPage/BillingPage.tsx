@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
+import { SortOrderEnum } from "components/EntityTable/types";
 import { PageHeader } from "components/ui/PageHeader";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
@@ -16,6 +17,11 @@ import styles from "./BillingPage.module.scss";
 import CreditsUsage from "./components/CreditsUsage";
 import { EmailVerificationHint } from "./components/EmailVerificationHint";
 import RemainingCredits from "./components/RemainingCredits";
+
+export interface BillingPageQueryParams {
+  sortBy?: string;
+  order?: SortOrderEnum;
+}
 
 export const BillingPage: React.FC = () => {
   const { emailVerified } = useAuthService();
