@@ -210,7 +210,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
     }
 
     return columns;
-  }, [columnHelper, sortBy, sortOrder, onSortClick, entity, allowAutoDetectSchema]);
+  }, [columnHelper, streamCentricUIEnabled, sortBy, sortOrder, entity, onSortClick, allowAutoDetectSchema]);
 
   return <NextTable columns={columns} data={sortingData} onClickRow={onClickRow} testId="connectionsTable" />;
 };

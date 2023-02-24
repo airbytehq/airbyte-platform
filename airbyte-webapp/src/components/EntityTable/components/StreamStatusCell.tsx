@@ -8,6 +8,11 @@ import { WebBackendConnectionRead } from "core/request/AirbyteClient";
 import { useGetConnection } from "hooks/services/useConnectionHook";
 
 import styles from "./StreamStatusCell.module.scss";
+import { Checkmark } from "./StreamStatusIcons/Checkmark";
+import { Error } from "./StreamStatusIcons/Error";
+import { Inactive } from "./StreamStatusIcons/Inactive";
+import { Late } from "./StreamStatusIcons/Late";
+import { Syncing } from "./StreamStatusIcons/Syncing";
 import { ConnectionTableDataItem } from "../types";
 
 type StatusType = "On Track" | "Disabled" | "Error" | "Behind";
@@ -17,6 +22,13 @@ const statusMap: Readonly<Record<StatusType, string>> = {
   Disabled: styles.disabled,
   Error: styles.error,
   Behind: styles.behind,
+};
+
+const iconMap: Readonly<Record<StatusType, React.ReactNode>> = {
+  "On Track": <Checkmark />,
+  Disabled: <Inactive />,
+  Error: <Error />,
+  Behind: <Late />,
 };
 
 const getStatusType = (connection: WebBackendConnectionRead): StatusType => {
@@ -54,11 +66,18 @@ const StreamStatusCellTooltipContent = ({
       <div className={styles.bar}>
         <div className={filling} />
       </div>
-      <div className={styles.tooltipText}>
-        <div>
-          {connection.syncCatalog.streams.length} {statusType}
+      <div className={styles.tooltipContent}>
+        <div className={styles.tooltipText}>
+          {iconMap[statusType]}
+          <b>{connection.syncCatalog.streams.length}</b> {statusType}
         </div>
-        <div>{connection.isSyncing ? "Syncing" : null}</div>
+        <div className={styles.syncing}>
+          {connection.isSyncing ? (
+            <>
+              <Syncing /> {connection.syncCatalog.streams.length}
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -70,6 +89,7 @@ export const StreamsStatusCell: React.FC<CellContext<ConnectionTableDataItem, un
   const filling = classNames(styles.filling, statusMap[statusType]);
   return (
     <Tooltip
+      theme="light"
       control={
         <div className={styles.bar}>
           <div className={filling} />

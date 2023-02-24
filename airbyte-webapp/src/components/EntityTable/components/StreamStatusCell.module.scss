@@ -40,12 +40,42 @@
   justify-content: space-between;
 
   .bar {
-    width: 80%;
+    width: 75%;
   }
 
-  .tooltipText {
+  .tooltipContent {
     display: flex;
-    flex-direction: row;
-    justify-content: space-around;
+    align-items: center;
+    justify-content: space-between;
+    width: 65%;
+
+    > div {
+      flex: 1 1 75px;
+    }
+
+    .tooltipText {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(359deg);
+  }
+}
+
+.syncing {
+  > svg {
+    animation-name: spin;
+    animation-duration: 2000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
   }
 }

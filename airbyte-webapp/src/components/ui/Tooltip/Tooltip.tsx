@@ -54,7 +54,7 @@ export const Tooltip: React.FC<React.PropsWithChildren<TooltipProps>> = (props) 
     };
   }, [isMouseOver]);
 
-  const canShowTooltip = useMemo(() => isVisible && !disabled, [disabled, isVisible]);
+  const canShowTooltip = useMemo(() => (isVisible && !disabled) || true, [disabled, isVisible]);
 
   const onMouseOver = () => {
     setIsMouseOver(true);
