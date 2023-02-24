@@ -129,7 +129,7 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final byte[] authorization = Base64.getEncoder()
@@ -166,8 +166,8 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
       throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
     }
     if (data.has("expires_in")) {
-      Instant expires_in = Instant.now(this.clock).plusSeconds(data.get("expires_in").asInt());
-      result.put("token_expiry_date", expires_in.toString());
+      final Instant expiresIn = Instant.now(this.clock).plusSeconds(data.get("expires_in").asInt());
+      result.put("token_expiry_date", expiresIn.toString());
     } else {
       throw new IOException(String.format("Missing 'expires_in' in query params from %s", accessTokenUrl));
     }

@@ -28,7 +28,7 @@ import org.slf4j.MDC;
  */
 public class MdcScope implements AutoCloseable {
 
-  public final static MdcScope.Builder DEFAULT_BUILDER = new Builder();
+  public static final MdcScope.Builder DEFAULT_BUILDER = new Builder();
 
   private final Map<String, String> originalContextMap;
 
@@ -43,33 +43,58 @@ public class MdcScope implements AutoCloseable {
     MDC.setContextMap(originalContextMap);
   }
 
+  /**
+   * Builder for an MdcScope.
+   */
   public static class Builder {
 
     private Optional<String> maybeLogPrefix = Optional.empty();
     private Optional<Color> maybePrefixColor = Optional.empty();
     private boolean simple = true;
 
+    /**
+     * Set the prefix for log lines in this scope.
+     *
+     * @param logPrefix prefix for log lines
+     * @return the builder
+     */
     public Builder setLogPrefix(final String logPrefix) {
       this.maybeLogPrefix = Optional.ofNullable(logPrefix);
 
       return this;
     }
 
+    /**
+     * Set the color for log lines in this scope.
+     *
+     * @param color of log line
+     * @return the builder
+     */
     public Builder setPrefixColor(final Color color) {
       this.maybePrefixColor = Optional.ofNullable(color);
 
       return this;
     }
 
-    // Use this to disable simple logging for things in an MdcScope.
-    // If you're using this, you're probably starting to use MdcScope outside of container labelling.
-    // If so, consider changing the defaults / builder / naming.
+    /**
+     * Disable simple logging for things in an MdcScope. If you're using this, you're probably starting
+     * to use MdcScope outside of container labelling. If so, consider changing the defaults / builder /
+     * naming.
+     *
+     * @param simple whether to disable simply logging. it is on by default
+     * @return the builder
+     */
     public Builder setSimple(final boolean simple) {
       this.simple = simple;
 
       return this;
     }
 
+    /**
+     * Build the MdcScope.
+     *
+     * @return the MdcScope
+     */
     public MdcScope build() {
       final Map<String, String> extraMdcEntries = new HashMap<>();
 

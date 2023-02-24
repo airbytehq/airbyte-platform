@@ -23,12 +23,14 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.Map;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/source_oauths")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class SourceOauthApiController implements SourceOauthApi {
 
   private final OAuthHandler oAuthHandler;
 
+  @SuppressWarnings("ParameterName")
   public SourceOauthApiController(final OAuthHandler oAuthHandler) {
     this.oAuthHandler = oAuthHandler;
   }

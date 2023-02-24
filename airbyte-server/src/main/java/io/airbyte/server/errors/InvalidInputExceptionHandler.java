@@ -16,6 +16,9 @@ import io.micronaut.http.server.exceptions.ExceptionHandler;
 import jakarta.inject.Singleton;
 import javax.validation.ConstraintViolationException;
 
+/**
+ * Invalid value or values in input.
+ */
 // https://www.baeldung.com/jersey-bean-validation#custom-exception-handler
 // handles exceptions related to the request body not matching the openapi config.
 @Produces

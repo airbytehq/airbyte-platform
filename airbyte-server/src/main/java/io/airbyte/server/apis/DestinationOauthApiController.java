@@ -23,6 +23,7 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.Map;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/destination_oauths")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -30,6 +31,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
 
   private final OAuthHandler oAuthHandler;
 
+  @SuppressWarnings("ParameterName")
   public DestinationOauthApiController(final OAuthHandler oAuthHandler) {
     this.oAuthHandler = oAuthHandler;
   }
@@ -52,6 +54,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
     return ApiHelper.execute(() -> oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest));
   }
 
+  @SuppressWarnings("LineLength")
   @Post("/oauth_params/create")
   @Secured({ADMIN})
   @ExecuteOn(TaskExecutors.IO)

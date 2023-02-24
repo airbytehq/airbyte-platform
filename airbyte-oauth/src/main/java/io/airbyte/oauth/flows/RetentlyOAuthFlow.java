@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Retently Oauth.
+ */
 public class RetentlyOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://app.retently.com/api/oauth/authorize";

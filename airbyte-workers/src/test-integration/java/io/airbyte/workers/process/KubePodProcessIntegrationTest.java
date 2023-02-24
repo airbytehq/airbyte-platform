@@ -72,7 +72,7 @@ import org.slf4j.LoggerFactory;
 @Timeout(value = 6,
          unit = TimeUnit.MINUTES)
 @MicronautTest
-public class KubePodProcessIntegrationTest {
+class KubePodProcessIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(KubePodProcessIntegrationTest.class);
 
@@ -88,14 +88,14 @@ public class KubePodProcessIntegrationTest {
   private static final ResourceRequirements DEFAULT_RESOURCE_REQUIREMENTS = new WorkerConfigs(new EnvConfigs()).getResourceRequirements();
 
   @BeforeAll
-  public static void init() throws Exception {
+  static void init() throws Exception {
     // todo: should we offer port pairs to prevent deadlock? can create test here with fewer to get this
     openPorts = new ArrayList<>(getOpenPorts(30));
     KubePortManagerSingleton.init(new HashSet<>(openPorts.subList(1, openPorts.size() - 1)));
   }
 
   @BeforeEach
-  public void setup() throws Exception {
+  void setup() throws Exception {
     heartbeatUrl = getHost() + ":" + heartbeatPort;
 
     fabricClient = new DefaultKubernetesClient();
@@ -107,8 +107,8 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testInitKubePortManagerSingletonTwice() throws Exception {
-    /**
+  void testInitKubePortManagerSingletonTwice() throws Exception {
+    /*
      * Test init KubePortManagerSingleton twice: 1. with same ports should succeed 2. with different
      * port should fail
      *
@@ -135,7 +135,7 @@ public class KubePodProcessIntegrationTest {
    * flakiness.
    */
   @RetryingTest(3)
-  public void testConcurrentRunning() throws Exception {
+  void testConcurrentRunning() throws Exception {
     final var totalJobs = 5;
 
     final var pool = Executors.newFixedThreadPool(totalJobs);
@@ -167,7 +167,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testSuccessfulSpawning() throws Exception {
+  void testSuccessfulSpawning() throws Exception {
     // start a finite process
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess("echo hi; sleep 1; echo hi2");
@@ -180,7 +180,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testLongSuccessfulSpawning() throws Exception {
+  void testLongSuccessfulSpawning() throws Exception {
     // start a finite process
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess("echo hi; sleep 10; echo hi2");
@@ -193,7 +193,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RepeatedTest(5)
-  public void testPortsReintroducedIntoPoolOnlyOnce() throws Exception {
+  void testPortsReintroducedIntoPoolOnlyOnce() throws Exception {
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
 
     // run a finite process
@@ -252,7 +252,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testSuccessfulSpawningWithQuotes() throws Exception {
+  void testSuccessfulSpawningWithQuotes() throws Exception {
     // start a finite process
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess("echo \"h\\\"i\"; sleep 1; echo hi2");
@@ -267,7 +267,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testEnvMapSet() throws Exception {
+  void testEnvMapSet() throws Exception {
     // start a finite process
     final Process process = getProcess("echo ENV_VAR_1=$ENV_VAR_1");
     final var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -280,7 +280,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testPipeInEntrypoint() throws Exception {
+  void testPipeInEntrypoint() throws Exception {
     // start a process that has a pipe in the entrypoint
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess("echo hi | cat");
@@ -294,7 +294,7 @@ public class KubePodProcessIntegrationTest {
 
   @RetryingTest(3)
   @Timeout(20)
-  public void testDeletingPodImmediatelyAfterCompletion() throws Exception {
+  void testDeletingPodImmediatelyAfterCompletion() throws Exception {
     // start a process that requests
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final var uuid = UUID.randomUUID();
@@ -318,7 +318,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testExitCodeRetrieval() throws Exception {
+  void testExitCodeRetrieval() throws Exception {
     // start a process that requests
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess("exit 10");
@@ -331,7 +331,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testMissingEntrypoint() throws WorkerException, InterruptedException {
+  void testMissingEntrypoint() throws WorkerException, InterruptedException {
     // start a process with an entrypoint that doesn't exist
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
     final Process process = getProcess(null);
@@ -344,7 +344,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testKillingWithoutHeartbeat() throws Exception {
+  void testKillingWithoutHeartbeat() throws Exception {
     heartbeatUrl = "invalid_host";
 
     fabricClient = new DefaultKubernetesClient();
@@ -368,7 +368,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testExitValueWaitsForMainToTerminate() throws Exception {
+  void testExitValueWaitsForMainToTerminate() throws Exception {
     // start a long running main process
     final Process process = getProcess("sleep 2; exit 13;");
 
@@ -384,7 +384,7 @@ public class KubePodProcessIntegrationTest {
   }
 
   @RetryingTest(3)
-  public void testCopyLargeFiles() throws Exception {
+  void testCopyLargeFiles() throws Exception {
     final int numFiles = 1;
     final int numLinesPerFile = 200000;
 

@@ -6,11 +6,16 @@ package io.airbyte.config;
 
 import io.airbyte.commons.constants.AirbyteCatalogConstants;
 
+/**
+ * Catalog definitions config.
+ */
 public class CatalogDefinitionsConfig {
 
   /**
    * This method is used to get the path to the local connector catalog. Its override is intended for
-   * Airbyte developers to test out changes to the catalog locally.
+   * Airbyte developers to test out changes to the catalog locally
+   *
+   * @return path to connector catalog
    */
   public static String getLocalConnectorCatalogPath() {
     return new EnvConfigs().getLocalCatalogPath();

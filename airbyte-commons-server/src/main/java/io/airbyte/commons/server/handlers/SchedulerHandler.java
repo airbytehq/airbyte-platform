@@ -84,6 +84,10 @@ import java.util.UUID;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 @Slf4j
 public class SchedulerHandler {
@@ -365,6 +369,7 @@ public class SchedulerHandler {
     return specRead;
   }
 
+  @SuppressWarnings("LineLength")
   public DestinationDefinitionSpecificationRead getDestinationSpecification(
                                                                             final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {

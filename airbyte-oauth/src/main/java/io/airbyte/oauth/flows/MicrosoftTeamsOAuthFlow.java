@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Microsoft Teams OAuth flow.
+ */
 public class MicrosoftTeamsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String fieldName = "tenant_id";
@@ -25,7 +28,7 @@ public class MicrosoftTeamsOAuthFlow extends BaseOAuth2Flow {
   }
 
   public MicrosoftTeamsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier, TOKEN_REQUEST_CONTENT_TYPE.JSON);
+    super(configRepository, httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   /**

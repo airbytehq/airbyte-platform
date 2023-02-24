@@ -7,6 +7,9 @@ package io.airbyte.config.persistence;
 import io.airbyte.config.AirbyteConfig;
 import java.util.UUID;
 
+/**
+ * Exception when the requested config cannot be found.
+ */
 public class ConfigNotFoundException extends Exception {
 
   private static final long serialVersionUID = 836273627;

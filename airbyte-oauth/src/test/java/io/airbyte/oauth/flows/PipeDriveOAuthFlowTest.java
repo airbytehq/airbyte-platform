@@ -7,6 +7,7 @@ package io.airbyte.oauth.flows;
 import io.airbyte.oauth.BaseOAuthFlow;
 import java.util.List;
 
+@SuppressWarnings("MissingJavadocType")
 public class PipeDriveOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

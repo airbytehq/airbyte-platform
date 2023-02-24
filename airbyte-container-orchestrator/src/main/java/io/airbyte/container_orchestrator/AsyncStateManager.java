@@ -73,6 +73,8 @@ public class AsyncStateManager {
   }
 
   /**
+   * Get output.
+   *
    * @return the output stored in the success file. This can be an empty string.
    * @throws IllegalArgumentException if no success file exists
    */
@@ -86,7 +88,7 @@ public class AsyncStateManager {
 
   /**
    * IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
-   * version is deployed!
+   * version is deployed.
    */
   @VisibleForTesting
   String getDocumentStoreKey(final AsyncKubePodStatus status) {
