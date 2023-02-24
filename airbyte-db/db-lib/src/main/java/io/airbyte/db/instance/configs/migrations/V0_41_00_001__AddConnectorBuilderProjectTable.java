@@ -33,9 +33,8 @@ public class V0_41_00_001__AddConnectorBuilderProjectTable extends BaseJavaMigra
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      addConnectorBuilderProjectTable(ctx);
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    addConnectorBuilderProjectTable(ctx);
   }
 
   private static void addConnectorBuilderProjectTable(final DSLContext ctx) {
