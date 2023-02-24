@@ -60,6 +60,7 @@ create table "public"."actor_definition" (
   "normalization_integration_type" varchar(255),
   "allowed_hosts" jsonb,
   "suggested_streams" jsonb,
+  "max_seconds_between_messages" int,
   constraint "actor_definition_pkey"
     primary key ("id")
 );
@@ -129,7 +130,7 @@ create table "public"."connection_operation" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connection_operation_pkey"
     primary key ("id", "connection_id", "operation_id")
-);
+}
 create table "public"."connector_builder_project"(
   "id" uuid not null,
   "workspace_id" uuid not null,
@@ -281,4 +282,5 @@ create index "connection_destination_id_idx" on "public"."connection"("destinati
 create index "connection_source_id_idx" on "public"."connection"("source_id" asc);
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
+create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
