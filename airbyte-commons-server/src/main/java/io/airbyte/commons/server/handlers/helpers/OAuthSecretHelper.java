@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -40,13 +41,9 @@ public class OAuthSecretHelper {
     for (final Entry<String, List<String>> entry : oAuthPaths.entrySet()) {
       // Key where we need to stuff things
       final String key = entry.getKey();
-      final List<String> jsonPathArray = entry.getValue();
-      String jsonPointer = "/" + String.join("/", jsonPathArray);
-      // TODO - remove debug
-      System.out.println("Key: " + key);
-      System.out.println("val: " + hydratedSecret.get(key));
-      System.out.println("JsonPointer: " + jsonPointer);
-      connectionConfiguration.withObject(jsonPointer).set(key, (JsonNode) hydratedSecret.get(key));
+      final List<String> jsonPathList = entry.getValue();
+
+      Jsons.replaceNestedString(newConnectionConfiguration, jsonPathList, String.valueOf(hydratedSecret.get(key)));
     }
     return newConnectionConfiguration;
   }
