@@ -20,7 +20,6 @@ declare global {
     FIREBASE_AUTH_EMULATOR_HOST?: string;
     CLOUD_API_URL?: string;
     CLOUD_PUBLIC_API_URL?: string;
-    REACT_APP_SENTRY_DSN?: string;
   }
 }
 
@@ -50,5 +49,4 @@ export interface AirbyteWebappConfig {
     tag?: string;
   };
   webappTag?: string;
-  sentryDsn?: string;
 }

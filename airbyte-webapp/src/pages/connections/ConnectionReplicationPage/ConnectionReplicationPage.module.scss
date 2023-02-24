@@ -1,9 +1,27 @@
+@use "scss/colors";
 @use "scss/variables";
 
+$container-padding-bottom: 28px; // (intercom height + margins (88px) - button height (32px)) / 2
+
 .content {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+
   > form {
     display: flex;
     flex-direction: column;
-    gap: variables.$spacing-md;
+    flex: 1;
   }
+}
+
+.editControlsContainer {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  margin-left: -#{variables.$spacing-xl};
+  padding: variables.$height-soft-edge variables.$spacing-xl $container-padding-bottom;
+  width: calc(100% + variables.$spacing-xl * 2);
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(248, 248, 250, 0%), colors.$grey-50 variables.$height-soft-edge);
 }
