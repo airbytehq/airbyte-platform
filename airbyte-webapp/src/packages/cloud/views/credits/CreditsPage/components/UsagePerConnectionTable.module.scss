@@ -25,6 +25,14 @@ th.header {
   }
 }
 
+.header__sorted {
+  color: colors.$grey-600 !important;
+}
+
+.nonSortableHeader {
+  margin-left: variables.$spacing-sm;
+}
+
 .usageValue {
   padding-right: variables.$spacing-md;
   min-width: 53px;
