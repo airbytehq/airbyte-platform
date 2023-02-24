@@ -207,7 +207,7 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
             cell: () => (
               <FlexContainer className={styles.cell} alignItems="center">
                 <Text size="sm" className={styles.cellText}>
-                  Every 6 hours
+                  PLACEHOLDER!!
                 </Text>
               </FlexContainer>
             ),

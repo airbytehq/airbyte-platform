@@ -15,7 +15,6 @@ export interface CardProps {
   lightPadding?: boolean;
   withPadding?: boolean;
   roundedBottom?: boolean;
-  noLine?: boolean;
 }
 
 export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
@@ -27,7 +26,6 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
   lightPadding,
   withPadding,
   roundedBottom,
-  noLine,
 }) => {
   return (
     <div
@@ -42,7 +40,6 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
             [styles.lightPadding]: lightPadding || !children,
             [styles.roundedBottom]: roundedBottom,
             [styles.withDescription]: description,
-            [styles.noLine]: noLine,
           })}
         >
           <Heading as="h5" className={classNames(styles.title)}>
