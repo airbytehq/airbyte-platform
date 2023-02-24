@@ -8,6 +8,8 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DEFINITI
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DEFINITION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
+import com.amazonaws.util.json.Jackson;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +34,9 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
+import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
+import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.oauth.OAuthFlowImplementation;
 import io.airbyte.oauth.OAuthImplementationFactory;
@@ -61,15 +66,18 @@ public class OAuthHandler {
   private final OAuthImplementationFactory oAuthImplementationFactory;
   private final TrackingClient trackingClient;
   private final SecretsRepositoryReader secretsRepositoryReader;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
 
   public OAuthHandler(final ConfigRepository configRepository,
                       final HttpClient httpClient,
                       final TrackingClient trackingClient,
-                      final SecretsRepositoryReader secretsRepositoryReader) {
+                      final SecretsRepositoryReader secretsRepositoryReader,
+                      final SecretsRepositoryWriter secretsRepositoryWriter) {
     this.configRepository = configRepository;
     this.oAuthImplementationFactory = new OAuthImplementationFactory(configRepository, httpClient);
     this.trackingClient = trackingClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
   }
 
   public OAuthConsentRead getSourceOAuthConsent(final SourceOauthConsentRequest sourceOauthConsentRequest)
@@ -166,7 +174,18 @@ public class OAuthHandler {
     return result;
   }
 
-  public Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
+  public Map<String, Object> completeSourceOAuthHandleReturnSecret(final CompleteSourceOauthRequest completeSourceOauthRequest)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final Map<String, Object> oAuthTokens = completeSourceOAuth(completeSourceOauthRequest);
+    if (completeSourceOauthRequest.getReturnSecretCoordinate()) {
+      return writeOAuthResponseSecret(completeSourceOauthRequest.getWorkspaceId(), oAuthTokens);
+    } else {
+      return oAuthTokens;
+    }
+  }
+
+  @VisibleForTesting
+  protected Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeSourceOauthRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         completeSourceOauthRequest.getSourceDefinitionId());
@@ -300,8 +319,7 @@ public class OAuthHandler {
 
     final JsonNode oAuthInputConfigurationFromDB = getOAuthInputConfiguration(hydratedSourceConnectionConfiguration, fieldsToGet);
 
-    return getOauthFromDBIfNeeded(oAuthInputConfigurationFromDB,
-        oAuthInputConfiguration);
+    return getOauthFromDBIfNeeded(oAuthInputConfigurationFromDB, oAuthInputConfiguration);
   }
 
   private Map<String, Object> generateSourceMetadata(final UUID sourceDefinitionId)
@@ -359,6 +377,40 @@ public class OAuthHandler {
     });
 
     return Jsons.jsonNode(result);
+  }
+
+  /**
+   * Given an OAuth response, writes a secret and returns the secret Coordinate in the appropriate
+   * format.
+   * <p>
+   * Unlike our regular source creation flow, the OAuth credentials created and stored this way will
+   * be stored in a singular secret as a string. When these secrets are used, the user will be
+   * expected to use the specification to rehydrate the connection configuration with the secret
+   * values prior to saving a source/destination.
+   * <p>
+   * The singular secret was chosen to optimize UX for public API consumers (passing them one secret
+   * to keep track of > passing them a set of secrets).
+   * <p>
+   * See https://github.com/airbytehq/airbyte/pull/22151#discussion_r1104856648 for full discussion.
+   */
+  public Map<String, Object> writeOAuthResponseSecret(final UUID workspaceId, final Map<String, Object> payload) {
+
+    try {
+      final String payloadString = Jackson.getObjectMapper().writeValueAsString(payload);
+      final SecretCoordinate secretCoordinate = secretsRepositoryWriter.storeSecret(generateOAuthSecretCoordinate(workspaceId), payloadString);
+      return Map.of("secretId", secretCoordinate.getFullCoordinate());
+
+    } catch (final JsonProcessingException e) {
+      throw new RuntimeException("Json object could not be written to string.", e);
+    }
+  }
+
+  /**
+   * Generate OAuthSecretCoordinates. Always assume V1 and do not support secret updates
+   */
+  private SecretCoordinate generateOAuthSecretCoordinate(final UUID workspaceId) {
+    final String coordinateBase = SecretsHelpers.getCoordinatorBase("airbyte_oauth_workspace_", workspaceId, UUID::randomUUID);
+    return new SecretCoordinate(coordinateBase, 1);
   }
 
 }
