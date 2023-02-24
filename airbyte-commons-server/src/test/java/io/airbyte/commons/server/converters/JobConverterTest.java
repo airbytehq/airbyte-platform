@@ -170,13 +170,15 @@ class JobConverterTest {
       .job(JOB_INFO.getJob())
       .attempts(JOB_INFO.getAttempts().stream().map(AttemptInfoRead::getAttempt).collect(Collectors.toList()));
 
+  private static final FailureReason FAILURE_REASON = new FailureReason()
+        .withFailureOrigin(FailureOrigin.SOURCE)
+        .withFailureType(FailureType.SYSTEM_ERROR)
+        .withExternalMessage(FAILURE_EXTERNAL_MESSAGE)
+        .withStacktrace(FAILURE_STACKTRACE)
+        .withTimestamp(FAILURE_TIMESTAMP);
+
   private static final io.airbyte.config.AttemptFailureSummary FAILURE_SUMMARY = new io.airbyte.config.AttemptFailureSummary()
-      .withFailures(Lists.newArrayList(new FailureReason()
-          .withFailureOrigin(FailureOrigin.SOURCE)
-          .withFailureType(FailureType.SYSTEM_ERROR)
-          .withExternalMessage(FAILURE_EXTERNAL_MESSAGE)
-          .withStacktrace(FAILURE_STACKTRACE)
-          .withTimestamp(FAILURE_TIMESTAMP)))
+      .withFailures(Lists.newArrayList(FAILURE_REASON))
       .withPartialSuccess(PARTIAL_SUCCESS);
 
   @BeforeEach
@@ -274,6 +276,11 @@ class JobConverterTest {
         CREATED_AT);
 
     assertNull(jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
+  }
+
+  @Test
+  void testSynchronousJobRead() {
+    // TODO
   }
 
 }
