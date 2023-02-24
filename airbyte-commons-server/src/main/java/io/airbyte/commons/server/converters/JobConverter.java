@@ -211,15 +211,7 @@ public class JobConverter {
     }
 
     return new AttemptFailureSummary()
-        .failures(failureSummary.getFailures().stream().map(failure -> new FailureReason()
-            .failureOrigin(Enums.convertTo(failure.getFailureOrigin(), FailureOrigin.class))
-            .failureType(Enums.convertTo(failure.getFailureType(), FailureType.class))
-            .externalMessage(failure.getExternalMessage())
-            .internalMessage(failure.getInternalMessage())
-            .stacktrace(failure.getStacktrace())
-            .timestamp(failure.getTimestamp())
-            .retryable(failure.getRetryable()))
-            .collect(Collectors.toList()))
+        .failures(failureSummary.getFailures().stream().map(JobConverter::getFailureReason).collect(Collectors.toList()))
         .partialSuccess(failureSummary.getPartialSuccess());
   }
 
@@ -229,6 +221,17 @@ public class JobConverter {
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public static FailureReason getFailureReason(final io.airbyte.config.FailureReason failureReason) {
+    return new FailureReason()
+        .failureOrigin(Enums.convertTo(failureReason.getFailureOrigin(), FailureOrigin.class))
+        .failureType(Enums.convertTo(failureReason.getFailureType(), FailureType.class))
+        .externalMessage(failureReason.getExternalMessage())
+        .internalMessage(failureReason.getInternalMessage())
+        .stacktrace(failureReason.getStacktrace())
+        .timestamp(failureReason.getTimestamp())
+        .retryable(failureReason.getRetryable());
   }
 
   public SynchronousJobRead getSynchronousJobRead(final SynchronousResponse<?> response) {
