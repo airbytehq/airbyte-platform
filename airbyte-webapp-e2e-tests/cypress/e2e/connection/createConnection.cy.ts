@@ -35,6 +35,10 @@ import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObje
 
 const streamsTable = new NewStreamsTablePageObject();
 
+const dropTables = () => {
+  runDbQuery(dropUsersTableQuery, dropDummyTablesQuery(20));
+};
+
 // TODO: Enable this test when the new stream table will be turned on
 describe("Connection - Create new connection", () => {
   let source: Source;
@@ -42,12 +46,10 @@ describe("Connection - Create new connection", () => {
   let connectionId: string;
 
   before(() => {
-    initialSetupCompleted();
-    runDbQuery(dropUsersTableQuery);
-    runDbQuery(dropDummyTablesQuery(20));
+    dropTables();
+    runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
 
-    runDbQuery(createUsersTableQuery);
-    runDbQuery(createDummyTablesQuery(20));
+    initialSetupCompleted();
 
     requestWorkspaceId().then(() => {
       const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Stream table Source"));
@@ -72,6 +74,8 @@ describe("Connection - Create new connection", () => {
     if (destination) {
       requestDeleteDestination(destination.destinationId);
     }
+
+    dropTables();
   });
 
   describe("Set up source and destination", () => {
