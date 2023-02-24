@@ -7,7 +7,7 @@ const toggleInput = "input[data-testid='toggle']";
 const streamNameInput = "input[name='streamName']";
 const streamUrlPath = "input[name='urlPath']";
 const recordSelectorInput = "[data-testid='tag-input'] input";
-const authType = "[data-testid='global.authenticator.type']";
+const authType = "[data-testid='global.authenticator']";
 const testInputsButton = "[data-testid='test-inputs']";
 const limitInput = "[name='streams[0].paginator.strategy.page_size']";
 const injectOffsetInto = "[data-testid$='paginator.pageTokenOption.inject_into']";
