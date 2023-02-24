@@ -5,6 +5,7 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -102,6 +103,7 @@ class GenerateInputActivityTest {
     job = mock(Job.class);
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
+    when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
 
     final DestinationConnection destinationConnection = new DestinationConnection()
         .withDestinationId(DESTINATION_ID)
