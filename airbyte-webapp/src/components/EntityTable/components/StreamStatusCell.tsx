@@ -32,6 +32,7 @@ const iconMap: Readonly<Record<StatusType, React.ReactNode>> = {
 };
 
 const getStatusType = (connection: WebBackendConnectionRead): StatusType => {
+  // connection.syncCatalog.streams[0].config?.selected
   if (connection.status === "active" && connection.latestSyncJobStatus !== "failed") {
     if (
       connection.scheduleType !== "manual" &&
@@ -67,17 +68,14 @@ const StreamStatusCellTooltipContent = ({
         <div className={filling} />
       </div>
       <div className={styles.tooltipContent}>
-        <div className={styles.tooltipText}>
-          {iconMap[statusType]}
-          <b>{connection.syncCatalog.streams.length}</b> {statusType}
+        <div className={styles.streamsDetail}>
+          {iconMap[statusType]} <b>{connection.syncCatalog.streams.length}</b> {statusType}
         </div>
-        <div className={styles.syncing}>
-          {connection.isSyncing ? (
-            <>
-              <Syncing /> {connection.syncCatalog.streams.length}
-            </>
-          ) : null}
-        </div>
+        {connection.isSyncing || true ? (
+          <div className={styles.syncContainer}>
+            <Syncing className={styles.syncing} /> {connection.syncCatalog.streams.length}
+          </div>
+        ) : null}
       </div>
     </div>
   );

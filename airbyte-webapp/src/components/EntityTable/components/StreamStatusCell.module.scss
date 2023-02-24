@@ -33,30 +33,31 @@
 }
 
 .tooltipContainer {
-  width: 300px;
+  width: 248px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
 
   .bar {
     width: 75%;
+    margin-bottom: 10px;
   }
 
   .tooltipContent {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 65%;
+    width: 75%;
 
-    > div {
-      flex: 1 1 75px;
-    }
-
-    .tooltipText {
+    .streamsDetail {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .syncContainer {
+      display: flex;
+      align-items: center;
     }
   }
 }
@@ -72,10 +73,8 @@
 }
 
 .syncing {
-  > svg {
-    animation-name: spin;
-    animation-duration: 2000ms;
-    animation-iteration-count: infinite;
-    animation-timing-function: linear;
-  }
+  animation-name: spin;
+  animation-duration: 2000ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
 }
