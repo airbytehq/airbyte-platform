@@ -37,6 +37,7 @@ public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
   }
 
   @Override
+  @SuppressWarnings("PMD.AvoidCatchingThrowable")
   public List<StandardDestinationDefinition> getDestinationDefinitions() {
     try {
       return super.getDestinationDefinitions();
@@ -49,6 +50,7 @@ public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
   }
 
   @Override
+  @SuppressWarnings("PMD.AvoidCatchingThrowable")
   public List<StandardSourceDefinition> getSourceDefinitions() {
     try {
       return super.getSourceDefinitions();
