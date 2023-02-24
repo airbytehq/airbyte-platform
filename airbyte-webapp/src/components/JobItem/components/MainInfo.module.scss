@@ -42,8 +42,8 @@
     flex: 0 0 auto;
 
     .attemptCount {
-      font-size: 12px;
-      line-height: 15px;
+      font-size: variables.$font-size-sm;
+      line-height: 1.25;
       color: colors.$grey;
     }
   }

@@ -74,8 +74,8 @@
 
 .td {
   padding: variables.$spacing-lg calc(variables.$spacing-md + variables.$spacing-xs);
-  font-size: 12px;
-  line-height: 15px;
+  font-size: variables.$font-size-sm;
+  line-height: 1.25;
   font-weight: normal;
   color: colors.$dark-blue;
   white-space: nowrap;

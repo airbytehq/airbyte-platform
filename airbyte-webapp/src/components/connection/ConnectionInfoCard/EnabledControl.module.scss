@@ -9,8 +9,8 @@
 
 .label {
   min-width: 60px;
-  font-size: 14px;
-  line-height: 19px;
+  font-size: variables.$font-size-lg;
+  line-height: 1.35;
   font-weight: 500;
   color: colors.$grey-300;
   display: inline-block;

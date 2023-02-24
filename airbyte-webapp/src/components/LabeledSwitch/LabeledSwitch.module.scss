@@ -1,4 +1,4 @@
-@use "../../scss/colors";
+@use "scss/colors";
 
 .labeledSwitch {
   display: flex;
@@ -8,8 +8,8 @@
 
 .label {
   padding-left: 7px;
-  font-size: 13px;
-  line-height: 16px;
+  font-size: variables.$font-size-md;
+  line-height: 1.23;
   cursor: pointer;
   color: colors.$dark-blue;
   display: flex;
