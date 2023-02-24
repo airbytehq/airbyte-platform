@@ -6,7 +6,6 @@ package io.airbyte.db;
 
 import java.sql.SQLException;
 import org.jooq.DSLContext;
-import org.jooq.impl.DSL;
 
 /**
  * Database object for interacting with a Jooq connection.
@@ -24,7 +23,7 @@ public class Database {
   }
 
   public <T> T transaction(final ContextQueryFunction<T> transform) throws SQLException {
-    return dslContext.transactionResult(configuration -> transform.query(DSL.using(configuration)));
+    return dslContext.transactionResult(configuration -> transform.query(dslContext));
   }
 
 }
