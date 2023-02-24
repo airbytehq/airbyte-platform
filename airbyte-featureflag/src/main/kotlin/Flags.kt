@@ -19,7 +19,13 @@ object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
 
 object PerfBackgroundJsonValidation : Temporary(key = "performance.backgroundJsonSchemaValidation")
 
+object StrictComparisonNormalizationEnabled : Temporary(key = "normalization.strictComparisonNormalizationEnabled")
+
+object CommitStatesAsap : Temporary(key = "platform.commitStatesAsap")
+
 object FieldSelectionEnabled : Temporary(key="connection.columnSelection")
+
+object CheckInputGeneration : Temporary(key="connectionManagerWorkflow.checkInputGeneration")
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -55,7 +61,7 @@ object ShouldFailSyncIfHeartbeatFailure : Temporary(key = "heartbeat.failSync")
  * @param [attrs] optional attributes associated with this flag
  */
 sealed class Flag(
-    internal val key: String,
+    val key: String,
     internal val default: Boolean = false,
     internal val attrs: Map<String, String> = mapOf(),
 )
