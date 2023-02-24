@@ -786,6 +786,11 @@ public interface Configs {
     KUBERNETES
   }
 
+  enum WorkerEnvironment2 {
+    DOCKER,
+    KUBERNETES
+  }
+
   /**
    * Deployment type.
    */
