@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 
 class FeatureFlagFetchActivityTest {
 
-  final static UUID CONNECTION_ID = UUID.randomUUID();
-  final static UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
   FeatureFlagFetchActivity featureFlagFetchActivity;
   FeatureFlagClient featureFlagClient;
