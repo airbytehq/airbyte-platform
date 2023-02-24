@@ -46,7 +46,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
   private Supplier<UUID> uuidSupplier;
   private UUID workspaceId;
-  private final String draftJSONString = "{\"test\":123}";
+  private final String draftJSONString = "{\"test\":123,\"empty\":{\"array_in_object\":[]}}";
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -73,7 +73,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
     final ConnectorBuilderProjectWithWorkspaceId create = new ConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails().name(project.getName())
-            .draftManifest(new ObjectMapper().convertValue(project.getManifestDraft(), new TypeReference<Map<String, Object>>() {})))
+            .draftManifest(project.getManifestDraft()))
         .workspaceId(workspaceId);
 
     final ConnectorBuilderProjectIdWithWorkspaceId response = connectorBuilderProjectsHandler.createConnectorBuilderProject(create);
@@ -202,7 +202,7 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @DisplayName("getConnectorBuilderProject should return a builder project with draft")
+  @DisplayName("getConnectorBuilderProject should return a builder project with draft and retain object structures without primitive leafs")
   void testGetConnectorBuilderProject() throws IOException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
 

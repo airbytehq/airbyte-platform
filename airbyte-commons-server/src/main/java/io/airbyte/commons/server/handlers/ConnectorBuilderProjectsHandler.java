@@ -4,14 +4,13 @@
 
 package io.airbyte.commons.server.handlers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.api.model.generated.DeclarativeManifest;
+import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.config.ConfigSchema;
@@ -21,7 +20,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -107,8 +105,8 @@ public class ConnectorBuilderProjectsHandler {
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
     final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project));
     if (project.getManifestDraft() != null) {
-      final DeclarativeManifest manifest = new DeclarativeManifest()
-          .manifest(new ObjectMapper().convertValue(project.getManifestDraft(), new TypeReference<Map<String, Object>>() {})).isDraft(true);
+      final DeclarativeManifestRead manifest = new DeclarativeManifestRead()
+          .manifest(project.getManifestDraft()).isDraft(true);
       response.setDeclarativeManifest(manifest);
     }
 
