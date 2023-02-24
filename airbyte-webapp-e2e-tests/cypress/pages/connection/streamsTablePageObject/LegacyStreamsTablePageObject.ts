@@ -61,7 +61,7 @@ const checkDropdownField = (streamName: string, dropdownType: Dropdown, expected
 };
 
 export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase implements IStreamsTablePageObject {
-  expandStreamDetailsByName(namespace: string, streamName: string) {
+  showStreamDetails(namespace: string, streamName: string) {
     cy.get(getExpandStreamArrowBtn(streamName)).click();
   }
 
@@ -76,7 +76,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param cursorValue
    */
-  selectCursorField(streamName: string, cursorValue: string) {
+  selectCursor(streamName: string, cursorValue: string) {
     selectFieldDropdownOption(streamName, "cursor", cursorValue);
   }
 
@@ -85,7 +85,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param primaryKeyValues
    */
-  selectPrimaryKeyField(streamName: string, primaryKeyValues: string[]) {
+  selectPrimaryKeys(streamName: string, primaryKeyValues: string[]) {
     selectFieldDropdownOption(streamName, "primaryKey", primaryKeyValues);
   }
 
@@ -104,7 +104,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param expectedValue
    */
-  checkCursorField(streamName: string, expectedValue: string) {
+  checkSelectedCursorField(streamName: string, expectedValue: string) {
     checkDropdownField(streamName, "cursor", expectedValue);
   }
 
@@ -113,19 +113,39 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param expectedValues
    */
-  checkPrimaryKey(streamName: string, expectedValues: string[]) {
+  checkSelectedPrimaryKeys(streamName: string, expectedValues: string[]) {
     checkDropdownField(streamName, "primaryKey", expectedValues);
   }
 
-  checkPreFilledPrimaryKeyField(streamName: string, expectedValue: string) {
+  checkSourceDefinedPrimaryKeys(streamName: string, expectedValue: string) {
     cy.get(getPreFilledPrimaryKeyText(streamName)).contains(expectedValue);
   }
 
-  isPrimaryKeyNonExist(namespace: string, streamName: string) {
+  checkNoSourceDefinedPrimaryKeys(namespace: string, streamName: string) {
     cy.get(getPreFilledPrimaryKeyText(streamName)).should("not.exist");
   }
 
   enableStream(namespace: string, streamName: string) {
     cy.get(streamSyncEnabledSwitch(streamName)).check({ force: true });
+  }
+
+  checkSourceDefinedCursor(streamName: string, expectedValue: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  hasEmptyCursorSelect(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  hasEmptyPrimaryKeySelect(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  checkNoSourceDefinedCursor(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  disableStream(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
   }
 }

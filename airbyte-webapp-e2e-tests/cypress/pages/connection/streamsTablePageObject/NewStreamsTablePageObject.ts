@@ -55,7 +55,7 @@ const checkFieldSelectedValue = (streamName: string, type: SyncFieldType, expect
 };
 
 export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implements IStreamsTablePageObject {
-  expandStreamDetailsByName(namespace: string, streamName: string): void {
+  showStreamDetails(namespace: string, streamName: string): void {
     cy.get(getRowTestId(namespace, streamName)).click(1, 1);
   }
 
@@ -64,11 +64,11 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
     cy.get(`.react-select__option`).contains(`${source} | ${dest}`).click();
   }
 
-  selectCursorField(streamName: string, cursorValue: string): void {
+  selectCursor(streamName: string, cursorValue: string): void {
     selectFieldOption(streamName, "cursor", cursorValue);
   }
 
-  selectPrimaryKeyField(streamName: string, primaryKeyValues: string[]): void {
+  selectPrimaryKeys(streamName: string, primaryKeyValues: string[]): void {
     selectFieldOption(streamName, "primary-key", primaryKeyValues);
   }
 
@@ -82,21 +82,21 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
     });
   }
 
-  checkCursorField(streamName: string, expectedValue: string): void {
+  checkSelectedCursorField(streamName: string, expectedValue: string): void {
     checkFieldSelectedValue(streamName, "cursor", expectedValue);
   }
 
-  checkPrimaryKey(streamName: string, expectedValues: string[]): void {
+  checkSelectedPrimaryKeys(streamName: string, expectedValues: string[]): void {
     checkFieldSelectedValue(streamName, "primary-key", expectedValues);
   }
 
-  checkPreFilledPrimaryKeyField(streamName: string, expectedValue: string): void {
+  checkSourceDefinedPrimaryKeys(streamName: string, expectedValue: string): void {
     cy.get(getRowTestId("public", streamName)).within(() => {
       cy.get(getSourceDefinedTestId("primary-key")).contains(expectedValue);
     });
   }
 
-  checkPreFilledCursorField(streamName: string, expectedValue: string): void {
+  checkSourceDefinedCursor(streamName: string, expectedValue: string): void {
     cy.get(getRowTestId("public", streamName)).within(() => {
       cy.get(getSourceDefinedTestId("cursor")).contains(expectedValue);
     });
@@ -116,13 +116,13 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
     });
   }
 
-  isCursorNonExist(namespace: string, streamName: string): void {
+  checkNoSourceDefinedCursor(namespace: string, streamName: string): void {
     cy.get(getRowTestId(namespace, streamName)).within(() => {
       cy.get(getSourceDefinedTestId("cursor")).should("not.exist");
     });
   }
 
-  isPrimaryKeyNonExist(namespace: string, streamName: string): void {
+  checkNoSourceDefinedPrimaryKeys(namespace: string, streamName: string): void {
     cy.get(getRowTestId(namespace, streamName)).within(() => {
       cy.get(getSourceDefinedTestId("primary-key")).should("not.exist");
     });

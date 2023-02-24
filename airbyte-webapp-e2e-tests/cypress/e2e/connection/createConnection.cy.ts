@@ -33,17 +33,17 @@ import {
 } from "commands/db/queries";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
 
-const streamsTable = new NewStreamsTablePageObject();
-
-const dropTables = () => {
-  runDbQuery(dropUsersTableQuery, dropDummyTablesQuery(20));
-};
-
 // TODO: Enable this test when the new stream table will be turned on
-describe("Connection - Create new connection", () => {
+describe.skip("Connection - Create new connection", () => {
+  const streamsTable = new NewStreamsTablePageObject();
+
   let source: Source;
   let destination: Destination;
   let connectionId: string;
+
+  const dropTables = () => {
+    runDbQuery(dropUsersTableQuery, dropDummyTablesQuery(20));
+  };
 
   before(() => {
     dropTables();

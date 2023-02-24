@@ -125,7 +125,7 @@ describe("Connection - Auto-detect schema changes", () => {
       // Change users sync mode
       streamsTablePageObject.searchStream(streamName);
       streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
-      streamsTablePageObject.selectCursorField(streamName, "updated_at");
+      streamsTablePageObject.selectCursor(streamName, "updated_at");
       replicationPage.clickSaveButton();
 
       // Remove cursor from db and refreshs schema to force breaking change detection

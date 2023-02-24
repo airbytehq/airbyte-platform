@@ -153,8 +153,8 @@ describe.skip("Connection - sync modes", () => {
     });
 
     it("does not require primary key or cursor", () => {
-      streamsTable.isCursorNonExist("public", "users");
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+      streamsTable.checkNoSourceDefinedCursor("public", "users");
+      streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
 
     it("saves", () => {
@@ -167,8 +167,8 @@ describe.skip("Connection - sync modes", () => {
         },
       });
 
-      streamsTable.isCursorNonExist("public", "users");
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+      streamsTable.checkNoSourceDefinedCursor("public", "users");
+      streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
   });
 
@@ -182,8 +182,8 @@ describe.skip("Connection - sync modes", () => {
     });
 
     it("does not require primary key or cursor", () => {
-      streamsTable.isCursorNonExist("public", "users");
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+      streamsTable.checkNoSourceDefinedCursor("public", "users");
+      streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
 
     it("saves", () => {
@@ -196,8 +196,8 @@ describe.skip("Connection - sync modes", () => {
         },
       });
 
-      streamsTable.isCursorNonExist("public", "users");
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+      streamsTable.checkNoSourceDefinedCursor("public", "users");
+      streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
   });
 
@@ -213,12 +213,12 @@ describe.skip("Connection - sync modes", () => {
 
       it("should be able to select cursor", () => {
         streamsTable.hasEmptyCursorSelect("public", "users2");
-        streamsTable.selectCursorField("users2", cursor);
-        streamsTable.checkCursorField("users2", cursor);
+        streamsTable.selectCursor("users2", cursor);
+        streamsTable.checkSelectedCursorField("users2", cursor);
       });
 
       it("has source-defined primary key", () => {
-        streamsTable.checkPreFilledPrimaryKeyField("users2", primaryKey);
+        streamsTable.checkSourceDefinedPrimaryKeys("users2", primaryKey);
       });
 
       it("saves", () => {
@@ -233,8 +233,8 @@ describe.skip("Connection - sync modes", () => {
           },
         });
 
-        streamsTable.checkCursorField("users2", cursor);
-        streamsTable.checkPreFilledPrimaryKeyField("users2", primaryKey);
+        streamsTable.checkSelectedCursorField("users2", cursor);
+        streamsTable.checkSourceDefinedPrimaryKeys("users2", primaryKey);
       });
     });
 
@@ -248,11 +248,11 @@ describe.skip("Connection - sync modes", () => {
       });
 
       it("has source-defined cursor", () => {
-        streamsTable.checkPreFilledCursorField("accounts", cursor);
+        streamsTable.checkSourceDefinedCursor("accounts", cursor);
       });
 
       it("has source-defined primary key", () => {
-        streamsTable.checkPreFilledPrimaryKeyField("accounts", primaryKey);
+        streamsTable.checkSourceDefinedPrimaryKeys("accounts", primaryKey);
       });
 
       it("saves", () => {
@@ -267,8 +267,8 @@ describe.skip("Connection - sync modes", () => {
           },
         });
 
-        streamsTable.checkPreFilledCursorField("accounts", cursor);
-        streamsTable.checkPreFilledPrimaryKeyField("accounts", primaryKey);
+        streamsTable.checkSourceDefinedCursor("accounts", cursor);
+        streamsTable.checkSourceDefinedPrimaryKeys("accounts", primaryKey);
       });
     });
 
@@ -294,22 +294,22 @@ describe.skip("Connection - sync modes", () => {
       });
 
       it("should be able to select cursor", () => {
-        streamsTable.selectCursorField("user_cars", cursorValue);
-        streamsTable.checkCursorField("user_cars", cursorValue);
+        streamsTable.selectCursor("user_cars", cursorValue);
+        streamsTable.checkSelectedCursorField("user_cars", cursorValue);
       });
 
       it("can select single primary key", () => {
         const singlePrimaryKeyValue = [primaryKeyValue[0]];
-        streamsTable.selectPrimaryKeyField("user_cars", singlePrimaryKeyValue);
-        streamsTable.checkPrimaryKey("user_cars", singlePrimaryKeyValue);
+        streamsTable.selectPrimaryKeys("user_cars", singlePrimaryKeyValue);
+        streamsTable.checkSelectedPrimaryKeys("user_cars", singlePrimaryKeyValue);
 
         // Unchecks:
-        streamsTable.selectPrimaryKeyField("user_cars", singlePrimaryKeyValue);
+        streamsTable.selectPrimaryKeys("user_cars", singlePrimaryKeyValue);
       });
 
       it("can select multiple primary keys", () => {
-        streamsTable.selectPrimaryKeyField("user_cars", primaryKeyValue);
-        streamsTable.checkPrimaryKey("user_cars", primaryKeyValue);
+        streamsTable.selectPrimaryKeys("user_cars", primaryKeyValue);
+        streamsTable.checkSelectedPrimaryKeys("user_cars", primaryKeyValue);
       });
 
       it("saves", () => {
@@ -324,8 +324,8 @@ describe.skip("Connection - sync modes", () => {
           },
         });
 
-        streamsTable.checkCursorField("user_cars", cursorValue);
-        streamsTable.checkPrimaryKey("user_cars", primaryKeyValue);
+        streamsTable.checkSelectedCursorField("user_cars", cursorValue);
+        streamsTable.checkSelectedPrimaryKeys("user_cars", primaryKeyValue);
       });
     });
   });
@@ -347,7 +347,7 @@ describe.skip("Connection - sync modes", () => {
     });
 
     it("does not require a primary key", () => {
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+      streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
 
     it("can save when stream is disabled", () => {
@@ -357,8 +357,8 @@ describe.skip("Connection - sync modes", () => {
     });
 
     it("selects cursor", () => {
-      streamsTable.selectCursorField("users", cursor);
-      streamsTable.checkCursorField("users", cursor);
+      streamsTable.selectCursor("users", cursor);
+      streamsTable.checkSelectedCursorField("users", cursor);
     });
 
     it("saves", () => {
@@ -372,8 +372,8 @@ describe.skip("Connection - sync modes", () => {
         },
       });
 
-      streamsTable.checkCursorField("users", cursor);
-      streamsTable.isPrimaryKeyNonExist("public", "users");
+      streamsTable.checkSelectedCursorField("users", cursor);
+      streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
   });
 });

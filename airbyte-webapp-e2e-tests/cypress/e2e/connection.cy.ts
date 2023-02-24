@@ -355,7 +355,7 @@ describe("Connection - stream details", () => {
     goToReplicationTab();
 
     streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.expandStreamDetailsByName(sourceNamespace, streamName);
+    streamsTablePageObject.showStreamDetails(sourceNamespace, streamName);
     streamsTablePageObject.checkStreamFields(collectionNames, collectionTypes);
 
     deleteSource(sourceName);
@@ -390,7 +390,7 @@ describe("Connection sync modes", () => {
 
     streamsTablePageObject.searchStream(streamName);
     streamsTablePageObject.selectSyncMode("Incremental", "Append");
-    streamsTablePageObject.selectCursorField(streamName, "updated_at");
+    streamsTablePageObject.selectCursor(streamName, "updated_at");
 
     submitButtonClick();
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -408,7 +408,7 @@ describe("Connection sync modes", () => {
     goToReplicationTab();
 
     streamsTablePageObject.searchStream("users");
-    streamsTablePageObject.checkCursorField(streamName, "updated_at");
+    streamsTablePageObject.checkSelectedCursorField(streamName, "updated_at");
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -429,8 +429,8 @@ describe("Connection sync modes", () => {
 
     streamsTablePageObject.searchStream(streamName);
     streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
-    streamsTablePageObject.selectCursorField(streamName, "updated_at");
-    streamsTablePageObject.checkPreFilledPrimaryKeyField(streamName, "id");
+    streamsTablePageObject.selectCursor(streamName, "updated_at");
+    streamsTablePageObject.checkSourceDefinedPrimaryKeys(streamName, "id");
 
     submitButtonClick();
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -449,8 +449,8 @@ describe("Connection sync modes", () => {
 
     streamsTablePageObject.searchStream(streamName);
 
-    streamsTablePageObject.checkCursorField(streamName, "updated_at");
-    streamsTablePageObject.checkPreFilledPrimaryKeyField(streamName, "id");
+    streamsTablePageObject.checkSelectedCursorField(streamName, "updated_at");
+    streamsTablePageObject.checkSourceDefinedPrimaryKeys(streamName, "id");
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -471,9 +471,9 @@ describe("Connection sync modes", () => {
 
     streamsTablePageObject.searchStream(streamName);
     streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
-    streamsTablePageObject.selectCursorField(streamName, "city");
-    streamsTablePageObject.isPrimaryKeyNonExist(sourceNamespace, streamName);
-    streamsTablePageObject.selectPrimaryKeyField(streamName, ["city_code"]);
+    streamsTablePageObject.selectCursor(streamName, "city");
+    streamsTablePageObject.checkNoSourceDefinedPrimaryKeys(sourceNamespace, streamName);
+    streamsTablePageObject.selectPrimaryKeys(streamName, ["city_code"]);
 
     submitButtonClick(true);
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -492,8 +492,8 @@ describe("Connection sync modes", () => {
 
     streamsTablePageObject.searchStream(streamName);
 
-    streamsTablePageObject.checkCursorField(streamName, "city");
-    streamsTablePageObject.checkPrimaryKey(streamName, ["city_code"]);
+    streamsTablePageObject.checkSelectedCursorField(streamName, "city");
+    streamsTablePageObject.checkSelectedPrimaryKeys(streamName, ["city_code"]);
 
     deleteSource(sourceName);
     deleteDestination(destName);
