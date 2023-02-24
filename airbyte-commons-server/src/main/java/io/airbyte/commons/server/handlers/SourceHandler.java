@@ -40,7 +40,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -99,11 +98,10 @@ public class SourceHandler {
         oAuthConfigSupplier);
   }
 
-  // TODO - add optional param to SourceCreate for secretId
   public SourceRead createSourceHandleSecret(final SourceCreate sourceCreate) throws JsonValidationException, ConfigNotFoundException, IOException {
     if (!sourceCreate.getSecretId().isBlank()) {
       // Hydrate secret
-      Map<String, Object> hydratedSecret = OAuthSecretHelper.hydrateOAuthResponseSecret(sourceCreate.getSecretId());
+      JsonNode hydratedSecret = OAuthSecretHelper.hydrateOAuthResponseSecret(secretsRepositoryReader, sourceCreate.getSecretId());
       final StandardSourceDefinition sourceDefinition = configRepository
           .getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
       sourceCreate.setConnectionConfiguration(

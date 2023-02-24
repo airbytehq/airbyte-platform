@@ -4,13 +4,14 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
-import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
+import io.airbyte.config.persistence.SecretsRepositoryReader;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -28,8 +29,8 @@ public class OAuthSecretHelper {
    * necessary for source creation and where to put them.
    */
   @VisibleForTesting
-  public static JsonNode setSecretsInConnectionConfiguration(StandardSourceDefinition sourceDefinition,
-                                                             final Map<String, Object> hydratedSecret,
+  public static JsonNode setSecretsInConnectionConfiguration(final StandardSourceDefinition sourceDefinition,
+                                                             final JsonNode hydratedSecret,
                                                              final JsonNode connectionConfiguration)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final ConnectorSpecification spec = sourceDefinition.getSpec();
@@ -43,7 +44,7 @@ public class OAuthSecretHelper {
       final String key = entry.getKey();
       final List<String> jsonPathList = entry.getValue();
 
-      Jsons.replaceNestedString(newConnectionConfiguration, jsonPathList, String.valueOf(hydratedSecret.get(key)));
+      Jsons.replaceNestedValue(newConnectionConfiguration, jsonPathList, hydratedSecret.get(key));
     }
     System.out.println(newConnectionConfiguration);
     return newConnectionConfiguration;
@@ -92,8 +93,10 @@ public class OAuthSecretHelper {
     return result;
   }
 
-  public static Map<String, Object> hydrateOAuthResponseSecret(String secretId) {
-    return Map.of("test", "test");
+  public static JsonNode hydrateOAuthResponseSecret(SecretsRepositoryReader secretsRepositoryReader, String secretId) {
+      final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
+      return secretsRepositoryReader.fetchSecret(secretCoordinate);
+
   }
 
 }
