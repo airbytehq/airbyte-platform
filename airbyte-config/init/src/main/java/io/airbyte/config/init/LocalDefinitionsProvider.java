@@ -34,7 +34,7 @@ final public class LocalDefinitionsProvider implements DefinitionsProvider {
   public CombinedConnectorCatalog getLocalDefinitionCatalog() {
     try {
       final URL url = Resources.getResource(LOCAL_CONNECTOR_CATALOG_PATH);
-      LOGGER.info("Loading local catalog definitions from {}", url);
+      LOGGER.info("Loading local connector catalog definitions from {}", url);
 
       final String jsonString = Resources.toString(url, StandardCharsets.UTF_8);
       return Jsons.deserialize(jsonString, CombinedConnectorCatalog.class);
