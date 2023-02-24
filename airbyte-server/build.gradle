@@ -52,6 +52,8 @@ dependencies {
     implementation libs.swagger.annotations
     implementation libs.javax.ws.rs.api
 
+    runtimeOnly libs.javax.databind
+
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers.postgresql
