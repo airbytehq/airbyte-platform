@@ -33,8 +33,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 class StateAggregatorTest {
 
   StateAggregator stateAggregator;
-  boolean USE_STREAM_CAPABLE_STATE = true;
-  boolean DONT_USE_STREAM_CAPABLE_STATE = false;
+  private static final boolean USE_STREAM_CAPABLE_STATE = true;
+  private static final boolean DONT_USE_STREAM_CAPABLE_STATE = false;
 
   @BeforeEach
   void init() {

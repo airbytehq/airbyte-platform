@@ -17,6 +17,7 @@ import java.util.UUID;
 /**
  * Test sync that simulate an activity failure of the child workflow.
  */
+@SuppressWarnings("MissingJavadocType")
 public class SyncWorkflowWithActivityFailureException implements SyncWorkflow {
 
   @Override

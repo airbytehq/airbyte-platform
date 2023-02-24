@@ -12,6 +12,9 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
+/**
+ * Normalization Runner. Executes normalization.
+ */
 public interface NormalizationRunner extends AutoCloseable {
 
   /**
@@ -51,7 +54,7 @@ public interface NormalizationRunner extends AutoCloseable {
    * @param config - configuration for connecting to the destination
    * @param catalog - the schema of the json blob in the destination. it is used normalize the blob
    *        into typed columns.
-   * @param resourceRequirements
+   * @param resourceRequirements - resource requirements
    * @return true of normalization succeeded. otherwise false.
    * @throws Exception - any exception thrown from normalization will be handled gracefully by the
    *         caller.

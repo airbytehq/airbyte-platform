@@ -7,6 +7,9 @@ package io.airbyte.commons.server.errors;
 import io.airbyte.api.model.generated.KnownExceptionInfo;
 import org.apache.logging.log4j.core.util.Throwables;
 
+/**
+ * Exception wrapper to handle formatting API exception outputs nicely.
+ */
 public abstract class KnownException extends RuntimeException {
 
   public KnownException(final String message) {
@@ -17,12 +20,19 @@ public abstract class KnownException extends RuntimeException {
     super(message, cause);
   }
 
-  abstract public int getHttpCode();
+  public abstract int getHttpCode();
 
   public KnownExceptionInfo getKnownExceptionInfo() {
     return KnownException.infoFromThrowable(this);
   }
 
+  /**
+   * Static factory for creating a known exception.
+   *
+   * @param t throwable to wrap
+   * @param message error message
+   * @return known exception
+   */
   public static KnownExceptionInfo infoFromThrowableWithMessage(final Throwable t, final String message) {
     final KnownExceptionInfo exceptionInfo = new KnownExceptionInfo()
         .exceptionClassName(t.getClass().getName())

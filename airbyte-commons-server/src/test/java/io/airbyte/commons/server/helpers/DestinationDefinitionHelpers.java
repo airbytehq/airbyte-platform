@@ -7,6 +7,7 @@ package io.airbyte.commons.server.helpers;
 import io.airbyte.config.StandardDestinationDefinition;
 import java.util.UUID;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class DestinationDefinitionHelpers {
 
   public static StandardDestinationDefinition generateDestination() {

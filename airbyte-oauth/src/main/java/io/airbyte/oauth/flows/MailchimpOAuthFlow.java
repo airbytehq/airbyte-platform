@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/
+ * Following docs from https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/.
  */
 public class MailchimpOAuthFlow extends BaseOAuth2Flow {
 

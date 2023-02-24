@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Slack OAuth.
+ */
 public class SlackOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://slack.com/oauth/authorize";

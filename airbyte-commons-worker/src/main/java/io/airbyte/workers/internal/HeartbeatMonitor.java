@@ -34,13 +34,14 @@ public class HeartbeatMonitor {
   }
 
   /**
-   * Register a heartbeat
+   * Register a heartbeat.
    */
   public void beat() {
     lastBeat.set(nowSupplier.get());
   }
 
   /**
+   * Verify if the heart is still beating.
    *
    * @return true if the last heartbeat is still "fresh". i.e. time since last heartbeat is less than
    *         heartBeatFreshDuration. otherwise, false.

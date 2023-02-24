@@ -98,6 +98,12 @@ public abstract class MigrationDevCenter {
     }
   }
 
+  /**
+   * Dump schema.
+   *
+   * @param persistToFile file to persist to
+   * @return schema
+   */
   @VisibleForTesting
   public String dumpSchema(final boolean persistToFile) {
     try (final PostgreSQLContainer<?> container = createContainer()) {

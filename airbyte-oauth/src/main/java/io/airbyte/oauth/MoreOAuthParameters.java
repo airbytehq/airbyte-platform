@@ -21,11 +21,22 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * OAuth params.
+ */
 public class MoreOAuthParameters {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Jsons.class);
   public static final String SECRET_MASK = "******";
 
+  /**
+   * Get source OAuth param from stream.
+   *
+   * @param stream oauth param stream
+   * @param workspaceId workspace id
+   * @param sourceDefinitionId source definition id
+   * @return oauth params
+   */
   public static Optional<SourceOAuthParameter> getSourceOAuthParameter(
                                                                        final Stream<SourceOAuthParameter> stream,
                                                                        final UUID workspaceId,
@@ -38,6 +49,14 @@ public class MoreOAuthParameters {
             .thenComparing(SourceOAuthParameter::getOauthParameterId));
   }
 
+  /**
+   * Get destination OAuth param from stream.
+   *
+   * @param stream oauth param stream
+   * @param workspaceId workspace id
+   * @param destinationDefinitionId destination definition id
+   * @return oauth params
+   */
   public static Optional<DestinationOAuthParameter> getDestinationOAuthParameter(
                                                                                  final Stream<DestinationOAuthParameter> stream,
                                                                                  final UUID workspaceId,
@@ -50,6 +69,12 @@ public class MoreOAuthParameters {
             .thenComparing(DestinationOAuthParameter::getOauthParameterId));
   }
 
+  /**
+   * Flatten config.
+   *
+   * @param config to flatten
+   * @return flattened config
+   */
   public static JsonNode flattenOAuthConfig(final JsonNode config) {
     if (config.getNodeType() == OBJECT) {
       return flattenOAuthConfig((ObjectNode) Jsons.emptyObject(), (ObjectNode) config);
@@ -73,6 +98,13 @@ public class MoreOAuthParameters {
     return flatConfig;
   }
 
+  /**
+   * Merge JSON configs.
+   *
+   * @param mainConfig original config
+   * @param fromConfig config with overwrites
+   * @return merged config
+   */
   public static JsonNode mergeJsons(final ObjectNode mainConfig, final ObjectNode fromConfig) {
     for (final String key : Jsons.keys(fromConfig)) {
       if (fromConfig.get(key).getNodeType() == OBJECT) {

@@ -33,9 +33,13 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * Bean factory for the airbyte server micronaut app.
+ */
 @Factory
 public class ApplicationBeanFactory {
 
+  @SuppressWarnings("AbbreviationAsWordInName")
   @Singleton
   public Supplier<UUID> randomUUIDSupplier() {
     return () -> UUID.randomUUID();
@@ -85,6 +89,7 @@ public class ApplicationBeanFactory {
     return Path.of(workspaceRoot);
   }
 
+  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   public JsonSecretsProcessor jsonSecretsProcessor(final FeatureFlags featureFlags) {
     return JsonSecretsProcessor.builder()

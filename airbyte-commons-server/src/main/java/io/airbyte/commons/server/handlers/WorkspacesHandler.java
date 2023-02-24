@@ -44,9 +44,14 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * WorkspacesHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class WorkspacesHandler {
 
+  public static final int MAX_SLUG_GENERATION_ATTEMPTS = 10;
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
   private final ConfigRepository configRepository;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
@@ -234,7 +239,6 @@ public class WorkspacesHandler {
     // be replaced with an actual sql query. e.g. SELECT COUNT(*) WHERE slug=%s;
     boolean isSlugUsed = configRepository.getWorkspaceBySlugOptional(proposedSlug, true).isPresent();
     String resolvedSlug = proposedSlug;
-    final int MAX_ATTEMPTS = 10;
     int count = 0;
     while (isSlugUsed) {
       // todo (cgardens) - this is still susceptible to a race condition where we randomly generate the
@@ -243,8 +247,8 @@ public class WorkspacesHandler {
       resolvedSlug = proposedSlug + "-" + RandomStringUtils.randomAlphabetic(8);
       isSlugUsed = configRepository.getWorkspaceBySlugOptional(resolvedSlug, true).isPresent();
       count++;
-      if (count > MAX_ATTEMPTS) {
-        throw new InternalServerKnownException(String.format("could not generate a valid slug after %s tries.", MAX_ATTEMPTS));
+      if (count > MAX_SLUG_GENERATION_ATTEMPTS) {
+        throw new InternalServerKnownException(String.format("could not generate a valid slug after %s tries.", MAX_SLUG_GENERATION_ATTEMPTS));
       }
     }
 

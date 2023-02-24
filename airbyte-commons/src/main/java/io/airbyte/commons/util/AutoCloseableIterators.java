@@ -12,6 +12,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+/**
+ * An iterator that implements {@link AutoCloseable}. Good for handling things like reading from a
+ * database. Read all records from the iterator and then return the connection to the connection
+ * pool when the iterator is exhausted.
+ */
 public class AutoCloseableIterators {
 
   /**

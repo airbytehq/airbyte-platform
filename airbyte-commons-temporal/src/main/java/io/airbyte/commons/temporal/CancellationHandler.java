@@ -9,10 +9,17 @@ import io.temporal.client.ActivityCompletionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * For each call, checks if the current activity is cancelled. If it is, then it executes the
+ * provided callback.
+ */
 public interface CancellationHandler {
 
   void checkAndHandleCancellation(Runnable onCancellationCallback);
 
+  /**
+   * Temporal implementation of the cancellation handler.
+   */
   class TemporalCancellationHandler implements CancellationHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TemporalCancellationHandler.class);
@@ -37,15 +44,15 @@ public interface CancellationHandler {
     @Override
     public void checkAndHandleCancellation(final Runnable onCancellationCallback) {
       try {
-        /**
+        /*
          * Heartbeat is somewhat misleading here. What it does is check the current Temporal activity's
          * context and throw an exception if the sync has been cancelled or timed out. The input to this
          * heartbeat function is available as a field in thrown ActivityCompletionExceptions, which we
          * aren't using for now.
          *
-         * We should use this only as a check for the ActivityCompletionException. See
-         * {@link TemporalUtils#withBackgroundHeartbeat} for where we actually send heartbeats to ensure
-         * that we don't time out the activity.
+         * We should use this only as a check for the ActivityCompletionException. See {@link
+         * TemporalUtils#withBackgroundHeartbeat} for where we actually send heartbeats to ensure that we
+         * don't time out the activity.
          */
         activityContext.heartbeat(null);
       } catch (final ActivityCompletionException e) {

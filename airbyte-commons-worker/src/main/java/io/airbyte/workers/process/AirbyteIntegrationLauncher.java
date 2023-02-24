@@ -37,6 +37,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Launcher creates process for each protocol method.
+ */
 public class AirbyteIntegrationLauncher implements IntegrationLauncher {
 
   private static final String CONFIG = "--config";

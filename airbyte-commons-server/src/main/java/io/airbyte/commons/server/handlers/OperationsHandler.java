@@ -34,6 +34,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class OperationsHandler {
 
@@ -97,17 +101,17 @@ public class OperationsHandler {
     return persistOperation(updateOperation(operationUpdate, standardSyncOperation));
   }
 
-  private OperationRead persistOperation(final StandardSyncOperation standardSyncOperation)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    configRepository.writeStandardSyncOperation(standardSyncOperation);
-    return buildOperationRead(standardSyncOperation.getOperationId());
-  }
-
   public static StandardSyncOperation updateOperation(final OperationUpdate operationUpdate, final StandardSyncOperation standardSyncOperation) {
     standardSyncOperation
         .withName(operationUpdate.getName());
     OperationsConverter.populateOperatorConfigFromApi(operationUpdate.getOperatorConfiguration(), standardSyncOperation);
     return standardSyncOperation;
+  }
+
+  private OperationRead persistOperation(final StandardSyncOperation standardSyncOperation)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    configRepository.writeStandardSyncOperation(standardSyncOperation);
+    return buildOperationRead(standardSyncOperation.getOperationId());
   }
 
   public OperationReadList listOperationsForConnection(final ConnectionIdRequestBody connectionIdRequestBody)

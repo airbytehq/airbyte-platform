@@ -11,11 +11,12 @@ import io.airbyte.config.persistence.split_secrets.SecretsTestCase;
 import java.util.Map;
 import java.util.function.Consumer;
 
+@SuppressWarnings("MissingJavadocType")
 public class ArrayTestCase implements SecretsTestCase {
 
-  private final static String KEY1 = "key1";
-  private final static String KEY2 = "key2";
-  private final static String KEY3 = "key3";
+  private static final String KEY1 = "key1";
+  private static final String KEY2 = "key2";
+  private static final String KEY3 = "key3";
 
   @Override
   public String getName() {
