@@ -24,13 +24,18 @@ class OAuthSecretHelperTest {
 
   @Test
   void testGetOAuthConfigPaths() throws IOException {
-    assertEquals(1, 1);
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
+    Map<String, List<String>> result = OAuthSecretHelper.getOAuthConfigPaths(connectorSpecification);
+    Map<String, List<String>> expected = Map.of(
+        "refresh_token", List.of("refresh_token"),
+        "client_id", List.of("client_id"),
+        "client_secret", List.of("client_secret"));
+    assertEquals(expected, result);
   }
 
   @Test
   void testBuildKeyToPathInConnectorConfigMap() throws IOException {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
-    System.out.println(connectorSpecification.getAdvancedAuth());
     Map<String, List<String>> resultForCompleteOauthOutputSpecification = OAuthSecretHelper.buildKeyToPathInConnectorConfigMap(
         connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthOutputSpecification()
     );
