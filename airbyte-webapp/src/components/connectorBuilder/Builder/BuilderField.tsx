@@ -123,14 +123,12 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
         />
       )}
       {props.type === "array" && (
-        <div data-testid={`tag-input-${path}`}>
-          <ArrayField
-            name={path}
-            value={(field.value as string[] | undefined) ?? []}
-            setValue={setValue}
-            error={hasError}
-          />
-        </div>
+        <ArrayField
+          name={path}
+          value={(field.value as string[] | undefined) ?? []}
+          setValue={setValue}
+          error={hasError}
+        />
       )}
       {props.type === "enum" && (
         <EnumField
