@@ -18,7 +18,10 @@ import java.nio.file.Path;
 /**
  * This handler is only responsible for server and scheduler logs. Jobs logs paths are determined by
  * the submitJob function in the JobSubmitter class in the airbyte-server module.
+ *
+ * Javadocs suppressed because api docs should be used as source of truth.
  */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class LogsHandler {
 

@@ -22,6 +22,9 @@ import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+/**
+ * Record migrator.
+ */
 public class RecordMigrations {
 
   /**

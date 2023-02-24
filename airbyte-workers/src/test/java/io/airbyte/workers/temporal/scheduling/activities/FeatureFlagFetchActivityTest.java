@@ -11,8 +11,8 @@ import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.featureflag.CheckInputGeneration;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import java.util.Map;
@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 
 class FeatureFlagFetchActivityTest {
 
-  final static UUID CONNECTION_ID = UUID.randomUUID();
-  final static UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
   FeatureFlagFetchActivity featureFlagFetchActivity;
   FeatureFlagClient featureFlagClient;
@@ -34,7 +34,7 @@ class FeatureFlagFetchActivityTest {
     final WorkspaceApi workspaceApi = mock(WorkspaceApi.class);
 
     featureFlagClient = mock(TestClient.class);
-    when(featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
+    when(featureFlagClient.enabled(CheckInputGeneration.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     featureFlagFetchActivity = new FeatureFlagFetchActivityImpl(workspaceApi, featureFlagClient);
 
@@ -47,7 +47,7 @@ class FeatureFlagFetchActivityTest {
     final FeatureFlagFetchActivity.FeatureFlagFetchInput input = new FeatureFlagFetchActivity.FeatureFlagFetchInput(CONNECTION_ID);
 
     final FeatureFlagFetchActivity.FeatureFlagFetchOutput output = featureFlagFetchActivity.getFeatureFlags(input);
-    Assertions.assertEquals(output.getFeatureFlags(), Map.of(FieldSelectionEnabled.INSTANCE.getKey(), true));
+    Assertions.assertEquals(output.getFeatureFlags(), Map.of(CheckInputGeneration.INSTANCE.getKey(), true));
 
   }
 

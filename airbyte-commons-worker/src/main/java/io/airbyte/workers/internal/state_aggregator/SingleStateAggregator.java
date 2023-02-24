@@ -23,13 +23,23 @@ class SingleStateAggregator implements StateAggregator {
     state = stateMessage;
   }
 
+  @Override
+  public void ingest(final StateAggregator stateAggregator) {
+    if (stateAggregator instanceof SingleStateAggregator) {
+      ingest(((SingleStateAggregator) stateAggregator).state);
+    } else {
+      throw new IllegalArgumentException(
+          "Got an incompatible StateAggregator: " + stateAggregator.getClass().getName() + ", expected SingleStateAggregator");
+    }
+  }
+
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public State getAggregated() {
     if (state.getType() == null || state.getType() == AirbyteStateType.LEGACY) {
       return new State().withState(state.getData());
     } else {
-      /**
+      /*
        * The destination emit a Legacy state in order to be retro-compatible with old platform. If we are
        * running this code, we know that the platform has been upgraded and we can thus discard the legacy
        * state. Keeping the legacy state is causing issue because of its size
@@ -39,6 +49,11 @@ class SingleStateAggregator implements StateAggregator {
       return new State()
           .withState(Jsons.jsonNode(List.of(state)));
     }
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return state == null;
   }
 
 }

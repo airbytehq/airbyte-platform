@@ -36,9 +36,9 @@ class ProtocolVersionCheckerTest {
   DefinitionsProvider definitionsProvider;
   JobPersistence jobPersistence;
 
-  final Version V0_0_0 = new Version("0.0.0");
-  final Version V1_0_0 = new Version("1.0.0");
-  final Version V2_0_0 = new Version("2.0.0");
+  private static final Version V0_0_0 = new Version("0.0.0");
+  private static final Version V1_0_0 = new Version("1.0.0");
+  private static final Version V2_0_0 = new Version("2.0.0");
 
   @BeforeEach
   void beforeEach() throws IOException {

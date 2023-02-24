@@ -10,6 +10,9 @@ import java.net.http.HttpClient;
 import java.util.List;
 import java.util.function.Supplier;
 
+/**
+ * Google Search Console OAuth.
+ */
 public class GoogleSearchConsoleOAuthFlow extends GoogleOAuthFlow {
 
   @VisibleForTesting

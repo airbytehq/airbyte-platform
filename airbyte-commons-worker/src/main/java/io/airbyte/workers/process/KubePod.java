@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.process;
 
+/**
+ * Interface for interacting with kube pods.
+ */
 public interface KubePod {
 
   int exitValue();

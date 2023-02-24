@@ -119,7 +119,7 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
    *
    * @param bufferedReader the stream to read
    * @return The Version if found
-   * @throws IOException
+   * @throws IOException exception while writing
    */
   private Optional<Version> detectVersion(final BufferedReader bufferedReader) throws IOException {
     // Buffersize needs to be big enough to containing everything we need for the detection. Otherwise,
@@ -145,8 +145,8 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
       return Optional.empty();
     } catch (final IOException e) {
       logger.warn(
-          "Protocol version detection failed, it is likely than the connector sent more than {}B without an complete SPEC message." +
-              " A SPEC message that is too long could be the root cause here.",
+          "Protocol version detection failed, it is likely than the connector sent more than {}B without an complete SPEC message."
+              + " A SPEC message that is too long could be the root cause here.",
           BUFFER_READ_AHEAD_LIMIT);
       throw e;
     }
@@ -165,7 +165,7 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
     return this;
   }
 
-  final protected void initializeForProtocolVersion(final Version protocolVersion) {
+  protected final void initializeForProtocolVersion(final Version protocolVersion) {
     this.deserializer = (AirbyteMessageDeserializer<T>) serDeProvider.getDeserializer(protocolVersion).orElseThrow();
     this.migrator = migratorFactory.getAirbyteMessageMigrator(protocolVersion);
     this.protocolVersion = protocolVersion;

@@ -32,6 +32,9 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.StrictComparisonNormalizationEnabled;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -56,6 +59,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Normalization temporal activity impl.
+ */
 @Singleton
 @Slf4j
 public class NormalizationActivityImpl implements NormalizationActivity {
@@ -69,6 +75,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
   private final FeatureFlags featureFlags;
+  private final FeatureFlagClient featureFlagClient;
   private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
@@ -89,6 +96,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    final LogConfigs logConfigs,
                                    @Value("${airbyte.version}") final String airbyteVersion,
                                    final FeatureFlags featureFlags,
+                                   final FeatureFlagClient featureFlagClient,
                                    @Value("${micronaut.server.port}") final Integer serverPort,
                                    final AirbyteConfigValidator airbyteConfigValidator,
                                    final TemporalUtils temporalUtils,
@@ -103,6 +111,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
     this.featureFlags = featureFlags;
+    this.featureFlagClient = featureFlagClient;
     this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
@@ -123,7 +132,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
       final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
       final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
 
-      if (FeatureFlagHelper.isStrictComparisonNormalizationEnabledForWorkspace(featureFlags, input.getWorkspaceId())) {
+      if (FeatureFlagHelper.isStrictComparisonNormalizationEnabledForWorkspace(featureFlags, input.getWorkspaceId())
+          || featureFlagClient.enabled(StrictComparisonNormalizationEnabled.INSTANCE, new Workspace(input.getWorkspaceId().toString()))) {
         log.info("Using strict comparison normalization");
         replaceNormalizationImageTag(destinationLauncherConfig, featureFlags.strictComparisonNormalizationTag());
       }
@@ -176,12 +186,17 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         () -> context);
   }
 
+  @SuppressWarnings("InvalidJavadocPosition")
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   @Deprecated(forRemoval = true)
   /**
    * This activity is deprecated. It is using a big payload which is not needed, it has been replace
    * by generateNormalizationInputWithMinimumPayload
+   *
+   * @param syncInput sync input
+   * @param syncOutput sync output
+   * @return normalization output
    */
   public NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput) {
     return new NormalizationInput()
@@ -226,6 +241,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     destinationLauncherConfig.setNormalizationDockerImage(String.join(":", imageComponents));
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<NormalizationInput, NormalizationSummary>, Exception> getLegacyWorkerFactory(
                                                                                                               final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                               final JobRunConfig jobRunConfig) {
@@ -239,6 +255,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         workerEnvironment);
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<NormalizationInput, NormalizationSummary>, Exception> getContainerLauncherWorkerFactory(
                                                                                                                          final WorkerConfigs workerConfigs,
                                                                                                                          final IntegrationLauncherConfig destinationLauncherConfig,

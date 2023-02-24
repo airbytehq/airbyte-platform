@@ -72,6 +72,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+/**
+ * Setup for Temporal Client test suite.
+ */
 @SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate")
 public class TemporalClientTest {
 

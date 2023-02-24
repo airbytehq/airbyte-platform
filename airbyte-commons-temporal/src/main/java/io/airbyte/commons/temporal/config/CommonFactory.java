@@ -9,6 +9,9 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.env.Environment;
 import jakarta.inject.Singleton;
 
+/**
+ * Create a worker environment from micronaut environment.
+ */
 @Factory
 public class CommonFactory {
 

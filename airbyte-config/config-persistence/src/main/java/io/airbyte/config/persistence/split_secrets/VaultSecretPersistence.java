@@ -13,10 +13,13 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+/**
+ * Vault implementation for the secret persistence.
+ */
 @Slf4j
-final public class VaultSecretPersistence implements SecretPersistence {
+public final class VaultSecretPersistence implements SecretPersistence {
 
-  private final String SECRET_KEY = "value";
+  private static final String SECRET_KEY = "value";
   private final Vault vault;
   private final String pathPrefix;
 

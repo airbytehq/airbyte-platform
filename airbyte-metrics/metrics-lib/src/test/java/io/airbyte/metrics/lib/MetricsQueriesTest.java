@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-public class MetricsQueriesTest {
+class MetricsQueriesTest {
 
   private static final String USER = "user";
   private static final String PASS = "hunter2";
@@ -85,7 +85,7 @@ public class MetricsQueriesTest {
   }
 
   @Nested
-  class srcIdAndDestIdToReleaseStages {
+  class SrcIdAndDestIdToReleaseStages {
 
     @AfterEach
     void tearDown() throws SQLException {
@@ -119,7 +119,7 @@ public class MetricsQueriesTest {
   }
 
   @Nested
-  class jobIdToReleaseStages {
+  class JobIdToReleaseStages {
 
     @AfterEach
     void tearDown() throws SQLException {

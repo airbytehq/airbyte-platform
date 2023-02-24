@@ -10,6 +10,9 @@ import io.airbyte.config.SlackNotificationConfiguration;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * Client for trigger notifications (regardless of notification type e.g. slack or email).
+ */
 public abstract class NotificationClient {
 
   protected boolean sendOnSuccess;
@@ -62,6 +65,12 @@ public abstract class NotificationClient {
                                              final String url)
       throws IOException, InterruptedException;
 
+  /**
+   * Create notification client.
+   *
+   * @param notification type of notification
+   * @return notification client
+   */
   public static NotificationClient createNotificationClient(final Notification notification) {
     return switch (notification.getNotificationType()) {
       case SLACK -> new SlackNotificationClient(notification);
