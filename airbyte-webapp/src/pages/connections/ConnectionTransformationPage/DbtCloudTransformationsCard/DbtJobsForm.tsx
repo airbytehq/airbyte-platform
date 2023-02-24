@@ -65,9 +65,10 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                           options={
                             availableDbtCloudJobs
                               .filter((remoteJob) => !values.jobs.some((savedJob) => isSameJob(remoteJob, savedJob)))
-                              .map((job) => ({ displayName: job.jobName, value: job })) ?? (
-                              <FormattedMessage id="connection.dbtCloudJobs.noJobsFoundForAccount" />
-                            )
+                              .map((job) => ({ displayName: job.jobName, value: job })) ?? {
+                              displayName: <FormattedMessage id="connection.dbtCloudJobs.noJobsFoundForAccount" />,
+                              value: null,
+                            }
                           }
                           onChange={(selection) => {
                             push(selection.value);
