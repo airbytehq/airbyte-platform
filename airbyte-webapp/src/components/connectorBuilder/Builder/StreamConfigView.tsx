@@ -170,13 +170,11 @@ const StreamControls = ({
   return (
     <div className={styles.controls}>
       <StreamTab
-        data-testid="tag-tab-stream-configuration"
         label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
         selected={selectedTab === "configuration"}
         onSelect={() => setSelectedTab("configuration")}
       />
       <StreamTab
-        data-testid="tag-tab-stream-schema"
         label={formatMessage({ id: "connectorBuilder.streamSchema" })}
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
@@ -207,21 +205,14 @@ const StreamTab = ({
   onSelect,
   showErrorIndicator,
   showSchemaConflictIndicator,
-  "data-testid": testId,
 }: {
   selected: boolean;
   label: string;
   onSelect: () => void;
   showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
-  "data-testid": string;
 }) => (
-  <button
-    data-testid={testId}
-    type="button"
-    className={classNames(styles.tab, { [styles.selectedTab]: selected })}
-    onClick={onSelect}
-  >
+  <button type="button" className={classNames(styles.tab, { [styles.selectedTab]: selected })} onClick={onSelect}>
     {label}
     {showErrorIndicator && <Indicator />}
     {showSchemaConflictIndicator && <SchemaConflictIndicator />}

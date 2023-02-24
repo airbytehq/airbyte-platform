@@ -61,7 +61,6 @@ export const SliceSelector: React.FC<SliceSelectorProps> = ({ className, slices,
 
   return (
     <ListBox
-      data-testid="tag-select-slice"
       className={className}
       options={options}
       selectedValue={selectedSliceIndex}

@@ -33,7 +33,6 @@ interface ListBoxProps<T> {
   onSelect: (selectedValue: T) => void;
   buttonClassName?: string;
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
-  "data-testid"?: string;
 }
 
 export const ListBox = <T,>({
@@ -45,7 +44,6 @@ export const ListBox = <T,>({
   controlButton: ControlButton = DefaultControlButton,
   optionClassName,
   selectedOptionClassName,
-  "data-testid": testId,
 }: ListBoxProps<T>) => {
   const selectedOption = options.find((option) => option.value === selectedValue) ?? {
     label: String(selectedValue),
@@ -53,7 +51,7 @@ export const ListBox = <T,>({
   };
 
   return (
-    <div className={className} data-testid={testId}>
+    <div className={className}>
       <Listbox value={selectedValue} onChange={onSelect}>
         <Listbox.Button className={classNames(buttonClassName, styles.button)}>
           <ControlButton selectedOption={selectedOption} />
