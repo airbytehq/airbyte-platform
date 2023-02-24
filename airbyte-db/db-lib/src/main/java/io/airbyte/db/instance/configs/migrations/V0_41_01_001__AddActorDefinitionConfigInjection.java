@@ -22,9 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // TODO: update migration description in the class name
-public class V0_41_00_002__AddActorDefinitionConfigInjection extends BaseJavaMigration {
+public class V0_41_01_001__AddActorDefinitionConfigInjection extends BaseJavaMigration {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(V0_41_00_002__AddActorDefinitionConfigInjection.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(V0_41_01_001__AddActorDefinitionConfigInjection.class);
 
   @Override
   public void migrate(final Context context) throws Exception {
