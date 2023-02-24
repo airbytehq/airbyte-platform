@@ -40,7 +40,7 @@ public class V0_41_01_001__AddActorDefinitionConfigInjection extends BaseJavaMig
 
   private static void addConfigInjectionTable(final DSLContext ctx) {
     final Field<JSONB> jsonToInject = DSL.field("json_to_inject", SQLDataType.JSONB.nullable(false));
-    final Field<String> injectionPath = DSL.field("injection_path", SQLDataType.VARCHAR(256).nullable(false));
+    final Field<String> injectionPath = DSL.field("injection_path", SQLDataType.VARCHAR.nullable(false));
     final Field<UUID> actorDefinitionId = DSL.field("actor_definition_id", SQLDataType.UUID.nullable(false));
     final Field<OffsetDateTime> createdAt =
         DSL.field("created_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(currentOffsetDateTime()));

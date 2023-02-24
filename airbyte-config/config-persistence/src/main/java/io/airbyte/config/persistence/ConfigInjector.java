@@ -24,8 +24,7 @@ public class ConfigInjector {
   }
 
   public JsonNode injectConfig(final JsonNode configuration, final UUID actorDefinitionId) throws IOException {
-    final List<ActorDefinitionConfigInjection> configInjections = configRepository.getActorDefinitionConfigInjections(actorDefinitionId).toList();
-    configInjections.forEach(injection -> {
+    configRepository.getActorDefinitionConfigInjections(actorDefinitionId).forEach(injection -> {
       ((ObjectNode) configuration).set(injection.getInjectionPath(), injection.getJsonToInject());
     });
     return configuration;
