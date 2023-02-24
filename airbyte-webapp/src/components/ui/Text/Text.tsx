@@ -4,6 +4,7 @@ import React from "react";
 import styles from "./text.module.scss";
 
 type TextSize = "xs" | "sm" | "md" | "lg";
+type TextColor = "darkBlue" | "grey" | "grey300";
 type TextElementType = "p" | "span" | "div";
 
 interface TextProps {
@@ -11,36 +12,40 @@ interface TextProps {
   centered?: boolean;
   as?: TextElementType;
   size?: TextSize;
+  color?: TextColor;
   bold?: boolean;
   inverseColor?: boolean;
   title?: string;
-  color?: "default" | "grey-300";
   gradient?: boolean;
 }
 
+const sizes: Record<TextSize, string> = {
+  xs: styles.xs,
+  sm: styles.sm,
+  md: styles.md,
+  lg: styles.lg,
+};
+
+const colors: Record<TextColor, string> = {
+  darkBlue: styles.darkBlue,
+  grey: styles.grey,
+  grey300: styles.grey300,
+};
+
 const getTextClassNames = ({
   size,
+  color,
   centered,
   bold,
   inverseColor,
-  color,
   gradient,
-}: Required<Pick<TextProps, "size" | "centered" | "bold" | "inverseColor" | "color" | "gradient">>) => {
-  const sizes: Record<TextSize, string> = {
-    xs: styles.xs,
-    sm: styles.sm,
-    md: styles.md,
-    lg: styles.lg,
-  };
-
-  return classNames(styles.text, sizes[size], {
+}: Required<Pick<TextProps, "size" | "color" | "centered" | "bold" | "inverseColor" | "gradient">>) =>
+  classNames(styles.text, sizes[size], colors[color], {
     [styles.centered]: centered,
     [styles.bold]: bold,
     [styles.inverse]: inverseColor,
-    [styles["text--color-grey-300"]]: color === "grey-300",
     [styles.gradient]: gradient,
   });
-};
 
 export const Text: React.FC<React.PropsWithChildren<TextProps>> = React.memo(
   ({
@@ -50,13 +55,13 @@ export const Text: React.FC<React.PropsWithChildren<TextProps>> = React.memo(
     children,
     className: classNameProp,
     size = "md",
+    color = "darkBlue",
     inverseColor = false,
-    color = "default",
     gradient = false,
     ...remainingProps
   }) => {
     const className = classNames(
-      getTextClassNames({ centered, size, bold, inverseColor, gradient, color }),
+      getTextClassNames({ centered, size, color, bold, inverseColor, gradient }),
       classNameProp
     );
 
