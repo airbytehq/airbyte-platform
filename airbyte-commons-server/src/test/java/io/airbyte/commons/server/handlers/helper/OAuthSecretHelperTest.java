@@ -62,12 +62,27 @@ class OAuthSecretHelperTest {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
     StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
     ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
-    Map<String, Object> hydratedSecret = Map.of("refresh_token", "so-refreshing");
+    Map<String, Object> hydratedSecret = Map.of(
+        "refresh_token", "so-refreshing",
+        "client_id", "abcd1234",
+        "client_secret", "shhhh"
+    );
     JsonNode newConnectionConfiguration = OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
 
-    System.out.println(newConnectionConfiguration);
-    // TODO - flesh this test out
-    assertEquals(1, 1);
+    ObjectNode expectedConnectionConfiguration = JsonNodeFactory.instance.objectNode();
+    expectedConnectionConfiguration.put("refresh_token", "so-refreshing");
+    expectedConnectionConfiguration.put("client_id", "abcd1234");
+    expectedConnectionConfiguration.put("client_secret", "shhhh");
+
+    assertEquals(newConnectionConfiguration, expectedConnectionConfiguration);
+
+    connectionConfiguration.put("refresh_token", "not-refreshing");
+    connectionConfiguration.put("client_id", "efgh5678");
+    connectionConfiguration.put("client_secret", "boom");
+
+    JsonNode replacementConnectionConfiguration = OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
+
+    assertEquals(replacementConnectionConfiguration, expectedConnectionConfiguration);
   }
 
 }

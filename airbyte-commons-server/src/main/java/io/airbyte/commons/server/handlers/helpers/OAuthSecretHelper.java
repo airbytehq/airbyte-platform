@@ -45,6 +45,7 @@ public class OAuthSecretHelper {
 
       Jsons.replaceNestedString(newConnectionConfiguration, jsonPathList, String.valueOf(hydratedSecret.get(key)));
     }
+    System.out.println(newConnectionConfiguration);
     return newConnectionConfiguration;
   }
 
