@@ -11,23 +11,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
-import io.airbyte.api.model.generated.AttemptFailureSummary;
-import io.airbyte.api.model.generated.AttemptInfoRead;
-import io.airbyte.api.model.generated.AttemptRead;
-import io.airbyte.api.model.generated.AttemptStats;
-import io.airbyte.api.model.generated.AttemptStreamStats;
-import io.airbyte.api.model.generated.DestinationDefinitionRead;
-import io.airbyte.api.model.generated.JobConfigType;
-import io.airbyte.api.model.generated.JobDebugRead;
-import io.airbyte.api.model.generated.JobInfoLightRead;
-import io.airbyte.api.model.generated.JobInfoRead;
-import io.airbyte.api.model.generated.JobRead;
-import io.airbyte.api.model.generated.JobWithAttemptsRead;
-import io.airbyte.api.model.generated.LogRead;
-import io.airbyte.api.model.generated.ResetConfig;
-import io.airbyte.api.model.generated.SourceDefinitionRead;
-import io.airbyte.api.model.generated.StreamDescriptor;
+import io.airbyte.api.model.generated.*;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
+import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
@@ -183,7 +170,7 @@ class JobConverterTest {
       .withPartialSuccess(PARTIAL_SUCCESS);
 
   @Nested
-  class TestJobWithAttempts {
+  class TestJob {
 
     @BeforeEach
     public void setUp() {
@@ -287,9 +274,31 @@ class JobConverterTest {
   @Nested
   class TestSynchronousJob {
 
+    private SynchronousJobMetadata metadata;
+    private static final UUID JOB_ID = UUID.randomUUID();
+    private static final ConfigType CONFIG_TYPE = ConfigType.DISCOVER_SCHEMA;
+    private static final Optional<UUID> CONFIG_ID = Optional.empty();
+    private static final boolean JOB_SUCCEEDED = true;
+    private static final boolean CONNECTOR_CONFIG_IS_UPDATED = false;
+
+    @BeforeEach
+    public void setUp() {
+      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
+      metadata = mock(SynchronousJobMetadata.class);
+      when(metadata.getId()).thenReturn(JOB_ID);
+      when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);
+      when(metadata.getConfigId()).thenReturn(CONFIG_ID);
+      when(metadata.getCreatedAt()).thenReturn(CREATED_AT);
+      when(metadata.getEndedAt()).thenReturn(CREATED_AT);
+      when(metadata.isSucceeded()).thenReturn(JOB_SUCCEEDED);
+      when(metadata.isConnectorConfigurationUpdated()).thenReturn(CONNECTOR_CONFIG_IS_UPDATED);
+      when(metadata.getLogPath()).thenReturn(LOG_PATH);
+      when(metadata.getFailureReason()).thenReturn(FAILURE_REASON);
+    }
     @Test
     void testSynchronousJobRead() {
       // TODO
+      // assertEquals(SYNCHRONOUS_JOB_INFO, jobConverter.getSynchonousJobRead(metadata));
     }
 
   }
