@@ -14,7 +14,6 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.*;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
-import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.FailureReason;
@@ -59,11 +58,20 @@ class JobConverterTest {
   private static final long FAILURE_TIMESTAMP = System.currentTimeMillis();
   private static final String FAILURE_STACKTRACE = "stacktrace";
   private static final FailureReason FAILURE_REASON = new FailureReason()
-          .withFailureOrigin(FailureOrigin.SOURCE)
-          .withFailureType(FailureType.SYSTEM_ERROR)
-          .withExternalMessage(FAILURE_EXTERNAL_MESSAGE)
-          .withStacktrace(FAILURE_STACKTRACE)
-          .withTimestamp(FAILURE_TIMESTAMP);
+      .withFailureOrigin(FailureOrigin.SOURCE)
+      .withFailureType(FailureType.SYSTEM_ERROR)
+      .withExternalMessage(FAILURE_EXTERNAL_MESSAGE)
+      .withStacktrace(FAILURE_STACKTRACE)
+      .withTimestamp(FAILURE_TIMESTAMP);
+
+  @Test
+  void testEnumConversion() {
+    assertTrue(Enums.isCompatible(JobConfig.ConfigType.class, JobConfigType.class));
+    assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
+    assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
+    assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
+
+  }
 
   @Nested
   class TestJob {
@@ -82,95 +90,95 @@ class JobConverterTest {
     private static final boolean PARTIAL_SUCCESS = false;
 
     private static final JobConfig JOB_CONFIG = new JobConfig()
-            .withConfigType(CONFIG_TYPE)
-            .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
-                    new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("users")),
-                    new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("accounts"))))));
+        .withConfigType(CONFIG_TYPE)
+        .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
+            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("users")),
+            new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("accounts"))))));
 
     private static final JobOutput JOB_OUTPUT = new JobOutput()
-            .withOutputType(OutputType.SYNC)
-            .withSync(new StandardSyncOutput()
-                    .withStandardSyncSummary(new StandardSyncSummary()
-                            .withRecordsSynced(RECORDS_EMITTED)
-                            .withBytesSynced(BYTES_EMITTED)
-                            .withTotalStats(new SyncStats()
-                                    .withRecordsEmitted(RECORDS_EMITTED)
-                                    .withBytesEmitted(BYTES_EMITTED)
-                                    .withSourceStateMessagesEmitted(STATE_MESSAGES_EMITTED)
-                                    .withRecordsCommitted(RECORDS_COMMITTED))
-                            .withStreamStats(Lists.newArrayList(new StreamSyncStats()
-                                    .withStreamName(STREAM_NAME)
-                                    .withStats(new SyncStats()
-                                            .withRecordsEmitted(RECORDS_EMITTED)
-                                            .withBytesEmitted(BYTES_EMITTED)
-                                            .withSourceStateMessagesEmitted(STATE_MESSAGES_EMITTED)
-                                            .withRecordsCommitted(RECORDS_COMMITTED))))));
+        .withOutputType(OutputType.SYNC)
+        .withSync(new StandardSyncOutput()
+            .withStandardSyncSummary(new StandardSyncSummary()
+                .withRecordsSynced(RECORDS_EMITTED)
+                .withBytesSynced(BYTES_EMITTED)
+                .withTotalStats(new SyncStats()
+                    .withRecordsEmitted(RECORDS_EMITTED)
+                    .withBytesEmitted(BYTES_EMITTED)
+                    .withSourceStateMessagesEmitted(STATE_MESSAGES_EMITTED)
+                    .withRecordsCommitted(RECORDS_COMMITTED))
+                .withStreamStats(Lists.newArrayList(new StreamSyncStats()
+                    .withStreamName(STREAM_NAME)
+                    .withStats(new SyncStats()
+                        .withRecordsEmitted(RECORDS_EMITTED)
+                        .withBytesEmitted(BYTES_EMITTED)
+                        .withSourceStateMessagesEmitted(STATE_MESSAGES_EMITTED)
+                        .withRecordsCommitted(RECORDS_COMMITTED))))));
 
     private Job job;
 
     private static final JobInfoRead JOB_INFO =
-            new JobInfoRead()
-                    .job(new JobRead()
-                            .id(JOB_ID)
-                            .configId(JOB_CONFIG_ID)
-                            .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
-                            .configType(JobConfigType.SYNC)
-                            .createdAt(CREATED_AT)
-                            .updatedAt(CREATED_AT))
-                    .attempts(Lists.newArrayList(new AttemptInfoRead()
-                            .attempt(new AttemptRead()
-                                    .id((long) ATTEMPT_NUMBER)
-                                    .status(io.airbyte.api.model.generated.AttemptStatus.RUNNING)
-                                    .recordsSynced(RECORDS_EMITTED)
-                                    .bytesSynced(BYTES_EMITTED)
-                                    .totalStats(new AttemptStats()
-                                            .recordsEmitted(RECORDS_EMITTED)
-                                            .bytesEmitted(BYTES_EMITTED)
-                                            .stateMessagesEmitted(STATE_MESSAGES_EMITTED)
-                                            .recordsCommitted(RECORDS_COMMITTED))
-                                    .streamStats(Lists.newArrayList(new AttemptStreamStats()
-                                            .streamName(STREAM_NAME)
-                                            .stats(new AttemptStats()
-                                                    .recordsEmitted(RECORDS_EMITTED)
-                                                    .bytesEmitted(BYTES_EMITTED)
-                                                    .stateMessagesEmitted(STATE_MESSAGES_EMITTED)
-                                                    .recordsCommitted(RECORDS_COMMITTED))))
-                                    .updatedAt(CREATED_AT)
-                                    .createdAt(CREATED_AT)
-                                    .endedAt(CREATED_AT)
-                                    .failureSummary(new AttemptFailureSummary()
-                                            .failures(Lists.newArrayList(new io.airbyte.api.model.generated.FailureReason()
-                                                    .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
-                                                    .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
-                                                    .externalMessage(FAILURE_EXTERNAL_MESSAGE)
-                                                    .stacktrace(FAILURE_STACKTRACE)
-                                                    .timestamp(FAILURE_TIMESTAMP)))
-                                            .partialSuccess(PARTIAL_SUCCESS)))
-                            .logs(new LogRead().logLines(new ArrayList<>()))));
+        new JobInfoRead()
+            .job(new JobRead()
+                .id(JOB_ID)
+                .configId(JOB_CONFIG_ID)
+                .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
+                .configType(JobConfigType.SYNC)
+                .createdAt(CREATED_AT)
+                .updatedAt(CREATED_AT))
+            .attempts(Lists.newArrayList(new AttemptInfoRead()
+                .attempt(new AttemptRead()
+                    .id((long) ATTEMPT_NUMBER)
+                    .status(io.airbyte.api.model.generated.AttemptStatus.RUNNING)
+                    .recordsSynced(RECORDS_EMITTED)
+                    .bytesSynced(BYTES_EMITTED)
+                    .totalStats(new AttemptStats()
+                        .recordsEmitted(RECORDS_EMITTED)
+                        .bytesEmitted(BYTES_EMITTED)
+                        .stateMessagesEmitted(STATE_MESSAGES_EMITTED)
+                        .recordsCommitted(RECORDS_COMMITTED))
+                    .streamStats(Lists.newArrayList(new AttemptStreamStats()
+                        .streamName(STREAM_NAME)
+                        .stats(new AttemptStats()
+                            .recordsEmitted(RECORDS_EMITTED)
+                            .bytesEmitted(BYTES_EMITTED)
+                            .stateMessagesEmitted(STATE_MESSAGES_EMITTED)
+                            .recordsCommitted(RECORDS_COMMITTED))))
+                    .updatedAt(CREATED_AT)
+                    .createdAt(CREATED_AT)
+                    .endedAt(CREATED_AT)
+                    .failureSummary(new AttemptFailureSummary()
+                        .failures(Lists.newArrayList(new io.airbyte.api.model.generated.FailureReason()
+                            .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
+                            .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
+                            .externalMessage(FAILURE_EXTERNAL_MESSAGE)
+                            .stacktrace(FAILURE_STACKTRACE)
+                            .timestamp(FAILURE_TIMESTAMP)))
+                        .partialSuccess(PARTIAL_SUCCESS)))
+                .logs(new LogRead().logLines(new ArrayList<>()))));
 
     private static final String version = "0.33.4";
     private static final AirbyteVersion airbyteVersion = new AirbyteVersion(version);
     private static final SourceDefinitionRead sourceDefinitionRead = new SourceDefinitionRead().sourceDefinitionId(UUID.randomUUID());
     private static final DestinationDefinitionRead destinationDefinitionRead =
-            new DestinationDefinitionRead().destinationDefinitionId(UUID.randomUUID());
+        new DestinationDefinitionRead().destinationDefinitionId(UUID.randomUUID());
 
     private static final JobDebugRead JOB_DEBUG_INFO =
-            new JobDebugRead()
-                    .id(JOB_ID)
-                    .configId(JOB_CONFIG_ID)
-                    .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
-                    .configType(JobConfigType.SYNC)
-                    .airbyteVersion(airbyteVersion.serialize())
-                    .sourceDefinition(sourceDefinitionRead)
-                    .destinationDefinition(destinationDefinitionRead);
+        new JobDebugRead()
+            .id(JOB_ID)
+            .configId(JOB_CONFIG_ID)
+            .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
+            .configType(JobConfigType.SYNC)
+            .airbyteVersion(airbyteVersion.serialize())
+            .sourceDefinition(sourceDefinitionRead)
+            .destinationDefinition(destinationDefinitionRead);
 
     private static final JobWithAttemptsRead JOB_WITH_ATTEMPTS_READ = new JobWithAttemptsRead()
-            .job(JOB_INFO.getJob())
-            .attempts(JOB_INFO.getAttempts().stream().map(AttemptInfoRead::getAttempt).collect(Collectors.toList()));
+        .job(JOB_INFO.getJob())
+        .attempts(JOB_INFO.getAttempts().stream().map(AttemptInfoRead::getAttempt).collect(Collectors.toList()));
 
     private static final io.airbyte.config.AttemptFailureSummary FAILURE_SUMMARY = new io.airbyte.config.AttemptFailureSummary()
-            .withFailures(Lists.newArrayList(FAILURE_REASON))
-            .withPartialSuccess(PARTIAL_SUCCESS);
+        .withFailures(Lists.newArrayList(FAILURE_REASON))
+        .withPartialSuccess(PARTIAL_SUCCESS);
 
     @BeforeEach
     public void setUp() {
@@ -215,14 +223,6 @@ class JobConverterTest {
     @Test
     void testGetJobWithAttemptsRead() {
       assertEquals(JOB_WITH_ATTEMPTS_READ, JobConverter.getJobWithAttemptsRead(job));
-    }
-
-    @Test
-    void testEnumConversion() {
-      assertTrue(Enums.isCompatible(JobConfig.ConfigType.class, JobConfigType.class));
-      assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
-      assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
-      assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
     }
 
     // this test intentionally only looks at the reset config as the rest is the same here.
@@ -281,20 +281,20 @@ class JobConverterTest {
     private static final boolean JOB_SUCCEEDED = true;
     private static final boolean CONNECTOR_CONFIG_UPDATED = false;
     private static SynchronousJobRead SYNCHRONOUS_JOB_INFO = new SynchronousJobRead()
-            .id(JOB_ID)
-            .configType(JobConfigType.DISCOVER_SCHEMA)
-            .configId(String.valueOf(CONFIG_ID))
-            .createdAt(CREATED_AT)
-            .endedAt(CREATED_AT)
-            .succeeded(JOB_SUCCEEDED)
-            .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)
-            .logs(new LogRead().logLines(new ArrayList<>()))
-            .failureReason(new io.airbyte.api.model.generated.FailureReason()
-                .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
-                .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
-                .externalMessage(FAILURE_EXTERNAL_MESSAGE)
-                .stacktrace(FAILURE_STACKTRACE)
-                .timestamp(FAILURE_TIMESTAMP));
+        .id(JOB_ID)
+        .configType(JobConfigType.DISCOVER_SCHEMA)
+        .configId(String.valueOf(CONFIG_ID))
+        .createdAt(CREATED_AT)
+        .endedAt(CREATED_AT)
+        .succeeded(JOB_SUCCEEDED)
+        .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)
+        .logs(new LogRead().logLines(new ArrayList<>()))
+        .failureReason(new io.airbyte.api.model.generated.FailureReason()
+            .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
+            .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
+            .externalMessage(FAILURE_EXTERNAL_MESSAGE)
+            .stacktrace(FAILURE_STACKTRACE)
+            .timestamp(FAILURE_TIMESTAMP));
 
     @BeforeEach
     public void setUp() {
@@ -310,10 +310,12 @@ class JobConverterTest {
       when(metadata.getLogPath()).thenReturn(LOG_PATH);
       when(metadata.getFailureReason()).thenReturn(FAILURE_REASON);
     }
+
     @Test
     void testSynchronousJobRead() {
       assertEquals(SYNCHRONOUS_JOB_INFO, jobConverter.getSynchronousJobRead(metadata));
     }
 
   }
+
 }
