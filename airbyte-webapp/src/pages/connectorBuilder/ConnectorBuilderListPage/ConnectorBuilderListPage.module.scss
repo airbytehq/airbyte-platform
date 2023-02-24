@@ -1,10 +1,8 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.container {
-  padding: variables.$spacing-xl;
-
-  > table > thead > tr > th:first-of-type {
+.table {
+  > thead > tr > th:first-of-type {
     padding-left: variables.$spacing-lg;
   }
 }

@@ -7,13 +7,14 @@ import { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
+import { MainPageWithScroll } from "components";
 import { DefaultLogoCatalog } from "components/common/DefaultLogoCatalog";
 import { HeadTitle } from "components/common/HeadTitle";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
 import { NextTable } from "components/ui/NextTable";
+import { PageHeader } from "components/ui/PageHeader";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
@@ -107,19 +108,25 @@ export const ConnectorBuilderListPage: React.FC = () => {
   );
 
   return (
-    <>
-      <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-      <FlexContainer direction="column" className={styles.container} gap="lg">
-        <FlexContainer direction="row" justifyContent="space-between">
-          <Heading as="h1" size="lg">
-            <FormattedMessage id="connectorBuilder.listPage.heading" values={{ count: projects.length }} />
-          </Heading>
-          <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={() => navigate(ConnectorBuilderRoutePaths.Create)}>
-            <FormattedMessage id="connectorBuilder.listPage.newConnector" />
-          </Button>
-        </FlexContainer>
-        <NextTable columns={columns} data={sortedProjects} />
-      </FlexContainer>
-    </>
+    <MainPageWithScroll
+      headTitle={<HeadTitle titles={[{ id: "connectorBuilder.title" }]} />}
+      pageTitle={
+        <PageHeader
+          title={<FormattedMessage id="connectorBuilder.listPage.heading" values={{ count: projects.length }} />}
+          endComponent={
+            <Button
+              icon={<FontAwesomeIcon icon={faPlus} />}
+              onClick={() => navigate(ConnectorBuilderRoutePaths.Create)}
+              size="sm"
+              data-id="new-custom-connector"
+            >
+              <FormattedMessage id="connectorBuilder.listPage.newConnector" />
+            </Button>
+          }
+        />
+      }
+    >
+      <NextTable columns={columns} data={sortedProjects} className={styles.table} />
+    </MainPageWithScroll>
   );
 };
