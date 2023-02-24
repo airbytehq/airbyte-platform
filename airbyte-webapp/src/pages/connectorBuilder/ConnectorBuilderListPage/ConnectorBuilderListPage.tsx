@@ -20,7 +20,6 @@ import { Text } from "components/ui/Text";
 
 import { useQuery } from "hooks/useQuery";
 import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./ConnectorBuilderListPage.module.scss";
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
@@ -33,8 +32,7 @@ interface Project {
 export const ConnectorBuilderListPage: React.FC = () => {
   const navigate = useNavigate();
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
-  const workspaceId = useCurrentWorkspaceId();
-  const projectsReadList = useListProjects(workspaceId);
+  const projectsReadList = useListProjects();
   // TODO: set version based on activeDeclarativeManifestVersion once it is added to the API
   const projects = projectsReadList.projects.map((projectDetails) => ({ name: projectDetails.name, version: "draft" }));
 

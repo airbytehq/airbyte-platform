@@ -3,7 +3,7 @@ import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } 
 import { useIntl } from "react-intl";
 import { UseQueryResult } from "react-query";
 import { useParams } from "react-router-dom";
-import { useEffectOnce } from "react-use";
+import { useDebounce, useEffectOnce } from "react-use";
 
 import {
   BuilderFormValues,
@@ -20,11 +20,10 @@ import {
   StreamsListReadStreamsItem,
 } from "core/request/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
-import { useProject } from "./ConnectorBuilderProjectsService";
+import { useProject, useUpdateProject } from "./ConnectorBuilderProjectsService";
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -68,9 +67,9 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     throw new Error("Could not find project id in path");
   }
   const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
-  const workspaceId = useCurrentWorkspaceId();
 
-  const builderProject = useProject(workspaceId, projectId);
+  const builderProject = useProject(projectId);
+  const { update } = useUpdateProject(projectId);
   const resolvedManifest = useResolvedManifest(
     builderProject.declarativeManifest?.manifest || DEFAULT_JSON_MANIFEST_VALUES
   );
@@ -170,6 +169,16 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   );
 
   const [selectedView, setSelectedView] = useState<BuilderView>("global");
+
+  const [savingState, setSavingState] = useState<"loading" | "invalid" | "saved">("saved");
+
+  useDebounce(
+    () => {
+      update();
+    },
+    5000,
+    [builderFormValues, formValuesValid]
+  );
 
   const ctx = {
     builderFormValues,
