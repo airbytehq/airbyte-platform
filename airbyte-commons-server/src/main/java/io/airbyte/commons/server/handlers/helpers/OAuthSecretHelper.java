@@ -42,6 +42,9 @@ public class OAuthSecretHelper {
       final String key = entry.getKey();
       final List<String> jsonPathArray = entry.getValue();
       String jsonPointer = "/" + String.join("/", jsonPathArray);
+      System.out.println("Key: " + key);
+      System.out.println("val: " + hydratedSecret.get(key));
+      System.out.println("JsonPointer: " + jsonPointer);
       connectionConfiguration.withObject(jsonPointer).set(key, (JsonNode) hydratedSecret.get(key));
     }
     return newConnectionConfiguration;
@@ -72,8 +75,10 @@ public class OAuthSecretHelper {
     Iterator<Entry<String, JsonNode>> it = specification.get("properties").fields();
     while (it.hasNext()) {
       Entry<String, JsonNode> node = it.next();
+      // TODO - remove debug
       System.out.println("node: " + node);
       JsonNode pathInConnectorConfigNode = node.getValue().at("/path_in_connector_config");
+      // TODO - remove debug
       System.out.println("path_in_connector_config node: " + pathInConnectorConfigNode);
       List<String> pathList = new ArrayList<String>();
       if (pathInConnectorConfigNode.isArray()) {

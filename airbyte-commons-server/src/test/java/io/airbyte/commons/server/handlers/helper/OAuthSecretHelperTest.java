@@ -7,11 +7,16 @@ package io.airbyte.commons.server.handlers.helper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
+import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.protocol.models.AdvancedAuth;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,8 +58,15 @@ class OAuthSecretHelperTest {
   }
 
   @Test
-  void testSetSecretsInConnectionConfiguration() {
-    assertEquals(1, 1);
+  void testSetSecretsInConnectionConfiguration() throws IOException, JsonValidationException, ConfigNotFoundException {
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
+    StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
+    ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
+    Map<String, Object> hydratedSecret = Map.of("refresh_token", "so-refreshing");
+    JsonNode newConnectionConfiguration = OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
+
+    // TODO - flesh this test out
+    assertEquals(expected, result);
   }
 
 }
