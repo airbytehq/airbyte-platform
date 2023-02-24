@@ -14,13 +14,8 @@ public class CatalogDefinitionsConfig {
    * Airbyte developers to test out changes to the catalog locally.
    */
   public static String getLocalConnectorCatalogPath() {
-    Optional<String> customCatalogPath = new EnvConfigs().getLocalCatalogPath();
-    if (customCatalogPath.isPresent()) {
-      return customCatalogPath.get();
-    }
-
-    return AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH;
-
+    final Optional<String> customCatalogPath = new EnvConfigs().getLocalCatalogPath();
+    return customCatalogPath.orElse(AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH);
   }
 
   /**
