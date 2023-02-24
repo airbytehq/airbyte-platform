@@ -60,6 +60,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class JobConverterTest {
@@ -171,116 +172,126 @@ class JobConverterTest {
       .attempts(JOB_INFO.getAttempts().stream().map(AttemptInfoRead::getAttempt).collect(Collectors.toList()));
 
   private static final FailureReason FAILURE_REASON = new FailureReason()
-        .withFailureOrigin(FailureOrigin.SOURCE)
-        .withFailureType(FailureType.SYSTEM_ERROR)
-        .withExternalMessage(FAILURE_EXTERNAL_MESSAGE)
-        .withStacktrace(FAILURE_STACKTRACE)
-        .withTimestamp(FAILURE_TIMESTAMP);
+      .withFailureOrigin(FailureOrigin.SOURCE)
+      .withFailureType(FailureType.SYSTEM_ERROR)
+      .withExternalMessage(FAILURE_EXTERNAL_MESSAGE)
+      .withStacktrace(FAILURE_STACKTRACE)
+      .withTimestamp(FAILURE_TIMESTAMP);
 
   private static final io.airbyte.config.AttemptFailureSummary FAILURE_SUMMARY = new io.airbyte.config.AttemptFailureSummary()
       .withFailures(Lists.newArrayList(FAILURE_REASON))
       .withPartialSuccess(PARTIAL_SUCCESS);
 
-  @BeforeEach
-  public void setUp() {
-    jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
-    job = mock(Job.class);
-    final Attempt attempt = mock(Attempt.class);
-    when(job.getId()).thenReturn(JOB_ID);
-    when(job.getConfigType()).thenReturn(JOB_CONFIG.getConfigType());
-    when(job.getScope()).thenReturn(JOB_CONFIG_ID);
-    when(job.getConfig()).thenReturn(JOB_CONFIG);
-    when(job.getStatus()).thenReturn(JOB_STATUS);
-    when(job.getCreatedAtInSecond()).thenReturn(CREATED_AT);
-    when(job.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
-    when(job.getAttempts()).thenReturn(Lists.newArrayList(attempt));
-    when(attempt.getAttemptNumber()).thenReturn(ATTEMPT_NUMBER);
-    when(attempt.getStatus()).thenReturn(ATTEMPT_STATUS);
-    when(attempt.getOutput()).thenReturn(Optional.of(JOB_OUTPUT));
-    when(attempt.getLogPath()).thenReturn(LOG_PATH);
-    when(attempt.getCreatedAtInSecond()).thenReturn(CREATED_AT);
-    when(attempt.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
-    when(attempt.getEndedAtInSecond()).thenReturn(Optional.of(CREATED_AT));
-    when(attempt.getFailureSummary()).thenReturn(Optional.of(FAILURE_SUMMARY));
+  @Nested
+  class TestJobWithAttempts {
+
+    @BeforeEach
+    public void setUp() {
+      jobConverter = new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY);
+      job = mock(Job.class);
+      final Attempt attempt = mock(Attempt.class);
+      when(job.getId()).thenReturn(JOB_ID);
+      when(job.getConfigType()).thenReturn(JOB_CONFIG.getConfigType());
+      when(job.getScope()).thenReturn(JOB_CONFIG_ID);
+      when(job.getConfig()).thenReturn(JOB_CONFIG);
+      when(job.getStatus()).thenReturn(JOB_STATUS);
+      when(job.getCreatedAtInSecond()).thenReturn(CREATED_AT);
+      when(job.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
+      when(job.getAttempts()).thenReturn(Lists.newArrayList(attempt));
+      when(attempt.getAttemptNumber()).thenReturn(ATTEMPT_NUMBER);
+      when(attempt.getStatus()).thenReturn(ATTEMPT_STATUS);
+      when(attempt.getOutput()).thenReturn(Optional.of(JOB_OUTPUT));
+      when(attempt.getLogPath()).thenReturn(LOG_PATH);
+      when(attempt.getCreatedAtInSecond()).thenReturn(CREATED_AT);
+      when(attempt.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
+      when(attempt.getEndedAtInSecond()).thenReturn(Optional.of(CREATED_AT));
+      when(attempt.getFailureSummary()).thenReturn(Optional.of(FAILURE_SUMMARY));
+
+    }
+
+    @Test
+    void testGetJobInfoRead() {
+      assertEquals(JOB_INFO, jobConverter.getJobInfoRead(job));
+    }
+
+    @Test
+    void testGetJobInfoLightRead() {
+      final JobInfoLightRead expected = new JobInfoLightRead().job(JOB_INFO.getJob());
+      assertEquals(expected, jobConverter.getJobInfoLightRead(job));
+    }
+
+    @Test
+    void testGetDebugJobInfoRead() {
+      assertEquals(JOB_DEBUG_INFO, JobConverter.getDebugJobInfoRead(JOB_INFO, sourceDefinitionRead, destinationDefinitionRead, airbyteVersion));
+    }
+
+    @Test
+    void testGetJobWithAttemptsRead() {
+      assertEquals(JOB_WITH_ATTEMPTS_READ, JobConverter.getJobWithAttemptsRead(job));
+    }
+
+    @Test
+    void testEnumConversion() {
+      assertTrue(Enums.isCompatible(JobConfig.ConfigType.class, JobConfigType.class));
+      assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
+      assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
+      assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
+    }
+
+    // this test intentionally only looks at the reset config as the rest is the same here.
+    @Test
+    void testResetJobIncludesResetConfig() {
+      final JobConfig resetConfig = new JobConfig()
+          .withConfigType(ConfigType.RESET_CONNECTION)
+          .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(List.of(
+              new io.airbyte.protocol.models.StreamDescriptor().withName("users"),
+              new io.airbyte.protocol.models.StreamDescriptor().withName("accounts")))));
+      final Job resetJob = new Job(
+          JOB_ID,
+          ConfigType.RESET_CONNECTION,
+          JOB_CONFIG_ID,
+          resetConfig,
+          Collections.emptyList(),
+          JobStatus.SUCCEEDED,
+          CREATED_AT,
+          CREATED_AT,
+          CREATED_AT);
+
+      final ResetConfig expectedResetConfig = new ResetConfig().streamsToReset(List.of(
+          new StreamDescriptor().name("users"),
+          new StreamDescriptor().name("accounts")));
+      assertEquals(expectedResetConfig, jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
+    }
+
+    @Test
+    void testResetJobExcludesConfigIfNull() {
+      final JobConfig resetConfig = new JobConfig()
+          .withConfigType(ConfigType.RESET_CONNECTION)
+          .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(null));
+      final Job resetJob = new Job(
+          JOB_ID,
+          ConfigType.RESET_CONNECTION,
+          JOB_CONFIG_ID,
+          resetConfig,
+          Collections.emptyList(),
+          JobStatus.SUCCEEDED,
+          CREATED_AT,
+          CREATED_AT,
+          CREATED_AT);
+
+      assertNull(jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
+    }
 
   }
 
-  @Test
-  void testGetJobInfoRead() {
-    assertEquals(JOB_INFO, jobConverter.getJobInfoRead(job));
-  }
+  @Nested
+  class TestSynchronousJob {
 
-  @Test
-  void testGetJobInfoLightRead() {
-    final JobInfoLightRead expected = new JobInfoLightRead().job(JOB_INFO.getJob());
-    assertEquals(expected, jobConverter.getJobInfoLightRead(job));
-  }
+    @Test
+    void testSynchronousJobRead() {
+      // TODO
+    }
 
-  @Test
-  void testGetDebugJobInfoRead() {
-    assertEquals(JOB_DEBUG_INFO, JobConverter.getDebugJobInfoRead(JOB_INFO, sourceDefinitionRead, destinationDefinitionRead, airbyteVersion));
-  }
-
-  @Test
-  void testGetJobWithAttemptsRead() {
-    assertEquals(JOB_WITH_ATTEMPTS_READ, JobConverter.getJobWithAttemptsRead(job));
-  }
-
-  @Test
-  void testEnumConversion() {
-    assertTrue(Enums.isCompatible(JobConfig.ConfigType.class, JobConfigType.class));
-    assertTrue(Enums.isCompatible(JobStatus.class, io.airbyte.api.model.generated.JobStatus.class));
-    assertTrue(Enums.isCompatible(AttemptStatus.class, io.airbyte.api.model.generated.AttemptStatus.class));
-    assertTrue(Enums.isCompatible(FailureReason.FailureOrigin.class, io.airbyte.api.model.generated.FailureOrigin.class));
-  }
-
-  // this test intentionally only looks at the reset config as the rest is the same here.
-  @Test
-  void testResetJobIncludesResetConfig() {
-    final JobConfig resetConfig = new JobConfig()
-        .withConfigType(ConfigType.RESET_CONNECTION)
-        .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(List.of(
-            new io.airbyte.protocol.models.StreamDescriptor().withName("users"),
-            new io.airbyte.protocol.models.StreamDescriptor().withName("accounts")))));
-    final Job resetJob = new Job(
-        JOB_ID,
-        ConfigType.RESET_CONNECTION,
-        JOB_CONFIG_ID,
-        resetConfig,
-        Collections.emptyList(),
-        JobStatus.SUCCEEDED,
-        CREATED_AT,
-        CREATED_AT,
-        CREATED_AT);
-
-    final ResetConfig expectedResetConfig = new ResetConfig().streamsToReset(List.of(
-        new StreamDescriptor().name("users"),
-        new StreamDescriptor().name("accounts")));
-    assertEquals(expectedResetConfig, jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
-  }
-
-  @Test
-  void testResetJobExcludesConfigIfNull() {
-    final JobConfig resetConfig = new JobConfig()
-        .withConfigType(ConfigType.RESET_CONNECTION)
-        .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(null));
-    final Job resetJob = new Job(
-        JOB_ID,
-        ConfigType.RESET_CONNECTION,
-        JOB_CONFIG_ID,
-        resetConfig,
-        Collections.emptyList(),
-        JobStatus.SUCCEEDED,
-        CREATED_AT,
-        CREATED_AT,
-        CREATED_AT);
-
-    assertNull(jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig());
-  }
-
-  @Test
-  void testSynchronousJobRead() {
-    // TODO
   }
 
 }
