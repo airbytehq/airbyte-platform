@@ -1,4 +1,5 @@
 import React, { Dispatch, SetStateAction, useContext, useEffect, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { useLocalStorage } from "react-use";
 
 import {
@@ -23,6 +24,9 @@ interface LocalStorageContext {
 export const ConnectorBuilderLocalStorageContext = React.createContext<LocalStorageContext | null>(null);
 
 export const ConnectorBuilderLocalStorageProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  const { projectId } = useParams<{
+    projectId: string;
+  }>();
   const [storedFormValues, setStoredFormValues] = useLocalStorageFixed<BuilderFormValues>(
     "connectorBuilderFormValues",
     DEFAULT_BUILDER_FORM_VALUES

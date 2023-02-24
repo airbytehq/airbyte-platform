@@ -8,7 +8,7 @@ const ConnectorBuilderLandingPage = React.lazy(() => import("./ConnectorBuilderL
 const ConnectorBuilderEditPage = React.lazy(() => import("./ConnectorBuilderEditPage"));
 
 export const enum ConnectorBuilderRoutePaths {
-  Edit = "edit",
+  Edit = "edit/:id",
 }
 
 const ConnectorBuilderRoutes: React.FC = () => (
