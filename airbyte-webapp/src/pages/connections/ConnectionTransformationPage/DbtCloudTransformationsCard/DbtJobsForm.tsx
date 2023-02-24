@@ -64,7 +64,7 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                     title={
                       <span className={styles.cardTitle}>
                         <FormattedMessage id="connection.dbtCloudJobs.cardTitle" />
-                        {availableDbtCloudJobs.lenght > 0 ? (
+                        {availableDbtCloudJobs.length > 0 ? (
                           <DropdownMenu
                             options={availableDbtCloudJobs
                               .filter((remoteJob) => !values.jobs.some((savedJob) => isSameJob(remoteJob, savedJob)))
