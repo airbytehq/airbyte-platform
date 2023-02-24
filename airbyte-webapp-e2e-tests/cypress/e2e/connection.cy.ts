@@ -540,7 +540,7 @@ describe("Connection - detect source schema changes in source", () => {
 
     catalogDiffModal.clickCloseButton();
 
-    streamsTablePageObject.toggleStreamEnabledState(sourceNamespace, "cars");
+    streamsTablePageObject.enableStream(sourceNamespace, "cars");
 
     submitButtonClick();
     replicationPage.resetModalSaveBtnClick();

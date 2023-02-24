@@ -17,6 +17,8 @@ import { SyncModeSelect } from "./SyncModeSelect";
 import { useCatalogTreeTableRowProps } from "./useCatalogTreeTableRowProps";
 import { StreamHeaderProps } from "../StreamHeader";
 
+const stopPropagationClickHandler: React.MouseEventHandler<HTMLInputElement> = (event) => event.stopPropagation();
+
 export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
   stream,
   destName,
@@ -63,7 +65,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         {!disabled && (
           <>
             <CatalogTreeTableRowIcon stream={stream} />
-            <CheckBox checkboxSize="sm" checked={isSelected} onChange={selectForBulkEdit} />
+            <CheckBox
+              checkboxSize="sm"
+              checked={isSelected}
+              onChange={selectForBulkEdit}
+              onClick={stopPropagationClickHandler}
+            />
           </>
         )}
       </CatalogTreeTableCell>
@@ -72,6 +79,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           size="sm"
           checked={stream.config?.selected}
           onChange={onSelectStream}
+          onClick={stopPropagationClickHandler}
           disabled={disabled}
           data-testid="selected-switch"
         />

@@ -8,5 +8,5 @@ export interface IStreamsTablePageObject {
   checkPrimaryKey(streamName: string, expectedValues: string[]): void;
   checkPreFilledPrimaryKeyField(streamName: string, expectedValue: string): void;
   isPrimaryKeyNonExist(namespace: string, streamName: string): void;
-  toggleStreamEnabledState(namespace: string, streamName: string): void;
+  enableStream(namespace: string, streamName: string): void;
 }

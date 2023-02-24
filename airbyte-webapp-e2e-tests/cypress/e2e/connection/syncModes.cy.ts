@@ -73,23 +73,23 @@ describe("Connection - sync modes", () => {
         });
       })
       .then(() => {
-        cy.intercept({ method: 'POST', url: '**/connections/get', times: 1 }, (request) => {
+        cy.intercept({ method: "POST", url: "**/connections/get", times: 1 }, (request) => {
           request.reply((response) => {
             const body: Connection = modifySyncCatalogStream({
               connection: response.body,
-              namespace: 'public',
-              streamName: 'accounts',
+              namespace: "public",
+              streamName: "accounts",
               modifyStream: (stream) => ({
                 ...stream,
                 sourceDefinedCursor: true,
-                defaultCursorField: ['updated_at']
-              })
+                defaultCursorField: ["updated_at"],
+              }),
             });
-  
+
             response.send(body);
           });
-        }).as('getConnectionWithModifiedStream');
-  
+        }).as("getConnectionWithModifiedStream");
+
         connectionPage.visit(connection, "replication", false);
         cy.wait("@getConnectionWithModifiedStream", { timeout: 20000 });
 
@@ -133,19 +133,19 @@ describe("Connection - sync modes", () => {
       });
     });
 
-    describe("with source-defined cursors and primary keys", () => {
+    describe("with source-defined cursor and primary keys", () => {
       before(() => {
-        streamsTable.searchStream('accounts');
+        streamsTable.searchStream("accounts");
         streamsTable.selectSyncMode("Incremental", "Deduped + history");
       });
 
       after(() => {
         replicationPage.clickCancelEditButton();
-        streamsTable.searchStream('users');
+        streamsTable.searchStream("users");
       });
 
       it("has source-defined cursor", () => {
-        streamsTable.checkPreFilledCursorField('accounts', 'updated_at');
+        streamsTable.checkPreFilledCursorField("accounts", "updated_at");
       });
 
       it("has source-defined primary key", () => {
@@ -167,6 +167,13 @@ describe("Connection - sync modes", () => {
       it("has empty cursor and primary key selects", () => {
         streamsTable.hasEmptyCursorSelect("public", "user_cars");
         streamsTable.hasEmptyPrimaryKeySelect("public", "user_cars");
+        replicationPage.getSaveButton().should("be.disabled");
+      });
+
+      it("can save when stream is disabled", () => {
+        streamsTable.disableStream("public", "user_cars");
+        replicationPage.getSaveButton().should("be.enabled");
+        streamsTable.enableStream("public", "user_cars");
       });
 
       it("should be able to select cursor", () => {
@@ -192,14 +199,23 @@ describe("Connection - sync modes", () => {
       streamsTable.selectSyncMode("Incremental", "Append");
     });
 
-    it("selects cursor", () => {
+    it("has selectable cursor", () => {
       replicationPage.getSaveButton().should("be.disabled");
       streamsTable.hasEmptyCursorSelect("public", "users");
-      streamsTable.selectCursorField("users", "updated_at");
     });
 
     it("does not require a primary key", () => {
       streamsTable.isPrimaryKeyNonExist("public", "users");
+    });
+
+    it("can save when stream is disabled", () => {
+      streamsTable.disableStream("public", "users");
+      replicationPage.getSaveButton().should("be.enabled");
+      streamsTable.disableStream("public", "users");
+    });
+
+    it("selects cursor", () => {
+      streamsTable.selectCursorField("users", "updated_at");
     });
   });
 

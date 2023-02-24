@@ -125,7 +125,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
     cy.get(getPreFilledPrimaryKeyText(streamName)).should("not.exist");
   }
 
-  toggleStreamEnabledState(namespace: string, streamName: string) {
+  enableStream(namespace: string, streamName: string) {
     cy.get(streamSyncEnabledSwitch(streamName)).check({ force: true });
   }
 }

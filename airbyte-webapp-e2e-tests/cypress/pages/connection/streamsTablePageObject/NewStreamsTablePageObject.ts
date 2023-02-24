@@ -128,7 +128,11 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
     });
   }
 
-  toggleStreamEnabledState(namespace: string, streamName: string): void {
+  enableStream(namespace: string, streamName: string): void {
     cy.get(getRowTestId(namespace, streamName, getTestId("selected-switch"))).check({ force: true });
+  }
+
+  disableStream(namespace: string, streamName: string): void {
+    cy.get(getRowTestId(namespace, streamName, getTestId("selected-switch"))).uncheck({ force: true });
   }
 }
