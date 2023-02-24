@@ -7,6 +7,7 @@ import {
   AirbyteStreamConfiguration,
   StreamDescriptor,
   StreamTransform,
+  AirbyteStream,
 } from "core/request/AirbyteClient";
 
 const getDefaultCursorField = (streamNode: SyncSchemaStream): string[] => {
@@ -117,6 +118,23 @@ const verifyConfigCursorField = (streamNode: SyncSchemaStream): SyncSchemaStream
     },
   };
 };
+const overrideStreamSelection = (
+  streamNode: SyncSchemaStream,
+  suggestedStreams: Array<AirbyteStream["name"]>
+): SyncSchemaStream => {
+  if (!streamNode.config) {
+    return streamNode;
+  }
+  const { config } = streamNode;
+  const isSuggested = suggestedStreams.includes(streamNode.stream?.name ?? "");
+  return {
+    ...streamNode,
+    config: {
+      ...config,
+      selected: Boolean(isSuggested),
+    },
+  };
+};
 
 const getOptimalSyncMode = (
   streamNode: SyncSchemaStream,
@@ -174,17 +192,23 @@ const getOptimalSyncMode = (
 };
 
 const calculateInitialCatalog = (
+  suggestedStreams: string[],
   schema: SyncSchema,
   supportedDestinationSyncModes: DestinationSyncMode[],
   streamsWithBreakingFieldChanges?: StreamTransform[],
   isNotCreateMode?: boolean,
   newStreamDescriptors?: StreamDescriptor[]
 ): SyncSchema => {
+  // console.log("schema", schema);
+  console.log("sourceDefinitionId", suggestedStreams);
+
   return {
     streams: schema.streams.map<SyncSchemaStream>((apiNode, id) => {
       const nodeWithId: SyncSchemaStream = { ...apiNode, id: id.toString() };
-      const nodeStream = verifySourceDefinedProperties(verifySupportedSyncModes(nodeWithId), isNotCreateMode || false);
-
+      const nodeStream = verifySourceDefinedProperties(
+        verifySupportedSyncModes(overrideStreamSelection(nodeWithId, suggestedStreams)),
+        isNotCreateMode || false
+      );
       // if the stream is new since a refresh, verify cursor and get optimal sync modes
       const isStreamNew = newStreamDescriptors?.some(
         (streamIdFromDiff) =>

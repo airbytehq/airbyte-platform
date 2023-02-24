@@ -119,7 +119,7 @@ export const StreamHeader: React.FC<StreamHeaderProps> = ({
         <HeaderCell flex={0.4}>
           <Switch
             size="sm"
-            checked={stream.config?.selected}
+            checked={isStreamEnabled}
             onChange={onSelectStream}
             disabled={disabled}
             data-testid={`${stream.stream?.name}-stream-sync-switch`}

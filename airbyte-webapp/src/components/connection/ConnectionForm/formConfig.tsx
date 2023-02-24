@@ -30,6 +30,7 @@ import {
 } from "core/request/AirbyteClient";
 import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { ValuesProps } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
@@ -360,9 +361,13 @@ export const useInitialValues = (
     return undefined;
   }, [catalogDiff?.transforms, connection]);
 
+  const selectedStreams = useExperiment("connection.syncCatalogConfig.selectedStreams", {});
+  console.log("selectedStreams", selectedStreams);
+  const sourceSuggestedStreams = selectedStreams[connection.source.sourceDefinitionId];
   const initialSchema = useMemo(
     () =>
       calculateInitialCatalog(
+        sourceSuggestedStreams,
         connection.syncCatalog,
         destDefinitionSpecification?.supportedDestinationSyncModes || [],
         streamTransformsWithBreakingChange,
@@ -370,6 +375,7 @@ export const useInitialValues = (
         newStreamDescriptors
       ),
     [
+      sourceSuggestedStreams,
       streamTransformsWithBreakingChange,
       connection.syncCatalog,
       destDefinitionSpecification?.supportedDestinationSyncModes,

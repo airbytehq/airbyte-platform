@@ -7,6 +7,7 @@ import { SyncSchemaStream } from "core/domain/catalog";
 import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { BulkEditServiceProvider } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { naturalComparatorBy } from "utils/objects";
 
 import styles from "./CatalogTree.module.scss";
@@ -41,10 +42,14 @@ const CatalogTreeComponent: React.FC<React.PropsWithChildren<CatalogTreeProps>> 
     [streams, onStreamsChanged]
   );
 
-  const sortedSchema = useMemo(
-    () => [...streams].sort(naturalComparatorBy((syncStream) => syncStream.stream?.name ?? "")),
-    [streams]
-  );
+  const suggestedStreamsExperiments = useExperiment("connection.syncCatalogConfig.selectedStreams", {});
+  const sortedSchema = useMemo(() => {
+    // this should only happen in the initial load
+    if (Boolean(suggestedStreamsExperiments)) {
+      return [...streams].sort((a, b) => Number(b.config?.selected) - Number(a.config?.selected));
+    }
+    return [...streams].sort(naturalComparatorBy((syncStream) => syncStream.stream?.name ?? ""));
+  }, [streams]);
 
   const filteredStreams = useMemo(() => {
     const filters: Array<(s: SyncSchemaStream) => boolean> = [
