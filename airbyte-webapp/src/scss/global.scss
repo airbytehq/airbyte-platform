@@ -3,6 +3,12 @@
 @use "./fonts";
 @use "./variables";
 
+:root {
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+}
+
 html,
 body,
 #root {
