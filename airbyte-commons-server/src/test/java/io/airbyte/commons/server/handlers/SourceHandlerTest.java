@@ -35,7 +35,6 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
-import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
@@ -58,14 +57,11 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayNameGenerator.Standard;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 class SourceHandlerTest {
 
@@ -432,7 +428,8 @@ class SourceHandlerTest {
     when(configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()))
         .thenReturn(definition);
 
-    // Test that calling createSourceHandleSecret only hits old code path if nothing is passed for secretId
+    // Test that calling createSourceHandleSecret only hits old code path if nothing is passed for
+    // secretId
     sourceHandlerSpy.createSourceHandleSecret(sourceCreate);
     verify(sourceHandlerSpy).createSource(sourceCreate);
     verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any());

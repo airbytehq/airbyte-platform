@@ -100,7 +100,7 @@ public class SourceHandler {
   }
 
   public SourceRead createSourceHandleSecret(final SourceCreate sourceCreate) throws JsonValidationException, ConfigNotFoundException, IOException {
-    if (!(sourceCreate.getSecretId() == null) && !sourceCreate.getSecretId().isBlank()) {
+    if (sourceCreate.getSecretId() != null && !sourceCreate.getSecretId().isBlank()) {
       JsonNode hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.getSecretId());
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
       sourceCreate.setConnectionConfiguration(
@@ -384,6 +384,5 @@ public class SourceHandler {
     return secretsRepositoryReader.fetchSecret(secretCoordinate);
 
   }
-
 
 }

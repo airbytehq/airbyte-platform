@@ -56,7 +56,7 @@ class OAuthSecretHelperTest {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
     StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
     ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
-     JsonNode hydratedSecret = Jsons.jsonNode(Map.of(
+    JsonNode hydratedSecret = Jsons.jsonNode(Map.of(
         "refresh_token", "so-refreshing",
         "client_id", "abcd1234",
         "client_secret", "shhhh"));
