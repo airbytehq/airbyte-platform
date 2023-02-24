@@ -61,6 +61,9 @@ public interface GenerateInputActivity {
 
   }
 
+  /**
+   * Generated job input.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

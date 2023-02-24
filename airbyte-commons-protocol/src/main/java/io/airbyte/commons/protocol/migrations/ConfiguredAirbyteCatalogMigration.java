@@ -5,12 +5,13 @@
 package io.airbyte.commons.protocol.migrations;
 
 /**
- * ConfiguredCatalog Migration.
+ * Migrate between different version sof airbyte catalog.
  *
- * @param <V0> previous version
- * @param <V1> current version
+ * @param <PreviousVersion> previous version
+ * @param <CurrentVersion> current version
  */
-public interface ConfiguredAirbyteCatalogMigration<V0, V1> extends Migration {
+@SuppressWarnings("InterfaceTypeParameterName")
+public interface ConfiguredAirbyteCatalogMigration<PreviousVersion, CurrentVersion> extends Migration {
 
   /**
    * Downgrades a ConfiguredAirbyteCatalog from the new version to the old version.
@@ -18,7 +19,7 @@ public interface ConfiguredAirbyteCatalogMigration<V0, V1> extends Migration {
    * @param message the ConfiguredAirbyteCatalog to downgrade
    * @return the downgraded ConfiguredAirbyteCatalog
    */
-  V0 downgrade(final V1 message);
+  PreviousVersion downgrade(final CurrentVersion message);
 
   /**
    * Upgrades a ConfiguredAirbyteCatalog from the old version to the new version.
@@ -26,6 +27,6 @@ public interface ConfiguredAirbyteCatalogMigration<V0, V1> extends Migration {
    * @param message the ConfiguredAirbyteCatalog to upgrade
    * @return the upgraded ConfiguredAirbyteCatalog
    */
-  V1 upgrade(final V0 message);
+  CurrentVersion upgrade(final PreviousVersion message);
 
 }

@@ -19,6 +19,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add Connector Builder tables to the platform.
+ */
 public class V0_41_00_001__AddConnectorBuilderProjectTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_41_00_001__AddConnectorBuilderProjectTable.class);

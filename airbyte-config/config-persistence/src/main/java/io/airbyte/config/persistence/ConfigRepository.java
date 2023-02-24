@@ -2125,6 +2125,15 @@ public class ConfigRepository {
     return countResult > 0;
   }
 
+  /**
+   * Get connector builder project.
+   *
+   * @param builderProjectId project id
+   * @param fetchManifestDraft manifest draft
+   * @return builder project
+   * @throws IOException exception while interacting with db
+   * @throws ConfigNotFoundException if build project is not found
+   */
   public ConnectorBuilderProject getConnectorBuilderProject(final UUID builderProjectId, final boolean fetchManifestDraft)
       throws IOException, ConfigNotFoundException {
     final Optional<ConnectorBuilderProject> projectOptional = database.query(ctx -> {
@@ -2145,6 +2154,13 @@ public class ConfigRepository {
     return projectOptional.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, builderProjectId));
   }
 
+  /**
+   * Get connector builder project from a workspace id.
+   *
+   * @param workspaceId workspace id
+   * @return builder project
+   * @throws IOException exception while interacting with db
+   */
   public Stream<ConnectorBuilderProject> getConnectorBuilderProjectsByWorkspace(final UUID workspaceId) throws IOException {
     final Condition matchByWorkspace = CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId);
 
@@ -2159,11 +2175,24 @@ public class ConfigRepository {
         .stream();
   }
 
+  /**
+   * Delete builder project.
+   *
+   * @param builderProjectId builder project to delete
+   * @return true if successful
+   * @throws IOException exception while interacting with db
+   */
   public boolean deleteBuilderProject(final UUID builderProjectId) throws IOException {
     return database.transaction(ctx -> ctx.update(CONNECTOR_BUILDER_PROJECT).set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, true)
         .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)).execute()) > 0;
   }
 
+  /**
+   * Write a builder project to the db.
+   *
+   * @param builderProject builder project to write
+   * @throws IOException exception while interacting with db
+   */
   public void writeBuilderProject(final ConnectorBuilderProject builderProject) throws IOException {
     database.transaction(ctx -> {
       final OffsetDateTime timestamp = OffsetDateTime.now();

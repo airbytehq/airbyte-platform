@@ -21,6 +21,7 @@ import java.util.Set;
  * This class is intended to apply the transformations required to go from one version of the
  * AirbyteProtocol to another.
  */
+@SuppressWarnings({"MethodTypeParameterName", "LineLength"})
 @Singleton
 public class AirbyteMessageMigrator {
 
@@ -38,39 +39,58 @@ public class AirbyteMessageMigrator {
   /**
    * Downgrade a message from the most recent version to the target version by chaining all the
    * required migrations.
+   *
+   * @param message message to upgrade
+   * @param target target version ?
+   * @param configuredAirbyteCatalog catalog
+   * @param <PreviousVersion> version of message
+   * @param <CurrentVersion> version to go to
+   * @return downgraded catalog
    */
-  public <V0, V1> V0 downgrade(final V1 message,
-                               final Version target,
-                               final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+  public <PreviousVersion, CurrentVersion> PreviousVersion downgrade(final CurrentVersion message,
+                                                                     final Version target,
+                                                                     final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
     return migrationContainer.downgrade(message, target, (migration, msg) -> applyDowngrade(migration, msg, configuredAirbyteCatalog));
   }
 
   /**
    * Upgrade a message from the source version to the most recent version by chaining all the required
    * migrations.
+   *
+   * @param message message to upgrade
+   * @param source source's version ?
+   * @param configuredAirbyteCatalog catalog
+   * @param <PreviousVersion> version of message
+   * @param <CurrentVersion> version to go to
+   * @return upgraded catalog
    */
-  public <V0, V1> V1 upgrade(final V0 message,
-                             final Version source,
-                             final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+  public <PreviousVersion, CurrentVersion> CurrentVersion upgrade(final PreviousVersion message,
+                                                                  final Version source,
+                                                                  final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
     return migrationContainer.upgrade(message, source, (migration, msg) -> applyUpgrade(migration, msg, configuredAirbyteCatalog));
   }
 
+  /**
+   * Get most recent protocol version.
+   *
+   * @return protocol version
+   */
   public Version getMostRecentVersion() {
     return migrationContainer.getMostRecentVersion();
   }
 
   // Helper function to work around type casting
-  private static <V0, V1> V0 applyDowngrade(final AirbyteMessageMigration<V0, V1> migration,
-                                            final Object message,
-                                            final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
-    return migration.downgrade((V1) message, configuredAirbyteCatalog);
+  private static <PreviousVersion, CurrentVersion> PreviousVersion applyDowngrade(final AirbyteMessageMigration<PreviousVersion, CurrentVersion> migration,
+                                                                                  final Object message,
+                                                                                  final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+    return migration.downgrade((CurrentVersion) message, configuredAirbyteCatalog);
   }
 
   // Helper function to work around type casting
-  private static <V0, V1> V1 applyUpgrade(final AirbyteMessageMigration<V0, V1> migration,
-                                          final Object message,
-                                          final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
-    return migration.upgrade((V0) message, configuredAirbyteCatalog);
+  private static <PreviousVersion, CurrentVersion> CurrentVersion applyUpgrade(final AirbyteMessageMigration<PreviousVersion, CurrentVersion> migration,
+                                                                               final Object message,
+                                                                               final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+    return migration.upgrade((PreviousVersion) message, configuredAirbyteCatalog);
   }
 
   // Used for inspection of the injection

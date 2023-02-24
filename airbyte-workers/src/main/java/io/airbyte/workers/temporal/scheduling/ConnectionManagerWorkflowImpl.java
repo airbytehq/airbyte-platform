@@ -365,8 +365,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * is fully rolled out.
    */
   private boolean shouldRunCheckInputGeneration(final boolean featureFlagEnabled) {
-    if (!featureFlagEnabled)
+    if (!featureFlagEnabled) {
       return false;
+    }
 
     final int generateCheckInputVersion =
         Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);

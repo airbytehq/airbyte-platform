@@ -356,12 +356,24 @@ public class DbConverter {
             : Jsons.deserialize(record.get(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY).data()));
   }
 
+  /**
+   * Builder connector builder with manifest project from db record.
+   *
+   * @param record db record
+   * @return connector builder project
+   */
   public static ConnectorBuilderProject buildConnectorBuilderProject(final Record record) {
     return buildConnectorBuilderProjectWithoutManifestDraft(record)
         .withManifestDraft(record.get(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT) == null ? null
             : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT).data()));
   }
 
+  /**
+   * Builder connector builder without manifest project from db record.
+   *
+   * @param record db record
+   * @return connector builder project
+   */
   public static ConnectorBuilderProject buildConnectorBuilderProjectWithoutManifestDraft(final Record record) {
     return new ConnectorBuilderProject()
         .withWorkspaceId(record.get(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID))
