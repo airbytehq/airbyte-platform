@@ -10,8 +10,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.SecretsRepositoryReader;
-import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -91,12 +89,6 @@ public class OAuthSecretHelper {
       result.put(node.getKey(), pathList);
     }
     return result;
-  }
-
-  public static JsonNode hydrateOAuthResponseSecret(SecretsRepositoryReader secretsRepositoryReader, String secretId) {
-      final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
-      return secretsRepositoryReader.fetchSecret(secretCoordinate);
-
   }
 
 }

@@ -31,6 +31,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -99,11 +100,9 @@ public class SourceHandler {
   }
 
   public SourceRead createSourceHandleSecret(final SourceCreate sourceCreate) throws JsonValidationException, ConfigNotFoundException, IOException {
-    if (!sourceCreate.getSecretId().isBlank()) {
-      // Hydrate secret
-      JsonNode hydratedSecret = OAuthSecretHelper.hydrateOAuthResponseSecret(secretsRepositoryReader, sourceCreate.getSecretId());
-      final StandardSourceDefinition sourceDefinition = configRepository
-          .getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
+    if (!(sourceCreate.getSecretId() == null) && !sourceCreate.getSecretId().isBlank()) {
+      JsonNode hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.getSecretId());
+      final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
       sourceCreate.setConnectionConfiguration(
           OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, sourceCreate.getConnectionConfiguration()));
     }
@@ -379,5 +378,12 @@ public class SourceHandler {
         .sourceName(sourceDefinition.getName())
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
   }
+
+  public JsonNode hydrateOAuthResponseSecret(String secretId) {
+    final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
+    return secretsRepositoryReader.fetchSecret(secretCoordinate);
+
+  }
+
 
 }

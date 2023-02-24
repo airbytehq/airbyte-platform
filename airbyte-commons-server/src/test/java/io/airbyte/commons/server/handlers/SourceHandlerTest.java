@@ -6,7 +6,11 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +35,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
@@ -42,6 +47,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -52,10 +58,14 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayNameGenerator.Standard;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 class SourceHandlerTest {
 
@@ -397,6 +407,42 @@ class SourceHandlerTest {
 
     verify(configRepository).writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
+  }
+
+  @Test
+  void testCreateSourceHandleSecret() throws JsonValidationException, ConfigNotFoundException, IOException {
+    StandardSourceDefinition definition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("marketo")
+        .withDockerRepository("thebestrepo")
+        .withDockerImageTag("thelatesttag")
+        .withDocumentationUrl("https://wikipedia.org")
+        .withSpec(ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification())
+        .withIcon(ICON);
+
+    final SourceHandler sourceHandlerSpy = Mockito.spy(sourceHandler);
+    final SourceCreate sourceCreate = new SourceCreate()
+        .name(sourceConnection.getName())
+        .workspaceId(sourceConnection.getWorkspaceId())
+        .sourceDefinitionId(definition.getSourceDefinitionId())
+        .connectionConfiguration(sourceConnection.getConfiguration());
+
+    doReturn(new SourceRead()).when(sourceHandlerSpy).createSource(any());
+    doReturn(Jsons.emptyObject()).when(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
+    when(configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()))
+        .thenReturn(definition);
+
+    // Test that calling createSourceHandleSecret only hits old code path if nothing is passed for secretId
+    sourceHandlerSpy.createSourceHandleSecret(sourceCreate);
+    verify(sourceHandlerSpy).createSource(sourceCreate);
+    verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any());
+
+    // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
+    SecretCoordinate secretCoordinate = new SecretCoordinate("test", 1);
+    sourceCreate.setSecretId(secretCoordinate.getFullCoordinate());
+    sourceHandlerSpy.createSourceHandleSecret(sourceCreate);
+    verify(sourceHandlerSpy, times(2)).createSource(sourceCreate);
+    verify(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
   }
 
 }
