@@ -1,22 +1,9 @@
-import React, { Dispatch, SetStateAction, useContext, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import React, { Dispatch, SetStateAction, useContext } from "react";
 import { useLocalStorage } from "react-use";
 
-import {
-  BuilderFormValues,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES,
-  EditorView,
-  versionSupported,
-} from "components/connectorBuilder/types";
-
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { EditorView } from "components/connectorBuilder/types";
 
 interface LocalStorageContext {
-  storedFormValues: BuilderFormValues;
-  setStoredFormValues: (values: BuilderFormValues) => void;
-  storedManifest: ConnectorManifest;
-  setStoredManifest: (manifest: ConnectorManifest) => void;
   storedEditorView: EditorView;
   setStoredEditorView: (view: EditorView) => void;
 }
@@ -24,43 +11,9 @@ interface LocalStorageContext {
 export const ConnectorBuilderLocalStorageContext = React.createContext<LocalStorageContext | null>(null);
 
 export const ConnectorBuilderLocalStorageProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const { projectId } = useParams<{
-    projectId: string;
-  }>();
-  const [storedFormValues, setStoredFormValues] = useLocalStorageFixed<BuilderFormValues>(
-    "connectorBuilderFormValues",
-    DEFAULT_BUILDER_FORM_VALUES
-  );
-
-  let versionSaveFormValues = storedFormValues;
-
-  // TODO this is required as an interim measure to avoid the UI from breaking on outdated form values in the local storage.
-  // It is only required for alpha testing and will be removed once the state is stored via API request in the database
-  const outdatedFormValues = useMemo(() => !versionSupported(storedFormValues.version), [storedFormValues.version]);
-  if (outdatedFormValues) {
-    versionSaveFormValues = DEFAULT_BUILDER_FORM_VALUES;
-  }
-
-  useEffect(() => {
-    if (outdatedFormValues) {
-      alert(
-        "Reset outdated form values. The low code CDK version of this distribution contains breaking changes which are not compatible with saved states."
-      );
-    }
-  }, [outdatedFormValues]);
-
-  const [storedManifest, setStoredManifest] = useLocalStorageFixed<ConnectorManifest>(
-    "connectorBuilderJsonManifest",
-    DEFAULT_JSON_MANIFEST_VALUES
-  );
-
   const [storedEditorView, setStoredEditorView] = useLocalStorageFixed<EditorView>("connectorBuilderEditorView", "ui");
 
   const ctx = {
-    storedFormValues: versionSaveFormValues,
-    setStoredFormValues,
-    storedManifest,
-    setStoredManifest,
     storedEditorView,
     setStoredEditorView,
   };

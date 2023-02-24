@@ -9,7 +9,7 @@ import {
   StreamsListRequestBodyConfig,
   StreamsListRequestBodyManifest,
 } from "core/request/ConnectorBuilderClient";
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
@@ -62,4 +62,13 @@ export const useResolveManifest = () => {
   const service = useConnectorBuilderService();
 
   return { resolve: (manifest: ConnectorManifest) => service.resolveManifest({ manifest }) };
+};
+
+export const useResolvedManifest = (manifest: ResolveManifestRequestBodyManifest) => {
+  const service = useConnectorBuilderService();
+
+  return useSuspenseQuery(
+    connectorBuilderKeys.resolve(manifest),
+    async () => (await service.resolveManifest({ manifest })).manifest as DeclarativeComponentSchema
+  );
 };

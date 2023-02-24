@@ -2,7 +2,6 @@ import merge from "lodash/merge";
 
 import { ConnectorManifest, DeclarativeStream } from "core/request/ConnectorManifest";
 
-import { DEFAULT_BUILDER_FORM_VALUES } from "./types";
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 
 const baseManifest: ConnectorManifest = {
@@ -57,7 +56,7 @@ describe("Conversion throws error when", () => {
       throw new Error(errorMessage);
     };
     const convert = async () => {
-      return convertToBuilderFormValues(resolve, {} as ConnectorManifest, DEFAULT_BUILDER_FORM_VALUES);
+      return convertToBuilderFormValues(resolve, {} as ConnectorManifest, "Untitled");
     };
     await expect(convert).rejects.toThrow(errorMessage);
   });
@@ -77,7 +76,7 @@ describe("Conversion throws error when", () => {
           },
         ],
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+      return convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     };
     await expect(convert).rejects.toThrow("doesn't use a SimpleRetriever");
   });
@@ -97,7 +96,7 @@ describe("Conversion throws error when", () => {
           }),
         ],
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+      return convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     };
     await expect(convert).rejects.toThrow("doesn't use a HttpRequester");
   });
@@ -120,7 +119,7 @@ describe("Conversion throws error when", () => {
           }),
         ],
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+      return convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     };
     await expect(convert).rejects.toThrow("api_token value must be of the form {{ config[");
   });
@@ -153,7 +152,7 @@ describe("Conversion throws error when", () => {
           }),
         ],
       };
-      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+      return convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     };
     await expect(convert).rejects.toThrow("OAuthAuthenticator contains a refresh_request_body with non-string values");
   });
@@ -161,8 +160,8 @@ describe("Conversion throws error when", () => {
 
 describe("Conversion successfully results in", () => {
   it("default values if manifest is empty", async () => {
-    const formValues = await convertToBuilderFormValues(noOpResolve, baseManifest, DEFAULT_BUILDER_FORM_VALUES);
-    expect(formValues).toEqual(DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, baseManifest, "Untitled");
+    expect(formValues).toEqual("Untitled");
   });
 
   it("spec properties converted to inputs if no streams present", async () => {
@@ -184,7 +183,7 @@ describe("Conversion successfully results in", () => {
         },
       },
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.inferredInputOverrides).toEqual({});
     expect(formValues.inputs).toEqual([
       {
@@ -231,7 +230,7 @@ describe("Conversion successfully results in", () => {
         },
       },
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.inputs).toEqual([
       {
         key: "numeric_key",
@@ -260,7 +259,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.streams[0].requestOptions.requestParameters).toEqual([
       ["k1", "v1"],
       ["k2", "v2"],
@@ -279,7 +278,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.streams[0].primaryKey).toEqual(["id"]);
   });
 
@@ -305,7 +304,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.streams[0].partitionRouter).toEqual(manifest.streams[0].retriever.partition_router);
   });
 
@@ -331,7 +330,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.streams[1].partitionRouter).toEqual([
       {
         type: "SubstreamPartitionRouter",
@@ -356,7 +355,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.streams[0].schema).toEqual(
       `{
   "key": "value"
@@ -392,7 +391,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.streams[0].unsupportedFields).toEqual({
       transformations: manifest.streams[0].transformations,
       retriever: {
@@ -430,7 +429,7 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_BUILDER_FORM_VALUES);
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, "Untitled");
     expect(formValues.global.authenticator).toEqual({
       type: "OAuthAuthenticator",
       client_id: "{{ config['client_id'] }}",

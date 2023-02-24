@@ -90,7 +90,10 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   const handleToggleYamlEditor = async () => {
     if (yamlIsDirty) {
       try {
-        const convertedFormValues = await convertToBuilderFormValues(jsonManifest, builderFormValues);
+        const convertedFormValues = await convertToBuilderFormValues(
+          jsonManifest,
+          builderFormValues.global.connectorName
+        );
         setValues(convertedFormValues);
         toggleYamlEditor();
       } catch (e) {

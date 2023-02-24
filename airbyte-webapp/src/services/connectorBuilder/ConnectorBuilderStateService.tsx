@@ -2,6 +2,8 @@ import { dump } from "js-yaml";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { UseQueryResult } from "react-query";
+import { useParams } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import {
   BuilderFormValues,
@@ -10,6 +12,7 @@ import {
   DEFAULT_JSON_MANIFEST_VALUES,
   EditorView,
 } from "components/connectorBuilder/types";
+import { convertToBuilderFormValuesSync } from "components/connectorBuilder/useManifestToBuilderForm";
 
 import {
   StreamRead,
@@ -17,9 +20,11 @@ import {
   StreamsListReadStreamsItem,
 } from "core/request/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
+import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
-import { useListStreams, useReadStream } from "./ConnectorBuilderApiService";
+import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
+import { useProject } from "./ConnectorBuilderProjectsService";
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -56,14 +61,46 @@ export const ConnectorBuilderFormStateContext = React.createContext<FormStateCon
 export const ConnectorBuilderTestStateContext = React.createContext<TestStateContext | null>(null);
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const {
-    storedFormValues,
-    setStoredFormValues,
-    storedManifest,
-    setStoredManifest,
-    storedEditorView,
-    setStoredEditorView,
-  } = useConnectorBuilderLocalStorage();
+  const { projectId } = useParams<{
+    projectId: string;
+  }>();
+  if (!projectId) {
+    throw new Error("Could not find project id in path");
+  }
+  const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
+  const workspaceId = useCurrentWorkspaceId();
+
+  const builderProject = useProject(workspaceId, projectId);
+  const resolvedManifest = useResolvedManifest(
+    builderProject.declarativeManifest?.manifest || DEFAULT_JSON_MANIFEST_VALUES
+  );
+
+  const [storedManifest, setStoredManifest] = useState<DeclarativeComponentSchema>(
+    (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) || DEFAULT_JSON_MANIFEST_VALUES
+  );
+  const [formValuesFromProject, failedConversion] = useMemo(() => {
+    try {
+      return [convertToBuilderFormValuesSync(resolvedManifest, builderProject.builderProject.name), false];
+    } catch (e) {
+      console.error(e);
+      // could not convert
+      return [
+        {
+          ...DEFAULT_BUILDER_FORM_VALUES,
+          global: { ...DEFAULT_BUILDER_FORM_VALUES.global, connectorName: builderProject.builderProject.name },
+        },
+        true,
+      ];
+    }
+  }, [builderProject.builderProject.name, resolvedManifest]);
+  const [storedFormValues, setStoredFormValues] = useState<BuilderFormValues>(formValuesFromProject);
+
+  useEffectOnce(() => {
+    if (failedConversion && storedEditorView === "ui") {
+      setStoredEditorView("yaml");
+    }
+  });
+  console.log(formValuesFromProject, failedConversion);
 
   const lastValidBuilderFormValuesRef = useRef<BuilderFormValues>(storedFormValues);
   const currentBuilderFormValuesRef = useRef<BuilderFormValues>(storedFormValues);
@@ -85,7 +122,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 
   // use the ref for the current builder form values because useLocalStorage will always serialize and deserialize the whole object,
   // changing all the references which re-triggers all memoizations
-  const builderFormValues = currentBuilderFormValuesRef.current || DEFAULT_BUILDER_FORM_VALUES;
+  const builderFormValues = currentBuilderFormValuesRef.current;
 
   const derivedJsonManifest = useMemo(
     () => (storedEditorView === "yaml" ? storedManifest : convertToManifest(builderFormValues)),
