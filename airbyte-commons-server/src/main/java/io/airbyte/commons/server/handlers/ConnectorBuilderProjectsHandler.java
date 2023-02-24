@@ -6,7 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
@@ -53,8 +53,8 @@ public class ConnectorBuilderProjectsHandler {
             : new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()));
   }
 
-  private static ConnectorBuilderProjectDetails builderProjectToDetails(final ConnectorBuilderProject project) {
-    return new ConnectorBuilderProjectDetails().name(project.getName()).builderProjectId(project.getBuilderProjectId())
+  private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
+    return new ConnectorBuilderProjectDetailsRead().name(project.getName()).builderProjectId(project.getBuilderProjectId())
         .hasDraft(project.getHasDraft());
   }
 
@@ -105,7 +105,7 @@ public class ConnectorBuilderProjectsHandler {
       throws IOException, ConfigNotFoundException {
     validateWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
-    final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetails(project));
+    final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project));
     if (project.getManifestDraft() != null) {
       final DeclarativeManifest manifest = new DeclarativeManifest()
           .manifest(new ObjectMapper().convertValue(project.getManifestDraft(), new TypeReference<Map<String, Object>>() {})).isDraft(true);
@@ -120,7 +120,7 @@ public class ConnectorBuilderProjectsHandler {
 
     final Stream<ConnectorBuilderProject> projects = configRepository.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());
 
-    return new ConnectorBuilderProjectReadList().projects(projects.map(ConnectorBuilderProjectsHandler::builderProjectToDetails).toList());
+    return new ConnectorBuilderProjectReadList().projects(projects.map(ConnectorBuilderProjectsHandler::builderProjectToDetailsRead).toList());
   }
 
 }
