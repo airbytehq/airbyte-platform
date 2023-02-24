@@ -8,8 +8,8 @@ import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.featureflag.CheckInputGeneration;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.Flag;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
@@ -45,9 +45,7 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
   public FeatureFlagFetchOutput getFeatureFlags(final FeatureFlagFetchInput input) {
     final UUID workspaceId = getWorkspaceId(input.getConnectionId());
 
-    // TODO: remove this feature flag from here - not really needed by consumers but in here to get this
-    // activity up and running
-    final List<Flag> workspaceFlags = List.of(FieldSelectionEnabled.INSTANCE);
+    final List<Flag> workspaceFlags = List.of(CheckInputGeneration.INSTANCE);
     final Map<String, Boolean> featureFlags = new HashMap<>();
     for (final Flag flag : workspaceFlags) {
       featureFlags.put(flag.getKey(), featureFlagClient.enabled(flag, new Workspace(workspaceId)));

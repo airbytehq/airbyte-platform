@@ -20,7 +20,10 @@ const StoreProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
     <ReactQueryDevtools
       initialIsOpen={false}
       position="bottom-right"
-      toggleButtonProps={isCloudApp() ? { style: { transform: "translate(-65px, -12px)" } } : undefined}
+      toggleButtonProps={{
+        style: isCloudApp() ? { transform: "translate(-65px, -12px)" } : undefined,
+        id: "react-query-devtool-btn",
+      }}
     />
     {children}
   </QueryClientProvider>
