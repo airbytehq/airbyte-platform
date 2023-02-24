@@ -557,6 +557,44 @@ paths:
       responses:
         "204":
           description: Successful operation
+  /v1/connector_builder_projects/list:
+    post:
+      tags:
+        - connector_builder_project
+      summary: List connector builder projects for workspace
+      operationId: listConnectorBuilderProjects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectReadList"
+  /v1/connector_builder_projects/get_with_manifest:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get a connector builder project with draft manifest
+      operationId: getConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectRead"
   /v1/sources/create:
     post:
       tags:
@@ -2555,6 +2593,14 @@ components:
     ConnectorBuilderProjectId:
       type: string
       format: uuid
+    DeclarativeManifest:
+      type: object
+      properties:
+        manifest:
+          type: object
+          additionalProperties: true
+        isDraft:
+          type: boolean
     ConnectorBuilderProjectDetails:
       type: object
       required:
@@ -2565,6 +2611,19 @@ components:
         draftManifest:
           type: object
           additionalProperties: true
+    ConnectorBuilderProjectDetailsRead:
+      type: object
+      required:
+        - name
+        - builderProjectId
+        - hasDraft
+      properties:
+        name:
+          type: string
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        hasDraft:
+          type: boolean
     ConnectorBuilderProjectIdWithWorkspaceId:
       type: object
       required:
@@ -2598,6 +2657,24 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProject:
           $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    ConnectorBuilderProjectRead:
+      type: object
+      required:
+        - builderProject
+      properties:
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
+        declarativeManifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    ConnectorBuilderProjectReadList:
+      type: object
+      required:
+        - projects
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
     # SourceDefinition
     SourceDefinitionId:
       type: string
