@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
@@ -21,7 +20,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
