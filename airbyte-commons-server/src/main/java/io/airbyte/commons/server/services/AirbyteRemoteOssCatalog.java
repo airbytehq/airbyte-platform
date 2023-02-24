@@ -43,7 +43,7 @@ public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
       return super.getDestinationDefinitions();
     } catch (final Throwable e) {
       LOGGER.warn(
-          "Unable to retrieve latest Destination list from Remote Catalog. Using the list bundled with Airbyte. This warning is expected if this Airbyte cluster does not have internet access.",
+          "Unable to retrieve latest Destination list from Remote Catalog. This warning is expected if this Airbyte cluster does not have internet access.",
           e);
       return Collections.emptyList();
     }
@@ -55,7 +55,7 @@ public class AirbyteRemoteOssCatalog extends RemoteDefinitionsProvider {
       return super.getSourceDefinitions();
     } catch (final Throwable e) {
       LOGGER.warn(
-          "Unable to retrieve latest Source list from Remote Catalog. Using the list bundled with Airbyte. This warning is expected if this Airbyte cluster does not have internet access.",
+          "Unable to retrieve latest Source list from Remote Catalog. This warning is expected if this Airbyte cluster does not have internet access.",
           e);
       return Collections.emptyList();
     }
