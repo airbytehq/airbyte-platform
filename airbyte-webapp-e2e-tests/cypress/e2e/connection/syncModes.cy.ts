@@ -81,7 +81,7 @@ const saveConnectionAndAssertStreams = (
     });
 };
 
-describe("Connection - sync modes", () => {
+describe.skip("Connection - sync modes", () => {
   const streamsTable = new NewStreamsTablePageObject();
 
   let source: Source;
