@@ -9,6 +9,9 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.function.Function;
 
+/**
+ * Config db schema.
+ */
 @SuppressWarnings({"PMD.AvoidThrowingRawExceptionTypes", "PMD.NullAssignment"})
 public enum ConfigSchema implements AirbyteConfig {
 
@@ -26,6 +29,11 @@ public enum ConfigSchema implements AirbyteConfig {
   WORKSPACE_WEBHOOK_OPERATION_CONFIGS("WebhookOperationConfigs.yaml",
       WebhookOperationConfigs.class),
 
+  // connector builder project
+  CONNECTOR_BUILDER_PROJECT("ConnectorBuilderProject.yaml",
+      ConnectorBuilderProject.class,
+      project -> project.getBuilderProjectId().toString(),
+      "builderProjectId"),
   // source
   STANDARD_SOURCE_DEFINITION("StandardSourceDefinition.yaml",
       StandardSourceDefinition.class,

@@ -27,12 +27,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RefreshSchemaActivityTest {
 
-  static private SourceApi mSourceApi;
-  static private EnvVariableFeatureFlags mEnvVariableFeatureFlags;
+  private static SourceApi mSourceApi;
+  private static EnvVariableFeatureFlags mEnvVariableFeatureFlags;
 
-  static private RefreshSchemaActivityImpl refreshSchemaActivity;
+  private static RefreshSchemaActivityImpl refreshSchemaActivity;
 
-  static private final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID SOURCE_ID = UUID.randomUUID();
 
   @BeforeEach
   void setUp() {
@@ -51,7 +51,7 @@ class RefreshSchemaActivityTest {
 
   @Test
   void testShouldRefreshSchemaRecentRefreshOver24HoursAgo() throws ApiException {
-    Long twoDaysAgo = OffsetDateTime.now().minusHours(48l).toEpochSecond();
+    Long twoDaysAgo = OffsetDateTime.now().minusHours(48L).toEpochSecond();
     ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twoDaysAgo);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
     Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
@@ -59,7 +59,7 @@ class RefreshSchemaActivityTest {
 
   @Test
   void testShouldRefreshSchemaRecentRefreshLessThan24HoursAgo() throws ApiException {
-    Long twelveHoursAgo = OffsetDateTime.now().minusHours(12l).toEpochSecond();
+    Long twelveHoursAgo = OffsetDateTime.now().minusHours(12L).toEpochSecond();
     ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twelveHoursAgo);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
     Assertions.assertThat(false).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));

@@ -62,6 +62,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Data;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType", "LineLength"})
 public class MockData {
 
   public static final UUID WORKSPACE_ID_1 = UUID.randomUUID();
@@ -686,7 +687,7 @@ public class MockData {
 
   public static List<ActorCatalogFetchEventWithCreationDate> actorCatalogFetchEventsForAggregationTest() {
     final OffsetDateTime now = OffsetDateTime.now();
-    final OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1l);
+    final OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1L);
 
     final ActorCatalogFetchEvent actorCatalogFetchEvent1 = new ActorCatalogFetchEvent()
         .withId(ACTOR_CATALOG_FETCH_EVENT_ID_1)

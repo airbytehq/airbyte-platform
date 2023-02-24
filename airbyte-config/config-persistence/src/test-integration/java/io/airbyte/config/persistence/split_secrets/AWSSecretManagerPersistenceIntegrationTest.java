@@ -15,21 +15,22 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("MissingJavadocType")
 public class AWSSecretManagerPersistenceIntegrationTest {
 
-  public String coordinate_base;
+  public String coordinateBase;
   private AWSSecretManagerPersistence persistence;
   private final Configs configs = new EnvConfigs();
 
   @BeforeEach
   void setup() {
     persistence = new AWSSecretManagerPersistence(configs.getAwsAccessKey(), configs.getAwsSecretAccessKey());
-    coordinate_base = "aws/airbyte/secret/integration/" + RandomUtils.nextInt() % 20000;
+    coordinateBase = "aws/airbyte/secret/integration/" + RandomUtils.nextInt() % 20000;
   }
 
   @Test
   void testReadWriteUpdate() throws InterruptedException {
-    SecretCoordinate secretCoordinate = new SecretCoordinate(coordinate_base, 1);
+    SecretCoordinate secretCoordinate = new SecretCoordinate(coordinateBase, 1);
 
     // try reading a non-existent secret
     Optional<String> firstRead = persistence.read(secretCoordinate);
@@ -45,7 +46,7 @@ public class AWSSecretManagerPersistenceIntegrationTest {
 
     // update it
     final var secondPayload = "bar-secret";
-    final var coordinate2 = new SecretCoordinate(coordinate_base, 2);
+    final var coordinate2 = new SecretCoordinate(coordinateBase, 2);
     persistence.write(coordinate2, secondPayload);
     persistence.cache.refreshNow(secretCoordinate.getCoordinateBase());
     final var thirdRead = persistence.read(coordinate2);
@@ -55,7 +56,7 @@ public class AWSSecretManagerPersistenceIntegrationTest {
 
   @AfterEach
   void tearDown() {
-    persistence.deleteSecret(new SecretCoordinate(coordinate_base, 1));
+    persistence.deleteSecret(new SecretCoordinate(coordinateBase, 1));
   }
 
 }

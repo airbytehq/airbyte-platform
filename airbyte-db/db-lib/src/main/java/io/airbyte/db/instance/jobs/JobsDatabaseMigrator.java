@@ -8,6 +8,9 @@ import io.airbyte.db.Database;
 import io.airbyte.db.instance.FlywayDatabaseMigrator;
 import org.flywaydb.core.Flyway;
 
+/**
+ * Migrator for jobs db.
+ */
 public class JobsDatabaseMigrator extends FlywayDatabaseMigrator {
 
   public static final String DB_IDENTIFIER = "jobs";

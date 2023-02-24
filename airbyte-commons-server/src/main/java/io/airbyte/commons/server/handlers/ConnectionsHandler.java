@@ -24,6 +24,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -55,7 +56,6 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.helper.ConnectionHelper;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
@@ -71,6 +71,10 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * ConnectionsHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class ConnectionsHandler {
 
@@ -413,11 +417,6 @@ public class ConnectionsHandler {
     return listConnectionsForWorkspace(workspaceIdRequestBody, false);
   }
 
-  public ConnectionReadList listAllConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    return listConnectionsForWorkspace(workspaceIdRequestBody, true);
-  }
-
   public ConnectionReadList listConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody, final boolean includeDeleted)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
@@ -427,6 +426,11 @@ public class ConnectionsHandler {
     }
 
     return new ConnectionReadList().connections(connectionReads);
+  }
+
+  public ConnectionReadList listAllConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return listConnectionsForWorkspace(workspaceIdRequestBody, true);
   }
 
   public ConnectionReadList listConnectionsForSource(final UUID sourceId, final boolean includeDeleted) throws IOException {
@@ -555,9 +559,9 @@ public class ConnectionsHandler {
     final ConnectionMatcher connectionMatcher = new ConnectionMatcher(connectionSearch);
     final ConnectionRead connectionReadFromSearch = connectionMatcher.match(connectionRead);
 
-    return (connectionReadFromSearch == null || connectionReadFromSearch.equals(connectionRead)) &&
-        matchSearch(connectionSearch.getSource(), sourceRead) &&
-        matchSearch(connectionSearch.getDestination(), destinationRead);
+    return (connectionReadFromSearch == null || connectionReadFromSearch.equals(connectionRead))
+        && matchSearch(connectionSearch.getSource(), sourceRead)
+        && matchSearch(connectionSearch.getDestination(), destinationRead);
   }
 
   // todo (cgardens) - make this static. requires removing one bad dependency in SourceHandlerTest

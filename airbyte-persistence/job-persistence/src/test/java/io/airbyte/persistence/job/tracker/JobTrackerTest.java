@@ -452,6 +452,29 @@ class JobTrackerTest {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), additionalExpectedMetadata);
   }
 
+  void testAsynchronousAttempt(final ConfigType configType, final Job job, final Map<String, Object> additionalExpectedMetadata)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+
+    final Map<String, Object> metadata = getJobMetadata(configType, LONG_JOB_ID);
+    // test when frequency is manual.
+    when(configRepository.getStandardSync(CONNECTION_ID))
+        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(true).withCatalog(CATALOG));
+    when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID)).thenReturn(WORKSPACE_ID);
+    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+        .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
+    final Map<String, Object> manualMetadata = MoreMaps.merge(
+        ATTEMPT_METADATA,
+        metadata,
+        Map.of(FREQUENCY_KEY, "manual"),
+        additionalExpectedMetadata);
+
+    jobTracker.trackSync(job, JobState.SUCCEEDED);
+    assertCorrectMessageForSucceededState(manualMetadata);
+
+    jobTracker.trackSync(job, JobState.FAILED);
+    assertCorrectMessageForFailedState(manualMetadata);
+  }
+
   void testAsynchronousAttemptWithFailures(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
@@ -489,29 +512,6 @@ class JobTrackerTest {
         "main_failure_reason", configFailureJson.toString());
     testAsynchronousAttempt(configType, getJobWithFailuresMock(configType, LONG_JOB_ID),
         MoreMaps.merge(additionalExpectedMetadata, failureMetadata));
-  }
-
-  void testAsynchronousAttempt(final ConfigType configType, final Job job, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-
-    final Map<String, Object> metadata = getJobMetadata(configType, LONG_JOB_ID);
-    // test when frequency is manual.
-    when(configRepository.getStandardSync(CONNECTION_ID))
-        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(true).withCatalog(CATALOG));
-    when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID)).thenReturn(WORKSPACE_ID);
-    when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-        .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    final Map<String, Object> manualMetadata = MoreMaps.merge(
-        ATTEMPT_METADATA,
-        metadata,
-        Map.of(FREQUENCY_KEY, "manual"),
-        additionalExpectedMetadata);
-
-    jobTracker.trackSync(job, JobState.SUCCEEDED);
-    assertCorrectMessageForSucceededState(manualMetadata);
-
-    jobTracker.trackSync(job, JobState.FAILED);
-    assertCorrectMessageForFailedState(manualMetadata);
   }
 
   private Job getJobMock(final ConfigType configType, final long jobId) throws ConfigNotFoundException, IOException, JsonValidationException {

@@ -41,6 +41,7 @@ import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -70,7 +71,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.helper.ConnectionHelper;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -117,8 +117,8 @@ class ConnectionsHandlerTest {
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
   private static final String AZKABAN_USERS = "azkaban_users";
-  private final static String CRON_TIMEZONE_UTC = "UTC";
-  private final static String CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String CRON_TIMEZONE_UTC = "UTC";
+  private static final String CRON_EXPRESSION = "* */2 * * * ?";
 
   @SuppressWarnings("unchecked")
   @BeforeEach

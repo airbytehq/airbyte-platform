@@ -1,8 +1,9 @@
-.container {
-  max-height: 600px;
-  overflow: unset;
-  min-width: fit-content;
-  padding-right: 15px;
+@use "scss/colors";
+@use "scss/z-indices";
 
-  --webkit-overlay: true;
+.header {
+  position: sticky;
+  top: 0;
+  z-index: z-indices.$mainPageWithScrollEdge;
+  background: colors.$white;
 }

@@ -14,7 +14,10 @@ import java.util.Collections;
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
  * it is easier for a react frontend to consume. It should NOT have direct access to the database.
  * It should operate exclusively by calling other endpoints that are exposed in the API.
+ *
+ * Javadocs suppressed because api docs should be used as source of truth.
  **/
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class WebBackendGeographiesHandler {
 
@@ -27,7 +30,7 @@ public class WebBackendGeographiesHandler {
   }
 
   /**
-   * Only called by the wrapped Cloud API to enable multi-cloud
+   * Only called by the wrapped Cloud API to enable multi-cloud.
    */
   public WebBackendGeographiesListResult listGeographiesCloud() {
     return new WebBackendGeographiesListResult().geographies(Arrays.asList(Geography.values()));

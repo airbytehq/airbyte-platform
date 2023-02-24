@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
+import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.json.Jsons;
@@ -26,7 +27,6 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.ConnectorConfigUpdater;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
@@ -38,6 +38,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Default Check Connection Worker. Calls the check method on a connector.
+ */
 public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCheckConnectionWorker.class);
@@ -94,6 +97,9 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
             case DESTINATION -> connectorConfigUpdater.updateDestination(
                 input.getActorId(),
                 optionalConfigMsg.get().getConfig());
+            default -> {
+              // no op
+            }
           }
           jobOutput.setConnectorConfigurationUpdated(true);
         }

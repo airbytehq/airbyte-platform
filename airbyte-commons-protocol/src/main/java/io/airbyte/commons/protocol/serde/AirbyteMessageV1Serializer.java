@@ -8,6 +8,9 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.protocol.models.AirbyteMessage;
 import jakarta.inject.Singleton;
 
+/**
+ * Serializer for Protocol V1.
+ */
 @Singleton
 public class AirbyteMessageV1Serializer extends AirbyteMessageGenericSerializer<AirbyteMessage> {
 

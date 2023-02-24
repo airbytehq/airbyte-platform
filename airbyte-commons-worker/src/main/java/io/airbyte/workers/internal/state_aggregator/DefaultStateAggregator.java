@@ -9,6 +9,10 @@ import io.airbyte.config.State;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 
+/**
+ * Default state aggregator that detects which type of state is being used and aggregates
+ * appropriately.
+ */
 public class DefaultStateAggregator implements StateAggregator {
 
   private AirbyteStateType stateType = null;

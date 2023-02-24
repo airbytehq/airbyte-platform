@@ -46,6 +46,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
+import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
@@ -61,7 +62,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.helper.ProtocolConverters;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -79,7 +79,10 @@ import java.util.stream.Collectors;
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
  * it is easier for a react frontend to consume. It should NOT have direct access to the database.
  * It should operate exclusively by calling other endpoints that are exposed in the API.
+ *
+ * Javadocs suppressed because api docs should be used as source of truth.
  **/
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class WebBackendConnectionsHandler {
 
@@ -131,6 +134,7 @@ public class WebBackendConnectionsHandler {
     return Enums.convertTo(stateHandler.getState(connectionIdRequestBody).getStateType(), ConnectionStateType.class);
   }
 
+  @SuppressWarnings("LineLength")
   public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody)
       throws IOException {
 
@@ -225,7 +229,7 @@ public class WebBackendConnectionsHandler {
     return webBackendConnectionRead;
   }
 
-  static private WebBackendConnectionListItem buildWebBackendConnectionListItem(
+  private static WebBackendConnectionListItem buildWebBackendConnectionListItem(
                                                                                 final StandardSync standardSync,
                                                                                 final Map<UUID, SourceSnippetRead> sourceReadById,
                                                                                 final Map<UUID, DestinationSnippetRead> destinationReadById,

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 class V0_39_17_001__AddStreamDescriptorsToStateTableTest extends AbstractConfigsDatabaseTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_39_17_001__AddStreamDescriptorsToStateTableTest.class);
-  private final String STATE_TABLE = "State";
+  private static final String STATE_TABLE = "State";
 
   private UUID connection1;
   private UUID connection2;

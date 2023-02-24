@@ -25,6 +25,7 @@ import java.util.UUID;
  * </ol>
  * </li>
  */
+@SuppressWarnings("MissingJavadocType")
 public class SyncWorkflowFailingWithHearbeatTimeoutException implements SyncWorkflow {
 
   @Override

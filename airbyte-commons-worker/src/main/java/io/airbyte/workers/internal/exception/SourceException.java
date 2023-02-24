@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.internal.exception;
 
+/**
+ * Exceptions thrown from a source.
+ */
 public class SourceException extends RuntimeException {
 
   public SourceException(final String message) {

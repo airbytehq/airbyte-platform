@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.JobTypeResourceLimit;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
 import io.airbyte.api.model.generated.ResourceRequirements;
+import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.config.BasicSchedule;
@@ -28,11 +29,14 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.workers.helper.StateConverter;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Convert between API and internal versions of airbyte models.
+ */
+@SuppressWarnings({"MissingJavadocMethod", "LineLength"})
 public class ApiPojoConverters {
 
   public static io.airbyte.config.ActorDefinitionResourceRequirements actorDefResourceReqsToInternal(final ActorDefinitionResourceRequirements actorDefResourceReqs) {

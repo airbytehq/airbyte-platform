@@ -12,17 +12,17 @@ import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SaveStatsRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.server.handlers.AttemptHandler;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
-@Controller("/api/v1/attempt/")
-@Requires(property = "airbyte.deployment-mode",
-          value = "OSS")
+@SuppressWarnings("MissingJavadocType")
+@Controller("/api/v1/attempt")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class AttemptApiController implements AttemptApi {
 
@@ -35,6 +35,7 @@ public class AttemptApiController implements AttemptApi {
   @Override
   @Post(uri = "/save_stats",
         processes = MediaType.APPLICATION_JSON)
+  @ExecuteOn(TaskExecutors.IO)
   public InternalOperationResult saveStats(final SaveStatsRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.saveStats(requestBody));
   }
@@ -43,6 +44,7 @@ public class AttemptApiController implements AttemptApi {
   @Post(uri = "/set_workflow_in_attempt",
         processes = MediaType.APPLICATION_JSON)
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   public InternalOperationResult setWorkflowInAttempt(@Body final SetWorkflowInAttemptRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.setWorkflowInAttempt(requestBody));
   }
@@ -51,6 +53,7 @@ public class AttemptApiController implements AttemptApi {
   @Post(uri = "/save_sync_config",
         processes = MediaType.APPLICATION_JSON)
   @Secured({ADMIN})
+  @ExecuteOn(TaskExecutors.IO)
   public InternalOperationResult saveSyncConfig(@Body final SaveAttemptSyncConfigRequestBody requestBody) {
     return ApiHelper.execute(() -> attemptHandler.saveSyncConfig(requestBody));
   }

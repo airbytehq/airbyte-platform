@@ -31,15 +31,15 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
- * Abstract Class factoring common behavior for oAuth 2.0 flow implementations
+ * Abstract Class factoring common behavior for oAuth 2.0 flow implementations.
  */
 public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
 
   /**
    * Simple enum of content type strings and their respective encoding functions used for POSTing the
-   * access token request
+   * access token request.
    */
-  public enum TOKEN_REQUEST_CONTENT_TYPE {
+  public enum TokenRequestContentType {
 
     URL_ENCODED("application/x-www-form-urlencoded", BaseOAuth2Flow::toUrlEncodedString),
     JSON("application/json", BaseOAuth2Flow::toJson);
@@ -47,15 +47,25 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     String contentType;
     Function<Map<String, String>, String> converter;
 
+    /**
+     * Get HTTP content type.
+     *
+     * @return content type
+     */
     public String getContentType() {
       return contentType;
     }
 
+    /**
+     * Get converter to json.
+     *
+     * @return converter function
+     */
     public Function<Map<String, String>, String> getConverter() {
       return converter;
     }
 
-    TOKEN_REQUEST_CONTENT_TYPE(final String contentType, final Function<Map<String, String>, String> converter) {
+    TokenRequestContentType(final String contentType, final Function<Map<String, String>, String> converter) {
       this.contentType = contentType;
       this.converter = converter;
     }
@@ -63,7 +73,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   }
 
   protected final HttpClient httpClient;
-  protected final TOKEN_REQUEST_CONTENT_TYPE tokenReqContentType;
+  protected final TokenRequestContentType tokenReqContentType;
   private final Supplier<String> stateSupplier;
 
   public BaseOAuth2Flow(final ConfigRepository configRepository, final HttpClient httpClient) {
@@ -71,13 +81,13 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   }
 
   public BaseOAuth2Flow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    this(configRepository, httpClient, stateSupplier, TOKEN_REQUEST_CONTENT_TYPE.URL_ENCODED);
+    this(configRepository, httpClient, stateSupplier, TokenRequestContentType.URL_ENCODED);
   }
 
   public BaseOAuth2Flow(final ConfigRepository configRepository,
                         final HttpClient httpClient,
                         final Supplier<String> stateSupplier,
-                        final TOKEN_REQUEST_CONTENT_TYPE tokenReqContentType) {
+                        final TokenRequestContentType tokenReqContentType) {
     super(configRepository);
     this.httpClient = httpClient;
     this.stateSupplier = stateSupplier;
@@ -89,9 +99,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                     final UUID sourceDefinitionId,
                                     final String redirectUrl,
                                     final JsonNode inputOAuthConfiguration,
-                                    final OAuthConfigSpecification oAuthConfigSpecification)
+                                    final OAuthConfigSpecification oauthConfigSpecification)
       throws IOException, ConfigNotFoundException, JsonValidationException {
-    validateInputOAuthConfiguration(oAuthConfigSpecification, inputOAuthConfiguration);
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
     return formatConsentUrl(sourceDefinitionId, getClientIdUnsafe(oAuthParamConfig), redirectUrl, inputOAuthConfiguration);
   }
@@ -101,9 +111,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                          final UUID destinationDefinitionId,
                                          final String redirectUrl,
                                          final JsonNode inputOAuthConfiguration,
-                                         final OAuthConfigSpecification oAuthConfigSpecification)
+                                         final OAuthConfigSpecification oauthConfigSpecification)
       throws IOException, ConfigNotFoundException, JsonValidationException {
-    validateInputOAuthConfiguration(oAuthConfigSpecification, inputOAuthConfiguration);
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
     return formatConsentUrl(destinationDefinitionId, getClientIdUnsafe(oAuthParamConfig), redirectUrl, inputOAuthConfiguration);
   }
@@ -157,6 +167,28 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   }
 
   @Override
+  public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
+                                                 final UUID sourceDefinitionId,
+                                                 final Map<String, Object> queryParams,
+                                                 final String redirectUrl,
+                                                 final JsonNode inputOAuthConfiguration,
+                                                 final OAuthConfigSpecification oauthConfigSpecification)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
+    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
+    return formatOAuthOutput(
+        oAuthParamConfig,
+        completeOAuthFlow(
+            getClientIdUnsafe(oAuthParamConfig),
+            getClientSecretUnsafe(oAuthParamConfig),
+            extractCodeParameter(queryParams),
+            redirectUrl,
+            inputOAuthConfiguration,
+            oAuthParamConfig),
+        oauthConfigSpecification);
+  }
+
+  @Override
   @Deprecated
   public Map<String, Object> completeDestinationOAuth(final UUID workspaceId,
                                                       final UUID destinationDefinitionId,
@@ -177,36 +209,14 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   }
 
   @Override
-  public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
-                                                 final UUID sourceDefinitionId,
-                                                 final Map<String, Object> queryParams,
-                                                 final String redirectUrl,
-                                                 final JsonNode inputOAuthConfiguration,
-                                                 final OAuthConfigSpecification oAuthConfigSpecification)
-      throws IOException, ConfigNotFoundException, JsonValidationException {
-    validateInputOAuthConfiguration(oAuthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
-    return formatOAuthOutput(
-        oAuthParamConfig,
-        completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
-            extractCodeParameter(queryParams),
-            redirectUrl,
-            inputOAuthConfiguration,
-            oAuthParamConfig),
-        oAuthConfigSpecification);
-  }
-
-  @Override
   public Map<String, Object> completeDestinationOAuth(final UUID workspaceId,
                                                       final UUID destinationDefinitionId,
                                                       final Map<String, Object> queryParams,
                                                       final String redirectUrl,
                                                       final JsonNode inputOAuthConfiguration,
-                                                      final OAuthConfigSpecification oAuthConfigSpecification)
+                                                      final OAuthConfigSpecification oauthConfigSpecification)
       throws IOException, ConfigNotFoundException, JsonValidationException {
-    validateInputOAuthConfiguration(oAuthConfigSpecification, inputOAuthConfiguration);
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
     return formatOAuthOutput(
         oAuthParamConfig,
@@ -217,15 +227,27 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             redirectUrl,
             inputOAuthConfiguration,
             oAuthParamConfig),
-        oAuthConfigSpecification);
+        oauthConfigSpecification);
   }
 
+  /**
+   * Complete OAuth flow.
+   *
+   * @param clientId client id
+   * @param clientSecret client secret
+   * @param authCode oauth code
+   * @param redirectUrl redirect url
+   * @param inputOAuthConfiguration oauth configuration
+   * @param oauthParamConfig oauth params
+   * @return object returned from oauth flow
+   * @throws IOException thrown while executing io
+   */
   protected Map<String, Object> completeOAuthFlow(final String clientId,
                                                   final String clientSecret,
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final HttpRequest request = HttpRequest.newBuilder()
