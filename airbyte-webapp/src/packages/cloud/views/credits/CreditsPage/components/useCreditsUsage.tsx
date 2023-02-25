@@ -20,8 +20,8 @@ export const useCreditsUsage = () => {
         } else {
           allConsumption.push({
             timeframe: consumption.timeframe,
-            billedCost: consumption.billedCost ?? 0,
-            freeUsage: consumption.freeUsage ?? 0,
+            billedCost: consumption.billedCost,
+            freeUsage: consumption.freeUsage,
           });
         }
 
