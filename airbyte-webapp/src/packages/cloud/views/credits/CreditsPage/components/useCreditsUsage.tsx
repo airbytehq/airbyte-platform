@@ -1,9 +1,36 @@
-import { useGetCloudWorkspaceUsage } from "packages/cloud/services/workspaces/CloudWorkspacesService";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
+import { mockWorkspaceCreditsUsage } from "test-utils/mock-data/mockWorkspaceCreditsUsage";
+
+import { ConsumptionPerConnectionPerTimeframe } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 
 export const useCreditsUsage = () => {
-  const { workspaceId } = useCurrentWorkspace();
-  const data = useGetCloudWorkspaceUsage(workspaceId);
+  // const { workspaceId } = useCurrentWorkspace();
+  // const data = useGetCloudWorkspaceUsage(workspaceId);
+  const data = mockWorkspaceCreditsUsage;
 
-  return { data };
+  const { consumptionPerConnectionPerTimeframe } = data;
+  const freeAndPaidUsagePerDay: Array<Partial<ConsumptionPerConnectionPerTimeframe>> =
+    consumptionPerConnectionPerTimeframe?.reduce(
+      (allConsumption: Array<Partial<ConsumptionPerConnectionPerTimeframe>>, consumption) => {
+        if (allConsumption.some((item) => item.timeframe === consumption.timeframe)) {
+          const timeframeItem = allConsumption.filter((item) => {
+            return item.timeframe === consumption.timeframe;
+          })[0];
+          timeframeItem.billedCost = (timeframeItem.billedCost ?? 0) + consumption.billedCost;
+          timeframeItem.freeUsage = (timeframeItem.freeUsage ?? 0) + consumption.freeUsage;
+        } else {
+          allConsumption.push({
+            timeframe: consumption.timeframe,
+            billedCost: consumption.billedCost ?? 0,
+            freeUsage: consumption.freeUsage ?? 0,
+          });
+        }
+
+        return allConsumption;
+      },
+      []
+    );
+
+  console.log({ freeAndPaidUsagePerDay });
+
+  return { data, freeAndPaidUsagePerDay };
 };
