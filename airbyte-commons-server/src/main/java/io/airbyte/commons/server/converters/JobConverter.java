@@ -46,6 +46,8 @@ import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Singleton;
+
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -227,7 +229,7 @@ public class JobConverter {
     }
   }
 
-  public static FailureReason getFailureReason(final io.airbyte.config.FailureReason failureReason) {
+  public static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
     if (failureReason == null) {
       return null;
     }
