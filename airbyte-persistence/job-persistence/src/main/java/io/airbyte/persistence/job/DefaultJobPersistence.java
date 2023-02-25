@@ -736,6 +736,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .where(JOBS.CONFIG_TYPE.in(Sqls.toSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .and(JOBS.ID.eq(includingJobId))
+        .fetch()
         .stream()
         .findFirst()
         .map(record -> record.get(JOBS.CREATED_AT, OffsetDateTime.class)));
