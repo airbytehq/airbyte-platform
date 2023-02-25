@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.scheduler;
 
 import io.airbyte.commons.temporal.JobMetadata;
+import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig.ConfigType;
 import java.nio.file.Path;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 /**
  * Job metadata for synchronous jobs. Provides common interface for this metadata to make handling
@@ -36,24 +38,22 @@ public class SynchronousJobMetadata {
    * Create synchronous job metadata from a temporal response.
    *
    * @param jobMetadata temporal job metadata
+   * @param jobOutput output of job, if available
    * @param id job id
    * @param configType job type
    * @param configId id of resource for job type (i.e. if configType is discover config id is going to
    *        be a source id)
-   * @param connectorConfigurationUpdated whether this job updated the connector configuration
    * @param createdAt time the job was created
    * @param endedAt time the job ended
-   * @param failureReason reason for job failure
    * @return synchronous job metadata
    */
   public static SynchronousJobMetadata fromJobMetadata(final JobMetadata jobMetadata,
+                                                       @Nullable ConnectorJobOutput jobOutput,
                                                        final UUID id,
                                                        final ConfigType configType,
                                                        final UUID configId,
-                                                       final boolean connectorConfigurationUpdated,
                                                        final long createdAt,
-                                                       final long endedAt,
-                                                       final FailureReason failureReason) {
+                                                       final long endedAt) {
     return new SynchronousJobMetadata(
         id,
         configType,
@@ -61,9 +61,9 @@ public class SynchronousJobMetadata {
         createdAt,
         endedAt,
         jobMetadata.isSucceeded(),
-        connectorConfigurationUpdated,
+        jobOutput != null ? jobOutput.getConnectorConfigurationUpdated() : false,
         jobMetadata.getLogPath(),
-        failureReason);
+        jobOutput != null ? jobOutput.getFailureReason() : null);
   }
 
   public SynchronousJobMetadata(final UUID id,
