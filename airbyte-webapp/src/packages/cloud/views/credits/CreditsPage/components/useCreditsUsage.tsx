@@ -9,26 +9,27 @@ export const useCreditsUsage = () => {
 
   const { consumptionPerConnectionPerTimeframe } = data;
   const freeAndPaidUsagePerDay: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">> =
-    consumptionPerConnectionPerTimeframe?.reduce(
-      (allConsumption: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">>, consumption) => {
-        if (allConsumption.some((item) => item.timeframe === consumption.timeframe)) {
+    consumptionPerConnectionPerTimeframe
+      ?.reduce((allConsumption: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">>, consumption) => {
+        if (allConsumption.some((item) => item.timeframe === consumption.timeframe.split("T")[0])) {
           const timeframeItem = allConsumption.filter((item) => {
-            return item.timeframe === consumption.timeframe;
+            return item.timeframe === consumption.timeframe.split("T")[0];
           })[0];
           timeframeItem.billedCost = (timeframeItem.billedCost ?? 0) + consumption.billedCost;
           timeframeItem.freeUsage = (timeframeItem.freeUsage ?? 0) + consumption.freeUsage;
         } else {
           allConsumption.push({
-            timeframe: consumption.timeframe,
+            timeframe: consumption.timeframe.split("T")[0],
             billedCost: consumption.billedCost,
             freeUsage: consumption.freeUsage,
           });
         }
 
         return allConsumption;
-      },
-      []
-    );
+      }, [])
+      .sort((a, b) => {
+        return a.timeframe.localeCompare(b.timeframe);
+      });
 
   console.log({ freeAndPaidUsagePerDay });
 

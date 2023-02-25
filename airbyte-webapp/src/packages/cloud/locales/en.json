@@ -140,6 +140,8 @@
 
   "credits.date": "Date",
   "credits.amount": "Credits",
+  "credits.freeUsage": "Free usage",
+  "credits.billedCost": "Billed",
 
   "credits.loadingCreditsUsage": "Loading credits usage …",
   "credits.usagePerConnection": "Usage per connection",

@@ -110,7 +110,7 @@ export const mockWorkspaceCreditsUsage: CloudWorkspaceUsage = {
     {
       timeframe: "2023-02-02T08:00:00Z",
       billedCost: 0.0,
-      freeUsage: 0.0,
+      freeUsage: 0.00003,
       connection: {
         connectionId: "e18ea9bf-5ef2-43ef-80bf-1b6bc3b8c38a",
         connectionName: "PokeAPI <> End-to-End Testing (/dev/null)",
@@ -198,7 +198,7 @@ export const mockWorkspaceCreditsUsage: CloudWorkspaceUsage = {
     {
       timeframe: "2023-02-06T08:00:00Z",
       billedCost: 0.0,
-      freeUsage: 0.0,
+      freeUsage: 0.00001,
       connection: {
         connectionId: "e18ea9bf-5ef2-43ef-80bf-1b6bc3b8c38a",
         connectionName: "PokeAPI <> End-to-End Testing (/dev/null)",
@@ -220,7 +220,7 @@ export const mockWorkspaceCreditsUsage: CloudWorkspaceUsage = {
     {
       timeframe: "2023-02-07T08:00:00Z",
       billedCost: 0.0,
-      freeUsage: 0.0,
+      freeUsage: 0.00001,
       connection: {
         connectionId: "e18ea9bf-5ef2-43ef-80bf-1b6bc3b8c38a",
         connectionName: "PokeAPI <> End-to-End Testing (/dev/null)",
