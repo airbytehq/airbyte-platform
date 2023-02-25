@@ -1,4 +1,4 @@
-import { ConnectionStatus } from "core/request/AirbyteClient";
+import { ConnectionStatus, ConnectionScheduleType, ConnectionScheduleTimeUnit } from "core/request/AirbyteClient";
 
 export enum CreditStatus {
   "POSITIVE" = "positive",
@@ -30,6 +30,32 @@ export interface CreditConsumptionByConnector {
   sourceDefinitionId: string;
   sourceDefinitionName: string;
   sourceId: string;
+  connectionScheduleType: ConnectionScheduleType | null;
+  connectionScheduleTimeUnit: ConnectionScheduleTimeUnit | null;
+  connectionScheduleUnits: number | null;
+}
+
+export interface ConsumptionPerConnectionPerTimeframe {
+  timeframe: string;
+  billedCost: number;
+  freeUsage: number;
+  connection: {
+    connectionId: string;
+    connectionName: string;
+    status: ConnectionStatus;
+    creditsConsumed: number | null;
+    destinationConnectionName: string;
+    destinationDefinitionId: string;
+    destinationDefinitionName: string;
+    destinationId: string;
+    sourceConnectionName: string;
+    sourceDefinitionId: string;
+    sourceDefinitionName: string;
+    sourceId: string;
+    connectionScheduleType: ConnectionScheduleType | null;
+    connectionScheduleTimeUnit: ConnectionScheduleTimeUnit | null;
+    connectionScheduleUnits: number | null;
+  };
 }
 
 export interface CloudWorkspaceUsage {
@@ -39,4 +65,5 @@ export interface CloudWorkspaceUsage {
     date: [number, number, number];
     creditsConsumed: number;
   }>;
+  consumptionPerConnectionPerTimeframe: ConsumptionPerConnectionPerTimeframe[];
 }
