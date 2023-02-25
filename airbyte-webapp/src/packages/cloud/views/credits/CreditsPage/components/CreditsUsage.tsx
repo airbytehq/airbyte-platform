@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { BarChart } from "components/ui/BarChart";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
@@ -10,11 +9,10 @@ import { useGetCloudWorkspaceUsage } from "packages/cloud/services/workspaces/Cl
 
 import styles from "./CreditsUsage.module.scss";
 import UsagePerConnectionTable from "./UsagePerConnectionTable";
-
-const LegendLabels = ["value"];
+import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 const CreditsUsage: React.FC = () => {
-  const { formatMessage, formatDate } = useIntl();
+  const { formatDate } = useIntl();
 
   const { workspaceId } = useCurrentWorkspace();
   const data = useGetCloudWorkspaceUsage(workspaceId);
@@ -34,24 +32,7 @@ const CreditsUsage: React.FC = () => {
   return (
     <>
       <Card title={<FormattedMessage id="credits.totalUsage" />} lightPadding>
-        <div className={styles.chartWrapper}>
-          {data?.creditConsumptionByDay?.length ? (
-            <BarChart
-              data={chartData}
-              legendLabels={LegendLabels}
-              xLabel={formatMessage({
-                id: "credits.date",
-              })}
-              yLabel={formatMessage({
-                id: "credits.amount",
-              })}
-            />
-          ) : (
-            <FlexContainer alignItems="center" justifyContent="center" className={styles.empty}>
-              <FormattedMessage id="credits.noData" />
-            </FlexContainer>
-          )}
-        </div>
+        <UsagePerDayGraph data={chartData} />
       </Card>
 
       <Card title={<FormattedMessage id="credits.usagePerConnection" />} lightPadding className={styles.cardBlock}>
