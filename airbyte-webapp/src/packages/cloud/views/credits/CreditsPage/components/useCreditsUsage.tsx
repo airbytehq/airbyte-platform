@@ -8,9 +8,9 @@ export const useCreditsUsage = () => {
   const data = mockWorkspaceCreditsUsage;
 
   const { consumptionPerConnectionPerTimeframe } = data;
-  const freeAndPaidUsagePerDay: Array<Partial<ConsumptionPerConnectionPerTimeframe>> =
+  const freeAndPaidUsagePerDay: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">> =
     consumptionPerConnectionPerTimeframe?.reduce(
-      (allConsumption: Array<Partial<ConsumptionPerConnectionPerTimeframe>>, consumption) => {
+      (allConsumption: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">>, consumption) => {
         if (allConsumption.some((item) => item.timeframe === consumption.timeframe)) {
           const timeframeItem = allConsumption.filter((item) => {
             return item.timeframe === consumption.timeframe;
