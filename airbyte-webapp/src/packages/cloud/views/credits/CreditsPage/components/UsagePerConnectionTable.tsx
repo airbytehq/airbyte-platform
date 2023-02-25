@@ -6,6 +6,7 @@ import { FormattedMessage, FormattedNumber } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { SortOrderEnum } from "components/EntityTable/types";
+import { FlexContainer } from "components/ui/Flex";
 import { NextTable } from "components/ui/NextTable";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -18,10 +19,7 @@ import { useSourceDefinitionList } from "services/connector/SourceDefinitionServ
 import ConnectionCell from "./ConnectionCell";
 import UsageCell from "./UsageCell";
 import styles from "./UsagePerConnectionTable.module.scss";
-
-interface UsagePerConnectionTableProps {
-  creditConsumption: CreditConsumptionByConnector[];
-}
+import { useCreditsUsage } from "./useCreditsUsage";
 
 type FullTableProps = CreditConsumptionByConnector & {
   creditsConsumedPercent: number;
@@ -29,11 +27,15 @@ type FullTableProps = CreditConsumptionByConnector & {
   destinationIcon?: string;
 };
 
-const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ creditConsumption }) => {
+const UsagePerConnectionTable: React.FC = () => {
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const navigate = useNavigate();
   const { sourceDefinitions } = useSourceDefinitionList();
   const { destinationDefinitions } = useDestinationDefinitionList();
+
+  const {
+    data: { creditConsumptionByConnector: creditConsumption },
+  } = useCreditsUsage();
 
   const creditConsumptionWithPercent = React.useMemo<FullTableProps[]>(() => {
     const sumCreditsConsumed = creditConsumption.reduce((a, b) => a + b.creditsConsumed, 0);
@@ -167,9 +169,17 @@ const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = ({ credi
   );
 
   return (
-    <div className={styles.content}>
-      <NextTable columns={columns} data={sortingData} light />
-    </div>
+    <>
+      {creditConsumption.length === 0 ? (
+        <FlexContainer alignItems="center" justifyContent="center" className={styles.empty}>
+          <FormattedMessage id="credits.noData" />
+        </FlexContainer>
+      ) : (
+        <div className={styles.content}>
+          <NextTable columns={columns} data={sortingData} light />
+        </div>
+      )}
+    </>
   );
 };
 
