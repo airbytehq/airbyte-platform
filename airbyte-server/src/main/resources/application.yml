@@ -25,6 +25,9 @@ micronaut:
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+        exclusions:
+          - /health
+          - /health/.+
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
@@ -140,10 +143,16 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: false
+    enabled: ${HEALTH_ENDPOINT_ENABLED:true}
     jdbc:
       enabled: false
     sensitive: false
+    details-visible: ${HEALTH_ENDPOINT_DETAILS_VISIBLE:AUTHENTICATED}
+    status:
+      http-mapping:
+        UP: ${HEALTH_ENDPOINT_UP_HTTP_CODE:200}
+        UNKNOWN: ${HEALTH_ENDPOINT_UNKNOWN_HTTP_CODE:200}
+        DOWN: ${HEALTH_ENDPOINT_DOWN_HTTP_CODE:503}
   info:
     enabled: true
     sensitive: true
