@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
@@ -24,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class OAuthSecretHelperTest {
 
   @Test
-  void testGetOAuthConfigPaths() throws IOException {
+  void testGetOAuthConfigPaths() throws IOException, JsonValidationException {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
     Map<String, List<String>> result = OAuthSecretHelper.getOAuthConfigPaths(connectorSpecification);
     Map<String, List<String>> expected = Map.of(
@@ -52,7 +53,7 @@ class OAuthSecretHelperTest {
   }
 
   @Test
-  void testSetSecretsInConnectionConfiguration() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testSetSecretsInConnectionConfigurationForAdvancedAuth() throws IOException, JsonValidationException, ConfigNotFoundException {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
     StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
     ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
@@ -82,4 +83,31 @@ class OAuthSecretHelperTest {
     assertEquals(replacementConnectionConfiguration, expectedConnectionConfiguration);
   }
 
+  @Test
+  void testSetSecretsInConnectionConfigurationForAuthSpecification() throws IOException, JsonValidationException, ConfigNotFoundException {
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
+    StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
+    ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
+    JsonNode hydratedSecret = Jsons.jsonNode(Map.of("credentials", Map.of(
+        "refresh_token", "so-refreshing",
+        "client_id", "abcd1234",
+        "client_secret", "shhhh")));
+    JsonNode newConnectionConfiguration =
+        OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
+
+    // Test hydrating empty object
+    assertEquals(newConnectionConfiguration, hydratedSecret);
+
+    // Test overwriting in case users put gibberish values in
+    ObjectNode credentials = JsonNodeFactory.instance.objectNode();
+    credentials.set("refresh_token", TextNode.valueOf("not-refreshing"));
+    credentials.set("client_id", TextNode.valueOf("efgh5678"));
+    credentials.set("client_secret", TextNode.valueOf("boom"));
+    connectionConfiguration.set("credentials", credentials);
+
+    JsonNode replacementConnectionConfiguration =
+        OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
+
+    assertEquals(replacementConnectionConfiguration, hydratedSecret);
+  }
 }
