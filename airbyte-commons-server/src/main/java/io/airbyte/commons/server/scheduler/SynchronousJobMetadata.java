@@ -48,7 +48,7 @@ public class SynchronousJobMetadata {
    * @return synchronous job metadata
    */
   public static SynchronousJobMetadata fromJobMetadata(final JobMetadata jobMetadata,
-                                                       @Nullable ConnectorJobOutput jobOutput,
+                                                       final @Nullable ConnectorJobOutput jobOutput,
                                                        final UUID id,
                                                        final ConfigType configType,
                                                        final UUID configId,
