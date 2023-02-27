@@ -1,6 +1,17 @@
 import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { Bar, BarChart, CartesianGrid, Label, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Label,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { theme } from "theme";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -101,12 +112,15 @@ export const UsagePerDayGraph: React.FC = () => {
                 ] as unknown as [number, string];
               }}
             />
-            <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.grey} />
-            {/* {data.map((item, index) => {
-              console.log(item.freeUsage);
-              return <Cell key={`cell-paid-${index}`} fill={styles.green} />;
-            })} */}
-            <Bar key="free" stackId="a" dataKey="freeUsage" fill={styles.green} />
+            <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.grey}>
+              {data.map((item, index) => {
+                // recharts takes an array here, but their types only permit a string or number :/
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore-next-line
+                return <Cell key={`cell-${index}`} radius={item.freeUsage ? 0 : [4, 4, 0, 0]} />;
+              })}
+            </Bar>
+            <Bar key="free" stackId="a" dataKey="freeUsage" fill={styles.green} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       ) : (

@@ -10,26 +10,33 @@ export const useCreditsUsage = () => {
   const { consumptionPerConnectionPerTimeframe } = data;
   const freeAndPaidUsagePerDay: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">> =
     consumptionPerConnectionPerTimeframe
+      ?.sort((a, b) => {
+        return a.timeframe.localeCompare(b.timeframe);
+      })
       ?.reduce((allConsumption: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">>, consumption) => {
-        if (allConsumption.some((item) => item.timeframe === consumption.timeframe.split("T")[0])) {
+        const consumptionTimeframeToDay = new Date(consumption.timeframe);
+
+        const localizedDateTimeframe = consumptionTimeframeToDay.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+
+        if (allConsumption.some((item) => item.timeframe === localizedDateTimeframe)) {
           const timeframeItem = allConsumption.filter((item) => {
-            return item.timeframe === consumption.timeframe.split("T")[0];
+            return item.timeframe === localizedDateTimeframe;
           })[0];
           timeframeItem.billedCost = (timeframeItem.billedCost ?? 0) + consumption.billedCost;
           timeframeItem.freeUsage = (timeframeItem.freeUsage ?? 0) + consumption.freeUsage;
         } else {
           allConsumption.push({
-            timeframe: consumption.timeframe.split("T")[0],
+            timeframe: localizedDateTimeframe,
             billedCost: consumption.billedCost,
             freeUsage: consumption.freeUsage,
           });
         }
 
         return allConsumption;
-      }, [])
-      .sort((a, b) => {
-        return a.timeframe.localeCompare(b.timeframe);
-      });
+      }, []);
 
   return { data, freeAndPaidUsagePerDay };
 };
