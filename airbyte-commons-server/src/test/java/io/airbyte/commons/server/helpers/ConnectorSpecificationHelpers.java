@@ -57,7 +57,6 @@ public class ConnectorSpecificationHelpers {
     final Path authSpecificationPath = Paths.get(
         ConnectorSpecificationHelpers.class.getClassLoader().getResource("json/TestAuthSpecification.json").getPath());
     AuthSpecification authSpecification = Jsons.deserialize(Files.readString(authSpecificationPath), AuthSpecification.class);
-    System.out.println("Auth specification: " + authSpecification);
 
     try {
       return new ConnectorSpecification()

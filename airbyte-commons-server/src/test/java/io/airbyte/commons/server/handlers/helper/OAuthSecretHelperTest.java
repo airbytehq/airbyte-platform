@@ -24,14 +24,18 @@ import org.junit.jupiter.api.Test;
 
 class OAuthSecretHelperTest {
 
+  String REFRESH_TOKEN = "refresh_token";
+  String CLIENT_ID = "client_id";
+  String CLIENT_SECRET = "client_secret";
+
   @Test
   void testGetOAuthConfigPaths() throws IOException, JsonValidationException {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
     Map<String, List<String>> result = OAuthSecretHelper.getOAuthConfigPaths(connectorSpecification);
     Map<String, List<String>> expected = Map.of(
-        "refresh_token", List.of("refresh_token"),
-        "client_id", List.of("client_id"),
-        "client_secret", List.of("client_secret"));
+        REFRESH_TOKEN, List.of("refresh_token"),
+        CLIENT_ID, List.of("client_id"),
+        CLIENT_SECRET, List.of("client_secret"));
     assertEquals(expected, result);
   }
 
@@ -41,14 +45,14 @@ class OAuthSecretHelperTest {
     Map<String, List<String>> resultForCompleteOauthOutputSpecification = OAuthSecretHelper.buildKeyToPathInConnectorConfigMap(
         connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthOutputSpecification());
     Map<String, List<String>> expectedForCompleteOAuthOutputSpecification = Map.of(
-        "refresh_token", List.of("refresh_token"));
+        REFRESH_TOKEN, List.of("refresh_token"));
     assertEquals(expectedForCompleteOAuthOutputSpecification, resultForCompleteOauthOutputSpecification);
 
     Map<String, List<String>> resultForCompleteOauthServerOutputSpecification = OAuthSecretHelper.buildKeyToPathInConnectorConfigMap(
         connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification());
     Map<String, List<String>> expectedForCompleteOAuthServerOutputSpecification = Map.of(
-        "client_id", List.of("client_id"),
-        "client_secret", List.of("client_secret"));
+        CLIENT_ID, List.of("client_id"),
+        CLIENT_SECRET, List.of("client_secret"));
     assertEquals(expectedForCompleteOAuthServerOutputSpecification, resultForCompleteOauthServerOutputSpecification);
   }
 
@@ -58,24 +62,24 @@ class OAuthSecretHelperTest {
     StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
     ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
     JsonNode hydratedSecret = Jsons.jsonNode(Map.of(
-        "refresh_token", "so-refreshing",
-        "client_id", "abcd1234",
-        "client_secret", "shhhh"));
+        REFRESH_TOKEN, "so-refreshing",
+        CLIENT_ID, "abcd1234",
+        CLIENT_SECRET, "shhhh"));
     JsonNode newConnectionConfiguration =
         OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
 
     // Test hydrating empty object
     ObjectNode expectedConnectionConfiguration = JsonNodeFactory.instance.objectNode();
-    expectedConnectionConfiguration.put("refresh_token", "so-refreshing");
-    expectedConnectionConfiguration.put("client_id", "abcd1234");
-    expectedConnectionConfiguration.put("client_secret", "shhhh");
+    expectedConnectionConfiguration.put(REFRESH_TOKEN, "so-refreshing");
+    expectedConnectionConfiguration.put(CLIENT_ID, "abcd1234");
+    expectedConnectionConfiguration.put(CLIENT_SECRET, "shhhh");
 
     assertEquals(newConnectionConfiguration, expectedConnectionConfiguration);
 
     // Test overwriting in case users put gibberish values in
-    connectionConfiguration.put("refresh_token", "not-refreshing");
-    connectionConfiguration.put("client_id", "efgh5678");
-    connectionConfiguration.put("client_secret", "boom");
+    connectionConfiguration.put(REFRESH_TOKEN, "not-refreshing");
+    connectionConfiguration.put(CLIENT_ID, "efgh5678");
+    connectionConfiguration.put(CLIENT_SECRET, "boom");
 
     JsonNode replacementConnectionConfiguration =
         OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
@@ -89,9 +93,9 @@ class OAuthSecretHelperTest {
     StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
     ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
     JsonNode hydratedSecret = Jsons.jsonNode(Map.of("credentials", Map.of(
-        "refresh_token", "so-refreshing",
-        "client_id", "abcd1234",
-        "client_secret", "shhhh")));
+        REFRESH_TOKEN, "so-refreshing",
+        CLIENT_ID, "abcd1234",
+        CLIENT_SECRET, "shhhh")));
     JsonNode newConnectionConfiguration =
         OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition, hydratedSecret, connectionConfiguration);
 
@@ -100,9 +104,9 @@ class OAuthSecretHelperTest {
 
     // Test overwriting in case users put gibberish values in
     ObjectNode credentials = JsonNodeFactory.instance.objectNode();
-    credentials.set("refresh_token", TextNode.valueOf("not-refreshing"));
-    credentials.set("client_id", TextNode.valueOf("efgh5678"));
-    credentials.set("client_secret", TextNode.valueOf("boom"));
+    credentials.set(REFRESH_TOKEN, TextNode.valueOf("not-refreshing"));
+    credentials.set(CLIENT_ID, TextNode.valueOf("efgh5678"));
+    credentials.set(CLIENT_SECRET, TextNode.valueOf("boom"));
     connectionConfiguration.set("credentials", credentials);
 
     JsonNode replacementConnectionConfiguration =
