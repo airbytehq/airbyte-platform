@@ -178,7 +178,7 @@ export const ConnectionReplicationPage: React.FC = () => {
           onSubmit={onFormSubmit}
           enableReinitialize
         >
-          {({ values, isSubmitting, isValid, dirty, resetForm, status }) => (
+          {({ values, isSubmitting, isValid, dirty, resetForm, status, errors }) => (
             <SchemaChangeBackdrop>
               <Form>
                 <ValidateFormOnSchemaRefresh />
@@ -198,7 +198,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                       discardRefreshedSchema();
                     }}
                     successMessage={saved && !dirty && <FormattedMessage id="form.changesSaved" />}
-                    errorMessage={getErrorMessage(isValid, dirty)}
+                    errorMessage={getErrorMessage(isValid, dirty, errors)}
                     enableControls={schemaHasBeenRefreshed || dirty}
                   />
                 </div>

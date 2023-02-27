@@ -35,7 +35,7 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
   const [isCollapsed, setIsCollapsed] = useToggle(collapsedInitially);
 
   if (collapsedInitially && !collapsible) {
-    console.warn("Section cannot be collapsed initially if it is not collapsible");
+    // console.warn("Section cannot be collapsed initially if it is not collapsible");
   }
 
   return (
