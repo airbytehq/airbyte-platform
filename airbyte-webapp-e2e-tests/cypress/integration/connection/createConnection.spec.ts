@@ -143,6 +143,62 @@ describe.skip("Connection - Create new connection", () => {
     });
   });
 
+  describe("Stream", () => {
+    const {
+      isStreamSyncEnabled,
+      toggleStreamSync,
+      isStreamRowHasRemovedStyle,
+      checkSourceNamespace,
+      checkSourceStreamName,
+      checkDestinationNamespace,
+      checkDestinationStreamName,
+    } = newConnectionPage.getStreamUtilityFunctions("public", "users");
+
+    it("should have checked sync switch by default ", () => {
+      // filter table to have only one stream
+      streamsTablePageObject.searchStream("users");
+      newConnectionPage.checkAmountOfStreamTableRows(1);
+
+      isStreamSyncEnabled(true);
+    });
+
+    it("should have unchecked sync switch after click ", () => {
+      toggleStreamSync();
+      isStreamSyncEnabled(false);
+    });
+
+    it("should have removed stream style after click ", () => {
+      isStreamRowHasRemovedStyle(true);
+    });
+
+    it("should have checked sync switch after click and default stream style", () => {
+      toggleStreamSync();
+      isStreamSyncEnabled(true);
+      isStreamRowHasRemovedStyle(false);
+    });
+
+    it("should have source namespace name", () => {
+      checkSourceNamespace();
+    });
+
+    it("should have source stream name", () => {
+      checkSourceStreamName();
+    });
+
+    // check sync mode by default - should be "Full Refresh | overwrite"
+    // should have empty cursor field by default
+    // should have empty primary key field by default
+    // change default sync mode - stream row should have light blue background
+
+    it("should have default destination namespace name", () => {
+      checkDestinationNamespace("<destination schema>");
+    });
+
+    it("should have default destination stream name", () => {
+      checkDestinationStreamName("users");
+    });
+  });
+
   /*
     here will be added more tests to extend the test flow
    */
