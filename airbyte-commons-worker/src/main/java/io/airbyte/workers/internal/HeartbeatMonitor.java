@@ -37,13 +37,14 @@ public class HeartbeatMonitor {
   }
 
   /**
-   * Register a heartbeat
+   * Register a heartbeat.
    */
   public void beat() {
     lastBeat.set(nowSupplier.get());
   }
 
   /**
+   * Verify if the heart is still beating.
    *
    * @return true if the last heartbeat is still "fresh". i.e. time since last heartbeat is less than
    *         heartBeatFreshDuration. otherwise, false.
@@ -52,6 +53,9 @@ public class HeartbeatMonitor {
     return getTimeSinceLastBeat().map(timeSinceLastBeat -> timeSinceLastBeat.compareTo(heartbeatFreshnessThreshold) < 0);
   }
 
+  /**
+   * Return the time since the last beat. It returns empty is no beat has been performed.
+   */
   public Optional<Duration> getTimeSinceLastBeat() {
     final Instant instantFetched = lastBeat.get();
 

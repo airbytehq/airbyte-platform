@@ -31,6 +31,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/connections")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -70,6 +71,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionReadList listConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody));
   }
@@ -78,12 +80,14 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/list_all")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionReadList listAllConnectionsForWorkspace(@Body final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.listAllConnectionsForWorkspace(workspaceIdRequestBody));
   }
 
   @Override
   @Post(uri = "/search")
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionReadList searchConnections(@Body final ConnectionSearch connectionSearch) {
     return ApiHelper.execute(() -> connectionsHandler.searchConnections(connectionSearch));
   }
@@ -92,6 +96,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Post(uri = "/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public ConnectionRead getConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> connectionsHandler.getConnection(connectionIdRequestBody.getConnectionId()));
   }

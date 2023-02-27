@@ -18,6 +18,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Create stream reset table migration.
+ */
 // TODO: update migration description in the class name
 public class V0_39_1_001__CreateStreamReset extends BaseJavaMigration {
 

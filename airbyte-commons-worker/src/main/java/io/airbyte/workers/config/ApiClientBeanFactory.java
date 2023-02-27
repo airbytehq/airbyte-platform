@@ -44,6 +44,7 @@ public class ApiClientBeanFactory {
 
   private static final int JWT_TTL_MINUTES = 5;
 
+  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("apiClient")
   public ApiClient apiClient(
@@ -119,6 +120,7 @@ public class ApiClientBeanFactory {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
   }
 
+  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("internalApiScheme")
   public String internalApiScheme(@Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode, final Environment environment) {
@@ -140,6 +142,7 @@ public class ApiClientBeanFactory {
    * <p>
    * Otherwise, use the AIRBYTE_API_AUTH_HEADER_VALUE from EnvConfigs.
    */
+  @SuppressWarnings("LineLength")
   @Prototype
   @Named("internalApiAuthToken")
   public String internalApiAuthToken(

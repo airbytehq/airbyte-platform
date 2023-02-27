@@ -8,6 +8,9 @@ import io.airbyte.config.OperatorWebhookInput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
+/**
+ * Webhook operation temporal interface.
+ */
 @ActivityInterface
 public interface WebhookOperationActivity {
 

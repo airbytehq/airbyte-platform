@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 public interface DatabaseInitializer {
 
   /**
-   * Initializes the configured database by using the following steps:
+   * Initializes the configured database by using the following steps.
    *
    * <ol>
    * <li>Verify that the database is available and accepting connections</li>

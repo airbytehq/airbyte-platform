@@ -149,7 +149,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * @param syncInput all configuration for running replication
    * @param jobRoot file root that worker is allowed to use
    * @return output of the replication attempt (including state)
-   * @throws WorkerException
+   * @throws WorkerException exception from worker
    */
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
@@ -478,9 +478,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     // First check if the process was cancelled. Cancellation takes precedence over failures.
     if (cancelled.get()) {
       outputStatus = ReplicationStatus.CANCELLED;
-    }
-    // if the process was not cancelled but still failed, then it's an actual failure
-    else if (hasFailed.get()) {
+      // if the process was not cancelled but still failed, then it's an actual failure
+    } else if (hasFailed.get()) {
       outputStatus = ReplicationStatus.FAILED;
     } else {
       outputStatus = ReplicationStatus.COMPLETED;
@@ -570,8 +569,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * Extracts state out to the {@link ReplicationOutput} so it can be later saved in the
    * PersistStateActivity - State is NOT SAVED here.
    *
-   * @param syncInput
-   * @param output
+   * @param syncInput sync input
+   * @param output sync output
    */
   private void prepStateForLaterSaving(final StandardSyncInput syncInput, final ReplicationOutput output) {
     if (messageTracker.getSourceOutputState().isPresent()) {
@@ -678,8 +677,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * the configured catalog. Since the configured catalog only includes the selected fields, this lets
    * us filter records to only the fields explicitly requested.
    *
-   * @param catalog
-   * @param streamToSelectedFields
+   * @param catalog catalog
+   * @param streamToSelectedFields map of stream descriptor to list of selected fields
    */
   private static void populatedStreamToSelectedFields(final ConfiguredAirbyteCatalog catalog,
                                                       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields) {
@@ -699,8 +698,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * Populates a map for stream -> all the top-level fields in the catalog. Used to identify any
    * unexpected top-level fields in the records.
    *
-   * @param catalog
-   * @param streamToAllFields
+   * @param catalog catalog
+   * @param streamToAllFields map of stream descriptor to set of all of its fields
    */
   private static void populateStreamToAllFields(final ConfiguredAirbyteCatalog catalog,
                                                 final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields) {

@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("MissingJavadocType")
 public class GoogleSheetsOAuthFlowIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GoogleSheetsOAuthFlowIntegrationTest.class);
@@ -47,6 +48,7 @@ public class GoogleSheetsOAuthFlowIntegrationTest {
   private ServerHandler serverHandler;
   private HttpClient httpClient;
 
+  @SuppressWarnings("MissingJavadocMethod")
   @BeforeEach
   public void setup() throws IOException {
     if (!Files.exists(CREDENTIALS_PATH)) {
@@ -106,7 +108,7 @@ public class GoogleSheetsOAuthFlowIntegrationTest {
 
   static class ServerHandler implements HttpHandler {
 
-    final private String expectedParam;
+    private final String expectedParam;
     private String paramValue;
     private boolean succeeded;
 

@@ -49,7 +49,6 @@ public class HeartbeatTimeoutChaperone {
                                    final FeatureFlagClient featureFlagClient,
                                    final UUID workspaceId) {
     this.timeoutCheckDuration = timeoutCheckDuration;
-
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagClient = featureFlagClient;
     this.workspaceId = workspaceId;
@@ -70,6 +69,13 @@ public class HeartbeatTimeoutChaperone {
     this.customMonitor = customMonitor;
   }
 
+  /**
+   * Start a runnable with a heartbeat thread. It relies on a {@link HeartbeatMonitor} to perform a
+   * heartbeat. If the heartbeat perform, it will fail the runnable.
+   *
+   * @param runnableFuture - the method to run
+   * @throws ExecutionException - throw is the runnable throw an exception
+   */
   public void runWithHeartbeatThread(final CompletableFuture<Void> runnableFuture) throws ExecutionException {
     LOGGER.info("Starting source heartbeat check. Will check every {} minutes.", timeoutCheckDuration.toMinutes());
     final CompletableFuture<Void> heartbeatFuture = CompletableFuture.runAsync(customMonitor.orElse(this::monitor), executorService);
@@ -124,6 +130,9 @@ public class HeartbeatTimeoutChaperone {
     }
   }
 
+  /**
+   * Exception thrown is the timeout is not beating.
+   */
   public static class HeartbeatTimeoutException extends RuntimeException {
 
     public HeartbeatTimeoutException(final String message) {

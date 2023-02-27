@@ -42,9 +42,9 @@ class WorkerUtilsTest {
   @Nested
   class GentleCloseWithHeartbeat {
 
-    private final Duration CHECK_HEARTBEAT_DURATION = Duration.of(10, ChronoUnit.MILLIS);
+    private static final Duration CHECK_HEARTBEAT_DURATION = Duration.of(10, ChronoUnit.MILLIS);
 
-    private final Duration SHUTDOWN_TIME_DURATION = Duration.of(100, ChronoUnit.MILLIS);
+    private static final Duration SHUTDOWN_TIME_DURATION = Duration.of(100, ChronoUnit.MILLIS);
 
     private Process process;
     private HeartbeatMonitor heartbeatMonitor;

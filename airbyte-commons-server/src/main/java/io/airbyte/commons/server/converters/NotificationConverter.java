@@ -9,6 +9,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Convert between API and internal versions of notification models.
+ */
+@SuppressWarnings({"MissingJavadocMethod", "LineLength"})
 public class NotificationConverter {
 
   public static List<io.airbyte.config.Notification> toConfigList(final List<io.airbyte.api.model.generated.Notification> notifications) {

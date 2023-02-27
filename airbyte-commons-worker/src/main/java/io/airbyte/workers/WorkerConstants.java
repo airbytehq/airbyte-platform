@@ -4,6 +4,9 @@
 
 package io.airbyte.workers;
 
+/**
+ * Worker constants.
+ */
 public class WorkerConstants {
 
   public static final String SOURCE_CONFIG_JSON_FILENAME = "source_config.json";

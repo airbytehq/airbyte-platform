@@ -19,8 +19,12 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.SourceType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jooq.DSLContext;
@@ -39,6 +43,8 @@ import org.jooq.impl.DSL;
 public class ConfigWriter {
 
   /**
+   * Get in use docker images.
+   *
    * @return A set of connectors (both source and destination) that are already used in standard
    *         syncs. We identify connectors by its repository name instead of definition id because
    *         connectors can be added manually by users, and their config ids are not always the same

@@ -52,6 +52,7 @@ import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Warmup;
 
+@SuppressWarnings("MissingJavadocType")
 @Slf4j
 public class ReplicationWorkerPerformanceTest {
 
