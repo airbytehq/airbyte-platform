@@ -184,7 +184,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
       }
       triggerUpdate();
     },
-    5000,
+    2500,
     [triggerUpdate, builderFormValues.global.connectorName, lastValidJsonManifest]
   );
 
@@ -254,7 +254,7 @@ function useBlockOnSavingState(savingState: SavingState) {
       if (savingState === "invalid") {
         openConfirmationModal({
           title: "form.discardChanges",
-          text: "form.discardChangesConfirmation",
+          text: "connectorBuilder.discardChangesConfirmation",
           submitButtonText: "form.discardChanges",
           onSubmit: () => {
             closeConfirmationModal();

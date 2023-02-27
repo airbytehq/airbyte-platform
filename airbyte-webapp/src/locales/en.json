@@ -789,6 +789,7 @@
   "connectorBuilder.waitForSaving": "Wait for saving to complete...",
   "connectorBuilder.waitForSaving.cancelButton": "Leave anyway",
   "connectorBuilder.loadingState.error": "Error saving draft. Click to retry.",
+  "connectorBuilder.discardChangesConfirmation": "Changes can't be saved because there are errors in your configuration. Either fix these errors before navigating away or discard your changes.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
