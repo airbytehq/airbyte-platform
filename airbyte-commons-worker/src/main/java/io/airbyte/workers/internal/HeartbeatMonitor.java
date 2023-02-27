@@ -50,7 +50,7 @@ public class HeartbeatMonitor {
    *         heartBeatFreshDuration. otherwise, false.
    */
   public Optional<Boolean> isBeating() {
-    return getTimeSinceLastBeat().map(timeSinceLastBeat -> timeSinceLastBeat.compareTo(heartbeatFreshnessThreshold) < 0);
+    return getTimeSinceLastBeat().map(timeSinceLastBeat -> timeSinceLastBeat.compareTo(Duration.ofSeconds(1)) < 0);
   }
 
   /**

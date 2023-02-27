@@ -42,7 +42,7 @@ class HeartbeatMonitorTest {
     when(nowSupplier.get()).thenReturn(FIVE_SECONDS_BEFORE).thenReturn(NOW);
     heartbeatMonitor.beat();
     Assertions.assertThat(heartbeatMonitor.getTimeSinceLastBeat()).hasValue(Duration.ofSeconds(5));
-    Assertions.assertThat(heartbeatMonitor.isBeating()).hasValue(true);
+    Assertions.assertThat(heartbeatMonitor.isBeating()).hasValue(false);
   }
 
   @Test
