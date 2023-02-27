@@ -381,7 +381,8 @@ public class SourceHandler {
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
   }
 
-  public JsonNode hydrateOAuthResponseSecret(String secretId) {
+  @VisibleForTesting
+  JsonNode hydrateOAuthResponseSecret(String secretId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
     return secretsRepositoryReader.fetchSecret(secretCoordinate);
 
