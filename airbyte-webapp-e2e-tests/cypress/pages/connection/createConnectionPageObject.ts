@@ -106,7 +106,6 @@ export const getStreamUtilityFunctions = (namespace: string, streamName: string)
 
   const checkDestinationNamespace = (expectedValue: string) =>
     cy.get(stream).within(() => cy.get(destinationNamespaceCell).contains(expectedValue));
-
   const checkDestinationStreamName = (expectedValue: string) =>
     cy.get(stream).within(() => cy.get(destinationStreamNameCell).contains(expectedValue));
 
