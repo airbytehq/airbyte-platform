@@ -130,20 +130,20 @@ create table "public"."connection_operation" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connection_operation_pkey"
     primary key ("id", "connection_id", "operation_id")
-}
-create table "public"."connector_builder_project"(
+);
+create table "public"."connector_builder_project" (
   "id" uuid not null,
   "workspace_id" uuid not null,
   "name" varchar(256) not null,
-  "manifest_draft" jsonb null,
-  "actor_definition_id" uuid null,
-  "tombstone" bool not null default false,
-  "created_at" timestamptz(35) not null default null,
-  "updated_at" timestamptz(35) not null default null,
+  "manifest_draft" jsonb,
+  "actor_definition_id" uuid,
+  "tombstone" boolean not null default false,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connector_builder_project_pkey"
     primary key ("id")
 );
-create table "public"."operation"(
+create table "public"."operation" (
   "id" uuid not null,
   "workspace_id" uuid not null,
   "name" varchar(256) not null,
