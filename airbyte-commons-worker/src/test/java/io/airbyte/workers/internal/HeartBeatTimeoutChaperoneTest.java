@@ -5,21 +5,25 @@
 package io.airbyte.workers.internal;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +34,8 @@ class HeartBeatTimeoutChaperoneTest {
 
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final UUID workspaceId = UUID.randomUUID();
+  private final UUID connectionId = UUID.randomUUID();
+  private final MetricClient metricClient = mock(MetricClient.class);
 
   @Test
   void testFailHeartbeat() {
@@ -39,7 +45,9 @@ class HeartBeatTimeoutChaperoneTest {
         timeoutCheckDuration,
         featureFlagClient,
         workspaceId,
-        Optional.of(() -> {}));
+        Optional.of(() -> {}),
+        connectionId,
+        metricClient);
 
     Assertions.assertThatThrownBy(() -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {
       try {
@@ -65,7 +73,9 @@ class HeartBeatTimeoutChaperoneTest {
           } catch (final InterruptedException e) {
             throw new RuntimeException(e);
           }
-        }));
+        }),
+        connectionId,
+        metricClient);
     assertDoesNotThrow(() -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {})));
   }
 
@@ -77,7 +87,9 @@ class HeartBeatTimeoutChaperoneTest {
         timeoutCheckDuration,
         featureFlagClient,
         workspaceId,
-        Optional.of(() -> {}));
+        Optional.of(() -> {}),
+        connectionId,
+        metricClient);
     assertDoesNotThrow(() -> heartbeatTimeoutChaperone.runWithHeartbeatThread(CompletableFuture.runAsync(() -> {
       try {
         Thread.sleep(1000);
@@ -93,9 +105,14 @@ class HeartBeatTimeoutChaperoneTest {
         heartbeatMonitor,
         timeoutCheckDuration,
         featureFlagClient,
-        workspaceId);
+        workspaceId,
+        connectionId,
+        metricClient);
+    when(featureFlagClient.enabled(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
     assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
+    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
   }
 
   @Test
@@ -104,10 +121,13 @@ class HeartBeatTimeoutChaperoneTest {
         heartbeatMonitor,
         timeoutCheckDuration,
         featureFlagClient,
-        workspaceId);
-    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(true));
-    assertThrows(TimeoutException.class,
-        () -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
+        workspaceId,
+        connectionId,
+        metricClient);
+    when(featureFlagClient.enabled(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(false));
+
+    assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
   }
 
 }

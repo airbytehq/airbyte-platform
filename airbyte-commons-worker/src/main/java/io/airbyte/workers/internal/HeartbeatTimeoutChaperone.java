@@ -10,6 +10,10 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,15 +47,21 @@ public class HeartbeatTimeoutChaperone {
   private final UUID workspaceId;
   private final ExecutorService executorService = Executors.newFixedThreadPool(2);
   private final Optional<Runnable> customMonitor;
+  private final UUID connectionId;
+  private final MetricClient metricClient;
 
   public HeartbeatTimeoutChaperone(final HeartbeatMonitor heartbeatMonitor,
                                    final Duration timeoutCheckDuration,
                                    final FeatureFlagClient featureFlagClient,
-                                   final UUID workspaceId) {
+                                   final UUID workspaceId,
+                                   final UUID connectionId,
+                                   final MetricClient metricClient) {
     this.timeoutCheckDuration = timeoutCheckDuration;
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagClient = featureFlagClient;
     this.workspaceId = workspaceId;
+    this.connectionId = connectionId;
+    this.metricClient = metricClient;
     this.customMonitor = Optional.empty();
   }
 
@@ -60,13 +70,17 @@ public class HeartbeatTimeoutChaperone {
                             final Duration timeoutCheckDuration,
                             final FeatureFlagClient featureFlagClient,
                             final UUID workspaceId,
-                            final Optional<Runnable> customMonitor) {
+                            final Optional<Runnable> customMonitor,
+                            final UUID connectionId,
+                            final MetricClient metricClient) {
     this.timeoutCheckDuration = timeoutCheckDuration;
 
     this.heartbeatMonitor = heartbeatMonitor;
     this.featureFlagClient = featureFlagClient;
     this.workspaceId = workspaceId;
     this.customMonitor = customMonitor;
+    this.connectionId = connectionId;
+    this.metricClient = metricClient;
   }
 
   /**
@@ -125,6 +139,9 @@ public class HeartbeatTimeoutChaperone {
 
       // if not beating, return. otherwise, if it is beating or heartbeat hasn't started, continue.
       if (!heartbeatMonitor.isBeating().orElse(true)) {
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+        LOGGER.error("Source has stopped heart beating.");
         return;
       }
     }

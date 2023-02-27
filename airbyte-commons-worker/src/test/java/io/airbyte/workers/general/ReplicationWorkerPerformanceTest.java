@@ -117,7 +117,11 @@ public class ReplicationWorkerPerformanceTest {
 
     final FeatureFlagClient featureFlagClient = new TestClient(Map.of("heartbeat.failSync", false));
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
-        io.airbyte.workers.internal.HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION, featureFlagClient, workspaceID);
+        io.airbyte.workers.internal.HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
+        featureFlagClient,
+        workspaceID,
+        UUID.randomUUID(),
+        new NotImplementedMetricClient());
 
     final var worker = new DefaultReplicationWorker("1", 0,
         versionedAbSource,

@@ -335,7 +335,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
       final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
-          HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION, featureFlagClient, syncInput.getWorkspaceId());
+          HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
+          featureFlagClient,
+          syncInput.getWorkspaceId(),
+          syncInput.getConnectionId(),
+          MetricClientFactory.getMetricClient());
       final UUID workspaceId = syncInput.getWorkspaceId();
       // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
       // environment-variable flags say so (deprecated).
