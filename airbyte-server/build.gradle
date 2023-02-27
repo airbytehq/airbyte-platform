@@ -54,8 +54,6 @@ dependencies {
 
     runtimeOnly libs.javax.databind
 
-    runtimeOnly libs.javax.databind
-
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers.postgresql
