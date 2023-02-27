@@ -353,4 +353,32 @@ public class Jsons {
 
   }
 
+  /**
+   * Merge updateNode into mainNode
+   * Stolen from https://stackoverflow.com/questions/9895041/merging-two-json-documents-using-jackson
+   */
+  public static JsonNode mergeNodes(JsonNode mainNode, JsonNode updateNode) {
+
+    Iterator<String> fieldNames = updateNode.fieldNames();
+    while (fieldNames.hasNext()) {
+
+      String fieldName = fieldNames.next();
+      JsonNode jsonNode = mainNode.get(fieldName);
+      // if field exists and is an embedded object
+      if (jsonNode != null && jsonNode.isObject()) {
+        mergeNodes(jsonNode, updateNode.get(fieldName));
+      }
+      else {
+        if (mainNode instanceof ObjectNode) {
+          // Overwrite field
+          JsonNode value = updateNode.get(fieldName);
+          ((ObjectNode) mainNode).replace(fieldName, value);
+        }
+      }
+
+    }
+
+    return mainNode;
+  }
+
 }
