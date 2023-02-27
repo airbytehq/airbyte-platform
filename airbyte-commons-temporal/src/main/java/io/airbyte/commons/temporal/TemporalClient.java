@@ -479,7 +479,8 @@ public class TemporalClient {
         .withSourceResourceRequirements(config.getSourceResourceRequirements())
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
         .withConnectionId(connectionId)
-        .withWorkspaceId(config.getWorkspaceId());
+        .withWorkspaceId(config.getWorkspaceId())
+        .withCommitStateAsap(false); // FIXME this shouldn't be hardcoded, TODO inject featureFlagClient
 
     return execute(jobRunConfig,
         () -> getWorkflowStub(SyncWorkflow.class, TemporalJobType.SYNC).run(

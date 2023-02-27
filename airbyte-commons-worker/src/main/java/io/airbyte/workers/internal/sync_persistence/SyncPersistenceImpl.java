@@ -12,9 +12,14 @@ import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.workers.internal.state_aggregator.StateAggregator;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.micronaut.context.annotation.Prototype;
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Named;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
  * handled in memory.
  */
 @Slf4j
+@Prototype
 public class SyncPersistenceImpl implements SyncPersistence {
 
   final long runImmediately = 0;
@@ -46,8 +52,8 @@ public class SyncPersistenceImpl implements SyncPersistence {
 
   public SyncPersistenceImpl(final StateApi stateApi,
                              final StateAggregatorFactory stateAggregatorFactory,
-                             final ScheduledExecutorService scheduledExecutorService,
-                             final long stateFlushPeriodInSeconds) {
+                             @Named("syncPersistenceExecutorService") final ScheduledExecutorService scheduledExecutorService,
+                             @Value("${airbyte.worker.replication.persistence-flush-period}") final long stateFlushPeriodInSeconds) {
     this.stateApi = stateApi;
     this.stateAggregatorFactory = stateAggregatorFactory;
     this.stateFlushExecutorService = scheduledExecutorService;
@@ -62,6 +68,8 @@ public class SyncPersistenceImpl implements SyncPersistence {
     } else if (!this.connectionId.equals(connectionId)) {
       throw new IllegalArgumentException("Invalid connectionId " + connectionId + ", expected " + this.connectionId);
     }
+
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_BUFFERING, 1);
     stateBuffer.ingest(stateMessage);
     startBackgroundFlushStateTask();
   }
@@ -74,6 +82,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
     // Making sure we only start one of background flush task
     synchronized (this) {
       if (stateFlushFuture == null) {
+        log.info("starting state flush thread for connectionId " + connectionId);
         stateFlushFuture =
             stateFlushExecutorService.scheduleAtFixedRate(this::flushState, runImmediately, stateFlushPeriodInSeconds, TimeUnit.SECONDS);
       }
@@ -99,6 +108,10 @@ public class SyncPersistenceImpl implements SyncPersistence {
     try {
       final boolean terminated = stateFlushExecutorService.awaitTermination(flushTerminationTimeoutInSeconds, TimeUnit.SECONDS);
       if (!terminated) {
+        if (stateToFlush != null && !stateToFlush.isEmpty()) {
+          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+        }
+
         // Ongoing flush failed to terminate within the allocated time
         log.info("Pending persist operation took too long to complete, most recent states may have been lost");
 
@@ -107,8 +120,11 @@ public class SyncPersistenceImpl implements SyncPersistence {
         return;
       }
     } catch (final InterruptedException e) {
+      if (stateToFlush != null && !stateToFlush.isEmpty()) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+      }
+
       // The current thread is getting interrupted
-      // TODO Metrics
       log.info("SyncPersistence has been interrupted while terminating, most recent states may have been lost", e);
 
       // This is also a hard case, if the backend persisted the data, we may write duplicate
@@ -119,10 +135,17 @@ public class SyncPersistenceImpl implements SyncPersistence {
     if (hasDataToFlush()) {
       // we still have data to flush
       prepareDataForFlush();
-      AirbyteApiClient.retryWithJitter(() -> {
-        doFlushState();
-        return null;
-      }, "Flush States from SyncPersistenceImpl");
+      try {
+        AirbyteApiClient.retryWithJitter(() -> {
+          doFlushState();
+          return null;
+        }, "Flush States from SyncPersistenceImpl");
+      } catch (final Exception e) {
+        if (stateToFlush != null && !stateToFlush.isEmpty()) {
+          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+        }
+        throw e;
+      }
     }
   }
 
@@ -143,7 +166,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
     try {
       doFlushState();
     } catch (final Exception e) {
-      log.warn("Failed to persist state for connectionId {}", connectionId, e);
+      log.warn("Failed to persist state for connectionId {}, it will be retried as part of the next flush", connectionId, e);
     }
   }
 
@@ -172,14 +195,22 @@ public class SyncPersistenceImpl implements SyncPersistence {
       return;
     }
 
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT, 1);
+
     final ConnectionStateCreateOrUpdate stateApiRequest = new ConnectionStateCreateOrUpdate()
         .connectionId(connectionId)
         .connectionState(StateConverter.toClient(connectionId, maybeStateWrapper.get()));
 
-    stateApi.createOrUpdateState(stateApiRequest);
+    try {
+      stateApi.createOrUpdateState(stateApiRequest);
+    } catch (final Exception e) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FAILED, 1);
+      throw e;
+    }
 
     // Only reset stateToFlush if the API call was successful
     stateToFlush = null;
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL, 1);
   }
 
 }

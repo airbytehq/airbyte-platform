@@ -46,6 +46,8 @@ import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -99,6 +101,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final AirbyteMapper mapper;
   private final AirbyteDestination destination;
   private final MessageTracker messageTracker;
+  private final SyncPersistenceFactory syncPersistenceFactory;
 
   private final ExecutorService executors;
   private final AtomicBoolean cancelled;
@@ -114,6 +117,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final AirbyteMapper mapper,
                                   final AirbyteDestination destination,
                                   final MessageTracker messageTracker,
+                                  final SyncPersistenceFactory syncPersistenceFactory,
                                   final RecordSchemaValidator recordSchemaValidator,
                                   final WorkerMetricReporter metricReporter,
                                   final ConnectorConfigUpdater connectorConfigUpdater,
@@ -124,6 +128,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.mapper = mapper;
     this.destination = destination;
     this.messageTracker = messageTracker;
+    this.syncPersistenceFactory = syncPersistenceFactory;
     this.executors = Executors.newFixedThreadPool(2);
     this.recordSchemaValidator = recordSchemaValidator;
     this.metricReporter = metricReporter;
@@ -150,6 +155,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   @Override
   public final ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
+    LOGGER
+        .info("Committing states from " + (shouldCommitStateAsap(syncInput) ? "replication" : "persistState")
+            + " activity");
     LineGobbler.startSection("REPLICATION");
 
     // todo (cgardens) - this should not be happening in the worker. this is configuration information
@@ -172,7 +180,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
 
       ApmTraceUtils.addTagsToTrace(generateTraceTags(destinationConfig, jobRoot));
-      replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig);
+      replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig,
+          syncInput.getConnectionId(), shouldCommitStateAsap(syncInput));
       timeTracker.trackReplicationEndTime();
 
       return getReplicationOutput(syncInput, destinationConfig, replicationRunnableFailureRef, destinationRunnableFailureRef, timeTracker);
@@ -188,12 +197,15 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                          final ThreadedTimeTracker timeTracker,
                          final AtomicReference<FailureReason> replicationRunnableFailureRef,
                          final AtomicReference<FailureReason> destinationRunnableFailureRef,
-                         final WorkerSourceConfig sourceConfig) {
+                         final WorkerSourceConfig sourceConfig,
+                         final UUID connectionId,
+                         final boolean commitStatesAsap) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
+    final SyncPersistence syncPersistence = commitStatesAsap ? syncPersistenceFactory.get() : null;
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
-    try (destination; source) {
+    try (syncPersistence; destination; source) {
       destination.start(destinationConfig, jobRoot);
       timeTracker.trackSourceReadStartTime();
       source.start(sourceConfig, jobRoot);
@@ -202,7 +214,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, messageTracker, connectorConfigUpdater, mdc, timeTracker, destinationConfig.getDestinationId()),
+          readFromDstRunnable(destination, cancelled, messageTracker, syncPersistence, connectorConfigUpdater, mdc, timeTracker,
+              destinationConfig.getDestinationId(), connectionId, commitStatesAsap),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -266,10 +279,13 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
                                               final AtomicBoolean cancelled,
                                               final MessageTracker messageTracker,
+                                              final SyncPersistence syncPersistence,
                                               final ConnectorConfigUpdater connectorConfigUpdater,
                                               final Map<String, String> mdc,
                                               final ThreadedTimeTracker timeHolder,
-                                              final UUID destinationId) {
+                                              final UUID destinationId,
+                                              final UUID connectionId,
+                                              final boolean commitStatesAsap) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
@@ -286,6 +302,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             LOGGER.info("State in DefaultReplicationWorker from destination: {}", message);
 
             messageTracker.acceptFromDestination(message);
+            if (commitStatesAsap && message.getType() == Type.STATE) {
+              syncPersistence.persist(connectionId, message.getState());
+            }
 
             try {
               if (message.getType() == Type.CONTROL) {
@@ -761,6 +780,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     }
 
     return tags;
+  }
+
+  private static boolean shouldCommitStateAsap(final StandardSyncInput syncInput) {
+    return syncInput.getCommitStateAsap() != null && syncInput.getCommitStateAsap();
   }
 
 }

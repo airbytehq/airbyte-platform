@@ -36,6 +36,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -85,13 +86,15 @@ class GenerateInputActivityTest {
   @BeforeEach
   void setUp() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
+    final FeatureFlagClient featureFlagClient = mock(FeatureFlagClient.class);
 
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     stateApi = mock(StateApi.class);
     attemptApi = mock(AttemptApi.class);
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);
-    generateInputActivity = new GenerateInputActivityImpl(jobPersistence, configRepository, stateApi, attemptApi, featureFlags, oAuthConfigSupplier);
+    generateInputActivity = new GenerateInputActivityImpl(jobPersistence, configRepository, stateApi, attemptApi, featureFlags,
+        featureFlagClient, oAuthConfigSupplier);
 
     job = mock(Job.class);
 
