@@ -102,6 +102,10 @@ export const UsagePerDayGraph: React.FC = () => {
               }}
             />
             <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.grey} />
+            {/* {data.map((item, index) => {
+              console.log(item.freeUsage);
+              return <Cell key={`cell-paid-${index}`} fill={styles.green} />;
+            })} */}
             <Bar key="free" stackId="a" dataKey="freeUsage" fill={styles.green} />
           </BarChart>
         </ResponsiveContainer>

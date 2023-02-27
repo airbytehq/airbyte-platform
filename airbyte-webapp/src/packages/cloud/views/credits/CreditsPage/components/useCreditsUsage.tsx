@@ -31,7 +31,5 @@ export const useCreditsUsage = () => {
         return a.timeframe.localeCompare(b.timeframe);
       });
 
-  console.log({ freeAndPaidUsagePerDay });
-
   return { data, freeAndPaidUsagePerDay };
 };
