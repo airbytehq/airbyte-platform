@@ -110,4 +110,5 @@ class OAuthSecretHelperTest {
 
     assertEquals(replacementConnectionConfiguration, hydratedSecret);
   }
+
 }

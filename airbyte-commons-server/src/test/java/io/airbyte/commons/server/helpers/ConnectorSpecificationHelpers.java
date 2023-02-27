@@ -50,6 +50,7 @@ public class ConnectorSpecificationHelpers {
       throw new RuntimeException(e);
     }
   }
+
   public static ConnectorSpecification generateAuthSpecificationConnectorSpecification() throws IOException {
     final Path specificationPath =
         Paths.get(ConnectorSpecificationHelpers.class.getClassLoader().getResource("json/TestOAuthSpecification.json").getPath());

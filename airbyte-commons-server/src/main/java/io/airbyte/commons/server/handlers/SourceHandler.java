@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -37,6 +38,7 @@ import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
+import io.micrometer.core.instrument.config.validate.Validated.Secret;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -109,7 +111,8 @@ public class SourceHandler {
     return createSource(sourceCreate);
   }
 
-  public SourceRead createSource(final SourceCreate sourceCreate)
+  @VisibleForTesting
+  SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // validate configuration
     final ConnectorSpecification spec = getSpecFromSourceDefinitionId(

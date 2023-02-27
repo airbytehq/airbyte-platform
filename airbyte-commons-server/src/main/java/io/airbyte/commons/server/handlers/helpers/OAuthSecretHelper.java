@@ -24,7 +24,6 @@ public class OAuthSecretHelper {
    * Should mimic frontend in using connector specification to figure out what auth properties are
    * necessary for source creation and where to put them.
    */
-  @VisibleForTesting
   public static JsonNode setSecretsInConnectionConfiguration(final StandardSourceDefinition sourceDefinition,
                                                              final JsonNode hydratedSecret,
                                                              final JsonNode connectionConfiguration)
@@ -33,7 +32,7 @@ public class OAuthSecretHelper {
 
     // Get the paths from advancedAuth that we need
     final ObjectNode newConnectionConfiguration = connectionConfiguration.deepCopy();
-    if(spec.getAdvancedAuth() != null) {
+    if (spec.getAdvancedAuth() != null) {
       final Map<String, List<String>> oAuthPaths = getOAuthConfigPaths(spec);
       for (final Entry<String, List<String>> entry : oAuthPaths.entrySet()) {
         // Key where we need to stuff things
@@ -43,8 +42,7 @@ public class OAuthSecretHelper {
         Jsons.replaceNestedValue(newConnectionConfiguration, jsonPathList, hydratedSecret.get(key));
       }
       return newConnectionConfiguration;
-    }
-    else {
+    } else {
       // Just merge, complete_oauth handled setting rootNode for us.
       return Jsons.mergeNodes(connectionConfiguration, hydratedSecret);
     }
@@ -57,7 +55,6 @@ public class OAuthSecretHelper {
    */
   @VisibleForTesting
   public static Map<String, List<String>> getOAuthConfigPaths(final ConnectorSpecification connectorSpecification) throws JsonValidationException {
-    Map<String, List<String>> result = null;
     if (connectorSpecification.getAdvancedAuth() != null) {
       final JsonNode completeOAuthOutputSpecification =
           connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthOutputSpecification();
@@ -65,19 +62,18 @@ public class OAuthSecretHelper {
           connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification();
 
       // Merge all the mappings into one map
-      result = new HashMap<>(buildKeyToPathInConnectorConfigMap(completeOAuthOutputSpecification));
+      Map<String, List<String>> result = new HashMap<>(buildKeyToPathInConnectorConfigMap(completeOAuthOutputSpecification));
       result.putAll(buildKeyToPathInConnectorConfigMap(completeOAuthServerOutputSpecification));
-    }
-    else {
+      return result;
+    } else {
       throw new JsonValidationException(
-          String.format("Expected to find advancedAuth but none present - see [%s]", connectorSpecification.getDocumentationUrl()));
+          String.format("Error parsing advancedAuth - see [%s]", connectorSpecification.getDocumentationUrl()));
     }
-
-    return result;
   }
 
   /**
-   * Given advanced auth specifications, extract a map of important keys to their path in connectorConfiguration.
+   * Given advanced auth specifications, extract a map of important keys to their path in
+   * connectorConfiguration.
    */
   @VisibleForTesting
   public static Map<String, List<String>> buildKeyToPathInConnectorConfigMap(JsonNode specification) {
@@ -97,4 +93,5 @@ public class OAuthSecretHelper {
     }
     return result;
   }
+
 }
