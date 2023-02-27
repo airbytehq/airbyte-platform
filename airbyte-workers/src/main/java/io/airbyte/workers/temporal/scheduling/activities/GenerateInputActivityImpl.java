@@ -137,17 +137,17 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   }
 
   private JsonNode getSourceConfiguration(final SourceConnection source) throws IOException {
-    return oAuthConfigSupplier.injectSourceOAuthParameters(
+    return configInjector.injectConfig(oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
         source.getWorkspaceId(),
-        source.getConfiguration());
+        source.getConfiguration()), source.getSourceDefinitionId());
   }
 
   private JsonNode getDestinationConfiguration(final DestinationConnection destination) throws IOException {
-    return oAuthConfigSupplier.injectDestinationOAuthParameters(
+    return configInjector.injectConfig(oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
         destination.getWorkspaceId(),
-        destination.getConfiguration());
+        destination.getConfiguration()), destination.getDestinationDefinitionId());
   }
 
   private IntegrationLauncherConfig getDestinationIntegrationLauncherConfig(final long jobId,
