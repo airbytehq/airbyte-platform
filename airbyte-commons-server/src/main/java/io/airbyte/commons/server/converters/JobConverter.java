@@ -46,13 +46,12 @@ import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.Job;
 import jakarta.inject.Singleton;
-
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Convert between API and internal versions of job models.
