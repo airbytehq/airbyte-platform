@@ -68,7 +68,13 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         )}
       </CatalogTreeTableCell>
       <CatalogTreeTableCell size="fixed" className={styles.syncCell}>
-        <Switch size="sm" checked={stream.config?.selected} onChange={onSelectStream} disabled={disabled} />
+        <Switch
+          size="sm"
+          checked={stream.config?.selected}
+          onChange={onSelectStream}
+          disabled={disabled}
+          testId="sync"
+        />
       </CatalogTreeTableCell>
       {/* TODO: Replace with actual field count for column selection */}
       {/* <CatalogTreeTableCell size="fixed" className={styles.fieldsCell}>
@@ -76,12 +82,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           124567
         </Text>
       </CatalogTreeTableCell> */}
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip testId="source-namespace">
         <Text size="md" className={styles.cellText}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip testId="source-stream-name">
         <Text size="md" className={styles.cellText}>
           {stream.stream?.name}
         </Text>
@@ -128,12 +134,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip testId="destination-namespace">
         <Text size="md" className={styles.cellText}>
           {destNamespace}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip testId="destination-stream-name">
         <Text size="md" className={styles.cellText}>
           {destName}
         </Text>
