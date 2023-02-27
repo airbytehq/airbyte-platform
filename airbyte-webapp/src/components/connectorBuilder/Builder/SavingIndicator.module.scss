@@ -1,0 +1,6 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.invalid {
+  color: colors.$red;
+}

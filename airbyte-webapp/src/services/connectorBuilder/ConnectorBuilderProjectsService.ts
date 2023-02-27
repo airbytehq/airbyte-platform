@@ -1,6 +1,8 @@
+import { useMutation } from "react-query";
+
 import { useConfig } from "config";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
@@ -40,8 +42,7 @@ export const useUpdateProject = (projectId: string) => {
   const service = useConnectorBuilderProjectsService();
   const workspaceId = useCurrentWorkspaceId();
 
-  return {
-    update: (projectName: string, manifest: ConnectorManifest) =>
-      service.updateBuilderProject(workspaceId, projectId, projectName, manifest),
-  };
+  return useMutation<void, Error, { name: string; manifest: DeclarativeComponentSchema }>(({ name, manifest }) =>
+    service.updateBuilderProject(workspaceId, projectId, name, manifest)
+  );
 };

@@ -7,6 +7,7 @@ import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CodeEditor } from "components/ui/CodeEditor";
+import { FlexItem } from "components/ui/Flex";
 
 import { Action, Namespace } from "core/analytics";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
@@ -15,6 +16,7 @@ import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./YamlEditor.module.scss";
+import { SavingIndicator } from "../Builder/SavingIndicator";
 import { UiYamlToggleButton } from "../Builder/UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { convertToManifest } from "../types";
@@ -127,6 +129,9 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
       <div className={styles.control}>
         <UiYamlToggleButton yamlSelected onClick={handleToggleYamlEditor} />
         <DownloadYamlButton yaml={yamlValue} yamlIsValid={yamlIsValid} />
+        <FlexItem>
+          <SavingIndicator />
+        </FlexItem>
       </div>
       <div className={styles.editorContainer}>
         <CodeEditor

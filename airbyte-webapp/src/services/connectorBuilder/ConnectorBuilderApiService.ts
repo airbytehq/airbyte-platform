@@ -67,8 +67,11 @@ export const useResolveManifest = () => {
 export const useResolvedManifest = (manifest: ResolveManifestRequestBodyManifest) => {
   const service = useConnectorBuilderService();
 
-  return useSuspenseQuery(
-    connectorBuilderKeys.resolve(manifest),
-    async () => (await service.resolveManifest({ manifest })).manifest as DeclarativeComponentSchema
-  );
+  return useSuspenseQuery(connectorBuilderKeys.resolve(manifest), async () => {
+    try {
+      return (await service.resolveManifest({ manifest })).manifest as DeclarativeComponentSchema;
+    } catch {
+      return undefined;
+    }
+  });
 };

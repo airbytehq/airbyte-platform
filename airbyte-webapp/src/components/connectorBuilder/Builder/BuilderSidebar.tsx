@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
+import { FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
@@ -19,6 +20,7 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
+import { SavingIndicator } from "./SavingIndicator";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import {
@@ -110,6 +112,10 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           {values.global?.connectorName}
         </Heading>
       </div>
+
+      <FlexItem>
+        <SavingIndicator />
+      </FlexItem>
 
       <ViewSelectButton
         data-testid="navbutton-global"

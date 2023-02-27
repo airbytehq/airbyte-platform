@@ -37,6 +37,7 @@ interface FormStateContext {
   yamlIsValid: boolean;
   selectedView: BuilderView;
   editorView: EditorView;
+  savingState: "invalid" | "loading" | "saved";
   setBuilderFormValues: (values: BuilderFormValues, isInvalid: boolean) => void;
   setJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
@@ -69,7 +70,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
 
   const builderProject = useProject(projectId);
-  const { update } = useUpdateProject(projectId);
+  const { mutateAsync: updateProject } = useUpdateProject(projectId);
   const resolvedManifest = useResolvedManifest(
     builderProject.declarativeManifest?.manifest || DEFAULT_JSON_MANIFEST_VALUES
   );
@@ -78,6 +79,15 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) || DEFAULT_JSON_MANIFEST_VALUES
   );
   const [formValuesFromProject, failedConversion] = useMemo(() => {
+    if (!resolvedManifest) {
+      return [
+        {
+          ...DEFAULT_BUILDER_FORM_VALUES,
+          global: { ...DEFAULT_BUILDER_FORM_VALUES.global, connectorName: builderProject.builderProject.name },
+        },
+        true,
+      ];
+    }
     try {
       return [convertToBuilderFormValuesSync(resolvedManifest, builderProject.builderProject.name), false];
     } catch (e) {
@@ -99,7 +109,6 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
       setStoredEditorView("yaml");
     }
   });
-  console.log(formValuesFromProject, failedConversion);
 
   const lastValidBuilderFormValuesRef = useRef<BuilderFormValues>(storedFormValues);
   const currentBuilderFormValuesRef = useRef<BuilderFormValues>(storedFormValues);
@@ -168,19 +177,44 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     [builderFormValues, storedEditorView, storedManifest, derivedJsonManifest, lastValidBuilderFormValues]
   );
 
+  const [persistedState, setPersistedState] = useState<{ name: string; manifest: DeclarativeComponentSchema }>(() => ({
+    manifest: lastValidJsonManifest,
+    name: builderProject.builderProject.name,
+  }));
+
   const [selectedView, setSelectedView] = useState<BuilderView>("global");
 
-  const [savingState, setSavingState] = useState<"loading" | "invalid" | "saved">("saved");
+  const savingState =
+    storedEditorView === "yaml"
+      ? !yamlIsValid
+        ? "invalid"
+        : persistedState.manifest !== lastValidJsonManifest
+        ? "loading"
+        : "saved"
+      : !formValuesValid
+      ? "invalid"
+      : persistedState.manifest !== lastValidJsonManifest
+      ? "loading"
+      : "saved";
 
   useDebounce(
-    () => {
-      update();
+    async () => {
+      if (
+        persistedState.manifest === lastValidJsonManifest &&
+        persistedState.name === builderFormValues.global.connectorName
+      ) {
+        // first run of the hook, no need to update
+        return;
+      }
+      const newProject = { name: builderFormValues.global.connectorName, manifest: lastValidJsonManifest };
+      await updateProject(newProject);
+      setPersistedState(newProject);
     },
     5000,
-    [builderFormValues, formValuesValid]
+    [builderFormValues.global.connectorName, lastValidJsonManifest]
   );
 
-  const ctx = {
+  const ctx: FormStateContext = {
     builderFormValues,
     formValuesValid,
     jsonManifest: derivedJsonManifest,
@@ -190,6 +224,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     yamlIsValid,
     selectedView,
     editorView: storedEditorView,
+    savingState,
     setBuilderFormValues,
     setJsonManifest: setStoredManifest,
     setYamlIsValid,
