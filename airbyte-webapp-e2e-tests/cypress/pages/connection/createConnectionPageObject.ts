@@ -11,6 +11,13 @@ const connectorHeaderGroupIcon = (connectorType: ConnectorType) =>
   `span[data-testid='connector-header-group-icon-container-${connectorType}']`;
 const catalogTreeTableHeader = `div[data-testid='catalog-tree-table-header']`;
 const catalogTreeTableBody = `div[data-testid='catalog-tree-table-body']`;
+const streamTableRow = (namespace: string, streamName: string) =>
+  `div[data-testid='catalog-tree-table-row-${namespace}-${streamName}']`;
+const streamSyncSwitch = `label[data-testid='sync-switch']`;
+const sourceStreamNameCell = `div[data-testid='source-stream-name-cell']`;
+const destinationStreamNameCell = `div[data-testid='destination-stream-name-cell']`;
+const sourceNamespaceCell = `div[data-testid='source-namespace-cell']`;
+const destinationNamespaceCell = `div[data-testid='destination-namespace-cell']`;
 
 export const selectExistingConnectorFromDropdown = (connectorName: string) =>
   cy
@@ -68,3 +75,44 @@ export const scrollTableToStream = (streamName: string) => {
 
 export const isStreamTableRowVisible = (streamName: string) =>
   cy.get(catalogTreeTableBody).contains(streamName).should("be.visible");
+
+export const getStreamUtilityFunctions = (namespace: string, streamName: string) => {
+  const stream = streamTableRow(namespace, streamName);
+
+  const isStreamSyncEnabled = (expectedValue: boolean) =>
+    cy.get(stream).within(() => {
+      cy.get(streamSyncSwitch)
+        .get("input")
+        .should(`${expectedValue ? "" : "not."}be.checked`);
+    });
+
+  const toggleStreamSync = () =>
+    cy.get(stream).within(() => {
+      cy.get(streamSyncSwitch).click();
+    });
+
+  const isStreamRowHasRemovedStyle = (expectedValue: boolean) =>
+    cy
+      .get(stream)
+      .invoke("attr", "class")
+      .should(`${expectedValue ? "" : "not."}match`, /removed/);
+
+  const checkSourceNamespace = () => cy.get(stream).within(() => cy.get(sourceNamespaceCell).contains(namespace));
+  const checkSourceStreamName = () => cy.get(stream).within(() => cy.get(sourceStreamNameCell).contains(streamName));
+
+  const checkDestinationNamespace = (expectedValue: string) =>
+    cy.get(stream).within(() => cy.get(destinationNamespaceCell).contains(expectedValue));
+
+  const checkDestinationStreamName = (expectedValue: string) =>
+    cy.get(stream).within(() => cy.get(destinationStreamNameCell).contains(expectedValue));
+
+  return {
+    isStreamSyncEnabled,
+    toggleStreamSync,
+    isStreamRowHasRemovedStyle,
+    checkSourceNamespace,
+    checkSourceStreamName,
+    checkDestinationNamespace,
+    checkDestinationStreamName,
+  };
+};
