@@ -50,7 +50,7 @@ const CreateControls: React.FC<CreateControlsProps> = ({ isSubmitting, errorMess
         <ErrorBlock>
           <Error />
           <div>
-            <FormattedMessage id="form.failedTests" />
+            {isValid && <FormattedMessage id="form.failedTests" />}
             <ErrorText>{errorMessage}</ErrorText>
           </div>
         </ErrorBlock>
