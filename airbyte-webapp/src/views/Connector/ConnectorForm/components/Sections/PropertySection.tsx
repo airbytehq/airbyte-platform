@@ -1,4 +1,5 @@
 import { useField } from "formik";
+import uniq from "lodash/uniq";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -64,7 +65,7 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
 
   const errorMessage = Array.isArray(meta.error) ? (
     <FlexContainer direction="column" gap="none">
-      {meta.error.filter(Boolean).map((error, index) => {
+      {uniq(meta.error.filter(Boolean)).map((error, index) => {
         return <ErrorMessage key={index} error={error} property={property} />;
       })}
     </FlexContainer>
