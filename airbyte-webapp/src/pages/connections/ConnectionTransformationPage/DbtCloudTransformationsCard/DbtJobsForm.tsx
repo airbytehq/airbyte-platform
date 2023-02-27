@@ -13,6 +13,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud";
 import { DbtCloudJob, isSameJob } from "packages/cloud/services/dbtCloud";
+import { links } from "utils/links";
 
 import styles from "./DbtJobsForm.module.scss";
 import { JobsList } from "./JobsList";
@@ -84,7 +85,16 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                             <Tooltip
                               control={
                                 <Text color="grey">
-                                  <FormattedMessage id="connection.dbtCloudJobs.noJobsFoundForAccount" />
+                                  <FormattedMessage
+                                    id="connection.dbtCloudJobs.noJobsFoundForAccount"
+                                    values={{
+                                      lnk: (linkText: React.ReactNode[]) => (
+                                        <a href={links.dbtCloud} rel="noreferrer noopener">
+                                          <Text>{linkText}</Text>
+                                        </a>
+                                      ),
+                                    }}
+                                  />
                                 </Text>
                               }
                             />
