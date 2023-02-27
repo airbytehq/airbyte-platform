@@ -97,7 +97,11 @@ if [ -n "$CI" ]; then
   # trap "mkdir -p /tmp/kubernetes_logs && write_all_logs" EXIT
 fi
 
-kubectl expose $(kubectl get po -l app.kubernetes.io/name=server -o name) --name exposed-server-svc --type NodePort --overrides '{ "apiVersion": "v1","spec":{"ports": [{"port":8001,"protocol":"TCP","targetPort":8001,"nodePort":8001}]}}'
+if [ -n "$CI" ]; then
+  kubectl expose $(kubectl get po -l app.kubernetes.io/name=server -o name) --name exposed-server-svc --type NodePort --overrides '{ "apiVersion": "v1","spec":{"ports": [{"port":8001,"protocol":"TCP","targetPort":8001,"nodePort":8001}]}}'
+else
+  kubectl port-forward svc/ab-airbyte-server 8001:8001 &
+fi
 
 echo "Running worker integration tests..."
 KUBE=true SUB_BUILD=PLATFORM ./gradlew :airbyte-workers:integrationTest --scan
