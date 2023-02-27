@@ -65,7 +65,7 @@ export const UsagePerDayGraph: React.FC = () => {
                   })}
                   offset={0}
                   position="insideBottom"
-                  fontSize={11}
+                  fontSize={10}
                   fill={chartTicksColor}
                   fontWeight={600}
                 />
@@ -89,7 +89,7 @@ export const UsagePerDayGraph: React.FC = () => {
                 value={formatMessage({
                   id: "credits.amount",
                 })}
-                fontSize={11}
+                fontSize={10}
                 fill={chartTicksColor}
                 fontWeight={600}
                 position="top"
