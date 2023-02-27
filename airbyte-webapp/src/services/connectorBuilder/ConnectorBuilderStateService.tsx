@@ -31,7 +31,7 @@ import { useProject, useUpdateProject } from "./ConnectorBuilderProjectsService"
 
 export type BuilderView = "global" | "inputs" | number;
 
-export type SavingState = "loading" | "invalid" | "saved";
+export type SavingState = "loading" | "invalid" | "saved" | "error";
 
 interface FormStateContext {
   builderFormValues: BuilderFormValues;
@@ -50,6 +50,7 @@ interface FormStateContext {
   setYamlIsValid: (value: boolean) => void;
   setSelectedView: (view: BuilderView) => void;
   setEditorView: (editorView: EditorView) => void;
+  triggerUpdate: () => void;
 }
 
 interface TestStateContext {
@@ -74,7 +75,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     throw new Error("Could not find project id in path");
   }
   const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
-  const { builderProject, failedInitialFormValueConversion, initialFormValues, updateProject } =
+  const { builderProject, failedInitialFormValueConversion, initialFormValues, updateProject, updateError } =
     useInitializedBuilderProject(projectId);
 
   const [storedManifest, setStoredManifest] = useState<DeclarativeComponentSchema>(
@@ -162,11 +163,18 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     persistedState,
     builderFormValues,
     lastValidJsonManifest,
-    formValuesValid
+    formValuesValid,
+    updateError
   );
 
+  const triggerUpdate = useCallback(async () => {
+    const newProject = { name: builderFormValues.global.connectorName, manifest: lastValidJsonManifest };
+    await updateProject(newProject);
+    setPersistedState(newProject);
+  }, [builderFormValues.global.connectorName, lastValidJsonManifest, updateProject]);
+
   useDebounce(
-    async () => {
+    () => {
       if (
         persistedState.manifest === lastValidJsonManifest &&
         persistedState.name === builderFormValues.global.connectorName
@@ -174,12 +182,10 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
         // first run of the hook, no need to update
         return;
       }
-      const newProject = { name: builderFormValues.global.connectorName, manifest: lastValidJsonManifest };
-      await updateProject(newProject);
-      setPersistedState(newProject);
+      triggerUpdate();
     },
     5000,
-    [builderFormValues.global.connectorName, lastValidJsonManifest]
+    [triggerUpdate, builderFormValues.global.connectorName, lastValidJsonManifest]
   );
 
   const pendingTransition = useBlockOnSavingState(savingState);
@@ -201,6 +207,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     setYamlEditorIsMounted,
     setSelectedView,
     setEditorView,
+    triggerUpdate,
   };
 
   return (
@@ -213,7 +220,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 
 function useInitializedBuilderProject(projectId: string) {
   const builderProject = useProject(projectId);
-  const { mutateAsync: updateProject } = useUpdateProject(projectId);
+  const { mutateAsync: updateProject, error: updateError } = useUpdateProject(projectId);
   const resolvedManifest = useResolvedManifest(
     builderProject.declarativeManifest?.manifest || DEFAULT_JSON_MANIFEST_VALUES
   );
@@ -233,6 +240,7 @@ function useInitializedBuilderProject(projectId: string) {
   return {
     builderProject,
     updateProject,
+    updateError,
     initialFormValues,
     failedInitialFormValueConversion,
   };
@@ -284,8 +292,12 @@ function getSavingState(
   persistedState: { name: string; manifest: DeclarativeComponentSchema },
   formValues: BuilderFormValues,
   lastValidJsonManifest: DeclarativeComponentSchema,
-  formValuesValid: boolean
-) {
+  formValuesValid: boolean,
+  updateError: Error | null
+): SavingState {
+  if (updateError) {
+    return "error";
+  }
   if (storedEditorView === "yaml" && !yamlIsValid) {
     return "invalid";
   }

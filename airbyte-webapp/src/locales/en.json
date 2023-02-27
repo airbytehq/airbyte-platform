@@ -788,6 +788,7 @@
   "connectorBuilder.loadingState.saved": "Draft saved",
   "connectorBuilder.waitForSaving": "Wait for saving to complete...",
   "connectorBuilder.waitForSaving.cancelButton": "Leave anyway",
+  "connectorBuilder.loadingState.error": "Error saving draft. Click to retry.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
