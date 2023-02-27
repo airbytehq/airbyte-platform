@@ -13,6 +13,9 @@ const catalogTreeTableHeader = `div[data-testid='catalog-tree-table-header']`;
 const catalogTreeTableBody = `div[data-testid='catalog-tree-table-body']`;
 const streamTableRow = (namespace: string, streamName: string) =>
   `div[data-testid='catalog-tree-table-row-${namespace}-${streamName}']`;
+const streamPanel = (namespace: string, streamName: string) =>
+  `div[data-testid='stream-details-panel-${namespace}-${streamName}']`;
+const streamPanelCloseButton = `button[data-testid='stream-panel-close-button']`;
 const streamSyncSwitch = `label[data-testid='sync-switch']`;
 const sourceStreamNameCell = `div[data-testid='source-stream-name-cell']`;
 const destinationStreamNameCell = `div[data-testid='destination-stream-name-cell']`;
@@ -78,6 +81,7 @@ export const isStreamTableRowVisible = (streamName: string) =>
 
 export const getStreamUtilityFunctions = (namespace: string, streamName: string) => {
   const stream = streamTableRow(namespace, streamName);
+  const panel = streamPanel(namespace, streamName);
 
   const isStreamSyncEnabled = (expectedValue: boolean) =>
     cy.get(stream).within(() => {
@@ -106,6 +110,10 @@ export const getStreamUtilityFunctions = (namespace: string, streamName: string)
   const checkDestinationStreamName = (expectedValue: string) =>
     cy.get(stream).within(() => cy.get(destinationStreamNameCell).contains(expectedValue));
 
+  const openStreamPanel = () => cy.get(stream).within(() => cy.get(destinationNamespaceCell).click());
+  const closeStreamPanel = () => cy.get(panel).within(() => cy.get(streamPanelCloseButton).click());
+  const isStreamPanelVisible = (expectedValue: boolean) => cy.get(panel).should(`${expectedValue ? "" : "not."}exist`);
+
   return {
     isStreamSyncEnabled,
     toggleStreamSync,
@@ -114,5 +122,8 @@ export const getStreamUtilityFunctions = (namespace: string, streamName: string)
     checkSourceStreamName,
     checkDestinationNamespace,
     checkDestinationStreamName,
+    openStreamPanel,
+    closeStreamPanel,
+    isStreamPanelVisible,
   };
 };

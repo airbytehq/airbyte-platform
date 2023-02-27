@@ -152,6 +152,9 @@ describe.skip("Connection - Create new connection", () => {
       checkSourceStreamName,
       checkDestinationNamespace,
       checkDestinationStreamName,
+      closeStreamPanel,
+      openStreamPanel,
+      isStreamPanelVisible,
     } = newConnectionPage.getStreamUtilityFunctions("public", "users");
 
     it("should have checked sync switch by default ", () => {
@@ -196,6 +199,16 @@ describe.skip("Connection - Create new connection", () => {
 
     it("should have default destination stream name", () => {
       checkDestinationStreamName("users");
+    });
+
+    it("should open stream details panel by clicking on stream row", () => {
+      openStreamPanel();
+      isStreamPanelVisible(true);
+    });
+
+    it("should close stream details panel by clicking on close button", () => {
+      closeStreamPanel();
+      isStreamPanelVisible(false);
     });
   });
 

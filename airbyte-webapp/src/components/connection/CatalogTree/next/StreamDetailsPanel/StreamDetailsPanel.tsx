@@ -37,7 +37,10 @@ export const StreamDetailsPanel: React.FC<StreamDetailsPanelProps> = ({
   return (
     <Dialog className={styles.dialog} open onClose={onClose}>
       <Overlay />
-      <Dialog.Panel className={styles.container}>
+      <Dialog.Panel
+        className={styles.container}
+        data-testid={`stream-details-panel-${stream?.namespace || "no-namespace"}-${stream?.name}`}
+      >
         <StreamPanelHeader
           stream={stream}
           config={config}

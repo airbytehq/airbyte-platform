@@ -66,7 +66,13 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
         <StreamProperty messageId="form.syncMode" value={syncMode} />
       </FlexContainer>
       <FlexContainer className={styles.rightActions} justifyContent="flex-end">
-        <Button variant="clear" onClick={onClose} className={styles.crossIcon} icon={<CrossIcon />} />
+        <Button
+          variant="clear"
+          onClick={onClose}
+          className={styles.crossIcon}
+          icon={<CrossIcon />}
+          data-testid="stream-panel-close-button"
+        />
       </FlexContainer>
     </FlexContainer>
   );
