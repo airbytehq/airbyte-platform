@@ -43,7 +43,7 @@ export const Switch: React.FC<SwitchProps> = ({
   });
 
   return (
-    <label className={labelStyle} data-testid={testId}>
+    <label className={labelStyle} {...(testId ? { "data-testid": `${testId}-switch` } : {})}>
       <input
         {...props}
         aria-checked={(indeterminate ? "mixed" : checked) ?? !!value}
