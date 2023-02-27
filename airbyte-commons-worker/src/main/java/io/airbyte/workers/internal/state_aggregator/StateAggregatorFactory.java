@@ -6,6 +6,9 @@ package io.airbyte.workers.internal.state_aggregator;
 
 import io.airbyte.commons.features.FeatureFlags;
 
+/**
+ * Factory to build StateAggregator.
+ */
 public class StateAggregatorFactory {
 
   final FeatureFlags featureFlags;

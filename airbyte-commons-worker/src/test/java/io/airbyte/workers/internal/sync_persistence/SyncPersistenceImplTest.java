@@ -43,7 +43,7 @@ import org.mockito.ArgumentCaptor;
 
 class SyncPersistenceImplTest {
 
-  private final long FLUSH_PERIOD = 60;
+  private final long flushPeriod = 60;
 
   private SyncPersistenceImpl syncPersistence;
   private StateApi stateApi;
@@ -62,14 +62,14 @@ class SyncPersistenceImplTest {
 
     // Wire the executor service with arg captures
     executorService = mock(ScheduledExecutorService.class);
-    when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(FLUSH_PERIOD), eq(TimeUnit.SECONDS)))
+    when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS)))
         .thenReturn(mock(ScheduledFuture.class));
 
     // Setting syncPersistence
     stateApi = mock(StateApi.class);
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
     when(featureFlags.useStreamCapableState()).thenReturn(true);
-    syncPersistence = new SyncPersistenceImpl(stateApi, new StateAggregatorFactory(featureFlags), executorService, FLUSH_PERIOD);
+    syncPersistence = new SyncPersistenceImpl(stateApi, new StateAggregatorFactory(featureFlags), executorService, flushPeriod);
   }
 
   @AfterEach
@@ -81,7 +81,7 @@ class SyncPersistenceImplTest {
   void testPersistHappyPath() throws ApiException {
     final AirbyteStateMessage stateA1 = getStreamState("A", 1);
     syncPersistence.persist(connectionId, stateA1);
-    verify(executorService).scheduleAtFixedRate(any(Runnable.class), eq(0L), eq(FLUSH_PERIOD), eq(TimeUnit.SECONDS));
+    verify(executorService).scheduleAtFixedRate(any(Runnable.class), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS));
     clearInvocations(executorService);
 
     // Simulating the expected flush execution

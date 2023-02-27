@@ -8,11 +8,11 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
+import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.workers.helper.StateConverter;
 import io.airbyte.workers.internal.state_aggregator.StateAggregator;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import java.util.Optional;
@@ -22,11 +22,17 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Default implementation of the SyncPersistence
+ *
+ * Persistence operations are delegated to an API and batched with a regular interval. Buffering is
+ * handled in memory.
+ */
 @Slf4j
 public class SyncPersistenceImpl implements SyncPersistence {
 
-  final long RUN_IMMEDIATELY = 0;
-  final long FLUSH_TERMINATION_TIMEOUT_IN_SECONDS = 60;
+  final long runImmediately = 0;
+  final long flushTerminationTimeoutInSeconds = 60;
 
   private UUID connectionId;
   private final StateApi stateApi;
@@ -69,7 +75,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
     synchronized (this) {
       if (stateFlushFuture == null) {
         stateFlushFuture =
-            stateFlushExecutorService.scheduleAtFixedRate(this::flushState, RUN_IMMEDIATELY, stateFlushPeriodInSeconds, TimeUnit.SECONDS);
+            stateFlushExecutorService.scheduleAtFixedRate(this::flushState, runImmediately, stateFlushPeriodInSeconds, TimeUnit.SECONDS);
       }
     }
   }
@@ -91,7 +97,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
 
     // Wait for previous running task to terminate
     try {
-      final boolean terminated = stateFlushExecutorService.awaitTermination(FLUSH_TERMINATION_TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+      final boolean terminated = stateFlushExecutorService.awaitTermination(flushTerminationTimeoutInSeconds, TimeUnit.SECONDS);
       if (!terminated) {
         // Ongoing flush failed to terminate within the allocated time
         log.info("Pending persist operation took too long to complete, most recent states may have been lost");
