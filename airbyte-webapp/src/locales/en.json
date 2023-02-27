@@ -783,8 +783,11 @@
   "connectorBuilder.listPage.heading": "{count} custom {count, plural, one {connector} other {connectors}}",
   "connectorBuilder.listPage.newConnector": "New custom connector",
   "connectorBuilder.loadingState.invalid": "Draft can't be saved",
+  "connectorBuilder.loadingState.invalid.tooltip": "Make sure there are no errors in your configuration",
   "connectorBuilder.loadingState.loading": "Saving draft",
   "connectorBuilder.loadingState.saved": "Draft saved",
+  "connectorBuilder.waitForSaving": "Wait for saving to complete...",
+  "connectorBuilder.waitForSaving.cancelButton": "Leave anyway",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

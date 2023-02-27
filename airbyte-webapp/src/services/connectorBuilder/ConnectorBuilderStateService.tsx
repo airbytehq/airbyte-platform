@@ -1,3 +1,4 @@
+import { Transition } from "history";
 import { dump } from "js-yaml";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
@@ -5,6 +6,7 @@ import { UseQueryResult } from "react-query";
 import { useParams } from "react-router-dom";
 import { useDebounce, useEffectOnce } from "react-use";
 
+import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
 import {
   BuilderFormValues,
   convertToManifest,
@@ -20,12 +22,16 @@ import {
   StreamsListReadStreamsItem,
 } from "core/request/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
+import { useBlocker } from "hooks/router/useBlocker";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import { useProject, useUpdateProject } from "./ConnectorBuilderProjectsService";
 
 export type BuilderView = "global" | "inputs" | number;
+
+export type SavingState = "loading" | "invalid" | "saved";
 
 interface FormStateContext {
   builderFormValues: BuilderFormValues;
@@ -37,7 +43,7 @@ interface FormStateContext {
   yamlIsValid: boolean;
   selectedView: BuilderView;
   editorView: EditorView;
-  savingState: "invalid" | "loading" | "saved";
+  savingState: SavingState;
   setBuilderFormValues: (values: BuilderFormValues, isInvalid: boolean) => void;
   setJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
@@ -68,50 +74,21 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     throw new Error("Could not find project id in path");
   }
   const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
-
-  const builderProject = useProject(projectId);
-  const { mutateAsync: updateProject } = useUpdateProject(projectId);
-  const resolvedManifest = useResolvedManifest(
-    builderProject.declarativeManifest?.manifest || DEFAULT_JSON_MANIFEST_VALUES
-  );
+  const { builderProject, failedInitialFormValueConversion, initialFormValues, updateProject } =
+    useInitializedBuilderProject(projectId);
 
   const [storedManifest, setStoredManifest] = useState<DeclarativeComponentSchema>(
     (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) || DEFAULT_JSON_MANIFEST_VALUES
   );
-  const [formValuesFromProject, failedConversion] = useMemo(() => {
-    if (!resolvedManifest) {
-      return [
-        {
-          ...DEFAULT_BUILDER_FORM_VALUES,
-          global: { ...DEFAULT_BUILDER_FORM_VALUES.global, connectorName: builderProject.builderProject.name },
-        },
-        true,
-      ];
-    }
-    try {
-      return [convertToBuilderFormValuesSync(resolvedManifest, builderProject.builderProject.name), false];
-    } catch (e) {
-      console.error(e);
-      // could not convert
-      return [
-        {
-          ...DEFAULT_BUILDER_FORM_VALUES,
-          global: { ...DEFAULT_BUILDER_FORM_VALUES.global, connectorName: builderProject.builderProject.name },
-        },
-        true,
-      ];
-    }
-  }, [builderProject.builderProject.name, resolvedManifest]);
-  const [storedFormValues, setStoredFormValues] = useState<BuilderFormValues>(formValuesFromProject);
+  const [builderFormValues, setStoredFormValues] = useState<BuilderFormValues>(initialFormValues);
 
   useEffectOnce(() => {
-    if (failedConversion && storedEditorView === "ui") {
+    if (failedInitialFormValueConversion && storedEditorView === "ui") {
       setStoredEditorView("yaml");
     }
   });
 
-  const lastValidBuilderFormValuesRef = useRef<BuilderFormValues>(storedFormValues);
-  const currentBuilderFormValuesRef = useRef<BuilderFormValues>(storedFormValues);
+  const lastValidBuilderFormValuesRef = useRef<BuilderFormValues>(builderFormValues);
 
   const [formValuesValid, setFormValuesValid] = useState(true);
 
@@ -121,16 +98,11 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
         // update ref first because calling setStoredBuilderFormValues might synchronously kick off a react render cycle.
         lastValidBuilderFormValuesRef.current = values;
       }
-      currentBuilderFormValuesRef.current = values;
       setStoredFormValues(values);
       setFormValuesValid(isValid);
     },
     [setStoredFormValues]
   );
-
-  // use the ref for the current builder form values because useLocalStorage will always serialize and deserialize the whole object,
-  // changing all the references which re-triggers all memoizations
-  const builderFormValues = currentBuilderFormValuesRef.current;
 
   const derivedJsonManifest = useMemo(
     () => (storedEditorView === "yaml" ? storedManifest : convertToManifest(builderFormValues)),
@@ -184,18 +156,14 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 
   const [selectedView, setSelectedView] = useState<BuilderView>("global");
 
-  const savingState =
-    storedEditorView === "yaml"
-      ? !yamlIsValid
-        ? "invalid"
-        : persistedState.manifest !== lastValidJsonManifest
-        ? "loading"
-        : "saved"
-      : !formValuesValid
-      ? "invalid"
-      : persistedState.manifest !== lastValidJsonManifest
-      ? "loading"
-      : "saved";
+  const savingState = getSavingState(
+    storedEditorView,
+    yamlIsValid,
+    persistedState,
+    builderFormValues,
+    lastValidJsonManifest,
+    formValuesValid
+  );
 
   useDebounce(
     async () => {
@@ -213,6 +181,8 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     5000,
     [builderFormValues.global.connectorName, lastValidJsonManifest]
   );
+
+  const pendingTransition = useBlockOnSavingState(savingState);
 
   const ctx: FormStateContext = {
     builderFormValues,
@@ -233,8 +203,104 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     setEditorView,
   };
 
-  return <ConnectorBuilderFormStateContext.Provider value={ctx}>{children}</ConnectorBuilderFormStateContext.Provider>;
+  return (
+    <ConnectorBuilderFormStateContext.Provider value={ctx}>
+      {pendingTransition && <WaitForSavingModal pendingTransition={pendingTransition} />}
+      {children}
+    </ConnectorBuilderFormStateContext.Provider>
+  );
 };
+
+function useInitializedBuilderProject(projectId: string) {
+  const builderProject = useProject(projectId);
+  const { mutateAsync: updateProject } = useUpdateProject(projectId);
+  const resolvedManifest = useResolvedManifest(
+    builderProject.declarativeManifest?.manifest || DEFAULT_JSON_MANIFEST_VALUES
+  );
+  const [initialFormValues, failedInitialFormValueConversion] = useMemo(() => {
+    if (!resolvedManifest) {
+      // could not resolve manifest, use default form values
+      return [getDefaultFormValuesWithName(builderProject.builderProject.name), true];
+    }
+    try {
+      return [convertToBuilderFormValuesSync(resolvedManifest, builderProject.builderProject.name), false];
+    } catch (e) {
+      // could not convert to form values, use default form values
+      return [getDefaultFormValuesWithName(builderProject.builderProject.name), true];
+    }
+  }, [builderProject.builderProject.name, resolvedManifest]);
+
+  return {
+    builderProject,
+    updateProject,
+    initialFormValues,
+    failedInitialFormValueConversion,
+  };
+}
+
+function useBlockOnSavingState(savingState: SavingState) {
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const [pendingTransition, setPendingTransition] = useState<undefined | Transition>();
+  const blocker = useCallback(
+    (tx: Transition) => {
+      if (savingState === "invalid") {
+        openConfirmationModal({
+          title: "form.discardChanges",
+          text: "form.discardChangesConfirmation",
+          submitButtonText: "form.discardChanges",
+          onSubmit: () => {
+            closeConfirmationModal();
+            tx.retry();
+          },
+        });
+      } else {
+        setPendingTransition(tx);
+      }
+    },
+    [closeConfirmationModal, openConfirmationModal, savingState]
+  );
+
+  useBlocker(blocker, savingState !== "saved");
+
+  useEffect(() => {
+    if (savingState === "saved" && pendingTransition) {
+      pendingTransition.retry();
+    }
+  }, [savingState, pendingTransition]);
+
+  return pendingTransition;
+}
+
+function getDefaultFormValuesWithName(name: string) {
+  return {
+    ...DEFAULT_BUILDER_FORM_VALUES,
+    global: { ...DEFAULT_BUILDER_FORM_VALUES.global, connectorName: name },
+  };
+}
+
+function getSavingState(
+  storedEditorView: string,
+  yamlIsValid: boolean,
+  persistedState: { name: string; manifest: DeclarativeComponentSchema },
+  formValues: BuilderFormValues,
+  lastValidJsonManifest: DeclarativeComponentSchema,
+  formValuesValid: boolean
+) {
+  if (storedEditorView === "yaml" && !yamlIsValid) {
+    return "invalid";
+  }
+  if (storedEditorView === "ui" && !formValuesValid) {
+    return "invalid";
+  }
+  const currentStateIsPersistedState =
+    persistedState.manifest === lastValidJsonManifest && persistedState.name === formValues.global.connectorName;
+
+  if (currentStateIsPersistedState) {
+    return "saved";
+  }
+
+  return "loading";
+}
 
 export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();

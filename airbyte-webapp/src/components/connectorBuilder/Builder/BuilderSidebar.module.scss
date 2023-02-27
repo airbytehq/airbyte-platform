@@ -4,9 +4,6 @@
 
 .container {
   padding: variables.$spacing-lg;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   position: relative;
 }
 
@@ -20,18 +17,8 @@
 }
 
 .connectorName {
-  margin-top: variables.$spacing-md;
-  min-height: 28px;
-  width: 100%;
-  display: flex;
-  align-items: center;
   overflow-x: auto;
-}
-
-.connectorNameText {
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: variables.$spacing-lg;
+  text-align: center;
 }
 
 .streamsHeader {
@@ -39,12 +26,12 @@
   align-items: center;
   width: 100%;
   padding: 0 variables.$spacing-sm 0 variables.$spacing-md;
-  margin-top: variables.$spacing-2xl;
 }
 
 .streamsHeading {
   color: colors.$blue;
   flex-grow: 1;
+  position: static;
 }
 
 .downloadButton {
@@ -83,16 +70,9 @@
   color: colors.$blue;
 }
 
-.globalConfigButton {
-  margin-top: variables.$spacing-sm;
-}
-
 .streamList {
   flex-grow: 1;
   width: 100%;
-  margin: variables.$spacing-md 0;
-  display: flex;
-  flex-direction: column;
   overflow-y: auto;
 }
 
