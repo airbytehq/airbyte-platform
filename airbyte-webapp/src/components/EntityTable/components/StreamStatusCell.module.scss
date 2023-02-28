@@ -33,7 +33,7 @@
   }
 }
 
-$contentWidth: 75%;
+$contentPadding: 40px;
 
 .tooltipContainer {
   width: 248px;
@@ -42,14 +42,15 @@ $contentWidth: 75%;
   align-items: center;
 
   .bar {
-    width: $contentWidth;
+    padding: 0 $contentPadding;
     margin-bottom: variables.$spacing-md;
   }
 
   .tooltipContent {
     display: flex;
     align-items: center;
-    width: $contentWidth;
+    padding: 0 $contentPadding;
+    width: 100%;
 
     .streamsDetail {
       display: flex;

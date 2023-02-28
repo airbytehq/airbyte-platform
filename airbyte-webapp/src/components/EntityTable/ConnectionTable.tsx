@@ -180,6 +180,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         columnHelper.display({
           id: "stream-status",
           cell: StreamsStatusCell,
+          size: 170,
         })
       );
     } else {

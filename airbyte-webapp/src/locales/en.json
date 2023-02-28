@@ -783,5 +783,11 @@
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
-  "cloudApi.loginCallbackUrlError": "There was an error connecting to the developer portal. Please try again."
+  "cloudApi.loginCallbackUrlError": "There was an error connecting to the developer portal. Please try again.",
+
+  "stream.status.actionRequired": "Action Required",
+  "stream.status.onTrack": "On Track",
+  "stream.status.disabled": "Disabled",
+  "stream.status.error": "Error",
+  "stream.status.behind": "Behind"
 }
