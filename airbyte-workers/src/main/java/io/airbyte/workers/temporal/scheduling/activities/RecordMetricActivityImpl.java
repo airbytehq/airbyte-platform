@@ -103,8 +103,8 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
     return tags;
   }
 
-  @Cacheable(value = "connection-workspace-id")
-  private UUID getWorkspaceId(final UUID connectionId) {
+  @Cacheable("connection-workspace-id")
+  UUID getWorkspaceId(final UUID connectionId) {
     try {
       final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
       return workspaceRead.getWorkspaceId();
