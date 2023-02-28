@@ -1,4 +1,4 @@
-import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import queryString from "query-string";
 import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
@@ -76,11 +76,8 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
 
-  const columns = React.useMemo(() => {
-    // ColumnDef requires explicit typing to unshift down below, but each column has explicit
-    // typing so we need an `any` to accommodate for varied column types
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const columns: Array<ColumnDef<ConnectionTableDataItem, any>> = [
+  const columns = React.useMemo(
+    () => [
       columnHelper.display({
         id: "stream-status",
         cell: StreamsStatusCell,
@@ -200,10 +197,9 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
         },
         cell: (props) => <ConnectionSettingsCell id={props.cell.getValue()} />,
       }),
-    ];
-
-    return columns;
-  }, [columnHelper, sortBy, sortOrder, entity, onSortClick, allowAutoDetectSchema]);
+    ],
+    [columnHelper, sortBy, sortOrder, entity, onSortClick, allowAutoDetectSchema]
+  );
 
   return (
     <NextTable
