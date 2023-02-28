@@ -7,7 +7,6 @@ import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { DropdownMenu } from "components/ui/DropdownMenu";
-import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud";
@@ -62,7 +61,7 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                 return (
                   <Card
                     title={
-                      <span className={styles.cardTitle}>
+                      <div className={styles.cardTitle}>
                         <FormattedMessage id="connection.dbtCloudJobs.cardTitle" />
                         {availableDbtCloudJobs.length > 0 ? (
                           <DropdownMenu
@@ -80,22 +79,20 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                             )}
                           </DropdownMenu>
                         ) : (
-                          <FlexContainer alignItems="center">
-                            <Text color="grey">
-                              <FormattedMessage
-                                id="connection.dbtCloudJobs.noJobsFoundForAccount"
-                                values={{
-                                  lnk: (linkText: React.ReactNode[]) => (
-                                    <a href={links.dbtCloud} rel="noreferrer noopener">
-                                      <Text>{linkText}</Text>
-                                    </a>
-                                  ),
-                                }}
-                              />
-                            </Text>
-                          </FlexContainer>
+                          <Text color="grey">
+                            <FormattedMessage
+                              id="connection.dbtCloudJobs.noJobsFoundForAccount"
+                              values={{
+                                lnk: (linkText: React.ReactNode[]) => (
+                                  <a href={links.dbtCloud} rel="noreferrer noopener">
+                                    {linkText}
+                                  </a>
+                                ),
+                              }}
+                            />
+                          </Text>
                         )}
-                      </span>
+                      </div>
                     }
                   >
                     <JobsList jobs={values.jobs} remove={remove} dirty={dirty} isLoading={isSaving} />
