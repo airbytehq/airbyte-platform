@@ -1,6 +1,6 @@
 # Tools
 
-Contains various tools (usually bash scripts) to improve quality of life or the build system.
+Contains various tools (usually bash scripts) to improve the quality of life of the build system.
 
 ## Releasing a new version
 ```

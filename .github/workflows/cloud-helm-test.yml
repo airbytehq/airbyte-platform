@@ -1,0 +1,152 @@
+name: "Test Helm chart on KIND"
+
+env:
+  S3_BUILD_CACHE_ACCESS_KEY_ID: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}  # needed for https://github.com/burrunan/gradle-s3-build-cache
+  S3_BUILD_CACHE_SECRET_KEY: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+
+on:
+  push:
+    branches-ignore:
+      - master
+    paths-ignore:
+      - 'docs/**'
+      - 'infra/tailscale/**'
+      - 'infra/terraform/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+
+      #  Ignoring changes in files containing users lists
+      - 'infra/aws/project/values.tf'
+      - 'infra/github-org/airbytehq-gh-org-config.yaml'
+      - 'infra/gcp/postgres/cloud_admin_users.yaml'
+      - 'infra/gcp/projects/shared-config/values.tf'
+  workflow_dispatch:
+
+jobs:
+  start-runner:
+    name: "Start Runner on AWS"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Start Runner on AWS using appropriate Action
+        id: start-ec2-runner
+        uses: ./.github/actions/runner-on-aws-start
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+  cloud-build:
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    name: "Build and test Helm chart on KIND"
+    timeout-minutes: 30
+    steps:
+
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+
+      - name: Preparing Runner to the Build process
+        uses: ./.github/actions/runner-prepare
+
+      - name: Compose Build
+        uses: Wandalen/wretry.action@master
+        with:
+          command: VERSION=dev ./gradlew -p oss build && VERSION=dev ./gradlew build
+          attempt_limit: 3
+          attempt_delay: 5000 # in ms
+
+      - name: KIND Kubernetes Cluster Setup
+        uses: helm/kind-action@v1.2.0
+        with:
+          config: ./tools/conf/acceptance-test-kind-cluster-config.yaml
+        env:
+          USER: root
+          HOME: /home/runner
+
+      - name: Run Helm End-to-End Acceptance Tests
+        shell: bash
+        run: VERSION=$(git rev-parse --short=10 HEAD) KIND=true ./tools/bin/acceptance_test_helm.sh
+        env:
+          USER: root
+          HOME: /home/runner
+
+      - name: Generate Test Report
+        uses: dorny/test-reporter@v1
+        if: always()    # run this step even if previous step failed
+        with:
+          name: Cloud E2E Kube Test Report
+          # Specify top-level and second-level modules. Note there cannot be a space between the comma.
+          path: '/actions-runner/_work/airbyte-platform-internal/airbyte-platform-internal/*/build/test-results/*/*.xml'
+          reporter: java-junit
+      
+      - uses: actions/setup-python@v4
+        if: always()
+        with:
+          python-version: "3.9"
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        id: cloud-helm-results
+        if: always()
+        with:
+          junit_files: "/actions-runner/_work/airbyte-platform-internal/airbyte-platform-internal/*/build/test-results/*/*.xml"
+          comment_mode: off
+          json_file: cloud_helm_results.json
+          json_test_case_results: true
+          check_name: "Cloud Helm Test Results"
+      
+      - name: Setup Google Cloud SDK
+        if: always()
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          service_account_key: ${{ secrets.DEV_GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Prep Test Results For GCS
+        if: always()
+        run: |
+          python tools/bin/prep_test_results_for_gcs.py --json cloud_helm_results.json --jobid $GITHUB_JOB --runid $GITHUB_RUN_ID
+        
+      - name: Upload Test Results to GCS
+        if: always()
+        run: | 
+          gcs_bucket_name="dev-ab-ci-run-results"
+          filename=$(echo "${{ fromJSON( steps.cloud-helm-results.outputs.json ).check_url }}" | sed 's@.*/@@')  
+          echo "$filename"
+          gsutil -h "Cache-Control:public" cp cloud_helm_results.jsonl "gs://$gcs_bucket_name/cloud/$filename.jsonl"
+      
+
+  stop-runner:
+    name: "Stop Runner on AWS"
+    timeout-minutes: 10
+    needs:
+      - start-runner
+      - cloud-build
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Stop Runner on AWS using appropriate Action
+        uses: ./.github/actions/runner-on-aws-stop
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
