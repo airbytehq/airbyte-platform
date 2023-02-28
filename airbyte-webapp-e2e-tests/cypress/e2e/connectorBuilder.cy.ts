@@ -10,8 +10,13 @@ import {
 } from "commands/connectorBuilder";
 import { initialSetupCompleted } from "commands/workspaces";
 
-describe("Connector builder", () => {
+describe("Connector builder", { testIsolation: false }, () => {
   before(() => {
+    // Updated for cypress 12 because connector builder uses local storage
+    // docs.cypress.io/guides/references/migration-guide#Simulating-Pre-Test-Isolation-Behavior
+    cy.clearLocalStorage();
+    cy.clearCookies();
+
     initialSetupCompleted();
     goToConnectorBuilderPage();
     startFromScratch();
