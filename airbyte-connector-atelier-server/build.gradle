@@ -24,7 +24,7 @@ dependencies {
     implementation group: 'io.swagger', name: 'swagger-annotations', version: '1.6.2'
 }
 
-mainClassName = 'io.airbyte.connector_atelier.MicronautConnectorAtelierServerRunner'
+mainClassName = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
 
 application {
     mainClass = mainClassName
@@ -51,9 +51,9 @@ task generateOpenApiServer(type: GenerateTask) {
     outputDir = generatedCodeDir
 
     generatorName = "jaxrs-spec"
-    apiPackage = "io.airbyte.connector_atelier.api.generated"
-    invokerPackage = "io.airbyte.connector_atelier.api.invoker.generated"
-    modelPackage = "io.airbyte.connector_atelier.api.model.generated"
+    apiPackage = "io.airbyte.connector_builder.api.generated"
+    invokerPackage = "io.airbyte.connector_builder.api.invoker.generated"
+    modelPackage = "io.airbyte.connector_builder.api.model.generated"
 
     // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid
     configOptions = [

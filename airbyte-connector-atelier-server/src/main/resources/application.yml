@@ -1,6 +1,6 @@
 micronaut:
   application:
-    name: airbyte-connector-atelier-server
+    name: airbyte-connector-builder-server
   security:
     intercept-url-map:
       - pattern: /** # We could have more granular route security but for immediate simplicity lets apply the same policy
@@ -28,7 +28,7 @@ micronaut:
       sensitive: false
 
 airbyte:
-  # connector-atelier-server: uncomment when there are connector server specific environment variables we need to specify
+  # connector-builder-server: uncomment when there are connector server specific environment variables we need to specify
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
   local:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}

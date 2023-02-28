@@ -5,4 +5,4 @@
  / ___ |/ / /  / /_/ / /_/ / /_/  __/
 /_/  |_/_/_/  /_.___/\__, /\__/\___/
                     /____/
-        : airbyte-connector-atelier-server :
+        : airbyte-connector-builder-server :

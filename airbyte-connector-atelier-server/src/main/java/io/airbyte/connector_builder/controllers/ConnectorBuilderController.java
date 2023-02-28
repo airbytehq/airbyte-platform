@@ -2,18 +2,18 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connector_atelier.controllers;
+package io.airbyte.connector_builder.controllers;
 
-import io.airbyte.connector_atelier.api.generated.V1Api;
-import io.airbyte.connector_atelier.api.model.generated.ResolveManifest;
-import io.airbyte.connector_atelier.api.model.generated.ResolveManifestRequestBody;
-import io.airbyte.connector_atelier.api.model.generated.StreamRead;
-import io.airbyte.connector_atelier.api.model.generated.StreamReadPages;
-import io.airbyte.connector_atelier.api.model.generated.StreamReadRequestBody;
-import io.airbyte.connector_atelier.api.model.generated.StreamReadSlices;
-import io.airbyte.connector_atelier.api.model.generated.StreamsListRead;
-import io.airbyte.connector_atelier.api.model.generated.StreamsListReadStreams;
-import io.airbyte.connector_atelier.api.model.generated.StreamsListRequestBody;
+import io.airbyte.connector_builder.api.generated.V1Api;
+import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
+import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
+import io.airbyte.connector_builder.api.model.generated.StreamRead;
+import io.airbyte.connector_builder.api.model.generated.StreamReadPages;
+import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
+import io.airbyte.connector_builder.api.model.generated.StreamReadSlices;
+import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
+import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreams;
+import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
@@ -26,9 +26,9 @@ import java.util.List;
 
 @Controller("/v1")
 @Context
-public class ConnectorAtelierController implements V1Api {
+public class ConnectorBuilderController implements V1Api {
 
-  public ConnectorAtelierController() {
+  public ConnectorBuilderController() {
     // Placeholder for now. We just return dummy responses for the base server right now, but we should
     // define any helper handlers here
   }

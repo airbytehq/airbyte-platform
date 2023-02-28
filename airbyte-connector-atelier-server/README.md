@@ -1,5 +1,7 @@
-# Connector Atelier
+# Connector Atelier (aka Builder)
 
+The temporary home for the Micronaut microservice version of the Connector Builder Server which will
+be integrated back into `airbyte-connector-builder-server` upon completion.
 
 ## Getting started
 
