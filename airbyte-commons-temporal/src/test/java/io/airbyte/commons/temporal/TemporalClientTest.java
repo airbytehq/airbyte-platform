@@ -43,6 +43,7 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -112,6 +113,7 @@ public class TemporalClientTest {
   private ConnectionManagerUtils connectionManagerUtils;
   private NotificationUtils notificationUtils;
   private StreamResetRecordsHelper streamResetRecordsHelper;
+  private FeatureFlagClient featureFlagClient;
   private Path workspaceRoot;
 
   @BeforeEach
@@ -129,9 +131,10 @@ public class TemporalClientTest {
     connectionManagerUtils = spy(new ConnectionManagerUtils());
     notificationUtils = spy(new NotificationUtils());
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
+    featureFlagClient = mock(FeatureFlagClient.class);
     temporalClient =
         spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils, notificationUtils,
-            streamResetRecordsHelper));
+            streamResetRecordsHelper, featureFlagClient));
   }
 
   @Nested
@@ -147,7 +150,7 @@ public class TemporalClientTest {
 
       temporalClient = spy(
           new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils, mNotificationUtils,
-              streamResetRecordsHelper));
+              streamResetRecordsHelper, featureFlagClient));
     }
 
     @Test
