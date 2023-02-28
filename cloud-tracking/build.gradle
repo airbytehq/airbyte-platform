@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':cloud-api')
+    implementation project(':cloud-config:cloud-config-persistence')
+
+    implementation "io.airbyte:airbyte-analytics"
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte.airbyte-db:db-lib"
+    implementation "io.airbyte.airbyte-persistence:job-persistence"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
+}

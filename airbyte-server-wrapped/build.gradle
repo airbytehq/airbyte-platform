@@ -1,0 +1,66 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+    implementation libs.bundles.micronaut.annotation
+    implementation libs.micronaut.security
+
+    implementation project(':cloud-api')
+    implementation project(':cloud-auth')
+    implementation project(':cloud-workers')
+    implementation project(':cloud-config:cloud-config-core')
+    implementation project(':dbt-integration')
+
+    implementation "io.airbyte:airbyte-api"
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte:airbyte-commons-temporal"
+    implementation "io.airbyte:airbyte-commons-server"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte:airbyte-json-validation"
+    implementation "io.airbyte.airbyte-metrics:metrics-lib"
+    implementation "io.airbyte:airbyte-notification"
+    implementation "io.airbyte.airbyte-persistence:job-persistence"
+    implementation "io.airbyte:airbyte-server"
+    implementation libs.airbyte.protocol
+    implementation libs.bundles.datadog
+    implementation libs.slf4j.api
+
+    runtimeOnly 'io.micronaut.micrometer:micronaut-micrometer-core:4.8.0'
+    runtimeOnly 'io.micronaut.micrometer:micronaut-micrometer-registry-datadog:4.8.0'
+    runtimeOnly 'io.micronaut:micronaut-management:3.8.4'
+
+    testAnnotationProcessor platform(libs.micronaut.bom)
+    testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
+
+    testImplementation libs.bundles.micronaut.test
+    testImplementation libs.bundles.junit
+    testImplementation libs.airbyte.protocol
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register("copyGeneratedJar", Copy) {
+    dependsOn copyDocker
+    dependsOn jar
+    from('build/libs') {
+        include "*$project.name-*.jar"
+    }
+    into 'build/docker/lib'
+}
+
+tasks.register("copyDependencies", Sync) {
+    from configurations.runtimeClasspath {
+        transitive false
+    }
+    into 'build/docker/lib'
+}
+
+tasks.named("buildDockerImage") {
+    dependsOn copyGeneratedJar, copyDependencies
+    dependsOn gradle.includedBuild("airbyte").task(':airbyte-server:buildDockerImage')
+}

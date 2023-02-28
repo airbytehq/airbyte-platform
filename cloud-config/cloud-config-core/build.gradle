@@ -1,0 +1,8 @@
+dependencies {
+    implementation "io.airbyte:airbyte-analytics"
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte.airbyte-config:init"
+    implementation "io.airbyte:airbyte-notification"
+}

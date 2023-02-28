@@ -1,0 +1,83 @@
+name: Build/Push Images (Non-Master)
+
+env:
+  S3_BUILD_CACHE_ACCESS_KEY_ID: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }} # needed for https://github.com/burrunan/gradle-s3-build-cache
+  S3_BUILD_CACHE_SECRET_KEY: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+
+on:
+  workflow_dispatch:
+
+jobs:
+  start-runner:
+    name: "Start Runner on AWS"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Start Runner on AWS using appropriate Action
+        id: start-ec2-runner
+        uses: ./.github/actions/runner-on-aws-start
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+
+  cloud-build:
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    name: "Build and Push Images"
+    outputs:
+      cloud_version: ${{ steps.build.outputs.cloud_version }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: compute image tag
+        id: image_tag
+        run: |
+          VERSION=$(git rev-parse --short=10 HEAD)
+          echo "image_tag=dev-${VERSION}" >> $GITHUB_OUTPUT
+      - name: Preparing Runner to the Build process
+        uses: ./.github/actions/runner-prepare
+      - name: Build Components and Push Images
+        id: build
+        uses: ./.github/actions/build-and-push
+        with:
+          image_tag: ${{ steps.image_tag.outputs.image_tag }}
+          dockerhub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+  stop-runner:
+    name: "Stop Runner on AWS"
+    timeout-minutes: 10
+    needs:
+      - start-runner
+      - cloud-build
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Stop Runner on AWS using appropriate Action
+        uses: ./.github/actions/runner-on-aws-stop
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          # Use a different token in order to spread the Github API load.
+          # See https://github.com/airbytehq/airbyte/issues/10828 for more info.
+          github-token: ${{ env.PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
