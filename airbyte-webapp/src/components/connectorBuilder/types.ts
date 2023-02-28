@@ -114,9 +114,11 @@ export function versionSupported(version: string) {
   return semver.satisfies(version, `>= ${OLDEST_SUPPORTED_CDK_VERSION} <=${CDK_VERSION}`);
 }
 
+export const DEFAULT_CONNECTOR_NAME = "Untitled";
+
 export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
-    connectorName: "Untitled",
+    connectorName: DEFAULT_CONNECTOR_NAME,
     urlBase: "",
     authenticator: { type: "NoAuth" },
   },

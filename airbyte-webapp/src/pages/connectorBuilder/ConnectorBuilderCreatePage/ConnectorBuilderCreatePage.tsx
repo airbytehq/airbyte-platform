@@ -12,6 +12,7 @@ import { HeadTitle } from "components/common/HeadTitle";
 import {
   BuilderFormValues,
   DEFAULT_BUILDER_FORM_VALUES,
+  DEFAULT_CONNECTOR_NAME,
   DEFAULT_JSON_MANIFEST_VALUES,
 } from "components/connectorBuilder/types";
 import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
@@ -44,6 +45,7 @@ const CREATE_PROJECT_ERROR_ID = "connectorBuilder.createProject.error";
 const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
   const { mutateAsync: createProject, isLoading: isCreateProjectLoading } = useCreateProject();
+  const [activeTile, setActiveTile] = useState<"yaml" | "empty" | undefined>();
   const { storedFormValues, setStoredFormValues, storedManifest, setStoredManifest, setStoredEditorView } =
     useConnectorBuilderLocalStorage();
   const navigate = useNavigate();
@@ -183,6 +185,8 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
     };
   }, [unregisterNotificationById]);
 
+  const isLoading = isCreateProjectLoading || importYamlLoading;
+
   return (
     <FlexContainer direction="column" alignItems="center" gap="2xl">
       <FlexContainer direction="column" gap="md" alignItems="center" className={styles.titleContainer}>
@@ -201,9 +205,10 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           title="connectorBuilder.createPage.importYaml.title"
           description="connectorBuilder.createPage.importYaml.description"
           buttonText="connectorBuilder.createPage.importYaml.button"
-          buttonProps={{ isLoading: importYamlLoading || isCreateProjectLoading }}
+          buttonProps={{ isLoading: activeTile === "yaml" && isLoading, disabled: isLoading }}
           onClick={() => {
             unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
+            setActiveTile("yaml");
             fileInputRef.current?.click();
           }}
           dataTestId="import-yaml"
@@ -213,9 +218,10 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           title="connectorBuilder.createPage.startFromScratch.title"
           description="connectorBuilder.createPage.startFromScratch.description"
           buttonText="connectorBuilder.createPage.startFromScratch.button"
-          buttonProps={{ isLoading: isCreateProjectLoading }}
-          onClick={async () => {
+          buttonProps={{ isLoading: activeTile === "empty" && isLoading, disabled: isLoading }}
+          onClick={() => {
             setStoredEditorView("ui");
+            setActiveTile("empty");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
               actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });
@@ -230,7 +236,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
 
 function getConnectorName(fileName?: string | undefined, formValues?: BuilderFormValues) {
   if (!fileName) {
-    return "Untitled";
+    return DEFAULT_CONNECTOR_NAME;
   }
   const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
   if (fileNameNoType === "manifest" && formValues) {
