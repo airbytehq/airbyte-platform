@@ -27,7 +27,9 @@
   height: variables.$spacing-xl;
   border-radius: variables.$border-radius-pill;
 
-  .selected:empty {}
+  .selected {
+    // need to be empty since it uses to override the default color
+  }
 
   .total {
     font-size: 8px;
