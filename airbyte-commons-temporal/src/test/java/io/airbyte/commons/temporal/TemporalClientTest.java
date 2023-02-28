@@ -44,6 +44,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -79,6 +80,7 @@ import org.mockito.Mockito;
 @SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate")
 public class TemporalClientTest {
 
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID JOB_UUID = UUID.randomUUID();
   private static final long JOB_ID = 11L;
@@ -131,7 +133,7 @@ public class TemporalClientTest {
     connectionManagerUtils = spy(new ConnectionManagerUtils());
     notificationUtils = spy(new NotificationUtils());
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
-    featureFlagClient = mock(FeatureFlagClient.class);
+    featureFlagClient = new TestClient();
     temporalClient =
         spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils, notificationUtils,
             streamResetRecordsHelper, featureFlagClient));
@@ -286,7 +288,8 @@ public class TemporalClientTest {
           .withSourceDockerImage(IMAGE_NAME1)
           .withDestinationDockerImage(IMAGE_NAME2)
           .withOperationSequence(List.of())
-          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog());
+          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog())
+          .withWorkspaceId(WORKSPACE_ID);
       final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
           .withSourceConfiguration(Jsons.emptyObject())
           .withDestinationConfiguration(Jsons.emptyObject());
@@ -363,7 +366,8 @@ public class TemporalClientTest {
           .withSourceDockerImage(IMAGE_NAME1)
           .withDestinationDockerImage(IMAGE_NAME2)
           .withOperationSequence(List.of())
-          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog());
+          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog())
+          .withWorkspaceId(WORKSPACE_ID);
 
       temporalClient.submitSync(JOB_ID, ATTEMPT_ID, syncConfig, attemptSyncConfig, CONNECTION_ID);
       temporalClient.forceDeleteWorkflow(CONNECTION_ID);
