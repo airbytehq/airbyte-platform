@@ -14,12 +14,23 @@ import java.io.IOException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Utility functions for triggering a notification in temporal.
+ */
 @Singleton
 @Slf4j
 public class NotificationUtils {
 
   public NotificationUtils() {}
 
+  /**
+   * Trigger notification to the user using whatever notification settings they provided after
+   * detecting a schema change.
+   *
+   * @param client workflow client
+   * @param connectionId connection id
+   * @param url url to the connection in the airbyte web app
+   */
   public void sendSchemaChangeNotification(final WorkflowClient client, final UUID connectionId, final String url) {
     final ConnectionNotificationWorkflow notificationWorkflow =
         client.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY));

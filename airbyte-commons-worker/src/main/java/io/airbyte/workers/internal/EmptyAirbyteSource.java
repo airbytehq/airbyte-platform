@@ -90,9 +90,9 @@ public class EmptyAirbyteSource implements AirbyteSource {
         if (workerSourceConfig.getState() != null) {
           stateWrapper = StateMessageHelper.getTypedState(workerSourceConfig.getState().getState(), useStreamCapableState);
 
-          if (stateWrapper.isPresent() &&
-              stateWrapper.get().getStateType() == StateType.LEGACY &&
-              !resettingAllCatalogStreams(workerSourceConfig)) {
+          if (stateWrapper.isPresent()
+              && stateWrapper.get().getStateType() == StateType.LEGACY
+              && !resettingAllCatalogStreams(workerSourceConfig)) {
             log.error("The state a legacy one but we are trying to do a partial update, this is not supported.");
             throw new IllegalStateException("Try to perform a partial reset on a legacy state");
           }

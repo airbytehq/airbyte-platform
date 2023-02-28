@@ -35,6 +35,9 @@ import org.flywaydb.core.internal.scanner.Scanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Migration helper.
+ */
 public class MigrationDevHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MigrationDevHelper.class);
@@ -58,7 +61,7 @@ public class MigrationDevHelper {
     LOGGER.info("\n==== Post Migration Schema ====\n" + migrator.dumpSchema() + "\n");
   }
 
-  public static void createNextMigrationFile(final String dbIdentifier, final FlywayDatabaseMigrator migrator) throws IOException {
+  static void createNextMigrationFile(final String dbIdentifier, final FlywayDatabaseMigrator migrator) throws IOException {
     final String description = "New_migration";
 
     final MigrationVersion nextMigrationVersion = getNextMigrationVersion(migrator);
@@ -85,7 +88,7 @@ public class MigrationDevHelper {
     }
   }
 
-  public static Optional<MigrationVersion> getSecondToLastMigrationVersion(final FlywayDatabaseMigrator migrator) {
+  static Optional<MigrationVersion> getSecondToLastMigrationVersion(final FlywayDatabaseMigrator migrator) {
     final List<ResolvedMigration> migrations = getAllMigrations(migrator);
     if (migrations.isEmpty() || migrations.size() == 1) {
       return Optional.empty();
@@ -93,6 +96,14 @@ public class MigrationDevHelper {
     return Optional.of(migrations.get(migrations.size() - 2).getVersion());
   }
 
+  /**
+   * Dump schema to file.
+   *
+   * @param schema to dump
+   * @param schemaDumpFile to dump to
+   * @param printSchema should dump schema
+   * @throws IOException exception while accessing database
+   */
   public static void dumpSchema(final String schema, final String schemaDumpFile, final boolean printSchema) throws IOException {
     try (final PrintWriter writer = new PrintWriter(new File(Path.of(schemaDumpFile).toUri()), StandardCharsets.UTF_8)) {
       writer.println(schema);

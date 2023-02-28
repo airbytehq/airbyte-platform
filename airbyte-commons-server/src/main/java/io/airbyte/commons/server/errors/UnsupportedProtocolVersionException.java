@@ -6,6 +6,10 @@ package io.airbyte.commons.server.errors;
 
 import io.airbyte.commons.version.Version;
 
+/**
+ * Exception for when a connector is using a protocol version that the current version of the
+ * platform does not support.
+ */
 public class UnsupportedProtocolVersionException extends KnownException {
 
   public UnsupportedProtocolVersionException(final Version current, final Version minSupported, final Version maxSupported) {

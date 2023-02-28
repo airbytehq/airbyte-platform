@@ -16,11 +16,12 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * AirbyteProtocol Message Migrator
+ * AirbyteProtocol Message Migrator.
  *
  * This class is intended to apply the transformations required to go from one version of the
  * AirbyteProtocol to another.
  */
+@SuppressWarnings({"MethodTypeParameterName", "LineLength"})
 @Singleton
 public class AirbyteMessageMigrator {
 
@@ -37,7 +38,14 @@ public class AirbyteMessageMigrator {
 
   /**
    * Downgrade a message from the most recent version to the target version by chaining all the
-   * required migrations
+   * required migrations.
+   *
+   * @param message message to upgrade
+   * @param target target version ?
+   * @param configuredAirbyteCatalog catalog
+   * @param <PreviousVersion> version of message
+   * @param <CurrentVersion> version to go to
+   * @return downgraded catalog
    */
   public <PreviousVersion, CurrentVersion> PreviousVersion downgrade(final CurrentVersion message,
                                                                      final Version target,
@@ -47,7 +55,14 @@ public class AirbyteMessageMigrator {
 
   /**
    * Upgrade a message from the source version to the most recent version by chaining all the required
-   * migrations
+   * migrations.
+   *
+   * @param message message to upgrade
+   * @param source source's version ?
+   * @param configuredAirbyteCatalog catalog
+   * @param <PreviousVersion> version of message
+   * @param <CurrentVersion> version to go to
+   * @return upgraded catalog
    */
   public <PreviousVersion, CurrentVersion> CurrentVersion upgrade(final PreviousVersion message,
                                                                   final Version source,
@@ -55,6 +70,11 @@ public class AirbyteMessageMigrator {
     return migrationContainer.upgrade(message, source, (migration, msg) -> applyUpgrade(migration, msg, configuredAirbyteCatalog));
   }
 
+  /**
+   * Get most recent protocol version.
+   *
+   * @return protocol version
+   */
   public Version getMostRecentVersion() {
     return migrationContainer.getMostRecentVersion();
   }

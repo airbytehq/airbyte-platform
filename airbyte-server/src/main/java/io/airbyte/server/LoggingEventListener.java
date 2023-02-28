@@ -16,7 +16,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 /**
- * Initializes the logging client on startup
+ * Initializes the logging client on startup.
  */
 @Singleton
 public class LoggingEventListener implements ApplicationEventListener<ServiceReadyEvent> {

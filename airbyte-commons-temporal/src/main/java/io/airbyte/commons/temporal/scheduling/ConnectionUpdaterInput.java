@@ -13,6 +13,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
+/**
+ * Input into a ConnectionManagerWorkflow. Used to pass information from one execution of the
+ * ConnectionManagerWorkflow to the next.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

@@ -1342,7 +1342,7 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Initial sync ran, now running an update with a stream being removed.");
 
-    /**
+    /*
      * Remove stream
      */
     sourceDb.query(ctx -> ctx.dropTableIfExists(additionalTable).execute());
@@ -1363,7 +1363,7 @@ class BasicAcceptanceTests {
 
     LOGGER.info("Remove done, now running an update with a stream being added.");
 
-    /**
+    /*
      * Add a stream -- the value of in the table are different than the initial import to ensure that it
      * is properly reset.
      */
@@ -1511,7 +1511,7 @@ class BasicAcceptanceTests {
    *
    * @param connectionId the connection to wait for
    * @param maxRetries the number of times to retry
-   * @throws InterruptedException
+   * @throws InterruptedException exception if interrupted while waiting
    */
   private void waitForSuccessfulJobWithRetries(final UUID connectionId, final int maxRetries) throws InterruptedException {
     int i;

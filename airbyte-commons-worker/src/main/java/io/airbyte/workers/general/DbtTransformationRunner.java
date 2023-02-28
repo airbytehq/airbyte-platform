@@ -33,6 +33,9 @@ import org.apache.tools.ant.types.Commandline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * DbtTransformationRunner. Runs normalization.
+ */
 public class DbtTransformationRunner implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DbtTransformationRunner.class);
@@ -78,6 +81,18 @@ public class DbtTransformationRunner implements AutoCloseable {
     return transform(jobId, attempt, jobRoot, config, resourceRequirements, dbtConfig);
   }
 
+  /**
+   * Transform data (i.e. run normalization).
+   *
+   * @param jobId job id
+   * @param attempt attempt number
+   * @param jobRoot job root
+   * @param config normalization config
+   * @param resourceRequirements resource requirements
+   * @param dbtConfig dbt config
+   * @return true, if succeeded. otherwise, false.
+   * @throws Exception while executing
+   */
   public boolean transform(final String jobId,
                            final int attempt,
                            final Path jobRoot,

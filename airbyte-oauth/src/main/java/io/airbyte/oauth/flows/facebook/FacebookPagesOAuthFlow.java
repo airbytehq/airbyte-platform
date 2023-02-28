@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * Facebook Pages OAuth.
+ */
 public class FacebookPagesOAuthFlow extends FacebookOAuthFlow {
 
   private static final String SCOPES = "pages_manage_ads,pages_manage_metadata,pages_read_engagement,pages_read_user_content";
