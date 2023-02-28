@@ -635,4 +635,33 @@ public class Jsons {
     return mainNode;
   }
 
+  /**
+   * Creates nodes on the way if necessary.
+   */
+  private static void setNested(final JsonNode json, final List<String> keys, final BiConsumer<ObjectNode, String> typedReplacement) {
+    Preconditions.checkArgument(!keys.isEmpty(), "Must pass at least one key");
+    final JsonNode nodeContainingFinalKey = navigateToAndCreate(json, keys.subList(0, keys.size() -
+        1));
+    typedReplacement.accept((ObjectNode) nodeContainingFinalKey, keys.get(keys.size() - 1));
+  }
+
+  /**
+   * Navigates to a node based on provided nested keys. Creates necessary parent nodes.
+   */
+  public static JsonNode navigateToAndCreate(JsonNode node, final List<String> keys) {
+    for (final String key : keys) {
+      ObjectNode currentNode = (ObjectNode) node;
+      node = node.get(key);
+      if (node == null || node.isNull()) {
+        node = emptyObject();
+        currentNode.set(key, node);
+      }
+    }
+    return node;
+  }
+
+  public static void setNestedValue(final JsonNode json, final List<String> keys, final JsonNode replacement) {
+    setNested(json, keys, (node, finalKey) -> node.set(finalKey, replacement));
+  }
+
 }

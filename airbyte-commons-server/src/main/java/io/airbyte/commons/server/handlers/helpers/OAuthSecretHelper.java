@@ -18,6 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * Holds helpers to handle OAuth secrets
+ */
 public class OAuthSecretHelper {
 
   /**
@@ -39,7 +42,7 @@ public class OAuthSecretHelper {
         final String key = entry.getKey();
         final List<String> jsonPathList = entry.getValue();
 
-        Jsons.replaceNestedValue(newConnectionConfiguration, jsonPathList, hydratedSecret.get(key));
+        Jsons.setNestedValue(newConnectionConfiguration, jsonPathList, hydratedSecret.get(key));
       }
       return newConnectionConfiguration;
     } else {
