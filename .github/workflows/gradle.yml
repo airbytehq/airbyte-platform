@@ -50,6 +50,7 @@ jobs:
       cli: ${{ steps.filter.outputs.cli }}
       db: ${{ steps.filter.outputs.db }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      connector-builder-micronaut: ${{ steps.filter.outputs.connector-builder-micronaut }}
     steps:
       - name: Checkout Airbyte
         uses: actions/checkout@v3
@@ -959,7 +960,7 @@ jobs:
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-connector-atelier-server-build-runner:
-    name: "Connector: Stop Build EC2 Runner"
+    name: "Connector Atelier: Stop Build EC2 Runner"
     timeout-minutes: 10
     needs:
       - start-connector-atelier-server-build-runner # required to get output from the start-runner job
