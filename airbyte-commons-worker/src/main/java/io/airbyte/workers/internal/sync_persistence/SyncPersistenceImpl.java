@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.internal.sync_persistence;
 
+import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
@@ -66,6 +67,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   }
 
   @Override
+  @Trace
   public void persist(final UUID connectionId, final AirbyteStateMessage stateMessage) {
     if (this.connectionId == null) {
       this.connectionId = connectionId;
