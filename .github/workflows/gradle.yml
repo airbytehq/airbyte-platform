@@ -80,7 +80,7 @@ jobs:
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
               - 'airbyte-webapp-e2e-tests/**'
-            connector-builder-micronaut
+            connector-builder-micronaut:
               - 'airbyte-connector-atelier-server/**'
 
   # Uncomment to debug.
