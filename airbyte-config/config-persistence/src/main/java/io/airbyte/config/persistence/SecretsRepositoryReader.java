@@ -158,6 +158,12 @@ public class SecretsRepositoryReader {
     return workspace;
   }
 
+  /**
+   * Given a secret coordinate, fetch the secret.
+   *
+   * @param secretCoordinate secret coordinate
+   * @return JsonNode representing the fetched secret
+   */
   public JsonNode fetchSecret(final SecretCoordinate secretCoordinate) {
     ObjectNode node = JsonNodeFactory.instance.objectNode();
     node.put("_secret", secretCoordinate.getFullCoordinate());
