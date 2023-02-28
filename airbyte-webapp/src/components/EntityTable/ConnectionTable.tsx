@@ -32,7 +32,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
   const navigate = useNavigate();
   const query = useQuery<{ sortBy?: string; order?: SortOrderEnum }>();
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI", false);
+  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v2", false);
 
   const sortBy = query.sortBy || "entityName";
   const sortOrder = query.order || SortOrderEnum.ASC;
