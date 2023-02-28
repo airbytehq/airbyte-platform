@@ -45,6 +45,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
 
   // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
   const debouncedSetJsonManifest = useMemo(() => debounce(setJsonManifest, 200), [setJsonManifest]);
+  const initialLoad = useRef(true);
 
   const monaco = useMonaco();
 
@@ -56,7 +57,12 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
       try {
         const json = load(yamlValue) as ConnectorManifest;
         setYamlIsValid(true);
-        debouncedSetJsonManifest(json);
+        // skip setting the manifest on the first load as it just got passed in and is synced already
+        if (initialLoad.current) {
+          initialLoad.current = false;
+        } else {
+          debouncedSetJsonManifest(json);
+        }
 
         // clear editor error markers
         if (yamlEditorModel) {
