@@ -3,7 +3,7 @@ import React, { Suspense, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
-import CreateControls from "components/connection/ConnectionForm/CreateControls";
+import { CreateControls } from "components/connection/ConnectionForm/CreateControls";
 import {
   FormikConnectionFormValues,
   useConnectionValidationSchema,
