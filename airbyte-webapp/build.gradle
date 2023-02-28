@@ -27,6 +27,12 @@ node {
 
 task validateLockFiles {
     description "Validate only a pnpm-lock.yaml lock file exists"
+    inputs.files "pnpm-lock.yaml", "package-lock.json", "yarn.lock"
+
+    // The validateLockFiles has no outputs, thus we always treat the outpus up to date
+    // as long as the inputs have not changed
+    outputs.upToDateWhen { true }
+
     doLast {
         assert file("pnpm-lock.yaml").exists()
         assert !file("package-lock.json").exists()
@@ -35,9 +41,9 @@ task validateLockFiles {
 }
 
 pnpmInstall.dependsOn validateLockFiles
-// Make sure `pnpmInstall` always runs, since it's better at determining
-// whether it's needs to do anything than Gradle can
-pnpmInstall.outputs.upToDateWhen { false }
+// Add patches folder to inputs of pnpmInstall task, since it has pnpm-lock.yml as an output
+// thus wouldn't rerun in case a patch get changed
+pnpmInstall.inputs.dir "patches"
 
 task pnpmBuild(type: PnpmTask) {
     dependsOn pnpmInstall
@@ -46,8 +52,15 @@ task pnpmBuild(type: PnpmTask) {
 
     inputs.files commonConfigs
     inputs.file '.eslintrc.js'
+    inputs.file '.stylelintrc'
+    inputs.file 'scripts/calculate-source-hash.sh'
+    inputs.file 'scripts/load-declarative-schema.sh'
+    inputs.file 'orval.config.ts'
+    inputs.file 'vite.config.ts'
+    inputs.file 'index.html'
     inputs.dir 'public'
     inputs.dir 'src'
+    inputs.dir 'node_modules'
 
     outputs.dir 'build/app'
 }
@@ -57,6 +70,8 @@ task test(type: PnpmTask) {
 
     args = ['run', 'test:ci']
     inputs.files commonConfigs
+    inputs.file 'jest.config.ts'
+    inputs.file 'babel.config.js'
     inputs.dir 'src'
 }
 
@@ -64,7 +79,8 @@ task licenseCheck(type: PnpmTask) {
     dependsOn pnpmInstall
 
     args = ['run', 'license-check']
-    inputs.files commonConfigs
+    inputs.dir 'node_modules'
+    inputs.file 'package.json'
     inputs.file 'scripts/license-check.js'
 
     // The licenseCheck has no outputs, thus we always treat the outpus up to date
@@ -76,6 +92,9 @@ task validateLinks(type: PnpmTask) {
     dependsOn pnpmInstall
 
     args = ['run', 'validate-links']
+
+    inputs.file 'scripts/validate-links.ts'
+    inputs.file 'src/utils/links.ts'
 
     // Since the output of this task depends on availability of URLs
     // we never want to treat it as "up-to-date" and always want to run it
