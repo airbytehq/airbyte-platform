@@ -7,9 +7,15 @@ package io.airbyte.workers.temporal.scheduling.activities;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
 
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.generated.WorkspaceApi;
+import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -21,8 +27,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,9 +44,11 @@ import lombok.extern.slf4j.Slf4j;
 public class RecordMetricActivityImpl implements RecordMetricActivity {
 
   private final MetricClient metricClient;
+  private final WorkspaceApi workspaceApi;
 
-  public RecordMetricActivityImpl(final MetricClient metricClient) {
+  public RecordMetricActivityImpl(final MetricClient metricClient, final WorkspaceApi workspaceApi) {
     this.metricClient = metricClient;
+    this.workspaceApi = workspaceApi;
   }
 
   /**
@@ -48,8 +59,9 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void recordWorkflowCountMetric(final RecordMetricInput metricInput) {
-    ApmTraceUtils.addTagsToTrace(generateTags(metricInput.getConnectionUpdaterInput()));
-    final List<MetricAttribute> baseMetricAttributes = generateMetricAttributes(metricInput.getConnectionUpdaterInput());
+    final Optional<UUID> workspaceIdOptional = getWorkspaceId(metricInput);
+    ApmTraceUtils.addTagsToTrace(generateTags(metricInput.getConnectionUpdaterInput(), workspaceIdOptional));
+    final List<MetricAttribute> baseMetricAttributes = generateMetricAttributes(metricInput.getConnectionUpdaterInput(), workspaceIdOptional);
     if (metricInput.getMetricAttributes() != null) {
       baseMetricAttributes.addAll(Stream.of(metricInput.getMetricAttributes()).collect(Collectors.toList()));
     }
@@ -64,9 +76,10 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
    *        be executed.
    * @return The list of {@link MetricAttribute}s to be included when recording a metric.
    */
-  private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput) {
+  private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput, final Optional<UUID> workspaceIdOptional) {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
     metricAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionUpdaterInput.getConnectionId())));
+    workspaceIdOptional.ifPresent(id -> metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, id.toString())));
     return metricAttributes;
   }
 
@@ -76,7 +89,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
    * @param connectionUpdaterInput The connection update input information.
    * @return The map of tags for instrumentation.
    */
-  private Map<String, Object> generateTags(final ConnectionUpdaterInput connectionUpdaterInput) {
+  private Map<String, Object> generateTags(final ConnectionUpdaterInput connectionUpdaterInput, final Optional<UUID> workspaceIdOptional) {
     final Map<String, Object> tags = new HashMap();
 
     if (connectionUpdaterInput != null) {
@@ -86,9 +99,22 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
       if (connectionUpdaterInput.getJobId() != null) {
         tags.put(JOB_ID_KEY, connectionUpdaterInput.getJobId());
       }
+      workspaceIdOptional.ifPresent(id -> tags.put(WORKSPACE_ID_KEY, id));
     }
 
     return tags;
   }
 
+  private Optional<UUID> getWorkspaceId(final RecordMetricInput recordMetricInput) {
+    if (recordMetricInput.getConnectionUpdaterInput() == null) {
+      return Optional.empty();
+    }
+    try {
+      final UUID connectionId = recordMetricInput.getConnectionUpdaterInput().getConnectionId();
+      final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+      return Optional.of(workspaceRead.getWorkspaceId());
+    } catch (final ApiException e) {
+      throw new RetryableException(e);
+    }
+  }
 }
