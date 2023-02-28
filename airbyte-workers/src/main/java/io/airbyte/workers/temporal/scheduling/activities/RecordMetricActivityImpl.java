@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -76,7 +75,8 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
    *        be executed.
    * @return The list of {@link MetricAttribute}s to be included when recording a metric.
    */
-  private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput, final Optional<UUID> workspaceIdOptional) {
+  private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput,
+                                                         final Optional<UUID> workspaceIdOptional) {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
     metricAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionUpdaterInput.getConnectionId())));
     workspaceIdOptional.ifPresent(id -> metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, id.toString())));
@@ -117,4 +117,5 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
       throw new RetryableException(e);
     }
   }
+
 }
