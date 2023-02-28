@@ -48,6 +48,81 @@ public class CatalogConverter {
         .namespace(stream.getNamespace());
   }
 
+  /**
+   * Convert an internal catalog and field selection mask to an api catalog model.
+   *
+   * @param catalog internal catalog
+   * @param fieldSelectionData field selection mask
+   * @return api catalog model
+   */
+  public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final ConfiguredAirbyteCatalog catalog, FieldSelectionData fieldSelectionData) {
+    final List<io.airbyte.api.model.generated.AirbyteStreamAndConfiguration> streams = catalog.getStreams()
+        .stream()
+        .map(configuredStream -> {
+          final var streamDescriptor = new StreamDescriptor()
+              .name(configuredStream.getStream().getName())
+              .namespace(configuredStream.getStream().getNamespace());
+          final io.airbyte.api.model.generated.AirbyteStreamConfiguration configuration =
+              new io.airbyte.api.model.generated.AirbyteStreamConfiguration()
+                  .syncMode(Enums.convertTo(configuredStream.getSyncMode(), io.airbyte.api.model.generated.SyncMode.class))
+                  .cursorField(configuredStream.getCursorField())
+                  .destinationSyncMode(
+                      Enums.convertTo(configuredStream.getDestinationSyncMode(), io.airbyte.api.model.generated.DestinationSyncMode.class))
+                  .primaryKey(configuredStream.getPrimaryKey())
+                  .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
+                  .selected(true)
+                  .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor));
+          if (configuration.getFieldSelectionEnabled()) {
+            final List<String> selectedColumns = new ArrayList<>();
+            // TODO(mfsiega-airbyte): support nested fields here.
+            configuredStream.getStream()
+                .getJsonSchema()
+                .findValue("properties")
+                .fieldNames().forEachRemaining((name) -> selectedColumns.add(name));
+            configuration.setSelectedFields(
+                selectedColumns.stream().map((fieldName) -> new SelectedFieldInfo().addFieldPathItem(fieldName)).collect(Collectors.toList()));
+          }
+          return new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
+              .stream(toApi(configuredStream.getStream()))
+              .config(configuration);
+        })
+        .collect(Collectors.toList());
+    return new io.airbyte.api.model.generated.AirbyteCatalog().streams(streams);
+  }
+
+  /**
+   * Convert an internal model version of the catalog into an api model of the catalog.
+   *
+   * @param catalog internal catalog model
+   * @param sourceDefinition source definition for the catalog
+   * @return api catalog model
+   */
+  public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final io.airbyte.protocol.models.AirbyteCatalog catalog,
+                                                                    StandardSourceDefinition sourceDefinition) {
+    List<String> suggestedStreams = new ArrayList<>();
+    Boolean suggestingStreams;
+
+    // There are occasions in tests where we have not seeded the sourceDefinition fully. This is to
+    // prevent those tests from failing
+    if (sourceDefinition != null) {
+      suggestingStreams = sourceDefinition.getSuggestedStreams() != null;
+      if (suggestingStreams) {
+        suggestedStreams.addAll(sourceDefinition.getSuggestedStreams().getStreams());
+      }
+    } else {
+      suggestingStreams = false;
+    }
+
+    return new io.airbyte.api.model.generated.AirbyteCatalog()
+        .streams(catalog.getStreams()
+            .stream()
+            .map(CatalogConverter::toApi)
+            .map(s -> new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
+                .stream(s)
+                .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams)))
+            .collect(Collectors.toList()));
+  }
+
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   private static io.airbyte.protocol.models.AirbyteStream toConfiguredProtocol(final AirbyteStream stream, AirbyteStreamConfiguration config)
       throws JsonValidationException {
@@ -104,146 +179,6 @@ public class CatalogConverter {
         .withNamespace(stream.getNamespace());
   }
 
-  public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final io.airbyte.protocol.models.AirbyteCatalog catalog,
-                                                                    StandardSourceDefinition sourceDefinition) {
-    List<String> suggestedStreams = new ArrayList<>();
-    Boolean suggestingStreams;
-
-    // There are occasions in tests where we have not seeded the sourceDefinition fully. This is to
-    // prevent those tests from failing
-    if (sourceDefinition != null) {
-      suggestingStreams = sourceDefinition.getSuggestedStreams() != null;
-      if (suggestingStreams) {
-        suggestedStreams.addAll(sourceDefinition.getSuggestedStreams().getStreams());
-      }
-    } else {
-      suggestingStreams = false;
-    }
-
-    return new io.airbyte.api.model.generated.AirbyteCatalog()
-        .streams(catalog.getStreams()
-            .stream()
-            .map(CatalogConverter::toApi)
-            .map(s -> new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
-                .stream(s)
-                .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams)))
-            .collect(Collectors.toList()));
-  }
-
-  private static io.airbyte.api.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(final io.airbyte.api.model.generated.AirbyteStream stream,
-                                                                                                        Boolean suggestingStreams,
-                                                                                                        List<String> suggestedStreams) {
-    final io.airbyte.api.model.generated.AirbyteStreamConfiguration result = new io.airbyte.api.model.generated.AirbyteStreamConfiguration()
-        .aliasName(Names.toAlphanumericAndUnderscore(stream.getName()))
-        .cursorField(stream.getDefaultCursorField())
-        .destinationSyncMode(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
-        .primaryKey(stream.getSourceDefinedPrimaryKey())
-        .selected(!suggestingStreams)
-        .suggested(true);
-
-    if (suggestingStreams) {
-      if (suggestedStreams.contains(stream.getName())) {
-        result.setSelected(true);
-      } else {
-        result.setSuggested(false);
-      }
-    }
-
-    if (stream.getSupportedSyncModes().size() > 0) {
-      result.setSyncMode(stream.getSupportedSyncModes().get(0));
-    } else {
-      result.setSyncMode(io.airbyte.api.model.generated.SyncMode.INCREMENTAL);
-    }
-
-    return result;
-  }
-
-  public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final ConfiguredAirbyteCatalog catalog, FieldSelectionData fieldSelectionData) {
-    final List<io.airbyte.api.model.generated.AirbyteStreamAndConfiguration> streams = catalog.getStreams()
-        .stream()
-        .map(configuredStream -> {
-          final var streamDescriptor = new StreamDescriptor()
-              .name(configuredStream.getStream().getName())
-              .namespace(configuredStream.getStream().getNamespace());
-          final io.airbyte.api.model.generated.AirbyteStreamConfiguration configuration =
-              new io.airbyte.api.model.generated.AirbyteStreamConfiguration()
-                  .syncMode(Enums.convertTo(configuredStream.getSyncMode(), io.airbyte.api.model.generated.SyncMode.class))
-                  .cursorField(configuredStream.getCursorField())
-                  .destinationSyncMode(
-                      Enums.convertTo(configuredStream.getDestinationSyncMode(), io.airbyte.api.model.generated.DestinationSyncMode.class))
-                  .primaryKey(configuredStream.getPrimaryKey())
-                  .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
-                  .selected(true)
-                  .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor));
-          if (configuration.getFieldSelectionEnabled()) {
-            final List<String> selectedColumns = new ArrayList<>();
-            // TODO(mfsiega-airbyte): support nested fields here.
-            configuredStream.getStream().getJsonSchema().findValue("properties").fieldNames().forEachRemaining((name) -> selectedColumns.add(name));
-            configuration.setSelectedFields(
-                selectedColumns.stream().map((fieldName) -> new SelectedFieldInfo().addFieldPathItem(fieldName)).collect(Collectors.toList()));
-          }
-          return new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
-              .stream(toApi(configuredStream.getStream()))
-              .config(configuration);
-        })
-        .collect(Collectors.toList());
-    return new io.airbyte.api.model.generated.AirbyteCatalog().streams(streams);
-  }
-
-  private static Boolean getStreamHasFieldSelectionEnabled(FieldSelectionData fieldSelectionData, StreamDescriptor streamDescriptor) {
-    if (fieldSelectionData == null
-        || fieldSelectionData.getAdditionalProperties().get(streamDescriptorToStringForFieldSelection(streamDescriptor)) == null) {
-      return false;
-    }
-
-    return fieldSelectionData.getAdditionalProperties().get(streamDescriptorToStringForFieldSelection(streamDescriptor));
-  }
-
-  /**
-   * Converts the API catalog model into a protocol catalog. Note: returns all streams, regardless of
-   * selected status. See
-   * {@link CatalogConverter#toConfiguredProtocol(AirbyteStream, AirbyteStreamConfiguration)} for
-   * context.
-   *
-   * @param catalog api catalog
-   * @return protocol catalog
-   */
-  public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toProtocolKeepAllStreams(
-                                                                                             final io.airbyte.api.model.generated.AirbyteCatalog catalog)
-      throws JsonValidationException {
-    final AirbyteCatalog clone = Jsons.clone(catalog);
-    clone.getStreams().forEach(stream -> stream.getConfig().setSelected(true));
-    return toConfiguredProtocol(clone);
-  }
-
-  /**
-   * To convert AirbyteCatalog from APIs to model. This is to differentiate between
-   * toConfiguredProtocol as the other one converts to ConfiguredAirbyteCatalog object instead.
-   */
-  public static io.airbyte.protocol.models.AirbyteCatalog toProtocol(
-                                                                     final io.airbyte.api.model.generated.AirbyteCatalog catalog)
-      throws JsonValidationException {
-    final ArrayList<JsonValidationException> errors = new ArrayList<>();
-
-    io.airbyte.protocol.models.AirbyteCatalog protoCatalog =
-        new io.airbyte.protocol.models.AirbyteCatalog();
-    var airbyteStream = catalog.getStreams().stream().map(stream -> {
-      try {
-        return toConfiguredProtocol(stream.getStream(), stream.getConfig());
-      } catch (JsonValidationException e) {
-        LOGGER.error("Error parsing catalog: {}", e);
-        errors.add(e);
-        return null;
-      }
-    }).collect(Collectors.toList());
-
-    if (!errors.isEmpty()) {
-      throw errors.get(0);
-    }
-    protoCatalog.withStreams(airbyteStream);
-    return protoCatalog;
-  }
-
   /**
    * Converts the API catalog model into a protocol catalog. Note: only streams marked as selected
    * will be returned. This is included in this converter as the API model always carries all the
@@ -281,6 +216,90 @@ public class CatalogConverter {
     }
     return new io.airbyte.protocol.models.ConfiguredAirbyteCatalog()
         .withStreams(streams);
+  }
+
+  @SuppressWarnings("LineLength")
+  private static io.airbyte.api.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(final io.airbyte.api.model.generated.AirbyteStream stream,
+                                                                                                        Boolean suggestingStreams,
+                                                                                                        List<String> suggestedStreams) {
+    final io.airbyte.api.model.generated.AirbyteStreamConfiguration result = new io.airbyte.api.model.generated.AirbyteStreamConfiguration()
+        .aliasName(Names.toAlphanumericAndUnderscore(stream.getName()))
+        .cursorField(stream.getDefaultCursorField())
+        .destinationSyncMode(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
+        .primaryKey(stream.getSourceDefinedPrimaryKey())
+        .selected(!suggestingStreams)
+        .suggested(true);
+
+    if (suggestingStreams) {
+      if (suggestedStreams.contains(stream.getName())) {
+        result.setSelected(true);
+      } else {
+        result.setSuggested(false);
+      }
+    }
+
+    if (stream.getSupportedSyncModes().size() > 0) {
+      result.setSyncMode(stream.getSupportedSyncModes().get(0));
+    } else {
+      result.setSyncMode(io.airbyte.api.model.generated.SyncMode.INCREMENTAL);
+    }
+
+    return result;
+  }
+
+  private static Boolean getStreamHasFieldSelectionEnabled(FieldSelectionData fieldSelectionData, StreamDescriptor streamDescriptor) {
+    if (fieldSelectionData == null
+        || fieldSelectionData.getAdditionalProperties().get(streamDescriptorToStringForFieldSelection(streamDescriptor)) == null) {
+      return false;
+    }
+
+    return fieldSelectionData.getAdditionalProperties().get(streamDescriptorToStringForFieldSelection(streamDescriptor));
+  }
+
+  /**
+   * Converts the API catalog model into a protocol catalog. Note: returns all streams, regardless of
+   * selected status. See
+   * {@link CatalogConverter#toConfiguredProtocol(AirbyteStream, AirbyteStreamConfiguration)} for
+   * context.
+   *
+   * @param catalog api catalog
+   * @return protocol catalog
+   */
+  @SuppressWarnings("LineLength")
+  public static io.airbyte.protocol.models.ConfiguredAirbyteCatalog toProtocolKeepAllStreams(
+                                                                                             final io.airbyte.api.model.generated.AirbyteCatalog catalog)
+      throws JsonValidationException {
+    final AirbyteCatalog clone = Jsons.clone(catalog);
+    clone.getStreams().forEach(stream -> stream.getConfig().setSelected(true));
+    return toConfiguredProtocol(clone);
+  }
+
+  /**
+   * To convert AirbyteCatalog from APIs to model. This is to differentiate between
+   * toConfiguredProtocol as the other one converts to ConfiguredAirbyteCatalog object instead.
+   */
+  public static io.airbyte.protocol.models.AirbyteCatalog toProtocol(
+                                                                     final io.airbyte.api.model.generated.AirbyteCatalog catalog)
+      throws JsonValidationException {
+    final ArrayList<JsonValidationException> errors = new ArrayList<>();
+
+    io.airbyte.protocol.models.AirbyteCatalog protoCatalog =
+        new io.airbyte.protocol.models.AirbyteCatalog();
+    var airbyteStream = catalog.getStreams().stream().map(stream -> {
+      try {
+        return toConfiguredProtocol(stream.getStream(), stream.getConfig());
+      } catch (JsonValidationException e) {
+        LOGGER.error("Error parsing catalog: {}", e);
+        errors.add(e);
+        return null;
+      }
+    }).collect(Collectors.toList());
+
+    if (!errors.isEmpty()) {
+      throw errors.get(0);
+    }
+    protoCatalog.withStreams(airbyteStream);
+    return protoCatalog;
   }
 
   /**

@@ -13,6 +13,9 @@ import javax.ws.rs.ext.ExceptionMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Mapper for handling known exception.
+ */
 @Produces
 @Singleton
 @Requires(classes = KnownException.class)

@@ -12,6 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
+/**
+ * POJO / accessors for the attempt domain model.
+ */
 public class Attempt {
 
   private final int attemptNumber;
@@ -107,38 +110,46 @@ public class Attempt {
       return false;
     }
     final Attempt attempt = (Attempt) o;
-    return attemptNumber == attempt.attemptNumber &&
-        jobId == attempt.jobId &&
-        updatedAtInSecond == attempt.updatedAtInSecond &&
-        createdAtInSecond == attempt.createdAtInSecond &&
-        Objects.equals(syncConfig, attempt.syncConfig) &&
-        Objects.equals(output, attempt.output) &&
-        status == attempt.status &&
-        Objects.equals(failureSummary, attempt.failureSummary) &&
-        Objects.equals(logPath, attempt.logPath) &&
-        Objects.equals(endedAtInSecond, attempt.endedAtInSecond);
+    return attemptNumber == attempt.attemptNumber
+        && jobId == attempt.jobId
+        && updatedAtInSecond == attempt.updatedAtInSecond
+        && createdAtInSecond == attempt.createdAtInSecond
+        && Objects.equals(syncConfig, attempt.syncConfig)
+        && Objects.equals(output, attempt.output)
+        && status == attempt.status
+        && Objects.equals(failureSummary, attempt.failureSummary)
+        && Objects.equals(logPath, attempt.logPath)
+        && Objects.equals(endedAtInSecond, attempt.endedAtInSecond);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(attemptNumber, jobId, syncConfig, output, status, failureSummary, logPath, updatedAtInSecond, createdAtInSecond,
+    return Objects.hash(attemptNumber,
+        jobId,
+        syncConfig,
+        output,
+        status,
+        failureSummary,
+        logPath,
+        updatedAtInSecond,
+        createdAtInSecond,
         endedAtInSecond);
   }
 
   @Override
   public String toString() {
-    return "Attempt{" +
-        "id=" + attemptNumber +
-        ", jobId=" + jobId +
-        ", syncConfig=" + syncConfig +
-        ", output=" + output +
-        ", status=" + status +
-        ", failureSummary=" + failureSummary +
-        ", logPath=" + logPath +
-        ", updatedAtInSecond=" + updatedAtInSecond +
-        ", createdAtInSecond=" + createdAtInSecond +
-        ", endedAtInSecond=" + endedAtInSecond +
-        '}';
+    return "Attempt{"
+        + "id=" + attemptNumber
+        + ", jobId=" + jobId
+        + ", syncConfig=" + syncConfig
+        + ", output=" + output
+        + ", status=" + status
+        + ", failureSummary=" + failureSummary
+        + ", logPath=" + logPath
+        + ", updatedAtInSecond=" + updatedAtInSecond
+        + ", createdAtInSecond=" + createdAtInSecond
+        + ", endedAtInSecond=" + endedAtInSecond
+        + '}';
   }
 
 }

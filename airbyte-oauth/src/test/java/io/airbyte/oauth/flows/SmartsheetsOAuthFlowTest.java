@@ -10,6 +10,7 @@ import io.airbyte.oauth.MoreOAuthParameters;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("MissingJavadocType")
 public class SmartsheetsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

@@ -19,6 +19,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Smartsheets OAuth.
+ */
 public class SmartsheetsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://app.smartsheet.com/b/authorize";

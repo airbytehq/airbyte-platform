@@ -7,8 +7,18 @@ package io.airbyte.workers.storage;
 import io.airbyte.config.storage.CloudStorageConfigs;
 import java.nio.file.Path;
 
+/**
+ * Supported document stores.
+ */
 public class StateClients {
 
+  /**
+   * Create document store clients.
+   *
+   * @param cloudStorageConfigs cloud storage configs
+   * @param prefix prefix
+   * @return document store client
+   */
   public static DocumentStoreClient create(final CloudStorageConfigs cloudStorageConfigs, final Path prefix) {
     DocumentStoreClient documentStoreClient = null;
 
@@ -21,6 +31,9 @@ public class StateClients {
       }
       case GCS -> {
         documentStoreClient = GcsDocumentStoreClient.create(cloudStorageConfigs.getGcsConfig(), prefix);
+      }
+      default -> {
+        // to do
       }
     }
 

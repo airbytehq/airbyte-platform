@@ -8,29 +8,30 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.util.Optional;
 
 /**
- * AirbyteProtocol message migration interface
+ * AirbyteProtocol message migration interface.
  *
- * @param <PreviousVersion> The Old AirbyteMessage type
- * @param <CurrentVersion> The New AirbyteMessage type
+ * @param <V0> The Old AirbyteMessage type
+ * @param <V1> The New AirbyteMessage type
  */
-public interface AirbyteMessageMigration<PreviousVersion, CurrentVersion> extends Migration {
+public interface AirbyteMessageMigration<V0, V1> extends Migration {
 
   /**
-   * Downgrades a message to from the new version to the old version
+   * Downgrades a message to from the new version to the old version.
    *
-   * @param message: the message to downgrade
-   * @param configuredAirbyteCatalog: the ConfiguredAirbyteCatalog of the connection when applicable
+   * @param message the message to downgrade
+   * @param configuredAirbyteCatalog the ConfiguredAirbyteCatalog of the connection when applicable
    * @return the downgraded message
    */
-  PreviousVersion downgrade(final CurrentVersion message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog);
+  V0 downgrade(final V1 message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog);
 
   /**
-   * Upgrades a message from the old version to the new version
+   * Upgrades a message from the old version to the new
+   * version./Users/charles/code/airbyte-platform/airbyte-commons-protocol/src/main/java/io/airbyte/commons/protocol/migrations/Migration.java
    *
-   * @param message: the message to upgrade
-   * @param configuredAirbyteCatalog: the ConfiguredAirbyteCatalog of the connection when applicable
+   *
+   * @param configuredAirbyteCatalog the ConfiguredAirbyteCatalog of the connection when applicable
    * @return the upgrade message
    */
-  CurrentVersion upgrade(final PreviousVersion message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog);
+  V1 upgrade(final V0 message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog);
 
 }

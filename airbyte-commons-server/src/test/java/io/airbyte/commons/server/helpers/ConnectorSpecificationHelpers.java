@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class ConnectorSpecificationHelpers {
 
   public static ConnectorSpecification generateConnectorSpecification() throws IOException {

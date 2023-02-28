@@ -27,23 +27,23 @@ class JsonSchemaValidatorTest {
   private static final String PROPERTIES = "properties";
 
   private static final JsonNode VALID_SCHEMA = Jsons.deserialize(
-      "{\n" +
-          "    \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n" +
-          "    \"title\": \"test\",\n" +
-          "    \"type\": \"object\",\n" +
-          "    \"required\": [\"host\"],\n" +
-          "    \"additionalProperties\": false,\n" +
-          "    \"properties\": {\n" +
-          "      \"host\": {\n" +
-          "        \"type\": \"string\"\n" +
-          "      },\n" +
-          "      \"port\": {\n" +
-          "        \"type\": \"integer\",\n" +
-          "        \"minimum\": 0,\n" +
-          "        \"maximum\": 65536\n" +
-          "      }" +
-          "    }\n" +
-          "  }");
+      "{\n"
+          + "    \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n"
+          + "    \"title\": \"test\",\n"
+          + "    \"type\": \"object\",\n"
+          + "    \"required\": [\"host\"],\n"
+          + "    \"additionalProperties\": false,\n"
+          + "    \"properties\": {\n"
+          + "      \"host\": {\n"
+          + "        \"type\": \"string\"\n"
+          + "      },\n"
+          + "      \"port\": {\n"
+          + "        \"type\": \"integer\",\n"
+          + "        \"minimum\": 0,\n"
+          + "        \"maximum\": 65536\n"
+          + "      }"
+          + "    }\n"
+          + "  }");
 
   @Test
   void testValidateSuccess() {

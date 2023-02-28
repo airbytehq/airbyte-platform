@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Amazon Ads OAuth.
+ */
 public class AmazonAdsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://www.amazon.com/ap/oa";

@@ -46,6 +46,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * SourceHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
 @Singleton
 public class SourceHandler {
 

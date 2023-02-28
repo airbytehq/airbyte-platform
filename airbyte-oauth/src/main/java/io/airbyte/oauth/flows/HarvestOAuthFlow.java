@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Harvest OAuth.
+ */
 public class HarvestOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://id.getharvest.com/oauth2/authorize";

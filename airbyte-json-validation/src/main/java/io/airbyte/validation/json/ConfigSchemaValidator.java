@@ -7,6 +7,12 @@ package io.airbyte.validation.json;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Set;
 
+/**
+ * This class is syntactic sugar on JsonSchemaValidator to reduce boilerplate code that needs to be
+ * written to set up and validate objects declared in ConfigSchema.
+ *
+ * @param <T> Enum where the object is declared.
+ */
 public interface ConfigSchemaValidator<T extends Enum<T>> {
 
   Set<String> validate(T configType, JsonNode objectJson);

@@ -769,6 +769,7 @@ class DefaultJobPersistenceTest {
     return timeSupplier;
   }
 
+  @SuppressWarnings("LineLength")
   @Test
   @DisplayName("Should have valid yaml schemas in exported database")
   void testYamlSchemas() throws IOException {
@@ -851,8 +852,8 @@ class DefaultJobPersistenceTest {
     assertEquals(Optional.of(new AirbyteProtocolVersionRange(v1, v2)), range3);
   }
 
-  private long createJobAt(final Instant created_at) throws IOException {
-    when(timeSupplier.get()).thenReturn(created_at);
+  private long createJobAt(final Instant createdAt) throws IOException {
+    when(timeSupplier.get()).thenReturn(createdAt);
     return jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
   }
 
@@ -1916,9 +1917,9 @@ class DefaultJobPersistenceTest {
         throws IOException, SQLException {
       final Optional<Long> id = jobDatabase.query(
           ctx -> ctx.fetch(
-              "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) " +
-                  "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) " +
-                  "RETURNING id ",
+              "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
+                  + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+                  + "RETURNING id ",
               Sqls.toSqlName(jobConfig.getConfigType()),
               scope,
               runDate,
@@ -2022,10 +2023,10 @@ class DefaultJobPersistenceTest {
                              final int expectedAfterPurge,
                              final String goalOfTestScenario)
         throws IOException, SQLException {
-      final String CURRENT_SCOPE = UUID.randomUUID().toString();
+      final String currentScope = UUID.randomUUID().toString();
 
       // Decoys - these jobs will help mess up bad sql queries, even though they shouldn't be deleted.
-      final String DECOY_SCOPE = UUID.randomUUID().toString();
+      final String decoyScope = UUID.randomUUID().toString();
 
       // Reconfigure constants to test various combinations of tuning knobs and make sure all work.
       final DefaultJobPersistence jobPersistence =
@@ -2040,8 +2041,8 @@ class DefaultJobPersistenceTest {
       final List<Job> allJobs = new ArrayList<>();
       final List<Job> decoyJobs = new ArrayList<>();
       for (int i = 0; i < numJobs; i++) {
-        allJobs.add(persistJobForJobHistoryTesting(CURRENT_SCOPE, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
-        decoyJobs.add(persistJobForJobHistoryTesting(DECOY_SCOPE, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
+        allJobs.add(persistJobForJobHistoryTesting(currentScope, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
+        decoyJobs.add(persistJobForJobHistoryTesting(decoyScope, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
       }
 
       // At least one job should have state. Find the desired job and add state to it.
@@ -2058,7 +2059,7 @@ class DefaultJobPersistenceTest {
 
       // Execute the job history purge and check what jobs are left.
       ((DefaultJobPersistence) jobPersistence).purgeJobHistory(fakeNow);
-      final List<Job> afterPurge = jobPersistence.listJobs(ConfigType.SYNC, CURRENT_SCOPE, 9999, 0);
+      final List<Job> afterPurge = jobPersistence.listJobs(ConfigType.SYNC, currentScope, 9999, 0);
 
       // Test - contains expected number of jobs and no more than that
       assertEquals(expectedAfterPurge, afterPurge.size(), goalOfTestScenario + " - Incorrect number of jobs remain after deletion.");

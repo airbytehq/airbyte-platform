@@ -20,6 +20,10 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * Abstraction to manage the updating the configuration of a source or a destination. Helps with
+ * secrets handling and make it easy to test these transitions.
+ */
 @Singleton
 public class ConfigurationUpdate {
 
@@ -41,6 +45,17 @@ public class ConfigurationUpdate {
     this.secretsProcessor = secretsProcessor;
   }
 
+  /**
+   * Update the configuration object for a source.
+   *
+   * @param sourceId source id
+   * @param sourceName name of source
+   * @param newConfiguration new configuration
+   * @return updated source configuration
+   * @throws ConfigNotFoundException thrown if the source does not exist
+   * @throws IOException thrown if exception while interacting with the db
+   * @throws JsonValidationException thrown if newConfiguration is invalid json
+   */
   public SourceConnection source(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // get existing source
@@ -58,6 +73,17 @@ public class ConfigurationUpdate {
     return Jsons.clone(persistedSource).withConfiguration(updatedConfiguration);
   }
 
+  /**
+   * Update the configuration object for a destination.
+   *
+   * @param destinationId destination id
+   * @param destName name of destination
+   * @param newConfiguration new configuration
+   * @return updated destination configuration
+   * @throws ConfigNotFoundException thrown if the destination does not exist
+   * @throws IOException thrown if exception while interacting with the db
+   * @throws JsonValidationException thrown if newConfiguration is invalid json
+   */
   public DestinationConnection destination(final UUID destinationId, final String destName, final JsonNode newConfiguration)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // get existing destination

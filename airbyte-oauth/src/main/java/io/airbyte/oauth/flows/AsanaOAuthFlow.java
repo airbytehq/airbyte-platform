@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://developers.asana.com/docs/oauth
+ * Following docs from https://developers.asana.com/docs/oauth.
  */
 public class AsanaOAuthFlow extends BaseOAuth2Flow {
 

@@ -52,6 +52,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Convert between API and internal versions of job models.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class JobConverter {
 
