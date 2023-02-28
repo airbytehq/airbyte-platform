@@ -1,19 +1,31 @@
-pluginManagement {
+// The buildscript block defines dependencies in order for .gradle file evaluation.
+// This is separate from application dependencies.
+// See https://stackoverflow.com/questions/17773817/purpose-of-buildscript-block-in-gradle.
+buildscript {
     repositories {
-        gradlePluginPortal()
         maven {
-            url 'https://oss.sonatype.org/content/repositories/snapshots'
+            url "https://plugins.gradle.org/m2/"
         }
     }
-    resolutionStrategy {
-        eachPlugin {
-            // We're using the 6.1.0-SNAPSHOT version of openapi-generator which contains a fix for generating nullable arrays (https://github.com/OpenAPITools/openapi-generator/issues/13025)
-            // The snapshot version isn't available in the main Gradle Plugin Portal, so we added the Sonatype snapshot repository above.
-            // The useModule command below allows us to map from the plugin id, `org.openapi.generator`, to the underlying module (https://oss.sonatype.org/content/repositories/snapshots/org/openapitools/openapi-generator-gradle-plugin/6.1.0-SNAPSHOT/_
-            if (requested.id.id == 'org.openapi.generator') {
-                useModule "org.openapitools:openapi-generator-gradle-plugin:${requested.version}"
-            }
-        }
+    dependencies {
+        classpath 'com.bmuschko:gradle-docker-plugin:8.0.0'
+        // Plugin `com.bmuschko:gradle-docker-plugin:8.0.0` transitively depends on jackson 2.10.3,
+        // which is not binary compatible with jackson 2.14 that is used elsewhere.
+        // This causes `NoSuchMethodError` exceptions while building.
+        //
+        // Dependency chain:
+        // `com.bmuschko:gradle-docker-plugin:8.0.0` ->
+        // `com.github.docker-java:docker-java-core:3.2.14` ->
+        // `com.fasterxml.jackson.core:jackson-databind:2.10.3`
+        //
+        // As this is a third-party dependency, we cannot (without forking) update it to use a newer jackson version.
+        // There is however a PR that was created to update this version to the latest jackson version:
+        // https://github.com/docker-java/docker-java/pull/2056
+        //
+        // TODO: once oss has been inlined, revisit where the version of jackson is defined.
+        classpath 'com.fasterxml.jackson.core:jackson-core:2.14.2'
+
+        classpath 'org.codehaus.groovy:groovy-yaml:3.0.3'
     }
 }
 
@@ -21,7 +33,7 @@ pluginManagement {
 // as much information as possible.
 plugins {
     id "com.gradle.enterprise" version "3.4.1"
-    id 'com.github.burrunan.s3-build-cache' version "1.5"
+    id 'com.github.burrunan.s3-build-cache' version "1.5" 
 }
 
 gradleEnterprise {
@@ -31,27 +43,7 @@ gradleEnterprise {
     }
 }
 
-ext.isCiServer = System.getenv().containsKey("CI")
-
-buildCache {
-    local {
-        // Local build cache is dangerous as it might produce inconsistent results
-        // in case developer modifies files while the build is running
-        enabled = false
-    }
-    remote(com.github.burrunan.s3cache.AwsS3BuildCache) {
-        region = 'us-east-2'
-        bucket = 'airbyte-buildcache'
-        prefix = 'cache/'
-        push = isCiServer
-        // Credentials will be taken from  S3_BUILD_CACHE_... environment variables
-        // anonymous access will be used if environment variables are missing
-    }
-}
-
-rootProject.name = 'airbyte'
-
-// definition for dependency resolution
+enableFeaturePreview('VERSION_CATALOGS')
 dependencyResolutionManagement {
     repositories {
         maven {
@@ -60,65 +52,50 @@ dependencyResolutionManagement {
     }
     versionCatalogs {
         libs {
-            from(files("deps.toml"))
+            from("io.airbyte:oss-catalog:dev-306f8fb5fb")
         }
     }
 }
 
-// todo (cgardens) - remove sub builds after we update all tools
-// SUB_BUILD is an enum of <blank>, PLATFORM, CONNECTORS_BASE, ALL_CONNECTORS and OCTAVIA_CLI. Blank is equivalent to all.
-if (!System.getenv().containsKey("SUB_BUILD")) {
-    println("Building all of Airbyte.")
-} else {
-    def subBuild = System.getenv().get("SUB_BUILD")
-    println("Building Airbyte Sub Build: " + subBuild)
-    if (subBuild != "PLATFORM") {
-        throw new IllegalArgumentException(String.format("%s is invalid. Must be unset or PLATFORM", subBuild))
+ext.isCiServer = System.getenv().containsKey("CI")
+
+buildCache {
+    remote(com.github.burrunan.s3cache.AwsS3BuildCache) {
+        region = 'us-east-2'
+        bucket = 'airbyte-buildcache'
+        prefix = 'cloud-cache/'
+        push = isCiServer
+        // Credentials will be taken from  S3_BUILD_CACHE_... environment variables
+        // anonymous access will be used if environment variables are missing
     }
 }
 
-// shared
-include ':airbyte-commons'
+rootProject.name = 'airbyte-cloud'
 
-// shared by CONNECTORS_BASE and PLATFORM sub builds
-include ':airbyte-api'
-include ':airbyte-commons-cli'
-include ':airbyte-commons-protocol'
-include ':airbyte-config:specs'
-include ':airbyte-config:init'
-include ':airbyte-config:config-models' // reused by acceptance tests in connector base.
-include ':airbyte-db:db-lib' // reused by acceptance tests in connector base.
-include ':airbyte-json-validation'
-include ':airbyte-metrics:metrics-lib'
-include ':airbyte-oauth'
-include ':airbyte-test-utils'
+gradle.ext.ossBuild = 'airbyte'
 
-// airbyte-workers has a lot of dependencies.
-include ':airbyte-analytics' // transitively used by airbyte-workers.
-include ':airbyte-commons-temporal'
-include ':airbyte-commons-converters'
-include ':airbyte-commons-worker'
-include ':airbyte-config:config-persistence' // transitively used by airbyte-workers.
-include ':airbyte-featureflag'
-include ':airbyte-db:jooq' // transitively used by airbyte-workers.
-include ':airbyte-notification' // transitively used by airbyte-workers.
-include ':airbyte-persistence:job-persistence' // transitively used by airbyte-workers.
-include ':airbyte-worker-models'
+include ':airbyte-bootloader-wrapped'
+include ':airbyte-server-wrapped'
+include ':billing'
+include ':cloud-api'
+include ':cloud-auth'
+include ':cloud-bootloader'
+include ':cloud-config:cloud-config-core'
+include ':cloud-config:cloud-config-models'
+include ':cloud-config:cloud-config-persistence'
+include ':cloud-config:cloud-config-seed'
+include ':cloud-db:lib'
+include ':cloud-db:jooq'
+include ':cloud-partner-api'
+include ':cloud-partner-server'
+include ':cloud-public-api-server'
+include ':cloud-server'
+include ':cloud-tests'
+include ':cloud-tracking'
+include ':cloud-webapp'
+include ':cloud-workers'
+include ':dbt-integration'
 
-// platform
-if (!System.getenv().containsKey("SUB_BUILD") || System.getenv().get("SUB_BUILD") == "PLATFORM") {
-    include ':airbyte-bootloader'
-    include ':airbyte-commons-server'
-    include ':airbyte-connector-builder-server'
-    include ':airbyte-container-orchestrator'
-    include ':airbyte-cron'
-    include ':airbyte-metrics:reporter'
-    include ':airbyte-proxy'
-    include ':airbyte-server'
-    include ':airbyte-temporal'
-    include ':airbyte-tests'
-    include ':airbyte-webapp'
-    include ':airbyte-webapp-e2e-tests'
-    include ':airbyte-workers'
+includeBuild("oss") {
+    name = gradle.ossBuild
 }
-

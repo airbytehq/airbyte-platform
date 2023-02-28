@@ -1,0 +1,81 @@
+static def getImageName() {
+    return "airbyte/webapp"
+}
+
+// generate a tag that uniquely identifies the combination of cloud env, and cloud version of the corresponding image code.
+def getImageVersion(String env) {
+    return "cloud-$env-${rootProject.ext.cloud_version}"
+}
+
+def getImageNameWithTag(String env) {
+    "${getImageName()}:${getImageVersion(env)}"
+}
+
+// Turns e.g. frontend-dev into FrontendDev
+def upperCamelCase(String input) {
+    return input.replaceAll("([_-])([A-Za-z0-9])", { it -> it[2].toUpperCase() } ).capitalize()
+}
+
+// for each environment we need to publish a different webapp image that contains the correct env variables. this task
+// gathers those env variables (mostly) from envs/<env>/.env.
+def configureDockerBuild(String env) {
+    return configureDockerBuild(env, getImageNameWithTag(env), "${rootProject.ext.oss_version}")
+}
+
+def configureDockerBuild(String env, String imageWithTagName, String ossVersion) {
+    def values = file("envs/$env/.env").readLines().collect {it.tokenize('=') }
+    def baseCommand = ['docker', 'build', '.', '-t', imageWithTagName, '--build-arg', "AIRBYTE_VERSION=$ossVersion", '--build-arg', "ENV_NAME=$env"]
+    def valuesAsBuildArgs = values.collect{
+        def (key, value) = it
+        ['--build-arg', key + '=' + value]
+    }.flatten()
+    def fullCommand = baseCommand + valuesAsBuildArgs
+    return {
+        group "Build"
+        description "Build the cloud-webapp docker image for ${env}"
+        commandLine fullCommand
+        // To use the variables specified in the .env files, set them as env vars in the Gradle build process.
+        values.each {
+            def (key, value) = it
+            environment key, value
+        }
+    }
+}
+
+def configureDockerPush(String env) {
+    return {
+        group "Publishing"
+        description "Push the cloud-webapp docker image for ${env}"
+        commandLine 'docker', 'push', getImageNameWithTag(env)
+    }
+}
+
+task assembleWebapp(type: Copy) {
+    group "Build"
+    description "Build the webapp in the OSS build and copy its output"
+    // We need to hardcode these pathes here, since includedBuilds don't give you a full reference
+    // to the project/tasks in the includedBuild, that we could access the values from there
+    dependsOn gradle.includedBuild(gradle.ossBuild).task(":airbyte-webapp:assembleApp")
+    from "${gradle.includedBuild(gradle.ossBuild).projectDir}/airbyte-webapp/build/docker/bin/build"
+    into "build/app"
+}
+
+def allEnvs = ['dev', 'dev-1', 'dev-2', 'dev-3', 'frontend-dev', 'stage', 'prod', 'infra-dev']
+
+// Create docker build and docker push task for each env
+allEnvs.each { env -> 
+    def buildTaskName = "dockerBuild${upperCamelCase(env)}"
+    task "$buildTaskName" (type: Exec, dependsOn: assembleWebapp) {
+        configure configureDockerBuild(env)
+    }
+
+    task "dockerPush${upperCamelCase(env)}" (type: Exec, dependsOn: buildTaskName) {
+        configure configureDockerPush(env)
+    }
+}
+
+task dockerBuildTest(type: Exec, dependsOn: assembleWebapp) {
+    configure configureDockerBuild('test', "${getImageName()}:test-local", "${rootProject.ext.oss_version}")
+}
+
+assemble.dependsOn(dockerBuildTest)
