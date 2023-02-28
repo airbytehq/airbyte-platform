@@ -636,13 +636,13 @@ public class Jsons {
   }
 
   /**
-   * Creates nodes on the way if necessary.
+   * Sets a nested node to the passed value. Creates nodes on the way if necessary.
    */
-  private static void setNested(final JsonNode json, final List<String> keys, final BiConsumer<ObjectNode, String> typedReplacement) {
+  private static void setNested(final JsonNode json, final List<String> keys, final BiConsumer<ObjectNode, String> typedValue) {
     Preconditions.checkArgument(!keys.isEmpty(), "Must pass at least one key");
     final JsonNode nodeContainingFinalKey = navigateToAndCreate(json, keys.subList(0, keys.size() -
         1));
-    typedReplacement.accept((ObjectNode) nodeContainingFinalKey, keys.get(keys.size() - 1));
+    typedValue.accept((ObjectNode) nodeContainingFinalKey, keys.get(keys.size() - 1));
   }
 
   /**
@@ -660,8 +660,14 @@ public class Jsons {
     return node;
   }
 
-  public static void setNestedValue(final JsonNode json, final List<String> keys, final JsonNode replacement) {
-    setNested(json, keys, (node, finalKey) -> node.set(finalKey, replacement));
+  /**
+   * Set nested value and create parent keys on the way. Copied from our other replaceNestedValue.
+   * @param json node
+   * @param keys list of keys that you want to nest into
+   * @param value node value to set
+   */
+  public static void setNestedValue(final JsonNode json, final List<String> keys, final JsonNode value) {
+    setNested(json, keys, (node, finalKey) -> node.set(finalKey, value));
   }
 
 }
