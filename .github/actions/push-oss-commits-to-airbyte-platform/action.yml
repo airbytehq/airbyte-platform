@@ -1,0 +1,26 @@
+name: Push OSS commits to airbytehq/airbyte-platform
+description: Applies the latest commits in the `oss/` module to airbytehq/airbyte-platform
+inputs:
+  source_repo:
+    description: The name of the source repository.
+    required: true
+    default: airbytehq/airbyte-platform-internal
+  destination_repo:
+    description: The name of the destination repository
+    required: true
+    default: airbytehq/airbyte-platform
+  module_path:
+    description: A path in the destination repository where the module (source repository) will be embedded.
+    default: oss
+  github_access_token:
+    description: A github access token
+    required: true
+  
+runs:
+  using: 'docker'
+  image: 'Dockerfile' 
+  env:
+    AUTH_TOKEN: ${{ inputs.github_access_token }}
+    SRC_REPO: ${{ inputs.source_repo }}
+    SRC_PATH: ${{ inputs.module_path }}
+    DST_REPO: ${{ inputs.destination_repo }}
