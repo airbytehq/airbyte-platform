@@ -1,16 +1,11 @@
 @use "scss/colors";
 
 .text {
-  color: colors.$dark-blue;
   margin: 0;
   padding: 0;
 
   &.inverse {
     color: colors.$white;
-  }
-
-  &--color-grey-300 {
-    color: colors.$grey-300;
   }
 }
 
@@ -36,6 +31,18 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 1.3em;
+}
+
+.darkBlue {
+  color: colors.$dark-blue;
+}
+
+.grey {
+  color: colors.$grey;
+}
+
+.grey300 {
+  color: colors.$grey-300;
 }
 
 .centered {

@@ -48,7 +48,7 @@ public class PatchedLogsApi {
   }
 
   /**
-   * Get logs
+   * Get logs.
    *
    * @param logsRequestBody (required)
    * @return File
@@ -60,7 +60,7 @@ public class PatchedLogsApi {
   }
 
   /**
-   * Get logs
+   * Get logs.
    *
    * @param logsRequestBody (required)
    * @return ApiResponse&lt;File&gt;

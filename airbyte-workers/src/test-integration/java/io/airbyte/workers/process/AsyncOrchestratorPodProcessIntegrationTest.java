@@ -37,14 +37,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
 @Disabled
-public class AsyncOrchestratorPodProcessIntegrationTest {
+class AsyncOrchestratorPodProcessIntegrationTest {
 
   private static KubernetesClient kubernetesClient;
   private static DocumentStoreClient documentStoreClient;
   private static Process portForwardProcess;
 
   @BeforeAll
-  public static void init() throws Exception {
+  static void init() throws Exception {
     kubernetesClient = new DefaultKubernetesClient();
 
     final var podName = "test-minio-" + RandomStringUtils.randomAlphabetic(10).toLowerCase();
@@ -99,7 +99,7 @@ public class AsyncOrchestratorPodProcessIntegrationTest {
 
   @ValueSource(strings = {"IfNotPresent", " Always"})
   @ParameterizedTest
-  public void testAsyncOrchestratorPodProcess(final String pullPolicy) throws InterruptedException {
+  void testAsyncOrchestratorPodProcess(final String pullPolicy) throws InterruptedException {
     final var serverPort = 8080;
     final var podName = "test-async-" + RandomStringUtils.randomAlphabetic(10).toLowerCase();
     final var mainContainerInfo = new KubeContainerInfo("airbyte/container-orchestrator:dev", pullPolicy);

@@ -41,6 +41,9 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Temporal job client for synchronous jobs (i.e. spec, check, discover).
+ */
 public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSynchronousSchedulerClient.class);
@@ -54,6 +57,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
 
   private final RouterService routerService;
 
+  @SuppressWarnings("ParameterName")
   public DefaultSynchronousSchedulerClient(final TemporalClient temporalClient,
                                            final JobTracker jobTracker,
                                            final JobErrorReporter jobErrorReporter,
@@ -217,7 +221,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     }
   }
 
-  /**
+  /*
    * @param connectorDefinitionId either source or destination definition id
    */
   private <T> void track(final UUID jobId,

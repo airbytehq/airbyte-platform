@@ -22,6 +22,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Square OAuth.
+ */
 public class SquareOAuthFlow extends BaseOAuth2Flow {
 
   private static final List<String> SCOPES = Arrays.asList(

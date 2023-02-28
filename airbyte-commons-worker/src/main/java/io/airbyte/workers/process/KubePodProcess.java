@@ -163,6 +163,14 @@ public class KubePodProcess implements KubePod {
   private final CompletableFuture<Integer> exitCodeFuture;
   private final SharedIndexInformer<Pod> podInformer;
 
+  /**
+   * Get pod IP.
+   *
+   * @param client kube client
+   * @param podName pod name
+   * @param podNamespace pod namespace
+   * @return pod's ip address
+   */
   public static String getPodIP(final KubernetesClient client, final String podName, final String podNamespace) {
     final var pod = client.pods().inNamespace(podNamespace).withName(podName).get();
     if (pod == null) {
@@ -265,6 +273,12 @@ public class KubePodProcess implements KubePod {
     }
   }
 
+  /**
+   * Create port list for pod.
+   *
+   * @param internalToExternalPorts internal to external pots
+   * @return container ports
+   */
   public static List<ContainerPort> createContainerPortList(final Map<Integer, Integer> internalToExternalPorts) {
     return internalToExternalPorts.keySet().stream()
         .map(integer -> new ContainerPortBuilder()
@@ -273,6 +287,13 @@ public class KubePodProcess implements KubePod {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Copy files to kube pod.
+   *
+   * @param client kube client
+   * @param podDefinition pod to copy to
+   * @param files files to copy
+   */
   public static void copyFilesToKubeConfigVolume(final KubernetesClient client,
                                                  final Pod podDefinition,
                                                  final Map<String, String> files) {
@@ -378,7 +399,7 @@ public class KubePodProcess implements KubePod {
         .toArray(Toleration[]::new);
   }
 
-  @SuppressWarnings("PMD.InvalidLogMessageFormat")
+  @SuppressWarnings({"PMD.InvalidLogMessageFormat", "VariableDeclarationUsageDistance"})
   public KubePodProcess(final boolean isOrchestrator,
                         final String processRunnerHost,
                         final KubernetesClient fabricClient,
@@ -824,6 +845,12 @@ public class KubePodProcess implements KubePod {
     };
   }
 
+  /**
+   * Get resource requirements builder.
+   *
+   * @param resourceRequirements resource requirements
+   * @return builder
+   */
   public static ResourceRequirementsBuilder getResourceRequirementsBuilder(final ResourceRequirements resourceRequirements) {
     if (resourceRequirements != null) {
       final Map<String, Quantity> requestMap = new HashMap<>();

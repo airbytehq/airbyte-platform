@@ -17,6 +17,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add actor definition workspace grant table migration.
+ */
 public class V0_35_59_002__AddActorDefinitionWorkspaceGrantTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_59_002__AddActorDefinitionWorkspaceGrantTable.class);
@@ -32,7 +35,7 @@ public class V0_35_59_002__AddActorDefinitionWorkspaceGrantTable extends BaseJav
     createActorDefinitionWorkspaceGrant(ctx);
   }
 
-  public static void createActorDefinitionWorkspaceGrant(final DSLContext ctx) {
+  static void createActorDefinitionWorkspaceGrant(final DSLContext ctx) {
     final Field<UUID> actorDefinitionId = DSL.field("actor_definition_id", SQLDataType.UUID.nullable(false));
     final Field<UUID> workspaceId = DSL.field("workspace_id", SQLDataType.UUID.nullable(false));
     ctx.createTableIfNotExists("actor_definition_workspace_grant")

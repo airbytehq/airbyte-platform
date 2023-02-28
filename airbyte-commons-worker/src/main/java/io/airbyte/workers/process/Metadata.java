@@ -11,7 +11,7 @@ package io.airbyte.workers.process;
 public final class Metadata {
 
   /**
-   * General Metadata
+   * General Metadata.
    */
   static final String JOB_LABEL_KEY = "job_id";
   static final String ATTEMPT_LABEL_KEY = "attempt_id";

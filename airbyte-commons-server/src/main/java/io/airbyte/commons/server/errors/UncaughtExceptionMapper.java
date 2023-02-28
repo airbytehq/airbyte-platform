@@ -12,6 +12,9 @@ import javax.ws.rs.ext.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Exception mapper for when an unknown exception is thrown.
+ */
 @Provider
 public class UncaughtExceptionMapper implements ExceptionMapper<Throwable> {
 

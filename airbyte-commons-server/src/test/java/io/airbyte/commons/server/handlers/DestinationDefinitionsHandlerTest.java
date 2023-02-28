@@ -645,6 +645,7 @@ class DestinationDefinitionsHandlerTest {
         workspaceId);
   }
 
+  @SuppressWarnings("TypeName")
   @Nested
   @DisplayName("listLatest")
   class listLatest {

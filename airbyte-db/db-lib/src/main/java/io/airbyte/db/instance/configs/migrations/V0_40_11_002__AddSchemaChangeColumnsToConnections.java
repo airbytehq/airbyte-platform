@@ -14,6 +14,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add schema change column to connection migration.
+ */
 public class V0_40_11_002__AddSchemaChangeColumnsToConnections extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_11_002__AddSchemaChangeColumnsToConnections.class);
@@ -63,7 +66,7 @@ public class V0_40_11_002__AddSchemaChangeColumnsToConnections extends BaseJavaM
         .execute();
   }
 
-  public enum NonBreakingChangePreferenceType implements EnumType {
+  enum NonBreakingChangePreferenceType implements EnumType {
 
     IGNORE("ignore"),
     DISABLE("disable");

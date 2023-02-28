@@ -22,6 +22,14 @@ import org.jooq.DSLContext;
 @Slf4j
 public class MetricQueries {
 
+  /**
+   * Get releases stages for a job. Multiple release stages possible since source and destination can
+   * have different release stages.
+   *
+   * @param ctx db context
+   * @param jobId job id
+   * @return releases stages for job
+   */
   public static List<ReleaseStage> jobIdToReleaseStages(final DSLContext ctx, final long jobId) {
     final var srcRelStageCol = "src_release_stage";
     final var dstRelStageCol = "dst_release_stage";
@@ -43,6 +51,14 @@ public class MetricQueries {
     return stages;
   }
 
+  /**
+   * Get release stages for source and destination.
+   *
+   * @param ctx db context
+   * @param srcId source id
+   * @param dstId destination id
+   * @return list of release stages
+   */
   public static List<ReleaseStage> srcIdAndDestIdToReleaseStages(final DSLContext ctx, final UUID srcId, final UUID dstId) {
     return ctx.select(ACTOR_DEFINITION.RELEASE_STAGE).from(ACTOR).join(ACTOR_DEFINITION).on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_DEFINITION.ID))
         .where(ACTOR.ID.eq(srcId))

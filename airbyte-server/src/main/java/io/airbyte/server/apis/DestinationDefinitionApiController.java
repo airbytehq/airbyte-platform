@@ -31,6 +31,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/destination_definitions")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -71,6 +72,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody));
   }
 
+  @SuppressWarnings("LineLength")
   @Post(uri = "/get_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
@@ -80,6 +82,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinitionForWorkspace(destinationDefinitionIdWithWorkspaceId));
   }
 
+  @SuppressWarnings("LineLength")
   @Post(uri = "/grant_definition")
   @Secured({ADMIN})
   @ExecuteOn(TaskExecutors.IO)

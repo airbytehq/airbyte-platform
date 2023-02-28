@@ -9,8 +9,17 @@ import java.util.UUID;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.MountableFile;
 
+/**
+ * Helper for doing common postgres test container setup.
+ */
 public class PostgreSQLContainerHelper {
 
+  /**
+   * Setup database with a setup script.
+   *
+   * @param file file to execute
+   * @param db database
+   */
   public static void runSqlScript(final MountableFile file, final PostgreSQLContainer db) {
     try {
       final String scriptPath = "/etc/" + UUID.randomUUID() + ".sql";

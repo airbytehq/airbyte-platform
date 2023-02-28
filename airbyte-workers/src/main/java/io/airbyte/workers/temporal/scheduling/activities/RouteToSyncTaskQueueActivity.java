@@ -11,12 +11,18 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * RouteToSyncTaskQueueActivity.
+ */
 @ActivityInterface
 public interface RouteToSyncTaskQueueActivity {
 
   @ActivityMethod
   RouteToSyncTaskQueueOutput route(RouteToSyncTaskQueueInput input);
 
+  /**
+   * RouteToSyncTaskQueueInput.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -26,6 +32,9 @@ public interface RouteToSyncTaskQueueActivity {
 
   }
 
+  /**
+   * RouteToSyncTaskQueueOutput.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

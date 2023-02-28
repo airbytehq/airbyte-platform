@@ -28,6 +28,10 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Report errors from Jobs. Common error information that can be sent to any of the reporting
+ * clients that we support.
+ */
 public class JobErrorReporter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobErrorReporter.class);
@@ -72,7 +76,7 @@ public class JobErrorReporter {
   }
 
   /**
-   * Reports a Sync Job's connector-caused FailureReasons to the JobErrorReportingClient
+   * Reports a Sync Job's connector-caused FailureReasons to the JobErrorReportingClient.
    *
    * @param connectionId - connection that had the failure
    * @param failureSummary - final attempt failure summary
@@ -117,8 +121,8 @@ public class JobErrorReporter {
               prefixConnectorMetadataKeys(getSourceMetadata(sourceDefinition), "source"),
               getDestinationMetadata(destinationDefinition));
           final String dockerImage =
-              destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":" +
-                  destinationDefinition.getNormalizationConfig().getNormalizationTag();
+              destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":"
+                  + destinationDefinition.getNormalizationConfig().getNormalizationTag();
 
           reportJobFailureReason(workspace, failureReason, dockerImage, metadata);
         }
@@ -127,7 +131,7 @@ public class JobErrorReporter {
   }
 
   /**
-   * Reports a FailureReason from a connector Check job for a Source to the JobErrorReportingClient
+   * Reports a FailureReason from a connector Check job for a Source to the JobErrorReportingClient.
    *
    * @param workspaceId - workspace for which the check failed
    * @param failureReason - failure reason from the check connection job
@@ -148,7 +152,7 @@ public class JobErrorReporter {
 
   /**
    * Reports a FailureReason from a connector Check job for a Destination to the
-   * JobErrorReportingClient
+   * JobErrorReportingClient.
    *
    * @param workspaceId - workspace for which the check failed
    * @param failureReason - failure reason from the check connection job
@@ -168,7 +172,7 @@ public class JobErrorReporter {
   }
 
   /**
-   * Reports a FailureReason from a connector Deploy job for a Source to the JobErrorReportingClient
+   * Reports a FailureReason from a connector Deploy job for a Source to the JobErrorReportingClient.
    *
    * @param workspaceId - workspace for which the Discover job failed
    * @param failureReason - failure reason from the Discover job
@@ -188,7 +192,7 @@ public class JobErrorReporter {
   }
 
   /**
-   * Reports a FailureReason from a connector Spec job to the JobErrorReportingClient
+   * Reports a FailureReason from a connector Spec job to the JobErrorReportingClient.
    *
    * @param failureReason - failure reason from the Deploy job
    * @param jobContext - connector job reporting context
