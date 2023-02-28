@@ -1,0 +1,36 @@
+@use "scss/colors";
+@use "scss/variables";
+
+@mixin theme($name, $border, $selected, $total) {
+  &.#{$name} {
+    border: variables.$border-thin solid $border;
+
+    .selected {
+      color: $selected;
+    }
+
+    .total {
+      color: $total;
+    }
+  }
+}
+
+
+
+.container {
+  padding: variables.$spacing-xs 0;
+  width: variables.$spacing-2xl;
+  height: variables.$spacing-xl;
+  border-radius: variables.$border-radius-pill;
+
+  .selected:empty {}
+
+  .total {
+    font-size: 8px;
+  }
+
+  @include theme("grey", colors.$grey-50, colors.$grey-600, colors.$grey-400);
+  @include theme("blue", colors.$blue-100, colors.$blue-600, colors.$blue-400);
+  @include theme("green", colors.$green-50,  colors.$green-600, colors.$green-600);
+  @include theme("red", colors.$red-50, colors.$red-600, colors.$red-400);
+}
