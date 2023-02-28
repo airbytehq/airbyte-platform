@@ -1,6 +1,7 @@
 import { getTestId, joinTestIds } from "utils/selectors";
-import { IStreamsTablePageObject } from "./IStreamsTablePageObject";
+import { IStreamsTablePageObject, SYNC_MODE_STRINGS } from "./types";
 import { StreamsTablePageObjectBase } from "./StreamsTableContainerPageObject";
+import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
 
 const syncModeSelectButton = joinTestIds(getTestId("sync-mode-select"), getTestId("pill-select-button"));
 
@@ -59,9 +60,9 @@ export class NewStreamsTablePageObject extends StreamsTablePageObjectBase implem
     cy.get(getRowTestId(namespace, streamName)).click(1, 1);
   }
 
-  selectSyncMode(source: string, dest: string): void {
+  selectSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
     cy.get(syncModeSelectButton).first().click({ force: true });
-    cy.get(`.react-select__option`).contains(`${source} | ${dest}`).click();
+    cy.get(`.react-select__option`).contains(`${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`).click();
   }
 
   selectCursor(streamName: string, cursorValue: string): void {

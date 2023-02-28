@@ -1,5 +1,6 @@
-import { IStreamsTablePageObject } from "./IStreamsTablePageObject";
+import { IStreamsTablePageObject, SYNC_MODE_STRINGS } from "./types";
 import { StreamsTablePageObjectBase } from "./StreamsTableContainerPageObject";
+import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
 
 const syncModeDropdown = "div[data-testid='syncSettingsDropdown'] input";
 const getFieldDropdownContainer = (streamName: string, type: Dropdown) => `div[id='${streamName}_${type}_pathPopout']`;
@@ -65,10 +66,12 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
     cy.get(getExpandStreamArrowBtn(streamName)).click();
   }
 
-  selectSyncMode(source: string, dest: string) {
+  selectSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
     cy.get(syncModeDropdown).first().click({ force: true });
 
-    cy.get(`.react-select__option`).contains(`Source:${source}|Dest:${dest}`).click();
+    cy.get(`.react-select__option`)
+      .contains(`Source:${SYNC_MODE_STRINGS[source]}|Dest:${SYNC_MODE_STRINGS[dest]}`)
+      .click();
   }
 
   /**

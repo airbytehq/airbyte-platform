@@ -82,10 +82,21 @@ export interface SyncCatalogStream {
   namespace?: string;
 }
 
+export const enum SourceSyncMode {
+  FullRefresh = "full_refresh",
+  Incremental = "incremental",
+}
+
+export const enum DestinationSyncMode {
+  Append = "append",
+  AppendDedup = "append_dedup",
+  Overwrite = "overwrite",
+}
+
 export interface SyncCatalogStreamConfig {
-  syncMode: "full_refresh" | "incremental";
+  syncMode: SourceSyncMode;
   cursorField?: string[];
-  destinationSyncMode: "append" | "overwrite" | "append_dedup";
+  destinationSyncMode: DestinationSyncMode;
   primaryKey?: string[][];
   aliasName?: string;
   selected?: boolean;

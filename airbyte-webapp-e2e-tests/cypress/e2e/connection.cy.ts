@@ -17,6 +17,7 @@ import {
 import { goToReplicationTab } from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import streamsTablePageObject from "pages/connection/streamsTablePageObject";
+import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
 
 const sourceNamespace = "public";
 
@@ -83,7 +84,7 @@ describe("Connection - creation, updating connection replication settings, delet
     connectionForm.selectSchedule("Every hour");
     connectionForm.fillOutDestinationPrefix("auto_test");
     connectionForm.setupDestinationNamespaceCustomFormat("_test");
-    streamsTablePageObject.selectSyncMode("Full refresh", "Append");
+    streamsTablePageObject.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
 
     const prefix = "auto_test";
     connectionForm.fillOutDestinationPrefix(prefix);
@@ -389,7 +390,7 @@ describe("Connection sync modes", () => {
     goToReplicationTab();
 
     streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.selectSyncMode("Incremental", "Append");
+    streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.Append);
     streamsTablePageObject.selectCursor(streamName, "updated_at");
 
     submitButtonClick();
@@ -428,7 +429,7 @@ describe("Connection sync modes", () => {
     goToReplicationTab();
 
     streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
+    streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
     streamsTablePageObject.selectCursor(streamName, "updated_at");
     streamsTablePageObject.checkSourceDefinedPrimaryKeys(streamName, "id");
 
@@ -470,7 +471,7 @@ describe("Connection sync modes", () => {
     goToReplicationTab();
 
     streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
+    streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
     streamsTablePageObject.selectCursor(streamName, "city");
     streamsTablePageObject.checkNoSourceDefinedPrimaryKeys(sourceNamespace, streamName);
     streamsTablePageObject.selectPrimaryKeys(streamName, ["city_code"]);
