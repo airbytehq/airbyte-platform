@@ -11,7 +11,11 @@ const ConnectorBuilderEditPage = React.lazy(() => import("./ConnectorBuilderEdit
 
 export const enum ConnectorBuilderRoutePaths {
   Create = "create",
-  Edit = "edit",
+  Edit = "edit/:projectId",
+}
+
+export function getEditPath(projectId: string) {
+  return `edit/${projectId}`;
 }
 
 const ConnectorBuilderRoutes: React.FC = () => (

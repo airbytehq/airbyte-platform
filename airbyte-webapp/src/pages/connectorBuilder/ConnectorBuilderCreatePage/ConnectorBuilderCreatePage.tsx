@@ -23,24 +23,27 @@ import { Text } from "components/ui/Text";
 import { ToastType } from "components/ui/Toast";
 
 import { Action, Namespace } from "core/analytics";
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   ConnectorBuilderLocalStorageProvider,
   useConnectorBuilderLocalStorage,
 } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { useCreateProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import { ReactComponent as AirbyteLogo } from "./airbyte-logo.svg";
 import styles from "./ConnectorBuilderCreatePage.module.scss";
 import { ReactComponent as ImportYamlImage } from "./import-yaml.svg";
 import { ReactComponent as StartFromScratchImage } from "./start-from-scratch.svg";
-import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
+import { getEditPath } from "../ConnectorBuilderRoutes";
 
 const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
+const CREATE_PROJECT_ERROR_ID = "connectorBuilder.createProject.error";
 
 const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
+  const { mutateAsync: createProject, isLoading: isCreateProjectLoading } = useCreateProject();
   const { storedFormValues, setStoredFormValues, storedManifest, setStoredManifest, setStoredEditorView } =
     useConnectorBuilderLocalStorage();
   const navigate = useNavigate();
@@ -54,7 +57,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
       !isEqual(initialStoredFormValues.current, DEFAULT_BUILDER_FORM_VALUES) ||
       !isEqual(initialStoredManifest.current, DEFAULT_JSON_MANIFEST_VALUES)
     ) {
-      navigate(`../${ConnectorBuilderRoutePaths.Edit}`, { replace: true });
+      navigate(`../${getEditPath("1234")}`, { replace: true });
     }
   }, [navigate]);
 
@@ -68,6 +71,29 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
       actionDescription: "Connector Builder UI create page opened",
     });
   }, [analyticsService]);
+
+  const createAndNavigate = useCallback(
+    async (name: string, manifest?: DeclarativeComponentSchema) => {
+      try {
+        const result = await createProject({ name, manifest });
+        navigate(`../${getEditPath(result.builderProjectId)}`);
+      } catch (e) {
+        registerNotification({
+          id: CREATE_PROJECT_ERROR_ID,
+          text: (
+            <FormattedMessage
+              id={CREATE_PROJECT_ERROR_ID}
+              values={{
+                reason: e,
+              }}
+            />
+          ),
+          type: ToastType.ERROR,
+        });
+      }
+    },
+    [createProject, navigate, registerNotification]
+  );
 
   const handleYamlUpload = useCallback(
     async (uploadEvent: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,32 +137,21 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           } catch (e) {
             setStoredEditorView("yaml");
             setStoredManifest(json);
-            navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_INCOMPATIBLE_YAML_IMPORTED, {
               actionDescription: "A YAML manifest that's incompatible with the Builder UI was imported",
               error_message: e.message,
             });
+            createAndNavigate(getConnectorName(fileName), json);
             return;
           }
 
-          if (fileName) {
-            const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
-            if (fileNameNoType === "manifest") {
-              // remove http protocol from beginning of url
-              convertedFormValues.global.connectorName = convertedFormValues.global.urlBase.replace(
-                /(^\w+:|^)\/\//,
-                ""
-              );
-            } else {
-              convertedFormValues.global.connectorName = startCase(fileNameNoType);
-            }
-          }
+          convertedFormValues.global.connectorName = getConnectorName(fileName, convertedFormValues);
           setStoredEditorView("ui");
           setStoredFormValues(convertedFormValues);
-          navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_COMPATIBLE_YAML_IMPORTED, {
             actionDescription: "A YAML manifest that's compatible with the Builder UI was imported",
           });
+          createAndNavigate(getConnectorName(fileName), json);
         } finally {
           if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -152,7 +167,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
     [
       analyticsService,
       convertToBuilderFormValues,
-      navigate,
+      createAndNavigate,
       registerNotification,
       setStoredEditorView,
       setStoredFormValues,
@@ -162,7 +177,10 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
 
   // clear out notification on unmount, so it doesn't persist after a redirect
   useEffect(() => {
-    return () => unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
+    return () => {
+      unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
+      unregisterNotificationById(CREATE_PROJECT_ERROR_ID);
+    };
   }, [unregisterNotificationById]);
 
   return (
@@ -183,7 +201,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           title="connectorBuilder.createPage.importYaml.title"
           description="connectorBuilder.createPage.importYaml.description"
           buttonText="connectorBuilder.createPage.importYaml.button"
-          buttonProps={{ isLoading: importYamlLoading }}
+          buttonProps={{ isLoading: importYamlLoading || isCreateProjectLoading }}
           onClick={() => {
             unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
             fileInputRef.current?.click();
@@ -195,12 +213,13 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           title="connectorBuilder.createPage.startFromScratch.title"
           description="connectorBuilder.createPage.startFromScratch.description"
           buttonText="connectorBuilder.createPage.startFromScratch.button"
-          onClick={() => {
+          buttonProps={{ isLoading: isCreateProjectLoading }}
+          onClick={async () => {
             setStoredEditorView("ui");
-            navigate(`../${ConnectorBuilderRoutePaths.Edit}`);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
               actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });
+            createAndNavigate(getConnectorName());
           }}
           dataTestId="start-from-scratch"
         />
@@ -208,6 +227,18 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
     </FlexContainer>
   );
 };
+
+function getConnectorName(fileName?: string | undefined, formValues?: BuilderFormValues) {
+  if (!fileName) {
+    return "Untitled";
+  }
+  const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
+  if (fileNameNoType === "manifest" && formValues) {
+    // remove http protocol from beginning of url
+    return formValues.global.urlBase.replace(/(^\w+:|^)\/\//, "");
+  }
+  return startCase(fileNameNoType);
+}
 
 export const ConnectorBuilderCreatePage: React.FC = () => (
   <ConnectorBuilderLocalStorageProvider>

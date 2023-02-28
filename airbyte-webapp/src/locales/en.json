@@ -761,6 +761,7 @@
   "connectorBuilder.inputsButton": "Inputs",
   "connectorBuilder.interUserInputValue": "Insert a user input value",
   "connectorBuilder.yamlUpload.error": "The YAML you provided is invalid: {reason} (line {line})",
+  "connectorBuilder.createProject.error": "Failed to create project: {reason}",
   "connectorBuilder.title": "Connector Builder",
   "connectorBuilder.createPage.prompt": "How do you want to start building your connector?",
   "connectorBuilder.createPage.importYaml.title": "Import a YAML manifest",
