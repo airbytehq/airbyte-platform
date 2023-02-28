@@ -8,10 +8,12 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { CatalogTreeTableCell } from "./CatalogTreeTableCell";
 import styles from "./CatalogTreeTableRow.module.scss";
 import { CatalogTreeTableRowIcon } from "./CatalogTreeTableRowIcon";
+import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
 import { StreamPathSelect } from "./StreamPathSelect";
 import { SyncModeSelect } from "./SyncModeSelect";
 import { useCatalogTreeTableRowProps } from "./useCatalogTreeTableRowProps";
@@ -35,7 +37,8 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
   disabled,
   configErrors,
 }) => {
-  const { primaryKey, cursorField, syncMode, destinationSyncMode } = stream.config ?? {};
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
   const { defaultCursorField } = stream.stream ?? {};
   const syncSchema = useMemo(
     () => ({
@@ -70,12 +73,15 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell size="fixed" className={styles.syncCell}>
         <Switch size="sm" checked={stream.config?.selected} onChange={onSelectStream} disabled={disabled} />
       </CatalogTreeTableCell>
-      {/* TODO: Replace with actual field count for column selection */}
-      {/* <CatalogTreeTableCell size="fixed" className={styles.fieldsCell}>
-        <Text size="sm" className={styles.cellText}>
-          124567
-        </Text>
-      </CatalogTreeTableCell> */}
+      {isColumnSelectionEnabled && (
+        <CatalogTreeTableCell size="fixed" className={styles.fieldsCell}>
+          <FieldSelectionStatus
+            selectedFields={selectedFields?.length ?? fieldCount}
+            totalFields={fieldCount}
+            variant={pillButtonVariant as FieldSelectionStatusVariant}
+          />
+        </CatalogTreeTableCell>
+      )}
       <CatalogTreeTableCell withTooltip>
         <Text size="md" className={styles.cellText}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
