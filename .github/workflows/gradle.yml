@@ -80,6 +80,8 @@ jobs:
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
               - 'airbyte-webapp-e2e-tests/**'
+            connector-builder-micronaut
+              - 'airbyte-connector-atelier-server/**'
 
   # Uncomment to debug.
   #  changes-output:
@@ -536,7 +538,7 @@ jobs:
           # Specify top-level and second-level modules. Note there cannot be a space between the comma.
           path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
-          fail-on-error: 'false'
+          fail-on-error: "false"
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -617,7 +619,7 @@ jobs:
   helm-acceptance-test:
     name: "Platform: Acceptance Tests (Helm)"
     # In case of self-hosted EC2 errors, removed the `needs` line and switch back to running on ubuntu-latest.
-    needs: [ start-helm-acceptance-test-runner ] # required to start the main job when the runner is ready
+    needs: [start-helm-acceptance-test-runner] # required to start the main job when the runner is ready
     runs-on: ${{ needs.start-helm-acceptance-test-runner.outputs.label }} # run the job on the newly created runner
     # this is the label of the runner
     timeout-minutes: 90
@@ -753,7 +755,7 @@ jobs:
           name: Platform Helm E2E Test Report
           path: "./*/build/test-results/*/*.xml"
           reporter: java-junit
-          fail-on-error: 'false'
+          fail-on-error: "false"
 
       - uses: actions/upload-artifact@v2
         if: failure()
@@ -871,3 +873,119 @@ jobs:
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n\"}},
             {\"type\":\"divider\"}]}
+
+  # Temporary job to isolate CI testing of the airbyte-connector-atelier-server module while we port it to Micronaut. Once we have
+  # deprecated the old server, we will re-integrate this with the existing SUB_BUILD=PLATFORM jobs. It's a little heavy-handed to
+  # copy whole job definition, but this should ideally impact other teams' velocity as little as possible while retaining our own.
+  # We only want CI to run for the new micronaut server when the /airbyte-connector-atelier-server folder changes. And in turn, we
+  # only want the Platform CI to run if we've changed files in the relevant folders.
+  start-connector-atelier-server-build-runner:
+    name: "Connector Atelier Server: Start Build EC2 Runner"
+    needs:
+      - changes
+    if: needs.changes.outputs.connector-builder-micronaut == 'true'
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Checkout Airbyte
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_OSS }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Start AWS Runner
+        id: start-ec2-runner
+        uses: ./.github/actions/start-aws-runner
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+
+  connector-atelier-server-build:
+    name: "Connector Atelier Server: Build"
+    # In case of self-hosted EC2 errors, remove the next two lines and uncomment the currently commented out `runs-on` line.
+    needs: start-connector-atelier-server-build-runner # required to start the main job when the runner is ready
+    runs-on: ${{ needs.start-connector-atelier-server-build-runner.outputs.label }} # run the job on the newly created runner
+    timeout-minutes: 90
+    steps:
+      - name: Checkout Airbyte
+        uses: actions/checkout@v3
+
+      - name: Cache Build Artifacts
+        uses: ./.github/actions/cache-build-artifacts
+        with:
+          cache-key: ${{ secrets.CACHE_VERSION }}
+          cache-python: "false"
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Set up CI Gradle Properties
+        run: |
+          mkdir -p ~/.gradle/
+          cat > ~/.gradle/gradle.properties <<EOF
+          org.gradle.jvmargs=-Xmx8g -Xss4m \
+            --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED \
+            --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED \
+            --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED \
+            --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED \
+            --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+          org.gradle.workers.max=8
+          org.gradle.vfs.watch=false
+          EOF
+
+      - name: Format
+        uses: Wandalen/wretry.action@master
+        with:
+          command: SUB_BUILD=BUILDER_TO_CLOUD ./gradlew format --scan --info --stacktrace
+          attempt_limit: 3
+          attempt_delay: 5000 # in ms
+
+      - name: Ensure no file change
+        run: git --no-pager diff && test -z "$(git --no-pager diff)"
+
+      - name: Build
+        uses: Wandalen/wretry.action@master
+        with:
+          command: SUB_BUILD=BUILDER_TO_CLOUD ./gradlew build javadoc --scan
+          attempt_limit: 3
+          attempt_delay: 5000 # in ms
+
+  # In case of self-hosted EC2 errors, remove this block.
+  stop-connector-atelier-server-build-runner:
+    name: "Connector: Stop Build EC2 Runner"
+    timeout-minutes: 10
+    needs:
+      - start-connector-atelier-server-build-runner # required to get output from the start-runner job
+      - connector-atelier-server-build # required to wait when the main job is done
+    runs-on: ubuntu-latest
+    # Always is required to stop the runner even if the previous job has errors. However always() runs even if the previous step is skipped.
+    # Thus, we check for skipped here.
+    if: ${{ always() && needs.start-connector-atelier-server-build-runner.result != 'skipped'}}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: Checkout Airbyte
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_OSS }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Stop EC2 runner
+        uses: supertopher/ec2-github-runner@base64v1.0.10
+        with:
+          mode: stop
+          github-token: ${{ env.PAT }}
+          label: ${{ needs.start-connector-atelier-server-build-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-connector-atelier-server-build-runner.outputs.ec2-instance-id }}
