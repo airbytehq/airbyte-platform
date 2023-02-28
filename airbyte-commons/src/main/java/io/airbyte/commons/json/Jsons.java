@@ -640,8 +640,7 @@ public class Jsons {
    */
   private static void setNested(final JsonNode json, final List<String> keys, final BiConsumer<ObjectNode, String> typedValue) {
     Preconditions.checkArgument(!keys.isEmpty(), "Must pass at least one key");
-    final JsonNode nodeContainingFinalKey = navigateToAndCreate(json, keys.subList(0, keys.size() -
-        1));
+    final JsonNode nodeContainingFinalKey = navigateToAndCreate(json, keys.subList(0, keys.size() - 1));
     typedValue.accept((ObjectNode) nodeContainingFinalKey, keys.get(keys.size() - 1));
   }
 
