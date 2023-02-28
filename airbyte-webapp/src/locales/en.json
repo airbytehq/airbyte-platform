@@ -705,7 +705,7 @@
   "connectorBuilder.stream": "Stream",
   "connectorBuilder.uiYamlToggle.ui": "UI",
   "connectorBuilder.uiYamlToggle.yaml": "YAML",
-  "connectorBuilder.resetAll": "Reset all",
+  "connectorBuilder.backToListing": "Go back to connector list",
   "connectorBuilder.emptyName": "(empty)",
   "connectorBuilder.inputsTitle": "User Inputs",
   "connectorBuilder.inputsDescription": "User inputs will be asked to the end-user in order to set up the connector.",

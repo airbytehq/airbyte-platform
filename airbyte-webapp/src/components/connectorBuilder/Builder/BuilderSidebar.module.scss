@@ -11,9 +11,8 @@
   @include mixins.shadow;
 
   width: 90px;
-  border-radius: 25px;
+  border-radius: variables.$border-radius-2xl;
   padding: variables.$spacing-xl;
-  margin-top: 55px;
 }
 
 .connectorName {

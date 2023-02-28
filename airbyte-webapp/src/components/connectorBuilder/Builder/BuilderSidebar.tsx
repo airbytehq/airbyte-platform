@@ -14,8 +14,6 @@ import { Text } from "components/ui/Text";
 
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { RoutePaths } from "pages/routePaths";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -23,12 +21,7 @@ import styles from "./BuilderSidebar.module.scss";
 import { SavingIndicator } from "./SavingIndicator";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
-import {
-  BuilderFormValues,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES,
-  getInferredInputs,
-} from "../types";
+import { BuilderFormValues, getInferredInputs } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface ViewSelectButtonProps {
@@ -72,25 +65,10 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { hasErrors } = useBuilderErrors();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { yamlManifest, selectedView, setSelectedView, setJsonManifest, setBuilderFormValues } =
-    useConnectorBuilderFormState();
+  const { yamlManifest, selectedView, setSelectedView } = useConnectorBuilderFormState();
   const { values } = useFormikContext<BuilderFormValues>();
-  const handleResetForm = () => {
-    openConfirmationModal({
-      text: "connectorBuilder.resetModal.text",
-      title: "connectorBuilder.resetModal.title",
-      submitButtonText: "connectorBuilder.resetModal.submitButton",
-      onSubmit: () => {
-        setBuilderFormValues(DEFAULT_BUILDER_FORM_VALUES, false);
-        setJsonManifest(DEFAULT_JSON_MANIFEST_VALUES);
-        closeConfirmationModal();
-        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.RESET_ALL, {
-          actionDescription: "Connector Builder UI reset back to blank slate",
-        });
-        navigate(RoutePaths.ConnectorBuilder);
-      },
-    });
+  const goToListing = () => {
+    navigate("..");
   };
   const handleViewSelect = (selectedView: BuilderView) => {
     setSelectedView(selectedView);
@@ -100,7 +78,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
       <UiYamlToggleButton yamlSelected={false} onClick={toggleYamlEditor} />
 
-      <FlexContainer direction="column" alignItems="center" gap="sm">
+      <FlexContainer direction="column" alignItems="center">
         {/* TODO: replace with uploaded img when that functionality is added */}
         <img
           className={styles.connectorImg}
@@ -195,8 +173,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="sm">
         <DownloadYamlButton className={styles.downloadButton} yamlIsValid yaml={yamlManifest} />
-        <Button className={styles.resetButton} full variant="clear" onClick={handleResetForm}>
-          <FormattedMessage id="connectorBuilder.resetAll" />
+        <Button className={styles.resetButton} full variant="clear" onClick={goToListing}>
+          <FormattedMessage id="connectorBuilder.backToListing" />
         </Button>
       </FlexContainer>
     </FlexContainer>
