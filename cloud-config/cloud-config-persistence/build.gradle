@@ -1,0 +1,22 @@
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation project(':cloud-config:cloud-config-models')
+    implementation project(':cloud-db:jooq')
+
+    implementation libs.flyway.core
+    implementation libs.guava
+    implementation libs.platform.testcontainers.postgresql
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte.airbyte-db:db-lib"
+    implementation "io.airbyte:airbyte-json-validation"
+    implementation "io.airbyte.airbyte-persistence:job-persistence"
+
+    testImplementation project(':cloud-db:lib')
+    testImplementation("org.assertj:assertj-core:3.21.0")
+}
