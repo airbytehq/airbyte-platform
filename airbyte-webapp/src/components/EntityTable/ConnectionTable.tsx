@@ -81,6 +81,33 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
     // typing so we need an `any` to accommodate for varied column types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const columns: Array<ColumnDef<ConnectionTableDataItem, any>> = [
+      columnHelper.display({
+        id: "stream-status",
+        cell: StreamsStatusCell,
+        size: 170,
+      }),
+      columnHelper.accessor("name", {
+        header: () => (
+          <SortableTableHeader
+            onClick={() => onSortClick("name")}
+            isActive={sortBy === "name"}
+            isAscending={sortOrder === SortOrderEnum.ASC}
+          >
+            <FormattedMessage id="tables.name" />
+          </SortableTableHeader>
+        ),
+        meta: {
+          thClassName: styles.width30,
+          responsive: true,
+        },
+        cell: (props) => (
+          <ConnectionStatusCell
+            status={props.row.original.lastSyncStatus}
+            value={props.cell.getValue()}
+            enabled={props.row.original.enabled}
+          />
+        ),
+      }),
       columnHelper.accessor("entityName", {
         header: () => (
           <SortableTableHeader
@@ -175,45 +202,18 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
       }),
     ];
 
-    if (streamCentricUIEnabled) {
-      columns.unshift(
-        columnHelper.display({
-          id: "stream-status",
-          cell: StreamsStatusCell,
-          size: 170,
-        })
-      );
-    } else {
-      columns.unshift(
-        columnHelper.accessor("name", {
-          header: () => (
-            <SortableTableHeader
-              onClick={() => onSortClick("name")}
-              isActive={sortBy === "name"}
-              isAscending={sortOrder === SortOrderEnum.ASC}
-            >
-              <FormattedMessage id="tables.name" />
-            </SortableTableHeader>
-          ),
-          meta: {
-            thClassName: styles.width30,
-            responsive: true,
-          },
-          cell: (props) => (
-            <ConnectionStatusCell
-              status={props.row.original.lastSyncStatus}
-              value={props.cell.getValue()}
-              enabled={props.row.original.enabled}
-            />
-          ),
-        })
-      );
-    }
-
     return columns;
-  }, [columnHelper, streamCentricUIEnabled, sortBy, sortOrder, entity, onSortClick, allowAutoDetectSchema]);
+  }, [columnHelper, sortBy, sortOrder, entity, onSortClick, allowAutoDetectSchema]);
 
-  return <NextTable columns={columns} data={sortingData} onClickRow={onClickRow} testId="connectionsTable" />;
+  return (
+    <NextTable
+      columns={columns}
+      data={sortingData}
+      onClickRow={onClickRow}
+      testId="connectionsTable"
+      columnVisibility={{ "stream-status": streamCentricUIEnabled, name: !streamCentricUIEnabled }}
+    />
+  );
 };
 
 export default ConnectionTable;

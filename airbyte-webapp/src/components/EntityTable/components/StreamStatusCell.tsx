@@ -140,14 +140,11 @@ const StreamsBar: React.FC<{ streams: AirbyteStreamWithStatusAndConfiguration[] 
   return (
     <div className={styles.bar}>
       {nonEmptyStreams.map(([statusType, count]) => (
-        <>
-          {console.log({ statusType, count })}
-          <div
-            style={{ width: `${Number(count / streams.length) * 100}%` }}
-            className={classNames(styles.filling, statusMap[statusType as unknown as StreamStatusType])}
-            key={statusType}
-          />
-        </>
+        <div
+          style={{ width: `${Number(count / streams.length) * 100}%` }}
+          className={classNames(styles.filling, statusMap[statusType as unknown as StreamStatusType])}
+          key={statusType}
+        />
       ))}
     </div>
   );
