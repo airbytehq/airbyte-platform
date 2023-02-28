@@ -982,7 +982,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
               </button>
               <button
                 class="<removed-for-snapshot-test>"
-                data-testid="save-button"
+                data-testid="save-edit-button"
                 disabled=""
                 type="submit"
               >

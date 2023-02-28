@@ -15,7 +15,7 @@ const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference
 const nonBreakingChangesPreferenceValue = (value: string) => `div[data-testid='nonBreakingChangesPreference-${value}']`;
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
 const cancelButton = getTestId("cancel-edit-button", "button");
-const saveButton = getTestId("save-button", "button");
+const saveButton = getTestId("save-edit-button", "button");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");

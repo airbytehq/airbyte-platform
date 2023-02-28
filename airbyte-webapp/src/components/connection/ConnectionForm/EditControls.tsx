@@ -55,7 +55,7 @@ const EditControls: React.FC<EditControlProps> = ({
           type="submit"
           isLoading={isSubmitting}
           disabled={isButtonDisabled || submitDisabled}
-          data-testid="save-button"
+          data-testid="save-edit-button"
         >
           <FormattedMessage id="form.saveChanges" />
         </Button>
