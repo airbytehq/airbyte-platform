@@ -78,7 +78,7 @@ public class SourceApiController implements SourceApi {
   @ExecuteOn(TaskExecutors.IO)
   @Override
   public SourceRead createSource(final SourceCreate sourceCreate) {
-    return ApiHelper.execute(() -> sourceHandler.createSourceHandleSecret(sourceCreate));
+    return ApiHelper.execute(() -> sourceHandler.createSourceWithOptionalSecret(sourceCreate));
   }
 
   @Post("/delete")

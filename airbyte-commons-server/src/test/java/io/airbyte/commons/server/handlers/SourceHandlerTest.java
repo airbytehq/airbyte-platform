@@ -430,14 +430,14 @@ class SourceHandlerTest {
 
     // Test that calling createSourceHandleSecret only hits old code path if nothing is passed for
     // secretId
-    sourceHandlerSpy.createSourceHandleSecret(sourceCreate);
+    sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
     verify(sourceHandlerSpy).createSource(sourceCreate);
     verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any());
 
     // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
     SecretCoordinate secretCoordinate = new SecretCoordinate("test", 1);
     sourceCreate.setSecretId(secretCoordinate.getFullCoordinate());
-    sourceHandlerSpy.createSourceHandleSecret(sourceCreate);
+    sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
     verify(sourceHandlerSpy, times(2)).createSource(sourceCreate);
     verify(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
   }
