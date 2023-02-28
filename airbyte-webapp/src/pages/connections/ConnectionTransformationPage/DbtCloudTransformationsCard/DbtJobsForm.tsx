@@ -84,7 +84,12 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                               id="connection.dbtCloudJobs.noJobsFoundForAccount"
                               values={{
                                 lnk: (linkText: React.ReactNode[]) => (
-                                  <a href={links.dbtCloud} rel="noreferrer noopener">
+                                  <a
+                                    href={links.dbtCloud}
+                                    rel="noreferrer noopener"
+                                    target="_blank"
+                                    className={styles.linkText}
+                                  >
                                     {linkText}
                                   </a>
                                 ),
