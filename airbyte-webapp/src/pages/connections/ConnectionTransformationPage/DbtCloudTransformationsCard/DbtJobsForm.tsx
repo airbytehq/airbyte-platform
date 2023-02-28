@@ -9,7 +9,6 @@ import { Card } from "components/ui/Card";
 import { DropdownMenu } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
-import { Tooltip } from "components/ui/Tooltip";
 
 import { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud";
 import { DbtCloudJob, isSameJob } from "packages/cloud/services/dbtCloud";
@@ -82,22 +81,18 @@ export const DbtJobsForm: React.FC<DbtJobsFormProps> = ({
                           </DropdownMenu>
                         ) : (
                           <FlexContainer alignItems="center">
-                            <Tooltip
-                              control={
-                                <Text color="grey">
-                                  <FormattedMessage
-                                    id="connection.dbtCloudJobs.noJobsFoundForAccount"
-                                    values={{
-                                      lnk: (linkText: React.ReactNode[]) => (
-                                        <a href={links.dbtCloud} rel="noreferrer noopener">
-                                          <Text>{linkText}</Text>
-                                        </a>
-                                      ),
-                                    }}
-                                  />
-                                </Text>
-                              }
-                            />
+                            <Text color="grey">
+                              <FormattedMessage
+                                id="connection.dbtCloudJobs.noJobsFoundForAccount"
+                                values={{
+                                  lnk: (linkText: React.ReactNode[]) => (
+                                    <a href={links.dbtCloud} rel="noreferrer noopener">
+                                      <Text>{linkText}</Text>
+                                    </a>
+                                  ),
+                                }}
+                              />
+                            </Text>
                           </FlexContainer>
                         )}
                       </span>
