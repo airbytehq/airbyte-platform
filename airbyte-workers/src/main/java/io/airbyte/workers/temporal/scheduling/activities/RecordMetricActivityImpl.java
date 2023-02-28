@@ -77,7 +77,10 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput) {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
     metricAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionUpdaterInput.getConnectionId())));
-    metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString()));
+
+    final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString();
+    metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId));
+    log.debug("generated metric attributes for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.getConnectionId());
     return metricAttributes;
   }
 
@@ -93,7 +96,9 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
     if (connectionUpdaterInput != null) {
       if (connectionUpdaterInput.getConnectionId() != null) {
         tags.put(CONNECTION_ID_KEY, connectionUpdaterInput.getConnectionId());
-        tags.put(WORKSPACE_ID_KEY, getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString());
+        final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString();
+        tags.put(WORKSPACE_ID_KEY, workspaceId);
+        log.debug("generated tags for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.getConnectionId());
       }
       if (connectionUpdaterInput.getJobId() != null) {
         tags.put(JOB_ID_KEY, connectionUpdaterInput.getJobId());
@@ -106,6 +111,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   @Cacheable("connection-workspace-id")
   UUID getWorkspaceId(final UUID connectionId) {
     try {
+      log.debug("Calling workspaceApi to fetch workspace ID for connection ID {}", connectionId);
       final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
       return workspaceRead.getWorkspaceId();
     } catch (final ApiException e) {
