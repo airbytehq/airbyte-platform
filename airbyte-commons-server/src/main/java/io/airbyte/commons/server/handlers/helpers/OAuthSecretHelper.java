@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * Holds helpers to handle OAuth secrets
+ * Holds helpers to handle OAuth secrets.
  */
 public class OAuthSecretHelper {
 
