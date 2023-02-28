@@ -29,9 +29,13 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Default implementation of the SyncPersistence
- *
+ * <p>
  * Persistence operations are delegated to an API and batched with a regular interval. Buffering is
  * handled in memory.
+ * <p>
+ * This implementation is meant to work for a single sync at time. Using it with data from different
+ * connections will end up mixing the data. Given the scope, it is annotated as `@Prototype` which
+ * tells micronaut to re-create a fresh instance everytime the SyncPersistence is requested.
  */
 @Slf4j
 @Prototype
