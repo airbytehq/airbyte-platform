@@ -89,6 +89,7 @@ class ContainerOrchestratorFactory {
     return new KubeProcessFactory(
         workerConfigs,
         configs.getJobKubeNamespace(),
+        configs.getJobKubeServiceAccount(),
         new DefaultKubernetesClient(),
         kubeHeartbeatUrl,
         false);
