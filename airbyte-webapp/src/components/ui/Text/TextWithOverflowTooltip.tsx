@@ -48,7 +48,7 @@ export const TextWithOverflowTooltip: React.FC<React.PropsWithChildren<TextWithO
           </Text>
         }
         disabled={tooltipDisabled}
-        className={styles.fullWidthTooltip} // todo: is that right?
+        className={styles.tooltip} // todo: is that right?
         containerClassName={styles.overflowTooltipContainer}
       >
         {textRef.current?.textContent}

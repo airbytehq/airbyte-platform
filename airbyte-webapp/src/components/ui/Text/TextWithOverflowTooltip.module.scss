@@ -4,10 +4,10 @@
   white-space: nowrap;
 }
 
-.fullWidthTooltip {
-  max-width: none;
-}
-
 .overflowTooltipContainer {
   min-width: 0;
+}
+
+.tooltip {
+  word-break: break-word;
 }
