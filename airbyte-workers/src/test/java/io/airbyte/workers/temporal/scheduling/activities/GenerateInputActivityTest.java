@@ -36,7 +36,9 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.CommitStatesAsap;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -50,11 +52,14 @@ import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.S
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,6 +72,8 @@ class GenerateInputActivityTest {
   private static GenerateInputActivityImpl generateInputActivity;
   private static OAuthConfigSupplier oAuthConfigSupplier;
   private static Job job;
+  private static FeatureFlagClient featureFlagClient;
+  private static Map<String, Boolean> featureFlagMap;
 
   private static final JsonNode SOURCE_CONFIGURATION = Jsons.jsonNode(Map.of("source_key", "source_value"));
   private static final JsonNode SOURCE_CONFIG_WITH_OAUTH = Jsons.jsonNode(Map.of("source_key", "source_value", "oauth", "oauth_value"));
@@ -86,7 +93,8 @@ class GenerateInputActivityTest {
   @BeforeEach
   void setUp() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
-    final FeatureFlagClient featureFlagClient = mock(FeatureFlagClient.class);
+    featureFlagMap = new HashMap<>();
+    featureFlagClient = new TestClient(featureFlagMap);
 
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     stateApi = mock(StateApi.class);
@@ -116,8 +124,10 @@ class GenerateInputActivityTest {
     when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
   }
 
-  @Test
-  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testGetSyncWorkflowInput(boolean commitStateAsap) throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
+    featureFlagMap.put(CommitStatesAsap.INSTANCE.getKey(), commitStateAsap);
     final SyncInput syncInput = new SyncInput(ATTEMPT_ID, JOB_ID);
 
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -157,7 +167,8 @@ class GenerateInputActivityTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withState(STATE)
         .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
-        .withWorkspaceId(jobSyncConfig.getWorkspaceId());
+        .withWorkspaceId(jobSyncConfig.getWorkspaceId())
+        .withCommitStateAsap(commitStateAsap);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
