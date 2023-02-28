@@ -19,8 +19,8 @@
 
 .container {
   padding: variables.$spacing-xs 0;
-  width: variables.$spacing-2xl;
-  height: variables.$spacing-xl;
+  min-width: variables.$spacing-2xl;
+  min-height: variables.$spacing-xl;
   border-radius: variables.$border-radius-pill;
 
   .selected:empty {}
