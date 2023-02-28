@@ -21,13 +21,13 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
+import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -58,9 +58,8 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void recordWorkflowCountMetric(final RecordMetricInput metricInput) {
-    final Optional<UUID> workspaceIdOptional = getWorkspaceId(metricInput);
-    ApmTraceUtils.addTagsToTrace(generateTags(metricInput.getConnectionUpdaterInput(), workspaceIdOptional));
-    final List<MetricAttribute> baseMetricAttributes = generateMetricAttributes(metricInput.getConnectionUpdaterInput(), workspaceIdOptional);
+    ApmTraceUtils.addTagsToTrace(generateTags(metricInput.getConnectionUpdaterInput()));
+    final List<MetricAttribute> baseMetricAttributes = generateMetricAttributes(metricInput.getConnectionUpdaterInput());
     if (metricInput.getMetricAttributes() != null) {
       baseMetricAttributes.addAll(Stream.of(metricInput.getMetricAttributes()).collect(Collectors.toList()));
     }
@@ -75,11 +74,10 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
    *        be executed.
    * @return The list of {@link MetricAttribute}s to be included when recording a metric.
    */
-  private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput,
-                                                         final Optional<UUID> workspaceIdOptional) {
+  private List<MetricAttribute> generateMetricAttributes(final ConnectionUpdaterInput connectionUpdaterInput) {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
     metricAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionUpdaterInput.getConnectionId())));
-    workspaceIdOptional.ifPresent(id -> metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, id.toString())));
+    metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString()));
     return metricAttributes;
   }
 
@@ -89,30 +87,27 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
    * @param connectionUpdaterInput The connection update input information.
    * @return The map of tags for instrumentation.
    */
-  private Map<String, Object> generateTags(final ConnectionUpdaterInput connectionUpdaterInput, final Optional<UUID> workspaceIdOptional) {
+  private Map<String, Object> generateTags(final ConnectionUpdaterInput connectionUpdaterInput) {
     final Map<String, Object> tags = new HashMap();
 
     if (connectionUpdaterInput != null) {
       if (connectionUpdaterInput.getConnectionId() != null) {
         tags.put(CONNECTION_ID_KEY, connectionUpdaterInput.getConnectionId());
+        tags.put(WORKSPACE_ID_KEY, getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString());
       }
       if (connectionUpdaterInput.getJobId() != null) {
         tags.put(JOB_ID_KEY, connectionUpdaterInput.getJobId());
       }
-      workspaceIdOptional.ifPresent(id -> tags.put(WORKSPACE_ID_KEY, id));
     }
 
     return tags;
   }
 
-  private Optional<UUID> getWorkspaceId(final RecordMetricInput recordMetricInput) {
-    if (recordMetricInput.getConnectionUpdaterInput() == null) {
-      return Optional.empty();
-    }
+  @Cacheable(value = "connection-workspace-id")
+  private UUID getWorkspaceId(final UUID connectionId) {
     try {
-      final UUID connectionId = recordMetricInput.getConnectionUpdaterInput().getConnectionId();
       final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
-      return Optional.of(workspaceRead.getWorkspaceId());
+      return workspaceRead.getWorkspaceId();
     } catch (final ApiException e) {
       throw new RetryableException(e);
     }

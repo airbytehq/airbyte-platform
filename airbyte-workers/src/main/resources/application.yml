@@ -3,6 +3,9 @@ micronaut:
     name: airbyte-workers
   server:
     port: 9000
+  caches:
+    connection-workspace-id:
+      maximumSize: 1000
 
 airbyte:
   activity:
