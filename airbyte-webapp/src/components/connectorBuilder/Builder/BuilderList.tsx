@@ -41,6 +41,7 @@ export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, b
       ))}
       <div>
         <Button
+          type="button"
           variant="secondary"
           icon={<FontAwesomeIcon icon={faPlus} />}
           onClick={() => {
