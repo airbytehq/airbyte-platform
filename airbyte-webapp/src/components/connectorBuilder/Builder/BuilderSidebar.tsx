@@ -4,10 +4,8 @@ import classnames from "classnames";
 import { useFormikContext } from "formik";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
 import Indicator from "components/Indicator";
-import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
@@ -61,15 +59,11 @@ interface BuilderSidebarProps {
 }
 
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className, toggleYamlEditor }) => {
-  const navigate = useNavigate();
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { hasErrors } = useBuilderErrors();
   const { yamlManifest, selectedView, setSelectedView } = useConnectorBuilderFormState();
   const { values } = useFormikContext<BuilderFormValues>();
-  const goToListing = () => {
-    navigate("..");
-  };
   const handleViewSelect = (selectedView: BuilderView) => {
     setSelectedView(selectedView);
   };
@@ -173,9 +167,6 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="sm">
         <DownloadYamlButton className={styles.downloadButton} yamlIsValid yaml={yamlManifest} />
-        <Button className={styles.resetButton} full variant="clear" onClick={goToListing}>
-          <FormattedMessage id="connectorBuilder.backToListing" />
-        </Button>
       </FlexContainer>
     </FlexContainer>
   );
