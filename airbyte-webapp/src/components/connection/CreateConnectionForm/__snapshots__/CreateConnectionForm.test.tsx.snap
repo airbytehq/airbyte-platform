@@ -1146,7 +1146,9 @@ exports[`CreateConnectionForm should render 1`] = `
         <div
           class="<removed-for-snapshot-test>"
         >
-          <div />
+          <div
+            class="<removed-for-snapshot-test>"
+          />
           <div>
             <button
               class="<removed-for-snapshot-test>"
