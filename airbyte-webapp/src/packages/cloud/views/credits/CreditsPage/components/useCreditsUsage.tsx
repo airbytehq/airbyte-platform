@@ -6,37 +6,60 @@ export const useCreditsUsage = () => {
   // const { workspaceId } = useCurrentWorkspace();
   // const data = useGetCloudWorkspaceUsage(workspaceId);
   const data = mockWorkspaceCreditsUsage;
-
   const { consumptionPerConnectionPerTimeframe } = data;
-  const freeAndPaidUsagePerDay: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">> =
-    consumptionPerConnectionPerTimeframe
-      ?.sort((a, b) => {
-        return a.timeframe.localeCompare(b.timeframe);
-      })
-      ?.reduce((allConsumption: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">>, consumption) => {
-        const consumptionTimeframeToDay = new Date(consumption.timeframe);
 
-        const localizedDateTimeframe = consumptionTimeframeToDay.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
+  /**
+   * for phase 1, we assume a time window of the past 30 days and an aggregation of per day.
+   * for phase 2, we will be pulling time window and aggregation from the response instead as we
+   * will be supporting more time windows and aggregations.
+   *
+   * in phase 2, we can, and will need to, readjust this a bit
+   *  */
 
-        if (allConsumption.some((item) => item.timeframe === localizedDateTimeframe)) {
-          const timeframeItem = allConsumption.filter((item) => {
-            return item.timeframe === localizedDateTimeframe;
-          })[0];
-          timeframeItem.billedCost = (timeframeItem.billedCost ?? 0) + consumption.billedCost;
-          timeframeItem.freeUsage = (timeframeItem.freeUsage ?? 0) + consumption.freeUsage;
-        } else {
-          allConsumption.push({
-            timeframe: localizedDateTimeframe,
-            billedCost: consumption.billedCost,
-            freeUsage: consumption.freeUsage,
-          });
-        }
+  const windowEnd = new Date();
+  const windowStart = new Date(new Date().setDate(windowEnd.getDate() - 30));
 
-        return allConsumption;
-      }, []);
+  const timeWindow = [windowStart, windowEnd];
 
-  return { data, freeAndPaidUsagePerDay };
+  const freeAndPaidUsagePerTimeframe: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">> = [];
+
+  const date = new Date(timeWindow[0]);
+  while (date <= timeWindow[1]) {
+    const localizedDateTimeframe = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    freeAndPaidUsagePerTimeframe.push({
+      timeframe: localizedDateTimeframe,
+      billedCost: 0,
+      freeUsage: 0,
+    });
+    date.setDate(date.getDate() + 1);
+  }
+
+  consumptionPerConnectionPerTimeframe
+    ?.sort((a, b) => {
+      return a.timeframe.localeCompare(b.timeframe);
+    })
+    .forEach((consumption) => {
+      const consumptionTimeframeToDay = new Date(consumption.timeframe);
+
+      const localizedDateTimeframe = consumptionTimeframeToDay.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+
+      const timeframeItemIndex = freeAndPaidUsagePerTimeframe.findIndex(
+        (item) => item.timeframe === localizedDateTimeframe
+      );
+
+      if (timeframeItemIndex !== -1) {
+        freeAndPaidUsagePerTimeframe[timeframeItemIndex].billedCost =
+          (freeAndPaidUsagePerTimeframe[timeframeItemIndex].billedCost ?? 0) + consumption.billedCost;
+        freeAndPaidUsagePerTimeframe[timeframeItemIndex].freeUsage =
+          (freeAndPaidUsagePerTimeframe[timeframeItemIndex].freeUsage ?? 0) + consumption.freeUsage;
+      }
+    });
+
+  return { data, freeAndPaidUsagePerTimeframe };
 };

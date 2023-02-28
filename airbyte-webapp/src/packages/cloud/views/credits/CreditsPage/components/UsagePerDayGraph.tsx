@@ -21,7 +21,7 @@ import styles from "./UsagePerDayGraph.module.scss";
 import { useCreditsUsage } from "./useCreditsUsage";
 
 export const UsagePerDayGraph: React.FC = () => {
-  const { freeAndPaidUsagePerDay: data } = useCreditsUsage();
+  const { freeAndPaidUsagePerTimeframe: data } = useCreditsUsage();
 
   const { formatMessage } = useIntl();
   const { formatNumber } = useIntl();
