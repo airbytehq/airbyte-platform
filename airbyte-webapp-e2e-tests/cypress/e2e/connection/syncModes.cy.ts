@@ -81,7 +81,7 @@ const saveConnectionAndAssertStreams = (
     });
 };
 
-describe.skip("Connection - sync modes", () => {
+describe("Connection - sync modes", () => {
   const streamsTable = new NewStreamsTablePageObject();
 
   let source: Source;
@@ -100,36 +100,30 @@ describe.skip("Connection - sync modes", () => {
 
     initialSetupCompleted();
 
-    requestWorkspaceId()
-      .then(() => {
-        const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Sync Mode Test Source"));
-        const destinationRequestBody = getPostgresCreateDestinationBody(
-          appendRandomString("Sync Mode Test Destination")
-        );
+    requestWorkspaceId().then(() => {
+      const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Sync Mode Test Source"));
+      const destinationRequestBody = getPostgresCreateDestinationBody(appendRandomString("Sync Mode Test Destination"));
 
-        return requestCreateSource(sourceRequestBody).then((sourceResponse) => {
-          source = sourceResponse;
-          requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
-            destination = destinationResponse;
+      return requestCreateSource(sourceRequestBody).then((sourceResponse) => {
+        source = sourceResponse;
+        requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
+          destination = destinationResponse;
+        });
+
+        return requestSourceDiscoverSchema(source.sourceId).then(({ catalog, catalogId }) => {
+          const connectionRequestBody = getConnectionCreateRequest({
+            name: appendRandomString("Sync Mode Test connection"),
+            sourceId: source.sourceId,
+            destinationId: destination.destinationId,
+            syncCatalog: catalog,
+            sourceCatalogId: catalogId,
           });
-
-          return requestSourceDiscoverSchema(source.sourceId).then(({ catalog, catalogId }) => {
-            const connectionRequestBody = getConnectionCreateRequest({
-              name: appendRandomString("Sync Mode Test connection"),
-              sourceId: source.sourceId,
-              destinationId: destination.destinationId,
-              syncCatalog: catalog,
-              sourceCatalogId: catalogId,
-            });
-            return requestCreateConnection(connectionRequestBody).then((connectionResponse) => {
-              connection = connectionResponse;
-            });
+          return requestCreateConnection(connectionRequestBody).then((connectionResponse) => {
+            connection = connectionResponse;
           });
         });
-      })
-      .then(() => {
-        connectionPage.visit(connection, "replication", { interceptGetHandler: modifyAccountsTableInterceptHandler });
       });
+    });
   });
 
   after(() => {
@@ -146,18 +140,20 @@ describe.skip("Connection - sync modes", () => {
     dropTables();
   });
 
+  beforeEach(() => {
+    connectionPage.visit(connection, "replication", { interceptGetHandler: modifyAccountsTableInterceptHandler });
+  });
+
   describe("Full refresh | Overwrite", () => {
-    it("selects sync mode", () => {
+    it("selects and saves", () => {
       streamsTable.searchStream("users");
       streamsTable.selectSyncMode("Full refresh", "Overwrite");
-    });
 
-    it("does not require primary key or cursor", () => {
+      // Check cursor and primary key
       streamsTable.checkNoSourceDefinedCursor("public", "users");
       streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
-    });
 
-    it("saves", () => {
+      // Save
       saveConnectionAndAssertStreams({
         namespace: "public",
         name: "users",
@@ -167,26 +163,21 @@ describe.skip("Connection - sync modes", () => {
         },
       });
 
+      // Confirm after save
       streamsTable.checkNoSourceDefinedCursor("public", "users");
       streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
   });
 
   describe("Full refresh | Append", () => {
-    before(() => {
+    it("selects and saves", () => {
       streamsTable.searchStream("users");
-    });
-
-    it("selects sync mode", () => {
       streamsTable.selectSyncMode("Full refresh", "Append");
-    });
 
-    it("does not require primary key or cursor", () => {
+      // Verify primary key and cursor
       streamsTable.checkNoSourceDefinedCursor("public", "users");
       streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
-    });
 
-    it("saves", () => {
       saveConnectionAndAssertStreams({
         namespace: "public",
         name: "users",
@@ -196,172 +187,143 @@ describe.skip("Connection - sync modes", () => {
         },
       });
 
+      // Verify changes after save
       streamsTable.checkNoSourceDefinedCursor("public", "users");
       streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
   });
 
   describe("Incremental | Deduped + history", () => {
-    describe("with source-defined primary keys", () => {
+    it("selects and saves with source-defined primary keys", () => {
       const cursor = "updated_at";
       const primaryKey = "id";
 
-      before(() => {
-        streamsTable.searchStream("users2");
-        streamsTable.selectSyncMode("Incremental", "Deduped + history");
+      streamsTable.searchStream("users2");
+      streamsTable.selectSyncMode("Incremental", "Deduped + history");
+
+      // Select cursor mode
+      streamsTable.hasEmptyCursorSelect("public", "users2");
+      streamsTable.selectCursor("users2", cursor);
+      streamsTable.checkSelectedCursorField("users2", cursor);
+
+      // Check primary key
+      streamsTable.checkSourceDefinedPrimaryKeys("users2", primaryKey);
+
+      saveConnectionAndAssertStreams({
+        namespace: "public",
+        name: "users2",
+        config: {
+          syncMode: "incremental",
+          destinationSyncMode: "append_dedup",
+          cursorField: [cursor],
+          primaryKey: [[primaryKey]],
+        },
       });
 
-      it("should be able to select cursor", () => {
-        streamsTable.hasEmptyCursorSelect("public", "users2");
-        streamsTable.selectCursor("users2", cursor);
-        streamsTable.checkSelectedCursorField("users2", cursor);
-      });
-
-      it("has source-defined primary key", () => {
-        streamsTable.checkSourceDefinedPrimaryKeys("users2", primaryKey);
-      });
-
-      it("saves", () => {
-        saveConnectionAndAssertStreams({
-          namespace: "public",
-          name: "users2",
-          config: {
-            syncMode: "incremental",
-            destinationSyncMode: "append_dedup",
-            cursorField: [cursor],
-            primaryKey: [[primaryKey]],
-          },
-        });
-
-        streamsTable.checkSelectedCursorField("users2", cursor);
-        streamsTable.checkSourceDefinedPrimaryKeys("users2", primaryKey);
-      });
+      // Verify changes after save
+      streamsTable.checkSelectedCursorField("users2", cursor);
+      streamsTable.checkSourceDefinedPrimaryKeys("users2", primaryKey);
     });
 
-    describe("with source-defined cursor and primary keys", () => {
+    it("selects and saves with source-defined cursor and primary keys", () => {
       const cursor = "updated_at";
       const primaryKey = "id";
+      streamsTable.searchStream("accounts");
+      streamsTable.selectSyncMode("Incremental", "Deduped + history");
 
-      before(() => {
-        streamsTable.searchStream("accounts");
-        streamsTable.selectSyncMode("Incremental", "Deduped + history");
+      // Check cursor and primary key
+      streamsTable.checkSourceDefinedCursor("accounts", cursor);
+      streamsTable.checkSourceDefinedPrimaryKeys("accounts", primaryKey);
+
+      saveConnectionAndAssertStreams({
+        namespace: "public",
+        name: "accounts",
+        config: {
+          syncMode: "incremental",
+          destinationSyncMode: "append_dedup",
+          cursorField: ["updated_at"],
+          primaryKey: [["id"]],
+        },
       });
 
-      it("has source-defined cursor", () => {
-        streamsTable.checkSourceDefinedCursor("accounts", cursor);
-      });
-
-      it("has source-defined primary key", () => {
-        streamsTable.checkSourceDefinedPrimaryKeys("accounts", primaryKey);
-      });
-
-      it("saves", () => {
-        saveConnectionAndAssertStreams({
-          namespace: "public",
-          name: "accounts",
-          config: {
-            syncMode: "incremental",
-            destinationSyncMode: "append_dedup",
-            cursorField: ["updated_at"],
-            primaryKey: [["id"]],
-          },
-        });
-
-        streamsTable.checkSourceDefinedCursor("accounts", cursor);
-        streamsTable.checkSourceDefinedPrimaryKeys("accounts", primaryKey);
-      });
+      // Verify after save
+      streamsTable.checkSourceDefinedCursor("accounts", cursor);
+      streamsTable.checkSourceDefinedPrimaryKeys("accounts", primaryKey);
     });
 
-    describe("with selectable primary keys", () => {
+    it("selects and saves with selectable user-defined keys and cursors", () => {
       const cursorValue = "created_at";
       const primaryKeyValue = ["car_id", "user_id"];
 
-      before(() => {
-        streamsTable.searchStream("user_cars");
-        streamsTable.selectSyncMode("Incremental", "Deduped + history");
+      streamsTable.searchStream("user_cars");
+      streamsTable.selectSyncMode("Incremental", "Deduped + history");
+
+      // Check that cursor and primary key is required
+      streamsTable.hasEmptyCursorSelect("public", "user_cars");
+      streamsTable.hasEmptyPrimaryKeySelect("public", "user_cars");
+      replicationPage.getSaveButton().should("be.disabled");
+
+      // Can save when stream is disabled
+      streamsTable.disableStream("public", "user_cars");
+      replicationPage.getSaveButton().should("be.enabled");
+      streamsTable.enableStream("public", "user_cars");
+
+      // Can select cursor
+      streamsTable.selectCursor("user_cars", cursorValue);
+      streamsTable.checkSelectedCursorField("user_cars", cursorValue);
+
+      // Can select single primary key
+      const singlePrimaryKeyValue = [primaryKeyValue[0]];
+      streamsTable.selectPrimaryKeys("user_cars", singlePrimaryKeyValue);
+      streamsTable.checkSelectedPrimaryKeys("user_cars", singlePrimaryKeyValue);
+
+      // Unchecks:
+      streamsTable.selectPrimaryKeys("user_cars", singlePrimaryKeyValue);
+
+      // Can select multiple values
+      streamsTable.selectPrimaryKeys("user_cars", primaryKeyValue);
+      streamsTable.checkSelectedPrimaryKeys("user_cars", primaryKeyValue);
+
+      saveConnectionAndAssertStreams({
+        namespace: "public",
+        name: "user_cars",
+        config: {
+          syncMode: "incremental",
+          destinationSyncMode: "append_dedup",
+          cursorField: [cursorValue],
+          primaryKey: [primaryKeyValue],
+        },
       });
 
-      it("has empty cursor and primary key selects", () => {
-        streamsTable.hasEmptyCursorSelect("public", "user_cars");
-        streamsTable.hasEmptyPrimaryKeySelect("public", "user_cars");
-        replicationPage.getSaveButton().should("be.disabled");
-      });
-
-      it("can save when stream is disabled", () => {
-        streamsTable.disableStream("public", "user_cars");
-        replicationPage.getSaveButton().should("be.enabled");
-        streamsTable.enableStream("public", "user_cars");
-      });
-
-      it("should be able to select cursor", () => {
-        streamsTable.selectCursor("user_cars", cursorValue);
-        streamsTable.checkSelectedCursorField("user_cars", cursorValue);
-      });
-
-      it("can select single primary key", () => {
-        const singlePrimaryKeyValue = [primaryKeyValue[0]];
-        streamsTable.selectPrimaryKeys("user_cars", singlePrimaryKeyValue);
-        streamsTable.checkSelectedPrimaryKeys("user_cars", singlePrimaryKeyValue);
-
-        // Unchecks:
-        streamsTable.selectPrimaryKeys("user_cars", singlePrimaryKeyValue);
-      });
-
-      it("can select multiple primary keys", () => {
-        streamsTable.selectPrimaryKeys("user_cars", primaryKeyValue);
-        streamsTable.checkSelectedPrimaryKeys("user_cars", primaryKeyValue);
-      });
-
-      it("saves", () => {
-        saveConnectionAndAssertStreams({
-          namespace: "public",
-          name: "user_cars",
-          config: {
-            syncMode: "incremental",
-            destinationSyncMode: "append_dedup",
-            cursorField: [cursorValue],
-            primaryKey: [primaryKeyValue],
-          },
-        });
-
-        streamsTable.checkSelectedCursorField("user_cars", cursorValue);
-        streamsTable.checkSelectedPrimaryKeys("user_cars", primaryKeyValue);
-      });
+      // Verify save
+      streamsTable.checkSelectedCursorField("user_cars", cursorValue);
+      streamsTable.checkSelectedPrimaryKeys("user_cars", primaryKeyValue);
     });
   });
 
   describe("Incremental | Append", () => {
-    const cursor = "updated_at";
+    it("selects and saves", () => {
+      const cursor = "updated_at";
 
-    before(() => {
       streamsTable.searchStream("users");
-    });
-
-    it("selects sync mode", () => {
       streamsTable.selectSyncMode("Incremental", "Append");
-    });
 
-    it("has selectable cursor", () => {
+      // Cursor selection is required
       replicationPage.getSaveButton().should("be.disabled");
       streamsTable.hasEmptyCursorSelect("public", "users");
-    });
 
-    it("does not require a primary key", () => {
+      // No primary key required
       streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
-    });
 
-    it("can save when stream is disabled", () => {
+      // Can save if disabled
       streamsTable.disableStream("public", "users");
       replicationPage.getSaveButton().should("be.enabled");
       streamsTable.enableStream("public", "users");
-    });
 
-    it("selects cursor", () => {
+      // Select cursor
       streamsTable.selectCursor("users", cursor);
       streamsTable.checkSelectedCursorField("users", cursor);
-    });
 
-    it("saves", () => {
       saveConnectionAndAssertStreams({
         namespace: "public",
         name: "users",
@@ -372,6 +334,7 @@ describe.skip("Connection - sync modes", () => {
         },
       });
 
+      // Verify save
       streamsTable.checkSelectedCursorField("users", cursor);
       streamsTable.checkNoSourceDefinedPrimaryKeys("public", "users");
     });
