@@ -57,7 +57,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   public SyncPersistenceImpl(final StateApi stateApi,
                              final StateAggregatorFactory stateAggregatorFactory,
                              @Named("syncPersistenceExecutorService") final ScheduledExecutorService scheduledExecutorService,
-                             @Value("${airbyte.worker.replication.persistence-flush-period}") final long stateFlushPeriodInSeconds) {
+                             @Value("${airbyte.worker.replication.persistence-flush-period-sec}") final long stateFlushPeriodInSeconds) {
     this.stateApi = stateApi;
     this.stateAggregatorFactory = stateAggregatorFactory;
     this.stateFlushExecutorService = scheduledExecutorService;

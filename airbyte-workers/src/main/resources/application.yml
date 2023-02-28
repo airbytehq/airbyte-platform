@@ -164,7 +164,7 @@ airbyte:
             limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
-      persistence-flush-period: ${REPLICATION_FLUSH_PERIOD:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
       orchestrator:
         cpu:
           limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}

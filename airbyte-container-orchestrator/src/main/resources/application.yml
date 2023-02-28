@@ -27,7 +27,7 @@ airbyte:
       host: ${INTERNAL_API_HOST}
   worker:
     replication:
-      persistence-flush-period: ${REPLICATION_FLUSH_PERIOD:60}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
 
 endpoints:
   beans:
