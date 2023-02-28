@@ -23,8 +23,8 @@ import { Syncing } from "./StreamStatusIcons/Syncing";
 import { AirbyteStreamAndConfiguration } from "../../../core/request/AirbyteClient";
 import { ConnectionTableDataItem } from "../types";
 
-// TOODO: Once available, add Error with Action
-type StatusType = "On Track" | "Disabled" | "Error" | "Behind";
+// TODO: When we have Actionable Errors, uncomment
+type StatusType = /* "Action Required" | */ "On Track" | "Disabled" | "Error" | "Behind";
 
 const statusMap: Readonly<Record<StatusType, string>> = {
   "On Track": styles.onTrack,
@@ -84,15 +84,15 @@ const generateFakeStreamsWithStatus = (
 };
 
 const getStatusForStream = (stream: AirbyteStreamWithStatusAndConfiguration): StatusType => {
-  // connection.syncCatalog.streams[0].config?.selected
   if (stream.config && stream.config.selected) {
     if (stream.config.status === "active" && stream.config.latestSyncJobStatus !== "failed") {
       if (
-        stream.config.scheduleType !== "manual" &&
+        // This can be undefined due to historical data, but should always be present
+        stream.config.scheduleType &&
+        !["cron", "manual"].includes(stream.config.scheduleType) &&
         stream.config.latestSyncJobCreatedAt &&
         stream.config.scheduleData?.basicSchedule?.units &&
-        // x1000 for a JS datetime
-        stream.config.latestSyncJobCreatedAt * 1000 <
+        stream.config.latestSyncJobCreatedAt * 1000 < // x1000 for a JS datetime
           dayjs()
             // Subtract 2x the scheduled interval and compare it to last sync time
             .subtract(stream.config.scheduleData.basicSchedule.units, stream.config.scheduleData.basicSchedule.timeUnit)
@@ -114,7 +114,8 @@ const sortStreams = (streams: AirbyteStreamWithStatusAndConfiguration[]): Record
       sortedStreams[getStatusForStream(stream)]++;
       return sortedStreams;
     },
-    { "On Track": 0, Behind: 0, Error: 0, Disabled: 0 }
+    // This is the intended display order thanks to Javascript object insertion order!
+    { /* "Action Required": 0, */ Error: 0, Behind: 0, "On Track": 0, Disabled: 0 }
   );
 
 const StreamsBar: React.FC<{ streams: AirbyteStreamWithStatusAndConfiguration[] }> = ({ streams }) => {

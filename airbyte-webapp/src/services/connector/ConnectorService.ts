@@ -25,7 +25,7 @@ class ConnectorService extends AirbyteRequestService {
   checkUpdates() {
     if (this.enabledFeatures[FeatureItem.AllowUpdateConnectors]) {
       // TODO: Remove this catch. There's something odd happening when I refresh
-      return webBackendCheckUpdates(this.requestOptions).catch(() => Promise.resolve(NO_UPDATES));
+      return webBackendCheckUpdates(this.requestOptions);
     }
     return Promise.resolve(NO_UPDATES);
   }
