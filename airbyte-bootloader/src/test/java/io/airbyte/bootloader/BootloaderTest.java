@@ -161,6 +161,7 @@ class BootloaderTest {
     }
   }
 
+  @SuppressWarnings("VariableDeclarationUsageDistance")
   @Test
   void testBootloaderAppRunSecretMigration() throws Exception {
     val mockedConfigs = mock(Configs.class);

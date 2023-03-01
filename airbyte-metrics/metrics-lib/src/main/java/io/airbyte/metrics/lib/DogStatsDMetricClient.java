@@ -69,9 +69,9 @@ public class DogStatsDMetricClient implements MetricClient {
   /**
    * Increment or decrement a counter.
    *
-   * @param metric
+   * @param metric dd metric
    * @param amt to adjust.
-   * @param attributes
+   * @param attributes addition attributes
    */
   @Override
   public void count(final MetricsRegistry metric, final long amt, final MetricAttribute... attributes) {
@@ -90,9 +90,9 @@ public class DogStatsDMetricClient implements MetricClient {
   /**
    * Record the latest value for a gauge.
    *
-   * @param metric
+   * @param metric dd metric
    * @param val to record.
-   * @param attributes
+   * @param attributes additional attributes
    */
   @Override
   public void gauge(final MetricsRegistry metric, final double val, final MetricAttribute... attributes) {

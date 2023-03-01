@@ -26,6 +26,11 @@ public class ApplicationBeanFactory {
     return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
   }
 
+  /**
+   * Json secrets process.
+   *
+   * @return json secrets process
+   */
   @Singleton
   public JsonSecretsProcessor jsonSecretsProcessor() {
     return JsonSecretsProcessor.builder()

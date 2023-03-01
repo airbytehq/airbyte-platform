@@ -31,6 +31,10 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Default implementation of enqueueing a job. Hides the details of building the Job object and
+ * storing it in the jobs db.
+ */
 @Slf4j
 public class DefaultJobCreator implements JobCreator {
 

@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.test.automaticMigrationAcceptance;
+package io.airbyte.test.automatic_migration_acceptance;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,13 +23,14 @@ import java.time.Duration;
 import java.util.function.Consumer;
 
 /**
- * The reason we are using this class instead of
- * {@link io.airbyte.api.client.generated.DeploymentApi is cause there is a bug in the the method
- * {@link io.airbyte.api.client.generated.DeploymentApi#importArchiveRequestBuilder(File)}, The
- * method specifies the content type as `localVarRequestBuilder.header("Content-Type",
+ * The reason we are using this class instead of io.airbyte.api.client.generated.DeploymentApi is
+ * cause there is a bug in the the method
+ * io.airbyte.api.client.generated.DeploymentApi#importArchiveRequestBuilder(File)}, The method
+ * specifies the content type as `localVarRequestBuilder.header("Content-Type",
  * "application/json");` but its supposed to be localVarRequestBuilder.header("Content-Type",
  * "application/x-gzip");
  */
+@SuppressWarnings("PackageName")
 public class ImportApi {
 
   private final HttpClient memberVarHttpClient;
@@ -53,7 +54,7 @@ public class ImportApi {
     return localVarResponse.getData();
   }
 
-  public ApiResponse<ImportRead> importArchiveWithHttpInfo(final File body) throws ApiException {
+  private ApiResponse<ImportRead> importArchiveWithHttpInfo(final File body) throws ApiException {
     final HttpRequest.Builder localVarRequestBuilder = importArchiveRequestBuilder(body);
     try {
       final HttpResponse<InputStream> localVarResponse = memberVarHttpClient.send(

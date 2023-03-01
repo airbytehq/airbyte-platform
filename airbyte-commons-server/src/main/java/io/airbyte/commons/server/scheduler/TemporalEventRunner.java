@@ -12,6 +12,9 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 
+/**
+ * Temporal event client. For triggering events on connections.
+ */
 @AllArgsConstructor
 public class TemporalEventRunner implements EventRunner {
 

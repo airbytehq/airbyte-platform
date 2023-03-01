@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 @Slf4j
 class NotifySchemaChangeActivityTest {
 
-  static private SlackNotificationClient mNotificationClient;
-  static private NotifySchemaChangeActivityImpl notifySchemaChangeActivity;
-  static private Notification mNotification;
+  private static SlackNotificationClient mNotificationClient;
+  private static NotifySchemaChangeActivityImpl notifySchemaChangeActivity;
+  private static Notification mNotification;
 
   @BeforeEach
   void setUp() {

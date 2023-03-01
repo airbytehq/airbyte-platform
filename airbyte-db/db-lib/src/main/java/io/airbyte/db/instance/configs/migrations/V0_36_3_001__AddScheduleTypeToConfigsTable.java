@@ -16,6 +16,9 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add schedule type to configs table migration.
+ */
 public class V0_36_3_001__AddScheduleTypeToConfigsTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_36_3_001__AddScheduleTypeToConfigsTable.class);
@@ -40,7 +43,7 @@ public class V0_36_3_001__AddScheduleTypeToConfigsTable extends BaseJavaMigratio
         .execute();
   }
 
-  public enum ScheduleType implements EnumType {
+  enum ScheduleType implements EnumType {
 
     manual("manual"),
     basicSchedule("basic_schedule"),

@@ -17,9 +17,12 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
+/**
+ * State Message helpers.
+ */
 public class StateMessageHelper {
 
-  public static class AirbyteStateMessageListTypeReference extends TypeReference<List<AirbyteStateMessage>> {}
+  private static class AirbyteStateMessageListTypeReference extends TypeReference<List<AirbyteStateMessage>> {}
 
   /**
    * This a takes a json blob state and tries return either a legacy state in the format of a json

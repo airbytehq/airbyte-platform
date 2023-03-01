@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.test.automaticMigrationAcceptance;
+package io.airbyte.test.automatic_migration_acceptance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  * When running this test consecutively locally, it might be necessary to run `docker volume prune`
  * to remove hanging volumes.
  */
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PackageName"})
 class MigrationAcceptanceTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MigrationAcceptanceTest.class);

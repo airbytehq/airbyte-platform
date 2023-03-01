@@ -18,6 +18,10 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * AttemptHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class AttemptHandler {
 

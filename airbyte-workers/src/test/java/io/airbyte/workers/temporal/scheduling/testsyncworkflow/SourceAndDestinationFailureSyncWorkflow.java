@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.assertj.core.util.Sets;
 
+@SuppressWarnings("MissingJavadocType")
 public class SourceAndDestinationFailureSyncWorkflow implements SyncWorkflow {
 
   @VisibleForTesting

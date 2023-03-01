@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.exceptions;
 
+/**
+ * Helper for handling connection errors.
+ */
 public class ConnectionErrorException extends RuntimeException {
 
   private String stateCode;

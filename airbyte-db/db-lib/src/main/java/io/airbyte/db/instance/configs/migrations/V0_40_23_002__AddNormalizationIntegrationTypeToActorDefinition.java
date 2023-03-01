@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add normalization integration type to actor definition migration.
+ */
 public class V0_40_23_002__AddNormalizationIntegrationTypeToActorDefinition extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(

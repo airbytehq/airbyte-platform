@@ -23,6 +23,9 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Snowflake Destination OAuth.
+ */
 public class DestinationSnowflakeOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://%s/oauth/authorize";
@@ -84,7 +87,7 @@ public class DestinationSnowflakeOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
 

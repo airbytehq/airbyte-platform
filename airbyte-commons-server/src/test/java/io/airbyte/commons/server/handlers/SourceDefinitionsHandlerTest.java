@@ -586,6 +586,7 @@ class SourceDefinitionsHandlerTest {
         workspaceId);
   }
 
+  @SuppressWarnings("TypeName")
   @Nested
   @DisplayName("listLatest")
   class listLatest {

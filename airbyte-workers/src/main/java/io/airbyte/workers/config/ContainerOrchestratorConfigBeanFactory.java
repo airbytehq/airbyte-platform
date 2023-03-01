@@ -51,6 +51,7 @@ public class ContainerOrchestratorConfigBeanFactory {
   // version is deployed!
   private static final Path STATE_STORAGE_PREFIX = Path.of("/state");
 
+  @SuppressWarnings({"LineLength", "MissingJavadocMethod"})
   @Singleton
   @Requires(property = "airbyte.container.orchestrator.enabled",
             value = "true")
