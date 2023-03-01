@@ -28,7 +28,7 @@ repositories {
 }
 
 Properties env = new Properties()
-rootProject.file('.env').withInputStream { env.load(it) }
+rootProject.file('.env.dev').withInputStream { env.load(it) }
 
 
 /*
