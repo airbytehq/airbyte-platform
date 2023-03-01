@@ -32,7 +32,7 @@ import org.jooq.DSLContext;
  */
 @Factory
 @Slf4j
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
 public class DatabaseBeanFactory {
 
   private static final String BASELINE_DESCRIPTION = "Baseline from file-based migration v1";
@@ -110,6 +110,7 @@ public class DatabaseBeanFactory {
     return new StreamResetPersistence(configDatabase);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("configsDatabaseMigrationCheck")
@@ -123,6 +124,7 @@ public class DatabaseBeanFactory {
             configsDatabaseInitializationTimeoutMs);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabaseMigrationCheck")

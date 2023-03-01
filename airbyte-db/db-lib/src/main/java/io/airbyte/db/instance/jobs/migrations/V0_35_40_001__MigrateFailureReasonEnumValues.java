@@ -25,6 +25,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add failure reasons migration.
+ */
 @SuppressWarnings({"PMD.AvoidLiteralsInIfCondition", "PMD.CompareObjectsWithEquals"})
 public class V0_35_40_001__MigrateFailureReasonEnumValues extends BaseJavaMigration {
 
@@ -150,7 +153,7 @@ public class V0_35_40_001__MigrateFailureReasonEnumValues extends BaseJavaMigrat
     private String stacktrace;
     private Boolean retryable;
     private Long timestamp;
-    private final static long serialVersionUID = -1485119682657564218L;
+    private static final long serialVersionUID = -1485119682657564218L;
 
     public String getFailureOrigin() {
       return failureOrigin;
@@ -339,7 +342,7 @@ public class V0_35_40_001__MigrateFailureReasonEnumValues extends BaseJavaMigrat
 
     private List<FailureReasonForMigration> failures = new ArrayList<>();
     private Boolean partialSuccess;
-    private final static long serialVersionUID = -9065693637249217586L;
+    private static final long serialVersionUID = -9065693637249217586L;
 
     public List<FailureReasonForMigration> getFailures() {
       return failures;

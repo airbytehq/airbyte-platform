@@ -59,18 +59,18 @@ class ConfigFetchActivityTest {
 
   private ConfigFetchActivityImpl configFetchActivity;
 
-  private final static UUID connectionId = UUID.randomUUID();
-  private final static ConnectionRead connectionReadWithLegacySchedule = new ConnectionRead()
+  private static final UUID connectionId = UUID.randomUUID();
+  private static final ConnectionRead connectionReadWithLegacySchedule = new ConnectionRead()
       .schedule(new ConnectionSchedule()
           .timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
           .units(5L))
       .status(ConnectionStatus.ACTIVE);
 
-  private final static ConnectionRead connectionReadWithManualScheduleType = new ConnectionRead()
+  private static final ConnectionRead connectionReadWithManualScheduleType = new ConnectionRead()
       .scheduleType(ConnectionScheduleType.MANUAL)
       .status(ConnectionStatus.ACTIVE);
 
-  private final static ConnectionRead connectionReadWithBasicScheduleType = new ConnectionRead()
+  private static final ConnectionRead connectionReadWithBasicScheduleType = new ConnectionRead()
       .scheduleType(ConnectionScheduleType.BASIC)
       .status(ConnectionStatus.ACTIVE)
       .scheduleData(new ConnectionScheduleData()
@@ -79,7 +79,7 @@ class ConfigFetchActivityTest {
               .units(5L)));
 
   public static final String UTC = "UTC";
-  private final static ConnectionRead connectionReadWithCronScheduleType = new ConnectionRead()
+  private static final ConnectionRead connectionReadWithCronScheduleType = new ConnectionRead()
       .scheduleType(ConnectionScheduleType.CRON)
       .status(ConnectionStatus.ACTIVE)
       .scheduleData(new ConnectionScheduleData()
@@ -87,13 +87,13 @@ class ConfigFetchActivityTest {
               .cronExpression("0 0 12 * * ?")
               .cronTimeZone(UTC)));
 
-  private final static ConnectionRead connectionReadWithScheduleDisable = new ConnectionRead()
+  private static final ConnectionRead connectionReadWithScheduleDisable = new ConnectionRead()
       .schedule(new ConnectionSchedule()
           .timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
           .units(5L))
       .status(ConnectionStatus.INACTIVE);
 
-  private final static ConnectionRead connectionReadWithScheduleDeleted = new ConnectionRead()
+  private static final ConnectionRead connectionReadWithScheduleDeleted = new ConnectionRead()
       .schedule(new ConnectionSchedule()
           .timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
           .units(5L))

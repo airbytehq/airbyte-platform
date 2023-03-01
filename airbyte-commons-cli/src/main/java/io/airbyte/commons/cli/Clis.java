@@ -13,10 +13,13 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+/**
+ * Common helper methods for writing command line tools and parsing command line arguments.
+ */
 public class Clis {
 
   /**
-   * Parse an options object
+   * Parse an options object.
    *
    * @param args - command line args
    * @param options - expected options

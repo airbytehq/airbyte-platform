@@ -20,6 +20,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Shopify Oauth.
+ */
 public class ShopifyOAuthFlow extends BaseOAuth2Flow {
 
   private static final List<String> SCOPES = Arrays.asList(

@@ -66,8 +66,8 @@ import org.junit.jupiter.api.Test;
 @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
 class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
-  private final static String DOCKER_IMAGE_TAG = "1.2.0";
-  private final static String CONFIG_HASH = "ConfigHash";
+  private static final String DOCKER_IMAGE_TAG = "1.2.0";
+  private static final String CONFIG_HASH = "ConfigHash";
 
   private ConfigRepository configRepository;
 

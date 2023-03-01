@@ -30,7 +30,6 @@ export const config: AirbyteWebappConfig = {
     site: window.REACT_APP_DATADOG_SITE ?? process.env.REACT_APP_DATADOG_SITE,
     service: window.REACT_APP_DATADOG_SERVICE ?? process.env.REACT_APP_DATADOG_SERVICE,
   },
-  sentryDsn: window.REACT_APP_SENTRY_DSN ?? process.env.REACT_APP_SENTRY_DSN,
   webappTag: window.REACT_APP_WEBAPP_TAG ?? process.env.REACT_APP_WEBAPP_TAG ?? "dev",
 };
 

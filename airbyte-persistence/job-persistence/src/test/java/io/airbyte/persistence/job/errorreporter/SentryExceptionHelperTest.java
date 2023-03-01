@@ -15,6 +15,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings({"LineLength", "FileTabCharacter"})
 class SentryExceptionHelperTest {
 
   private static final String ERROR_PATH = "/airbyte/connector-errors/error.py";
@@ -469,6 +470,7 @@ class SentryExceptionHelperTest {
         "syntax error at or near \"text\"\nLINE 6:                add column Base name text", List.of());
   }
 
+  @SuppressWarnings("FileTabCharacter")
   @Test
   void testBuildSentryExceptionsDbtUnhandledError() {
     final String stacktrace =
@@ -504,6 +506,7 @@ class SentryExceptionHelperTest {
         List.of());
   }
 
+  @SuppressWarnings("FileTabCharacter")
   @Test
   void testBuildSentryExceptionsDbtCompilationErrorAmbigRelation() {
     final String stacktrace =

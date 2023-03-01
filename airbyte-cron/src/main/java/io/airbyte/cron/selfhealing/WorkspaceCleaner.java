@@ -27,6 +27,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AgeFileFilter;
 
+/**
+ * Delete old files that accumulate in docker.
+ */
 @Singleton
 @Slf4j
 @Requires(notEnv = Environment.KUBERNETES)
@@ -47,10 +50,11 @@ public class WorkspaceCleaner {
     this.maxAgeFilesInDays = configs.getTemporalRetentionInDays();
   }
 
-  /*
-   * Delete files older than maxAgeFilesInDays from the workspace
+  /**
+   * Delete files older than maxAgeFilesInDays from the workspace. NOTE: this is currently only
+   * intended to work for docker.
    *
-   * NOTE: this is currently only intended to work for docker
+   * @throws IOException exception while interacting with the database
    */
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   @Scheduled(fixedRate = "1d")

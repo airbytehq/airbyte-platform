@@ -22,6 +22,7 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.io.IOException;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/notifications")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class NotificationsApiController implements NotificationsApi {

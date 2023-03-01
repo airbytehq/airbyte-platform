@@ -23,17 +23,17 @@ class NormalizationActivityImplTest {
     Assertions.assertFalse(NormalizationActivityImpl.normalizationSupportsV1DataTypes(withNormalizationVersion("0.4.1")));
     Assertions.assertFalse(NormalizationActivityImpl.normalizationSupportsV1DataTypes(withNormalizationVersion("dev")));
     Assertions.assertFalse(NormalizationActivityImpl.normalizationSupportsV1DataTypes(withNormalizationVersion("protocolv1")));
-    Assertions.assertFalse(NormalizationActivityImpl.normalizationSupportsV1DataTypes(withNormalizationVersion("strict_comparison")));
+    Assertions.assertFalse(NormalizationActivityImpl.normalizationSupportsV1DataTypes(withNormalizationVersion("strict_comparison2")));
   }
 
   @Test
   void checkNormalizationTagReplacement() {
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
-    when(featureFlags.strictComparisonNormalizationTag()).thenReturn("strict_comparison");
+    when(featureFlags.strictComparisonNormalizationTag()).thenReturn("strict_comparison2");
 
     final IntegrationLauncherConfig config = withNormalizationVersion("0.2.25");
-    NormalizationActivityImpl.replaceNormalizationImageTag(config, "strict_comparison");
-    assertEquals("normalization:strict_comparison", config.getNormalizationDockerImage());
+    NormalizationActivityImpl.replaceNormalizationImageTag(config, "strict_comparison2");
+    assertEquals("normalization:strict_comparison2", config.getNormalizationDockerImage());
   }
 
   private IntegrationLauncherConfig withNormalizationVersion(final String version) {

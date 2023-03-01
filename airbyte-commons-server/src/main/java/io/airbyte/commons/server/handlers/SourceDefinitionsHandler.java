@@ -53,7 +53,10 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("PMD.AvoidCatchingNPE")
+/**
+ * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings({"PMD.AvoidCatchingNPE", "MissingJavadocMethod"})
 @Singleton
 public class SourceDefinitionsHandler {
 
