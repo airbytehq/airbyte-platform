@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add tombstone to actor definition.
+ */
 public class V0_35_14_001__AddTombstoneToActorDefinition extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_14_001__AddTombstoneToActorDefinition.class);
@@ -24,7 +27,7 @@ public class V0_35_14_001__AddTombstoneToActorDefinition extends BaseJavaMigrati
     addTombstoneColumn(ctx);
   }
 
-  public static void addTombstoneColumn(final DSLContext ctx) {
+  static void addTombstoneColumn(final DSLContext ctx) {
     ctx.alterTable("actor_definition")
         .addColumnIfNotExists(DSL.field("tombstone", SQLDataType.BOOLEAN.nullable(false).defaultValue(false)))
         .execute();

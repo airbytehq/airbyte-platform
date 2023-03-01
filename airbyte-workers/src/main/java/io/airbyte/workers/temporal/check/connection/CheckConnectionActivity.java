@@ -15,9 +15,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Check connection activity temporal interface.
+ */
 @ActivityInterface
 public interface CheckConnectionActivity {
 
+  /**
+   * CheckConnectionInput.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

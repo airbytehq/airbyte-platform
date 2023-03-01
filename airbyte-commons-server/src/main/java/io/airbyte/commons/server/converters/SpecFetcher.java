@@ -8,6 +8,10 @@ import com.google.common.base.Preconditions;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.protocol.models.ConnectorSpecification;
 
+/**
+ * Convert between API and internal versions of spec models.
+ */
+@SuppressWarnings({"MissingJavadocMethod"})
 public class SpecFetcher {
 
   public static ConnectorSpecification getSpecFromJob(final SynchronousResponse<ConnectorSpecification> response) {

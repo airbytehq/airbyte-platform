@@ -92,7 +92,7 @@ class AirbyteMessageMigrationV1Test {
     }
 
     /**
-     * Utility method to upgrade the oldSchema, and assert that the result is equal to expectedSchema
+     * Utility method to upgrade the oldSchema, and assert that the result is equal to expectedSchema.
      *
      * @param oldSchemaString The schema to be upgraded
      * @param expectedSchemaString The expected schema after upgrading
@@ -605,7 +605,7 @@ class AirbyteMessageMigrationV1Test {
     }
 
     /**
-     * Utility method to upgrade the oldData, and assert that the result is equal to expectedData
+     * Utility method to upgrade the oldData, and assert that the result is equal to expectedData.
      *
      * @param oldDataString The data of the record to be upgraded
      * @param expectedDataString The expected data after upgrading
@@ -729,7 +729,7 @@ class AirbyteMessageMigrationV1Test {
     }
 
     /**
-     * Utility method to downgrade the oldSchema, and assert that the result is equal to expectedSchema
+     * Utility method to downgrade the oldSchema, and assert that the result is equal to expectedSchema.
      *
      * @param oldSchemaString The schema to be downgraded
      * @param expectedSchemaString The expected schema after downgrading
@@ -1227,7 +1227,7 @@ class AirbyteMessageMigrationV1Test {
 
     /**
      * Utility method to use the given catalog to downgrade the oldData, and assert that the result is
-     * equal to expectedDataString
+     * equal to expectedDataString.
      *
      * @param schemaString The JSON schema of the record
      * @param oldDataString The data of the record to be downgraded

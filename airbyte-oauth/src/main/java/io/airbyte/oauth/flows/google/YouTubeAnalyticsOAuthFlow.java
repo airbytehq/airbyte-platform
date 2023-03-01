@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * YouTube Analytics OAuth.
+ */
 public class YouTubeAnalyticsOAuthFlow extends GoogleOAuthFlow {
 
   private static final String SCOPE_URL = "https://www.googleapis.com/auth/yt-analytics.readonly";

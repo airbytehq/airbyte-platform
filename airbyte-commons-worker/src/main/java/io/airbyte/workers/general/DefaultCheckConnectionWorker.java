@@ -38,6 +38,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Default Check Connection Worker. Calls the check method on a connector.
+ */
 public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCheckConnectionWorker.class);
@@ -94,6 +97,9 @@ public class DefaultCheckConnectionWorker implements CheckConnectionWorker {
             case DESTINATION -> connectorConfigUpdater.updateDestination(
                 input.getActorId(),
                 optionalConfigMsg.get().getConfig());
+            default -> {
+              // no op
+            }
           }
           jobOutput.setConnectorConfigurationUpdated(true);
         }

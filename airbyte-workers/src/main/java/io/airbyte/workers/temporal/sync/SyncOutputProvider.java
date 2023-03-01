@@ -10,9 +10,12 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.SyncStats;
 import java.util.List;
 
+/**
+ * Static helpers for handling sync output.
+ */
 public class SyncOutputProvider {
 
-  public final static StandardSyncSummary EMPTY_FAILED_SYNC = new StandardSyncSummary()
+  public static final StandardSyncSummary EMPTY_FAILED_SYNC = new StandardSyncSummary()
       .withStatus(StandardSyncSummary.ReplicationStatus.FAILED)
       .withStartTime(System.currentTimeMillis())
       .withEndTime(System.currentTimeMillis())
@@ -25,6 +28,12 @@ public class SyncOutputProvider {
           .withDestinationStateMessagesEmitted(0L)
           .withRecordsCommitted(0L));
 
+  /**
+   * Get refresh schema failure.
+   *
+   * @param e exception that caused the failure
+   * @return sync output
+   */
   public static StandardSyncOutput getRefreshSchemaFailure(final Exception e) {
     return new StandardSyncOutput()
         .withFailures(List.of(new FailureReason()

@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add custom column to actor definitions migration.
+ */
 public class V0_35_59_003__AddCustomToActorDefinition extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_59_003__AddCustomToActorDefinition.class);
@@ -27,7 +30,7 @@ public class V0_35_59_003__AddCustomToActorDefinition extends BaseJavaMigration 
     addCustomColumn(ctx);
   }
 
-  public static void addCustomColumn(final DSLContext ctx) {
+  static void addCustomColumn(final DSLContext ctx) {
     ctx.alterTable("actor_definition")
         .addColumnIfNotExists(DSL.field("custom", SQLDataType.BOOLEAN.nullable(false).defaultValue(false)))
         .execute();

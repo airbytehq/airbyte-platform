@@ -7,6 +7,9 @@ package io.airbyte.commons.protocol;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 
+/**
+ * Default JSON serialization for the Airbyte Protocol.
+ */
 public class DefaultProtocolSerializer implements ProtocolSerializer {
 
   @Override

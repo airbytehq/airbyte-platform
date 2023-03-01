@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.internal.exception;
 
+/**
+ * Exceptions thrown from a destination.
+ */
 public class DestinationException extends RuntimeException {
 
   public DestinationException(final String message) {

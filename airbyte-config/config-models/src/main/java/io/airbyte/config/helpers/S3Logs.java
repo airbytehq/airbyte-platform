@@ -30,6 +30,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
+/**
+ * S3 logs.
+ */
 @SuppressWarnings({"PMD.ShortVariable", "PMD.CloseResource", "PMD.AvoidFileStream"})
 public class S3Logs implements CloudLogs {
 

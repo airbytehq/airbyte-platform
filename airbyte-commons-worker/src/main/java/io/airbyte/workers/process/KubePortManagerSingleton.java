@@ -72,6 +72,11 @@ public class KubePortManagerSingleton {
     return workerPorts.poll();
   }
 
+  /**
+   * Add used port.
+   *
+   * @param port port to add
+   */
   public void offer(final Integer port) {
     if (!workerPorts.contains(port)) {
       workerPorts.add(port);
