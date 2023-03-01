@@ -12,7 +12,7 @@ import {
   requestSourceDiscoverSchema,
   requestWorkspaceId,
 } from "commands/api";
-import { Connection, Destination, Source } from "commands/api/types";
+import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } from "commands/api/types";
 import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import { alterTable, createUsersTableQuery, dropUsersTableQuery } from "commands/db/queries";
@@ -124,8 +124,8 @@ describe("Connection - Auto-detect schema changes", () => {
 
       // Change users sync mode
       streamsTablePageObject.searchStream(streamName);
-      streamsTablePageObject.selectSyncMode("Incremental", "Deduped + history");
-      streamsTablePageObject.selectCursorField(streamName, "updated_at");
+      streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      streamsTablePageObject.selectCursor(streamName, "updated_at");
       replicationPage.clickSaveButton();
 
       // Remove cursor from db and refreshs schema to force breaking change detection
@@ -154,7 +154,7 @@ describe("Connection - Auto-detect schema changes", () => {
 
       // Fix the conflict
       streamsTablePageObject.searchStream("users");
-      streamsTablePageObject.selectSyncMode("Full refresh", "Append");
+      streamsTablePageObject.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
 
       replicationPage.clickSaveButton();
       connectionPage.getSyncEnabledSwitch().should("be.enabled");

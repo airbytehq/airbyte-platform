@@ -31,21 +31,25 @@ import {
   createDummyTablesQuery,
   dropDummyTablesQuery,
 } from "commands/db/queries";
-import streamsTablePageObject from "pages/connection/streamsTablePageObject";
+import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
 
 // TODO: Enable this test when the new stream table will be turned on
 describe.skip("Connection - Create new connection", () => {
+  const streamsTable = new NewStreamsTablePageObject();
+
   let source: Source;
   let destination: Destination;
   let connectionId: string;
 
-  before(() => {
-    initialSetupCompleted();
-    runDbQuery(dropUsersTableQuery);
-    runDbQuery(dropDummyTablesQuery(20));
+  const dropTables = () => {
+    runDbQuery(dropUsersTableQuery, dropDummyTablesQuery(20));
+  };
 
-    runDbQuery(createUsersTableQuery);
-    runDbQuery(createDummyTablesQuery(20));
+  before(() => {
+    dropTables();
+    runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
+
+    initialSetupCompleted();
 
     requestWorkspaceId().then(() => {
       const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Stream table Source"));
@@ -70,6 +74,8 @@ describe.skip("Connection - Create new connection", () => {
     if (destination) {
       requestDeleteDestination(destination.destinationId);
     }
+
+    dropTables();
   });
 
   describe("Set up source and destination", () => {
@@ -133,12 +139,12 @@ describe.skip("Connection - Create new connection", () => {
     });
 
     it("should filter table by stream name", () => {
-      streamsTablePageObject.searchStream("dummy_table_10");
+      streamsTable.searchStream("dummy_table_10");
       newConnectionPage.checkAmountOfStreamTableRows(1);
     });
 
     it("should clear stream search input field and show all available streams", () => {
-      streamsTablePageObject.clearStreamSearch();
+      streamsTable.clearStreamSearch();
       newConnectionPage.checkAmountOfStreamTableRows(21);
     });
   });
