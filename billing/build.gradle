@@ -1,0 +1,124 @@
+plugins {
+    id 'application'
+}
+
+configurations {
+    agent
+}
+
+configurations.all {
+    // Temporary hack to avoid dependency conflicts
+    exclude group: 'io.micronaut'
+    exclude group: 'io.micronaut.aws'
+    exclude group: 'io.micronaut.azure'
+    exclude group: 'io.micronaut.cache'
+    exclude group: 'io.micronaut.coherence'
+    exclude group: 'io.micronaut.data'
+    exclude group: 'io.micronaut.email'
+    exclude group: 'io.micronaut.flyway'
+    exclude group: 'io.micronaut.gcp'
+    exclude group: 'io.micronaut.groovy'
+    exclude group: 'io.micronaut.grpc'
+    exclude group: 'io.micronaut.kafka'
+    exclude group: 'io.micronaut.kotlin'
+    exclude group: 'io.micronaut.kubernetes'
+    exclude group: 'io.micronaut.liquibase'
+    exclude group: 'io.micronaut.jaxrs'
+    exclude group: 'io.micronaut.micrometer'
+    exclude group: 'io.micronaut.microstream'
+    exclude group: 'io.micronaut.mongodb'
+    exclude group: 'io.micronaut.mqtt'
+    exclude group: 'io.micronaut.openapi'
+    exclude group: 'io.micronaut.oraclecloud'
+    exclude group: 'io.micronaut.picocli'
+    exclude group: 'io.micronaut.problem'
+    exclude group: 'io.micronaut.r2dbc'
+    exclude group: 'io.micronaut.reactor'
+    exclude group: 'io.micronaut.redis'
+    exclude group: 'io.micronaut.rxjava2'
+    exclude group: 'io.micronaut.rxjava3'
+    exclude group: 'io.micronaut.security'
+    exclude group: 'io.micronaut.serde'
+    exclude group: 'io.micronaut.servlet'
+    exclude group: 'io.micronaut.spring'
+    exclude group: 'io.micronaut.sql'
+    exclude group: 'io.micronaut.test'
+    exclude group: 'io.micronaut.testresources'
+    exclude group: 'io.micronaut.tracing'
+    exclude group: 'io.micronaut.views'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    agent 'io.opentelemetry.javaagent:opentelemetry-javaagent:1.14.0'
+
+    implementation project(':cloud-api')
+    implementation project(':cloud-config:cloud-config-core')
+    implementation project(':cloud-config:cloud-config-persistence')
+    implementation project(':cloud-config:cloud-config-models')
+    implementation project(':cloud-db:lib')
+    implementation project(':cloud-tracking')
+    implementation project(':cloud-auth')
+
+    implementation libs.flyway.core
+    implementation platform('io.opentelemetry:opentelemetry-bom:1.18.0')
+    implementation platform('io.opentelemetry:opentelemetry-bom-alpha:1.18.0-alpha')
+    implementation "io.airbyte:airbyte-api"
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte.airbyte-db:db-lib"
+    implementation "io.airbyte:airbyte-json-validation"
+    implementation "io.airbyte.airbyte-persistence:job-persistence"
+    implementation 'io.opentelemetry:opentelemetry-api'
+    implementation 'io.opentelemetry:opentelemetry-extension-annotations'
+    implementation 'io.opentracing:opentracing-util:0.33.0'
+
+    implementation 'javax.validation:validation-api:1.1.0.Final'
+
+    testImplementation libs.platform.testcontainers.postgresql
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testImplementation "io.airbyte.airbyte-config:init"
+    testImplementation libs.airbyte.protocol
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+
+    // This should be available transitively from airbyte-config, but our hack to exclude micronaut bundles
+    // is also excluding this necessary dependency. So for now, declare it explicitly.
+    // see https://github.com/airbytehq/airbyte/pull/17269 for some additional context
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass = 'io.airbyte.billing.BillingCronInit'
+
+    // N.B.: The OTEL Java agent is provided by the airbyte-base-java-image Docker base image.
+    applicationDefaultJvmArgs = ['-XX:MaxRAMPercentage=75.0', '-javaagent:opentelemetry-javaagent.jar']
+}
+tasks.register('copyJavaAgent', Copy) {
+    from(configurations.agent) {
+        // Remove the version number from the JAR file name to normalize the name for reference in the JVM arguments
+        rename('opentelemetry-javaagent-.*', 'opentelemetry-javaagent.jar')
+    }
+    into('build/agent')
+}
+
+distributions {
+    main {
+        contents {
+            from 'build/agent'
+        }
+    }
+}
+
+tasks.distTar.dependsOn('copyJavaAgent')
+
+tasks.named("buildDockerImage") {
+    dependsOn copyGeneratedTar
+}

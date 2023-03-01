@@ -1,96 +1,89 @@
 #!/usr/bin/env bash
 
-# ------------- Import some defaults for the shell
+# todo (cgardens) - de-dupe this with the one that is in oss (tool/bin/check_images_exist.sh). only lines 17 and 24 are different. we don't have a clean way to pass bash scripts from OSS to cloud.bu
 
-# Source shell defaults
-# $0 is the currently running program (this file)
-this_file_directory=$(dirname $0)
-relative_path_to_defaults=$this_file_directory/../shell_defaults
-
-# if a file exists there, source it. otherwise complain
-if test -f $relative_path_to_defaults; then
-  # source and '.' are the same program
-  source $relative_path_to_defaults
-else
-  echo -e "\033[31m\nFAILED TO SOURCE TEST RUNNING OPTIONS.\033[39m"
-  echo -e "\033[31mTried $relative_path_to_defaults\033[39m"
-  exit 1
-fi
-
-set +o xtrace  # +x easier human reading here
+set -e
 
 . tools/lib/lib.sh
 
-function check_compose_image_exist() {
-  local compose_file=$1
-  local tag=$2
-  for img in `grep "image:" ${compose_file} | tr -d ' ' | cut -d ':' -f2`; do
-    printf "\t${img}: ${tag}\n"
-    if docker_tag_exists $img $tag; then
-      printf "\tSTATUS: found\n\n"
+function docker_tag_exists() {
+
+    name="$1"
+    tag="$2"
+    curatedName=$( sed -E 's/"//g' <<<"$name" )
+    curatedTag=$( sed -E 's/"//g' <<<"$tag" )
+    URL=https://hub.docker.com/v2/repositories/"$curatedName"/tags/"$curatedTag"
+    printf "\tURL: %s\n" "$URL"
+    curl --silent -f -lSL -H "Authorization: JWT $3" "$URL" > /dev/null
+}
+
+checkPlatformImages() {
+  echo "Checking platform images exist..."
+  docker compose -f docker-compose.build.yaml pull || exit 1
+  echo "Success! All platform images exist!"
+}
+
+checkImagesByName() {
+  DOCKER_HUB_TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${DOCKER_HUB_USER}'", "password": "'${DOCKER_HUB_PASSWORD}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+  while [ "$#" -gt "0" ]; do
+    ARG="$1" ; shift
+
+    IFS=":" read -r REPO TAG <<< "${ARG}"
+
+    # Skip non-Aribyte images:
+    [[ ! "${REPO}" =~ ^airbyte/ ]] && continue
+
+    if docker_tag_exists "$REPO" "$TAG" "$DOCKER_HUB_TOKEN"; then
+        printf "\tSTATUS: found\n"
     else
-      printf "\tERROR: not found!\n\n" && exit 1
+        printf "\tERROR: not found!\n" && exit 1
     fi
   done
 }
 
-function docker_tag_exists() {
-  # Is true for images stored in the Github Container Registry
-  repo=$1
-  tag=$2
-  # we user [[ here because test doesn't support globbing well
-  if [[ $repo == ghcr* ]]
-  then
-    TOKEN_URL=https://ghcr.io/token\?scope\="repository:$1:pull"
-    token=$(curl $TOKEN_URL | jq -r '.token' > /dev/null)
-    URL=https://ghcr.io/v2/$1/manifests/$2
-    echo -e "$blue_text""\tURL: $URL""$default_text"
-    curl -H "Authorization: Bearer $token" --location --silent --show-error --dump-header header.txt "$URL" > /dev/null
-    curl_success=$?
-  else
-    URL=https://hub.docker.com/v2/repositories/"$1"/tags/"$2"
-    echo -e "$blue_text""\tURL: $URL""$default_text"
-    curl --silent --show-error --location --dump-header header.txt "$URL" > /dev/null
-    curl_success=$?
-    # some bullshit to get the number out of a header that looks like this
-    # < content-length: 1039
-    # < x-ratelimit-limit: 180
-    # < x-ratelimit-reset: 1665683196
-    # < x-ratelimit-remaining: 180
-    docker_rate_limit_remaining=$(grep 'x-ratelimit-remaining: ' header.txt | grep --only-matching --extended-regexp "\d+")
-    # too noisy when set to < 1.  Dockerhub starts complaining somewhere around 10
-    if test "$docker_rate_limit_remaining" -lt 20; then
-      echo -e "$red_text""We are close to a sensitive dockerhub rate limit!""$default_text"
-      echo -e "$red_text""SLEEPING 60s sad times""$default_text"
-      sleep 60
-      docker_tag_exists $1 $2
-    elif test $docker_rate_limit_remaining -lt 50; then
-      echo -e "$red_text""Rate limit reported as $docker_rate_limit_remaining""$default_text"
-    fi
-  fi
-  if test $curl_success -ne 0; then
-    echo -e "$red_text""Curl Said this didn't work.  Please investigate""$default_text"
-    exit 1
-  fi
-}
+checkConnectorImages() {
+  echo "Checking connector images exist..."
 
-checkPlatformImages() {
-  echo -e "$blue_text""Checking platform images exist...""$default_text"
-  # Check dockerhub to see if the images exist
-  check_compose_image_exist docker-compose.yaml $VERSION
-}
+  # unfortunately the API does not allow using access tokens. we have to user username and password to fetch a JWT.
+  DOCKER_HUB_TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${DOCKER_HUB_USER}'", "password": "'${DOCKER_HUB_PASSWORD}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
 
+  CONNECTOR_DEFINITIONS=$(grep "dockerRepository" -h -A1 airbyte-bootloader-wrapped/src/main/resources/seed/*.yaml | grep -v -- "^--$" | tr -d ' ')
+  [ -z "CONNECTOR_DEFINITIONS" ] && echo "ERROR: Could not find any connector definition." && exit 1
+
+  while IFS=":" read -r _ REPO; do
+      IFS=":" read -r _ TAG
+      printf "${REPO}: ${TAG}\n"
+      if docker_tag_exists "$REPO" "$TAG" "$DOCKER_HUB_TOKEN"; then
+          printf "\tSTATUS: found\n"
+      else
+          printf "\tERROR: not found!\n" && exit 1
+      fi
+  done <<< "${CONNECTOR_DEFINITIONS}"
+
+  echo "Success! All connector images exist!"
+}
 
 main() {
   assert_root
 
   SUBSET=${1:-all} # default to all.
-  [[ ! "$SUBSET" =~ ^(all|platform)$ ]] && echo "Usage ./tools/bin/check_image_exists.sh [all|platform]" && exit 1
-  echo -e "$blue_text""checking images for: $SUBSET""$default_text"
+
+  shift
+
+  [[ ! "$SUBSET" =~ ^(all|platform|connectors|byname)$ ]] && echo "Usage ./tools/bin/check_image_exists.sh [all|platform|connectors|byname]" && exit 1
+
+  echo "checking images for: $SUBSET"
+
+  echo "authenticating with docker hub"
 
   [[ "$SUBSET" =~ ^(all|platform)$ ]] && checkPlatformImages
-  echo -e "$blue_text""Image check complete.""$default_text"
-  test -f header.txt     && rm header.txt
+
+  [[ "$SUBSET" =~ ^(all|connectors)$ ]] && checkConnectorImages
+
+  [ "$SUBSET" == "byname" ] && checkImagesByName $@
+
+  echo "Image check complete."
 }
 
 main "$@"

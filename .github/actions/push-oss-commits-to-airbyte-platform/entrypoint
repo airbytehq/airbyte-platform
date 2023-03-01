@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+set -e
+
+# The source repository
+SRC_REPO=${SRC_REPO:-airbytehq/airbyte-platform-internal}
+# The destination repository
+DST_REPO=${DST_REPO:-airbytehq/airbyte-platform}
+# The path to use when filtering the commit log
+SRC_PATH=${SRC_PATH:-oss}
+
+mkdir workspace
+cd workspace
+
+# Checkout airbytehq/airbyte-platform
+git clone https://x-access-token:${AUTH_TOKEN}@github.com/${DST_REPO}.git
+cd ${DST_REPO##*/}
+# Get the commit for HEAD on the target repo
+HEAD_COMMIT=$(git rev-parse HEAD)
+
+# Checkout airbytehq/airbyte-platform-internal
+cd ../
+git clone https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git
+cd ${SRC_REPO##*/}
+#FROM=$(git log --oneline --grep "\\[original commit: ${HEAD_COMMIT}\\]" | awk '{print $1}')
+FROM=f6ac58601a48cbaf8db56bf24eac4e64c1c1ca4a
+
+# TODO: Handle case were we cant find the commit
+if [[ -z "$FROM" ]]; then
+    echo "ABORT! We do not have a corresponding commit for the HEAD of airbyte-platform in airbyte-platform-internal"
+    echo "Please contact @prodeng"
+    exit 1
+fi
+
+# Copy the branch from `airbytehq/airbyte`
+cd ../${DST_REPO##*/}
+gitx-sync https://x-access-token:${AUTH_TOKEN}@github.com/${SRC_REPO}.git --path oss --from=$FROM --strip-annotations
+git push https://x-access-token:${AUTH_TOKEN}@github.com/${DST_REPO}.git main:main-test  # TODO: update this after testing

@@ -1,0 +1,387 @@
+name: Deploy Helm Chart to GKE and EKS (GCP and AWS platforms)
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_name:
+        description: "Environment Name:"
+        type: choice
+        required: true
+        options:
+          - infra-dev
+          - dev
+          - dev-1
+          - dev-2
+          - dev-3
+          - frontend-dev
+          - stage
+          - prod
+        default: "infra-dev"
+      prebuilt_image_tag:
+        description: "Prebuilt Airbyte Image Tag (e.g. dev-e7c34d6-1cede71. Use this to deploy a previously built image):"
+        default: ""
+        required: false
+      run_type:
+        description: "Deployment type:"
+        type: choice
+        required: true
+        options:
+          - dry            # -- just simulate deployment and show generated K8s manifest
+          - deploy         # -- simple deployment with automatic recovery in case of failure (common case) 
+          - no-rollback    # -- no-rollback -- deployment without possibility to rollback (please be careful with that option)
+        default: "dry"
+
+      # Due to the limit of 10 input parameters in the workflow, as well as to simplify the transfer of parameters, a parameter in JSON format was introduced, which is essentially a collection of parameters.
+      # We can pass tags of all components, as well as the majority of the general parameters via this parameter. The only exception is the "env_name" parameter, as this is a key parameter, and it makes sense to set it separately.
+      # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      hjson:
+        description: 'Parameters in HJSON format:'  # For example: { oss: OSS_Version, ossbranch: dev/some-branch, cloud: prebuilt_image_tag, server: aabbccd, cloud-server: eeffaab, log: error, run: deploy }
+        required: false
+      
+      log_level:
+        description: "Log level the app should be deployed at:"
+        required: false
+        type: choice
+        options:
+         - TRACE
+         - DEBUG
+         - INFO
+         - WARNING
+         - ERROR
+         - CRITICAL
+         - FATAL
+        default: "INFO"
+      # https://github.com/airbytehq/airbyte-platform-internal/issues/1891
+      # build_images:
+      #   description: "Build and Push Images"
+      #   # Only relevant when deploying from non-master branches. We don't want to push for master since the main cloud build already pushes images."
+      #   type: boolean
+      #   required: true
+      #   default: True
+      endpoints:
+        description: "Update GCP Endpoints Configs"
+        type: boolean
+        required: false
+        default: true
+      tests:
+        description: "Run Integration Tests"
+        type: boolean
+        required: true
+        default: true
+      gsm:
+        description: "Run Secrets Management (GSM,GKE)"
+        type: boolean
+        required: false
+        default: false
+      override-frontend-check:
+        description: "Override frontend-dev master branch check"
+        type: boolean
+        required: false
+        default: false
+
+  workflow_call:
+    inputs:
+      env_name:
+        type: string
+        required: true
+      prebuilt_image_tag:
+        type: string
+        required: false
+      log_level:
+        required: false
+        type: string
+        default: "INFO"
+      run_type:
+        type: string
+        required: true
+        default: "dry"
+
+      hjson:
+        type: string
+        required: false
+      
+      comment-id:
+        type: string
+        required: false
+      endpoints:
+        type: boolean
+        required: false
+        default: true
+      tests:
+        type: boolean
+        required: true
+        default: true
+      gsm:
+        type: boolean
+        required: false
+        default: false
+      override-frontend-check:
+        description: "Override frontend-dev master branch check"
+        type: boolean
+        required: false
+        default: false
+
+#
+# More information about the deployment process can be found here:
+#     https://internal-docs.airbyte.io/Deploying/Deploying-to-Cloud-using-CICD/One-Click-Deploy-Github-Actions
+#
+
+jobs:
+  vars:
+    name: "Parsing Input and set Variables (Generic for Workflow)"
+    runs-on: ubuntu-latest
+    outputs:
+      prebuilt_image_tag: ${{ steps.vars.outputs.prebuilt_image_tag }}
+      image_tag: ${{ steps.vars.outputs.prebuilt_image_tag }}
+
+    steps:
+      - name: Checkout Airbyte Platform Internal
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Check if frontend-dev is selected and deployment is from `non-master` branch
+        if: inputs.override-frontend-check == false && inputs.env_name == 'frontend-dev' && github.ref != 'refs/heads/master'
+        run: echo "Helm charts deployment to frontend-dev env is restricted from non-master branches!"; exit 1
+
+      - name: Install Dependencies for Python Code
+        run: |
+          python -m pip install --upgrade pip
+          pip install hjson GitPython termcolor
+
+      - name: Printing available Github Actions Environment Variables
+        shell: python
+        run: |
+            import sys, os, json
+            from termcolor import colored, cprint
+
+            for key in os.environ:
+                print(colored(key + ': ', 'cyan'), colored(os.getenv(key), 'yellow'))
+
+      - name: Processing Input Parameters
+        uses: jannekem/run-python-script-action@v1.5
+        id: vars
+        env:
+          PYTHONPATH: "${{ env.PYTHONPATH }}:${{ github.workspace }}"
+        with:
+          script: |
+            import sys, os, json, hjson
+            from git import Repo
+            from termcolor import colored, cprint
+            print('\n', colored("Working directory: ", 'cyan'), colored(os.getcwd(), 'yellow'))
+            from tools.python_libs.cicd.generic import hjs_str
+            
+            hjs_input = hjs_str("${{ inputs.hjson }}")
+            hjs_param = hjson.loads(hjs_input.to_hjson())
+
+            step_out = {}
+
+            # Set *prebuilt_image_tag* based on inputs
+            #------------------------------------
+            try: step_out["prebuilt_image_tag"] = hjs_param['cloud']
+            except KeyError:
+                if "${{ inputs.prebuilt_image_tag }}":
+                    step_out["prebuilt_image_tag"] = "${{ inputs.prebuilt_image_tag }}"  
+                    step_out["image_tag"] = "${{ inputs.prebuilt_image_tag }}"        
+                else:
+                    repo = Repo('.')
+                    short_sha = repo.git.rev_parse(repo.head.object.hexsha, short=10)
+                    step_out["image_tag"] = short_sha
+            print('\n \n', colored('Resulting Outputs:', 'blue'))
+            cprint('--------------------------------------------------------------------------------', 'blue')
+            for key in step_out:
+              print(colored('{:>30}'.format(key + ': '), 'cyan'), colored(step_out[key], 'yellow'))
+              set_output(key, step_out[key])
+
+
+  start-runner:
+    name: "Start Runner on AWS"
+    needs:
+      - vars
+    if: inputs.prebuilt_image_tag == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Checkout Airbyte Platform Internal
+        uses: actions/checkout@v3
+
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Start Runner on AWS using appropriate Action
+        id: start-ec2-runner
+        uses: ./.github/actions/runner-on-aws-start
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+
+
+  # This job is executed only when *prebuilt_image_tag* is not specified.
+  # Because if *prebuilt_image_tag* is specified, we assume that it is a tag that is already built.
+  cloud-build:
+    needs:
+      - vars
+      - start-runner
+    if: |
+        always() &&
+        needs.vars.result == 'success' &&
+        inputs.prebuilt_image_tag == ''  &&
+        needs.start-runner.result == 'success'
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    name: "Build and Push Images"
+    steps:
+      - name: Checkout Airbyte Platform Internal
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: compute image tag
+        id: image_tag
+        run: |
+          VERSION=$(git rev-parse --short=10 HEAD)
+          echo "image_tag=dev-${VERSION}" >> $GITHUB_OUTPUT
+      - name: Preparing Runner to the Build process
+        uses: ./.github/actions/runner-prepare
+      - name: Build Components and Push Images
+        id: build
+        uses: ./.github/actions/build-and-push
+        with:
+          image_tag: ${{ steps.image_tag.outputs.image_tag }}
+          dockerhub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+
+  stop-runner:
+    name: "Stop Runner on AWS"
+    timeout-minutes: 10
+    needs:
+      - start-runner
+      - cloud-build
+    if: always() && (needs.start-runner.result != 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Stop Runner on AWS using appropriate Action
+        uses: ./.github/actions/runner-on-aws-stop
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
+
+
+  deploy-helmcharts:
+    name: Deploy Helm Chart to Kubernetes Clusters
+    needs:
+      - vars
+      - start-runner
+      - cloud-build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    concurrency: deploy-to-${{inputs.env_name}}
+    if: |
+        always() &&
+        needs.vars.result == 'success' &&
+        (needs.start-runner.result == 'success' || needs.start-runner.result == 'skipped') &&
+        (needs.cloud-build.result == 'success' || needs.cloud-build.result == 'skipped')
+    steps:
+      - name: Link comment to workflow run
+        if: inputs.comment-id
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          comment-id: ${{ inputs.comment-id }}
+          body: |
+            > :clock2: ${{inputs.env_name}} https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+
+      - name: Checkout Airbyte Platform Internal
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Parsing Inputs and set Variables
+        id: input-and-variables
+        run: |-
+          set -e
+
+          case "${{ inputs.env_name }}" in
+              infra-dev|dev|dev-1|dev-2|dev-3|frontend-dev)
+                  GCP_SA_KEY="${{ secrets.DEV_GCP_SA_KEY }}"; echo "helm_atomic_upgrade=false" >> $GITHUB_OUTPUT ;;
+              stage)
+                  GCP_SA_KEY="${{ secrets.STAGE_GCP_SA_KEY }}"; echo "helm_atomic_upgrade=true" >> $GITHUB_OUTPUT;;
+              prod)
+                  GCP_SA_KEY="${{ secrets.PROD_GCP_SA_KEY }}"; echo "helm_atomic_upgrade=true" >> $GITHUB_OUTPUT;;
+              *)
+                  echo "*** Unexpected env_name: ${{ inputs.env_name }} ***"; exit 1
+              esac
+          echo "gcp_sa_key=${GCP_SA_KEY}" >> $GITHUB_OUTPUT
+
+          [[ "${{ inputs.run_type }}" == "dry" ]] && echo "dry_run=true" >> $GITHUB_OUTPUT || echo "dry_run=false >> $GITHUB_OUTPUT"
+
+      - name: Helm Chart is being deployed to Kubernetes Clusters and GCP Endpoints Configs are being updated
+        id: deploy
+        uses: ./.github/actions/deploy
+        with:
+          env_name: ${{ inputs.env_name }}
+          image_tag: ${{ needs.vars.outputs.image_tag }}
+          run: ${{ inputs.run_type }}
+          endpoints: ${{ inputs.endpoints }}
+          tests: ${{ inputs.tests }}
+          gsm: ${{ inputs.gsm }}
+          hjson: ${{ inputs.hjson }}
+          # This is a rare case where we need to build a specific branch/tag of the Cloud Repository.
+          # https://github.com/airbytehq/airbyte-platform-internal/issues/1891
+          # build_images: ${{ inputs.build_images }}
+          gcp_sa_key: ${{ steps.input-and-variables.outputs.gcp_sa_key }}
+          dockerhub_token: ${{ secrets.DOCKER_TOKEN }}
+          slackbot_token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          lastpass_token: ${{ secrets.LASTPASS_TOKEN }}
+          github_token: ${{ secrets.GH_PAT_MAINTENANCE_CLOUD }}
+          tailscale_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      - name: Add Success Comment
+        if: inputs.comment-id && success()
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          comment-id: ${{ inputs.comment-id }}
+          body: |
+            > :white_check_mark: ${{inputs.env_name}} https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
+
+      - name: Send Deploy Event to Datadog
+        if: success()
+        uses: masci/datadog@v1.4.0
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          events: |
+            - title: "Deployed airbytehq/airbyte-platform-internal"
+              text: "Successfully deployed ${{ github.repository }} to ${{ inputs.env_name }}"
+              host: ${{ github.repository }}
+              alert_type: "success"
+              tags:
+                - "event:deploy"
+                - "project:${{ github.repository }}"
+                - "env:${{ inputs.env_name }}"
+                - "image_tag:${{ needs.vars.outputs.image_tag }}"
+
+      - name: Add Failure Comment
+        if: inputs.comment-id && failure()
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          comment-id: ${{ inputs.comment-id }}
+          body: |
+            > :x: ${{inputs.connector}} https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}

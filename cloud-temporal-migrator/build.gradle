@@ -1,0 +1,40 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'io.temporal:temporal-sdk:1.8.1'
+
+    implementation("io.airbyte:airbyte-workers") {
+        // Temporary hack to avoid dependency conflicts
+        exclude group: 'io.micronaut'
+        exclude group: 'io.micronaut.flyway'
+        exclude group: 'io.micronaut.jaxrs'
+        exclude group: 'io.micronaut.security'
+        exclude group: 'io.micronaut.sql'
+    }
+    implementation "io.airbyte.airbyte-config:config-models"
+}
+
+application {
+    mainClass = 'io.airbyte.cloud_temporal_migrator.CloudTemporalMigratorApp'
+    applicationDefaultJvmArgs = ['-XX:MaxRAMPercentage=75.0']
+}
+
+task copyGeneratedTar(type: Copy) {
+    dependsOn copyDocker
+    dependsOn distTar
+
+    from('build/distributions') {
+        include 'cloud-temporal-migrator-*.tar'
+    }
+    into 'build/docker/bin'
+}
+
+Task dockerBuildTask = getDockerBuildTask("cloud-temporal-migrator",  "$project.projectDir", "$rootProject.ext.cloud_version", "$rootProject.ext.image_tag")
+dockerBuildTask.dependsOn(copyGeneratedTar)
+assemble.dependsOn(dockerBuildTask)

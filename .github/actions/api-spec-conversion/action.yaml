@@ -1,0 +1,77 @@
+name: api-spec-conversion
+description: |
+  api-spec-conversion Github Action produces Swagger2 specifications
+  for (currently) three API interfaces.  Converted specifications are
+  placed into sw2_spec_dir output directory.
+
+inputs:
+  env_name:
+    description: "Environment name: { infra* | dev* | stage | prod }"
+    required: true
+  dockerhub_token:
+    required: true
+
+outputs:
+  sw2_spec_dir:
+    description: Temp directory to output Swagger2 API specifications
+    value: ${{ steps.set-outputs-step.outputs.sw2_spec_dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Create output directory
+      shell: bash
+      run: echo "SW2_SPEC_DIR=$(mktemp -d -p '.' _tmp.XXXXXXXX)" >> $GITHUB_ENV
+
+    - name: Set this action outputs
+      shell: bash
+      id: set-outputs-step
+      run: echo "sw2_spec_dir=${SW2_SPEC_DIR}" >> $GITHUB_OUTPUT
+
+    - name: Download OSS (config-api) API specs
+      shell: bash
+      run: |
+        wget -L -nd -P _config_api \
+          https://raw.githubusercontent.com/airbytehq/airbyte-platform/main/airbyte-api/src/main/openapi/config.yaml
+
+    - name: Login to Dockerhub
+      uses: docker/login-action@v2
+      with:
+        username: airbytebot
+        password: ${{ inputs.dockerhub_token }}
+
+    - name: Convert config-api API specs
+      uses: ./.github/actions/openapi2swagger
+      with:
+        env_name: ${{ inputs.env_name }}
+        endpoint_prefix: config-api
+        oas3_spec_file: _config_api/config.yaml
+        sw2_overrides_file: tools/infra-deploy-tools/esp-overrides/${{ inputs.env_name }}/config-api-sw20-overrides.yaml
+        sw2_spec_out_dir: ${{ env.SW2_SPEC_DIR }}
+
+    - name: Convert cloud-api API specs
+      uses: ./.github/actions/openapi2swagger
+      with:
+        env_name: ${{ inputs.env_name }}
+        endpoint_prefix: cloud-api
+        oas3_spec_file: cloud-api/src/main/openapi/config.yaml
+        sw2_overrides_file: tools/infra-deploy-tools/esp-overrides/${{ inputs.env_name }}/cloud-api-sw20-overrides.yaml
+        sw2_spec_out_dir: ${{ env.SW2_SPEC_DIR }}
+
+    - name: Convert partner-api API specs
+      uses: ./.github/actions/openapi2swagger
+      with:
+        env_name: ${{ inputs.env_name }}
+        endpoint_prefix: partner-api
+        oas3_spec_file: cloud-partner-api/src/main/openapi/config.yaml
+        sw2_overrides_file: tools/infra-deploy-tools/esp-overrides/${{ inputs.env_name }}/partner-api-sw20-overrides.yaml
+        sw2_spec_out_dir: ${{ env.SW2_SPEC_DIR }}
+
+    - name: Convert public-api API specs
+      uses: ./.github/actions/openapi2swagger
+      with:
+        env_name: ${{ inputs.env_name }}
+        endpoint_prefix: public-api
+        oas3_spec_file: cloud-public-api-server/src/main/openapi/api_google_cloud_endpoints.yaml
+        sw2_overrides_file: tools/infra-deploy-tools/esp-overrides/${{ inputs.env_name }}/public-api-sw20-overrides.yaml
+        sw2_spec_out_dir: ${{ env.SW2_SPEC_DIR }}

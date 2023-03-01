@@ -1,0 +1,22 @@
+name: Push OSS commits to airbytehq/airbyte-platform
+
+on:
+  push:
+    branches: 
+      - master
+    paths:
+      - "oss/**"
+
+jobs:
+  push_oss_commits_to_airbyte_platform:
+    name: Push latest OSS commits to airbytehq/airbyte-platform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run gitx-sync
+        id: run-gitx-sync
+        uses: ./.github/actions/push-oss-commits-to-airbyte-platform
+        with:
+          github_access_token: ${{ secrets.GITXMOD_AUTOMATION_PAT }}
+          source_repo: airbytehq/airbyte-platform-internal
+          destination_repo: airbytehq/airbyte-platform
+          module_path: oss

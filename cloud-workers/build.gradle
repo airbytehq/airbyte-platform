@@ -1,0 +1,25 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation "io.airbyte:airbyte-commons-temporal"
+    implementation "io.airbyte.airbyte-config:config-models"
+
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+    implementation libs.bundles.micronaut.annotation
+}
+
+tasks.register("copyGeneratedJar", Copy) {
+    dependsOn copyDocker
+    dependsOn jar
+    from('build/libs') {
+        include "*$project.name-*.jar"
+    }
+    into 'build/docker/lib'
+}
+
+tasks.named("buildDockerImage") {
+    dependsOn copyGeneratedJar
+    dependsOn gradle.includedBuild("airbyte").task(':airbyte-workers:buildDockerImage')
+}

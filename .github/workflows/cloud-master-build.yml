@@ -1,0 +1,282 @@
+name: Deploy to Stage + Prod
+
+env:
+  S3_BUILD_CACHE_ACCESS_KEY_ID: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}  # needed for https://github.com/burrunan/gradle-s3-build-cache
+  S3_BUILD_CACHE_SECRET_KEY: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+
+on:
+  #push:
+    #branches:
+      #- master
+    #paths-ignore:
+      #- 'airbyte-bootloader-wrapped/src/main/resources/seed/**'
+      #- 'cloud-config/cloud-config-seed/src/main/resources/seed/**'
+      #- 'docs/**'
+       # todo: Today we run changes on the infra/gcp folder in order to make sure helm changes
+       # are pulled in. This is noisy. Need to figure out a better way.
+      #- 'infra/aws/**'
+      #- 'infra/tailscale/**'
+      #- 'infra/terraform/**'
+      #- '.github/ISSUE_TEMPLATE/**'
+      #- '.github/pull_request_template.md'
+       #  Ignoring changes in files containing users lists
+      #- 'infra/gcp/postgres/cloud_admin_users.yaml'
+      #- 'infra/gcp/projects/shared-config/values.tf'
+      #- 'infra/github-org/airbytehq-gh-org-config.yaml'
+
+  workflow_dispatch:
+
+jobs:
+  start-runner:
+    name: "Start Runner on AWS"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Start Runner on AWS using appropriate Action
+        id: start-ec2-runner
+        uses: ./.github/actions/runner-on-aws-start
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+
+  cloud-build:
+    needs:
+      - start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    name: "Build and Push Images"
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.image_tag }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: compute image tag
+        id: image_tag
+        run: |
+          VERSION=$(git rev-parse --short=10 HEAD)
+          echo "image_tag=dev-${VERSION}" >> $GITHUB_OUTPUT
+      - name: Preparing Runner to the Build process
+        uses: ./.github/actions/runner-prepare
+      - name: Build Components and Push Images
+        id: build
+        uses: ./.github/actions/build-and-push
+        with:
+          image_tag: ${{ steps.image_tag.outputs.image_tag }}
+          dockerhub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+  stop-runner:
+    name: "Stop Runner on AWS"
+    timeout-minutes: 10
+    needs:
+      - start-runner
+      - cloud-build
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Stop Runner on AWS using appropriate Action
+        uses: ./.github/actions/runner-on-aws-stop
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
+
+  deploy-to-stage:
+    name: "Deploy to Stage"
+    needs:
+      - cloud-build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    concurrency: deploy-to-stage
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+        # Due to the limited capabilities of this Action, this workflow will fails in certain rare cases.
+        # We need to find a way to checkout the code by short hash, in the most natural way for GitHub Actions.
+        # An appropriate issue has been created for this problem: https://github.com/airbytehq/airbyte-platform-internal/issues/496
+
+      - name: Helm Chart is being deployed to GKE Cluster and GCP Endpoints Configs are being updated
+        id: deploy
+        uses: ./.github/actions/deploy
+        with:
+          env_name: stage
+          run: "deploy"
+          image_tag: ${{ needs.cloud-build.outputs.image_tag }}
+          gcp_sa_key: ${{ secrets.STAGE_GCP_SA_KEY }}
+          dockerhub_token: ${{ secrets.DOCKER_TOKEN }}
+          slackbot_token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          lastpass_token: ${{ secrets.LASTPASS_TOKEN }}
+          github_token: ${{ secrets.GH_PAT_MAINTENANCE_CLOUD }}
+          tailscale_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      - name: Send Deploy Event to Datadog
+        if: success()
+        uses: masci/datadog@v1.4.0
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          events: |
+            - title: "Deployed airbytehq/airbyte-platform-internal"
+              text: "Successfully deployed ${{ github.repository }} to staging"
+              host: ${{ github.repository }}
+              alert_type: "success"
+              tags:
+                - "event:deploy"
+                - "project:${{ github.repository }}"
+                - "env:staging"
+                - "oss_version:${{ steps.deploy.outputs.oss_version }}"
+                - "cloud_version:${{ steps.build.outputs.cloud_version }}"
+
+  deploy-to-prod:
+    name: "Deploy to Production"
+    if: github.ref == 'refs/heads/master'
+    needs:
+      - deploy-to-stage
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    # Note: this has to match the deploy-to-production.yml concurrency key.
+    concurrency: deploy-to-production
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+        # Due to the limited capabilities of this Action, this workflow will fail in certain rare cases.
+        # We need to find a way to checkout the code by short hash, in the most natural way for GitHub Actions.
+        # An appropriate issue has been created for this problem: https://github.com/airbytehq/airbyte-platform-internal/issues/496
+
+      - name: Helm Chart is being deployed to Kubernetes Clusters and GCP Endpoints Configs are being updated
+        id: deploy
+        uses: ./.github/actions/deploy
+        with:
+          env_name: prod
+          run: "deploy"
+          image_tag: ${{ needs.cloud-build.outputs.image_tag }}
+          gcp_sa_key: ${{ secrets.PROD_GCP_SA_KEY }}
+          dockerhub_token: ${{ secrets.DOCKER_TOKEN }}
+          slackbot_token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          lastpass_token: ${{ secrets.LASTPASS_TOKEN }}
+          github_token: ${{ secrets.GH_PAT_MAINTENANCE_CLOUD }}
+          tailscale_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      - name: Send Deploy Event to Datadog
+        if: success()
+        uses: masci/datadog@v1.4.0
+        with:
+          api-key: ${{ secrets.DATADOG_API_KEY }}
+          events: |
+            - title: "Deployed airbytehq/airbyte-platform-internal"
+              text: "Successfully deployed ${{ github.repository }} to production"
+              host: ${{ github.repository }}
+              alert_type: "success"
+              tags:
+                - "event:deploy"
+                - "project:${{ github.repository }}"
+                - "env:prod"
+                - "oss_version:${{ steps.deploy.outputs.oss_version }}"
+                - "cloud_version:${{ steps.build.outputs.cloud_version }}"
+
+  notify-failure-slack-channel:
+    runs-on: ubuntu-latest
+    needs:
+      - cloud-build
+      - deploy-to-stage
+      - deploy-to-prod
+    if: failure()
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Match GitHub User to Slack User
+        id: match-github-to-slack-user
+        timeout-minutes: 3
+        uses: ./.github/actions/match-github-to-slack-user
+        env:
+          AIRBYTE_TEAM_BOT_SLACK_TOKEN: ${{ secrets.AIRBYTE_TEAM_BOT_SLACK_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish Build Failed Message to Cloud Build Failure Slack Channel
+        uses: ./.github/actions/notification-to-slack
+        with:
+          slackbot_token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          channel: C03AXC61YBZ  # -> cloud-master-build-failure
+          message_body: '
+            [
+              { "type": "divider" },
+              { "type": "section", "text": { "type": "mrkdwn", "text": "Merge to Cloud Master failed!  :bangbang: \n\n" } },
+              { "type": "section", "text": { "type": "mrkdwn", "text": "_merged by_: *${{ github.actor }}* \n"} },
+              { "type": "section", "text": { "type": "mrkdwn", "text": "<@${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}> \n" } },
+              { "type": "section", "text": { "type": "mrkdwn", "text": ":octavia-shock: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-shock: \n" } },
+              { "type": "divider" }
+            ]'
+      - name: Post to a Slack channel
+        id: slack
+        uses: slackapi/slack-github-action@v1.23.0
+        continue-on-error: true
+        with:
+          channel-id: ${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}
+          payload: |
+              {
+                "text": "Merge to Cloud Master failed!\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "Merge to Cloud Master failed!\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                    }
+                  }
+                ]
+              }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.AIRBYTE_HQ_BOT_SLACK_TOKEN }}
+
+  notify-failure-slack-channel-fixed-broken-build:
+    runs-on: ubuntu-latest
+    needs:
+      - cloud-build
+      - deploy-to-stage
+      - deploy-to-prod
+    if: success()
+    steps:
+      - name: Get Previous Workflow Status
+        uses: Mercymeilya/last-workflow-status@v0.3
+        id: last_status
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      # To avoid clogging up the channel, only publish build success if the previous build was a failure since this means the build was fixed.
+      - name: Checkout Airbyte Cloud
+        if: ${{ steps.last_status.outputs.last_status == 'failure' }}
+        uses: actions/checkout@v3
+      - name: Publish Build Fixed Message to Cloud Build Failure Slack Channel
+        if: ${{ steps.last_status.outputs.last_status == 'failure' }}
+        uses: ./.github/actions/notification-to-slack
+        with:
+          slackbot_token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          channel: C03AXC61YBZ  # -> cloud-master-build-failure
+          message_body: '
+            [
+              { "type": "divider" },
+              { "type": "section", "text": { "type": "mrkdwn", "text": "Cloud Master Fixed! :white_check_mark: \n\n" } },
+              { "type": "section", "text": { "type": "mrkdwn", "text": "_merged by_: *${{ github.actor }}* \n" } },
+              { "type": "section", "text": { "type": "mrkdwn", "text": ":octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n" } },
+              { "type": "divider" }
+            ]'

@@ -1,0 +1,80 @@
+plugins {
+    id 'application'
+}
+
+configurations.all {
+    // Temporary hack to avoid dependency conflicts
+    exclude group: 'io.micronaut'
+    exclude group: 'io.micronaut.aws'
+    exclude group: 'io.micronaut.azure'
+    exclude group: 'io.micronaut.cache'
+    exclude group: 'io.micronaut.coherence'
+    exclude group: 'io.micronaut.data'
+    exclude group: 'io.micronaut.email'
+    exclude group: 'io.micronaut.flyway'
+    exclude group: 'io.micronaut.gcp'
+    exclude group: 'io.micronaut.groovy'
+    exclude group: 'io.micronaut.grpc'
+    exclude group: 'io.micronaut.kafka'
+    exclude group: 'io.micronaut.kotlin'
+    exclude group: 'io.micronaut.kubernetes'
+    exclude group: 'io.micronaut.liquibase'
+    exclude group: 'io.micronaut.jaxrs'
+    exclude group: 'io.micronaut.micrometer'
+    exclude group: 'io.micronaut.microstream'
+    exclude group: 'io.micronaut.mongodb'
+    exclude group: 'io.micronaut.mqtt'
+    exclude group: 'io.micronaut.openapi'
+    exclude group: 'io.micronaut.oraclecloud'
+    exclude group: 'io.micronaut.picocli'
+    exclude group: 'io.micronaut.problem'
+    exclude group: 'io.micronaut.r2dbc'
+    exclude group: 'io.micronaut.reactor'
+    exclude group: 'io.micronaut.redis'
+    exclude group: 'io.micronaut.rxjava2'
+    exclude group: 'io.micronaut.rxjava3'
+    exclude group: 'io.micronaut.security'
+    exclude group: 'io.micronaut.serde'
+    exclude group: 'io.micronaut.servlet'
+    exclude group: 'io.micronaut.spring'
+    exclude group: 'io.micronaut.sql'
+    exclude group: 'io.micronaut.test'
+    exclude group: 'io.micronaut.testresources'
+    exclude group: 'io.micronaut.tracing'
+    exclude group: 'io.micronaut.views'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':cloud-config:cloud-config-core')
+    implementation project(':cloud-config:cloud-config-persistence')
+    implementation project(':cloud-db:lib')
+
+    implementation libs.flyway.core
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-db:db-lib"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+
+    // This should be available transitively from airbyte-config, but our hack to exclude micronaut bundles
+    // is also excluding this necessary dependency. So for now, declare it explicitly.
+    // see https://github.com/airbytehq/airbyte/pull/17269 for some additional context
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass = 'io.airbyte.cloud_bootloader.CloudBootloaderApp'
+    applicationDefaultJvmArgs = ['-XX:MaxRAMPercentage=75.0']
+}
+
+tasks.named("buildDockerImage") {
+    dependsOn copyGeneratedTar
+}

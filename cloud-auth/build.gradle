@@ -1,0 +1,41 @@
+plugins {
+    id 'java-library'
+}
+
+configurations.all {
+    // Temporary hack to avoid dependency conflicts
+    exclude group: 'io.micronaut.jaxrs'
+}
+
+dependencies {
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+    api libs.bundles.micronaut.annotation
+    api libs.reactor.core
+    api libs.micronaut.http
+    api libs.micronaut.http.server.netty
+    api libs.micronaut.security
+
+    implementation project(':cloud-api')
+    implementation project(':cloud-config:cloud-config-core')
+    implementation "io.airbyte:airbyte-api"
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte:airbyte-json-validation"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte.airbyte-metrics:metrics-lib"
+
+    implementation("io.airbyte:airbyte-commons-server") {
+        exclude module: 'airbyte-workers'
+    }
+
+    implementation 'javax.ws.rs:javax.ws.rs-api:2.1.1'
+    implementation libs.apache.commons.lang
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+    implementation 'com.datadoghq:dd-trace-api:0.108.1'
+
+    testImplementation libs.reactor.test
+    testImplementation 'org.glassfish.jersey.core:jersey-server'
+    testImplementation 'org.mockito:mockito-core:4.7.0'
+}
+
+Properties env = new Properties()
+rootProject.file('.env.dev').withInputStream { env.load(it) }

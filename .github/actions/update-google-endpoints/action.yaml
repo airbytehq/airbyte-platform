@@ -1,0 +1,138 @@
+name: update-google-endpoints
+description: |
+  update-google-endpoints Github Action is tackled with converting
+  API specifications and uploading them to GCP Endpoints service.
+
+inputs:
+  env_name:
+    description: "Environment name: { infra* | dev* | stage | prod }"
+    required: true
+  image_tag:
+    description: Image tag name
+    required: true
+  gcp_sa_key:
+    description: Google Cloud ServiceAccount Key
+    required: true
+  dry_run:
+    description: Simulate Endpoints configs update
+    required: true
+  skip_gcloud_auth:
+    description: Skip gcloud auth if needed
+    required: false
+    default: false
+  dockerhub_token:
+    required: true
+  slackbot_token:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Parsing Inputs
+      id: vars
+      shell: bash
+      run: |
+        AIRBYTE_VERSION="${{ inputs.image_tag }}"
+        echo "image_tag=${AIRBYTE_VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Print Variables
+      id: print-vars
+      shell: bash
+      run: |
+        echo -e "
+        \nVariables used by this action:
+        ----------------------------------------------------------------------------
+                        env_name: ${{ inputs.env_name }}
+           (input) image_tag: ${{ inputs.image_tag }}
+        (will use) image_tag: ${{ steps.vars.outputs.image_tag }}
+                         dry_run: ${{ inputs.dry_run }}
+                skip_gcloud_auth: ${{ inputs.skip_gcloud_auth }}
+        ----------------------------------------------------------------------------
+        \n"
+
+    - name: Convert API Specifications
+      uses: ./.github/actions/api-spec-conversion
+      id: api-conversion
+      with:
+        env_name: ${{ inputs.env_name }}
+        image_tag: ${{ steps.vars.outputs.image_tag }}
+        dockerhub_token: ${{ inputs.dockerhub_token }}
+
+    - name: Setup Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+      if: startsWith('false', inputs.skip_gcloud_auth)
+      with:
+        project_id: ${{ inputs.env_name }}-ab-cloud-proj
+        service_account_key: ${{ inputs.gcp_sa_key }}
+        export_default_credentials: true
+
+    - name: Update Endpoints configuration
+      id: update-gcp-endpoints
+      shell: bash
+      run: |
+        set -e
+        set -x
+        for FNAME in $(find ${{ steps.api-conversion.outputs.sw2_spec_dir }} -type f -name \*.yaml)
+        do
+          # Checking ${FNAME} ...
+          gcloud endpoints services deploy "${FNAME}" \
+              --project="${{ inputs.env_name }}-ab-cloud-proj" \
+              --validate-only --no-user-output-enabled
+
+          if [ "${{ inputs.dry_run }}" = "false" ]; then
+            # Deploying ${FNAME} ...
+            gcloud endpoints services deploy "${FNAME}" \
+                --project="${{ inputs.env_name }}-ab-cloud-proj"
+          fi
+        done
+        set +x
+
+    - name: Creating Slack Notification Message
+      id: slack-message
+      if: steps.update-gcp-endpoints.outcome	== 'success' || steps.update-gcp-endpoints.outcome	== 'failure'
+      shell: bash
+      run: |
+        set -e
+        MAIN_MESSAGE="*Endpoints Configuration* on *${{ inputs.env_name }}*"
+        case "${{ steps.update-gcp-endpoints.outcome }}" in
+        success)
+            MAIN_MESSAGE="${MAIN_MESSAGE} updated successfully!  :white_check_mark:"
+            ;;
+        failure)
+            MAIN_MESSAGE="${MAIN_MESSAGE} failed to update!  :bangbang:"
+            ;;
+        *)
+            MAIN_MESSAGE="${MAIN_MESSAGE} could not be determined ( ${{ steps.update-gcp-endpoints.outcome }} )"
+            ;;
+        esac
+        echo "main_message=${MAIN_MESSAGE}" >> $GITHUB_OUTPUT
+
+    - name: Determine Slack Notification Channel
+      id: determine-channel
+      shell: bash
+      run: |
+        if [ ${{ inputs.env_name }} == prod ]
+        then
+          # prod-deploys channel
+          echo "channel=C045LB3JW3W" >> $GITHUB_OUTPUT
+        else
+          # dev-deploys channel
+          echo "channel=C02TYDSUM8F" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Sending Slack Notifications about Google Endpoints update status
+      uses: ./.github/actions/notification-to-slack
+      if: steps.update-gcp-endpoints.outcome	== 'success' || steps.update-gcp-endpoints.outcome	== 'failure'
+      with:
+        slackbot_token: ${{ inputs.slackbot_token }}
+        channel: ${{ steps.determine-channel.outputs.channel }}
+        message_body: >-
+          [
+            { "type": "divider" },
+            { "type": "section", "text": { "type": "mrkdwn", "text": "${{ steps.slack-message.outputs.main_message }}\\n\\n" } },
+            { "type": "section", "text": { "type": "mrkdwn", "text": "```\
+                  image_tag: ${{ steps.vars.outputs.image_tag }}\\n\
+                   cloud branch: ${{ github.ref_name }}\\n\
+                   triggered by: ${{ github.actor }}\\n\
+                        dry-run: ${{ inputs.dry_run }}```" } }
+          ]

@@ -1,0 +1,395 @@
+name: 'Deploy Product Components to specified Environment'
+description: 'Deployment of Helm Chart to GKE Cluster and Updating of GCP Endpoints Configs'
+inputs:
+  env_name:
+    description: "Environment Name (infra-dev, dev, dev-1, dev-2, dev-3, frontend-dev, stage, prod)"
+    required: true
+  gcp_sa_key:
+    required: true
+  dockerhub_token:
+    required: true
+  lastpass_token:
+    description: "LastPass Service Account token"
+    required: true
+  slackbot_token:
+    description: "SlackBot token"
+    required: true
+  github_token:
+    description: "Github PAT, used for pulling terraform modules"
+    required: true
+  image_tag:
+    description: "Docker Image Tag"
+    required: true
+  namespace:
+    description: "Kubernetes Namespace"
+    required: true
+    default: "ab"
+  helm_release_name:
+    description: "Helm Release Name"
+    required: true
+    default: "airbyte"
+  helm_timeout:
+    description: "Helm Timeout"
+    required: true
+    default: "20m"
+  log_level:
+    description: "Log level the app should be deployed at (optional -- defaults to INFO) (FATAL, CRITICAL, ERROR, WARN, WARNING, INFO, DEBUG, TRACE) (case insensitive)"
+    required: false
+    default: "INFO"
+  run:
+    description: "Deployment type. Possible options: dry -- just simulate deployment and show generated K8s manifest | deploy -- simple deployment with automatic recovery in case of failure (common case) | no-rollback -- deployment without possibility to rollback (please be careful with that option)"
+    required: true
+    default: "dry"
+  endpoints:
+    description: "Update GCP Endpoints Configs"
+    required: false
+    default: "True"
+  tests:
+    description: "Run Integration Tests"
+    required: true
+    default: "True"
+  gsm:
+    description: "Run Secrets Management procedure (GSM,GKE)"
+    required: false
+  tailscale_key:
+    required: true
+
+
+
+  # Due to the limit of 10 input parameters in the workflow, as well as to simplify the transfer of parameters, a parameter in JSON format was introduced, which is essentially a collection of parameters.
+  # We can pass tags of all components, as well as the majority of the general parameters via this parameter. The only exception is the "env_name" parameter, as this is a key parameter, and it makes sense to set it separately.
+  #
+  # Generic JSON Keys:
+  #  - cloud             -- Airbyte Cloud Version [cloud_version]
+  #  - namespace         -- Kubernetes Namespace  (namespace)
+  #  - release           -- Helm Release Name     (helm_release_name)
+  #  - timeout           -- Helm Timeout          (helm_timeout)
+  #  - log               -- Log level the app should be deployed at (log_level)
+  #  - run               -- Deployment type: dry, deploy, no-rollback. (run_type)
+  #  - tests_integration -- Run Integration Tests
+  #
+  # Image Tags JSON Keys:
+  #  - server                  -- Server Image Tag                  \
+  #  - cloud-server            -- Cloud Server Image Tag            |
+  #  - cloud-partner-server    -- Cloud Partner Server Image Tag     \ (optional, defaults to: Airbyte Cloud Version <cloud_version>)
+  #  - billing                 -- Billing Cron Tag                   /
+  #  - bootloader              -- Bootloader Image Tag              |
+  #  - cloud-bootloader        -- Cloud Bootloader Image Tag        |
+  #  - cloud-public-api-server -- Cloud Public Api Server Image Tag /
+  #  - webapp                  -- WebApp Image Tag   (optional, defaults to: cloud-<env_name>-<cloud_version>)
+  #
+  hjson:
+    description: 'Parameters in JSON format. For example: { cloud: Cloud_Version, server: aabbccd, cloud-server: eeffaab, log: error, run: deploy }'
+    required: false
+    default: ""
+  
+  #
+  # More information about the deployment process can be found here:
+  #     https://github.com/airbytehq/airbyte-platform-internal/blob/master/docs/Deploying/Deploying-to-Cloud-using-CICD/JSON-Input-Parameter.md
+  #     https://internal-docs.airbyte.io/Deploying/Deploying-to-Cloud-using-CICD/JSON-Input-Parameter
+  #
+
+  # For now, as a TEMPORARY solution.
+  # !! It would be nice to find a way to get this list automatically! !!
+  components_list:
+    description: List of product components
+    required: true
+    default: '[ "server", "cloud-server", "cloud-partner-server", "billing", "bootloader", "cloud-bootloader", "cloud-workers", "cloud-public-api-server" ]'
+
+outputs:
+  cloud_version:
+    value: ${{ steps.variables.outputs.cloud }}
+  cloud_branch_name:
+    value: ${{ steps.variables.outputs.cloud_branch_name }}
+  log_level:
+    value: ${{ steps.variables.outputs.log }}
+  run_type:
+    value: ${{ steps.variables.outputs.run }}
+  generic:
+    description: A set of generic *Input Parameters* (like cloud_version, run_type, log_level etc.), serialized in JSON format.
+    value: ${{ steps.variables.outputs.generic }}
+  tags:
+    description: A set of *Tags* serialized in JSON format.
+    value: ${{ steps.variables.outputs.tags }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Determine Slack Notification Channel
+      id: determine-channel
+      shell: bash
+      run: |
+        if [ ${{ inputs.env_name }} == prod ]
+        then
+          # prod-deploys channel
+          echo "channel=C045LB3JW3W" >> $GITHUB_OUTPUT
+        else
+          # dev-deploys channel
+          echo "channel=C02TYDSUM8F" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Setup Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Install Dependencies for Python Code
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install hjson python-dotenv GitPython termcolor pyyaml
+    
+    - name: Processing Input Parameters
+      id: variables
+      uses: jannekem/run-python-script-action@v1.5
+      env:
+        PYTHONPATH: "${{ env.PYTHONPATH }}:${{ github.workspace }}"
+      with:
+        script: |
+          import sys, os, json, hjson, yaml
+          from git import Repo
+          from dotenv import dotenv_values
+          from termcolor import colored, cprint
+          print('\n', colored("Working directory: ", 'cyan'), colored(os.getcwd(), 'yellow'))
+          from tools.python_libs.cicd.generic import hjs_str
+          
+          # Loading data from HJSON input parameter.
+          hjs_input = hjs_str("${{ inputs.hjson }}")
+          hjs_param = hjson.loads(hjs_input.to_hjson())
+
+          # For now, as a TEMPORARY solution.
+          # !! It would be nice to find a way to map this dictionary automatically! !!
+          inputs_mapped = {
+              'cloud':     '${{ inputs.image_tag }}',
+              'namespace': '${{ inputs.namespace }}',
+              'release':   '${{ inputs.helm_release_name }}',
+              'timeout':   '${{ inputs.helm_timeout }}',
+              'log':       '${{ inputs.log_level }}',
+              'run':       '${{ inputs.run }}',
+              'endpoints': '${{ inputs.endpoints }}',
+              'tests':     '${{ inputs.tests }}',
+              'gsm':       '${{ inputs.gsm }}'
+              }
+
+          print('\n \n', colored('Mapped Inputs:', 'blue'))
+          cprint('--------------------------------------------------------------------------------', 'blue')
+          for key in inputs_mapped:
+              print(colored(f'{key:>30}: ', 'cyan'), colored(inputs_mapped[key], 'yellow'))
+
+          outputs = {}  # Initialization of the Output dictionary.
+
+          # If the parameter is present in HJSON, we take it from HJSON, if it is absent, then from the input parameters.
+          # The input parameters have default values, so if an input parameter is not specified, the default value will be used in the end.
+          for key in inputs_mapped:
+              try: outputs[key] = hjs_param[key]
+              except KeyError: outputs[key] = inputs_mapped[key]
+
+          # Custom Cases
+          # ----------------------------------------------------------------------
+          # If the *Cloud Version* is not specified, we form it based on a short hash.
+          if outputs['release'] == 'airbyte': outputs['release'] = '${{ inputs.env_name }}-' + outputs['release']
+          outputs['log'] = outputs['log'].upper()
+
+          endpoints_dry_run = 'false'
+          match outputs['run']:
+              case 'dry':         helm_run_type = '--dry-run'; endpoints_dry_run = 'true'
+              case 'deploy':      helm_run_type = '--atomic'
+              case 'no-rollback': helm_run_type = ''
+              case default:       error('Incorrect run_type: ' + outputs['run'] + 'specified!'); sys.exit(2)
+
+          set_output('helm_run_type', helm_run_type); set_output('endpoints_dry_run', endpoints_dry_run)
+
+          outputs['cloud_branch_name'] = os.getenv('GITHUB_REF_NAME')
+
+          print('\n \n', colored('Resulting Outputs:', 'blue'))
+          cprint('--------------------------------------------------------------------------------', 'blue')
+          for key in outputs:
+              print(colored(f'{key:>30}: ', 'cyan'), colored(outputs[key], 'yellow'))
+              set_output(key, outputs[key])
+
+
+          # The Processing and Forming of Image Tags
+          # ----------------------------------------
+          print('\n \n', colored('Defined Tags:', 'blue'))
+          cprint('--------------------------------------------------------------------------------', 'blue')
+          
+          tags = {}
+          helm_image_tags = ''
+
+          with open('prod-image-versions-override.yaml') as fh:
+                  override_versions = yaml.safe_load(fh)
+          # override_versions returns none type if file is empty. Below we assign empty list to it.
+          if override_versions is None: override_versions = []
+          
+          for key in ${{ inputs.components_list }}:
+              try: tags[key] = hjs_param[key]
+              except KeyError: tags[key] = outputs['cloud']
+              # Key-value pair in prod_cd_overrides.yaml that overrides components versions for deployment to prod
+              if '${{ inputs.env_name }}' == 'prod' and key in override_versions:
+                  helm_image_tags = helm_image_tags + ' --set ' + key + '.image.tag=' + override_versions[key]
+                  print(colored(f'{key:>30}: ', 'cyan'), colored(override_versions[key], 'yellow'))
+              else:
+                  if key == 'bootloader':
+                      helm_image_tags = helm_image_tags + ' --set ' + 'airbyte-bootloader' + '.image.tag=' + tags[key]
+                  elif key == 'cloud-workers':
+                      helm_image_tags = helm_image_tags + ' --set ' + 'worker' + '.image.tag=' + tags[key]
+                  elif key == 'cloud-public-api-server':
+                      helm_image_tags = helm_image_tags + ' --set ' + 'cloud-public-api-server.image.tag=' + tags[key]
+                  else:
+                      helm_image_tags = helm_image_tags + ' --set ' + key + '.image.tag=' + tags[key]
+                  print(colored(f'{key:>30}: ', 'cyan'), colored(tags[key], 'yellow'))
+              set_output('tag_' + key, tags[key])
+
+
+          # The processing of WebApp tag has to be separate because it has the environment mentioned in its name.  
+          try: tags['webapp'] = hjs_param['webapp']
+          except KeyError: tags['webapp'] = 'cloud-${{ inputs.env_name }}-' + outputs['cloud']
+          helm_image_tags = helm_image_tags + ' --set webapp.image.tag=' + tags['webapp']
+          print(colored(f'{"webapp":>30}: ', 'cyan'), colored(tags['webapp'], 'yellow'))
+          set_output('tag_webapp', tags['webapp'])
+
+          set_output('helm_image_tags', helm_image_tags)
+          
+          # Serialization and export of Outputs.
+          # ------------------------------------
+          set_output('generic', json.dumps(outputs)); set_output('tags', json.dumps(tags))
+
+
+    - name: Print processed Input Parameters
+      shell: bash
+      run: |
+        echo -e "
+        \nOutputs from *Processing Input Parameters* step
+        --------------------------------------------------------------------------------------
+                         tag_server: ${{ steps.variables.outputs.tag_server }}
+                   tag_cloud-server: ${{ steps.variables.outputs.tag_cloud-server }}
+           tag_cloud-partner-server: ${{ steps.variables.outputs.tag_cloud-partner-server }}
+                        tag_billing: ${{ steps.variables.outputs.tag_billing }}
+                         tag_webapp: ${{ steps.variables.outputs.tag_webapp }}
+                  tag_cloud-workers: ${{ steps.variables.outputs.tag_cloud-workers }}
+        tag_cloud-public-api-server: ${{ steps.variables.outputs.tag_cloud-public-api-server }}
+
+                             log: ${{ steps.variables.outputs.log }}
+                   helm_run_type: ${{ steps.variables.outputs.helm_run_type }}
+               endpoints_dry_run: ${{ steps.variables.outputs.endpoints_dry_run }}
+        \n 
+        Outputs from *Processing Input Parameters* step
+        --------------------------------------------------------------------------------------
+        ${{ steps.variables.outputs.helm_image_tags }}
+        \n"
+
+    - name: Preparing Runner
+      uses: ./.github/actions/runner-prepare-for-build
+      with:
+        cache-build-artifacts: false
+
+    - name: Refreshing helm/10-values.yaml files
+      uses: ./.github/actions/helm-values-builder
+
+    - name: Initializing Terraform on Environment
+      uses: ./.github/actions/terraform-init
+      with:
+        env_name: ${{ inputs.env_name }}
+        gcp_sa_key: ${{ inputs.gcp_sa_key }}
+        github_token: ${{ inputs.github_token }}
+
+    - name: Connect to internal networks of environments via Tailscale
+      uses: ./.github/actions/tailscale-tunnel
+      with:
+        env_name: ${{ inputs.env_name }}
+        gcp_sa_key: ${{ steps.input-and-variables.outputs.gcp_sa_key }}
+        tailscale_key: ${{ inputs.tailscale_key }}
+
+    - name: Update infrastructure secrets (GCP)
+      if: inputs.gsm == 'true' && inputs.run != 'dry'
+      uses: ./.github/actions/gsm-integration
+      with:
+        env_name: ${{ inputs.env_name }}
+        gcp_sa_key: ${{ steps.input-and-variables.outputs.gcp_sa_key }}
+        k8s_platform: gcp
+        lastpass_token: ${{ inputs.lastpass_token }}
+
+
+    - name: Patch serviceaccount before deployment
+      shell: bash
+      run: |
+        kubectl patch -n ab serviceaccount airbyte-admin -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs serviceaccount airbyte-admin -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs role airbyte-admin-role -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs rolebinding airbyte-admin-binding-ab -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs rolebinding airbyte-admin-binding-jobs -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl delete pod --ignore-not-found=true -n ab ${{ inputs.env_name }}-airbyte-airbyte-bootloader
+
+    - name: Deploy Helm Chart to GCP controlplane
+      shell: bash
+      run: |-
+        pushd infra/kube/airbyte && helm dep update && popd && \
+        helm upgrade --debug --force --install --wait --create-namespace -n ${{ steps.variables.outputs.namespace }} ${{ steps.variables.outputs.release }} ./infra/kube/airbyte \
+                     $(find ./infra/gcp/env/${{ inputs.env_name }}/helm/ -type f | sort -r | awk '{ print "--values "$0 }') \
+                     --set global.image.tag=${{ inputs.image_tag }} --set global.env_vars.AIRBYTE_VERSION=${{ inputs.image_tag }}-cloud \
+                     --set worker.env_vars.CONTAINER_ORCHESTRATOR_IMAGE=airbyte/container-orchestrator:${{ inputs.image_tag }} \
+                     --timeout=${{ steps.variables.outputs.timeout }} ${{ steps.variables.outputs.helm_image_tags }} \
+                     --set global.env_vars.LOG_LEVEL=${{ steps.variables.outputs.log }}  ${{ steps.variables.outputs.helm_run_type }}
+
+    - name: Update GCP Endpoints Configs
+      if: inputs.endpoints == 'true'
+      uses: ./.github/actions/update-google-endpoints
+      with:
+        env_name: ${{ inputs.env_name }}
+        image_tag: ${{ inputs.image_tag }}
+        gcp_sa_key: ${{ inputs.gcp_sa_key }}
+        dry_run: ${{ steps.variables.outputs.endpoints_dry_run }}
+        dockerhub_token: ${{ inputs.dockerhub_token }}
+        slackbot_token: ${{ inputs.slackbot_token }}
+
+    - name: Update infrastructure secrets (AWS)
+      if: inputs.gsm == 'true' && inputs.run != 'dry'
+      uses: ./.github/actions/gsm-integration
+      with:
+        env_name: ${{ inputs.env_name }}
+        gcp_sa_key: ${{ steps.input-and-variables.outputs.gcp_sa_key }}
+        k8s_platform: aws
+        lastpass_token: ${{ inputs.lastpass_token }}
+
+    - name: Deploy Helm Chart to AWS dataplane
+      uses: ./.github/actions/deploy-workers-aws
+      with:
+        env_name: ${{ inputs.env_name }}
+        image_tag: ${{ inputs.image_tag }}
+        run: ${{ inputs.run }}
+        setup_tailscale: 'false'
+        tailscale_key: ''
+
+    - name: Run Integration Tests
+      if: inputs.tests == 'true'
+      uses: ./.github/actions/tests-integration
+      with:
+        env_name: ${{ inputs.env_name }}
+        tailscale_key: ${{ inputs.tailscale_key }}
+
+    - name: Deployment Status Notification ( Succeed )
+      if: success()
+      uses: ./.github/actions/deploy-notify
+      with:
+        channel: ${{ steps.determine-channel.outputs.channel }}
+        env_name: ${{ inputs.env_name }}
+        generic: ${{ steps.variables.outputs.generic }}
+        tags: ${{ steps.variables.outputs.tags }}
+        deploy_status: 'success'
+        slackbot_token: ${{ inputs.slackbot_token }}
+
+    - name: Deployment Status Notification ( Failure )
+      if: failure()
+      uses: ./.github/actions/deploy-notify
+      with:
+        channel: ${{ steps.determine-channel.outputs.channel }}
+        env_name: ${{ inputs.env_name }}
+        generic: ${{ steps.variables.outputs.generic }}
+        tags: ${{ steps.variables.outputs.tags }}
+        deploy_status: 'failure'
+        slackbot_token: ${{ inputs.slackbot_token }}
+
+    # We use GitHub-hosted runners, so before completing the workflow
+    # we want to make sure that *all sensitive information is definitely deleted!*
+    - name: Clean-Up Workflow run
+      if: always()
+      uses: ./.github/actions/clean-up

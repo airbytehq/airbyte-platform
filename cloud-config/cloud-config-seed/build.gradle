@@ -1,0 +1,24 @@
+dependencies {
+    implementation project(':cloud-config:cloud-config-models')
+
+    implementation 'commons-cli:commons-cli:1.4'
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:init"
+    implementation "io.airbyte:airbyte-commons-cli"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:specs"
+    implementation "io.airbyte:airbyte-json-validation"
+    implementation libs.airbyte.protocol
+}
+
+task generateCloudConnectorCatalog(type: JavaExec, dependsOn: compileJava) {
+    classpath = sourceSets.main.runtimeClasspath
+
+    mainClass = 'io.airbyte.cloud.seed.CloudConnectorCatalogGenerator'
+
+    args '--output-root'
+    args new File(project(":airbyte-bootloader-wrapped").projectDir, '/src/main/resources/seed')
+
+    args '--oss-catalog-url'
+    args 'https://storage.googleapis.com/prod-airbyte-cloud-connector-metadata-service/oss_catalog.json'
+}

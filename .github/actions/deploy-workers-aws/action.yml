@@ -1,0 +1,106 @@
+name: 'Deploy Workers to AWS EKS'
+description: 'Deploys Airbyte Cloud workers (data plane) to AWS EKS'
+inputs:
+  env_name:
+    required: true
+  image_tag:
+    required: true
+  run:
+    required: true
+  setup_tailscale:
+    default: true
+    required: true
+  tailscale_key:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Identify Target EKS cluster
+      id: identify-target-eks
+      uses: ./.github/actions/get-eks-by-envname
+      with:
+        env_name: ${{ inputs.env_name }}
+
+    - name: Identify Helm Run Type
+      id: identify-helm-run-type
+      shell: bash
+      run: |
+        case "${{ inputs.run }}" in
+          deploy)
+            HELM_RUN_TYPE="--atomic"
+            ;;
+          no-rollback)
+            HELM_RUN_TYPE=""
+            ;;
+          *)
+            HELM_RUN_TYPE="--dry-run"
+            ;;
+        esac
+
+        echo "HELM_RUN_TYPE=${HELM_RUN_TYPE}" >> $GITHUB_OUTPUT
+
+    - name: Show vairalbes used for EKS deploy
+      shell: bash
+      run: |
+        echo
+        echo "================================================================"
+        echo "      Dataplane AWS Account : ${{ steps.identify-target-eks.outputs.dataplane-aws-account }}"
+        echo "       Dataplane EKS Region : ${{ steps.identify-target-eks.outputs.dataplane-eks-region }}"
+        echo "         Dataplane EKS Name : ${{ steps.identify-target-eks.outputs.dataplane-eks-name }}"
+        echo "Dataplane Helm Release Name : ${{ steps.identify-target-eks.outputs.dataplane-helm-release-name }}"
+        echo "              Helm Run Type : ${{ steps.identify-helm-run-type.outputs.HELM_RUN_TYPE }}"
+        echo
+        echo "                   env_name : ${{ inputs.env_name }}"
+        echo "                  image_tag : ${{ inputs.image_tag }}"
+        echo "                        run : ${{ inputs.run }}"
+        echo "================================================================"
+        echo
+
+    - name: Connect to Tailscale VPN
+      uses: tailscale/github-action@v1
+      if: ${{ inputs.setup_tailscale == 'true' }}
+      with:
+        authkey: ${{ inputs.tailscale_key }}
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: arn:aws:iam::${{ steps.identify-target-eks.outputs.dataplane-aws-account }}:role/GithubRunnerRole
+        aws-region: ${{ steps.identify-target-eks.outputs.dataplane-eks-region }}
+
+    - name: Connect to Amazon EKS cluster
+      if: ${{ steps.identify-target-eks.outputs.dataplane-eks-name != '' }}
+      shell: bash
+      run: |
+        aws eks update-kubeconfig --region ${{ steps.identify-target-eks.outputs.dataplane-eks-region }} --name ${{ steps.identify-target-eks.outputs.dataplane-eks-name }}
+
+    - name: Patch serviceaccount before deployment
+      shell: bash
+      run: |
+        kubectl patch -n ab serviceaccount airbyte-admin -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs serviceaccount airbyte-admin -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs role airbyte-admin-role -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs rolebinding airbyte-admin-binding-ab -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+        kubectl patch -n jobs rolebinding airbyte-admin-binding-jobs -p '{"metadata": {"annotations": {"helm.sh/resource-policy": "keep"}}}'
+
+    - name: Deploy Workers to AWS using helm
+      if: ${{ steps.identify-target-eks.outputs.dataplane-eks-name != '' }}
+      shell: bash
+      run: |
+        export ENV_NAME_REMAP="${{ inputs.env_name }}"
+        if [ "${{ inputs.env_name }}" == "prod" ]; then
+          # 'prod-paris' design mistake needs special care:
+          export ENV_NAME_REMAP="prod-paris"
+        fi
+        pushd infra/kube/airbyte && helm dep update && popd && \
+        set -x
+        helm upgrade --install --create-namespace -n ab ${{steps.identify-target-eks.outputs.dataplane-helm-release-name}} ./infra/kube/airbyte \
+           $(find ./infra/aws/env/${ENV_NAME_REMAP}/helm/ -type f | sort -r | awk '{ print "--values "$0 }') \
+           --set global.image.tag=${{ inputs.image_tag }} --set global.env_vars.AIRBYTE_VERSION=${{ inputs.image_tag }}-cloud \
+           --set worker.image.tag=${{ inputs.image_tag }} \
+           --set worker.env_vars.DD_VERSION=${{ inputs.image_tag }} \
+           --set worker.env_vars.CONTAINER_ORCHESTRATOR_IMAGE=airbyte/container-orchestrator:${{ inputs.image_tag }} \
+           --timeout=3m \
+           --set secrets.LOG_LEVEL=INFO ${{steps.identify-helm-run-type.outputs.HELM_RUN_TYPE}}
+

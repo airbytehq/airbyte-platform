@@ -1,0 +1,144 @@
+name: Build and Test (PR)
+
+env:
+  S3_BUILD_CACHE_ACCESS_KEY_ID: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+  S3_BUILD_CACHE_SECRET_KEY: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'infra/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+  workflow_dispatch:
+
+jobs:
+  start-runner:
+    name: "Start Runner on AWS"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Checkout Airbyte
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Start Runner on AWS using appropriate Action
+        id: start-ec2-runner
+        uses: ./.github/actions/runner-on-aws-start
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+  cloud-build:
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    name: "Check, Build and Test"
+    steps:
+      - name: Checkout Airbyte
+        uses: actions/checkout@v3
+
+      - name: Preparing Runner to the Build process
+        uses: ./.github/actions/runner-prepare
+
+      # TEMPORARILY DISABLED IN PR BUILD WHILE WE LOOK INTO HOW TO SPEED THIS UP
+      #- name: Format and Static Analysis
+      #  uses: Wandalen/wretry.action@master
+      #  with:
+      #    command: VERSION=$(git rev-parse --short=10 HEAD) ./gradlew clean check --scan --info --stacktrace
+      #    attempt_limit: 3
+      #    attempt_delay: 5000 # in ms
+
+      #- name: Ensure no file change
+      #  run: git status --porcelain && git --no-pager diff && test -z "$(git status --porcelain)"
+
+      - name: Copy docs from connectors repository
+        run: |
+          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
+          mkdir -p ./docs
+          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
+          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
+          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
+
+      - name: Build
+        uses: Wandalen/wretry.action@master
+        with:
+          command: VERSION=$(git rev-parse --short=10 HEAD) ./gradlew -p oss build --scan && VERSION=$(git rev-parse --short=10 HEAD) ./gradlew build --scan
+          attempt_limit: 3
+          attempt_delay: 5000 # in ms
+
+      - name: Generate Test Report
+        uses: dorny/test-reporter@v1
+        if: always()    # run this step even if previous step failed
+        with:
+          name: Cloud Test Report
+          # Specify top-level and second-level modules. Note there cannot be a space between the comma.
+          path: '/actions-runner/_work/airbyte-platform-internal/airbyte-platform-internal/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform-internal/airbyte-platform-internal/*/*/build/test-results/*/*.xml'
+          reporter: java-junit
+      
+      - uses: actions/setup-python@v4
+        if: always()
+        with:
+          python-version: "3.9"
+      
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        id: cloud-test-results
+        if: always()
+        with:
+          junit_files: "/actions-runner/_work/airbyte-platform-internal/airbyte-platform-internal/*/build/test-results/*/*.xml\n/actions-runner/_work/airbyte-platform-internal/airbyte-platform-internal/*/*/build/test-results/*/*.xml"
+          comment_mode: off
+          json_file: cloud_test_results.json
+          json_test_case_results: true
+          check_name: "Cloud Test Results"
+
+      - name: Setup Google Cloud SDK
+        if: always()
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          service_account_key: ${{ secrets.DEV_GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Prep Test Results For GCS
+        if: always()
+        run: |
+          python tools/bin/prep_test_results_for_gcs.py --json cloud_test_results.json --jobid $GITHUB_JOB --runid $GITHUB_RUN_ID
+        
+      - name: Upload Test Results to GCS
+        if: always()
+        run: | 
+          gcs_bucket_name="dev-ab-ci-run-results"
+          filename=$(echo "${{ fromJSON( steps.cloud-test-results.outputs.json ).check_url }}" | sed 's@.*/@@')  
+          echo "$filename"
+          gsutil -h "Cache-Control:public" cp cloud_test_results.jsonl "gs://$gcs_bucket_name/cloud/$filename.jsonl"
+
+  stop-runner:
+    name: "Stop Runner on AWS"
+    timeout-minutes: 10
+    needs:
+      - start-runner
+      - cloud-build
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Checkout Airbyte Cloud
+        uses: actions/checkout@v3
+      - name: Check PAT rate limits
+        run: |
+          ./tools/bin/find_non_rate_limited_PAT \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_CLOUD }} \
+            ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
+      - name: Stop Runner on AWS using appropriate Action
+        uses: ./.github/actions/runner-on-aws-stop
+        with:
+          aws-access-key-id: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          github-token: ${{ env.PAT }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}

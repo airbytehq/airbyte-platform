@@ -1,0 +1,32 @@
+import org.jsonschema2pojo.SourceType
+
+plugins {
+    id "com.github.eirnym.js2p" version "1.0"
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:init"
+    implementation "io.airbyte.airbyte-config:config-models"
+}
+
+jsonSchema2Pojo {
+	sourceType = SourceType.YAMLSCHEMA
+    source = files("${sourceSets.main.output.resourcesDir}/cloud-types")
+    targetDirectory = new File(project.buildDir, 'generated/src/gen/java/')
+
+    targetPackage = 'io.airbyte.cloud.config.generated'
+    useLongIntegers = true
+
+    removeOldOutput = true
+
+    generateBuilders = true
+    includeConstructors = false
+    includeSetters = true
+    serializable = true
+}
