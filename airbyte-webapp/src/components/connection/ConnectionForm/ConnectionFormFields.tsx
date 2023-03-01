@@ -19,9 +19,12 @@ import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ValuesProps } from "hooks/services/useConnectionHook";
 
+import { ConnectionConfigurationFormPreview } from "./ConnectionConfigurationFormPreview";
 import styles from "./ConnectionFormFields.module.scss";
+import { DestinationStreamPrefixName } from "./DestinationStreamPrefixName";
 import { FormikConnectionFormValues } from "./formConfig";
 import { NamespaceDefinitionField } from "./NamespaceDefinitionField";
+import { NamespaceDefinitionFieldNext } from "./NamespaceDefinitionFieldNext";
 import { NonBreakingChangesPreferenceField } from "./NonBreakingChangesPreferenceField";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
 import { ScheduleField } from "./ScheduleField";
@@ -52,15 +55,26 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
   });
 
   const isNewTableDesignEnabled = useNewTableDesignExperiment();
-  const firstSectionTitle = isNewTableDesignEnabled ? undefined : <FormattedMessage id="connection.transfer" />;
 
   return (
     <>
       {/* FormChangeTracker is here as it has access to everything it needs without being repeated */}
       <FormChangeTracker changed={dirty} formId={formId} />
       <div className={styles.formContainer}>
-        <Section title={firstSectionTitle}>
+        <Section
+          title={<FormattedMessage id="form.configuration" />}
+          collapsible={isNewTableDesignEnabled && mode === "edit"}
+          collapsedInitially
+          collapsedPreviewInfo={<ConnectionConfigurationFormPreview />}
+          testId="configuration"
+        >
           <ScheduleField />
+          {isNewTableDesignEnabled && (
+            <>
+              <NamespaceDefinitionFieldNext />
+              <DestinationStreamPrefixName />
+            </>
+          )}
           {allowAutoDetectSchema && (
             <Field name="nonBreakingChangesPreference" component={NonBreakingChangesPreferenceField} />
           )}
@@ -127,7 +141,7 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
             </Field>
           </Section>
         )}
-        <Section flush>
+        <Section flush flexHeight>
           <Field
             name="syncCatalog.streams"
             component={SyncCatalogField}

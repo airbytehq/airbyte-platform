@@ -12,6 +12,11 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Optional;
 
+/**
+ * Write protocol objects in a specified version.
+ *
+ * @param <T> type of protocol object.
+ */
 public class VersionedAirbyteMessageBufferedWriter<T> extends DefaultAirbyteMessageBufferedWriter {
 
   private final AirbyteMessageSerializer<T> serializer;

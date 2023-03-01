@@ -10,9 +10,18 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Schedule helpers.
+ */
 @SuppressWarnings("PMD.AvoidThrowingRawExceptionTypes")
 public class ScheduleHelpers {
 
+  /**
+   * Get number of seconds in time unit.
+   *
+   * @param timeUnitEnum time unit to get in seconds
+   * @return seconds in time unit
+   */
   public static Long getSecondsInUnit(final Schedule.TimeUnit timeUnitEnum) {
     switch (timeUnitEnum) {
       case MINUTES:
@@ -30,7 +39,7 @@ public class ScheduleHelpers {
     }
   }
 
-  public static Long getSecondsInUnit(final BasicSchedule.TimeUnit timeUnitEnum) {
+  private static Long getSecondsInUnit(final BasicSchedule.TimeUnit timeUnitEnum) {
     switch (timeUnitEnum) {
       case MINUTES:
         return TimeUnit.MINUTES.toSeconds(1);
@@ -55,6 +64,12 @@ public class ScheduleHelpers {
     return getSecondsInUnit(schedule.getTimeUnit()) * schedule.getUnits();
   }
 
+  /**
+   * Test if schedule configuration is consistent.
+   *
+   * @param standardSync sync to test
+   * @return true if mismatch. otherwise, false.
+   */
   public static boolean isScheduleTypeMismatch(final StandardSync standardSync) {
     if (standardSync.getScheduleType() == null) {
       return false;

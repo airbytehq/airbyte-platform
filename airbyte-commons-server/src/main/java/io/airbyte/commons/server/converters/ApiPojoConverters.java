@@ -33,6 +33,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Convert between API and internal versions of airbyte models.
+ */
+@SuppressWarnings({"MissingJavadocMethod", "LineLength"})
 public class ApiPojoConverters {
 
   public static io.airbyte.config.ActorDefinitionResourceRequirements actorDefResourceReqsToInternal(final ActorDefinitionResourceRequirements actorDefResourceReqs) {

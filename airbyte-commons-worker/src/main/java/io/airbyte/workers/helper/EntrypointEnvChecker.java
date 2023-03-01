@@ -19,6 +19,8 @@ import java.util.Collections;
 public class EntrypointEnvChecker {
 
   /**
+   * Get entrypoint env variable.
+   *
    * @param processFactory any process factory
    * @param jobId used as input to processFactory.create
    * @param jobAttempt used as input to processFactory.create

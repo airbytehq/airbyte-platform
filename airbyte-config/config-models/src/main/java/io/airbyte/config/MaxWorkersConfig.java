@@ -4,6 +4,9 @@
 
 package io.airbyte.config;
 
+/**
+ * Max workers by job type.
+ */
 public class MaxWorkersConfig {
 
   private final int maxSpecWorkers;
@@ -46,13 +49,13 @@ public class MaxWorkersConfig {
 
   @Override
   public String toString() {
-    return "MaxWorkersConfig{" +
-        "maxSpecWorkers=" + maxSpecWorkers +
-        ", maxCheckWorkers=" + maxCheckWorkers +
-        ", maxDiscoverWorkers=" + maxDiscoverWorkers +
-        ", maxSyncWorkers=" + maxSyncWorkers +
-        ", maxNotifyWorkers=" + maxNotifyWorkers +
-        '}';
+    return "MaxWorkersConfig{"
+        + "maxSpecWorkers=" + maxSpecWorkers
+        + ", maxCheckWorkers=" + maxCheckWorkers
+        + ", maxDiscoverWorkers=" + maxDiscoverWorkers
+        + ", maxSyncWorkers=" + maxSyncWorkers
+        + ", maxNotifyWorkers=" + maxNotifyWorkers
+        + '}';
   }
 
 }

@@ -35,7 +35,7 @@ import org.jooq.RecordMapper;
 import org.jooq.impl.DSL;
 
 /**
- * State Persistence
+ * State Persistence.
  *
  * Handle persisting States to the Database.
  *
@@ -51,11 +51,11 @@ public class StatePersistence {
   }
 
   /**
-   * Get the current State of a Connection
+   * Get the current State of a Connection.
    *
-   * @param connectionId
-   * @return
-   * @throws IOException
+   * @param connectionId connection id
+   * @return current state for the connection
+   * @throws IOException if there is an issue while interacting with the db.
    */
   public Optional<StateWrapper> getCurrentState(final UUID connectionId) throws IOException {
     final List<StateRecord> records = this.database.query(ctx -> getStateRecords(ctx, connectionId));
@@ -78,9 +78,9 @@ public class StatePersistence {
    * state. Other state type migrations should go through an explicit reset. An exception will be
    * thrown to prevent the system from getting into a bad state.
    *
-   * @param connectionId
-   * @param state
-   * @throws IOException
+   * @param connectionId connection id
+   * @param state new state
+   * @throws IOException if there is an issue while interacting with the db.
    */
   public void updateOrCreateState(final UUID connectionId, final StateWrapper state)
       throws IOException {
@@ -91,8 +91,8 @@ public class StatePersistence {
     // The only case where we allow a state migration is moving from LEGACY.
     // We expect any other migration to go through an explicit reset.
     if (!isMigration && previousState.isPresent() && previousState.get().getStateType() != currentStateType) {
-      throw new IllegalStateException("Unexpected type migration from '" + previousState.get().getStateType() + "' to '" + currentStateType +
-          "'. Migration of StateType need to go through an explicit reset.");
+      throw new IllegalStateException("Unexpected type migration from '" + previousState.get().getStateType() + "' to '" + currentStateType
+          + "'. Migration of StateType need to go through an explicit reset.");
     }
 
     this.database.transaction(ctx -> {
@@ -103,6 +103,9 @@ public class StatePersistence {
         case GLOBAL -> saveGlobalState(ctx, connectionId, state.getGlobal().getGlobal());
         case STREAM -> saveStreamState(ctx, connectionId, state.getStateMessages());
         case LEGACY -> saveLegacyState(ctx, connectionId, state.getLegacyState());
+        default -> {
+          // no op
+        }
       }
       return null;
     });
@@ -141,7 +144,7 @@ public class StatePersistence {
   }
 
   /**
-   * Performs the actual SQL operation depending on the state
+   * Performs the actual SQL operation depending on the state.
    *
    * If the state is null, it will delete the row, otherwise do an insert or update on conflict
    */
@@ -209,7 +212,7 @@ public class StatePersistence {
   }
 
   /**
-   * Get the StateType for a given list of StateRecords
+   * Get the StateType for a given list of StateRecords.
    *
    * @param connectionId The connectionId of the records, used to add more debugging context if an
    *        error is detected
@@ -227,12 +230,12 @@ public class StatePersistence {
       return types.stream().findFirst().get();
     }
 
-    throw new IllegalStateException("Inconsistent StateTypes for connectionId " + connectionId +
-        " (" + String.join(", ", types.stream().map(stateType -> stateType.getLiteral()).toList()) + ")");
+    throw new IllegalStateException("Inconsistent StateTypes for connectionId " + connectionId
+        + " (" + String.join(", ", types.stream().map(stateType -> stateType.getLiteral()).toList()) + ")");
   }
 
   /**
-   * Get the state records from the DB
+   * Get the state records from the DB.
    *
    * @param ctx A valid DSL context to use for the query
    * @param connectionId the ID of the connection
@@ -247,7 +250,7 @@ public class StatePersistence {
   }
 
   /**
-   * Build Global state
+   * Build Global state.
    *
    * The list of records can contain one global shared state that is the state without streamName and
    * without namespace The other records should be translated into AirbyteStreamState
@@ -268,7 +271,10 @@ public class StatePersistence {
   }
 
   /**
-   * Build StateWrapper for a PerStream state
+   * Build StateWrapper for a PerStream state.
+   *
+   * @param records list of db records that comprise the full state of a connection
+   * @return state wrapper
    */
   private static StateWrapper buildStreamState(final List<StateRecord> records) {
     final List<AirbyteStateMessage> messages = records.stream().map(
@@ -280,7 +286,10 @@ public class StatePersistence {
   }
 
   /**
-   * Build a StateWrapper for Legacy state
+   * Build a StateWrapper for Legacy state.
+   *
+   * @param records list of db records that comprise the full state of a connection
+   * @return state wrapper
    */
   private static StateWrapper buildLegacyState(final List<StateRecord> records) {
     final State legacyState = Jsons.convertValue(records.get(0).state, State.class);
@@ -290,7 +299,10 @@ public class StatePersistence {
   }
 
   /**
-   * Convert a StateRecord to an AirbyteStreamState
+   * Convert a StateRecord to an AirbyteStreamState.
+   *
+   * @param record db record
+   * @return state record
    */
   private static AirbyteStreamState buildAirbyteStreamState(final StateRecord record) {
     return new AirbyteStreamState()

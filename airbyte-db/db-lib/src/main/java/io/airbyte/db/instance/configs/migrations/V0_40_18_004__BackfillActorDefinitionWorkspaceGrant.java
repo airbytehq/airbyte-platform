@@ -12,6 +12,9 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Backfill actor definition workspace grant migration.
+ */
 // TODO: update migration description in the class name
 public class V0_40_18_004__BackfillActorDefinitionWorkspaceGrant extends BaseJavaMigration {
 

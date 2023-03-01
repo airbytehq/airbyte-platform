@@ -16,10 +16,13 @@ import io.airbyte.notification.NotificationClient;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.io.IOException;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/notifications")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class NotificationsApiController implements NotificationsApi {
@@ -28,6 +31,7 @@ public class NotificationsApiController implements NotificationsApi {
 
   @Post("/try")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public NotificationRead tryNotificationConfig(@Body final Notification notification) {
     return ApiHelper.execute(() -> tryNotification(notification));

@@ -7,6 +7,13 @@ package io.airbyte.workers;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
 
+/**
+ * Interface to define input and output to worker types.
+ *
+ * @param <InputType> input type
+ * @param <OutputType> output type
+ */
+@SuppressWarnings("InterfaceTypeParameterName")
 public interface Worker<InputType, OutputType> {
 
   /**

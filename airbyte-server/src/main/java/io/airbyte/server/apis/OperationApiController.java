@@ -24,9 +24,12 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
+import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings({"MissingJavadocType", "ParameterName"})
 @Controller("/api/v1/operations")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class OperationApiController implements OperationApi {
@@ -39,6 +42,7 @@ public class OperationApiController implements OperationApi {
 
   @Post("/check")
   @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public CheckOperationRead checkOperation(@Body final OperatorConfiguration operatorConfiguration) {
     return ApiHelper.execute(() -> operationsHandler.checkOperation(operatorConfiguration));
@@ -48,6 +52,7 @@ public class OperationApiController implements OperationApi {
   @Override
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   public OperationRead createOperation(@Body final OperationCreate operationCreate) {
     return ApiHelper.execute(() -> operationsHandler.createOperation(operationCreate));
   }
@@ -55,6 +60,7 @@ public class OperationApiController implements OperationApi {
   @Post("/delete")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteOperation(@Body final OperationIdRequestBody operationIdRequestBody) {
@@ -67,6 +73,7 @@ public class OperationApiController implements OperationApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public OperationRead getOperation(@Body final OperationIdRequestBody operationIdRequestBody) {
     return ApiHelper.execute(() -> operationsHandler.getOperation(operationIdRequestBody));
@@ -75,6 +82,7 @@ public class OperationApiController implements OperationApi {
   @Post("/list")
   @Secured({READER})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public OperationReadList listOperationsForConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> operationsHandler.listOperationsForConnection(connectionIdRequestBody));
@@ -83,6 +91,7 @@ public class OperationApiController implements OperationApi {
   @Post("/update")
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(TaskExecutors.IO)
   @Override
   public OperationRead updateOperation(@Body final OperationUpdate operationUpdate) {
     return ApiHelper.execute(() -> operationsHandler.updateOperation(operationUpdate));
