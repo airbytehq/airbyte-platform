@@ -23,6 +23,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Notion OAuth.
+ */
 public class NotionOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://api.notion.com/v1/oauth/authorize";
@@ -91,7 +94,7 @@ public class NotionOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final String authorization = Base64.getEncoder()

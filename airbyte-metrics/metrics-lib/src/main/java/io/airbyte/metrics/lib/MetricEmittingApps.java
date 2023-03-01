@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 
 /**
  * Enum containing all applications metrics are emitted for. Used to initialize
- * {@link MetricClientFactory.initialize(MetricEmittingApp)}.
+ * MetricClientFactory.initialize(...).
  *
  * Application Name Conventions:
  * <p>

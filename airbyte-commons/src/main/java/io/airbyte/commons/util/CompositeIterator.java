@@ -38,14 +38,14 @@ public final class CompositeIterator<T> extends AbstractIterator<T> implements A
 
   private final List<AutoCloseableIterator<T>> iterators;
 
-  private int i;
+  private int currentIteratorIndex;
   private boolean hasClosed;
 
   CompositeIterator(final List<AutoCloseableIterator<T>> iterators) {
     Preconditions.checkNotNull(iterators);
 
     this.iterators = iterators;
-    this.i = 0;
+    this.currentIteratorIndex = 0;
     this.hasClosed = false;
   }
 
@@ -67,8 +67,8 @@ public final class CompositeIterator<T> extends AbstractIterator<T> implements A
         throw new RuntimeException(e);
       }
 
-      if (i + 1 < iterators.size()) {
-        i++;
+      if (currentIteratorIndex + 1 < iterators.size()) {
+        currentIteratorIndex++;
       } else {
         return endOfData();
       }
@@ -78,7 +78,7 @@ public final class CompositeIterator<T> extends AbstractIterator<T> implements A
   }
 
   private AutoCloseableIterator<T> currentIterator() {
-    return iterators.get(i);
+    return iterators.get(currentIteratorIndex);
   }
 
   @Override

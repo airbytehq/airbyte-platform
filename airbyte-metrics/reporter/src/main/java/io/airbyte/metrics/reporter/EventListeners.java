@@ -38,12 +38,12 @@ class EventListeners {
    */
   @EventListener
   public void startEmitters(final ApplicationStartupEvent event) {
-    emitters.forEach(emitter -> executor.scheduleAtFixedRate(emitter::Emit, 0, emitter.getDuration().getSeconds(), TimeUnit.SECONDS));
+    emitters.forEach(emitter -> executor.scheduleAtFixedRate(emitter::emit, 0, emitter.getDuration().getSeconds(), TimeUnit.SECONDS));
     log.info("registered {} emitters", emitters.size());
   }
 
   /**
-   * Attempts to cleanly shutdown the running emitters
+   * Attempts to cleanly shutdown the running emitters.
    *
    * @param event unused but required in order to listen to the shutdown event.
    */

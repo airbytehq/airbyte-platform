@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test suite for the {@link SpecMaskPropertyGenerator} class.
  */
+@SuppressWarnings("LineLength")
 class SpecMaskPropertyGeneratorTest {
 
   private SpecMaskPropertyGenerator specMaskPropertyGenerator;

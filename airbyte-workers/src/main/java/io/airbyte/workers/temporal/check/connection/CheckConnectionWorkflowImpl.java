@@ -23,6 +23,9 @@ import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity.Chec
 import io.temporal.workflow.Workflow;
 import java.util.Map;
 
+/**
+ * Check connection temporal workflow implementation.
+ */
 public class CheckConnectionWorkflowImpl implements CheckConnectionWorkflow {
 
   private static final String CHECK_JOB_OUTPUT_TAG = "check_job_output";

@@ -13,6 +13,9 @@ import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import jakarta.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Temporal cleaner. Resets failed workflow executions.
+ */
 @Singleton
 @Slf4j
 public class Temporal {

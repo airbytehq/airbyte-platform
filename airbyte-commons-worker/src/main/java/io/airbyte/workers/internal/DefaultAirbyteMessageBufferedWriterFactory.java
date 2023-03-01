@@ -6,6 +6,9 @@ package io.airbyte.workers.internal;
 
 import java.io.BufferedWriter;
 
+/**
+ * Factory that provides the default writer.
+ */
 public class DefaultAirbyteMessageBufferedWriterFactory implements AirbyteMessageBufferedWriterFactory {
 
   @Override

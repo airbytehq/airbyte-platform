@@ -21,6 +21,10 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Fetch connector specs from Airbyte GCS Bucket where specs are stored when connectors are
+ * published.
+ */
 public class GcsBucketSpecFetcher {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GcsBucketSpecFetcher.class);
@@ -48,10 +52,21 @@ public class GcsBucketSpecFetcher {
     this.deploymentMode = deploymentMode;
   }
 
+  /**
+   * Get name of bucket where specs are stored.
+   *
+   * @return name of bucket where specs are stored
+   */
   public String getBucketName() {
     return bucketName;
   }
 
+  /**
+   * Fetch spec for docker image.
+   *
+   * @param dockerImage of a connector
+   * @return connector spec of docker image. if not found, empty optional.
+   */
   public Optional<ConnectorSpecification> attemptFetch(final String dockerImage) {
     final String[] dockerImageComponents = dockerImage.split(":");
     Preconditions.checkArgument(dockerImageComponents.length == 2, "Invalidate docker image: " + dockerImage);

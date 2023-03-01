@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Creates a sync job record in the db.
+ */
 public class DefaultSyncJobFactory implements SyncJobFactory {
 
   private final boolean connectorSpecificResourceDefaultsEnabled;
@@ -36,13 +39,13 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
   public DefaultSyncJobFactory(final boolean connectorSpecificResourceDefaultsEnabled,
                                final DefaultJobCreator jobCreator,
                                final ConfigRepository configRepository,
-                               final OAuthConfigSupplier oAuthConfigSupplier,
+                               final OAuthConfigSupplier oauthConfigSupplier,
                                final ConfigInjector configInjector,
                                final WorkspaceHelper workspaceHelper) {
     this.connectorSpecificResourceDefaultsEnabled = connectorSpecificResourceDefaultsEnabled;
     this.jobCreator = jobCreator;
     this.configRepository = configRepository;
-    this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.oAuthConfigSupplier = oauthConfigSupplier;
     this.configInjector = configInjector;
     this.workspaceHelper = workspaceHelper;
   }

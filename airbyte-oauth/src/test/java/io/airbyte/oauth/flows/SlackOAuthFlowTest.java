@@ -9,6 +9,7 @@ import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
 import java.util.Map;
 
+@SuppressWarnings("MissingJavadocType")
 public class SlackOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

@@ -47,7 +47,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class PersistStateActivityTest {
 
-  private final static UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final String STREAM_A = "a";
   private static final String STREAM_A_NAMESPACE = "a1";
   private static final String STREAM_B = "b";

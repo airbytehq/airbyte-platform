@@ -61,6 +61,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Generate input for a workflow.
+ */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class GenerateInputActivityImpl implements GenerateInputActivity {
@@ -76,6 +79,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GenerateInputActivity.class);
 
+  @SuppressWarnings("ParameterName")
   public GenerateInputActivityImpl(final JobPersistence jobPersistence,
                                    final ConfigRepository configRepository,
                                    final StateApi stateApi,
@@ -97,8 +101,9 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         () -> stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId)),
         "get state");
 
-    if (state.getStateType() == ConnectionStateType.NOT_SET)
+    if (state.getStateType() == ConnectionStateType.NOT_SET) {
       return Optional.empty();
+    }
 
     final StateWrapper internalState = StateConverter.clientToInternal(state);
     return Optional.of(StateMessageHelper.getState(internalState));
@@ -158,8 +163,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
     final String destinationNormalizationDockerImage = destinationDefinition.getNormalizationConfig() != null
-        ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":" +
-            destinationDefinition.getNormalizationConfig().getNormalizationTag()
+        ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":"
+            + destinationDefinition.getNormalizationConfig().getNormalizationTag()
         : null;
     final String normalizationIntegrationType =
         destinationDefinition.getNormalizationConfig() != null ? destinationDefinition.getNormalizationConfig().getNormalizationIntegrationType()

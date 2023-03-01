@@ -72,6 +72,27 @@ public class SecretsHelpers {
   }
 
   /**
+   * Used to separate secrets out of some configuration. This will output a partial config that
+   * includes pointers to secrets instead of actual secret values and a map that can be used to update
+   * a {@link SecretPersistence} at coordinates with values from the full config.
+   *
+   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
+   *        fixture creation.
+   * @param workspaceId workspace used for this config
+   * @param fullConfig config including secrets
+   * @param spec specification for the config
+   * @return a partial config + a map of coordinates to secret payloads
+   */
+  @VisibleForTesting
+  public static SplitSecretConfig splitConfig(final Supplier<UUID> uuidSupplier,
+                                              final UUID workspaceId,
+                                              final JsonNode fullConfig,
+                                              final JsonNode spec) {
+    return internalSplitAndUpdateConfig(uuidSupplier, workspaceId, (coordinate) -> Optional.empty(), Jsons.emptyObject(), fullConfig,
+        spec);
+  }
+
+  /**
    * Used to separate secrets out of a configuration and output a partial config that includes
    * pointers to secrets instead of actual secret values and a map that can be used to update a
    * {@link SecretPersistence} at coordinates with values from the full config. If a previous config
@@ -99,6 +120,32 @@ public class SecretsHelpers {
         oldPartialConfig,
         newFullConfig,
         spec);
+  }
+
+  /**
+   * Take a full configuration and old one. Save any secrets that are present in the new config.
+   * Return a SplitSecretConfig with the partial config and coordinate set after the old and new
+   * configs have merged.
+   *
+   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
+   *        fixture creation.
+   * @param workspaceId workspace id
+   * @param oldPartialConfig old partial config
+   * @param newFullConfig new config (prefer its value to the old one)
+   * @param spec spec for the config
+   * @param secretReader secret reader to get existing secrets
+   * @return results of merging old and new config with secrets removed and replaced with secret
+   *         coordinates
+   */
+  // todo (cgardens) - unused?
+  @VisibleForTesting
+  public static SplitSecretConfig splitAndUpdateConfig(final Supplier<UUID> uuidSupplier,
+                                                       final UUID workspaceId,
+                                                       final JsonNode oldPartialConfig,
+                                                       final JsonNode newFullConfig,
+                                                       final JsonNode spec,
+                                                       final ReadOnlySecretPersistence secretReader) {
+    return internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec);
   }
 
   /**
@@ -134,33 +181,6 @@ public class SecretsHelpers {
     });
 
     return config;
-  }
-
-  /**
-   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
-   *        fixture creation.
-   */
-  @VisibleForTesting
-  public static SplitSecretConfig splitConfig(final Supplier<UUID> uuidSupplier,
-                                              final UUID workspaceId,
-                                              final JsonNode fullConfig,
-                                              final JsonNode spec) {
-    return internalSplitAndUpdateConfig(uuidSupplier, workspaceId, (coordinate) -> Optional.empty(), Jsons.emptyObject(), fullConfig,
-        spec);
-  }
-
-  /**
-   * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
-   *        fixture creation.
-   */
-  @VisibleForTesting
-  public static SplitSecretConfig splitAndUpdateConfig(final Supplier<UUID> uuidSupplier,
-                                                       final UUID workspaceId,
-                                                       final JsonNode oldPartialConfig,
-                                                       final JsonNode newFullConfig,
-                                                       final JsonNode spec,
-                                                       final ReadOnlySecretPersistence secretReader) {
-    return internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec);
   }
 
   /**
@@ -256,8 +276,8 @@ public class SecretsHelpers {
    *
    * @param secretPersistence storage layer for secrets
    * @param coordinate reference to a secret in the persistence
-   * @throws RuntimeException when a secret at that coordinate is not available in the persistence
    * @return a json string containing the secret value or a JSON
+   * @throws RuntimeException when a secret at that coordinate is not available in the persistence
    */
   private static String getOrThrowSecretValue(final ReadOnlySecretPersistence secretPersistence,
                                               final SecretCoordinate coordinate) {
@@ -345,7 +365,7 @@ public class SecretsHelpers {
   /**
    * This method takes in the key (JSON key or HMAC key) of a workspace service account as a secret
    * and generates a co-ordinate for the secret so that the secret can be written in secret
-   * persistence at the generated co-ordinate
+   * persistence at the generated co-ordinate.
    *
    * @param newSecret The JSON key or HMAC key value
    * @param secretReader To read the value from secret persistence for comparison with the new value
@@ -374,12 +394,11 @@ public class SecretsHelpers {
         oldSecretFullCoordinate);
     return new SecretCoordinateToPayload(coordinateForStagingConfig,
         newSecret,
-        Jsons.jsonNode(Map.of(COORDINATE_FIELD,
-            coordinateForStagingConfig.getFullCoordinate())));
+        Jsons.jsonNode(Map.of(COORDINATE_FIELD, coordinateForStagingConfig.getFullCoordinate())));
   }
 
   /**
-   * Takes in the secret coordinate in form of a JSON and fetches the secret from the store
+   * Takes in the secret coordinate in form of a JSON and fetches the secret from the store.
    *
    * @param secretCoordinateAsJson The co-ordinate at which we expect the secret value to be present
    *        in the secret persistence

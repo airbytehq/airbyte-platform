@@ -18,6 +18,14 @@ public class ExceptionWrappingDatabase {
     this.database = database;
   }
 
+  /**
+   * Run a query.
+   *
+   * @param transform query to run
+   * @param <T> type of return value
+   * @return value of query
+   * @throws IOException exception when accessing db
+   */
   public <T> T query(final ContextQueryFunction<T> transform) throws IOException {
     try {
       return database.query(transform);
@@ -26,6 +34,14 @@ public class ExceptionWrappingDatabase {
     }
   }
 
+  /**
+   * Execute query in a transaction.
+   *
+   * @param transform query to run
+   * @param <T> type of return value
+   * @return value of query
+   * @throws IOException exception when accessing db
+   */
   public <T> T transaction(final ContextQueryFunction<T> transform) throws IOException {
     try {
       return database.transaction(transform);
