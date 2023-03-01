@@ -21,6 +21,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Persist discover schema catalog.
+ */
 public class V0_35_26_001__PersistDiscoveredCatalog extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_26_001__PersistDiscoveredCatalog.class);
@@ -38,7 +41,7 @@ public class V0_35_26_001__PersistDiscoveredCatalog extends BaseJavaMigration {
   }
 
   @VisibleForTesting
-  public static void migrate(final DSLContext ctx) {
+  static void migrate(final DSLContext ctx) {
     createActorCatalog(ctx);
     createCatalogFetchEvent(ctx);
     addConnectionTableForeignKey(ctx);

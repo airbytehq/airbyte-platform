@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * Google Analytics OAuth.
+ */
 public class GoogleAnalyticsViewIdOAuthFlow extends GoogleOAuthFlow {
 
   public static final String SCOPE_URL = "https://www.googleapis.com/auth/analytics.readonly";

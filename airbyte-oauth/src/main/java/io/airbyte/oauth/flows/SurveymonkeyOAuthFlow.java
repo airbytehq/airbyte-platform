@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * https://developer.surveymonkey.com/api/v3/?#authentication
+ * https://developer.surveymonkey.com/api/v3/?#authentication.
  */
 public class SurveymonkeyOAuthFlow extends BaseOAuth2Flow {
 

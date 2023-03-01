@@ -33,7 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@SuppressWarnings({"PMD.JUnit5TestShouldBePackagePrivate", "PMD.UnusedPrivateMethod"})
+@SuppressWarnings({"PMD.JUnit5TestShouldBePackagePrivate", "PMD.UnusedPrivateMethod", "MissingJavadocType"})
 public class SecretsHelpersTest {
 
   public static final UUID WORKSPACE_ID = UUID.fromString("e0eb0554-ffe0-4e9c-9dc0-ed7f52023eb2");
@@ -72,7 +72,7 @@ public class SecretsHelpersTest {
   @ParameterizedTest
   @MethodSource(PROVIDE_TEST_CASES)
   @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert"})
-  public void validateTestCases(final SecretsTestCase testCase) throws JsonValidationException {
+  void validateTestCases(final SecretsTestCase testCase) throws JsonValidationException {
     final var validator = new JsonSchemaValidator();
     final var spec = testCase.getSpec().getConnectionSpecification();
     validator.ensure(spec, testCase.getFullConfig());

@@ -9,6 +9,10 @@ import io.airbyte.config.persistence.ConfigRepository;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 
+/**
+ * HealthCheckHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class HealthCheckHandler {
 

@@ -39,11 +39,21 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Worker static utils.
+ */
 // TODO:(Issue-4824): Figure out how to log Docker process information.
 public class WorkerUtils {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkerUtils.class);
 
+  /**
+   * Waits until process ends or until time elapses.
+   *
+   * @param process process to wait for
+   * @param timeout timeout magnitude
+   * @param timeUnit timeout unit
+   */
   public static void gentleClose(final Process process, final long timeout, final TimeUnit timeUnit) {
 
     if (process == null) {
@@ -67,6 +77,12 @@ public class WorkerUtils {
     }
   }
 
+  /**
+   * Signal process to close. Once time has elapsed end it forcefully.
+   *
+   * @param process process to close
+   * @param lastChanceDuration timeout
+   */
   public static void closeProcess(final Process process, final Duration lastChanceDuration) {
     if (process == null) {
       return;
@@ -83,6 +99,11 @@ public class WorkerUtils {
     }
   }
 
+  /**
+   * Wait for process indefinitely.
+   *
+   * @param process process to wait for
+   */
   public static void wait(final Process process) {
     try {
       process.waitFor();
@@ -91,6 +112,11 @@ public class WorkerUtils {
     }
   }
 
+  /**
+   * Cancel process after 10 seconds.
+   *
+   * @param process process to cancel
+   */
   public static void cancelProcess(final Process process) {
     closeProcess(process, Duration.of(10, ChronoUnit.SECONDS));
   }
@@ -127,8 +153,14 @@ public class WorkerUtils {
     };
   }
 
-  public static Optional<AirbyteControlConnectorConfigMessage> getMostRecentConfigControlMessage(final Map<Type, List<AirbyteMessage>> messagesByType) {
-    return messagesByType.getOrDefault(Type.CONTROL, new ArrayList<>()).stream()
+  /**
+   * Get most recent control message from map of message type to messages.
+   *
+   * @param typeToMsgs message type to messages
+   * @return control message, if present.
+   */
+  public static Optional<AirbyteControlConnectorConfigMessage> getMostRecentConfigControlMessage(final Map<Type, List<AirbyteMessage>> typeToMsgs) {
+    return typeToMsgs.getOrDefault(Type.CONTROL, new ArrayList<>()).stream()
         .map(AirbyteMessage::getControl)
         .filter(control -> control.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG)
         .map(AirbyteControlMessage::getConnectorConfig)
@@ -142,12 +174,28 @@ public class WorkerUtils {
         .findFirst();
   }
 
+  /**
+   * Determine if a control message has updated the config for the connector.
+   *
+   * @param initialConfigJson original config json
+   * @param configMessage control message that is changing the config message
+   * @return true, if control message is actually changing the original config. otherwise, false.
+   */
   public static Boolean getDidControlMessageChangeConfig(final JsonNode initialConfigJson, final AirbyteControlConnectorConfigMessage configMessage) {
     final Config newConfig = configMessage.getConfig();
     final JsonNode newConfigJson = Jsons.jsonNode(newConfig);
     return !initialConfigJson.equals(newConfigJson);
   }
 
+  /**
+   * Group messages from process by type.
+   *
+   * @param process process emitting messages.
+   * @param streamFactory stream factory producing message.
+   * @param timeOut time out.
+   * @return map of message type to messages
+   * @throws IOException exception while reading
+   */
   public static Map<Type, List<AirbyteMessage>> getMessagesByType(final Process process, final AirbyteStreamFactory streamFactory, final int timeOut)
       throws IOException {
     final Map<Type, List<AirbyteMessage>> messagesByType;
@@ -160,6 +208,13 @@ public class WorkerUtils {
     }
   }
 
+  /**
+   * Get job failure reason from trace message.
+   *
+   * @param outputType airbyte protocol method
+   * @param messagesByType map of type to messages.
+   * @return failure reason from trace message, if present.
+   */
   public static Optional<FailureReason> getJobFailureReasonFromMessages(final OutputType outputType,
                                                                         final Map<Type, List<AirbyteMessage>> messagesByType) {
     final Optional<AirbyteTraceMessage> traceMessage = getTraceMessageFromMessagesByType(messagesByType);
@@ -172,6 +227,12 @@ public class WorkerUtils {
 
   }
 
+  /**
+   * Map stream names to their respective schemas.
+   *
+   * @param syncInput sync input
+   * @return map of stream names to their schemas
+   */
   public static Map<AirbyteStreamNameNamespacePair, JsonNode> mapStreamNamesToSchemas(final StandardSyncInput syncInput) {
     return syncInput.getCatalog().getStreams().stream().collect(
         Collectors.toMap(
@@ -180,7 +241,7 @@ public class WorkerUtils {
 
   }
 
-  public static String getStdErrFromErrorStream(final InputStream errorStream) throws IOException {
+  private static String getStdErrFromErrorStream(final InputStream errorStream) throws IOException {
     final BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8));
     final StringBuilder errorOutput = new StringBuilder();
     String line;
@@ -191,6 +252,14 @@ public class WorkerUtils {
     return errorOutput.toString();
   }
 
+  /**
+   * Throw worker exception.
+   *
+   * @param errorMessage error message
+   * @param process process that is throwing
+   * @throws WorkerException exception from worker
+   * @throws IOException exception while reading error from process
+   */
   public static void throwWorkerException(final String errorMessage, final Process process)
       throws WorkerException, IOException {
     final String stderr = getStdErrFromErrorStream(process.getErrorStream());

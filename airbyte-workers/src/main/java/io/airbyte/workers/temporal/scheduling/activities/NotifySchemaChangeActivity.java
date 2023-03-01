@@ -10,6 +10,9 @@ import io.temporal.activity.ActivityMethod;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * NotifySchemaChangeActivity.
+ */
 @ActivityInterface
 public interface NotifySchemaChangeActivity {
 

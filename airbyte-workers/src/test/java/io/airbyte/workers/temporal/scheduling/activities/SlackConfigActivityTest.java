@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 
 class SlackConfigActivityTest {
 
-  static private AirbyteApiClient mAirbyteApiClient;
-  static private SlackConfigActivityImpl slackConfigActivity;
+  private static AirbyteApiClient mAirbyteApiClient;
+  private static SlackConfigActivityImpl slackConfigActivity;
 
   @BeforeEach
   void setUp() {

@@ -60,6 +60,7 @@ import org.jooq.JSONB;
 import org.jooq.Record;
 import org.jooq.Table;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class SetupForNormalizedTablesTest {
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();

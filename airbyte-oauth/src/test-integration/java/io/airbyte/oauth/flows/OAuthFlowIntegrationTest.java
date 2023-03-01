@@ -25,7 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("PMD.AvoidReassigningParameters")
+@SuppressWarnings({"PMD.AvoidReassigningParameters", "MissingJavadocType"})
 public abstract class OAuthFlowIntegrationTest {
 
   /**
@@ -44,7 +44,7 @@ public abstract class OAuthFlowIntegrationTest {
 
   protected Path getCredentialsPath() {
     return Path.of("secrets/config.json");
-  };
+  }
 
   protected String getRedirectUrl() {
     return REDIRECT_URL;
@@ -52,6 +52,7 @@ public abstract class OAuthFlowIntegrationTest {
 
   protected abstract OAuthFlowImplementation getFlowImplementation(ConfigRepository configRepository, HttpClient httpClient);
 
+  @SuppressWarnings("MissingJavadocMethod")
   @BeforeEach
   public void setup() throws IOException {
     if (!Files.exists(getCredentialsPath())) {
@@ -95,7 +96,7 @@ public abstract class OAuthFlowIntegrationTest {
 
   public static class ServerHandler implements HttpHandler {
 
-    final private String expectedParam;
+    private final String expectedParam;
     private String paramValue;
     private boolean succeeded;
 

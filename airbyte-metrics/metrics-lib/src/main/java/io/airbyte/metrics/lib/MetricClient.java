@@ -4,7 +4,7 @@
 
 package io.airbyte.metrics.lib;
 
-/*
+/**
  * A generic metric client interface supporting basic metric emitting actions.
  */
 public interface MetricClient {
@@ -12,18 +12,18 @@ public interface MetricClient {
   /**
    * Increment or decrement a counter.
    *
-   * @param metric
+   * @param metric dd metric
    * @param val to record.
-   * @param attributes
+   * @param attributes additional attributes
    */
   void count(MetricsRegistry metric, long val, final MetricAttribute... attributes);
 
   /**
    * Record the latest value for a gauge.
    *
-   * @param metric
+   * @param metric dd metric
    * @param val to record.
-   * @param attributes
+   * @param attributes additional attributes
    */
   void gauge(MetricsRegistry metric, double val, final MetricAttribute... attributes);
 

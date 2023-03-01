@@ -10,7 +10,7 @@ import io.airbyte.oauth.BaseOAuthFlow;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
 class MicrosoftTeamsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

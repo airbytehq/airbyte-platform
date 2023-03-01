@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.server.errors;
 
+/**
+ * Value already exists and must be unique.
+ */
 public class ValueConflictKnownException extends KnownException {
 
   public ValueConflictKnownException(final String message) {

@@ -23,9 +23,9 @@ import org.junit.jupiter.api.Test;
 class OpenTelemetryMetricClientTest {
 
   OpenTelemetryMetricClient openTelemetryMetricClient;
-  private final static String TAG = "tag1";
+  private static final String TAG = "tag1";
 
-  private final static MetricEmittingApp METRIC_EMITTING_APP = MetricEmittingApps.WORKER;
+  private static final MetricEmittingApp METRIC_EMITTING_APP = MetricEmittingApps.WORKER;
   private InMemoryMetricExporter metricExporter;
   private SdkMeterProvider metricProvider;
 

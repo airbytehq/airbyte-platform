@@ -8,6 +8,10 @@ import io.airbyte.api.model.generated.WorkflowStateRead;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import jakarta.inject.Singleton;
 
+/**
+ * Convert between API and internal versions of workflow state models.
+ */
+@SuppressWarnings({"MissingJavadocMethod"})
 @Singleton
 public class WorkflowStateConverter {
 

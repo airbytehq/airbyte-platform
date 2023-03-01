@@ -17,6 +17,9 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add geography to connection migration.
+ */
 public class V0_40_11_001__AddGeographyColumnToConnections extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_11_001__AddGeographyColumnToConnections.class);
@@ -57,6 +60,9 @@ public class V0_40_11_001__AddGeographyColumnToConnections extends BaseJavaMigra
         .execute();
   }
 
+  /**
+   * Supported geographies.
+   */
   public enum GeographyType implements EnumType {
 
     AUTO("AUTO"),

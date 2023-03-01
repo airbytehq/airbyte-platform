@@ -12,9 +12,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Activity that fetches feature flags.
+ */
 @ActivityInterface
 public interface FeatureFlagFetchActivity {
 
+  /**
+   * Feature flag fetch input.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -24,6 +30,9 @@ public interface FeatureFlagFetchActivity {
 
   }
 
+  /**
+   * Feature flag fetch output.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
