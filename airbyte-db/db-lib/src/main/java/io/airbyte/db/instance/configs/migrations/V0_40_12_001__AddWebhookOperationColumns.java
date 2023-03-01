@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add webhook operations columns migration.
+ */
 // TODO: update migration description in the class name
 public class V0_40_12_001__AddWebhookOperationColumns extends BaseJavaMigration {
 

@@ -19,15 +19,20 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
+/**
+ * Abstraction to hide implementation of enqueuing a job.
+ */
 public interface JobCreator {
 
   /**
+   * Create a sync job.
+   *
    * @param source db model representing where data comes from
    * @param destination db model representing where data goes
    * @param standardSync sync options
    * @param sourceDockerImage docker image to use for the source
    * @param destinationDockerImage docker image to use for the destination
-   * @param workspaceId
+   * @param workspaceId workspace id
    * @return the new job if no other conflicting job was running, otherwise empty
    * @throws IOException if something wrong happens
    */
@@ -46,11 +51,12 @@ public interface JobCreator {
       throws IOException;
 
   /**
+   * Create a reset job.
    *
    * @param destination db model representing where data goes
    * @param standardSync sync options
    * @param destinationDockerImage docker image to use for the destination
-   * @param streamsToReset
+   * @param streamsToReset select which streams should be reset
    * @return the new job if no other conflicting job was running, otherwise empty
    * @throws IOException if something wrong happens
    */

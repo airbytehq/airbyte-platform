@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+/**
+ * Shared code for interacting with SQL strings.
+ */
 public class Sqls {
 
   public static <T extends Enum<T>> String toSqlName(final T value) {

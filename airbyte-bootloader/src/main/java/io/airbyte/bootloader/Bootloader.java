@@ -138,7 +138,8 @@ public class Bootloader {
       final String attentionBanner = MoreResources.readResource("banner/attention-banner.txt");
       log.error(attentionBanner);
       final String message = String.format(
-          "Cannot upgrade from version %s to version %s directly. First you must upgrade to version %s. After that upgrade is complete, you may upgrade to version %s",
+          "Cannot upgrade from version %s to version %s directly. First you must upgrade to version %s. "
+              + "After that upgrade is complete, you may upgrade to version %s",
           initialAirbyteDatabaseVersion.get().serialize(),
           airbyteVersion.serialize(),
           VERSION_BREAK.serialize(),
@@ -156,8 +157,8 @@ public class Bootloader {
     final Optional<AirbyteProtocolVersionRange> newProtocolRange = protocolVersionChecker.validate(autoUpgradeConnectors);
     if (newProtocolRange.isEmpty()) {
       throw new RuntimeException(
-          "Aborting bootloader to avoid breaking existing connection after an upgrade. " +
-              "Please address airbyte protocol version support issues in the connectors before retrying.");
+          "Aborting bootloader to avoid breaking existing connection after an upgrade. "
+              + "Please address airbyte protocol version support issues in the connectors before retrying.");
     }
     trackProtocolVersion(jobPersistence, newProtocolRange.get());
   }

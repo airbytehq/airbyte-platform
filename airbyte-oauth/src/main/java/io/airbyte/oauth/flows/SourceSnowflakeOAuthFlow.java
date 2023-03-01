@@ -24,6 +24,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Snowflake OAuth.
+ */
 public class SourceSnowflakeOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://%s/oauth/authorize";
@@ -95,7 +98,7 @@ public class SourceSnowflakeOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final byte[] authorization = Base64.getEncoder()

@@ -25,6 +25,9 @@ import java.util.function.Function;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Utility functions for connection manager workflows.
+ */
 @NoArgsConstructor
 @Singleton
 @Slf4j
@@ -95,6 +98,7 @@ public class ConnectionManagerUtils {
   // Keeping this private and only exposing the above methods outside this class provides a strict
   // type enforcement for external calls, and means this method can assume consistent type
   // implementations for both cases.
+  @SuppressWarnings({"MissingJavadocMethod", "LineLength"})
   private <T> ConnectionManagerWorkflow signalWorkflowAndRepairIfNecessary(final WorkflowClient client,
                                                                            final UUID connectionId,
                                                                            final Function<ConnectionManagerWorkflow, ? extends TemporalFunctionalInterfaceMarker> signalMethod,
@@ -115,7 +119,8 @@ public class ConnectionManagerUtils {
     } catch (final UnreachableWorkflowException e) {
       log.error(
           String.format(
-              "Failed to retrieve ConnectionManagerWorkflow for connection %s. Repairing state by creating new workflow and starting with the signal.",
+              "Failed to retrieve ConnectionManagerWorkflow for connection %s. "
+                  + "Repairing state by creating new workflow and starting with the signal.",
               connectionId),
           e);
 
@@ -157,10 +162,26 @@ public class ConnectionManagerUtils {
     }
   }
 
+  /**
+   * Terminate a temporal workflow and throw a useful exception.
+   *
+   * @param client temporal workflow client
+   * @param connectionId connection id
+   * @param reason reason for terminating the workflow
+   */
+  // todo (cgardens) - what makes this safe
   public void safeTerminateWorkflow(final WorkflowClient client, final UUID connectionId, final String reason) {
     safeTerminateWorkflow(client, getConnectionManagerName(connectionId), reason);
   }
 
+  /**
+   * Start a connection manager workflow for a connection.
+   *
+   * @param client temporal workflow client
+   * @param connectionId connection id
+   * @return new connection manager workflow
+   */
+  // todo (cgardens) - what does no signal mean in this context?
   public ConnectionManagerWorkflow startConnectionManagerNoSignal(final WorkflowClient client, final UUID connectionId) {
     final ConnectionManagerWorkflow connectionManagerWorkflow = newConnectionManagerWorkflowStub(client, connectionId);
     final ConnectionUpdaterInput input = TemporalWorkflowUtils.buildStartWorkflowInput(connectionId);
@@ -223,6 +244,13 @@ public class ConnectionManagerUtils {
     return getWorkflowState(client, connectionId).map(WorkflowState::isRunning).orElse(false);
   }
 
+  /**
+   * Get status of a connection manager workflow.
+   *
+   * @param workflowClient workflow client
+   * @param connectionId connection id
+   * @return workflow execution status
+   */
   public WorkflowExecutionStatus getConnectionManagerWorkflowStatus(final WorkflowClient workflowClient, final UUID connectionId) {
     final DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = DescribeWorkflowExecutionRequest.newBuilder()
         .setExecution(WorkflowExecution.newBuilder()
@@ -236,6 +264,13 @@ public class ConnectionManagerUtils {
     return describeWorkflowExecutionResponse.getWorkflowExecutionInfo().getStatus();
   }
 
+  /**
+   * Get the job id for a connection is a workflow is running for it. Otherwise, throws.
+   *
+   * @param client temporal workflow client
+   * @param connectionId connection id
+   * @return current job id
+   */
   public long getCurrentJobId(final WorkflowClient client, final UUID connectionId) {
     try {
       final ConnectionManagerWorkflow connectionManagerWorkflow = getConnectionManagerWorkflow(client, connectionId);

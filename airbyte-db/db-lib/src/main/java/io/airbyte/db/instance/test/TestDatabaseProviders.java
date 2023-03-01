@@ -41,6 +41,13 @@ public class TestDatabaseProviders {
     return this;
   }
 
+  /**
+   * Create new configs db.
+   *
+   * @return configs db.
+   * @throws IOException exception while accessing db
+   * @throws DatabaseInitializationException exception while initializing db
+   */
   public Database createNewConfigsDatabase() throws IOException, DatabaseInitializationException {
     final Flyway flyway = FlywayFactory.create(dataSource, ConfigsDatabaseTestProvider.class.getSimpleName(), ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION);
@@ -48,6 +55,13 @@ public class TestDatabaseProviders {
         .create(runMigration);
   }
 
+  /**
+   * Create new jobs db.
+   *
+   * @return jobs db.
+   * @throws IOException exception while accessing db
+   * @throws DatabaseInitializationException exception while initializing db
+   */
   public Database createNewJobsDatabase() throws IOException, DatabaseInitializationException {
     final Flyway flyway = FlywayFactory.create(dataSource, JobsDatabaseTestProvider.class.getSimpleName(), JobsDatabaseMigrator.DB_IDENTIFIER,
         JobsDatabaseMigrator.MIGRATION_FILE_LOCATION);

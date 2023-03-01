@@ -9,6 +9,9 @@ import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import jakarta.inject.Singleton;
 
+/**
+ * Based on geography and temporal job type returns the appropriate task queue.
+ */
 @Singleton
 public class DefaultTaskQueueMapper implements TaskQueueMapper {
 

@@ -7,6 +7,12 @@ package io.airbyte.commons.temporal;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Wraps the response from a temporal workflow. Adds metadata around whether it is a success or
+ * error so that a caller can decide how to handle the output.
+ *
+ * @param <T> type of the output if it were a success.
+ */
 public class TemporalResponse<T> {
 
   private final T output;
@@ -61,10 +67,10 @@ public class TemporalResponse<T> {
 
   @Override
   public String toString() {
-    return "TemporalResponse{" +
-        "output=" + output +
-        ", metadata=" + metadata +
-        '}';
+    return "TemporalResponse{"
+        + "output=" + output
+        + ", metadata=" + metadata
+        + '}';
   }
 
 }

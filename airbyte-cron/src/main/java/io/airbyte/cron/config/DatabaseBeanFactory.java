@@ -49,6 +49,14 @@ public class DatabaseBeanFactory {
     return new Database(dslContext);
   }
 
+  /**
+   * Flyway config.
+   *
+   * @param configFlywayConfigurationProperties flyway configuration
+   * @param configDataSource configs db source
+   * @param baselineVersion baseline version
+   * @return flyway config
+   */
   @Singleton
   @Named("configFlyway")
   public Flyway configFlyway(@Named("config") final FlywayConfigurationProperties configFlywayConfigurationProperties,
@@ -69,6 +77,16 @@ public class DatabaseBeanFactory {
     return new ConfigRepository(configDatabase);
   }
 
+  /**
+   * Database migration check.
+   *
+   * @param dslContext db context
+   * @param configsFlyway config for flyway
+   * @param configsDatabaseMinimumFlywayMigrationVersion minimum flyway migration version
+   * @param configsDatabaseInitializationTimeoutMs timeout
+   * @return check for database migration
+   */
+  @SuppressWarnings("LineLength")
   @Singleton
   @Named("configsDatabaseMigrationCheck")
   public DatabaseMigrationCheck configsDatabaseMigrationCheck(@Named("config") final DSLContext dslContext,

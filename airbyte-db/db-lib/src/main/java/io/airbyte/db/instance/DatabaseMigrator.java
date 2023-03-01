@@ -10,6 +10,9 @@ import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.output.BaselineResult;
 import org.flywaydb.core.api.output.MigrateResult;
 
+/**
+ * Database migrator interface.
+ */
 public interface DatabaseMigrator {
 
   /**

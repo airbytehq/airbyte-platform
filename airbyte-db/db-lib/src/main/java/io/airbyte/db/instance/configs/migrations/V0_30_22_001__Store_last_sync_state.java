@@ -107,6 +107,8 @@ public class V0_30_22_001__Store_last_sync_state extends BaseJavaMigration {
   }
 
   /**
+   * Get standard sync states.
+   *
    * @return a set of StandardSyncStates from the latest attempt for each connection.
    */
   @VisibleForTesting

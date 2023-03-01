@@ -11,6 +11,9 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
+/**
+ * Run airbyte discover catalog in temporal.
+ */
 @WorkflowInterface
 public interface DiscoverCatalogWorkflow {
 

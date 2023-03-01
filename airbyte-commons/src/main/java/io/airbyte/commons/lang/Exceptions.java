@@ -10,12 +10,15 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Shared code for handling {@link Exception}.
+ */
 public class Exceptions {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   /**
-   * Catch a checked exception and rethrow as a {@link RuntimeException}
+   * Catch a checked exception and rethrow as a {@link RuntimeException}.
    *
    * @param callable - function that throws a checked exception.
    * @param <T> - return type of the function.
@@ -50,6 +53,11 @@ public class Exceptions {
     }
   }
 
+  /**
+   * Swallow an exception and log it to STDERR.
+   *
+   * @param procedure code that emits exception to swallow.
+   */
   public static void swallow(final Procedure procedure) {
     try {
       procedure.call();
@@ -58,12 +66,23 @@ public class Exceptions {
     }
   }
 
+  /**
+   * Abstraction for swallowing exceptions.
+   */
   public interface Procedure {
 
     void call() throws Exception;
 
   }
 
+  /**
+   * Swallow {@link Exception} and returns a default value.
+   *
+   * @param procedure code that emits exception to swallow.
+   * @param defaultValue value to return when an exception is thrown.
+   * @param <T> type of the value returned.
+   * @return value from the wrapped code or the default value if an exception is thrown.
+   */
   public static <T> T swallowWithDefault(final Callable<T> procedure, final T defaultValue) {
     try {
       return procedure.call();

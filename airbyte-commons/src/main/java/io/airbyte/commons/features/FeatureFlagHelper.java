@@ -11,6 +11,9 @@ import java.util.UUID;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Shared code for handling feature flags.
+ */
 @Slf4j
 public class FeatureFlagHelper {
 

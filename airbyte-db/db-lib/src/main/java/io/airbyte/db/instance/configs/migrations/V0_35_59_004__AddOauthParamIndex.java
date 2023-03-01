@@ -11,6 +11,9 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add OAuth params index migration.
+ */
 public class V0_35_59_004__AddOauthParamIndex extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_59_004__AddOauthParamIndex.class);

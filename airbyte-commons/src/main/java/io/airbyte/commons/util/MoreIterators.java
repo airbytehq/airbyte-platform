@@ -13,10 +13,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * Shared code for common operations on {@link Iterator}.
+ */
 public class MoreIterators {
 
   /**
-   * Create an iterator from elements
+   * Create an iterator from elements.
    *
    * @param elements element to put in iterator
    * @param <T> type
@@ -27,7 +30,7 @@ public class MoreIterators {
   }
 
   /**
-   * Create a list from an iterator
+   * Create a list from an iterator.
    *
    * @param iterator iterator to convert
    * @param <T> type
@@ -42,7 +45,7 @@ public class MoreIterators {
   }
 
   /**
-   * Create a set from an iterator
+   * Create a set from an iterator.
    *
    * @param iterator iterator to convert
    * @param <T> type
@@ -56,6 +59,13 @@ public class MoreIterators {
     return set;
   }
 
+  /**
+   * Create an iterator that returns a single value from a supplier.
+   *
+   * @param supplier to provide the value
+   * @param <T> type of the value to be returned
+   * @return iterator that will return the value from the supplier
+   */
   public static <T> Iterator<T> singletonIteratorFromSupplier(final Supplier<T> supplier) {
     return new AbstractIterator<T>() {
 
