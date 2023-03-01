@@ -6,6 +6,9 @@ package io.airbyte.server;
 
 import io.micronaut.runtime.Micronaut;
 
+/**
+ * Config Server Micronaut App.
+ */
 public class Application {
 
   public static void main(final String[] args) {

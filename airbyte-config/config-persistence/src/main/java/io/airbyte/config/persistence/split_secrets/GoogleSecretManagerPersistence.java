@@ -36,7 +36,7 @@ import org.joda.time.Days;
  * secrets management platforms such as Hashicorp Vault and GSM, we would need to create secrets in
  * order (or depending on our retention for the secrets pretend to insert earlier versions).
  */
-final public class GoogleSecretManagerPersistence implements SecretPersistence {
+public final class GoogleSecretManagerPersistence implements SecretPersistence {
 
   /**
    * The "latest" alias is a magic string that gives you access to the latest secret without
@@ -114,6 +114,13 @@ final public class GoogleSecretManagerPersistence implements SecretPersistence {
     }
   }
 
+  /**
+   * Get secret manager client.
+   *
+   * @param credentialsJson secret manager credentials
+   * @return secrets client
+   * @throws IOException exception when interacting with the secrets store
+   */
   public static SecretManagerServiceClient getSecretManagerServiceClient(final String credentialsJson) throws IOException {
     final var credentialsByteStream = new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8));
     final var credentials = ServiceAccountCredentials.fromStream(credentialsByteStream);

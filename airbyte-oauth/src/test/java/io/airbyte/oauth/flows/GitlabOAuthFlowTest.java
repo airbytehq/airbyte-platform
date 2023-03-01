@@ -14,7 +14,7 @@ import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
 class GitlabOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

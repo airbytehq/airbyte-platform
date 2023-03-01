@@ -1,0 +1,40 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+    implementation libs.bundles.micronaut.annotation
+
+    implementation "io.airbyte.airbyte-config:init"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-config:config-persistence"
+    implementation "io.airbyte.airbyte-persistence:job-persistence"
+    implementation "io.airbyte:airbyte-json-validation"
+    implementation libs.lombok
+
+    testAnnotationProcessor platform(libs.micronaut.bom)
+    testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
+
+    testImplementation libs.bundles.micronaut.test
+    testImplementation libs.bundles.junit
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.10.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register("copyGeneratedJar", Copy) {
+    dependsOn copyDocker
+    dependsOn jar
+    from('build/libs') {
+        include "*$project.name-*.jar"
+    }
+    into 'build/docker/lib'
+}
+
+tasks.named("buildDockerImage") {
+    dependsOn copyGeneratedJar
+    dependsOn gradle.includedBuild("airbyte").task(':airbyte-bootloader:buildDockerImage')
+}

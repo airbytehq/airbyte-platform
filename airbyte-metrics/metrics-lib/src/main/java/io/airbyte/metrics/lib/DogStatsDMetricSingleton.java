@@ -30,7 +30,7 @@ public class DogStatsDMetricSingleton {
    * Traditional singleton initialize call. Please invoke this before using any methods in this class.
    * Usually called in the main class of the application attempting to publish metrics.
    */
-  public synchronized static void initialize(final MetricEmittingApp app, final DatadogClientConfiguration config) {
+  public static synchronized void initialize(final MetricEmittingApp app, final DatadogClientConfiguration config) {
     if (statsDClient != null) {
       throw new RuntimeException("You cannot initialize configuration more than once.");
     }
@@ -51,7 +51,7 @@ public class DogStatsDMetricSingleton {
   }
 
   @VisibleForTesting
-  public synchronized static void flush() {
+  public static synchronized void flush() {
     statsDClient = null;
     instancePublish = false;
   }
@@ -59,9 +59,9 @@ public class DogStatsDMetricSingleton {
   /**
    * Increment or decrement a counter.
    *
-   * @param metric
+   * @param metric to count
    * @param amt to adjust.
-   * @param tags
+   * @param tags additional tags
    */
   public static void count(final MetricsRegistry metric, final double amt, final String... tags) {
     if (instancePublish) {
@@ -79,9 +79,9 @@ public class DogStatsDMetricSingleton {
   /**
    * Record the latest value for a gauge.
    *
-   * @param metric
+   * @param metric dd metric
    * @param val to record.
-   * @param tags
+   * @param tags additional labels
    */
   public static void gauge(final MetricsRegistry metric, final double val, final String... tags) {
     if (instancePublish) {
@@ -106,9 +106,9 @@ public class DogStatsDMetricSingleton {
    *
    * See https://docs.datadoghq.com/metrics/types/?tab=histogram#metric-types for more information.
    *
-   * @param metric
+   * @param metric dd metrics
    * @param val of time to record.
-   * @param tags
+   * @param tags additional labels
    */
   public static void recordTimeLocal(final MetricsRegistry metric, final double val, final String... tags) {
     if (instancePublish) {
@@ -127,9 +127,9 @@ public class DogStatsDMetricSingleton {
    * Submit a single execution time aggregated globally by Datadog - all metric related statistics are
    * calculated in Datadog. Use this for precise stats.
    *
-   * @param metric
+   * @param metric dd metric
    * @param val of time to record.
-   * @param tags
+   * @param tags additional labels
    */
   public static void recordTimeGlobal(final MetricsRegistry metric, final double val, final String... tags) {
     if (instancePublish) {
@@ -148,9 +148,9 @@ public class DogStatsDMetricSingleton {
    * Wrapper of {@link #recordTimeGlobal(MetricsRegistry, double, String...)} with a runnable for
    * convenience.
    *
-   * @param metric
+   * @param metric dd metric
    * @param runnable to time
-   * @param tags
+   * @param tags additional labels
    */
   public static void recordTimeGlobal(final MetricsRegistry metric, final Runnable runnable, final String... tags) {
     final long start = System.currentTimeMillis();
@@ -164,9 +164,9 @@ public class DogStatsDMetricSingleton {
    * Wrapper around {@link #recordTimeGlobal(MetricsRegistry, double, String...)} with a different
    * name to better represent what this function does.
    *
-   * @param metric
-   * @param val
-   * @param tags
+   * @param metric dd metric
+   * @param val value
+   * @param tags additional labels
    */
   public static void percentile(final MetricsRegistry metric, final double val, final String... tags) {
     recordTimeGlobal(metric, val, tags);

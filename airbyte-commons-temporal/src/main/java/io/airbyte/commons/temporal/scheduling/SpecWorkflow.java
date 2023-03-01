@@ -10,6 +10,9 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 
+/**
+ * Run airbyte spec method in temporal.
+ */
 @WorkflowInterface
 public interface SpecWorkflow {
 

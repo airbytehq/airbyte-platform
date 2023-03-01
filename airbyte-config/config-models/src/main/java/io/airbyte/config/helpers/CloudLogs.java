@@ -39,6 +39,12 @@ public interface CloudLogs {
 
   void deleteLogs(LogConfigs configs, String logPath);
 
+  /**
+   * Create cloud log client.
+   *
+   * @param configs log configs
+   * @return log client
+   */
   static CloudLogs createCloudLogClient(final LogConfigs configs) {
     switch (configs.getStorageConfigs().getType()) {
       case S3 -> {
@@ -49,6 +55,9 @@ public interface CloudLogs {
       }
       case GCS -> {
         return new GcsLogs(new DefaultGcsClientFactory(configs.getStorageConfigs().getGcsConfig()));
+      }
+      default -> {
+        // no op
       }
     }
 

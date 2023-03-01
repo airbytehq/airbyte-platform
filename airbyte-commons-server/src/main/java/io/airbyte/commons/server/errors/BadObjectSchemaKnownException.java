@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.server.errors;
 
+/**
+ * Remove me.
+ */
 public class BadObjectSchemaKnownException extends KnownException {
 
   public BadObjectSchemaKnownException(final String message) {

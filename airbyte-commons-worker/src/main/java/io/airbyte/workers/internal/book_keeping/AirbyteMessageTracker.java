@@ -83,7 +83,7 @@ public class AirbyteMessageTracker implements MessageTracker {
   private boolean unreliableCommittedCounts;
   /**
    * If the StateMetricsTracker throws an exception, this flag is set to true and the metrics around
-   * max and mean time between state message emitted and committed are unreliable
+   * max and mean time between state message emitted and committed are unreliable.
    */
   private boolean unreliableStateTimingMetrics;
 
@@ -242,7 +242,7 @@ public class AirbyteMessageTracker implements MessageTracker {
   }
 
   /**
-   * When a connector signals that the platform should update persist an update
+   * When a connector signals that the platform should update persist an update.
    */
   private void handleEmittedOrchestratorMessage(final AirbyteControlMessage controlMessage, final ConnectorType connectorType) {
     switch (controlMessage.getType()) {
@@ -252,7 +252,7 @@ public class AirbyteMessageTracker implements MessageTracker {
   }
 
   /**
-   * When a connector needs to update its configuration
+   * When a connector needs to update its configuration.
    */
   @SuppressWarnings("PMD") // until method is implemented
   private void handleEmittedOrchestratorConnectorConfig(final AirbyteControlConnectorConfigMessage configMessage,
@@ -309,6 +309,9 @@ public class AirbyteMessageTracker implements MessageTracker {
         log.debug("Saving sync estimates");
         totalBytesEstimatedSync = estimate.getByteEstimate();
         totalRecordsEstimatedSync = estimate.getRowEstimate();
+      }
+      default -> {
+        // no op
       }
     }
 

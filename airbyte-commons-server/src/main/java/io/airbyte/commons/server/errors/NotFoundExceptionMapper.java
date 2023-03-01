@@ -12,6 +12,9 @@ import javax.ws.rs.ext.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Exception mapper for when an input id is for a resource that does not exist.
+ */
 @Provider
 public class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
 

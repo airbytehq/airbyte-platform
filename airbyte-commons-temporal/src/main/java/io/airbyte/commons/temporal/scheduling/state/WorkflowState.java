@@ -12,6 +12,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * Contains the state of the currently running workflow execution in the connection manager
+ * workflow.
+ */
 @Getter
 @NoArgsConstructor
 public class WorkflowState {
@@ -46,6 +50,11 @@ public class WorkflowState {
   private boolean doneWaiting = false;
   private boolean skipSchedulingNextWorkflow = false;
 
+  /**
+   * Whether the CURRENT workflow has running.
+   *
+   * @param running true, if running.
+   */
   public void setRunning(final boolean running) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.RUNNING,
@@ -54,6 +63,11 @@ public class WorkflowState {
     this.running = running;
   }
 
+  /**
+   * Whether the workflow has been deleted.
+   *
+   * @param deleted true, if deleted.
+   */
   public void setDeleted(final boolean deleted) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.DELETED,
@@ -62,6 +76,13 @@ public class WorkflowState {
     this.deleted = deleted;
   }
 
+  /**
+   * Determines the scheduling behavior for the CURRENT run of the connection manager workflow. If set
+   * to true, then the next sync should immediately execute and not wait for scheduling. If false,
+   * then it will wait for the schedule as "normal".
+   *
+   * @param skipScheduling true, if should skip.
+   */
   public void setSkipScheduling(final boolean skipScheduling) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.SKIPPED_SCHEDULING,
@@ -70,6 +91,12 @@ public class WorkflowState {
     this.skipScheduling = skipScheduling;
   }
 
+  /**
+   * Demarcates whether the connection's configurations have been updated during the current workflow
+   * execution.
+   *
+   * @param updated true, if updated.
+   */
   public void setUpdated(final boolean updated) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.UPDATED,
@@ -78,6 +105,11 @@ public class WorkflowState {
     this.updated = updated;
   }
 
+  /**
+   * Whether the CURRENT workflow has cancelled.
+   *
+   * @param cancelled true, if cancelled.
+   */
   public void setCancelled(final boolean cancelled) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.CANCELLED,
@@ -86,6 +118,11 @@ public class WorkflowState {
     this.cancelled = cancelled;
   }
 
+  /**
+   * Whether the CURRENT workflow has failed.
+   *
+   * @param failed true, if failed.
+   */
   public void setFailed(final boolean failed) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.FAILED,
@@ -94,6 +131,11 @@ public class WorkflowState {
     this.failed = failed;
   }
 
+  /**
+   * Whether the CURRENT workflow has succeeded.
+   *
+   * @param success true, if succeeded.
+   */
   public void setSuccess(final boolean success) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.SUCCESS,
@@ -102,6 +144,11 @@ public class WorkflowState {
     this.success = success;
   }
 
+  /**
+   * Whether the CURRENT workflow has been cancelled due to a reset request for the connection.
+   *
+   * @param cancelledForReset whether it is cancelled for reset
+   */
   public void setCancelledForReset(final boolean cancelledForReset) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.CANCELLED_FOR_RESET,
@@ -110,6 +157,12 @@ public class WorkflowState {
     this.cancelledForReset = cancelledForReset;
   }
 
+  /**
+   * Expresses what state the CURRENT workflow is in. If true, then waiting for the schedule to
+   * trigger it. If false, it is not waiting for the schedule.
+   *
+   * @param doneWaiting whether it is waiting for the schedule
+   */
   public void setDoneWaiting(final boolean doneWaiting) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.DONE_WAITING,
@@ -118,6 +171,13 @@ public class WorkflowState {
     this.doneWaiting = doneWaiting;
   }
 
+  /**
+   * Determines the scheduling behavior for the NEXT run of the connection manager workflow. If set to
+   * true, the next run should immediately execute the sync and not wait for scheduling. If false,
+   * then it will wait for the schedule as "normal".
+   *
+   * @param skipSchedulingNextWorkflow whether to wait for scheduling the next time or not
+   */
   public void setSkipSchedulingNextWorkflow(final boolean skipSchedulingNextWorkflow) {
     final ChangedStateEvent event = new ChangedStateEvent(
         StateField.SKIP_SCHEDULING_NEXT_WORKFLOW,
@@ -126,6 +186,9 @@ public class WorkflowState {
     this.skipSchedulingNextWorkflow = skipSchedulingNextWorkflow;
   }
 
+  /**
+   * Reset the state of a workflow entirely.
+   */
   // TODO: bmoric -> This is noisy when inpecting the list of event, it should be just a single reset
   // event.
   public void reset() {

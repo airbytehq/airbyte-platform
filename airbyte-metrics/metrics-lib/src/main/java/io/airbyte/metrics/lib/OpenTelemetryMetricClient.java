@@ -64,6 +64,12 @@ public class OpenTelemetryMetricClient implements MetricClient {
     histogramMeter.record(val, attributesBuilder.build());
   }
 
+  /**
+   * Initialize client.
+   *
+   * @param metricEmittingApp means of understanding where metrics are being emitted from
+   * @param otelEndpoint where metrics will be sent to
+   */
   public void initialize(final MetricEmittingApp metricEmittingApp, final String otelEndpoint) {
     final Resource resource = Resource.getDefault().toBuilder().put(SERVICE_NAME, metricEmittingApp.getApplicationName()).build();
 
@@ -77,11 +83,6 @@ public class OpenTelemetryMetricClient implements MetricClient {
     final MetricExporter metricExporter = OtlpGrpcMetricExporter.builder()
         .setEndpoint(otelEndpoint).build();
     initialize(metricEmittingApp, metricExporter, sdkTracerProvider, resource);
-  }
-
-  @VisibleForTesting
-  SdkMeterProvider getSdkMeterProvider() {
-    return meterProvider;
   }
 
   @VisibleForTesting
@@ -103,6 +104,11 @@ public class OpenTelemetryMetricClient implements MetricClient {
 
     meter = openTelemetry.meterBuilder(metricEmittingApp.getApplicationName())
         .build();
+  }
+
+  @VisibleForTesting
+  SdkMeterProvider getSdkMeterProvider() {
+    return meterProvider;
   }
 
   @Override

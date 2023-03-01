@@ -1,73 +1,177 @@
-version: "3.8"
+version: "3.7"
 
 services:
-  init:
-    image: airbyte/init:${VERSION}
+  # CLOUD IMAGES
+  billing:
+    image: airbyte/billing:${VERSION}
     build:
       dockerfile: Dockerfile
-      context: airbyte-config/init
+      context: billing/build/docker
+      args:
+        VERSION: ${VERSION}
       labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
+        io.airbyte.git-revision: ${VERSION}
+  bootloader-wrapped:
+    image: airbyte/bootloader-wrapped:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: airbyte-bootloader-wrapped/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+  cloud-bootloader:
+    image: airbyte/cloud-bootloader:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: cloud-bootloader/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+  internal-server:
+    image: airbyte/cloud-server:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: cloud-server/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+  partner-server:
+    image: airbyte/cloud-partner-server:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: cloud-partner-server/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+  public-api-server:
+    image: airbyte/cloud-public-api-server:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: cloud-public-api-server/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+  server-wrapped:
+    image: airbyte/server-wrapped:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: airbyte-server-wrapped/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+  cloud-workers:
+    image: airbyte/cloud-workers:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: cloud-workers/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${VERSION}
+
+  # OSS IMAGES
   bootloader:
     image: airbyte/bootloader:${VERSION}
     build:
       dockerfile: Dockerfile
-      context: airbyte-bootloader
-      labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
-  db:
-    image: airbyte/db:${VERSION}
-    build:
-      dockerfile: Dockerfile
-      context: airbyte-db/db-lib
-      labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
-  worker:
-    image: airbyte/worker:${VERSION}
-    build:
-      dockerfile: Dockerfile
-      context: airbyte-workers
+      context: oss/airbyte-bootloader/build/docker
+      args:
+        VERSION: ${VERSION}
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}
   connector-builder-server:
     image: airbyte/connector-builder-server:${VERSION}
     build:
       dockerfile: Dockerfile
-      context: airbyte-connector-builder-server
-      labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
-  server:
-    image: airbyte/server:${VERSION}
-    build:
-      dockerfile: Dockerfile
-      context: airbyte-server
-      labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
-  webapp:
-    image: airbyte/webapp:${VERSION}
-    build:
-      dockerfile: Dockerfile
-      context: airbyte-webapp
-      labels:
-        io.airbyte.git-revision: ${GIT_REVISION}
-  temporal:
-    image: airbyte/temporal:${VERSION}
-    build:
-      dockerfile: Dockerfile
-      context: airbyte-temporal
+      context: oss/airbyte-connector-builder-server/build/docker
+      args:
+        VERSION: ${VERSION}
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}
   container-orchestrator:
     image: airbyte/container-orchestrator:${VERSION}
     build:
       dockerfile: Dockerfile
-      context: airbyte-container-orchestrator
+      context: oss/airbyte-container-orchestrator/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  cron:
+    image: airbyte/cron:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-cron/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  db:
+    image: airbyte/db:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-db/db-lib/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  init:
+    image: airbyte/init:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-config/init/build/docker
+      args:
+        VERSION: ${VERSION}
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}
   metric-reporter:
     image: airbyte/metrics-reporter:${VERSION}
     build:
       dockerfile: Dockerfile
-      context: airbyte-metrics/reporter
+      context: oss/airbyte-metrics/reporter/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  server:
+    image: airbyte/server:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-server/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  temporal:
+    image: airbyte/temporal:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-temporal/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  webapp:
+    image: airbyte/webapp:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-webapp/build/docker
+      args:
+        VERSION: ${VERSION}
+      labels:
+        io.airbyte.git-revision: ${GIT_REVISION}
+  worker:
+    image: airbyte/worker:${VERSION}
+    build:
+      dockerfile: Dockerfile
+      context: oss/airbyte-workers/build/docker
+      args:
+        VERSION: ${VERSION}
       labels:
         io.airbyte.git-revision: ${GIT_REVISION}

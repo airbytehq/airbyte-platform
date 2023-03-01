@@ -13,6 +13,10 @@ import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Migrates configured catalogs.
+ */
+@SuppressWarnings({"MethodTypeParameterName", "LineLength"})
 @Singleton
 public class ConfiguredAirbyteCatalogMigrator {
 
@@ -29,7 +33,7 @@ public class ConfiguredAirbyteCatalogMigrator {
 
   /**
    * Downgrade a message from the most recent version to the target version by chaining all the
-   * required migrations
+   * required migrations.
    */
   public <PreviousVersion, CurrentVersion> PreviousVersion downgrade(final CurrentVersion message, final Version target) {
     return migrationContainer.downgrade(message, target, ConfiguredAirbyteCatalogMigrator::applyDowngrade);
@@ -37,7 +41,7 @@ public class ConfiguredAirbyteCatalogMigrator {
 
   /**
    * Upgrade a message from the source version to the most recent version by chaining all the required
-   * migrations
+   * migrations.
    */
   public <PreviousVersion, CurrentVersion> CurrentVersion upgrade(final PreviousVersion message, final Version source) {
     return migrationContainer.upgrade(message, source, ConfiguredAirbyteCatalogMigrator::applyUpgrade);

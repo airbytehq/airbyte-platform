@@ -12,7 +12,7 @@ import io.airbyte.protocol.models.OAuthConfigSpecification;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
 class TikTokMarketingOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
@@ -22,9 +22,9 @@ class TikTokMarketingOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected String getExpectedConsentUrl() {
-    return "https://ads.tiktok.com/marketing_api/auth?app_id=app_id" +
-        "&redirect_uri=https%3A%2F%2Fairbyte.io" +
-        "&state=state";
+    return "https://ads.tiktok.com/marketing_api/auth?app_id=app_id"
+        + "&redirect_uri=https%3A%2F%2Fairbyte.io"
+        + "&state=state";
   }
 
   @Override

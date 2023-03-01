@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add protocol flags to connection migration.
+ */
 public class V0_40_18_001__AddInvalidProtocolFlagToConnections extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_18_001__AddInvalidProtocolFlagToConnections.class);

@@ -7,6 +7,10 @@ package io.airbyte.commons.text;
 import com.google.common.base.Preconditions;
 import java.text.Normalizer;
 
+/**
+ * Shared code for interacting with names in strings. Usually used for SQL strings. e.g. adding
+ * proper quoting.
+ */
 public class Names {
 
   public static final String NON_ALPHANUMERIC_AND_UNDERSCORE_PATTERN = "[^\\p{Alnum}_]";
@@ -25,10 +29,22 @@ public class Names {
         .replaceAll(NON_ALPHANUMERIC_AND_UNDERSCORE_PATTERN, "_");
   }
 
+  /**
+   * Wrap a string in double quotes.
+   *
+   * @param value to wrap
+   * @return value wrapped in double quotes.
+   */
   public static String doubleQuote(final String value) {
     return internalQuote(value, '"');
   }
 
+  /**
+   * Wrap a string in single quotes.
+   *
+   * @param value to wrap
+   * @return value wrapped in single quotes.
+   */
   public static String singleQuote(final String value) {
     return internalQuote(value, '\'');
   }

@@ -6,6 +6,9 @@ package io.airbyte.config.constants;
 
 import java.util.List;
 
+/**
+ * Hosts that are connector containers are always allowed to access.
+ */
 public class AlwaysAllowedHosts {
 
   private final List<String> hosts = List.of(

@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Set;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+/**
+ * Failure helpers. Repository for all failures that happen in the worker.
+ */
 public class FailureHelper {
 
   private static final String JOB_ID_METADATA_KEY = "jobId";
@@ -23,6 +26,9 @@ public class FailureHelper {
   private static final String TRACE_MESSAGE_METADATA_KEY = "from_trace_message";
   private static final String CONNECTOR_COMMAND_METADATA_KEY = "connector_command";
 
+  /**
+   * Connector Commands.
+   */
   public enum ConnectorCommand {
 
     SPEC("spec"),
@@ -51,6 +57,14 @@ public class FailureHelper {
   private static final String ACTIVITY_TYPE_NORMALIZE = "Normalize";
   private static final String ACTIVITY_TYPE_DBT_RUN = "Run";
 
+  /**
+   * Create generic failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason genericFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return new FailureReason()
         .withInternalMessage(t.getMessage())
@@ -59,10 +73,17 @@ public class FailureHelper {
         .withMetadata(jobAndAttemptMetadata(jobId, attemptNumber));
   }
 
-  // Generate a FailureReason from an AirbyteTraceMessage.
-  // The FailureReason.failureType enum value is taken from the
-  // AirbyteErrorTraceMessage.failureType enum value, so the same enum value
-  // must exist on both Enums in order to be applied correctly to the FailureReason
+  /**
+   * Create generic failure.
+   *
+   * Generate a FailureReason from an AirbyteTraceMessage. The FailureReason.failureType enum value is
+   * taken from the AirbyteErrorTraceMessage.failureType enum value, so the same enum value must exist
+   * on both Enums in order to be applied correctly to the FailureReason
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason genericFailure(final AirbyteTraceMessage m, final Long jobId, final Integer attemptNumber) {
     FailureType failureType;
     if (m.getError().getFailureType() == null) {
@@ -87,6 +108,13 @@ public class FailureHelper {
         .withMetadata(traceMessageMetadata(jobId, attemptNumber));
   }
 
+  /**
+   * Create connector command failure.
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason connectorCommandFailure(final AirbyteTraceMessage m,
                                                       final Long jobId,
                                                       final Integer attemptNumber,
@@ -97,6 +125,14 @@ public class FailureHelper {
         .withMetadata(metadata);
   }
 
+  /**
+   * Create connector command failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason connectorCommandFailure(final Throwable t,
                                                       final Long jobId,
                                                       final Integer attemptNumber,
@@ -107,28 +143,66 @@ public class FailureHelper {
         .withMetadata(metadata);
   }
 
+  /**
+   * Create source failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason sourceFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.READ)
         .withFailureOrigin(FailureOrigin.SOURCE)
         .withExternalMessage("Something went wrong within the source connector");
   }
 
+  /**
+   * Create source failure.
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason sourceFailure(final AirbyteTraceMessage m, final Long jobId, final Integer attemptNumber) {
     return connectorCommandFailure(m, jobId, attemptNumber, ConnectorCommand.READ)
         .withFailureOrigin(FailureOrigin.SOURCE);
   }
 
+  /**
+   * Create destination failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason destinationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.WRITE)
         .withFailureOrigin(FailureOrigin.DESTINATION)
         .withExternalMessage("Something went wrong within the destination connector");
   }
 
+  /**
+   * Create destination failure.
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason destinationFailure(final AirbyteTraceMessage m, final Long jobId, final Integer attemptNumber) {
     return connectorCommandFailure(m, jobId, attemptNumber, ConnectorCommand.WRITE)
         .withFailureOrigin(FailureOrigin.DESTINATION);
   }
 
+  /**
+   * Create check failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason checkFailure(final Throwable t,
                                            final Long jobId,
                                            final Integer attemptNumber,
@@ -141,48 +215,111 @@ public class FailureHelper {
             .format("Checking %s connection failed - please review this connection's configuration to prevent future syncs from failing", origin));
   }
 
+  /**
+   * Create replication failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason replicationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.REPLICATION)
         .withExternalMessage("Something went wrong during replication");
   }
 
+  /**
+   * Create persistence failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason persistenceFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.PERSISTENCE)
         .withExternalMessage("Something went wrong during state persistence");
   }
 
+  /**
+   * Create normalization failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason normalizationFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.NORMALIZATION)
         .withExternalMessage("Something went wrong during normalization");
   }
 
+  /**
+   * Create normalization failure.
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason normalizationFailure(final AirbyteTraceMessage m, final Long jobId, final Integer attemptNumber) {
     return genericFailure(m, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.NORMALIZATION)
         .withExternalMessage(m.getError().getMessage());
   }
 
+  /**
+   * Create dbt failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason dbtFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.DBT)
         .withExternalMessage("Something went wrong during dbt");
   }
 
+  /**
+   * Create unknown origin failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason unknownOriginFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.UNKNOWN)
         .withExternalMessage("An unknown failure occurred");
   }
 
+  /**
+   * Create failure summary from failures.
+   *
+   * @param failures failures
+   * @param partialSuccess partial success
+   * @return attempt failure summary
+   */
   public static AttemptFailureSummary failureSummary(final Set<FailureReason> failures, final Boolean partialSuccess) {
     return new AttemptFailureSummary()
         .withFailures(orderedFailures(failures))
         .withPartialSuccess(partialSuccess);
   }
 
+  /**
+   * Create attempt failure summary for a cancellation.
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @param failures failure reasons
+   * @param partialSuccess partial success
+   * @return attempt failure summary
+   */
   public static AttemptFailureSummary failureSummaryForCancellation(final Long jobId,
                                                                     final Integer attemptNumber,
                                                                     final Set<FailureReason> failures,
@@ -197,6 +334,13 @@ public class FailureHelper {
     return failureSummary(failures, partialSuccess);
   }
 
+  /**
+   * Create attempt failure summary.
+   *
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return attempt failure summary
+   */
   public static AttemptFailureSummary failureSummaryForTemporalCleaningJobState(final Long jobId, final Integer attemptNumber) {
     final FailureReason failureReason = new FailureReason()
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)
@@ -209,8 +353,17 @@ public class FailureHelper {
     return new AttemptFailureSummary().withFailures(List.of(failureReason));
   }
 
-  public static FailureReason failureReasonFromWorkflowAndActivity(
-                                                                   final String workflowType,
+  /**
+   * Create a failure reason based workflow type and activity type.
+   *
+   * @param workflowType workflow type
+   * @param activityType activity type
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason failureReasonFromWorkflowAndActivity(final String workflowType,
                                                                    final String activityType,
                                                                    final Throwable t,
                                                                    final Long jobId,
@@ -228,6 +381,14 @@ public class FailureHelper {
     }
   }
 
+  /**
+   * Create generic platform failure.
+   *
+   * @param t throwable that cause the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
   public static FailureReason platformFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
     return genericFailure(t, jobId, attemptNumber)
         .withFailureOrigin(FailureOrigin.AIRBYTE_PLATFORM)

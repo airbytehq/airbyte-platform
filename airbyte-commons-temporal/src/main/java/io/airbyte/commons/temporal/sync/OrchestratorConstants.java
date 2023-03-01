@@ -10,6 +10,9 @@ import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.helpers.LogClientSingleton;
 import java.util.Set;
 
+/**
+ * Constants for running orchestrator pods.
+ */
 public class OrchestratorConstants {
 
   // we want to propagate log level, even if it isn't consumed by EnvConfigs

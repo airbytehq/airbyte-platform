@@ -68,8 +68,13 @@ public class AirbyteTestContainer {
     waitForAirbyte();
   }
 
+  /**
+   * Start the container asynchronously.
+   *
+   * @throws IOException exception while setting up containers
+   */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public void startAsync() throws IOException, InterruptedException {
+  public void startAsync() throws IOException {
     final File cleanedDockerComposeFile = prepareDockerComposeFile(dockerComposeFile);
     dockerComposeContainer = new DockerComposeContainer(cleanedDockerComposeFile)
         .withEnv(env);
@@ -183,7 +188,7 @@ public class AirbyteTestContainer {
   /**
    * This method is hacked from {@link org.testcontainers.containers.DockerComposeContainer#stop()} We
    * needed to do this to avoid removing the volumes when the container is stopped so that the data
-   * persists and can be tested against in the second run
+   * persists and can be tested against in the second run.
    */
   public void stopRetainVolumes() {
     if (dockerComposeContainer == null) {
@@ -224,6 +229,9 @@ public class AirbyteTestContainer {
     }
   }
 
+  /**
+   * Airbyte Test Container Builder.
+   */
   public static class Builder {
 
     private final File dockerComposeFile;
@@ -256,6 +264,11 @@ public class AirbyteTestContainer {
       return this;
     }
 
+    /**
+     * Build test container.
+     *
+     * @return airbyte test container
+     */
     public AirbyteTestContainer build() {
       // override .env file so that we never report to segment while testing.
       env.put("TRACKING_STRATEGY", "logging");
