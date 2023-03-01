@@ -15,6 +15,9 @@ import com.google.common.base.Preconditions;
 @SuppressWarnings("PMD.ShortMethodName")
 public class CloudStorageConfigs {
 
+  /**
+   * Worker storage strategy.
+   */
   public enum WorkerStorageType {
     S3,
     MINIO,
@@ -70,6 +73,9 @@ public class CloudStorageConfigs {
         Preconditions.checkArgument(minioConfig == null);
         Preconditions.checkNotNull(gcsConfig);
       }
+      default -> {
+        // no op
+      }
     }
   }
 
@@ -89,6 +95,9 @@ public class CloudStorageConfigs {
     return gcsConfig;
   }
 
+  /**
+   * S3 API worker storage config.
+   */
   public static class S3ApiWorkerStorageConfig {
 
     private final String bucketName;
@@ -115,6 +124,9 @@ public class CloudStorageConfigs {
 
   }
 
+  /**
+   * S3 storage config.
+   */
   public static class S3Config extends S3ApiWorkerStorageConfig {
 
     private final String region;
@@ -130,6 +142,9 @@ public class CloudStorageConfigs {
 
   }
 
+  /**
+   * Minio storage config.
+   */
   public static class MinioConfig extends S3ApiWorkerStorageConfig {
 
     private final String minioEndpoint;
@@ -145,6 +160,9 @@ public class CloudStorageConfigs {
 
   }
 
+  /**
+   * Gcs storage config.
+   */
   public static class GcsConfig {
 
     private final String bucketName;

@@ -6,8 +6,14 @@ package io.airbyte.commons.logging;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Shared code for handling logs.
+ */
 public class LoggingHelper {
 
+  /**
+   * Color of log line.
+   */
   public enum Color {
 
     BLACK("\u001b[30m"),

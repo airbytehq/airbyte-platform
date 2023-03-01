@@ -10,6 +10,9 @@ import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.util.UUID;
 
+/**
+ * PersistStateActivity.
+ */
 @ActivityInterface
 public interface PersistStateActivity {
 

@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * Google Ads OAuth.
+ */
 public class GoogleAdsOAuthFlow extends GoogleOAuthFlow {
 
   @VisibleForTesting

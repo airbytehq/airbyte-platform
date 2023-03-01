@@ -30,6 +30,9 @@ import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Migrate old way of storing configs to always use a secrets store.
+ */
 @Singleton
 @Slf4j
 public class SecretMigrator {
@@ -107,7 +110,7 @@ public class SecretMigrator {
   }
 
   /**
-   * This is migrating the secrets for the source actors
+   * This is migrating the secrets for the source actors.
    */
   @VisibleForTesting
   void migrateSources(final List<SourceConnection> sources, final Map<UUID, ConnectorSpecification> definitionIdToSourceSpecs)
@@ -129,7 +132,7 @@ public class SecretMigrator {
   }
 
   /**
-   * This is migrating the secrets for the destination actors
+   * This is migrating the secrets for the destination actors.
    */
   @VisibleForTesting
   void migrateDestinations(final List<DestinationConnection> destinations, final Map<UUID, ConnectorSpecification> definitionIdToDestinationSpecs)

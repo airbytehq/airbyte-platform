@@ -7,11 +7,13 @@ package io.airbyte.commons.server.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.io.Resources;
+import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.UUID;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -22,6 +24,7 @@ class AirbyteRemoteOssCatalogTest {
 
   private MockWebServer webServer;
   private MockResponse validCatalogResponse;
+  private MockResponse invalidCatalogResponse;
   private String catalogUrl;
 
   @BeforeEach
@@ -35,6 +38,11 @@ class AirbyteRemoteOssCatalogTest {
         .addHeader("Content-Type", "application/json; charset=utf-8")
         .addHeader("Cache-Control", "no-cache")
         .setBody(jsonBody);
+
+    invalidCatalogResponse = new MockResponse().setResponseCode(404)
+        .addHeader("Content-Type", "application/json; charset=utf-8")
+        .addHeader("Cache-Control", "no-cache")
+        .setBody("not found");
   }
 
   @Test
@@ -70,6 +78,21 @@ class AirbyteRemoteOssCatalogTest {
 
     remoteDefinitionsProvider.getRemoteDefinitionCatalog();
     assertEquals(2, webServer.getRequestCount());
+  }
+
+  @Test
+  @SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
+  void testHandlesNotAvailable() throws Exception {
+    webServer.enqueue(invalidCatalogResponse);
+    webServer.enqueue(invalidCatalogResponse);
+
+    final AirbyteRemoteOssCatalog remoteDefinitionsProvider = new AirbyteRemoteOssCatalog(catalogUrl);
+    final List<StandardDestinationDefinition> definitions = remoteDefinitionsProvider.getDestinationDefinitions();
+    assertEquals(0, definitions.size());
+
+    final List<StandardSourceDefinition> sources = remoteDefinitionsProvider.getSourceDefinitions();
+    assertEquals(0, sources.size());
+
   }
 
 }

@@ -45,8 +45,14 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Tracking calls to each job type.
+ */
 public class JobTracker {
 
+  /**
+   * Job state.
+   */
   public enum JobState {
     STARTED,
     SUCCEEDED,
@@ -81,6 +87,15 @@ public class JobTracker {
     this.trackingClient = trackingClient;
   }
 
+  /**
+   * Track telemetry for check connection.
+   *
+   * @param jobId job id
+   * @param sourceDefinitionId source definition id
+   * @param workspaceId workspace id
+   * @param jobState job state
+   * @param output output
+   */
   public void trackCheckConnectionSource(final UUID jobId,
                                          final UUID sourceDefinitionId,
                                          final UUID workspaceId,
@@ -96,6 +111,15 @@ public class JobTracker {
     });
   }
 
+  /**
+   * Track telemetry for check connection.
+   *
+   * @param jobId job id
+   * @param destinationDefinitionId defintion definition id
+   * @param workspaceId workspace id
+   * @param jobState job state
+   * @param output output
+   */
   public void trackCheckConnectionDestination(final UUID jobId,
                                               final UUID destinationDefinitionId,
                                               final UUID workspaceId,
@@ -111,6 +135,14 @@ public class JobTracker {
     });
   }
 
+  /**
+   * Track telemetry for discover.
+   *
+   * @param jobId job id
+   * @param sourceDefinitionId source definition id
+   * @param workspaceId workspace id
+   * @param jobState job state
+   */
   public void trackDiscover(final UUID jobId, final UUID sourceDefinitionId, final UUID workspaceId, final JobState jobState) {
     Exceptions.swallow(() -> {
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.DISCOVER_SCHEMA);
@@ -121,7 +153,12 @@ public class JobTracker {
     });
   }
 
-  // used for tracking all asynchronous jobs (sync and reset).
+  /**
+   * Used for tracking all asynchronous jobs (sync and reset).
+   *
+   * @param job job to track
+   * @param jobState job state
+   */
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
       final ConfigType configType = job.getConfigType();
@@ -160,6 +197,15 @@ public class JobTracker {
     });
   }
 
+  /**
+   * Track sync for internal system failure.
+   *
+   * @param jobId job id
+   * @param connectionId connection id
+   * @param attempts attempts
+   * @param jobState job state
+   * @param e the exception that was thrown
+   */
   public void trackSyncForInternalFailure(final Long jobId,
                                           final UUID connectionId,
                                           final Integer attempts,

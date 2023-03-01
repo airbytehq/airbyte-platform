@@ -17,6 +17,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * LinkedIn OAuth.
+ */
 public class LinkedinAdsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization";

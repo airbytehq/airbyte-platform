@@ -14,6 +14,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * ConfigFetchActivity.
+ */
 @ActivityInterface
 public interface ConfigFetchActivity {
 
@@ -26,6 +29,9 @@ public interface ConfigFetchActivity {
   @ActivityMethod
   public Optional<Boolean> getBreakingChange(final UUID connectionId);
 
+  /**
+   * ScheduleRetrieverInput.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -35,6 +41,9 @@ public interface ConfigFetchActivity {
 
   }
 
+  /**
+   * ScheduleRetrieverOutput.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -52,6 +61,9 @@ public interface ConfigFetchActivity {
   @ActivityMethod
   ScheduleRetrieverOutput getTimeToWait(ScheduleRetrieverInput input);
 
+  /**
+   * GetMaxAttemptOutput.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor

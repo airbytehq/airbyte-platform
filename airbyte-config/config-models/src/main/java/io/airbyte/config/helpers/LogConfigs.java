@@ -16,7 +16,7 @@ import java.util.Optional;
 @Singleton
 public class LogConfigs {
 
-  public final static LogConfigs EMPTY = new LogConfigs(Optional.empty());
+  public static final LogConfigs EMPTY = new LogConfigs(Optional.empty());
 
   private final CloudStorageConfigs storageConfigs;
 
