@@ -1,0 +1,28 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.control {
+  position: relative;
+  padding-bottom: 30px;
+}
+
+.label {
+  font-weight: 500;
+  margin: 0;
+  padding-bottom: variables.$spacing-sm;
+}
+
+.description {
+  font-size: 12px;
+  color: colors.$grey-300;
+  margin: 0;
+}
+
+.errorMessage {
+  position: absolute;
+  bottom: variables.$spacing-md;
+  font-size: 1rem;
+  color: colors.$red;
+  margin: 0;
+  transition: transform variables.$transition ease-in, opacity variables.$transition ease-in-out;
+}
