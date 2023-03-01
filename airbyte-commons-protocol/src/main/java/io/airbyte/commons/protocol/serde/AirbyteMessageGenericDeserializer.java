@@ -9,6 +9,11 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import lombok.Getter;
 
+/**
+ * Default Airbyte Protocol deserializer.
+ *
+ * @param <T> object type
+ */
 public class AirbyteMessageGenericDeserializer<T> implements AirbyteMessageDeserializer<T> {
 
   @Getter

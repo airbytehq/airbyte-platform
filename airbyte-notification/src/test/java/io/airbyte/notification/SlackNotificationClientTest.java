@@ -130,6 +130,7 @@ class SlackNotificationClientTest {
     assertTrue(client.notifyJobSuccess(SOURCE_TEST, DESTINATION_TEST, JOB_DESCRIPTION, LOG_URL, JOB_ID));
   }
 
+  @SuppressWarnings("LineLength")
   @Test
   void testNotifyConnectionDisabled() throws IOException, InterruptedException {
     final String expectedNotificationMessage = String.format(
@@ -152,6 +153,7 @@ class SlackNotificationClientTest {
     assertTrue(client.notifyConnectionDisabled("", SOURCE_TEST, DESTINATION_TEST, "job description.", WORKSPACE_ID, CONNECTION_ID));
   }
 
+  @SuppressWarnings("LineLength")
   @Test
   void testNotifyConnectionDisabledWarning() throws IOException, InterruptedException {
     final String expectedNotificationWarningMessage = String.format(
@@ -176,7 +178,7 @@ class SlackNotificationClientTest {
 
   static class ServerHandler implements HttpHandler {
 
-    final private String expectedMessage;
+    private final String expectedMessage;
 
     public ServerHandler(final String expectedMessage) {
       this.expectedMessage = expectedMessage;

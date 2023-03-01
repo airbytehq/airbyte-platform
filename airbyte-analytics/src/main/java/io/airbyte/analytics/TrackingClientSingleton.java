@@ -17,6 +17,9 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Singleton to get access to the tracking client.
+ */
 public class TrackingClientSingleton {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LoggingTrackingClient.class);
@@ -24,6 +27,12 @@ public class TrackingClientSingleton {
   private static final Object lock = new Object();
   private static TrackingClient trackingClient;
 
+  /**
+   * Get the tracking client. If a tracking client is not yet set, it will initialize a no op, logging
+   * tracker.
+   *
+   * @return tracking client.
+   */
   public static TrackingClient get() {
     synchronized (lock) {
       if (trackingClient == null) {
@@ -41,6 +50,15 @@ public class TrackingClientSingleton {
     }
   }
 
+  /**
+   * Initialize the client.
+   *
+   * @param trackingStrategy tracking strategy
+   * @param deployment deployment
+   * @param airbyteRole is it an airbyte employee
+   * @param airbyteVersion version of airbyte running
+   * @param configRepository access to the db
+   */
   public static void initialize(final Configs.TrackingStrategy trackingStrategy,
                                 final Deployment deployment,
                                 final String airbyteRole,
@@ -88,7 +106,7 @@ public class TrackingClientSingleton {
    * @param trackingStrategy - what type of tracker we want to use.
    * @param deployment - deployment tracking info. static because it should not change once the
    *        instance is running.
-   * @param airbyteRole
+   * @param airbyteRole - is it an airbyte employee
    * @param trackingIdentityFetcher - how we get the identity of the user. we have a function that
    *        takes in workspaceId and returns the tracking identity. it does not have any caching as
    *        email or other fields on the identity can change over time.

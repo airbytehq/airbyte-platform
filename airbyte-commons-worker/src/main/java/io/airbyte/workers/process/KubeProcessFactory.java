@@ -19,6 +19,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Kube process factory.
+ */
 public class KubeProcessFactory implements ProcessFactory {
 
   @VisibleForTesting
@@ -51,6 +54,8 @@ public class KubeProcessFactory implements ProcessFactory {
   }
 
   /**
+   * Create kube pod process factory.
+   *
    * @param namespace kubernetes namespace where spawned pods will live
    * @param fabricClient fabric8 kubernetes client
    * @param kubeHeartbeatUrl a url where if the response is not 200 the spawned process will fail

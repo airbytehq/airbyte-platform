@@ -15,6 +15,8 @@ import java.io.IOException;
 public interface TestDatabaseProvider {
 
   /**
+   * Create test database.
+   *
    * @param runMigration Whether the mock database should run Flyway migration before it is used in
    *        unit test. Usually this parameter should be false only when the migration itself is being
    *        tested.

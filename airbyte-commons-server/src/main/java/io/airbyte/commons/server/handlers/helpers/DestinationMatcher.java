@@ -10,6 +10,9 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
 import org.apache.logging.log4j.util.Strings;
 
+/**
+ * Constructs a query for finding a query.
+ */
 public class DestinationMatcher implements Matchable<DestinationRead> {
 
   private final DestinationSearch search;

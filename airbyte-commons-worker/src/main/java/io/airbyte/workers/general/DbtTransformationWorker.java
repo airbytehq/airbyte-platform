@@ -23,6 +23,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Dbt Transformation Worker. Worker that executes a dbt transformation.
+ */
 @SuppressWarnings("PMD.AvoidPrintStackTrace")
 public class DbtTransformationWorker implements Worker<OperatorDbtInput, Void> {
 

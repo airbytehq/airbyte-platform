@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add field selection to connection.
+ */
 public class V0_40_23_001__AddFieldSelectionDataToConnections extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_23_001__AddFieldSelectionDataToConnections.class);

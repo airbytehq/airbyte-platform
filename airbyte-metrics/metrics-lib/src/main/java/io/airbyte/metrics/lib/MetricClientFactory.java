@@ -32,19 +32,19 @@ public class MetricClientFactory {
   private static MetricClient metricClient;
 
   /**
-   *
    * Retrieve previously created metric client. If metric client was not created before, returns a
    * NotImplementedMetricClient instead.
    *
    * @return previously created metric client which has been properly initialized, or an instance of
    *         the empty NotImplementedMetricClient.
    */
-  public synchronized static MetricClient getMetricClient() {
+  public static synchronized MetricClient getMetricClient() {
     if (metricClient != null) {
       return metricClient;
     }
     LOGGER.warn(
-        "MetricClient has not been initialized. Must call MetricClientFactory.CreateMetricClient before using MetricClient. Using a dummy client for now. Ignore this if Airbyte is configured to not publish any metrics.");
+        "MetricClient has not been initialized. Must call MetricClientFactory.CreateMetricClient before using MetricClient. "
+            + "Using a dummy client for now. Ignore this if Airbyte is configured to not publish any metrics.");
 
     return new NotImplementedMetricClient();
   }
@@ -84,7 +84,9 @@ public class MetricClientFactory {
     return new StatsdConfig() {
 
       /**
-       * @return
+       * Get host.
+       *
+       * @return host
        */
       @Override
       public String host() {
@@ -137,7 +139,7 @@ public class MetricClientFactory {
     return client;
   }
 
-  synchronized static void flush() {
+  static synchronized void flush() {
     if (metricClient != null) {
       metricClient.shutdown();
       metricClient = null;

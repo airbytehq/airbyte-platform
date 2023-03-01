@@ -39,6 +39,10 @@ public class ExitCodeWatcher implements ResourceEventHandler<Pod> {
   private final AtomicBoolean active = new AtomicBoolean(true);
 
   /**
+   * Pod exit code watcher.
+   *
+   * @param podName pod name
+   * @param podNamespace pod namespace
    * @param onExitCode callback used to store the exit code
    * @param onWatchFailure callback that's triggered when the watch fails. should be some failed exit
    *        code.

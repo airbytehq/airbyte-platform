@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling;
 
-import static io.airbyte.workers.temporal.sync.SyncOutputProvider.EMPTY_FAILED_SYNC;
-
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
@@ -13,9 +11,13 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.temporal.sync.SyncOutputProvider;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * SyncCheckConnectionFailure.
+ */
 @Slf4j
 public class SyncCheckConnectionResult {
 
@@ -52,13 +54,18 @@ public class SyncCheckConnectionResult {
     this.failureOutput = failureOutput;
   }
 
+  /**
+   * Build failure out.
+   *
+   * @return sync output
+   */
   public StandardSyncOutput buildFailureOutput() {
     if (!this.isFailed()) {
       throw new RuntimeException("Cannot build failure output without a failure origin and output");
     }
 
     final StandardSyncOutput syncOutput = new StandardSyncOutput()
-        .withStandardSyncSummary(EMPTY_FAILED_SYNC);
+        .withStandardSyncSummary(SyncOutputProvider.EMPTY_FAILED_SYNC);
 
     if (failureOutput.getFailureReason() != null) {
       syncOutput.setFailures(List.of(failureOutput.getFailureReason().withFailureOrigin(origin)));
@@ -72,6 +79,12 @@ public class SyncCheckConnectionResult {
     return syncOutput;
   }
 
+  /**
+   * Test if output failed.
+   *
+   * @param output output
+   * @return true, if failed. otherwise, false.
+   */
   public static boolean isOutputFailed(final ConnectorJobOutput output) {
     if (output.getOutputType() != OutputType.CHECK_CONNECTION) {
       throw new IllegalArgumentException("Output type must be CHECK_CONNECTION");

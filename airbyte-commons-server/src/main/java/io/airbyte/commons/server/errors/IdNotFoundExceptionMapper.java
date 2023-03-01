@@ -15,6 +15,9 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Handles a missing id.
+ */
 @Produces
 @Singleton
 @Requires(classes = IdNotFoundKnownException.class)

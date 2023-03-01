@@ -8,4 +8,7 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.workers.Worker;
 
+/**
+ * Worker that calls the spec method on a connector.
+ */
 public interface GetSpecWorker extends Worker<JobGetSpecConfig, ConnectorJobOutput> {}
