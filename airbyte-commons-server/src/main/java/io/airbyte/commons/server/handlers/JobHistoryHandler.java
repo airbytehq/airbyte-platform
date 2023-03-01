@@ -56,6 +56,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * JobHistoryHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 @Slf4j
 public class JobHistoryHandler {

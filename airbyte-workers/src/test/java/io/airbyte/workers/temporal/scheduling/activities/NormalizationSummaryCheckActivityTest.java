@@ -28,9 +28,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NormalizationSummaryCheckActivityTest {
 
   private static final Long JOB_ID = 10L;
-  static private NormalizationSummaryCheckActivityImpl normalizationSummaryCheckActivity;
-  static private AirbyteApiClient airbyteApiClient;
-  static private JobsApi jobsApi;
+  private static NormalizationSummaryCheckActivityImpl normalizationSummaryCheckActivity;
+  private static AirbyteApiClient airbyteApiClient;
+  private static JobsApi jobsApi;
 
   @BeforeAll
   static void setUp() {

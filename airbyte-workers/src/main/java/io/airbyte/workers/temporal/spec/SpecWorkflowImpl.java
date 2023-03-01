@@ -18,6 +18,9 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import java.util.Map;
 
+/**
+ * SpecWorkflowImpl.
+ */
 public class SpecWorkflowImpl implements SpecWorkflow {
 
   @TemporalActivityStub(activityOptionsBeanName = "specActivityOptions")

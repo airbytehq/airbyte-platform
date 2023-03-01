@@ -19,6 +19,9 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Fetches feature flags to be used in temporal workflows.
+ */
 @Slf4j
 @Singleton
 public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
@@ -32,6 +35,12 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
     this.featureFlagClient = featureFlagClient;
   }
 
+  /**
+   * Get workspace id for a connection id.
+   *
+   * @param connectionId connection id
+   * @return workspace id
+   */
   public UUID getWorkspaceId(final UUID connectionId) {
     try {
       final WorkspaceRead workspace = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));

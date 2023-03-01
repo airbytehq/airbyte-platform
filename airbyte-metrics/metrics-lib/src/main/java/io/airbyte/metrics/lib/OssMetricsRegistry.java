@@ -44,7 +44,8 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   ATTEMPT_FAILED_BY_FAILURE_ORIGIN(
       MetricEmittingApps.WORKER,
       "attempt_failed_by_failure_origin",
-      "increments for every failure origin a failed attempt has. since a failure can have multiple origins, a single failure can be counted more than once. tagged by failure origin and failure type."),
+      "increments for every failure origin a failed attempt has. since a failure can have multiple origins, "
+          + "a single failure can be counted more than once. tagged by failure origin and failure type."),
   ATTEMPT_SUCCEEDED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "attempt_succeeded_by_release_stage",
@@ -118,10 +119,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "oldest running job in seconds"),
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
-      "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. tagged by terminal states."),
+      "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
+          + "tagged by terminal states."),
   STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
       "state_timestamp_metric_tracker_error",
-      "number of syncs where the state timestamp metric tracker ran out of memory or was unable to match destination state message to source state message"),
+      "number of syncs where the state timestamp metric tracker ran out of memory or "
+          + "was unable to match destination state message to source state message"),
   TEMPORAL_WORKFLOW_ATTEMPT(MetricEmittingApps.WORKER,
       "temporal_workflow_attempt",
       "count of the number of workflow attempts"),

@@ -25,6 +25,14 @@ import org.quartz.CronExpression;
  */
 public class ConnectionScheduleHelper {
 
+  /**
+   * Populate schedule data into a standard sync. Mutates the intput object!
+   *
+   * @param standardSync sync to hydrate
+   * @param scheduleType schedule type to add to sync
+   * @param scheduleData schedule data to add to sync
+   * @throws JsonValidationException exception if any of the inputs are invalid json
+   */
   public static void populateSyncFromScheduleTypeAndData(final StandardSync standardSync,
                                                          final ConnectionScheduleType scheduleType,
                                                          final ConnectionScheduleData scheduleData)
@@ -90,6 +98,9 @@ public class ConnectionScheduleHelper {
 
         // explicitly null out the legacy `schedule` column until it's removed.
         standardSync.withSchedule(null);
+      }
+      default -> {
+        // no op
       }
     }
   }

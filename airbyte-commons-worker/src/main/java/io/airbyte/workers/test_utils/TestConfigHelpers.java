@@ -29,6 +29,9 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
+/**
+ * Helper for creating test configs.
+ */
 public class TestConfigHelpers {
 
   private static final String CONNECTION_NAME = "favorite_color_pipe";
@@ -40,6 +43,12 @@ public class TestConfigHelpers {
     return createSyncConfig(false);
   }
 
+  /**
+   * Create sync config and appropriate sync input.
+   *
+   * @param multipleNamespaces stream namespaces.
+   * @return sync config and sync input
+   */
   public static ImmutablePair<StandardSync, StandardSyncInput> createSyncConfig(final Boolean multipleNamespaces) {
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceDefinitionId = UUID.randomUUID();

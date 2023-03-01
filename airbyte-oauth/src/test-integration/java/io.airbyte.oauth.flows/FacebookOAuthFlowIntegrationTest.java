@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("MissingJavadocType")
 public class FacebookOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
 
   protected static final Path CREDENTIALS_PATH = Path.of("secrets/facebook_marketing.json");

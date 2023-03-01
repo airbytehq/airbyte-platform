@@ -15,6 +15,10 @@ import io.micronaut.http.annotation.Produces;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import jakarta.inject.Singleton;
 
+/**
+ * Known Exception (i.e. an exception that we could anticipate and want to format nicely in the api
+ * response).
+ */
 @Produces
 @Singleton
 @Requires(classes = KnownException.class)

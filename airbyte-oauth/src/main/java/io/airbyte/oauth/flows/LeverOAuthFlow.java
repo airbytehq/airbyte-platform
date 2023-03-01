@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Lever OAuth.
+ */
 public class LeverOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "%s/authorize";

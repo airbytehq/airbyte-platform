@@ -7,6 +7,9 @@ package io.airbyte.persistence.job.models;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 
+/**
+ * Attempt with some context about its parent job appended.
+ */
 public class AttemptWithJobInfo {
 
   /**

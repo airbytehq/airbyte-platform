@@ -25,6 +25,9 @@ import javax.annotation.Nullable;
 
 // todo (cgardens) - we are not getting any value out of instantiating this class. we should just
 // use it as statics. not doing it now, because already in the middle of another refactor.
+/**
+ * Connection Helpers.
+ */
 @Singleton
 public class ConnectionHelper {
 
@@ -116,6 +119,14 @@ public class ConnectionHelper {
     return newConnection;
   }
 
+  /**
+   * Validate all resources are from the same workspace.
+   *
+   * @param workspaceHelper workspace helper
+   * @param sourceId source id
+   * @param destinationId destination id
+   * @param operationIds operation ids
+   */
   public static void validateWorkspace(final WorkspaceHelper workspaceHelper,
                                        final UUID sourceId,
                                        final UUID destinationId,
@@ -126,7 +137,11 @@ public class ConnectionHelper {
     Preconditions.checkArgument(
         sourceWorkspace.equals(destinationWorkspace),
         String.format(
-            "Source and destination do not belong to the same workspace. Source id: %s, Source workspace id: %s, Destination id: %s, Destination workspace id: %s",
+            "Source and destination do not belong to the same workspace. "
+                + "Source id: %s, "
+                + "Source workspace id: %s, "
+                + "Destination id: %s, "
+                + "Destination workspace id: %s",
             sourceId,
             sourceWorkspace,
             destinationId,

@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 
 class ConnectionSchedulerHelperTest {
 
-  private final static String EXPECTED_CRON_TIMEZONE = "UTC";
-  private final static String EXPECTED_CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String EXPECTED_CRON_TIMEZONE = "UTC";
+  private static final String EXPECTED_CRON_EXPRESSION = "* */2 * * * ?";
 
   @Test
   void testPopulateSyncScheduleFromManualType() throws JsonValidationException {
@@ -92,7 +92,7 @@ class ConnectionSchedulerHelperTest {
 
   @Test
   void testAvailableCronTimeZonesStayTheSame() {
-    /**
+    /*
      * NOTE: this test exists to make sure that the server stays in sync with the frontend. The list of
      * supported timezones is copied from airbyte-webapp/src/config/availableCronTimeZones.json. If this
      * test fails, then THAT file must be updated with the new timezones.

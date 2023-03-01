@@ -13,6 +13,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.RandomStringUtils;
 
+/**
+ * Factory for creating a process.
+ */
 public interface ProcessFactory {
 
   String VERSION_DELIMITER = ":";
@@ -38,7 +41,7 @@ public interface ProcessFactory {
    *        variables.
    * @param args Arguments to pass to the docker image being run in the new process.
    * @return ProcessBuilder object to run the process.
-   * @throws WorkerException
+   * @throws WorkerException exception thrown from worker
    */
   Process create(String jobType,
                  String jobId,

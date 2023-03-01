@@ -9,6 +9,9 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 
+/**
+ * Reporter of errors that happen in the worker.
+ */
 public class WorkerMetricReporter {
 
   private final String dockerRepo;

@@ -15,6 +15,9 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Helpers for executing api code to and handling exceptions it might throw.
+ */
 public class ApiHelper {
 
   @Trace(operationName = ENDPOINT_EXECUTION_OPERATION_NAME)

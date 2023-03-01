@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.exception;
 
+/**
+ * Exception from worker.
+ */
 public class WorkerException extends Exception {
 
   public WorkerException(final String message) {

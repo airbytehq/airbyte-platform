@@ -17,6 +17,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
+/**
+ * Manages resource requirements for different types of jobs. We follow a standard pattern of
+ * priority for which requirements get used. See getResourceRequirements below.
+ */
 public class ResourceRequirementsUtils {
 
   /**

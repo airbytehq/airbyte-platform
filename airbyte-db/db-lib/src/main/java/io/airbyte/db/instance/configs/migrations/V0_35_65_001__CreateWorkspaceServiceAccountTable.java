@@ -20,6 +20,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add service account to workspace migration.
+ */
 public class V0_35_65_001__CreateWorkspaceServiceAccountTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_65_001__CreateWorkspaceServiceAccountTable.class);

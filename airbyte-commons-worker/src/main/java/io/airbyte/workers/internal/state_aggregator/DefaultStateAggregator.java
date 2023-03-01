@@ -9,6 +9,10 @@ import io.airbyte.config.State;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 
+/**
+ * Default state aggregator that detects which type of state is being used and aggregates
+ * appropriately.
+ */
 public class DefaultStateAggregator implements StateAggregator {
 
   private AirbyteStateType stateType = null;
@@ -31,10 +35,10 @@ public class DefaultStateAggregator implements StateAggregator {
   public void ingest(final StateAggregator stateAggregator) {
     // We fail to ingest if the state aggregators have different types
     // If this.stateType is null, we copy the content from the other state
-    if (stateAggregator instanceof DefaultStateAggregator &&
-        (stateType == null ||
-            ((DefaultStateAggregator) stateAggregator).stateType == null ||
-            stateType == ((DefaultStateAggregator) stateAggregator).stateType)) {
+    if (stateAggregator instanceof DefaultStateAggregator
+        && (stateType == null
+            || ((DefaultStateAggregator) stateAggregator).stateType == null
+            || stateType == ((DefaultStateAggregator) stateAggregator).stateType)) {
       singleStateAggregator.ingest(((DefaultStateAggregator) stateAggregator).singleStateAggregator);
       streamStateAggregator.ingest(((DefaultStateAggregator) stateAggregator).streamStateAggregator);
 
@@ -44,8 +48,8 @@ public class DefaultStateAggregator implements StateAggregator {
       }
     } else {
       throw new IllegalArgumentException(
-          "Got an incompatible StateAggregator: " + prettyPrintStateAggregator(stateAggregator) +
-              ", expected " + prettyPrintStateAggregator(this));
+          "Got an incompatible StateAggregator: " + prettyPrintStateAggregator(stateAggregator)
+              + ", expected " + prettyPrintStateAggregator(this));
     }
   }
 
