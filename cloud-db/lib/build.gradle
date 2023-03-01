@@ -1,0 +1,56 @@
+plugins {
+    id 'java'
+}
+
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':cloud-config:cloud-config-core')
+    implementation project(':cloud-config:cloud-config-models')
+
+    implementation libs.flyway.core
+    implementation libs.platform.testcontainers.postgresql
+    implementation "io.airbyte:airbyte-commons"
+    implementation "io.airbyte.airbyte-config:config-models"
+    implementation "io.airbyte.airbyte-db:db-lib"
+    implementation libs.airbyte.protocol
+
+    // Ensure that the versions defined in deps.toml are used
+    // instead of versions from transitive dependencies
+    implementation (libs.jooq) {
+        force = true
+    }
+
+    configurations.all {
+        // Temporary hack to avoid dependency conflicts
+        exclude group: 'io.micronaut.flyway'
+    }
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+task(newCloudMigration, dependsOn: 'classes', type: JavaExec) {
+    main = 'io.airbyte.cloud.db.instance.development.CloudMigrationDevCenter'
+    classpath = sourceSets.main.runtimeClasspath
+    args 'cloud', 'create'
+}
+
+task(runCloudMigration, dependsOn: 'classes', type: JavaExec) {
+    main = 'io.airbyte.cloud.db.instance.development.CloudMigrationDevCenter'
+    classpath = sourceSets.main.runtimeClasspath
+    args 'cloud', 'migrate'
+}
+
+task(dumpCloudSchema, dependsOn: 'classes', type: JavaExec) {
+    main = 'io.airbyte.cloud.db.instance.development.CloudMigrationDevCenter'
+    classpath = sourceSets.main.runtimeClasspath
+    args 'cloud', 'dump_schema'
+}

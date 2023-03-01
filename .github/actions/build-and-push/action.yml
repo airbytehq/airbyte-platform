@@ -1,0 +1,132 @@
+name: "Build and Push"
+description: "Build and Push Images"
+inputs:
+  image_tag:
+    required: true
+  gh_token:
+    required: true
+  dockerhub_password:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Check connector images exist
+      run: ./tools/bin/check_images_exist.sh connectors
+      env:
+        # see docker.com - airbytebot credentials in LastPass.
+        DOCKER_HUB_USER: airbytebot
+        DOCKER_HUB_PASSWORD: ${{ inputs.dockerhub_password }}
+      shell: bash
+
+    - name: Check if Cloud App artifacts already exist
+      id: check_build_artifacts
+      env:
+        # see docker.com - airbytebot credentials in LastPass.
+        DOCKER_HUB_USER: airbytebot
+        DOCKER_HUB_PASSWORD: ${{ inputs.dockerhub_password }}
+        VERSION: ${{ inputs.image_tag }}
+      run: |-
+        VERSION=${{ inputs.image_tag }}
+        #   Check if Cloud App artifacts already exist
+        echo "   
+          VERSION: ${VERSION}"
+
+        # We do not want to fail immediately, we handle non-zero
+        # exit status further in this script, thus:
+        set +e
+
+        ./tools/bin/check_images_exist.sh platform
+        _exit_status=$?
+
+        if [ "${_exit_status}" -eq "0" ]; then
+          echo "cloud_app_images_exist=true" >> $GITHUB_OUTPUT
+        else
+          echo "cloud_app_images_exist=false" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    - name: Skip Building docker images that already exists
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'true'
+      run: |-
+        #   Inform that images exist
+        echo "
+          *** Cloud App images exist on Dockerhub.com, nothing to build ***
+        "
+      shell: bash
+
+    - name: Copy docs from connectors repository
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      run: |
+        git clone --depth 1 https://.:${{ inputs.gh_token }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
+        mkdir -p ./oss/docs
+        mkdir -p ./docs
+        cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
+        cp -R /tmp/airbyte_repo/docs/integrations ./oss/docs/integrations
+        cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
+        cp -R /tmp/airbyte_repo/docs/.gitbook ./oss/docs/.gitbook
+        [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
+      shell: bash
+
+    - name: Build
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      env:
+        VERSION: ${{ inputs.image_tag }}
+      run: |-
+        echo "
+                Variables for Build:
+        ---------------------------------------
+        VERSION: $VERSION
+        "
+        echo -e "\033[94mRunning ./gradlew build --scan\033[39m"
+        echo -e "\033[94mif this step fails run it locally and check for git changes\033[39m"
+
+        ./gradlew -p oss assemble --scan
+        ./gradlew assemble -x :cloud-webapp:dockerBuildTest --scan
+      shell: bash
+
+    - name: Login to Docker (on Master)
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      uses: docker/login-action@v2
+      with:
+        username: airbytebot
+        password: ${{ inputs.dockerhub_password }}
+
+    - name: Push Docker Images (on Master)
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      env:
+        VERSION: ${{ inputs.image_tag }}
+      run: docker compose -f docker-compose.build.yaml push
+      shell: bash
+
+    - name: Push Infra Sandbox Webapp Docker Images (on Master)
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      env:
+        VERSION: ${{ inputs.image_tag }}
+      run: ./gradlew :cloud-webapp:dockerPushInfraDev
+      shell: bash
+
+    - name: Push Dev Webapp Docker Images (on Master)
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      env:
+        VERSION: ${{ inputs.image_tag }}
+      run: |-
+        # If necessary the login level can expanded.
+        # set -o xtrace  # -x display every line before exectution;
+
+        for env_name in "dockerPushDev" "dockerPushDev1" "dockerPushDev2" "dockerPushDev3" "dockerPushFrontendDev"; do
+            ./gradlew :cloud-webapp:${env_name}; done
+      shell: bash
+
+    - name: Push Stage Webapp Docker Images (on Master)
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      env:
+        VERSION: ${{ inputs.image_tag }}
+      run: ./gradlew :cloud-webapp:dockerPushStage
+      shell: bash
+
+    - name: Push Prod Webapp Docker Images (on Master)
+      if: steps.check_build_artifacts.outputs.cloud_app_images_exist == 'false'
+      env:
+        VERSION: ${{ inputs.image_tag }}
+      run: ./gradlew :cloud-webapp:dockerPushProd
+      shell: bash

@@ -1,0 +1,72 @@
+name: Update GCP Endpoints
+on:
+  workflow_dispatch:
+    inputs:
+      env_name:
+        description: "Environment Name:"
+        type: choice
+        required: true
+        options:
+          - infra-dev
+          - dev
+          - dev-1
+          - dev-2
+          - dev-3
+          - frontend-dev
+          - stage
+          - prod
+        default: infra-dev
+
+      image_tag:
+        description: >
+          Airbyte image tag name
+        required: true
+
+      dry_run:
+        description: "Dry Run:"
+        type: choice
+        required: true
+        options:
+          - true
+          - false
+        default: true
+
+jobs:
+  manage-esp-configurations:
+    name: Manage ESP Configurations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set output variables
+        id: set-variables
+        run: |
+          set -e
+
+          case "${{ github.event.inputs.env_name }}" in
+              infra-dev|dev|dev-1|dev-2|dev-3|frontend-dev)
+                  GCP_SA_KEY="${{ secrets.DEV_GCP_SA_KEY }}"
+                  ;;
+              stage)
+                  GCP_SA_KEY="${{ secrets.STAGE_GCP_SA_KEY }}"
+                  ;;
+              prod)
+                  GCP_SA_KEY="${{ secrets.PROD_GCP_SA_KEY }}"
+                  ;;
+              *)
+                  echo "*** Unexpected ENV_NAME: ${{ github.event.inputs.env_name }} ***"
+                  exit 1
+                  ;;
+          esac
+          echo "gcp_sa_key=${GCP_SA_KEY}" >> $GITHUB_OUTPUT
+
+      - name: Update GCP Endpoints Configs
+        uses: ./.github/actions/update-google-endpoints
+        with:
+          env_name: ${{ github.event.inputs.env_name }}
+          image_tag: ${{ github.event.inputs.image_tag }}
+          gcp_sa_key: ${{ steps.set-variables.outputs.gcp_sa_key }}
+          dry_run: ${{ github.event.inputs.dry_run }}
+          dockerhub_token: ${{ secrets.DOCKER_TOKEN }}
+          slackbot_token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
