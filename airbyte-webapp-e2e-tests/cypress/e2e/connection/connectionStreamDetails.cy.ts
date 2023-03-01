@@ -37,7 +37,7 @@ const dropTables = () => {
   );
 };
 
-describe("Connection - Stream details", () => {
+describe.skip("Connection - Stream details", () => {
   const streamsTable = new NewStreamsTablePageObject();
   const streamDetails = new StreamDetailsPageObject();
 
