@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("MissingJavadocType")
 public class SalesforceOAuthFlowIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SalesforceOAuthFlowIntegrationTest.class);
@@ -47,6 +48,7 @@ public class SalesforceOAuthFlowIntegrationTest {
   private ServerHandler serverHandler;
   private HttpClient httpClient;
 
+  @SuppressWarnings("MissingJavadocMethod")
   @BeforeEach
   public void setup() throws IOException {
     if (!Files.exists(CREDENTIALS_PATH)) {
@@ -103,7 +105,7 @@ public class SalesforceOAuthFlowIntegrationTest {
 
   static class ServerHandler implements HttpHandler {
 
-    final private String expectedParam;
+    private final String expectedParam;
     private Map responseQuery;
     private String paramValue;
     private boolean succeeded;

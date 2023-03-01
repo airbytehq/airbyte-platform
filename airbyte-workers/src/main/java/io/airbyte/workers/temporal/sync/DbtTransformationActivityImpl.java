@@ -46,6 +46,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * DbtTransformationActivityImpl.
+ */
 @Singleton
 public class DbtTransformationActivityImpl implements DbtTransformationActivity {
 
@@ -148,6 +151,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                 destinationLauncherConfig.getNormalizationIntegrationType())));
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<OperatorDbtInput, Void>, Exception> getContainerLauncherWorkerFactory(
                                                                                                        final WorkerConfigs workerConfigs,
                                                                                                        final IntegrationLauncherConfig destinationLauncherConfig,

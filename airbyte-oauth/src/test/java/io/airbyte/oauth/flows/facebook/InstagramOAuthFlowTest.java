@@ -11,6 +11,7 @@ import io.airbyte.oauth.flows.BaseOAuthFlowTest;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("MissingJavadocType")
 public class InstagramOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

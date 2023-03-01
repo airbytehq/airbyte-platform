@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Hubspot OAuth.
+ */
 public class HubspotOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://app.hubspot.com/oauth/authorize";
@@ -25,7 +28,7 @@ public class HubspotOAuthFlow extends BaseOAuth2Flow {
   }
 
   public HubspotOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier, TOKEN_REQUEST_CONTENT_TYPE.JSON);
+    super(configRepository, httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   @Override

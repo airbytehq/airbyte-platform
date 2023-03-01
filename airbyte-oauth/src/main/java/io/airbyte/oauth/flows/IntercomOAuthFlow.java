@@ -18,6 +18,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Intercom OAuth.
+ */
 public class IntercomOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://app.intercom.com/a/oauth/connect";
