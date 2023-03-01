@@ -13,6 +13,7 @@ export const pathDisplayName = (path: Path): string => path.join(".");
 export type IndexerType = null | "required" | "sourceDefined";
 
 interface StreamPathSelectBaseProps {
+  type: "primary-key" | "cursor";
   paths: Path[];
   pathType: IndexerType;
   placeholder?: React.ReactNode;
@@ -42,6 +43,7 @@ type PathPopoutProps = StreamPathSelectBaseProps & (StreamPathSelectMultiProps |
 export const StreamPathSelect: React.FC<PathPopoutProps> = ({
   withSourceDefinedPill = false,
   variant = "grey",
+  type,
   ...props
 }) => {
   const SourceDefinedNode = useMemo(() => {
@@ -51,15 +53,20 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
     return <FormattedMessage id="connection.catalogTree.sourceDefined" />;
   }, [props.isMulti, props.path]);
   if (props.pathType === "sourceDefined") {
+    const testId = `${type}-text`;
     if (withSourceDefinedPill) {
       return (
-        <PillButton disabled variant={variant} className={styles.streamPathSelect}>
+        <PillButton disabled variant={variant} className={styles.streamPathSelect} data-testid={testId}>
           {SourceDefinedNode}
         </PillButton>
       );
     }
     return (
-      <InfoText variant={INFO_TEXT_VARIANT_BY_PILL_VARIANT[variant]} className={styles.streamPathSelect}>
+      <InfoText
+        variant={INFO_TEXT_VARIANT_BY_PILL_VARIANT[variant]}
+        className={styles.streamPathSelect}
+        data-testid={testId}
+      >
         {SourceDefinedNode}
       </InfoText>
     );
@@ -84,6 +91,7 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
       }}
       className={styles.streamPathSelect}
       hasError={props?.hasError}
+      data-testid={`${type}-select`}
     />
   );
 };
