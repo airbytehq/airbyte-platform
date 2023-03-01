@@ -1,7 +1,7 @@
 import { useQuery } from "react-query";
 
 import { useConfig } from "config";
-import { ConnectorBuilderRequestService } from "core/domain/connectorBuilder/ConnectorBuilderRequestService";
+import { ConnectorBuilderServerRequestService } from "core/domain/connectorBuilder/ConnectorBuilderServerRequestService";
 import {
   ResolveManifestRequestBodyManifest,
   StreamReadRequestBody,
@@ -28,7 +28,7 @@ function useConnectorBuilderService() {
   const config = useConfig();
   const middlewares = useDefaultRequestMiddlewares();
   return useInitService(
-    () => new ConnectorBuilderRequestService(config.connectorBuilderApiUrl, middlewares),
+    () => new ConnectorBuilderServerRequestService(config.connectorBuilderApiUrl, middlewares),
     [config.connectorBuilderApiUrl, middlewares]
   );
 }
