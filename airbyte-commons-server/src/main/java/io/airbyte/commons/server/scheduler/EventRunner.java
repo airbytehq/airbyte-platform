@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Client for triggering events on connections.
+ */
 public interface EventRunner {
 
   void createConnectionManagerWorkflow(final UUID connectionId);

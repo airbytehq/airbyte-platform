@@ -35,11 +35,27 @@ public class SecretsRepositoryReader {
     this.secretsHydrator = secretsHydrator;
   }
 
+  /**
+   * Get source with secrets.
+   *
+   * @param sourceId source id
+   * @return destination with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws ConfigNotFoundException if the config does not exist
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public SourceConnection getSourceConnectionWithSecrets(final UUID sourceId) throws JsonValidationException, IOException, ConfigNotFoundException {
     final var source = configRepository.getSourceConnection(sourceId);
     return hydrateSourcePartialConfig(source);
   }
 
+  /**
+   * List sources with secrets.
+   *
+   * @return sources with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public List<SourceConnection> listSourceConnectionWithSecrets() throws JsonValidationException, IOException {
     final var sources = configRepository.listSourceConnection();
 
@@ -49,12 +65,28 @@ public class SecretsRepositoryReader {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Get destination with secrets.
+   *
+   * @param destinationId destination id
+   * @return destination with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws ConfigNotFoundException if the config does not exist
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public DestinationConnection getDestinationConnectionWithSecrets(final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final var destination = configRepository.getDestinationConnection(destinationId);
     return hydrateDestinationPartialConfig(destination);
   }
 
+  /**
+   * List destinations with secrets.
+   *
+   * @return destinations with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public List<DestinationConnection> listDestinationConnectionWithSecrets() throws JsonValidationException, IOException {
     final var destinations = configRepository.listDestinationConnection();
 
@@ -82,6 +114,15 @@ public class SecretsRepositoryReader {
     }
   }
 
+  /**
+   * Get workspace service account with secrets.
+   *
+   * @param workspaceId workspace id
+   * @return workspace service account with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws ConfigNotFoundException if the config does not exist
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public WorkspaceServiceAccount getWorkspaceServiceAccountWithSecrets(final UUID workspaceId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final WorkspaceServiceAccount workspaceServiceAccount = configRepository.getWorkspaceServiceAccountNoSecrets(workspaceId);
@@ -96,6 +137,16 @@ public class SecretsRepositoryReader {
     return Jsons.clone(workspaceServiceAccount).withJsonCredential(jsonCredential).withHmacKey(hmacKey);
   }
 
+  /**
+   * Get workspace with secrets.
+   *
+   * @param workspaceId workspace id
+   * @param includeTombstone include workspace even if it is tombstoned
+   * @return workspace with secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws ConfigNotFoundException if the config does not exist
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public StandardWorkspace getWorkspaceWithSecrets(final UUID workspaceId, final boolean includeTombstone)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone);

@@ -31,6 +31,9 @@ import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Send a notification to a user about something that happened to a Job.
+ */
 public class JobNotifier {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobNotifier.class);
@@ -88,8 +91,8 @@ public class JobNotifier {
         try {
           final Builder<String, Object> notificationMetadata = ImmutableMap.builder();
           notificationMetadata.put("connection_id", connectionId);
-          if (NotificationType.SLACK.equals(notification.getNotificationType()) &&
-              notification.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
+          if (NotificationType.SLACK.equals(notification.getNotificationType())
+              && notification.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
             // flag as slack if the webhook URL is also pointing to slack
             notificationMetadata.put("notification_type", NotificationType.SLACK);
           } else if (NotificationType.CUSTOMERIO.equals(notification.getNotificationType())) {
@@ -135,12 +138,20 @@ public class JobNotifier {
     }
   }
 
-  // This method allows for the alert to be sent without the customerio configuration set in the
-  // database
-  // This is only needed because there is no UI element to allow for users to create that
-  // configuration.
-  // Once that exists, this can be removed and we should be using `notifyJobByEmail`.
-  // The alert is sent to the email associated with the workspace.
+  /**
+   * This method allows for the alert to be sent without the customerio configuration set in the
+   * database.
+   *
+   * This is only needed because there is no UI element to allow for users to create that
+   * configuration.
+   *
+   * Once that exists, this can be removed and we should be using `notifyJobByEmail`. The alert is
+   * sent to the email associated with the workspace.
+   *
+   * @param reason for notification
+   * @param action tracking action for telemetry
+   * @param job job notification is for
+   */
   public void notifyJobByEmail(final String reason, final String action, final Job job) {
     final Notification emailNotification = new Notification();
     emailNotification.setNotificationType(NotificationType.CUSTOMERIO);

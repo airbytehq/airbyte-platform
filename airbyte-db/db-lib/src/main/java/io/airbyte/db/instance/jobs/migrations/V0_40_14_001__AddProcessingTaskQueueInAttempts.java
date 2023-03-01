@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add task queue to attempt.
+ */
 // TODO: update migration description in the class name
 public class V0_40_14_001__AddProcessingTaskQueueInAttempts extends BaseJavaMigration {
 

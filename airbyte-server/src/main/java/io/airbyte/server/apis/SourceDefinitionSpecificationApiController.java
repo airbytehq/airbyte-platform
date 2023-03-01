@@ -17,6 +17,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/source_definition_specifications")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class SourceDefinitionSpecificationApiController implements SourceDefinitionSpecificationApi {
@@ -27,6 +28,7 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
     this.schedulerHandler = schedulerHandler;
   }
 
+  @SuppressWarnings("LineLength")
   @Post("/get")
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)

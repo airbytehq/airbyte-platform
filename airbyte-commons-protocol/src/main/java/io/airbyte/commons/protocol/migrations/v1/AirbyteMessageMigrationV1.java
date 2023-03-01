@@ -29,6 +29,9 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * V1 Migration.
+ */
 // Disable V1 Migration, uncomment to re-enable
 // @Singleton
 public class AirbyteMessageMigrationV1 implements AirbyteMessageMigration<io.airbyte.protocol.models.v0.AirbyteMessage, AirbyteMessage> {

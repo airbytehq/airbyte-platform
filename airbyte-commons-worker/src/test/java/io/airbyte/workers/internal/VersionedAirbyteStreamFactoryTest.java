@@ -34,7 +34,7 @@ class VersionedAirbyteStreamFactoryTest {
   AirbyteMessageSerDeProvider serDeProvider;
   AirbyteProtocolVersionedMigratorFactory migratorFactory;
 
-  final static Version defaultVersion = new Version("0.2.0");
+  private static final Version defaultVersion = new Version("0.2.0");
 
   @BeforeEach
   void beforeEach() {

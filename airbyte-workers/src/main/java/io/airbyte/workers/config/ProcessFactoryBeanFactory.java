@@ -26,7 +26,7 @@ import java.nio.file.Path;
  * Micronaut bean factory for process factory-related singletons.
  */
 @Factory
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
 public class ProcessFactoryBeanFactory {
 
   @Singleton

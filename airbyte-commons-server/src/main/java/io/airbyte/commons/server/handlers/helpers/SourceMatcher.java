@@ -10,6 +10,9 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import org.apache.logging.log4j.util.Strings;
 
+/**
+ * Constructs a query for finding a query.
+ */
 public class SourceMatcher implements Matchable<SourceRead> {
 
   private final SourceSearch search;

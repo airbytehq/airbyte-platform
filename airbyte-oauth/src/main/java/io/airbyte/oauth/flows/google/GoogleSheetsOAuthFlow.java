@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * Google Sheets OAuth.
+ */
 public class GoogleSheetsOAuthFlow extends GoogleOAuthFlow {
 
   // space-delimited string for multiple scopes, see:

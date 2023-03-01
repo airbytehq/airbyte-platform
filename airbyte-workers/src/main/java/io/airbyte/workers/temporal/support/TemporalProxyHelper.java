@@ -41,6 +41,7 @@ public class TemporalProxyHelper {
   /**
    * Cache of already generated proxies to reduce the cost of creating and loading the proxies.
    */
+  @SuppressWarnings({"MemberName", "AbbreviationAsWordInName"})
   private final TypeCache<Class<?>> WORKFLOW_PROXY_CACHE = new TypeCache<>();
 
   /**
@@ -59,8 +60,8 @@ public class TemporalProxyHelper {
    * Creates a proxy class for the given workflow class implementation and instance.
    *
    * @param workflowImplClass The workflow implementation class to proxy. proxy.
-   * @return A proxied workflow implementation class that can be registered with Temporal.
    * @param <T> The type of the workflow implementation class.
+   * @return A proxied workflow implementation class that can be registered with Temporal.
    */
   @SuppressWarnings("PMD.UnnecessaryCast")
   public <T> Class<T> proxyWorkflowClass(final Class<T> workflowImplClass) {
@@ -98,8 +99,8 @@ public class TemporalProxyHelper {
    *
    * @param workflowImplClass The workflow implementation class.
    * @param annotationClass The annotation.
-   * @return The set of methods annotated with the provided annotation.
    * @param <A> The type of the annotation.
+   * @return The set of methods annotated with the provided annotation.
    */
   private <A extends Annotation> Set<Method> findAnnotatedMethods(final Class<?> workflowImplClass, final Class<A> annotationClass) {
     return MethodIntrospector.selectMethods(
@@ -114,8 +115,8 @@ public class TemporalProxyHelper {
    * @param workflowImplClass The workflow implementation class.
    * @param activityOptions The collection of available {@link ActivityOptions} beans which will be
    *        used to initialize Temporal activity stubs in each registered Temporal workflow.
-   * @return The generated {@link TemporalActivityStubInterceptor} instance.
    * @param <T> The workflow implementation type.
+   * @return The generated {@link TemporalActivityStubInterceptor} instance.
    */
   private <T> TemporalActivityStubInterceptor<T> generateInterceptor(final Class<T> workflowImplClass,
                                                                      final Collection<BeanRegistration<ActivityOptions>> activityOptions) {

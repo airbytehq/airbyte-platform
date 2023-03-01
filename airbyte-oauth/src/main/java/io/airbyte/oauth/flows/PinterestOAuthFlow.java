@@ -71,7 +71,7 @@ public class PinterestOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     final var accessTokenUrl = getAccessTokenUrl(inputOAuthConfiguration);
     final String authorization = Base64.getEncoder()

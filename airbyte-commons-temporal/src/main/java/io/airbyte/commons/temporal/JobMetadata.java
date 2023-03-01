@@ -7,6 +7,9 @@ package io.airbyte.commons.temporal;
 import java.nio.file.Path;
 import java.util.Objects;
 
+/**
+ * Metadata about a temporal workflow.
+ */
 public class JobMetadata {
 
   private final boolean succeeded;
@@ -44,10 +47,10 @@ public class JobMetadata {
 
   @Override
   public String toString() {
-    return "JobMetadata{" +
-        "succeeded=" + succeeded +
-        ", logPath=" + logPath +
-        '}';
+    return "JobMetadata{"
+        + "succeeded=" + succeeded
+        + ", logPath=" + logPath
+        + '}';
   }
 
 }

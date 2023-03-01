@@ -14,6 +14,8 @@ import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import java.time.Duration;
 
+// todo (cgardens) - don't know what this is meant to do. needs javadocs.
+@SuppressWarnings("MissingJavadocType")
 @WorkflowInterface
 public interface HeartbeatWorkflow {
 

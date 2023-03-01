@@ -12,6 +12,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Job metadata for synchronous jobs. Provides common interface for this metadata to make handling
+ * all synchronous requests easier.
+ */
 public class SynchronousJobMetadata {
 
   private final UUID id;
@@ -25,6 +29,19 @@ public class SynchronousJobMetadata {
 
   private final Path logPath;
 
+  /**
+   * Create synchronous job metadata from a temporal response.
+   *
+   * @param jobMetadata temporal job metadata
+   * @param id job id
+   * @param configType job type
+   * @param configId id of resource for job type (i.e. if configType is discover config id is going to
+   *        be a source id)
+   * @param connectorConfigurationUpdated whether this job updated the connector configuration
+   * @param createdAt time the job was created
+   * @param endedAt time the job ended
+   * @return synchronous job metadata
+   */
   public static SynchronousJobMetadata fromJobMetadata(final JobMetadata jobMetadata,
                                                        final UUID id,
                                                        final ConfigType configType,
@@ -114,18 +131,26 @@ public class SynchronousJobMetadata {
 
   @Override
   public String toString() {
-    return "SynchronousJobMetadata{" +
-        "id=" + id +
-        ", configType=" + configType +
-        ", configId=" + configId +
-        ", createdAt=" + createdAt +
-        ", endedAt=" + endedAt +
-        ", succeeded=" + succeeded +
-        ", connectorConfigurationUpdated=" + connectorConfigurationUpdated +
-        ", logPath=" + logPath +
-        '}';
+    return "SynchronousJobMetadata{"
+        + "id=" + id
+        + ", configType=" + configType
+        + ", configId=" + configId
+        + ", createdAt=" + createdAt
+        + ", endedAt=" + endedAt
+        + ", succeeded=" + succeeded
+        + ", connectorConfigurationUpdated=" + connectorConfigurationUpdated
+        + ", logPath=" + logPath
+        + '}';
   }
 
+  /**
+   * Create an empty object. This is used because some API interfaces assume that there will be this
+   * metadata for jobs that don't produce it. This method is a convenience method to shim an empty
+   * version of the metadata in those cases.
+   *
+   * @param configType config type
+   * @return empty synchronous job metadata
+   */
   public static SynchronousJobMetadata mock(final ConfigType configType) {
     final long now = Instant.now().toEpochMilli();
     final UUID configId = null;

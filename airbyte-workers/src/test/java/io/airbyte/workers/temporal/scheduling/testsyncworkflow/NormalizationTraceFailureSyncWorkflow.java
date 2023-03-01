@@ -16,6 +16,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings("MissingJavadocType")
 public class NormalizationTraceFailureSyncWorkflow implements SyncWorkflow {
 
   // Should match activity types from FailureHelper.java
