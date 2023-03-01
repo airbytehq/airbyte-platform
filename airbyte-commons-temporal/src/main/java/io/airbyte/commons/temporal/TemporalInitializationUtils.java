@@ -14,6 +14,10 @@ import jakarta.inject.Singleton;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Utils for verifying that temporal is running and available. Used at the startup of an
+ * application.
+ */
 @Singleton
 @Slf4j
 public class TemporalInitializationUtils {

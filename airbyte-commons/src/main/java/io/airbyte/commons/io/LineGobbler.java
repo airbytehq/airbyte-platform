@@ -19,53 +19,88 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+/**
+ * Abstraction to consume an {@link InputStream} to completion.
+ */
 public class LineGobbler implements VoidCallable {
 
-  private final static Logger LOGGER = LoggerFactory.getLogger(LineGobbler.class);
-  private final static String GENERIC = "generic";
+  private static final Logger LOGGER = LoggerFactory.getLogger(LineGobbler.class);
+  private static final String GENERIC = "generic";
 
+  /**
+   * Connect an input stream to be consumed by consumer.
+   *
+   * @param is input stream
+   * @param consumer consumer
+   */
   public static void gobble(final InputStream is, final Consumer<String> consumer) {
     gobble(is, consumer, GENERIC, MdcScope.DEFAULT_BUILDER);
   }
 
+  /**
+   * Connect a message to be consumed by consumer.
+   *
+   * @param message message to be consumed
+   * @param consumer consumer
+   */
   public static void gobble(final String message, final Consumer<String> consumer) {
     final InputStream stringAsSteam = new ByteArrayInputStream(message.getBytes(StandardCharsets.UTF_8));
     gobble(stringAsSteam, consumer);
   }
 
+  /**
+   * Connect an input stream to be consumed by consumer with an {@link MdcScope}.
+   *
+   * @param is input stream
+   * @param consumer consumer
+   * @param mdcScopeBuilder mdc scope to be used during consumption
+   */
+  public static void gobble(final InputStream is, final Consumer<String> consumer, final MdcScope.Builder mdcScopeBuilder) {
+    gobble(is, consumer, GENERIC, mdcScopeBuilder);
+  }
+
+  /**
+   * Connect an input stream to be consumed by consumer with an {@link MdcScope} and caller label.
+   *
+   * @param is input stream
+   * @param consumer consumer
+   * @param caller name of caller
+   * @param mdcScopeBuilder mdc scope to be used during consumption
+   */
+  public static void gobble(final InputStream is, final Consumer<String> consumer, final String caller, final MdcScope.Builder mdcScopeBuilder) {
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    final Map<String, String> mdc = MDC.getCopyOfContextMap();
+    final var gobbler = new LineGobbler(is, consumer, executor, mdc, caller, mdcScopeBuilder);
+    executor.submit(gobbler);
+  }
+
+  /**
+   * Connect a message to be consumed by LOGGER.info.
+   *
+   * @param message message to be consumed
+   */
   public static void gobble(final String message) {
     gobble(message, LOGGER::info);
   }
 
   /**
    * Used to emit a visual separator in the user-facing logs indicating a start of a meaningful
-   * temporal activity
+   * temporal activity.
    *
-   * @param message
+   * @param message message to emphasize
    */
   public static void startSection(final String message) {
     gobble("\r\n----- START " + message + " -----\r\n\r\n");
   }
 
   /**
-   * Used to emit a visual separator in the user-facing logs indicating a end of a meaningful temporal
-   * activity
+   * Used to emit a visual separator in the user-facing logs indicating a end of a meaningful
+   * temporal. activity
    *
-   * @param message
+   * @param message message to emphasize
    */
   public static void endSection(final String message) {
     gobble("\r\n----- END " + message + " -----\r\n\r\n");
-  }
-
-  public static void gobble(final InputStream is, final Consumer<String> consumer, final MdcScope.Builder mdcScopeBuilder) {
-    gobble(is, consumer, GENERIC, mdcScopeBuilder);
-  }
-
-  public static void gobble(final InputStream is, final Consumer<String> consumer, final String caller, final MdcScope.Builder mdcScopeBuilder) {
-    final ExecutorService executor = Executors.newSingleThreadExecutor();
-    final Map<String, String> mdc = MDC.getCopyOfContextMap();
-    final var gobbler = new LineGobbler(is, consumer, executor, mdc, caller, mdcScopeBuilder);
-    executor.submit(gobbler);
   }
 
   private final BufferedReader is;

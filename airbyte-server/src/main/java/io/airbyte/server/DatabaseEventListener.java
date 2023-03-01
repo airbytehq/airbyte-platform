@@ -14,6 +14,9 @@ import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Listen for the db become ready (with migrations run).
+ */
 @Singleton
 public class DatabaseEventListener implements ApplicationEventListener<ServiceReadyEvent> {
 

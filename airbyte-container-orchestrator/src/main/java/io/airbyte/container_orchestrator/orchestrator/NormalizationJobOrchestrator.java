@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Run normalization worker.
+ */
 @Slf4j
 public class NormalizationJobOrchestrator implements JobOrchestrator<NormalizationInput> {
 

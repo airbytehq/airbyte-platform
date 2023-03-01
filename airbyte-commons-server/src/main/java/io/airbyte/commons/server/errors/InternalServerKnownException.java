@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.server.errors;
 
+/**
+ * Internal Server Error.
+ */
 public class InternalServerKnownException extends KnownException {
 
   public InternalServerKnownException(final String message) {

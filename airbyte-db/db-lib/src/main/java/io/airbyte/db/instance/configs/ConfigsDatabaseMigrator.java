@@ -8,6 +8,9 @@ import io.airbyte.db.Database;
 import io.airbyte.db.instance.FlywayDatabaseMigrator;
 import org.flywaydb.core.Flyway;
 
+/**
+ * Config db migrator.
+ */
 public class ConfigsDatabaseMigrator extends FlywayDatabaseMigrator {
 
   public static final String DB_IDENTIFIER = "configs";

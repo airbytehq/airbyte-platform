@@ -22,6 +22,9 @@ import org.jooq.Record;
 import org.jooq.RecordMapper;
 import org.jooq.impl.DSL;
 
+/**
+ * Persistence that contains which streams are marked as needing a reset for a connection.
+ */
 public class StreamResetPersistence {
 
   private final ExceptionWrappingDatabase database;
@@ -30,8 +33,12 @@ public class StreamResetPersistence {
     this.database = new ExceptionWrappingDatabase(database);
   }
 
-  /*
-   * Get a list of StreamDescriptors for streams that have pending or running resets
+  /**
+   * Get a list of StreamDescriptors for streams that have pending or running resets.
+   *
+   * @param connectionId connection id
+   * @return streams marked as needed resets
+   * @throws IOException if there is an issue while interacting with the db.
    */
   public List<StreamDescriptor> getStreamResets(final UUID connectionId) throws IOException {
     return database.query(ctx -> ctx.select(DSL.asterisk())
@@ -43,9 +50,13 @@ public class StreamResetPersistence {
         .toList();
   }
 
-  /*
+  /**
    * Delete stream resets for a given connection. This is called to delete stream reset records for
    * resets that are successfully completed.
+   *
+   * @param connectionId connection id
+   * @param streamsToDelete streams to delete
+   * @throws IOException if there is an issue while interacting with the db.
    */
   public void deleteStreamResets(final UUID connectionId, final List<StreamDescriptor> streamsToDelete) throws IOException {
     Condition condition = noCondition();

@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * Instagram OAuth.
+ */
 // Instagram Graph API require Facebook API User token
 public class InstagramOAuthFlow extends FacebookMarketingOAuthFlow {
 

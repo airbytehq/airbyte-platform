@@ -30,6 +30,10 @@ import org.slf4j.LoggerFactory;
 // todo (cgardens) - this class is in an unintuitive module. it is weird that you need to import
 // scheduler:persistence in order to get workspace ids for configs (e.g. source). Our options are to
 // split this helper by database or put it in a new module.
+
+/**
+ * Helpers for interacting with Workspaces.
+ */
 @SuppressWarnings("PMD.AvoidCatchingThrowable")
 @Singleton
 public class WorkspaceHelper {
@@ -140,6 +144,15 @@ public class WorkspaceHelper {
   }
 
   // CONNECTION ID
+
+  /**
+   * Get workspace id from source and destination. Verify that the source and destination are from the
+   * same workspace. Fails if either source or destination id are invalid.
+   *
+   * @param sourceId source id
+   * @param destinationId destination id
+   * @return workspace id
+   */
   public UUID getWorkspaceForConnection(final UUID sourceId, final UUID destinationId) throws JsonValidationException, ConfigNotFoundException {
     final UUID sourceWorkspace = getWorkspaceForSourceId(sourceId);
     final UUID destinationWorkspace = getWorkspaceForDestinationId(destinationId);
@@ -148,6 +161,17 @@ public class WorkspaceHelper {
     return sourceWorkspace;
   }
 
+  /**
+   * Get workspace id from source and destination. Verify that the source and destination are from the
+   * same workspace. Always compares source and destination workspaces even if there are errors while
+   * fetching them.
+   *
+   * I don't know why we want this.
+   *
+   * @param sourceId source id
+   * @param destinationId destination id
+   * @return workspace id
+   */
   public UUID getWorkspaceForConnectionIgnoreExceptions(final UUID sourceId, final UUID destinationId) {
     final UUID sourceWorkspace = getWorkspaceForSourceIdIgnoreExceptions(sourceId);
     final UUID destinationWorkspace = getWorkspaceForDestinationIdIgnoreExceptions(destinationId);

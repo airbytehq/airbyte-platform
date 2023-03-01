@@ -22,6 +22,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
+/**
+ * Schema V1 Migration.
+ */
 public class SchemaMigrationV1 {
 
   /**
@@ -261,6 +264,18 @@ public class SchemaMigrationV1 {
     }
   }
 
+  private static String getFormat(JsonNode schemaNode) {
+    return switch (schemaNode.get("format").asText()) {
+      case "date" -> JsonSchemaReferenceTypes.DATE_REFERENCE;
+      // In these two cases, we default to the "with timezone" type, rather than "without timezone".
+      // This matches existing behavior in normalization.
+      case "date-time" -> JsonSchemaReferenceTypes.TIMESTAMP_WITH_TIMEZONE_REFERENCE;
+      case "time" -> JsonSchemaReferenceTypes.TIME_WITH_TIMEZONE_REFERENCE;
+      // If we don't recognize the format, just use a plain string
+      default -> JsonSchemaReferenceTypes.STRING_REFERENCE;
+    };
+  }
+
   /**
    * Given a primitive (string/int/num/bool) type declaration _without_ an airbyte_type, get the
    * appropriate $ref type. In most cases, this only depends on the "type" key. When type=string, also
@@ -270,15 +285,7 @@ public class SchemaMigrationV1 {
     return switch (type) {
       case "string" -> {
         if (schemaNode.hasNonNull("format")) {
-          yield switch (schemaNode.get("format").asText()) {
-            case "date" -> JsonSchemaReferenceTypes.DATE_REFERENCE;
-            // In these two cases, we default to the "with timezone" type, rather than "without timezone".
-            // This matches existing behavior in normalization.
-            case "date-time" -> JsonSchemaReferenceTypes.TIMESTAMP_WITH_TIMEZONE_REFERENCE;
-            case "time" -> JsonSchemaReferenceTypes.TIME_WITH_TIMEZONE_REFERENCE;
-            // If we don't recognize the format, just use a plain string
-            default -> JsonSchemaReferenceTypes.STRING_REFERENCE;
-          };
+          yield getFormat(schemaNode);
         } else if (schemaNode.hasNonNull("contentEncoding")) {
           if ("base64".equals(schemaNode.get("contentEncoding").asText())) {
             yield JsonSchemaReferenceTypes.BINARY_DATA_REFERENCE;

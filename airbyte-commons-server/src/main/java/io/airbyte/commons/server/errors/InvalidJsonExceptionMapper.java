@@ -9,6 +9,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+/**
+ * Exception for invalid json input.
+ */
 @Provider
 public class InvalidJsonExceptionMapper implements ExceptionMapper<JsonParseException> {
 

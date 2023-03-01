@@ -28,7 +28,7 @@ import java.util.function.BiConsumer;
 
 /**
  * Abstract Class implementing common base methods for managing oAuth config (instance-wide) and
- * oAuth specifications
+ * oAuth specifications.
  */
 public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
 
@@ -108,11 +108,11 @@ public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
    * should be stored.
    */
   @Deprecated
-  protected Map<String, Object> formatOAuthOutput(final JsonNode oAuthParamConfig,
+  protected Map<String, Object> formatOAuthOutput(final JsonNode oauthParamConfig,
                                                   final Map<String, Object> oauthOutput,
                                                   final List<String> outputPath) {
     Map<String, Object> result = new HashMap<>(oauthOutput);
-    for (final String key : Jsons.keys(oAuthParamConfig)) {
+    for (final String key : Jsons.keys(oauthParamConfig)) {
       result.put(key, MoreOAuthParameters.SECRET_MASK);
     }
     for (final String node : outputPath) {
@@ -126,22 +126,22 @@ public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
    * back to the connector config. This function follows the connector's oauth specifications of which
    * outputs are expected and filters them accordingly.
    */
-  protected Map<String, Object> formatOAuthOutput(final JsonNode oAuthParamConfig,
+  protected Map<String, Object> formatOAuthOutput(final JsonNode oauthParamConfig,
                                                   final Map<String, Object> completeOAuthFlow,
-                                                  final OAuthConfigSpecification oAuthConfigSpecification)
+                                                  final OAuthConfigSpecification oauthConfigSpecification)
       throws JsonValidationException {
     final JsonSchemaValidator validator = new JsonSchemaValidator();
 
     final Map<String, Object> oAuthOutputs = formatOAuthOutput(
         validator,
-        oAuthConfigSpecification.getCompleteOauthOutputSpecification(),
+        oauthConfigSpecification.getCompleteOauthOutputSpecification(),
         completeOAuthFlow.keySet(),
         (resultMap, key) -> resultMap.put(key, completeOAuthFlow.get(key)));
 
     final Map<String, Object> oAuthServerOutputs = formatOAuthOutput(
         validator,
-        oAuthConfigSpecification.getCompleteOauthServerOutputSpecification(),
-        Jsons.keys(oAuthParamConfig),
+        oauthConfigSpecification.getCompleteOauthServerOutputSpecification(),
+        Jsons.keys(oauthParamConfig),
         // TODO secrets should be masked with the correct type
         // https://github.com/airbytehq/airbyte/issues/5990
         // In the short-term this is not world-ending as all secret fields are currently strings
