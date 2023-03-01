@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.lang;
 
+/**
+ * Shared code for handling booleans.
+ */
 public class MoreBooleans {
 
   /**

@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add allowed hosts migration.
+ */
 public class V0_40_27_001__AddAllowedHosts extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_27_001__AddAllowedHosts.class);

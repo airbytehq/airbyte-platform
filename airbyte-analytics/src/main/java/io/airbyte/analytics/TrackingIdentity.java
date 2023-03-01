@@ -9,6 +9,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * POJO that holds fields identity fields for telemetry.
+ */
 @SuppressWarnings("PMD.CompareObjectsWithEquals")
 public class TrackingIdentity {
 
@@ -71,11 +74,11 @@ public class TrackingIdentity {
       return false;
     }
     final TrackingIdentity that = (TrackingIdentity) o;
-    return anonymousDataCollection == that.anonymousDataCollection &&
-        news == that.news &&
-        securityUpdates == that.securityUpdates &&
-        Objects.equals(customerId, that.customerId) &&
-        Objects.equals(email, that.email);
+    return anonymousDataCollection == that.anonymousDataCollection
+        && news == that.news
+        && securityUpdates == that.securityUpdates
+        && Objects.equals(customerId, that.customerId)
+        && Objects.equals(email, that.email);
   }
 
   @Override

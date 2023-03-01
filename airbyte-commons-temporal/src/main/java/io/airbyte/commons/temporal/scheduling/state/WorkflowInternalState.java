@@ -11,6 +11,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Internal state of workflow.
+ */
+// todo (cgardens) - how is this different from WorkflowState.
 @Getter
 @Setter
 @NoArgsConstructor

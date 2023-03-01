@@ -17,6 +17,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add actor catalog metadata migration.
+ */
 public class V0_35_28_001__AddActorCatalogMetadataColumns extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(
@@ -31,7 +34,7 @@ public class V0_35_28_001__AddActorCatalogMetadataColumns extends BaseJavaMigrat
   }
 
   @VisibleForTesting
-  public static void migrate(final DSLContext ctx) {
+  static void migrate(final DSLContext ctx) {
     final Field<OffsetDateTime> createdAt =
         DSL.field("created_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(currentOffsetDateTime()));
     final Field<OffsetDateTime> modifiedAt =

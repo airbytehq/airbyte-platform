@@ -32,6 +32,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/web_backend")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class WebBackendApiController implements WebBackendApi {
@@ -92,6 +93,7 @@ public class WebBackendApiController implements WebBackendApi {
     return ApiHelper.execute(() -> webBackendConnectionsHandler.getWorkspaceState(webBackendWorkspaceState));
   }
 
+  @SuppressWarnings("LineLength")
   @Post("/connections/list")
   @Secured({READER})
   @SecuredWorkspace

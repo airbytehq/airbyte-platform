@@ -13,8 +13,17 @@ import io.airbyte.protocol.models.ConnectorSpecification;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Extract OAuth models from connector specs.
+ */
 public class OauthModelConverter {
 
+  /**
+   * Get advanced (old) auth from a connector spec.
+   *
+   * @param spec connector spec
+   * @return basic auth if present.
+   */
   public static Optional<AuthSpecification> getAuthSpec(final ConnectorSpecification spec) {
     if (spec.getAuthSpecification() == null) {
       return Optional.empty();
@@ -32,6 +41,12 @@ public class OauthModelConverter {
     return Optional.of(authSpecification);
   }
 
+  /**
+   * Get advanced (new and preferred) auth from a connector spec.
+   *
+   * @param spec connector spec
+   * @return advanced auth if present.
+   */
   public static Optional<AdvancedAuth> getAdvancedAuth(final ConnectorSpecification spec) {
     if (spec.getAdvancedAuth() == null) {
       return Optional.empty();

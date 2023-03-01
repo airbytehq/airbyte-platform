@@ -15,6 +15,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/health")
 @Secured(SecurityRule.IS_ANONYMOUS)
 public class HealthApiController implements HealthApi {

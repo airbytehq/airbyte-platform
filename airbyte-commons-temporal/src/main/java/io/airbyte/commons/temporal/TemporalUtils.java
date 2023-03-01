@@ -49,6 +49,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
+/**
+ * Temporal Utility functions.
+ */
+// todo (cgardens) - rename? utils implies it's static utility function
 @Slf4j
 @Singleton
 public class TemporalUtils {
@@ -88,6 +92,13 @@ public class TemporalUtils {
     this.temporalRetentionInDays = temporalRetentionInDays;
   }
 
+  /**
+   * Create temporal service client.
+   *
+   * @param options client options
+   * @param namespace temporal namespace
+   * @return temporal service client
+   */
   public WorkflowServiceStubs createTemporalService(final WorkflowServiceStubsOptions options, final String namespace) {
     return getTemporalClientWhenConnected(
         WAIT_INTERVAL,
@@ -97,6 +108,12 @@ public class TemporalUtils {
         namespace);
   }
 
+  /**
+   * Create temporal service client.
+   *
+   * @param isCloud is a cloud deployment
+   * @return temporal service client
+   */
   // TODO consider consolidating this method's logic into createTemporalService() after the Temporal
   // Cloud migration is complete.
   // The Temporal Migration migrator is the only reason this public method exists.
@@ -175,6 +192,12 @@ public class TemporalUtils {
     }
   }
 
+  /**
+   * Temporal Job Creator.
+   *
+   * @param <T> type o input config.
+   */
+  // todo (cgardens) - unused?
   @FunctionalInterface
   public interface TemporalJobCreator<T extends Serializable> {
 
@@ -199,6 +222,7 @@ public class TemporalUtils {
    * @return pair of the workflow execution (contains metadata on the asynchronously running job) and
    *         future that can be used to await the result of the workflow stub's function
    */
+  @SuppressWarnings("MethodTypeParameterName")
   public <STUB, A1, R> ImmutablePair<WorkflowExecution, CompletableFuture<R>> asyncExecute(final STUB workflowStub,
                                                                                            final Functions.Func1<A1, R> function,
                                                                                            final A1 arg1,
@@ -285,6 +309,21 @@ public class TemporalUtils {
     }
   }
 
+  /**
+   * Run a callable. If while it is running the temporal activity is cancelled, the provided callback
+   * is triggered.
+   *
+   * It manages this by regularly calling back to temporal in order to check whether the activity has
+   * been cancelled. If it is cancelled it calls the callback.
+   *
+   * @param afterCancellationCallbackRef callback to be triggered if the temporal activity is
+   *        cancelled before the callable completes
+   * @param callable callable to run with cancellation
+   * @param activityContext context used to check whether the activity has been cancelled
+   * @param <T> type of variable returned by the callable
+   * @return if the callable succeeds without being cancelled, returns the value returned by the
+   *         callable
+   */
   public <T> T withBackgroundHeartbeat(final AtomicReference<Runnable> afterCancellationCallbackRef,
                                        final Callable<T> callable,
                                        final Supplier<ActivityExecutionContext> activityContext) {
@@ -318,20 +357,42 @@ public class TemporalUtils {
     }
   }
 
+  /**
+   * Get log path (where logs should be written) for an attempt from a job root.
+   *
+   * @param jobRoot job root
+   * @return path to logs for an attempt
+   */
+  public static Path getLogPath(final Path jobRoot) {
+    return jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
+  }
+
   // todo (cgardens) - there are 2 sources of truth for job path. we need to reduce this down to one,
   // once we are fully on temporal.
   public static Path getJobRoot(final Path workspaceRoot, final JobRunConfig jobRunConfig) {
     return getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
   }
 
-  public static Path getLogPath(final Path jobRoot) {
-    return jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
-  }
-
+  /**
+   * Get an attempt root director from workspace, job id, and attempt number.
+   *
+   * @param workspaceRoot workspace root
+   * @param jobId job id
+   * @param attemptId attempt number (as long)
+   * @return working directory
+   */
   public static Path getJobRoot(final Path workspaceRoot, final String jobId, final long attemptId) {
     return getJobRoot(workspaceRoot, jobId, Math.toIntExact(attemptId));
   }
 
+  /**
+   * Get an attempt root director from workspace, job id, and attempt number.
+   *
+   * @param workspaceRoot workspace root
+   * @param jobId job id
+   * @param attemptId attempt number (as int)
+   * @return working directory
+   */
   public static Path getJobRoot(final Path workspaceRoot, final String jobId, final int attemptId) {
     return workspaceRoot
         .resolve(String.valueOf(jobId))

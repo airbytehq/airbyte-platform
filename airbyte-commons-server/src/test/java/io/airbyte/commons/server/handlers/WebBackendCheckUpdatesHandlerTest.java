@@ -27,7 +27,7 @@ class WebBackendCheckUpdatesHandlerTest {
   AirbyteRemoteOssCatalog remoteOssCatalog;
   WebBackendCheckUpdatesHandler webBackendCheckUpdatesHandler;
 
-  final static boolean INCLUDE_TOMBSTONE = false;
+  static final boolean INCLUDE_TOMBSTONE = false;
 
   @BeforeEach
   void beforeEach() {

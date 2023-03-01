@@ -78,7 +78,7 @@ public abstract class FacebookOAuthFlow extends BaseOAuth2Flow {
                                                   final String authCode,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
-                                                  final JsonNode oAuthParamConfig)
+                                                  final JsonNode oauthParamConfig)
       throws IOException {
     // Access tokens generated via web login are short-lived tokens
     // they arre valid for 1 hour and need to be exchanged for long-lived access token
@@ -87,7 +87,7 @@ public abstract class FacebookOAuthFlow extends BaseOAuth2Flow {
     // Long-Term Tokens section)
 
     final Map<String, Object> data =
-        super.completeOAuthFlow(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, oAuthParamConfig);
+        super.completeOAuthFlow(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, oauthParamConfig);
     Preconditions.checkArgument(data.containsKey(ACCESS_TOKEN));
     final String shortLivedAccessToken = (String) data.get(ACCESS_TOKEN);
     final String longLivedAccessToken = getLongLivedAccessToken(clientId, clientSecret, shortLivedAccessToken);

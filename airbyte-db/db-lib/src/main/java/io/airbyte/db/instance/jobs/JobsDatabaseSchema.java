@@ -46,6 +46,8 @@ public enum JobsDatabaseSchema implements TableSchema {
   }
 
   /**
+   * Get table names in db.
+   *
    * @return table names in lower case
    */
   public static Set<String> getTableNames() {

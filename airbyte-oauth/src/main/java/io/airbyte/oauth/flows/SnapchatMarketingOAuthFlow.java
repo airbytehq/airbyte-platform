@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://marketingapi.snapchat.com/docs/#authentication
+ * Following docs from https://marketingapi.snapchat.com/docs/#authentication.
  */
 public class SnapchatMarketingOAuthFlow extends BaseOAuth2Flow {
 
