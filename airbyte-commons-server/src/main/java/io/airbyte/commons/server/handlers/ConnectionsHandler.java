@@ -182,6 +182,8 @@ public class ConnectionsHandler {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
 
+
+
     configRepository.writeStandardSync(standardSync);
 
     trackNewConnection(standardSync);
