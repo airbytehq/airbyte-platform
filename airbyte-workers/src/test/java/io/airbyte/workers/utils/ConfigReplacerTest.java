@@ -48,7 +48,11 @@ class ConfigReplacerTest {
     expected.addAll(alwaysAllowedHosts.getHosts());
 
     final String configJson =
-        "{\"host\": \"foo.com\", \"number\": 123, \"subdomain\": \"account\", \"password\": \"abc123\", \"tunnel_method\": {\"tunnel_host\": \"1.2.3.4\"}}";
+        "{\"host\": \"foo.com\", "
+            + "\"number\": 123, "
+            + "\"subdomain\": \"account\", "
+            + "\"password\": \"abc123\", "
+            + "\"tunnel_method\": {\"tunnel_host\": \"1.2.3.4\"}}";
     final JsonNode config = mapper.readValue(configJson, JsonNode.class);
     final AllowedHosts response = replacer.getAllowedHosts(allowedHosts, config);
 

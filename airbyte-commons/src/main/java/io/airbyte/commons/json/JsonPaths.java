@@ -291,6 +291,7 @@ public class JsonPaths {
   }
 
   /**
+   * Get values at a JSONPath.
    *
    * @param conf - JsonPath configuration. Primarily used to reuse code to allow fetching values or
    *        paths from a json object

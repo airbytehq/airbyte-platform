@@ -26,21 +26,21 @@ class EnvConfigsTest {
 
   private Map<String, String> envMap;
   private EnvConfigs config;
-  private final static String ABC = "abc";
-  private final static String DEV = "dev";
-  private final static String ABCDEF = "abc/def";
-  private final static String ROOT = "root";
-  private final static String KEY = "key";
-  private final static String ONE = "one";
-  private final static String TWO = "two";
-  private final static String ONE_EQ_TWO = "one=two";
-  private final static String NOTHING = "nothing";
-  private final static String SOMETHING = "something";
-  private final static String AIRBYTE = "airbyte";
-  private final static String SERVER = "server";
-  private final static String AIRB_SERV_SOME_NOTHING = "airbyte=server,something=nothing";
-  private final static String ENV_STRING = "key=k,,;$%&^#";
-  private final static String NODE_SELECTORS = ",,,";
+  private static final String ABC = "abc";
+  private static final String DEV = "dev";
+  private static final String ABCDEF = "abc/def";
+  private static final String ROOT = "root";
+  private static final String KEY = "key";
+  private static final String ONE = "one";
+  private static final String TWO = "two";
+  private static final String ONE_EQ_TWO = "one=two";
+  private static final String NOTHING = "nothing";
+  private static final String SOMETHING = "something";
+  private static final String AIRBYTE = "airbyte";
+  private static final String SERVER = "server";
+  private static final String AIRB_SERV_SOME_NOTHING = "airbyte=server,something=nothing";
+  private static final String ENV_STRING = "key=k,,;$%&^#";
+  private static final String NODE_SELECTORS = ",,,";
 
   @BeforeEach
   void setUp() {

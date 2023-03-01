@@ -16,6 +16,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Strava OAuth.
+ */
 public class StravaOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://www.strava.com/oauth/authorize";
@@ -26,7 +29,7 @@ public class StravaOAuthFlow extends BaseOAuth2Flow {
   }
 
   public StravaOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier, TOKEN_REQUEST_CONTENT_TYPE.JSON);
+    super(configRepository, httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   /**

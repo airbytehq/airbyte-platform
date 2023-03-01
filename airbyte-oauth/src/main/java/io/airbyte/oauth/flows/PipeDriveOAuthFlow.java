@@ -23,8 +23,8 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class PipeDriveOAuthFlow extends BaseOAuth2Flow {
 
-  final String AUTHORIZE_URL = "https://oauth.pipedrive.com/oauth/authorize";
-  final String ACCESS_TOKEN_URL = "https://oauth.pipedrive.com/oauth/token";
+  private static final String AUTHORIZE_URL = "https://oauth.pipedrive.com/oauth/authorize";
+  private static final String ACCESS_TOKEN_URL = "https://oauth.pipedrive.com/oauth/token";
 
   public PipeDriveOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
     super(configRepository, httpClient);

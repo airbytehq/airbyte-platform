@@ -10,17 +10,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Extract paths to oauth fields from an oauth spec.
+ */
 public class OAuthPathExtractor {
 
   private static final String PROPERTIES = "properties";
   private static final String PATH_IN_CONNECTOR_CONFIG = "path_in_connector_config";
 
-  public static Map<String, List<String>> extractOauthConfigurationPaths(final JsonNode configuration) {
+  /**
+   * Extract fields names from oauth spec.
+   *
+   * @param oauthSpec oauth spec
+   * @return field names in the spec
+   */
+  public static Map<String, List<String>> extractOauthConfigurationPaths(final JsonNode oauthSpec) {
 
-    if (configuration != null && configuration.has(PROPERTIES) && configuration.get(PROPERTIES).isObject()) {
+    if (oauthSpec != null && oauthSpec.has(PROPERTIES) && oauthSpec.get(PROPERTIES).isObject()) {
       final Map<String, List<String>> result = new HashMap<>();
 
-      configuration.get(PROPERTIES).fields().forEachRemaining(entry -> {
+      oauthSpec.get(PROPERTIES).fields().forEachRemaining(entry -> {
         final JsonNode value = entry.getValue();
         if (value.isObject() && value.has(PATH_IN_CONNECTOR_CONFIG) && value.get(PATH_IN_CONNECTOR_CONFIG).isArray()) {
           final List<String> path = new ArrayList<>();

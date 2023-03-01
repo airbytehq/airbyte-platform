@@ -7,6 +7,11 @@ package io.airbyte.config;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * Config with metadata.
+ *
+ * @param <T> config type
+ */
 @SuppressWarnings("PMD.ShortVariable")
 public class ConfigWithMetadata<T> {
 

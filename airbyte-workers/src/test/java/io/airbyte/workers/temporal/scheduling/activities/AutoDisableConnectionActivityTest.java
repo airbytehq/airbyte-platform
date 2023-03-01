@@ -162,6 +162,7 @@ class AutoDisableConnectionActivityTest {
     Mockito.verify(mJobNotifier, Mockito.never()).autoDisableConnectionWarning(Mockito.any());
   }
 
+  @SuppressWarnings("LineLength")
   @Test
   @DisplayName("Test that the connection is _not_ disabled and no warning is sent after only failed jobs and oldest job is less than `MAX_DAYS_OF_STRAIGHT_FAILURE / 2 `days old")
   void testOnlyFailuresButFirstJobYoungerThanMaxDaysWarning() throws IOException {

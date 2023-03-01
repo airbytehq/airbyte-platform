@@ -23,6 +23,9 @@ import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 
+/**
+ * Configs db test provider.
+ */
 public class ConfigsDatabaseTestProvider implements TestDatabaseProvider {
 
   private final DSLContext dslContext;

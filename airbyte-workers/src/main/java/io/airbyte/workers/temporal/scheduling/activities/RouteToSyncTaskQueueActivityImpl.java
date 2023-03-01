@@ -17,6 +17,9 @@ import java.io.IOException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * RouteToSyncTaskQueueActivityImpl.
+ */
 @Slf4j
 @Singleton
 public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueActivity {

@@ -9,6 +9,9 @@ import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
+/**
+ * Facebook Marketing OAuth.
+ */
 public class FacebookMarketingOAuthFlow extends FacebookOAuthFlow {
 
   private static final String SCOPES = "ads_management,ads_read,read_insights,business_management";
