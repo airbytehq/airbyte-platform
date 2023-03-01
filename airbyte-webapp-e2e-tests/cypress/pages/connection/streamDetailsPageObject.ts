@@ -23,7 +23,7 @@ const [
 );
 
 export class StreamDetailsPageObject {
-  checkIsOpen() {
+  isOpen() {
     cy.get(streamDetails).should("exist");
   }
 
@@ -31,7 +31,7 @@ export class StreamDetailsPageObject {
     cy.get(closeButton).click();
   }
 
-  checkIsClosed() {
+  isClosed() {
     cy.get(streamDetails).should("not.exist");
   }
 
@@ -43,30 +43,30 @@ export class StreamDetailsPageObject {
     cy.get(syncStreamSwitch).uncheck({ force: true });
   }
 
-  checkSyncStreamEnabled() {
+  isSyncStreamEnabled() {
     cy.get(syncStreamSwitch).should("be.checked");
   }
 
-  checkSyncStreamDisabled() {
+  isSyncStreamDisabled() {
     cy.get(syncStreamSwitch).should("not.be.checked");
   }
 
-  checkNamespace(value: string) {
+  isNamespace(value: string) {
     cy.get(namespace).should("contain.text", value);
   }
 
-  checkStreamName(value: string) {
+  isStreamName(value: string) {
     cy.get(streamName).should("contain.text", value);
   }
 
-  checkSyncMode(sourceSyncMode: SourceSyncMode, destSyncMode: DestinationSyncMode) {
+  isSyncMode(sourceSyncMode: SourceSyncMode, destSyncMode: DestinationSyncMode) {
     cy.get(syncMode).should(
       "contain.text",
       `${SYNC_MODE_STRINGS[sourceSyncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`
     );
   }
 
-  checkFields(fieldNames: string[], fieldDataTypes: string[]) {
+  areFieldsValid(fieldNames: string[], fieldDataTypes: string[]) {
     cy.get(streamSourceFieldName).each(($span, i) => {
       expect($span.text()).to.equal(fieldNames[i]);
     });
@@ -76,17 +76,17 @@ export class StreamDetailsPageObject {
     });
   }
 
-  // checkScrolling() {}
+  // canScroll() {}
 
   // selectCursor(fieldName: string) {}
 
-  // checkCursorSelected(fieldName: string) {}
+  // isCursorSelected(fieldName: string) {}
 
   // selectPrimaryKeys(fieldNames: string[]) {}
 
-  // checkSourceDefinedCursor() {}
+  // isSourceDefinedCursor() {}
 
-  // checkSourceDefinedPrimaryKey() {}
+  // isSourceDefinedPrimaryKey() {}
 }
 
 export default new StreamDetailsPageObject();

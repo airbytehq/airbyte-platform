@@ -24,7 +24,6 @@ import {
 } from "commands/db/queries";
 import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionPage from "pages/connection/connectionPageObject";
-import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import { StreamDetailsPageObject } from "pages/connection/streamDetailsPageObject";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
 
@@ -105,23 +104,23 @@ describe.skip("Connection - Stream details", () => {
   describe("basics", () => {
     beforeEach(() => {
       streamsTable.showStreamDetails("public", "users");
-      streamDetails.checkIsOpen();
+      streamDetails.isOpen();
     });
 
     it("shows correct stream configuration", () => {
       const fieldNames = ["email", "id", "name", "updated_at"];
       const fieldTypes = ["String", "Integer", "String", "Datetime"];
 
-      streamDetails.checkSyncStreamEnabled();
-      streamDetails.checkNamespace("public");
-      streamDetails.checkStreamName("users");
-      streamDetails.checkSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
-      streamDetails.checkFields(fieldNames, fieldTypes);
+      streamDetails.isSyncStreamEnabled();
+      streamDetails.isNamespace("public");
+      streamDetails.isStreamName("users");
+      streamDetails.isSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+      streamDetails.areFieldsValid(fieldNames, fieldTypes);
     });
 
     it("closes", () => {
       streamDetails.close();
-      streamDetails.checkIsClosed();
+      streamDetails.isClosed();
     });
   });
 
@@ -131,9 +130,9 @@ describe.skip("Connection - Stream details", () => {
 
       streamsTable.showStreamDetails("public", "users");
 
-      streamDetails.checkSyncStreamDisabled();
+      streamDetails.isSyncStreamDisabled();
       streamDetails.enableSyncStream();
-      streamDetails.checkSyncStreamEnabled();
+      streamDetails.isSyncStreamEnabled();
       streamDetails.close();
 
       streamsTable.checkEnabledStream("public", "users");
