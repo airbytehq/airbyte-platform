@@ -52,10 +52,14 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.CheckWithCatalog;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
@@ -86,6 +90,8 @@ public class ConnectionsHandler {
   private final TrackingClient trackingClient;
   private final EventRunner eventRunner;
   private final ConnectionHelper connectionHelper;
+  @Inject
+  FeatureFlagClient featureFlagClient;
 
   @VisibleForTesting
   ConnectionsHandler(final ConfigRepository configRepository,
@@ -181,9 +187,11 @@ public class ConnectionsHandler {
     } else {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
-
-
-
+    UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
+    if (featureFlagClient.enabled(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
+      // TODO this is the hook for future check with catalog work
+      LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
+    }
     configRepository.writeStandardSync(standardSync);
 
     trackNewConnection(standardSync);
