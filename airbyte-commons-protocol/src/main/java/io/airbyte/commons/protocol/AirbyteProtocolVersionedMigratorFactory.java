@@ -8,7 +8,7 @@ import io.airbyte.commons.version.Version;
 import jakarta.inject.Singleton;
 
 /**
- * Factory to build AirbyteMessageVersionedMigrator
+ * Factory to build AirbyteMessageVersionedMigrator.
  */
 @Singleton
 public class AirbyteProtocolVersionedMigratorFactory {

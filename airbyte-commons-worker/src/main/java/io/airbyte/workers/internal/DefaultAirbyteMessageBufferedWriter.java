@@ -9,6 +9,9 @@ import io.airbyte.protocol.models.AirbyteMessage;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
+/**
+ * Default writer that serializes airbyte messages to JSON.
+ */
 public class DefaultAirbyteMessageBufferedWriter implements AirbyteMessageBufferedWriter {
 
   protected final BufferedWriter writer;

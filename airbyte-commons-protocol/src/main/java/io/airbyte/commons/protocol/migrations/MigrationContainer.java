@@ -12,6 +12,11 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 
+/**
+ * Contains all protocol migrations.
+ *
+ * @param <T> protocol type
+ */
 public class MigrationContainer<T extends Migration> {
 
   private final List<T> migrationsToRegister;
@@ -34,13 +39,13 @@ public class MigrationContainer<T extends Migration> {
 
   /**
    * Downgrade a message from the most recent version to the target version by chaining all the
-   * required migrations
+   * required migrations.
    */
-  public <PreviousVersion, CurrentVersion> PreviousVersion downgrade(final CurrentVersion message,
-                                                                     final Version target,
-                                                                     final BiFunction<T, Object, Object> applyDowngrade) {
+  public <V0, V1> V0 downgrade(final V1 message,
+                               final Version target,
+                               final BiFunction<T, Object, Object> applyDowngrade) {
     if (target.getMajorVersion().equals(mostRecentMajorVersion)) {
-      return (PreviousVersion) message;
+      return (V0) message;
     }
 
     Object result = message;
@@ -48,27 +53,33 @@ public class MigrationContainer<T extends Migration> {
     for (int i = selectedMigrations.length; i > 0; --i) {
       result = applyDowngrade.apply((T) selectedMigrations[i - 1], result);
     }
-    return (PreviousVersion) result;
+    return (V0) result;
   }
 
   /**
    * Upgrade a message from the source version to the most recent version by chaining all the required
-   * migrations
+   * migrations.
    */
-  public <PreviousVersion, CurrentVersion> CurrentVersion upgrade(final PreviousVersion message,
-                                                                  final Version source,
-                                                                  final BiFunction<T, Object, Object> applyUpgrade) {
+  public <V0, V1> V1 upgrade(final V0 message,
+                             final Version source,
+                             final BiFunction<T, Object, Object> applyUpgrade) {
     if (source.getMajorVersion().equals(mostRecentMajorVersion)) {
-      return (CurrentVersion) message;
+      return (V1) message;
     }
 
     Object result = message;
     for (var migration : selectMigrations(source)) {
       result = applyUpgrade.apply(migration, result);
     }
-    return (CurrentVersion) result;
+    return (V1) result;
   }
 
+  /**
+   * Get migrations needed to migrate to this version.
+   *
+   * @param version to migrate
+   * @return needed migrations
+   */
   public Collection<T> selectMigrations(final Version version) {
     final Collection<T> results = migrations.tailMap(version.getMajorVersion()).values();
     if (results.isEmpty()) {

@@ -21,6 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+/**
+ * Code for handling configuration files for orchestrated pods.
+ */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 @Factory
 public class ConfigFactory {
@@ -45,7 +48,7 @@ public class ConfigFactory {
    *
    * @param configDir Which directory contains the OrchestratorConstants.INIT_FILE_APPLICATION file.
    * @return Contents of OrchestratorConstants.INIT_FILE_APPLICATION
-   * @throws IOException
+   * @throws IOException exception while reading the file
    */
   @Singleton
   @Named("application")

@@ -42,6 +42,9 @@ import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 
+/**
+ * All db queries for the StandardSync resource. Also known as a Connection.
+ */
 public class StandardSyncPersistence {
 
   private record StandardSyncIdsWithProtocolVersions(
@@ -61,7 +64,7 @@ public class StandardSyncPersistence {
     return getStandardSyncWithMetadata(connectionId).getConfig();
   }
 
-  public ConfigWithMetadata<StandardSync> getStandardSyncWithMetadata(final UUID connectionId) throws IOException, ConfigNotFoundException {
+  private ConfigWithMetadata<StandardSync> getStandardSyncWithMetadata(final UUID connectionId) throws IOException, ConfigNotFoundException {
     final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
 
     final boolean foundMoreThanOneConfig = result.size() > 1;
@@ -77,93 +80,17 @@ public class StandardSyncPersistence {
     return listStandardSyncWithMetadata(Optional.empty()).stream().map(ConfigWithMetadata::getConfig).toList();
   }
 
+  /**
+   * Write standard sync (a.k.a. connection) to the db
+   *
+   * @param standardSync standard sync (a.k.a. connection)
+   * @throws IOException exception when interacting with the db
+   */
   public void writeStandardSync(final StandardSync standardSync) throws IOException {
     database.transaction(ctx -> {
       writeStandardSync(standardSync, ctx);
       return null;
     });
-  }
-
-  /**
-   * Deletes a connection (sync) and all of dependent resources (state and connection_operations).
-   *
-   * @param standardSyncId - id of the sync (a.k.a. connection_id)
-   * @throws IOException - error while accessing db.
-   */
-  public void deleteStandardSync(final UUID standardSyncId) throws IOException {
-    database.transaction(ctx -> {
-      PersistenceHelpers.deleteConfig(CONNECTION_OPERATION, CONNECTION_OPERATION.CONNECTION_ID, standardSyncId, ctx);
-      PersistenceHelpers.deleteConfig(STATE, STATE.CONNECTION_ID, standardSyncId, ctx);
-      PersistenceHelpers.deleteConfig(CONNECTION, CONNECTION.ID, standardSyncId, ctx);
-      return null;
-    });
-  }
-
-  /**
-   * For the StandardSyncs related to actorDefinitionId, clear the unsupported protocol version flag
-   * if both connectors are now within support range.
-   *
-   * @param actorDefinitionId the actorDefinitionId to query
-   * @param actorType the ActorType of actorDefinitionId
-   * @param supportedRange the supported range of protocol versions
-   */
-  public void clearUnsupportedProtocolVersionFlag(final UUID actorDefinitionId,
-                                                  final ActorType actorType,
-                                                  final AirbyteProtocolVersionRange supportedRange)
-      throws IOException {
-    final Stream<StandardSyncIdsWithProtocolVersions> candidateSyncs = database.query(ctx -> findDisabledSyncs(ctx, actorDefinitionId, actorType));
-    final List<UUID> standardSyncsToReEnable = candidateSyncs
-        .filter(sync -> supportedRange.isSupported(sync.sourceProtocolVersion()) && supportedRange.isSupported(sync.destinationProtocolVersion()))
-        .map(StandardSyncIdsWithProtocolVersions::standardSyncId)
-        .toList();
-    database.query(ctx -> {
-      clearProtocolVersionFlag(ctx, standardSyncsToReEnable);
-      return null;
-    });
-  }
-
-  public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws ConfigNotFoundException, IOException {
-    final StandardSync standardSync = getStandardSync(connectionId);
-    return CatalogHelpers.extractStreamDescriptors(standardSync.getCatalog());
-  }
-
-  private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
-    final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(CONNECTION);
-      if (configId.isPresent()) {
-        return query.where(CONNECTION.ID.eq(configId.get())).fetch();
-      }
-      return query.fetch();
-    });
-
-    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
-    for (final Record record : result) {
-      final StandardSync standardSync = DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)));
-      if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
-        throw new RuntimeException("unexpected schedule type mismatch");
-      }
-      standardSyncs.add(new ConfigWithMetadata<>(
-          record.get(CONNECTION.ID).toString(),
-          ConfigSchema.STANDARD_SYNC.name(),
-          record.get(CONNECTION.CREATED_AT).toInstant(),
-          record.get(CONNECTION.UPDATED_AT).toInstant(),
-          standardSync));
-    }
-    return standardSyncs;
-  }
-
-  private List<UUID> connectionOperationIds(final UUID connectionId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
-        .from(CONNECTION_OPERATION)
-        .where(CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
-        .fetch());
-
-    final List<UUID> ids = new ArrayList<>();
-    for (final Record record : result) {
-      ids.add(record.get(CONNECTION_OPERATION.OPERATION_ID));
-    }
-
-    return ids;
   }
 
   private void writeStandardSync(final StandardSync standardSync, final DSLContext ctx) {
@@ -268,6 +195,88 @@ public class StandardSyncPersistence {
             .execute();
       }
     }
+  }
+
+  /**
+   * Deletes a connection (sync) and all of dependent resources (state and connection_operations).
+   *
+   * @param standardSyncId - id of the sync (a.k.a. connection_id)
+   * @throws IOException - error while accessing db.
+   */
+  public void deleteStandardSync(final UUID standardSyncId) throws IOException {
+    database.transaction(ctx -> {
+      PersistenceHelpers.deleteConfig(CONNECTION_OPERATION, CONNECTION_OPERATION.CONNECTION_ID, standardSyncId, ctx);
+      PersistenceHelpers.deleteConfig(STATE, STATE.CONNECTION_ID, standardSyncId, ctx);
+      PersistenceHelpers.deleteConfig(CONNECTION, CONNECTION.ID, standardSyncId, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * For the StandardSyncs related to actorDefinitionId, clear the unsupported protocol version flag
+   * if both connectors are now within support range.
+   *
+   * @param actorDefinitionId the actorDefinitionId to query
+   * @param actorType the ActorType of actorDefinitionId
+   * @param supportedRange the supported range of protocol versions
+   */
+  public void clearUnsupportedProtocolVersionFlag(final UUID actorDefinitionId,
+                                                  final ActorType actorType,
+                                                  final AirbyteProtocolVersionRange supportedRange)
+      throws IOException {
+    final Stream<StandardSyncIdsWithProtocolVersions> candidateSyncs = database.query(ctx -> findDisabledSyncs(ctx, actorDefinitionId, actorType));
+    final List<UUID> standardSyncsToReEnable = candidateSyncs
+        .filter(sync -> supportedRange.isSupported(sync.sourceProtocolVersion()) && supportedRange.isSupported(sync.destinationProtocolVersion()))
+        .map(StandardSyncIdsWithProtocolVersions::standardSyncId)
+        .toList();
+    database.query(ctx -> {
+      clearProtocolVersionFlag(ctx, standardSyncsToReEnable);
+      return null;
+    });
+  }
+
+  public List<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws ConfigNotFoundException, IOException {
+    final StandardSync standardSync = getStandardSync(connectionId);
+    return CatalogHelpers.extractStreamDescriptors(standardSync.getCatalog());
+  }
+
+  private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
+    final Result<Record> result = database.query(ctx -> {
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(CONNECTION);
+      if (configId.isPresent()) {
+        return query.where(CONNECTION.ID.eq(configId.get())).fetch();
+      }
+      return query.fetch();
+    });
+
+    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
+    for (final Record record : result) {
+      final StandardSync standardSync = DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)));
+      if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
+        throw new RuntimeException("unexpected schedule type mismatch");
+      }
+      standardSyncs.add(new ConfigWithMetadata<>(
+          record.get(CONNECTION.ID).toString(),
+          ConfigSchema.STANDARD_SYNC.name(),
+          record.get(CONNECTION.CREATED_AT).toInstant(),
+          record.get(CONNECTION.UPDATED_AT).toInstant(),
+          standardSync));
+    }
+    return standardSyncs;
+  }
+
+  private List<UUID> connectionOperationIds(final UUID connectionId) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(CONNECTION_OPERATION)
+        .where(CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
+        .fetch());
+
+    final List<UUID> ids = new ArrayList<>();
+    for (final Record record : result) {
+      ids.add(record.get(CONNECTION_OPERATION.OPERATION_ID));
+    }
+
+    return ids;
   }
 
   private Stream<StandardSyncIdsWithProtocolVersions> findDisabledSyncs(final DSLContext ctx, final UUID actorDefId, final ActorType actorType) {

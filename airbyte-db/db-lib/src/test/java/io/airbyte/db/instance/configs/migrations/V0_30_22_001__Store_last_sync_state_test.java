@@ -236,7 +236,7 @@ class V0_30_22_001__Store_last_sync_state_test extends AbstractConfigsDatabaseTe
         .get(JOB_ID_FIELD);
   }
 
-  /**
+  /*
    * @param creationOffset Set the creation timestamp to {@code TIMESTAMP} + this passed in offset.
    */
   private static void createAttempt(final DSLContext ctx,

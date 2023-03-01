@@ -45,12 +45,12 @@ public interface Configs {
   AirbyteVersion getAirbyteVersion();
 
   /**
-   * Defines the max supported Airbyte Protocol Version
+   * Defines the max supported Airbyte Protocol Version.
    */
   Version getAirbyteProtocolVersionMax();
 
   /**
-   * Defines the min supported Airbyte Protocol Version
+   * Defines the min supported Airbyte Protocol Version.
    */
   Version getAirbyteProtocolVersionMin();
 
@@ -87,7 +87,7 @@ public interface Configs {
   /**
    * Defines the URL to pull the remote connector catalog from.
    *
-   * @return
+   * @return URL to remote connecto catalog
    */
   Optional<URI> getRemoteConnectorCatalogUrl();
 
@@ -259,7 +259,7 @@ public interface Configs {
   String getTemporalHost();
 
   /**
-   * Define the number of retention days for the temporal history
+   * Define the number of retention days for the temporal history.
    */
   int getTemporalRetentionInDays();
 
@@ -344,7 +344,7 @@ public interface Configs {
   /**
    * Get the type of feature flag client to use.
    *
-   * @return
+   * @return feature flag client
    */
   String getFeatureFlagClient();
 
@@ -491,32 +491,32 @@ public interface Configs {
   List<String> getJobKubeMainContainerImagePullSecrets();
 
   /**
-   * Define the Memory request for the Sidecar
+   * Define the Memory request for the Sidecar.
    */
   String getSidecarMemoryRequest();
 
   /**
-   * Define the Memory limit for the Sidecar
+   * Define the Memory limit for the Sidecar.
    */
   String getSidecarKubeMemoryLimit();
 
   /**
-   * Define the CPU request for the Sidecar
+   * Define the CPU request for the Sidecar.
    */
   String getSidecarKubeCpuRequest();
 
   /**
-   * Define the CPU limit for the Sidecar
+   * Define the CPU limit for the Sidecar.
    */
   String getSidecarKubeCpuLimit();
 
   /**
-   * Define the CPU request for the SOCAT Sidecar
+   * Define the CPU request for the SOCAT Sidecar.
    */
   String getJobKubeSocatImage();
 
   /**
-   * Define the CPU limit for the SOCAT Sidecar
+   * Define the CPU limit for the SOCAT Sidecar.
    */
   String getSocatSidecarKubeCpuLimit();
 
@@ -602,12 +602,12 @@ public interface Configs {
   // Worker
 
   /**
-   * Define the header name used to authenticate from an Airbyte Worker to the Airbyte API
+   * Define the header name used to authenticate from an Airbyte Worker to the Airbyte API.
    */
   String getAirbyteApiAuthHeaderName();
 
   /**
-   * Define the header value used to authenticate from an Airbyte Worker to the Airbyte API
+   * Define the header value used to authenticate from an Airbyte Worker to the Airbyte API.
    */
   String getAirbyteApiAuthHeaderValue();
 
@@ -728,27 +728,27 @@ public interface Configs {
   String getReplicationOrchestratorMemoryLimit();
 
   /**
-   * Get the longest duration of non long running activity
+   * Get the longest duration of non long running activity.
    */
   int getMaxActivityTimeoutSecond();
 
   /**
-   * Get initial delay in seconds between two activity attempts
+   * Get initial delay in seconds between two activity attempts.
    */
   int getInitialDelayBetweenActivityAttemptsSeconds();
 
   /**
-   * Get maximum delay in seconds between two activity attempts
+   * Get maximum delay in seconds between two activity attempts.
    */
   int getMaxDelayBetweenActivityAttemptsSeconds();
 
   /**
-   * Get the delay in seconds between an activity failing and the workflow being restarted
+   * Get the delay in seconds between an activity failing and the workflow being restarted.
    */
   int getWorkflowFailureRestartDelaySeconds();
 
   /**
-   * Get number of attempts of the non long running activities
+   * Get number of attempts of the non long running activities.
    */
   int getActivityNumberOfAttempt();
 
@@ -762,26 +762,41 @@ public interface Configs {
 
   String getStrictComparisonNormalizationTag();
 
+  /**
+   * Tracking strategy.
+   */
   enum TrackingStrategy {
     SEGMENT,
     LOGGING
   }
 
+  /**
+   * Job error reporting strategy.
+   */
   enum JobErrorReportingStrategy {
     SENTRY,
     LOGGING
   }
 
+  /**
+   * Worker environment.
+   */
   enum WorkerEnvironment {
     DOCKER,
     KUBERNETES
   }
 
+  /**
+   * Deployment type.
+   */
   enum DeploymentMode {
     OSS,
     CLOUD
   }
 
+  /**
+   * Secret persistence type.
+   */
   enum SecretPersistenceType {
     NONE,
     TESTING_CONFIG_DB_TABLE,

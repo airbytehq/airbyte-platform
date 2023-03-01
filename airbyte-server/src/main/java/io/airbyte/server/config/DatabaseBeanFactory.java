@@ -30,7 +30,8 @@ import org.jooq.DSLContext;
  */
 @Factory
 @Slf4j
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod", "LineLength"})
 public class DatabaseBeanFactory {
 
   private static final String BASELINE_DESCRIPTION = "Baseline from file-based migration v1";

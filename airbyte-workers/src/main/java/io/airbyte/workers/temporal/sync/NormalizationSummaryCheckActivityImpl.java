@@ -23,6 +23,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * NormalizationSummaryCheckActivityImpl.
+ */
 @Slf4j
 @Singleton
 public class NormalizationSummaryCheckActivityImpl implements NormalizationSummaryCheckActivity {

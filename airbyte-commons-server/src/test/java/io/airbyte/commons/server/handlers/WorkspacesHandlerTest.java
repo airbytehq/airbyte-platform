@@ -509,13 +509,13 @@ class WorkspacesHandlerTest {
   @Test
   @DisplayName("Partial patch update should preserve unchanged fields")
   void testWorkspacePatchUpdate() throws JsonValidationException, ConfigNotFoundException, IOException {
-    final String EXPECTED_NEW_EMAIL = "expected-new-email@example.com";
+    final String expectedNewEmail = "expected-new-email@example.com";
     final WorkspaceUpdate workspaceUpdate = new WorkspaceUpdate()
         .workspaceId(workspace.getWorkspaceId())
         .anonymousDataCollection(true)
-        .email(EXPECTED_NEW_EMAIL);
+        .email(expectedNewEmail);
 
-    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(EXPECTED_NEW_EMAIL).withAnonymousDataCollection(true);
+    final StandardWorkspace expectedWorkspace = Jsons.clone(workspace).withEmail(expectedNewEmail).withAnonymousDataCollection(true);
     when(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
         .thenReturn(workspace)
         .thenReturn(expectedWorkspace);
@@ -523,7 +523,7 @@ class WorkspacesHandlerTest {
     final WorkspaceRead expectedWorkspaceRead = new WorkspaceRead()
         .workspaceId(workspace.getWorkspaceId())
         .customerId(workspace.getCustomerId())
-        .email(EXPECTED_NEW_EMAIL)
+        .email(expectedNewEmail)
         .name(workspace.getName())
         .slug(workspace.getSlug())
         .initialSetupComplete(workspace.getInitialSetupComplete())

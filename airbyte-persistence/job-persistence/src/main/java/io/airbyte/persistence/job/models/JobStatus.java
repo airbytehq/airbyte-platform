@@ -8,6 +8,9 @@ import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * The statuses of a job.
+ */
 public enum JobStatus {
 
   PENDING,

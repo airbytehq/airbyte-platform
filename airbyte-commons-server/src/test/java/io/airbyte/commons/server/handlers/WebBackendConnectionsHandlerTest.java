@@ -1091,7 +1091,9 @@ class WebBackendConnectionsHandlerTest {
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
 
     when(configRepository.getMostRecentActorCatalogForSource(sourceId)).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.deserialize(
-        "{\"streams\": [{\"name\": \"cat_names\", \"namespace\": \"public\", \"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));
+        "{\"streams\": [{\"name\": \"cat_names\", "
+            + "\"namespace\": \"public\", "
+            + "\"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff, catalogDiff);
 
     when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))

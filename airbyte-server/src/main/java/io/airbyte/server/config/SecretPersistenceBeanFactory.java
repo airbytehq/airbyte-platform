@@ -125,6 +125,7 @@ public class SecretPersistenceBeanFactory {
     return new SecretsRepositoryReader(configRepository, secretsHydrator);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   public SecretsRepositoryWriter secretsRepositoryWriter(final ConfigRepository configRepository,
                                                          @Named("secretPersistence") final Optional<SecretPersistence> secretPersistence,

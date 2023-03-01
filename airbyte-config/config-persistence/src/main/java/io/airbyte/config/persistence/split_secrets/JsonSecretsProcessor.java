@@ -22,13 +22,17 @@ import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Abstraction for handling secrets in a JSON object where the location of the secret is described
+ * by JSONSchema.
+ */
 @Builder
 @SuppressWarnings({"PMD.CognitiveComplexity", "PMD.CyclomaticComplexity"})
 @Slf4j
 public class JsonSecretsProcessor {
 
   @Builder.Default
-  final private Boolean copySecrets = false;
+  private final Boolean copySecrets = false;
 
   protected static final JsonSchemaValidator VALIDATOR = new JsonSchemaValidator();
 

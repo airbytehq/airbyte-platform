@@ -53,7 +53,7 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
     <FlexContainer className={styles.container} justifyContent="space-between" alignItems="center">
       <FlexContainer gap="md" alignItems="center" className={styles.leftActions}>
         <Switch size="sm" checked={config?.selected} onChange={onSelectedChange} disabled={disabled} />
-        <Text color="grey-300" size="xs">
+        <Text color="grey300" size="xs">
           <FormattedMessage id="form.stream.sync" />
         </Text>
       </FlexContainer>
