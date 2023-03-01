@@ -1,6 +1,6 @@
 import type { Url } from "url";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { PluggableList } from "react-markdown/lib/react-markdown";
 import { useLocation } from "react-router-dom";
@@ -10,15 +10,18 @@ import urls from "rehype-urls";
 
 import { LoadingPage } from "components";
 import { Markdown } from "components/ui/Markdown";
-import { PageHeader } from "components/ui/PageHeader";
+import { StepsMenu } from "components/ui/StepsMenu";
 
 import { useConfig } from "config";
+import { isSourceDefinition } from "core/domain/connector/source";
+import { useExperiment } from "hooks/services/Experiment";
 import { useDocumentation } from "hooks/services/useDocumentation";
 import { isCloudApp } from "utils/app";
 import { links } from "utils/links";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 import styles from "./DocumentationPanel.module.scss";
+import { ResourceNotAvailable } from "./ResourceNotAvailable";
 
 const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
@@ -30,7 +33,12 @@ export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string 
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
   const config = useConfig();
-  const { setDocumentationPanelOpen, documentationUrl } = useDocumentationPanelContext();
+  const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
+
+  const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false);
+  const [isSchemaRequested, setIsSchemaRequested] = useState(false);
+  const [isERDRequested, setIsERDRequested] = useState(false);
+
   const { data: docs, isLoading, error } = useDocumentation(documentationUrl);
 
   const urlReplacerPlugin: PluggableList = useMemo<PluggableList>(() => {
@@ -57,20 +65,49 @@ export const DocumentationPanel: React.FC = () => {
     setDocumentationPanelOpen(false);
   }, [setDocumentationPanelOpen, location.pathname]);
 
+  const [activeTab, setActiveTab] = useState("setupGuide");
+  const tabs = [
+    {
+      id: "setupGuide",
+      name: <FormattedMessage id="sources.documentationPanel.tabs.setupGuide" />,
+    },
+    {
+      id: "schema",
+      name: <FormattedMessage id="sources.documentationPanel.tabs.schema" />,
+    },
+    {
+      id: "erd",
+      name: <FormattedMessage id="sources.documentationPanel.tabs.erd" />,
+    },
+  ];
+
   return isLoading || documentationUrl === "" ? (
     <LoadingPage />
   ) : (
     <div className={styles.container}>
-      <PageHeader withLine title={<FormattedMessage id="connector.setupGuide" />} />
-      <Markdown
-        className={styles.content}
-        content={
-          docs && !error
-            ? prepareMarkdown(docs, isCloudApp() ? "cloud" : "oss")
-            : formatMessage({ id: "connector.setupGuide.notFound" })
-        }
-        rehypePlugins={urlReplacerPlugin}
-      />
+      {selectedConnectorDefinition && isSourceDefinition(selectedConnectorDefinition) && showRequestSchemaButton && (
+        <div className={styles.stepsContainer}>
+          <StepsMenu lightMode data={tabs} onSelect={setActiveTab} activeStep={activeTab} />
+        </div>
+      )}
+
+      {activeTab === "setupGuide" && (
+        <Markdown
+          className={styles.content}
+          content={
+            docs && !error
+              ? prepareMarkdown(docs, isCloudApp() ? "cloud" : "oss")
+              : formatMessage({ id: "connector.setupGuide.notFound" })
+          }
+          rehypePlugins={urlReplacerPlugin}
+        />
+      )}
+      {activeTab === "schema" && (
+        <ResourceNotAvailable activeTab="schema" setRequested={setIsSchemaRequested} isRequested={isSchemaRequested} />
+      )}
+      {activeTab === "erd" && (
+        <ResourceNotAvailable activeTab="erd" setRequested={setIsERDRequested} isRequested={isERDRequested} />
+      )}
     </div>
   );
 };
