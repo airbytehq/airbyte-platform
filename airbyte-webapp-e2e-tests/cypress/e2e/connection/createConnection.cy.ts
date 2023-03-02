@@ -32,6 +32,8 @@ import {
   dropDummyTablesQuery,
 } from "commands/db/queries";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
+import streamsTablePageObject from "pages/connection/streamsTablePageObject";
+import { StreamRowPageObject } from "pages/connection/streamsTablePageObject/StreamRowPageObject";
 
 // TODO: Enable this test when the new stream table will be turned on
 describe.skip("Connection - Create new connection", () => {
@@ -161,7 +163,7 @@ describe.skip("Connection - Create new connection", () => {
       closeStreamPanel,
       openStreamPanel,
       isStreamPanelVisible,
-    } = newConnectionPage.getStreamUtilityFunctions("public", "users");
+    } = StreamRowPageObject.getStreamUtilityFunctions("public", "users");
 
     it("should have checked sync switch by default ", () => {
       // filter table to have only one stream
