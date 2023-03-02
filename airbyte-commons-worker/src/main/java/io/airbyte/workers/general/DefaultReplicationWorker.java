@@ -389,7 +389,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             try {
               source.close();
             } catch (final Exception e) {
-              throw new SourceException("Source cannot be stopped!", e);
+              throw new SourceException("Source didn't exit properly - check the logs!", e);
             }
           }
         }
