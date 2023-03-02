@@ -98,7 +98,7 @@ jobs:
     name: "Frontend: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
     if: |
       needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
