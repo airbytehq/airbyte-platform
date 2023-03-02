@@ -4,8 +4,10 @@
 #
 #    pip-compile --extra=tests --output-file=requirements-tests.txt
 #
-airbyte-cdk==0.25.0
+airbyte-cdk==0.29.0
     # via connector-builder-server (setup.py)
+airbyte-protocol-models==1.0.0
+    # via airbyte-cdk
 anyio==3.6.2
     # via starlette
 appdirs==1.4.4
@@ -33,8 +35,6 @@ click==8.1.3
     # via uvicorn
 coverage[toml]==7.1.0
     # via pytest-cov
-dataclasses-jsonschema==2.15.1
-    # via airbyte-cdk
 deprecated==1.2.13
     # via airbyte-cdk
 distlib==0.3.6
@@ -67,9 +67,7 @@ jinja2==3.1.2
 jsonref==0.3.0
     # via airbyte-cdk
 jsonschema==3.2.0
-    # via
-    #   airbyte-cdk
-    #   dataclasses-jsonschema
+    # via airbyte-cdk
 markupsafe==2.1.2
     # via jinja2
 multidict==6.0.4
@@ -95,6 +93,7 @@ py==1.11.0
 pydantic==1.9.2
     # via
     #   airbyte-cdk
+    #   airbyte-protocol-models
     #   fastapi
 pyrsistent==0.19.3
     # via jsonschema
@@ -113,7 +112,6 @@ pytest-recording==0.12.2
 python-dateutil==2.8.2
     # via
     #   airbyte-cdk
-    #   dataclasses-jsonschema
     #   pendulum
 pytzdata==2020.1
     # via pendulum
