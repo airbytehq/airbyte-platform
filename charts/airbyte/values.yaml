@@ -1234,6 +1234,7 @@ postgresql:
   commonAnnotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-1"
+  tolerations: []
 ## External PostgreSQL configuration
 ## All of these values are only used when postgresql.enabled is set to false
 ##  externalDatabase.host Database host
@@ -1265,6 +1266,7 @@ minio:
   auth:
     rootUser: minio
     rootPassword: minio123
+  tolerations: []
 
 ## @section cron parameters
 
