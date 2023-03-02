@@ -22,7 +22,7 @@ class HttpResponse(BaseModel):
     """
 
     status: int = Field(alias="status")
-    body: Optional[Dict[str, Any]] = Field(alias="body", default=None)
+    body: Optional[str] = Field(alias="body", default=None)
     headers: Optional[Dict[str, Any]] = Field(alias="headers", default=None)
 
 HttpResponse.update_forward_refs()
