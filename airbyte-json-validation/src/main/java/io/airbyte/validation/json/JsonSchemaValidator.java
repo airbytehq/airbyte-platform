@@ -29,6 +29,9 @@ import me.andrz.jackson.JsonReferenceProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Validate a JSON object against a JSONSchema schema.
+ */
 public class JsonSchemaValidator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaValidator.class);
@@ -106,12 +109,18 @@ public class JsonSchemaValidator {
   }
 
   /**
+   * Test if a JSON object conforms to a given JSONSchema.
+   * <p>
    * WARNING
    * <p>
    * The following methods perform JSON validation **by re-creating a validator each time**. This is
    * both CPU and GC expensive, and should be used carefully.
+   * <p>
+   *
+   * @param schemaJson JSONSchema to test against
+   * @param objectJson object to test
+   * @return true if objectJson conforms to the JSONSchema. Otherwise, false.
    */
-
   // todo(davin): Rewrite this section to cache schemas.
   public boolean test(final JsonNode schemaJson, final JsonNode objectJson) {
     final Set<ValidationMessage> validationMessages = validateInternal(schemaJson, objectJson);
@@ -123,6 +132,14 @@ public class JsonSchemaValidator {
     return validationMessages.isEmpty();
   }
 
+  /**
+   * Test if a JSON object conforms to a given JSONSchema. Returns the reason for failure if there are
+   * any.
+   *
+   * @param schemaJson JSONSchema to test against
+   * @param objectJson object to test
+   * @return Set of failure reasons. If empty, then objectJson is valid.
+   */
   public Set<String> validate(final JsonNode schemaJson, final JsonNode objectJson) {
     return validateInternal(schemaJson, objectJson)
         .stream()
@@ -130,6 +147,14 @@ public class JsonSchemaValidator {
         .collect(Collectors.toSet());
   }
 
+  /**
+   * Test if a JSON object conforms to a given JSONSchema. Returns the reason for failure if there are
+   * any.
+   *
+   * @param schemaJson JSONSchema to test against
+   * @param objectJson object to test
+   * @return List of failure reasons. If empty, then objectJson is valid.
+   */
   public List<String[]> getValidationMessageArgs(final JsonNode schemaJson, final JsonNode objectJson) {
     return validateInternal(schemaJson, objectJson)
         .stream()
@@ -137,6 +162,14 @@ public class JsonSchemaValidator {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Test if a JSON object conforms to a given JSONSchema. Returns the JSONPaths to the fields that
+   * failed validation if there are any.
+   *
+   * @param schemaJson JSONSchema to test against
+   * @param objectJson object to test
+   * @return List of paths to fields that failed validation. If empty, then objectJson is valid.
+   */
   public List<String> getValidationMessagePaths(final JsonNode schemaJson, final JsonNode objectJson) {
     return validateInternal(schemaJson, objectJson)
         .stream()
@@ -144,6 +177,15 @@ public class JsonSchemaValidator {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Test if a JSON object conforms to a given JSONSchema. Throws an exception if the object is not
+   * valid.
+   *
+   * @param schemaJson JSONSchema to test against
+   * @param objectJson object to test
+   * @throws JsonValidationException thrown is the objectJson is not valid against the schema in
+   *         schemaJson.
+   */
   public void ensure(final JsonNode schemaJson, final JsonNode objectJson) throws JsonValidationException {
     final Set<ValidationMessage> validationMessages = validateInternal(schemaJson, objectJson);
     if (validationMessages.isEmpty()) {
@@ -156,6 +198,13 @@ public class JsonSchemaValidator {
         schemaJson.toPrettyString()));
   }
 
+  /**
+   * Test if a JSON object conforms to a given JSONSchema. Throws an exception if the object is not
+   * valid.
+   *
+   * @param schemaJson JSONSchema to test against
+   * @param objectJson object to test
+   */
   public void ensureAsRuntime(final JsonNode schemaJson, final JsonNode objectJson) {
     try {
       ensure(schemaJson, objectJson);

@@ -123,12 +123,14 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
         />
       )}
       {props.type === "array" && (
-        <ArrayField
-          name={path}
-          value={(field.value as string[] | undefined) ?? []}
-          setValue={setValue}
-          error={hasError}
-        />
+        <div data-testid={`tag-input-${path}`}>
+          <ArrayField
+            name={path}
+            value={(field.value as string[] | undefined) ?? []}
+            setValue={setValue}
+            error={hasError}
+          />
+        </div>
       )}
       {props.type === "enum" && (
         <EnumField
@@ -154,7 +156,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
 export const BuilderField: React.FC<BuilderFieldProps> = (props) => {
   return (
     // The key is set to enforce a re-render of the component if the type change, otherwise changes in props might not be reflected correctly
-    <FastField name={props.path} key={props.type}>
+    <FastField name={props.path} key={`${props.type}_${props.label}`}>
       {({ field, form, meta }: FastFieldProps<unknown>) => (
         <InnerBuilderField {...props} field={field} form={form} meta={meta} />
       )}

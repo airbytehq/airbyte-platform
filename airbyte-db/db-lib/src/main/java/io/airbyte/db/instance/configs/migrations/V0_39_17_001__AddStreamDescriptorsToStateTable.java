@@ -18,8 +18,12 @@ import org.jooq.impl.SchemaImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add stream to state table.
+ */
 public class V0_39_17_001__AddStreamDescriptorsToStateTable extends BaseJavaMigration {
 
+  private static final String STATE_TABLE = "state";
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_39_17_001__AddStreamDescriptorsToStateTable.class);
 
   @Override
@@ -47,7 +51,6 @@ public class V0_39_17_001__AddStreamDescriptorsToStateTable extends BaseJavaMigr
   }
 
   private static void addStreamDescriptorFieldsToStateTable(final DSLContext ctx) {
-    final String STATE_TABLE = "state";
 
     ctx.alterTable(STATE_TABLE)
         .add(Arrays.asList(
@@ -60,6 +63,9 @@ public class V0_39_17_001__AddStreamDescriptorsToStateTable extends BaseJavaMigr
         .execute();
   }
 
+  /**
+   * State types.
+   */
   public enum StateType implements EnumType {
 
     GLOBAL("GLOBAL"),

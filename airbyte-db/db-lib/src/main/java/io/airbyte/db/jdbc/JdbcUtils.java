@@ -6,6 +6,9 @@ package io.airbyte.db.jdbc;
 
 import org.jooq.JSONFormat;
 
+/**
+ * Shared JDBC utils.
+ */
 public class JdbcUtils {
 
   public static final String HOST_KEY = "host";
@@ -19,7 +22,7 @@ public class JdbcUtils {
 
   private static final JSONFormat defaultJSONFormat = new JSONFormat().recordFormat(JSONFormat.RecordFormat.OBJECT);
 
-  public static JSONFormat getDefaultJSONFormat() {
+  public static JSONFormat getDefaultJsonFormat() {
     return defaultJSONFormat;
   }
 

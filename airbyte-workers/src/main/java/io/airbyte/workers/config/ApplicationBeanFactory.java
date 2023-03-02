@@ -17,6 +17,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -42,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Factory
 @Slf4j
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
 public class ApplicationBeanFactory {
 
   @Singleton
@@ -145,6 +146,8 @@ public class ApplicationBeanFactory {
 
   @Singleton
   public MetricClient metricClient() {
+    // Initialize the metric client
+    MetricClientFactory.initialize(MetricEmittingApps.WORKER);
     return MetricClientFactory.getMetricClient();
   }
 

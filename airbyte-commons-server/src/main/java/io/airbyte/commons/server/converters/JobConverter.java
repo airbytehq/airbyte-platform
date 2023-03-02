@@ -51,7 +51,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
+/**
+ * Convert between API and internal versions of job models.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class JobConverter {
 
@@ -211,15 +216,7 @@ public class JobConverter {
     }
 
     return new AttemptFailureSummary()
-        .failures(failureSummary.getFailures().stream().map(failure -> new FailureReason()
-            .failureOrigin(Enums.convertTo(failure.getFailureOrigin(), FailureOrigin.class))
-            .failureType(Enums.convertTo(failure.getFailureType(), FailureType.class))
-            .externalMessage(failure.getExternalMessage())
-            .internalMessage(failure.getInternalMessage())
-            .stacktrace(failure.getStacktrace())
-            .timestamp(failure.getTimestamp())
-            .retryable(failure.getRetryable()))
-            .collect(Collectors.toList()))
+        .failures(failureSummary.getFailures().stream().map(JobConverter::getFailureReason).collect(Collectors.toList()))
         .partialSuccess(failureSummary.getPartialSuccess());
   }
 
@@ -229,6 +226,20 @@ public class JobConverter {
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
+    if (failureReason == null) {
+      return null;
+    }
+    return new FailureReason()
+        .failureOrigin(Enums.convertTo(failureReason.getFailureOrigin(), FailureOrigin.class))
+        .failureType(Enums.convertTo(failureReason.getFailureType(), FailureType.class))
+        .externalMessage(failureReason.getExternalMessage())
+        .internalMessage(failureReason.getInternalMessage())
+        .stacktrace(failureReason.getStacktrace())
+        .timestamp(failureReason.getTimestamp())
+        .retryable(failureReason.getRetryable());
   }
 
   public SynchronousJobRead getSynchronousJobRead(final SynchronousResponse<?> response) {
@@ -246,7 +257,8 @@ public class JobConverter {
         .endedAt(metadata.getEndedAt())
         .succeeded(metadata.isSucceeded())
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
-        .logs(getLogRead(metadata.getLogPath()));
+        .logs(getLogRead(metadata.getLogPath()))
+        .failureReason(getFailureReason(metadata.getFailureReason()));
   }
 
   public static AttemptNormalizationStatusRead convertAttemptNormalizationStatus(

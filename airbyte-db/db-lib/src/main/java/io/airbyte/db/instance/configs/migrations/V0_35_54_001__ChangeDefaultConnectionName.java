@@ -21,12 +21,15 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Update connection name migration.
+ */
 public class V0_35_54_001__ChangeDefaultConnectionName extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_54_001__ChangeDefaultConnectionName.class);
   private static final String NAME = "name";
 
-  public static void defaultConnectionName(final DSLContext ctx) {
+  static void defaultConnectionName(final DSLContext ctx) {
     LOGGER.info("Updating connection name column");
     final Field<UUID> id = DSL.field("id", SQLDataType.UUID.nullable(false));
     final Field<String> name = DSL.field(NAME, SQLDataType.VARCHAR(256).nullable(false));
@@ -80,7 +83,7 @@ public class V0_35_54_001__ChangeDefaultConnectionName extends BaseJavaMigration
     defaultConnectionName(ctx);
   }
 
-  public static class Actor {
+  static class Actor {
 
     private final String name;
 
@@ -94,7 +97,7 @@ public class V0_35_54_001__ChangeDefaultConnectionName extends BaseJavaMigration
 
   }
 
-  public static class Connection {
+  static class Connection {
 
     private final String name;
     private final UUID connectionId;

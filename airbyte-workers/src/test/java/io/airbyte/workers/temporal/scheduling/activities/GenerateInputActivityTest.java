@@ -59,28 +59,28 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class GenerateInputActivityTest {
 
-  static private StateApi stateApi;
-  static private AttemptApi attemptApi;
-  static private JobPersistence jobPersistence;
-  static private ConfigRepository configRepository;
-  static private GenerateInputActivityImpl generateInputActivity;
-  static private OAuthConfigSupplier oAuthConfigSupplier;
-  static private Job job;
+  private static StateApi stateApi;
+  private static AttemptApi attemptApi;
+  private static JobPersistence jobPersistence;
+  private static ConfigRepository configRepository;
+  private static GenerateInputActivityImpl generateInputActivity;
+  private static OAuthConfigSupplier oAuthConfigSupplier;
+  private static Job job;
 
-  static private final JsonNode SOURCE_CONFIGURATION = Jsons.jsonNode(Map.of("source_key", "source_value"));
-  static private final JsonNode SOURCE_CONFIG_WITH_OAUTH = Jsons.jsonNode(Map.of("source_key", "source_value", "oauth", "oauth_value"));
-  static private final JsonNode DESTINATION_CONFIGURATION = Jsons.jsonNode(Map.of("destination_key", "destination_value"));
-  static private final JsonNode DESTINATION_CONFIG_WITH_OAUTH =
+  private static final JsonNode SOURCE_CONFIGURATION = Jsons.jsonNode(Map.of("source_key", "source_value"));
+  private static final JsonNode SOURCE_CONFIG_WITH_OAUTH = Jsons.jsonNode(Map.of("source_key", "source_value", "oauth", "oauth_value"));
+  private static final JsonNode DESTINATION_CONFIGURATION = Jsons.jsonNode(Map.of("destination_key", "destination_value"));
+  private static final JsonNode DESTINATION_CONFIG_WITH_OAUTH =
       Jsons.jsonNode(Map.of("destination_key", "destination_value", "oauth", "oauth_value"));
-  static private final State STATE = new State().withState(Jsons.jsonNode(Map.of("state_key", "state_value")));
+  private static final State STATE = new State().withState(Jsons.jsonNode(Map.of("state_key", "state_value")));
 
-  static private final UUID WORKSPACE_ID = UUID.randomUUID();
-  static private final long JOB_ID = 1;
-  static private final int ATTEMPT_ID = 1;
-  static private final UUID SOURCE_ID = UUID.randomUUID();
-  static private final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
-  static private final UUID DESTINATION_ID = UUID.randomUUID();
-  static private final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final long JOB_ID = 1;
+  private static final int ATTEMPT_ID = 1;
+  private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_ID = UUID.randomUUID();
+  private static final UUID CONNECTION_ID = UUID.randomUUID();
 
   @BeforeEach
   void setUp() throws IOException, JsonValidationException, ConfigNotFoundException, ApiException {

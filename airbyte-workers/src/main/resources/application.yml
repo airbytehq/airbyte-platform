@@ -72,6 +72,10 @@ airbyte:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
@@ -179,7 +183,7 @@ airbyte:
       max-attempts: ${SYNC_JOB_MAX_ATTEMPTS:3}
       max-timeout: ${SYNC_JOB_MAX_TIMEOUT_DAYS:3}
     notify:
-      enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
+      enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:false}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
   role: ${AIRBYTE_ROLE:}
   secret:

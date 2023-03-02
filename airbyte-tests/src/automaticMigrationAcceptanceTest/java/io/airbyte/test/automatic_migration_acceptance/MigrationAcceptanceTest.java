@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.test.automaticMigrationAcceptance;
+package io.airbyte.test.automatic_migration_acceptance;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -40,12 +40,12 @@ import org.slf4j.LoggerFactory;
  * upgrading from even older versions, which has since been removed
  * <p>
  * This test runs on the current code version and expects local images with the `dev` tag to be
- * available. To do so, run SUB_BUILD=PLATFORM ./gradlew build.
+ * available. To do so, run ./gradlew build.
  * <p>
  * When running this test consecutively locally, it might be necessary to run `docker volume prune`
  * to remove hanging volumes.
  */
-@SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PackageName"})
 class MigrationAcceptanceTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MigrationAcceptanceTest.class);
