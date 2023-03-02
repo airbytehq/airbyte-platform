@@ -22,7 +22,7 @@ const [
   "stream-source-field-data-type"
 );
 
-export class StreamDetailsPageObject {
+class StreamDetailsPageObject {
   isOpen() {
     cy.get(streamDetails).should("exist");
   }

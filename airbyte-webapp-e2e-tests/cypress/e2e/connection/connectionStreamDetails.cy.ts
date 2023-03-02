@@ -24,7 +24,7 @@ import {
 } from "commands/db/queries";
 import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionPage from "pages/connection/connectionPageObject";
-import { StreamDetailsPageObject } from "pages/connection/streamDetailsPageObject";
+import streamDetails from "pages/connection/streamDetailsPageObject";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
 
 const dropTables = () => {
@@ -38,7 +38,6 @@ const dropTables = () => {
 
 describe.skip("Connection - Stream details", () => {
   const streamsTable = new NewStreamsTablePageObject();
-  const streamDetails = new StreamDetailsPageObject();
 
   let source: Source;
   let destination: Destination;
