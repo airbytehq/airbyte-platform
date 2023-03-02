@@ -11,9 +11,9 @@ You can build the webapp using Gradle in the root of the repository:
 
 ```sh
 # Only compile and build the docker webapp image:
-SUB_BUILD=PLATFORM ./gradlew :airbyte-webapp:assemble
+./gradlew :airbyte-webapp:assemble
 # Build the webapp and additional artifacts and run tests:
-SUB_BUILD=PLATFORM ./gradlew :airbyte-webapp:build
+./gradlew :airbyte-webapp:build
 ```
 
 ## Developing the webapp

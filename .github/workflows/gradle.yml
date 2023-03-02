@@ -175,7 +175,7 @@ jobs:
       - name: Build :airbyte-webapp
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew --no-daemon :airbyte-webapp:build --scan
+          command: ./gradlew --no-daemon :airbyte-webapp:build --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -302,7 +302,7 @@ jobs:
           [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
 
       - name: Build Platform Docker Images
-        run: SUB_BUILD=PLATFORM ./gradlew --no-daemon assemble --scan
+        run: ./gradlew --no-daemon assemble --scan
 
       - name: Run End-to-End Frontend Tests
         env:
@@ -422,7 +422,7 @@ jobs:
       - name: Format
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew format --scan --info --stacktrace
+          command: ./gradlew format --scan --info --stacktrace
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -432,7 +432,7 @@ jobs:
       - name: Build
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew build javadoc --scan
+          command: ./gradlew build javadoc --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -476,7 +476,7 @@ jobs:
       - name: Test if Seed spec is updated
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew format && git --no-pager diff && test -z "$(git --no-pager diff)"
+          command: ./gradlew format && git --no-pager diff && test -z "$(git --no-pager diff)"
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -499,7 +499,7 @@ jobs:
       - name: Automatic Migration Acceptance Test
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew :airbyte-tests:automaticMigrationAcceptanceTest --scan -i
+          command: ./gradlew :airbyte-tests:automaticMigrationAcceptanceTest --scan -i
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -736,7 +736,7 @@ jobs:
       - name: Build Platform Docker Images
         uses: Wandalen/wretry.action@master
         with:
-          command: pwd && SUB_BUILD=PLATFORM ./gradlew assemble -x test --scan
+          command: pwd && ./gradlew assemble -x test --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
