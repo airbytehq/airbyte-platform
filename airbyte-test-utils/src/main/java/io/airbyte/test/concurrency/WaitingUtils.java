@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.concurrency;
+package io.airbyte.test.concurrency;
 
 import static java.lang.Thread.sleep;
 

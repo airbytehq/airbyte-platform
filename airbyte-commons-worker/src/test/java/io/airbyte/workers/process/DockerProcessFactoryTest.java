@@ -90,7 +90,7 @@ class DockerProcessFactoryTest {
 
     assertEquals(
         Jsons.jsonNode(ImmutableMap.of("data", 2)),
-        Jsons.deserialize(IOs.readFile(jobRoot, "config.json")));
+        Jsons.deserialize(IOs.readFile(jobRoot.resolve("config.json"))));
   }
 
   /**

@@ -28,7 +28,6 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
-import io.airbyte.commons.util.MoreLists;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
@@ -52,6 +51,7 @@ import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -160,9 +160,9 @@ public class SourceDefinitionsHandler {
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
-    return toSourceDefinitionReadList(MoreLists.concat(
-        configRepository.listPublicSourceDefinitions(false),
-        configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false)));
+    return toSourceDefinitionReadList(Stream.concat(
+        configRepository.listPublicSourceDefinitions(false).stream(),
+        configRepository.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList());
   }
 
   public PrivateSourceDefinitionReadList listPrivateSourceDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)

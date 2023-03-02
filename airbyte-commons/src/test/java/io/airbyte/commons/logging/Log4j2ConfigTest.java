@@ -47,7 +47,7 @@ class Log4j2ConfigTest {
     executor.shutdown();
     executor.awaitTermination(10, TimeUnit.SECONDS);
 
-    assertTrue(IOs.readFile(root, LOG_FILENAME).contains("random message testWorkerDispatch"));
+    assertTrue(IOs.readFile(root.resolve(LOG_FILENAME)).contains("random message testWorkerDispatch"));
   }
 
   @Test
@@ -71,8 +71,8 @@ class Log4j2ConfigTest {
     executor.shutdown();
     executor.awaitTermination(10, TimeUnit.SECONDS);
 
-    assertTrue(IOs.readFile(root1, LOG_FILENAME).contains("random message 1"));
-    assertTrue(IOs.readFile(root2, LOG_FILENAME).contains("random message 2"));
+    assertTrue(IOs.readFile(root1.resolve(LOG_FILENAME)).contains("random message 1"));
+    assertTrue(IOs.readFile(root2.resolve(LOG_FILENAME)).contains("random message 2"));
   }
 
   @Test
@@ -105,7 +105,7 @@ class Log4j2ConfigTest {
     executor.shutdown();
     executor.awaitTermination(10, TimeUnit.SECONDS);
 
-    assertTrue(IOs.readFile(root, LOG_FILENAME).contains("random message testAppDispatch"));
+    assertTrue(IOs.readFile(root.resolve(LOG_FILENAME)).contains("random message testAppDispatch"));
   }
 
   @Test

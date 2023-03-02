@@ -7,13 +7,12 @@ package io.airbyte.commons.jackson;
 import com.fasterxml.jackson.core.JsonGenerator.Feature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * The {@link JavaTimeModule} allows mappers to accommodate different varieties of serialised date
  * time strings.
- *
+ * <p>
  * All jackson mapper creation should use the following methods for instantiation.
  */
 public class MoreMappers {
@@ -28,16 +27,6 @@ public class MoreMappers {
     result.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     result.configure(Feature.WRITE_BIGDECIMAL_AS_PLAIN, true);
     return result;
-  }
-
-  /**
-   * Init default yaml {@link ObjectMapper}.
-   *
-   * @param factory yaml object mapper factory
-   * @return object mapper
-   */
-  public static ObjectMapper initYamlMapper(final YAMLFactory factory) {
-    return new ObjectMapper(factory).registerModule(new JavaTimeModule());
   }
 
 }
