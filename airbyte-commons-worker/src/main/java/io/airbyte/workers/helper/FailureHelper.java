@@ -170,6 +170,21 @@ public class FailureHelper {
   }
 
   /**
+   * Create source heartbeat failure.
+   *
+   * @param t throwable that caused the failure
+   * @param jobId job id
+   * @param attemptNumber attempt number
+   * @return failure reason
+   */
+  public static FailureReason sourceHeartbeatFailure(final Throwable t, final Long jobId, final Integer attemptNumber) {
+    return connectorCommandFailure(t, jobId, attemptNumber, ConnectorCommand.READ)
+        .withFailureOrigin(FailureOrigin.SOURCE)
+        .withFailureType(FailureType.HEARTBEAT_TIMEOUT)
+        .withExternalMessage("The source is unresponsive");
+  }
+
+  /**
    * Create destination failure.
    *
    * @param t throwable that caused the failure

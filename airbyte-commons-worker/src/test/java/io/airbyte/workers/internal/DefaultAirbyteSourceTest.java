@@ -47,6 +47,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -142,7 +143,7 @@ class DefaultAirbyteSourceTest {
   void testSuccessfulLifecycle() throws Exception {
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream("qwer".getBytes(StandardCharsets.UTF_8)));
 
-    when(heartbeatMonitor.isBeating()).thenReturn(true).thenReturn(false);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true)).thenReturn(Optional.of(false));
 
     final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory, heartbeatMonitor, protocolSerializer, featureFlags);
     source.start(SOURCE_CONFIG, jobRoot);
@@ -177,7 +178,7 @@ class DefaultAirbyteSourceTest {
 
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream(("rewq").getBytes(StandardCharsets.UTF_8)));
 
-    when(heartbeatMonitor.isBeating()).thenReturn(true).thenReturn(false);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true)).thenReturn(Optional.of(false));
 
     final AirbyteSource source = new DefaultAirbyteSource(integrationLauncher, streamFactory,
         heartbeatMonitor, protocolSerializer, featureFlags);

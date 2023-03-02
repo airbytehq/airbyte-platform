@@ -6,7 +6,6 @@ package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.features.FeatureFlags;
@@ -43,7 +42,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAirbyteSource.class);
 
-  private static final Duration HEARTBEAT_FRESH_DURATION = Duration.of(5, ChronoUnit.MINUTES);
   private static final Duration GRACEFUL_SHUTDOWN_DURATION = Duration.of(1, ChronoUnit.MINUTES);
   static final Set<Integer> IGNORED_EXIT_CODES = Set.of(
       0, // Normal exit
@@ -64,23 +62,18 @@ public class DefaultAirbyteSource implements AirbyteSource {
   private Integer exitValue = null;
   private final boolean featureFlagLogConnectorMsgs;
 
-  public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher, final FeatureFlags featureFlags) {
-    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), new DefaultProtocolSerializer(), featureFlags);
+  public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
+                              final FeatureFlags featureFlags,
+                              final HeartbeatMonitor heartbeatMonitor) {
+    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), heartbeatMonitor, new DefaultProtocolSerializer(),
+        featureFlags);
   }
 
   public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
                               final AirbyteStreamFactory streamFactory,
+                              final HeartbeatMonitor heartbeatMonitor,
                               final ProtocolSerializer protocolSerializer,
                               final FeatureFlags featureFlags) {
-    this(integrationLauncher, streamFactory, new HeartbeatMonitor(HEARTBEAT_FRESH_DURATION), protocolSerializer, featureFlags);
-  }
-
-  @VisibleForTesting
-  DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
-                       final AirbyteStreamFactory streamFactory,
-                       final HeartbeatMonitor heartbeatMonitor,
-                       final ProtocolSerializer protocolSerializer,
-                       final FeatureFlags featureFlags) {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.protocolSerializer = protocolSerializer;

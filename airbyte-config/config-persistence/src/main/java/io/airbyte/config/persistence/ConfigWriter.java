@@ -116,6 +116,9 @@ public class ConfigWriter {
             .set(ACTOR_DEFINITION.SUGGESTED_STREAMS, standardSourceDefinition.getSuggestedStreams() == null ? null
                 : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getSuggestedStreams())))
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+            .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
+                standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
+                    : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardSourceDefinition.getSourceDefinitionId()))
             .execute();
 
@@ -152,6 +155,9 @@ public class ConfigWriter {
                 : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getSuggestedStreams())))
             .set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+            .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
+                standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
+                    : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
             .execute();
       }
     });
