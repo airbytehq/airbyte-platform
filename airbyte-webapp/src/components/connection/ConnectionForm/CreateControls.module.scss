@@ -1,5 +1,11 @@
 @use "scss/variables";
+@use "scss/colors";
 
 .container {
   margin-top: variables.$spacing-md;
+}
+
+.errorText {
+  align-self: center;
+  color: colors.$red;
 }
