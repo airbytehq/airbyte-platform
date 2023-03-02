@@ -7,7 +7,6 @@ package io.airbyte.db.instance.configs.migrations;
 import static org.jooq.impl.DSL.currentOffsetDateTime;
 import static org.jooq.impl.DSL.foreignKey;
 import static org.jooq.impl.DSL.primaryKey;
-import static org.jooq.impl.DSL.unique;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -21,10 +20,12 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// TODO: update migration description in the class name
-public class V0_41_00_002__New_migration extends BaseJavaMigration {
+/**
+ * Add DeclarativeManifest and ActiveDeclarativeManifest.
+ */
+public class V0_41_00_002__AddDeclarativeManifestTables extends BaseJavaMigration {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(V0_41_00_002__New_migration.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(V0_41_00_002__AddDeclarativeManifestTables.class);
 
   @Override
   public void migrate(final Context context) throws Exception {
@@ -54,7 +55,6 @@ public class V0_41_00_002__New_migration extends BaseJavaMigration {
   }
 
   private static void addActiveDeclarativeManifestTable(final DSLContext ctx) {
-    final Field<UUID> id = DSL.field("id", SQLDataType.UUID.nullable(false));
     final Field<UUID> actorDefinitionId = DSL.field("actor_definition_id", SQLDataType.UUID.nullable(false));
     final Field<Long> version = DSL.field("version", SQLDataType.BIGINT.nullable(false));
     final Field<OffsetDateTime> createdAt =
@@ -63,11 +63,10 @@ public class V0_41_00_002__New_migration extends BaseJavaMigration {
         DSL.field("updated_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(currentOffsetDateTime()));
 
     ctx.createTableIfNotExists("active_declarative_manifest")
-        .columns(id, actorDefinitionId, version, createdAt, updatedAt)
+        .columns(actorDefinitionId, version, createdAt, updatedAt)
         .constraints(
-            primaryKey(id),
-            foreignKey(actorDefinitionId, version).references("declarative_manifest", "actor_definition_id", "version"),
-            unique(actorDefinitionId))
+            primaryKey(actorDefinitionId),
+            foreignKey(actorDefinitionId, version).references("declarative_manifest", "actor_definition_id", "version"))
         .execute();
   }
 

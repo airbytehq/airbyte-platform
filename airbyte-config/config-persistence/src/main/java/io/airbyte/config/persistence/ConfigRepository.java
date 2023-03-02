@@ -2243,22 +2243,19 @@ public class ConfigRepository {
   public void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest) throws IOException {
     database.transaction(ctx -> {
       final OffsetDateTime timestamp = OffsetDateTime.now();
-      final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ID.eq(activeDeclarativeManifest.getId());
+      final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(ACTIVE_DECLARATIVE_MANIFEST)
           .where(matchId));
 
       if (isExistingConfig) {
         ctx.update(ACTIVE_DECLARATIVE_MANIFEST)
-            .set(ACTIVE_DECLARATIVE_MANIFEST.ID, activeDeclarativeManifest.getId())
-            .set(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, activeDeclarativeManifest.getActorDefinitionId())
             .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
             .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
             .where(matchId)
             .execute();
       } else {
         ctx.insertInto(ACTIVE_DECLARATIVE_MANIFEST)
-            .set(ACTIVE_DECLARATIVE_MANIFEST.ID, activeDeclarativeManifest.getId())
             .set(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, activeDeclarativeManifest.getActorDefinitionId())
             .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
             .set(ACTIVE_DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
@@ -2302,7 +2299,7 @@ public class ConfigRepository {
   }
 
   /**
-   * Read all declarative manifests by actor definition id without the manifest column
+   * Read all declarative manifests by actor definition id without the manifest column.
    *
    * @param actorDefinitionId actor definition id
    * @throws IOException exception while interacting with db
@@ -2320,7 +2317,7 @@ public class ConfigRepository {
   }
 
   /**
-   * Read declarative manifest by actor definition id and version with manifest column
+   * Read declarative manifest by actor definition id and version with manifest column.
    *
    * @param actorDefinitionId actor definition id
    * @param version the version of the declarative manifest
@@ -2344,7 +2341,7 @@ public class ConfigRepository {
 
   /**
    * Read currently active declarative manifest by actor definition id by joining with
-   * active_declarative_manifest for the same actor definition id with manifest
+   * active_declarative_manifest for the same actor definition id with manifest.
    *
    * @param actorDefinitionId actor definition id
    * @throws IOException exception while interacting with db
@@ -2369,19 +2366,17 @@ public class ConfigRepository {
   }
 
   /**
-   * Read all actor definition ids which have an active declarative manifest pointing to them
+   * Read all actor definition ids which have an active declarative manifest pointing to them.
    *
    * @throws IOException exception while interacting with db
    */
   public Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException {
     return database
         .query(ctx -> ctx
-            .select(ACTOR_DEFINITION.ID)
-            .from(ACTOR_DEFINITION)
-            .join(ACTIVE_DECLARATIVE_MANIFEST, JoinType.JOIN)
-            .on(ACTOR_DEFINITION.ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+            .select(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID)
+            .from(ACTIVE_DECLARATIVE_MANIFEST)
             .fetch())
-        .stream().map(record -> record.get(ACTOR_DEFINITION.ID));
+        .stream().map(record -> record.get(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID));
   }
 
   /**

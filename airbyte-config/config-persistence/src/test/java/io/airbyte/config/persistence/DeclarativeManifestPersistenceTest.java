@@ -20,10 +20,10 @@ import org.junit.jupiter.api.Test;
 
 class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
 
-  private final static UUID AN_ACTOR_DEFINITION_ID = UUID.randomUUID();
-  private final static Long A_VERSION = 1L;
-  private final static Long ANOTHER_VERSION = 2L;
-  private final static JsonNode A_MANIFEST;
+  private static final UUID AN_ACTOR_DEFINITION_ID = UUID.randomUUID();
+  private static final Long A_VERSION = 1L;
+  private static final Long ANOTHER_VERSION = 2L;
+  private static final JsonNode A_MANIFEST;
 
   static {
     try {

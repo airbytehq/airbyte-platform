@@ -3,13 +3,12 @@
 // It doesn't contain the enums created in the database and the default values might also be buggy. 
 
 create table "public"."active_declarative_manifest"(
-  "id" uuid not null,
   "actor_definition_id" uuid not null,
   "version" int8 not null,
   "created_at" timestamptz(35) not null default null,
   "updated_at" timestamptz(35) not null default null,
   constraint "active_declarative_manifest_pkey"
-    primary key ("id")
+    primary key ("actor_definition_id")
 );
 create table "public"."actor"(
   "id" uuid not null,
@@ -307,8 +306,7 @@ alter table "public"."workspace_service_account"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
 comment on column "public"."actor_definition"."max_seconds_between_messages" is 'Define the number of seconds allowed between 2 messages emitted by the connector before timing out';
-create unique index "active_declarative_manifest_actor_definition_id_key" on "public"."active_declarative_manifest"("actor_definition_id" asc);
-create unique index "active_declarative_manifest_pkey" on "public"."active_declarative_manifest"("id" asc);
+create unique index "active_declarative_manifest_pkey" on "public"."active_declarative_manifest"("actor_definition_id" asc);
 create index "actor_actor_definition_id_idx" on "public"."actor"("actor_definition_id" asc);
 create unique index "actor_pkey" on "public"."actor"("id" asc);
 create index "actor_workspace_id_idx" on "public"."actor"("workspace_id" asc);

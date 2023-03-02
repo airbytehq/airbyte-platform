@@ -749,7 +749,7 @@ public class MockData {
   }
 
   public static ActiveDeclarativeManifest activeDeclarativeManifest() {
-    return new ActiveDeclarativeManifest().withId(UUID.randomUUID()).withActorDefinitionId(UUID.randomUUID()).withVersion(1L);
+    return new ActiveDeclarativeManifest().withActorDefinitionId(UUID.randomUUID()).withVersion(1L);
   }
 
   private static Map<String, String> sortMap(final Map<String, String> originalMap) {

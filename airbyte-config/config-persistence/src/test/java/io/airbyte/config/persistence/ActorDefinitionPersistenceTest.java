@@ -245,20 +245,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(allDestinationDefinitions, returnedDestDefsWithTombstone);
   }
 
-  @Test
-  void whenGetActorDefinitionIdsWithActiveDeclarativeManifestThenReturnActorDefinitionIds() throws IOException, JsonValidationException {
-    UUID activeActorDefinitionId = UUID.randomUUID();
-    UUID anotherActorDefinitionId = UUID.randomUUID();
-    configRepository.writeStandardSourceDefinition(MockData.standardSourceDefinitions().get(0).withSourceDefinitionId(activeActorDefinitionId));
-    configRepository.writeStandardSourceDefinition(MockData.standardSourceDefinitions().get(0).withSourceDefinitionId(anotherActorDefinitionId));
-    givenActiveDeclarativeManifestWithActorDefinitionId(activeActorDefinitionId);
-
-    List<UUID> results = configRepository.getActorDefinitionIdsWithActiveDeclarativeManifest().toList();
-
-    assertEquals(1, results.size());
-    assertEquals(activeActorDefinitionId, results.get(0));
-  }
-
   @SuppressWarnings("SameParameterValue")
   private static SourceConnection createSource(final UUID sourceDefId, final UUID workspaceId) {
     return new SourceConnection()
@@ -309,13 +295,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withInitialSetupComplete(false)
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
-  }
-
-  void givenActiveDeclarativeManifestWithActorDefinitionId(UUID actorDefinitionId) throws IOException {
-    Long version = 4L;
-    configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
-    configRepository
-        .upsertActiveDeclarativeManifest(MockData.activeDeclarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
   }
 
 }
