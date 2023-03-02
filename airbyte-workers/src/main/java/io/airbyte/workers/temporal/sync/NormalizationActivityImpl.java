@@ -133,7 +133,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
       final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
 
       if (FeatureFlagHelper.isStrictComparisonNormalizationEnabledForWorkspace(featureFlags, input.getWorkspaceId())
-          || featureFlagClient.enabled(StrictComparisonNormalizationEnabled.INSTANCE, new Workspace(input.getWorkspaceId().toString()))) {
+          || featureFlagClient.enabled(StrictComparisonNormalizationEnabled.INSTANCE, new Workspace(input.getWorkspaceId()))) {
         log.info("Using strict comparison normalization");
         replaceNormalizationImageTag(destinationLauncherConfig, featureFlags.strictComparisonNormalizationTag());
       }
