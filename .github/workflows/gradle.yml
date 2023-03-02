@@ -307,11 +307,7 @@ jobs:
       - name: Run End-to-End Frontend Tests
         env:
           CYPRESS_WEBAPP_KEY: ${{ secrets.CYPRESS_WEBAPP_KEY }}
-        uses: Wandalen/wretry.action@master
-        with:
-          command: ./tools/bin/e2e_test.sh
-          attempt_limit: 3
-          attempt_delay: 5000 # in ms
+        run: ./tools/bin/e2e_test.sh
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-frontend-e2e-runner:
