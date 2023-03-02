@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * upgrading from even older versions, which has since been removed
  * <p>
  * This test runs on the current code version and expects local images with the `dev` tag to be
- * available. To do so, run SUB_BUILD=PLATFORM ./gradlew build.
+ * available. To do so, run ./gradlew build.
  * <p>
  * When running this test consecutively locally, it might be necessary to run `docker volume prune`
  * to remove hanging volumes.

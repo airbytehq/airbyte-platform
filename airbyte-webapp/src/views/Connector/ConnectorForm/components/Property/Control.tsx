@@ -46,7 +46,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
           <TagInput
             name={name}
             itemType={property.itemType}
-            fieldValue={field.value || []}
+            fieldValue={field.value === undefined ? [] : Array.isArray(field.value) ? field.value : [field.value]}
             onChange={(tagLabels) => helpers.setValue(tagLabels)}
             error={!!meta.error}
             disabled={disabled}
