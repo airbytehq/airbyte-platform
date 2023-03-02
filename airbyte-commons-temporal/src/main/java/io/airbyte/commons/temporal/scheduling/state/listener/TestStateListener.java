@@ -10,6 +10,10 @@ import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Workflow state change listener for testing. Used to verify the behavior of event signals in
+ * testing.
+ */
 public class TestStateListener implements WorkflowStateChangedListener {
 
   private static final ConcurrentHashMap<UUID, Queue<ChangedStateEvent>> events = new ConcurrentHashMap<>();

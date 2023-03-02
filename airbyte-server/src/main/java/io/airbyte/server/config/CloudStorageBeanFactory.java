@@ -18,7 +18,7 @@ import jakarta.inject.Singleton;
  * Micronaut bean factory for cloud storage-related singletons.
  */
 @Factory
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "LineLength"})
 public class CloudStorageBeanFactory {
 
   @Singleton

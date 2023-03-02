@@ -7,7 +7,7 @@ Except as noted, all commands are written as if run from inside the `airbyte-web
 
 Steps:
 1) If you have not already done so, run `npm install` to install the e2e test dependencies.
-2) Build the OSS backend for the current commit with `SUB_BUILD=PLATFORM ../gradlew clean build`.
+2) Build the OSS backend for the current commit with `./gradlew clean build`.
 3) Create the test database: `npm run createdbsource` and `npm run createdbdestination`.
 4) When running the connector builder tests, start the dummy API server: `npm run createdummyapi`
 5) Start the OSS backend: `BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" VERSION=dev docker compose --file ../docker-compose.yaml up`. If you want, follow this with `docker compose stop webapp` to turn off the dockerized frontend build; interactive cypress sessions don't use it.
@@ -23,7 +23,7 @@ Except as noted, all commands are written as if run from inside the `airbyte-web
 
 Steps:
 1) If you have not already done so, run `npm install` to install the e2e test dependencies.
-2) Build the OSS backend for the current commit with `SUB_BUILD=PLATFORM ../gradlew clean build`.
+2) Build the OSS backend for the current commit with `./gradlew clean build`.
 3) Create the test database: `npm run createdbsource` and `npm run createdbdestination`.
 4) When running the connector builder tests, start the dummy API server: `npm run createdummyapi`
 5) Start the OSS backend: `BASIC_AUTH_USERNAME="" BASIC_AUTH_PASSWORD="" VERSION=dev docker compose --file ../docker-compose.yaml up`.

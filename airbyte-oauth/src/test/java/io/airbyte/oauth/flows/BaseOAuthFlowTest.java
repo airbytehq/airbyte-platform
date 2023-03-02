@@ -31,6 +31,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("MissingJavadocType")
 public abstract class BaseOAuthFlowTest {
 
   private static final String REDIRECT_URL = "https://airbyte.io";
@@ -77,14 +78,14 @@ public abstract class BaseOAuthFlowTest {
   }
 
   /**
-   * This should be implemented for the particular oauth flow implementation
+   * This should be implemented for the particular oauth flow implementation.
    *
    * @return the oauth flow implementation to test
    */
   protected abstract BaseOAuthFlow getOAuthFlow();
 
   /**
-   * This should be implemented for the particular oauth flow implementation
+   * This should be implemented for the particular oauth flow implementation.
    *
    * @return the expected consent URL
    */
@@ -92,7 +93,7 @@ public abstract class BaseOAuthFlowTest {
 
   /**
    * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe for example
-   * using `access_token` like in the `GithubOAuthFlowTest` instead?)
+   * using `access_token` like in the `GithubOAuthFlowTest` instead?).
    *
    * @return the full output expected to be returned by this oauth flow + all its instance wide
    *         variables
@@ -126,7 +127,7 @@ public abstract class BaseOAuthFlowTest {
         CLIENT_ID, MoreOAuthParameters.SECRET_MASK);
   }
 
-  /**
+  /*
    * @return the output specification used to filter what the oauth flow should be returning
    */
   protected JsonNode getCompleteOAuthServerOutputSpecification() {
@@ -134,7 +135,7 @@ public abstract class BaseOAuthFlowTest {
   }
 
   /**
-   * Redefine to match the oauth implementation flow getDefaultOAuthOutputPath()
+   * Redefine to match the oauth implementation flow getDefaultOAuthOutputPath().
    *
    * @return the backward compatible path that is used in the deprecated oauth flows.
    */
@@ -142,7 +143,7 @@ public abstract class BaseOAuthFlowTest {
     return List.of("credentials");
   }
 
-  /**
+  /*
    * @return if the OAuth implementation flow has a dependency on input values from connector config.
    */
   protected boolean hasDependencyOnConnectorConfigValues() {
@@ -169,7 +170,7 @@ public abstract class BaseOAuthFlowTest {
     return getJsonSchema(Map.of());
   }
 
-  /**
+  /*
    * @return the instance wide config params for this oauth flow
    */
   protected JsonNode getOAuthParamConfig() {

@@ -8,4 +8,7 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.workers.Worker;
 
+/**
+ * Discover Catalog Worker. Calls discover method on a connector.
+ */
 public interface DiscoverCatalogWorker extends Worker<StandardDiscoverCatalogInput, ConnectorJobOutput> {}

@@ -22,9 +22,11 @@ import io.airbyte.config.ConnectorJobOutput.OutputType;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
+import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.CheckInputGeneration;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConstants;
@@ -39,6 +41,7 @@ import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivit
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.GeneratedJobInput;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
+import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivityImpl;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
@@ -111,6 +114,7 @@ class ConnectionManagerWorkflowTest {
   private static final String WORKFLOW_ID = "workflow-id";
 
   private static final Duration WORKFLOW_FAILURE_RESTART_DELAY = Duration.ofSeconds(600);
+  private static final String SOURCE_DOCKER_IMAGE = "some_source";
 
   private final ConfigFetchActivity mConfigFetchActivity =
       mock(ConfigFetchActivity.class, Mockito.withSettings().withoutAnnotations());
@@ -142,12 +146,12 @@ class ConnectionManagerWorkflowTest {
 
   static Stream<Arguments> getMaxAttemptForResetRetry() {
     return Stream.of(
-        Arguments.of(3), // "The max attempt is 3, it will test that after a failed reset attempt the next attempt will also
-                         // be a
-        // reset")
-        Arguments.of(1) // "The max attempt is 3, it will test that after a failed reset job the next attempt will also be a
-                        // job")
-    );
+        // "The max attempt is 3, it will test that after a failed reset attempt the next attempt will also
+        // be a reset")
+        Arguments.of(3),
+        // "The max attempt is 3, it will test that after a failed reset job the next attempt will also be a
+        // job")
+        Arguments.of(1));
   }
 
   @BeforeEach
@@ -175,11 +179,18 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new AttemptNumberCreationOutput(
             1));
 
+    when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
+        .thenReturn(new SyncJobCheckConnectionInputs(
+            new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
+            new IntegrationLauncherConfig(),
+            new StandardCheckConnectionInput(),
+            new StandardCheckConnectionInput()));
+
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
             new GeneratedJobInput(
                 new JobRunConfig(),
-                new IntegrationLauncherConfig().withDockerImage("some_source"),
+                new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
                 new IntegrationLauncherConfig(),
                 new StandardSyncInput()));
 
@@ -199,7 +210,7 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
 
     when(mFeatureFlagFetchActivity.getFeatureFlags(Mockito.any()))
-        .thenReturn(new FeatureFlagFetchOutput(Map.of()));
+        .thenReturn(new FeatureFlagFetchOutput(Map.of(CheckInputGeneration.INSTANCE.getKey(), true)));
 
     activityOptions = ActivityOptions.newBuilder()
         .setHeartbeatTimeout(Duration.ofSeconds(30))
@@ -231,7 +242,7 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(
             new GeneratedJobInput(
                 jobRunConfig,
-                new IntegrationLauncherConfig().withDockerImage("some_source").withProtocolVersion(new Version("0.2.0")),
+                new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE).withProtocolVersion(new Version("0.2.0")),
                 new IntegrationLauncherConfig().withProtocolVersion(new Version("0.2.0")),
                 new StandardSyncInput()));
   }
@@ -243,6 +254,13 @@ class ConnectionManagerWorkflowTest {
   }
 
   private void mockResetJobInput(final JobRunConfig jobRunConfig) {
+    when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
+        .thenReturn(
+            new SyncJobCheckConnectionInputs(
+                new IntegrationLauncherConfig().withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB),
+                new IntegrationLauncherConfig(),
+                new StandardCheckConnectionInput(),
+                new StandardCheckConnectionInput()));
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
             new GeneratedJobInput(
@@ -1198,7 +1216,7 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(
               new GeneratedJobInput(
                   jobRunConfig,
-                  new IntegrationLauncherConfig().withDockerImage("some_source"),
+                  new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
                   new IntegrationLauncherConfig(),
                   new StandardSyncInput()));
 
@@ -1464,19 +1482,24 @@ class ConnectionManagerWorkflowTest {
     static Stream<Arguments> getSetupFailingActivity() {
       return Stream.of(
           Arguments.of(new Thread(() -> when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
-              .thenThrow(ApplicationFailure.newNonRetryableFailure("", "")))),
+              .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))), 0),
           Arguments.of(new Thread(() -> when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
-              .thenThrow(ApplicationFailure.newNonRetryableFailure("", "")))),
+              .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))), 0),
           Arguments.of(new Thread(() -> Mockito.doThrow(ApplicationFailure.newNonRetryableFailure("", ""))
-              .when(mJobCreationAndStatusUpdateActivity).reportJobStart(Mockito.any()))),
+              .when(mJobCreationAndStatusUpdateActivity).reportJobStart(Mockito.any())), 0),
+          Arguments.of(new Thread(
+              () -> when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
+                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
+              1),
           Arguments.of(new Thread(
               () -> when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
-                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", "")))));
+                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
+              1));
     }
 
     @ParameterizedTest
     @MethodSource("getSetupFailingActivity")
-    void testWorkflowRestartedAfterFailedActivity(final Thread mockSetup) throws InterruptedException {
+    void testWorkflowRestartedAfterFailedActivity(final Thread mockSetup, final int expectedEventsCount) throws InterruptedException {
       returnTrueForLastJobOrAttemptFailure();
       mockSetup.run();
       when(mConfigFetchActivity.getTimeToWait(Mockito.any())).thenReturn(new ScheduleRetrieverOutput(
@@ -1507,7 +1530,7 @@ class ConnectionManagerWorkflowTest {
 
       Assertions.assertThat(events)
           .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
-          .isEmpty();
+          .hasSize(expectedEventsCount);
 
       assertWorkflowWasContinuedAsNew();
     }

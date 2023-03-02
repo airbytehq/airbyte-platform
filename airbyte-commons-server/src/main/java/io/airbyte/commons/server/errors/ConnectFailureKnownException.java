@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.server.errors;
 
+/**
+ * Remove me.
+ */
 public class ConnectFailureKnownException extends KnownException {
 
   public ConnectFailureKnownException(final String message) {

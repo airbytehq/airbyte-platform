@@ -45,6 +45,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+/**
+ * SpecActivityImpl.
+ */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class SpecActivityImpl implements SpecActivity {

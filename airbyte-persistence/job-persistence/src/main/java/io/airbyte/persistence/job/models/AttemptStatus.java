@@ -7,6 +7,9 @@ package io.airbyte.persistence.job.models;
 import com.google.common.collect.Sets;
 import java.util.Set;
 
+/**
+ * The statuses of an attempt.
+ */
 public enum AttemptStatus {
 
   RUNNING,

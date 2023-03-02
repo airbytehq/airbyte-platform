@@ -59,6 +59,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Runs replication worker.
+ */
 public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncInput> {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -165,8 +168,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
     // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
     // environment-variable flags say so (deprecated).
     // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
-    final boolean fieldSelectionEnabled = workspaceId != null &&
-        (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
+    final boolean fieldSelectionEnabled = workspaceId != null
+        && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
             || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
     final var replicationWorker = new DefaultReplicationWorker(
         jobRunConfig.getJobId(),

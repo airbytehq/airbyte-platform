@@ -218,6 +218,7 @@ class DefaultNormalizationRunnerTest {
     assertThrows(WorkerException.class, runner::close);
   }
 
+  @SuppressWarnings("LineLength")
   @Test
   void testFailureWithDbtErrorJsonFormat() throws Exception {
     when(process.exitValue()).thenReturn(1);

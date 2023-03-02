@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Dbt Launcher Worker.
+ */
 public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
 
   public static final String DBT = "dbt-orchestrator";

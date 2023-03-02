@@ -14,6 +14,9 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Tracking client that logs to STDOUT. Mainly used for local deveolpment.
+ */
 public class LoggingTrackingClient implements TrackingClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LoggingTrackingClient.class);

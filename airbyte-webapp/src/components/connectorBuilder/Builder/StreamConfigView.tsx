@@ -27,10 +27,11 @@ import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
+import { IncrementalSection } from "./IncrementalSection";
 import { KeyValueListField } from "./KeyValueListField";
 import { PaginationSection } from "./PaginationSection";
+import { PartitionSection } from "./PartitionSection";
 import styles from "./StreamConfigView.module.scss";
-import { StreamSlicerSection } from "./StreamSlicerSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream } from "../types";
 import { formatJson } from "../utils";
@@ -93,7 +94,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             />
           </BuilderCard>
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <StreamSlicerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <BuilderCard>
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestParameters")}
@@ -168,11 +170,13 @@ const StreamControls = ({
   return (
     <div className={styles.controls}>
       <StreamTab
+        data-testid="tag-tab-stream-configuration"
         label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
         selected={selectedTab === "configuration"}
         onSelect={() => setSelectedTab("configuration")}
       />
       <StreamTab
+        data-testid="tag-tab-stream-schema"
         label={formatMessage({ id: "connectorBuilder.streamSchema" })}
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
@@ -203,14 +207,21 @@ const StreamTab = ({
   onSelect,
   showErrorIndicator,
   showSchemaConflictIndicator,
+  "data-testid": testId,
 }: {
   selected: boolean;
   label: string;
   onSelect: () => void;
   showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
+  "data-testid": string;
 }) => (
-  <button type="button" className={classNames(styles.tab, { [styles.selectedTab]: selected })} onClick={onSelect}>
+  <button
+    data-testid={testId}
+    type="button"
+    className={classNames(styles.tab, { [styles.selectedTab]: selected })}
+    onClick={onSelect}
+  >
     {label}
     {showErrorIndicator && <Indicator />}
     {showSchemaConflictIndicator && <SchemaConflictIndicator />}

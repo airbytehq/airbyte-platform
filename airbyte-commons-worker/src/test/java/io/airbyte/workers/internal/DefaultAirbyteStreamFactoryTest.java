@@ -115,7 +115,7 @@ class DefaultAirbyteStreamFactoryTest {
     final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
 
     final Stream<AirbyteMessage> messageStream =
-        new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1l).create(bufferedReader);
+        new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1L).create(bufferedReader);
 
     assertThrows(RuntimeException.class, () -> messageStream.toList());
   }

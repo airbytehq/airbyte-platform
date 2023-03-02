@@ -17,6 +17,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Microsoft Bing Ads OAuth.
+ */
 public class MicrosoftBingAdsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String fieldName = "tenant_id";

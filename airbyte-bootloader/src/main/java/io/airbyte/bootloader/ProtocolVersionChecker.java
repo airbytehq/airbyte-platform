@@ -67,7 +67,7 @@ public class ProtocolVersionChecker {
    * @param supportAutoUpgrade whether the connectors will be automatically upgraded by the platform
    * @return the supported protocol version range if check is successful, Optional.empty() if we would
    *         break existing connections.
-   * @throws IOException
+   * @throws IOException when interacting with the db.
    */
   public Optional<AirbyteProtocolVersionRange> validate(final boolean supportAutoUpgrade) throws IOException {
     final Optional<AirbyteVersion> currentAirbyteVersion = getCurrentAirbyteVersion();

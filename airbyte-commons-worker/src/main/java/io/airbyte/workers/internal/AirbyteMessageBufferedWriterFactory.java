@@ -6,6 +6,9 @@ package io.airbyte.workers.internal;
 
 import java.io.BufferedWriter;
 
+/**
+ * Factory for creating airbyte message writers. Base class that the versioned writers build upon.
+ */
 public interface AirbyteMessageBufferedWriterFactory {
 
   AirbyteMessageBufferedWriter createWriter(BufferedWriter bufferedWriter);

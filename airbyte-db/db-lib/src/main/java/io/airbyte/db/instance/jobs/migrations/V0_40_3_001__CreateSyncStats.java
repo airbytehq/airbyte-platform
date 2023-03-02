@@ -19,6 +19,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add sync stats table migration.
+ */
 public class V0_40_3_001__CreateSyncStats extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_3_001__CreateSyncStats.class);
