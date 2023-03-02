@@ -26,10 +26,10 @@ jobs:
 
   dispatch_command_to_cloud:
     needs: check
-    if: needs.check.outputs.branch_up_to_date == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Create a snapshot of an OSS PR to Cloud
+        if: needs.check.outputs.branch_up_to_date == 'true'
         uses: peter-evans/slash-command-dispatch@v3
         id: slash-command-dispatch
         with:
@@ -44,6 +44,14 @@ jobs:
             pr_number=${{ github.event.issue.number }}
           commands: |
             create-oss-pr
+
+      - name: Publish comment with requirements to update branch
+        if: needs.check.outputs.branch_up_to_date == 'false'
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          body: |
+            Your branch is not currently up-to-date with `main`. Please update your branch before attempting to snapshot your PR.
 
       - name: Publish comment with error message
         if: steps.slash-command-dispatch.outputs.error-message
