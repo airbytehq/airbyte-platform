@@ -19,7 +19,7 @@ object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
 
 object PerfBackgroundJsonValidation : Temporary(key = "performance.backgroundJsonSchemaValidation")
 
-object StrictComparisonNormalizationEnabled : Temporary(key = "normalization.strictComparisonNormalizationEnabled")
+object StrictComparisonNormalizationEnabled : Temporary(key = "normalization.strictComparisonEnabled")
 
 object CommitStatesAsap : Temporary(key = "platform.commitStatesAsap")
 

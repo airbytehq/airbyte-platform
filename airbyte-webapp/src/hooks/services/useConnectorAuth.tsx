@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 
@@ -200,6 +200,14 @@ export function useRunOauthFlow(
   const onCloseWindow = useCallback(() => {
     windowObjectReference?.close();
   }, []);
+
+  useEffect(
+    () => () => {
+      // Close popup oauth window when unmounting
+      onCloseWindow();
+    },
+    [onCloseWindow]
+  );
 
   useEvent("message", onOathGranted);
   // Close popup oauth window when we close the original tab

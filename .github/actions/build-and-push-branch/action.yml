@@ -19,7 +19,7 @@ runs:
       with:
         branch_version_tag: ${{ inputs.branch_version_tag }}
 
-    - name: Login to Docker (on Master)
+    - name: Login to Docker (on Main)
       uses: docker/login-action@v2
       with:
         username: ${{ inputs.dockerhub_username }}

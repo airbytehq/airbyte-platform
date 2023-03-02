@@ -1,13 +1,9 @@
 import uniqueId from "lodash/uniqueId";
 import { KeyboardEventHandler, useMemo, useState } from "react";
-import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig } from "react-select";
+import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig, components, InputProps } from "react-select";
 import CreatableSelect from "react-select/creatable";
 
 import styles from "./TagInput.module.scss";
-
-const overwrittenComponents = {
-  DropdownIndicator: null,
-};
 
 const customStyles: StylesConfig<Tag, true, GroupBase<Tag>> = {
   multiValue: (provided) => ({
@@ -151,6 +147,16 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
       setInputValue("");
     }
   };
+
+  const overwrittenComponents = useMemo(
+    () => ({
+      DropdownIndicator: null,
+      Input: (props: InputProps<Tag, true, GroupBase<Tag>>) => (
+        <components.Input {...props} data-testid={`tag-input-${name}`} />
+      ),
+    }),
+    [name]
+  );
 
   return (
     <div data-testid="tag-input" onBlur={onBlurControl}>

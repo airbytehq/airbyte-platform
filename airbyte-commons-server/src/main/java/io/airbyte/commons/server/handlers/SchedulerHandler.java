@@ -472,6 +472,8 @@ public class SchedulerHandler {
           .status(Enums.convertTo(response.getOutput().getStatus(), StatusEnum.class))
           .message(response.getOutput().getMessage());
     } else {
+      // TODO (Ella): Update logic - 'status' should no longer be necessary, as is the case for the other
+      // two synchronous jobs.
       checkConnectionRead
           .status(StatusEnum.FAILED)
           .message("Check Connection Failed!");

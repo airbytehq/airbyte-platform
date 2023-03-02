@@ -10,9 +10,10 @@ import { TryAfterErrorBlock } from "./TryAfterErrorBlock";
 export const SchemaError = ({ schemaError }: { schemaError: SchemaErrorType }) => {
   const job = LogsRequestError.extractJobInfo(schemaError);
   const { refreshSchema } = useConnectionFormService();
+  const errorMessage = job?.failureReason?.externalMessage || schemaError?.message;
   return (
     <Card>
-      <TryAfterErrorBlock onClick={refreshSchema} message={schemaError?.message} />
+      <TryAfterErrorBlock onClick={refreshSchema} message={errorMessage} />
       {job && <JobItem job={job} />}
     </Card>
   );

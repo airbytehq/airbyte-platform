@@ -29,14 +29,14 @@ runs:
 
     - name: Build with Docker Images
       if: inputs.build_docker_images == 'true'
-      run: VERSION=${{ steps.parse-input.outputs.branch_version_tag }} SUB_BUILD=PLATFORM ./gradlew build --scan
+      run: VERSION=${{ steps.parse-input.outputs.branch_version_tag }} ./gradlew build --scan
       shell: bash
 
     - name: Build without Docker Images
       if: inputs.build_docker_images != 'true'
-      run: VERSION=${{ steps.parse-input.outputs.branch_version_tag }} SUB_BUILD=PLATFORM ./gradlew test --scan
+      run: VERSION=${{ steps.parse-input.outputs.branch_version_tag }} ./gradlew test --scan
       shell: bash
 
     - name: Publish to Maven Local
-      run: VERSION=${{ steps.parse-input.outputs.branch_version_tag }} SUB_BUILD=PLATFORM ./gradlew publishToMavenLocal
+      run: VERSION=${{ steps.parse-input.outputs.branch_version_tag }} ./gradlew publishToMavenLocal
       shell: bash
