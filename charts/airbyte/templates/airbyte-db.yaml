@@ -37,7 +37,7 @@ spec:
         {{ include "airbyte.databaseSelectorLabels" . | nindent 8 }}
     spec:
       {{- if .Values.postgresql.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.postgresql.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.postgresql.tolerations "context" .) | nindent 8 }}
       {{- end }}
       {{- if .Values.affinity }}
       containers:
