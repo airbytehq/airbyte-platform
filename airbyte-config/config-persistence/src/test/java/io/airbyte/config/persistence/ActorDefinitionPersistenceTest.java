@@ -253,7 +253,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeStandardSourceDefinition(MockData.standardSourceDefinitions().get(0).withSourceDefinitionId(anotherActorDefinitionId));
     givenActiveDeclarativeManifestWithActorDefinitionId(activeActorDefinitionId);
 
-
     List<UUID> results = configRepository.getActorDefinitionIdsWithActiveDeclarativeManifest().toList();
 
     assertEquals(1, results.size());
@@ -315,7 +314,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void givenActiveDeclarativeManifestWithActorDefinitionId(UUID actorDefinitionId) throws IOException {
     Long version = 4L;
     configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
-    configRepository.upsertActiveDeclarativeManifest(MockData.activeDeclarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
+    configRepository
+        .upsertActiveDeclarativeManifest(MockData.activeDeclarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
   }
 
 }

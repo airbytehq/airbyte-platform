@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,7 +30,8 @@ public class ActiveDeclarativeManifestTest extends BaseConfigDatabaseTest {
   @Test
   void givenActorDefinitionIdAlreadyExistWhenUpsertActiveDeclarativeManifestThenThrowException() throws IOException {
     configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION));
-    configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(ANOTHER_VERSION));
+    configRepository
+        .insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(ANOTHER_VERSION));
     configRepository.upsertActiveDeclarativeManifest(
         activeDeclarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION));
 
