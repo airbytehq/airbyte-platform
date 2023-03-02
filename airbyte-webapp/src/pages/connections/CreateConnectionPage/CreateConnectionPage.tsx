@@ -11,26 +11,64 @@ import { FormPageContent } from "components/ConnectorBlocks";
 import { PageHeader } from "components/ui/PageHeader";
 import { StepsIndicator } from "components/ui/StepsIndicator";
 
+import {
+  DestinationDefinitionRead,
+  DestinationRead,
+  SourceDefinitionRead,
+  SourceRead,
+} from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
+import { useGetDestination } from "hooks/services/useDestinationHook";
+import { useGetSource } from "hooks/services/useSourceHook";
+import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
+import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { ConnectionCreateDestinationForm } from "./ConnectionCreateDestinationForm";
 import { ConnectionCreateSourceForm } from "./ConnectionCreateSourceForm";
 import ExistingEntityForm from "./ExistingEntityForm";
-import { hasDestinationId, hasSourceId, usePreloadData } from "./usePreloadData";
 
-enum StepsTypes {
+export enum StepsTypes {
   CREATE_ENTITY = "createEntity",
   CREATE_CONNECTOR = "createConnector",
   CREATE_CONNECTION = "createConnection",
 }
 
-enum EntityStepsTypes {
+export enum EntityStepsTypes {
   SOURCE = "source",
   DESTINATION = "destination",
   CONNECTION = "connection",
+}
+
+const hasSourceId = (state: unknown): state is { sourceId: string } => {
+  return typeof state === "object" && state !== null && typeof (state as { sourceId?: string }).sourceId === "string";
+};
+
+const hasDestinationId = (state: unknown): state is { destinationId: string } => {
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    typeof (state as { destinationId?: string }).destinationId === "string"
+  );
+};
+
+function usePreloadData(): {
+  sourceDefinition?: SourceDefinitionRead;
+  destination?: DestinationRead;
+  source?: SourceRead;
+  destinationDefinition?: DestinationDefinitionRead;
+} {
+  const location = useLocation();
+
+  const source = useGetSource(hasSourceId(location.state) ? location.state.sourceId : null);
+
+  const sourceDefinition = useSourceDefinition(source?.sourceDefinitionId);
+
+  const destination = useGetDestination(hasDestinationId(location.state) ? location.state.destinationId : null);
+  const destinationDefinition = useDestinationDefinition(destination?.destinationDefinitionId);
+
+  return { source, sourceDefinition, destination, destinationDefinition };
 }
 
 export const CreateConnectionPage: React.FC = () => {
@@ -41,7 +79,7 @@ export const CreateConnectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
 
-  // TODO: select UI and behavior based on the route using, you know, the router
+  // TODO: Probably there is a better way to figure it out instead of just checking third elem
   const locationType = location.pathname.split("/")[3];
 
   const type: EntityStepsTypes =
@@ -213,7 +251,6 @@ export const CreateConnectionPage: React.FC = () => {
               }
             />
           )}
-          <InlineEnrollmentCallout withBottomMargin />
           {renderStep()}
         </FormPageContent>
       </ConnectorDocumentationWrapper>

@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import React, { PropsWithChildren } from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -18,12 +17,7 @@ export const EnrollLink: React.FC<PropsWithChildren<unknown>> = ({ children }) =
     </button>
   );
 };
-
-interface InlineEnrollmentCalloutProps {
-  withBottomMargin?: boolean;
-}
-
-export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = ({ withBottomMargin }) => {
+export const InlineEnrollmentCallout: React.FC = () => {
   const { userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
   const { showEnrollmentUi } = enrollmentStatusQuery.data || {};
 
@@ -32,7 +26,7 @@ export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = (
   }
 
   return (
-    <Callout variant="info" className={classNames(styles.container, { [styles.withBottomMargin]: withBottomMargin })}>
+    <Callout variant="info" className={styles.container}>
       <Text size="sm">
         <FormattedMessage
           id="freeConnectorProgram.youCanEnroll"
