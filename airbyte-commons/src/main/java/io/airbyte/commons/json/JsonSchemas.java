@@ -89,8 +89,7 @@ public class JsonSchemas {
       final Path configRoot = Files.createTempDirectory("schemas");
       for (final String filename : filenames) {
         IOs.writeFile(
-            configRoot,
-            filename,
+            configRoot.resolve(filename),
             MoreResources.readResource(String.format("%s/%s", resourceDir, filename)));
       }
 
@@ -112,24 +111,6 @@ public class JsonSchemas {
   }
 
   /**
-   * Traverse a JsonSchema object. At each node, map a value.
-   *
-   * @param jsonSchema - JsonSchema object to traverse
-   * @param mapper - accepts the current node and the path to that node. whatever is returned will be
-   *        collected and returned by the final collection.
-   * @param <T> - type of objects being collected
-   * @return - collection of all items that were collected during the traversal. Returns a { @link
-   *         Collection } because there is no order or uniqueness guarantee so neither List nor Set
-   *         make sense.
-   */
-  public static <T> List<T> traverseJsonSchemaWithCollector(final JsonNode jsonSchema, final BiFunction<JsonNode, List<FieldNameOrList>, T> mapper) {
-    // for the sake of code reuse, use the filtered collector method but makes sure the filter always
-    // returns true.
-    return traverseJsonSchemaWithFilteredCollector(jsonSchema,
-        (node, path) -> Optional.ofNullable(mapper.apply(node, path)));
-  }
-
-  /**
    * Traverse a JsonSchema object. At each node, optionally map a value.
    *
    * @param jsonSchema - JsonSchema object to traverse
@@ -140,8 +121,8 @@ public class JsonSchemas {
    * @return - collection of all items that were collected during the traversal. Returns values in
    *         preoorder traversal order.
    */
-  public static <T> List<T> traverseJsonSchemaWithFilteredCollector(final JsonNode jsonSchema,
-                                                                    final BiFunction<JsonNode, List<FieldNameOrList>, Optional<T>> mapper) {
+  private static <T> List<T> traverseJsonSchemaWithFilteredCollector(final JsonNode jsonSchema,
+                                                                     final BiFunction<JsonNode, List<FieldNameOrList>, Optional<T>> mapper) {
     final List<T> collector = new ArrayList<>();
     traverseJsonSchema(jsonSchema,
         (node, path) -> mapper.apply(node, path).ifPresent(collector::add));

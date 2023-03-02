@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +56,7 @@ public class Enums {
   }
 
   /**
-   * Test if two enums are compatible to be converted between. To be compatiable they must have the
+   * Test if two enums are compatible to be converted between. To be compatible they must have the
    * same values.
    *
    * @param c1 class of enum 1
@@ -105,18 +104,6 @@ public class Enums {
 
   private static String normalizeName(final String name) {
     return name.toLowerCase().replaceAll("[^a-zA-Z0-9]", "");
-  }
-
-  /**
-   * Return the values of an enum as strings.
-   *
-   * @param e enum whose values to return
-   * @param <T1> type of the enum
-   * @return set of the values of the enum
-   */
-  public static <T1 extends Enum<T1>> Set<String> valuesAsStrings(final Class<T1> e) {
-    Preconditions.checkArgument(e.isEnum());
-    return Arrays.stream(e.getEnumConstants()).map(Enum::name).collect(Collectors.toSet());
   }
 
 }

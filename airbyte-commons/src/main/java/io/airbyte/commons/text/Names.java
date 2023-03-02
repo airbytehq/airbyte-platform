@@ -13,7 +13,7 @@ import java.text.Normalizer;
  */
 public class Names {
 
-  public static final String NON_ALPHANUMERIC_AND_UNDERSCORE_PATTERN = "[^\\p{Alnum}_]";
+  private static final String NON_ALPHANUMERIC_AND_UNDERSCORE_PATTERN = "[^\\p{Alnum}_]";
 
   /**
    * Converts any UTF8 string to a string with only alphanumeric and _ characters without preserving
@@ -27,16 +27,6 @@ public class Names {
         .replaceAll("\\p{M}", "") // P{M} matches a code point that is not a combining mark (unicode)
         .replaceAll("\\s+", "_")
         .replaceAll(NON_ALPHANUMERIC_AND_UNDERSCORE_PATTERN, "_");
-  }
-
-  /**
-   * Wrap a string in double quotes.
-   *
-   * @param value to wrap
-   * @return value wrapped in double quotes.
-   */
-  public static String doubleQuote(final String value) {
-    return internalQuote(value, '"');
   }
 
   /**
