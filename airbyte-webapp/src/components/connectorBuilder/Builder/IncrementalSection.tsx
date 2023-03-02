@@ -24,12 +24,12 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
     if (newToggleValue) {
       helpers.setValue({
         type: "DatetimeBasedCursor",
-        cursor_field: "",
-        datetime_format: "",
-        cursor_granularity: "",
-        end_datetime: "",
+        datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
         start_datetime: "",
+        end_datetime: "{{ now_utc() }}",
         step: "",
+        cursor_field: "",
+        cursor_granularity: "",
       });
     } else {
       helpers.setValue(undefined);

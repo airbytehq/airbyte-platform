@@ -4302,6 +4302,8 @@ components:
           default: false
         logs:
           $ref: "#/components/schemas/LogRead"
+        failureReason:
+          $ref: "#/components/schemas/FailureReason"
     Pagination:
       type: object
       properties:
