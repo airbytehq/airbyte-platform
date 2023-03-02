@@ -2234,7 +2234,8 @@ public class ConfigRepository {
   }
 
   /**
-   * Write an active declarative manifest. If ACTIVE_DECLARATIVE_MANIFEST.ID is already in the DB, the entry will be updated
+   * Write an active declarative manifest. If ACTIVE_DECLARATIVE_MANIFEST.ID is already in the DB, the
+   * entry will be updated
    *
    * @param activeDeclarativeManifest active declarative manifest to write
    * @throws IOException exception while interacting with db
@@ -2269,14 +2270,15 @@ public class ConfigRepository {
   }
 
   /**
-   * Insert a declarative manifest. If DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and DECLARATIVE_MANIFEST.VERSION is already in the DB, an exception
-   * will be thrown
+   * Insert a declarative manifest. If DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and
+   * DECLARATIVE_MANIFEST.VERSION is already in the DB, an exception will be thrown
    *
    * @param declarativeManifest declarative manifest to insert
    * @throws IOException exception while interacting with db
    */
   public void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
-    // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON object that is not null
+    // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
+    // object that is not null
     // Therefore, we will validate null values for JSON fields here
     if (declarativeManifest.getManifest() == null) {
       throw new DataAccessException("null value in column \"manifest\" of relation \"declarative_manifest\" violates not-null constraint");
@@ -2323,7 +2325,8 @@ public class ConfigRepository {
    * @param actorDefinitionId actor definition id
    * @param version the version of the declarative manifest
    * @throws IOException exception while interacting with db
-   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and DECLARATIVE_MANIFEST.VERSION
+   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
+   *         and DECLARATIVE_MANIFEST.VERSION
    */
   public DeclarativeManifest getDeclarativeManifestByActorDefinitionIdAndVersion(final UUID actorDefinitionId, final long version)
       throws IOException, ConfigNotFoundException {
@@ -2340,12 +2343,13 @@ public class ConfigRepository {
   }
 
   /**
-   * Read currently active declarative manifest by actor definition id by joining with active_declarative_manifest for the same actor definition id
-   * with manifest
+   * Read currently active declarative manifest by actor definition id by joining with
+   * active_declarative_manifest for the same actor definition id with manifest
    *
    * @param actorDefinitionId actor definition id
    * @throws IOException exception while interacting with db
-   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID that matches the version of an active manifest
+   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
+   *         that matches the version of an active manifest
    */
   public DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId)
       throws IOException, ConfigNotFoundException {
