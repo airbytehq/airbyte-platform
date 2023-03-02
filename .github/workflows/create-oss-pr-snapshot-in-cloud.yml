@@ -49,6 +49,7 @@ jobs:
         if: needs.check.outputs.branch_up_to_date == 'false'
         uses: peter-evans/create-or-update-comment@v2
         with:
+          issue-number: ${{ github.event.issue.number }}
           body: |
             Your branch is not currently up-to-date with `main`. Please update your branch before attempting to snapshot your PR.
 
