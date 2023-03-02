@@ -9,6 +9,9 @@ import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.discovery.event.ServiceReadyEvent;
 import jakarta.inject.Inject;
 
+/**
+ * Wait until temporal is ready before saying the app is ready.
+ */
 public class ApplicationInitializer implements ApplicationEventListener<ServiceReadyEvent> {
 
   @Inject

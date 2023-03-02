@@ -34,6 +34,13 @@ public class S3DocumentStoreClient implements DocumentStoreClient {
   private final Path root;
   private final S3Client s3Client;
 
+  /**
+   * Get Minio client.
+   *
+   * @param config minio config
+   * @param root root path
+   * @return minio client
+   */
   public static S3DocumentStoreClient minio(final MinioConfig config, final Path root) {
     return new S3DocumentStoreClient(
         new MinioS3ClientFactory(config).get(),
@@ -41,6 +48,13 @@ public class S3DocumentStoreClient implements DocumentStoreClient {
         root);
   }
 
+  /**
+   * Get S3 client.
+   *
+   * @param config s3 config
+   * @param root root path
+   * @return S3 client
+   */
   public static S3DocumentStoreClient s3(final S3Config config, final Path root) {
     return new S3DocumentStoreClient(
         new DefaultS3ClientFactory(config).get(),

@@ -6,6 +6,7 @@ package io.airbyte.oauth.flows;
 
 import io.airbyte.oauth.BaseOAuthFlow;
 
+@SuppressWarnings("MissingJavadocType")
 public class LinkedinAdsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override

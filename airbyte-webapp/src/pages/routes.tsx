@@ -11,11 +11,10 @@ import { useListWorkspaces } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 import MainView from "views/layout/MainView";
 
-import { RoutePaths, DestinationPaths } from "./routePaths";
+import { RoutePaths, DestinationPaths, SourcePaths } from "./routePaths";
 import { WorkspaceRead } from "../core/request/AirbyteClient";
 
 const ConnectionsRoutes = React.lazy(() => import("./connections/ConnectionsRoutes"));
-const CreateConnectionPage = React.lazy(() => import("./connections/CreateConnectionPage"));
 const ConnectorBuilderRoutes = React.lazy(() => import("./connectorBuilder/ConnectorBuilderRoutes"));
 
 const AllDestinationsPage = React.lazy(() => import("./destination/AllDestinationsPage"));
@@ -25,7 +24,12 @@ const DestinationOverviewPage = React.lazy(() => import("./destination/Destinati
 const DestinationSettingsPage = React.lazy(() => import("./destination/DestinationSettingsPage"));
 const PreferencesPage = React.lazy(() => import("./PreferencesPage"));
 const SettingsPage = React.lazy(() => import("./SettingsPage"));
-const SourcesPage = React.lazy(() => import("./SourcesPage"));
+
+const AllSourcesPage = React.lazy(() => import("./source/AllSourcesPage"));
+const CreateSourcePage = React.lazy(() => import("./source/CreateSourcePage"));
+const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
+const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
+const SourceOverviewPage = React.lazy(() => import("./source/SourceOverviewPage"));
 
 const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
   const analyticsContext = useMemo(
@@ -47,13 +51,19 @@ const MainViewRoutes: React.FC = () => {
           <Route path={RoutePaths.Destination}>
             <Route index element={<AllDestinationsPage />} />
             <Route path={DestinationPaths.NewDestination} element={<CreateDestinationPage />} />
-            <Route path={DestinationPaths.NewConnection} element={<CreateConnectionPage />} />
             <Route path={DestinationPaths.Root} element={<DestinationItemPage />}>
-              <Route path={DestinationPaths.Settings} element={<DestinationSettingsPage />} />
               <Route index element={<DestinationOverviewPage />} />
+              <Route path={DestinationPaths.Settings} element={<DestinationSettingsPage />} />
             </Route>
           </Route>
-          <Route path={`${RoutePaths.Source}/*`} element={<SourcesPage />} />
+          <Route path={RoutePaths.Source}>
+            <Route index element={<AllSourcesPage />} />
+            <Route path={SourcePaths.NewSource} element={<CreateSourcePage />} />
+            <Route path={SourcePaths.Root} element={<SourceItemPage />}>
+              <Route index element={<SourceOverviewPage />} />
+              <Route path={SourcePaths.Settings} element={<SourceSettingsPage />} />
+            </Route>
+          </Route>
           <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
           <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />} />
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />

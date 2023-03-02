@@ -17,6 +17,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Normalization Launcher Worker.
+ */
 public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInput, NormalizationSummary> {
 
   public static final String NORMALIZATION = "normalization-orchestrator";

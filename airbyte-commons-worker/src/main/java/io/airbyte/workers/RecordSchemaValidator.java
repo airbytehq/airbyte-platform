@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Validates that AirbyteRecordMessage data conforms to the JSON schema defined by the source's
- * configured catalog
+ * configured catalog.
  */
 public class RecordSchemaValidator {
 
@@ -57,10 +57,12 @@ public class RecordSchemaValidator {
 
   /**
    * Takes an AirbyteRecordMessage and uses the JsonSchemaValidator to validate that its data conforms
-   * to the stream's schema If it does not, this method throws a RecordSchemaValidationException
+   * to the stream's schema If it does not, this method throws a RecordSchemaValidationException.
    *
-   * @param message
-   * @throws RecordSchemaValidationException
+   * @param message message
+   * @param messageStream stream the message is associated with
+   * @throws RecordSchemaValidationException exception if record's data does not conform to the
+   *         stream's schema.
    */
   public void validateSchema(final AirbyteRecordMessage message, final AirbyteStreamNameNamespacePair messageStream)
       throws RecordSchemaValidationException {

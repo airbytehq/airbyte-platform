@@ -34,7 +34,7 @@ public class LogClientSingleton {
   private static LogClientSingleton instance;
 
   @VisibleForTesting
-  final static int LOG_TAIL_SIZE = 1000000;
+  static final int LOG_TAIL_SIZE = 1000000;
   @VisibleForTesting
   CloudLogs logClient;
 
@@ -61,6 +61,11 @@ public class LogClientSingleton {
   public static final String APP_LOGGING_CLOUD_PREFIX = "app-logging";
   public static final String JOB_LOGGING_CLOUD_PREFIX = "job-logging";
 
+  /**
+   * Get log client.
+   *
+   * @return log client
+   */
   public static synchronized LogClientSingleton getInstance() {
     if (instance == null) {
       instance = new LogClientSingleton();
@@ -68,14 +73,34 @@ public class LogClientSingleton {
     return instance;
   }
 
+  /**
+   * Get server log root.
+   *
+   * @param workspaceRoot workspace root dir
+   * @return server log path
+   */
   public Path getServerLogsRoot(final Path workspaceRoot) {
     return workspaceRoot.resolve("server/logs");
   }
 
+  /**
+   * Get scheduler log root.
+   *
+   * @param workspaceRoot workspace root dir
+   * @return scheduler log path
+   */
   public Path getSchedulerLogsRoot(final Path workspaceRoot) {
     return workspaceRoot.resolve("scheduler/logs");
   }
 
+  /**
+   * Get server log file.
+   *
+   * @param workspaceRoot workspace root dir
+   * @param workerEnvironment worker type
+   * @param logConfigs log configs
+   * @return server log
+   */
   public File getServerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       return getServerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
@@ -89,6 +114,14 @@ public class LogClientSingleton {
     }
   }
 
+  /**
+   * Get scheduler log file.
+   *
+   * @param workspaceRoot root dir of workspace
+   * @param workerEnvironment worker type
+   * @param logConfigs configuration of logs
+   * @return scheduler log file
+   */
   public File getSchedulerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       return getSchedulerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
@@ -103,6 +136,15 @@ public class LogClientSingleton {
     }
   }
 
+  /**
+   * Tail log file.
+   *
+   * @param workerEnvironment environment of worker.
+   * @param logConfigs configuration for logs
+   * @param logPath log path
+   * @return last lines in file
+   * @throws IOException exception while accessing logs
+   */
   public List<String> getJobLogFile(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path logPath) throws IOException {
     if (logPath == null || logPath.equals(Path.of(""))) {
       return Collections.emptyList();
@@ -134,6 +176,13 @@ public class LogClientSingleton {
     logClient.deleteLogs(logConfigs, cloudLogPath);
   }
 
+  /**
+   * Set job MDC.
+   *
+   * @param workerEnvironment environment of worker.
+   * @param logConfigs configuration for logs
+   * @param path log path
+   */
   public void setJobMdc(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path path) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker job mdc");
@@ -146,6 +195,13 @@ public class LogClientSingleton {
     }
   }
 
+  /**
+   * Set workspace MDC.
+   *
+   * @param workerEnvironment environment of worker.
+   * @param logConfigs configuration for logs
+   * @param path log path
+   */
   public void setWorkspaceMdc(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path path) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker workspace mdc");

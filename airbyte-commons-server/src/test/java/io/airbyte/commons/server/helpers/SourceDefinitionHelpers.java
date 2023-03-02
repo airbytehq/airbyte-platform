@@ -7,6 +7,7 @@ package io.airbyte.commons.server.helpers;
 import io.airbyte.config.StandardSourceDefinition;
 import java.util.UUID;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class SourceDefinitionHelpers {
 
   public static StandardSourceDefinition generateSourceDefinition() {

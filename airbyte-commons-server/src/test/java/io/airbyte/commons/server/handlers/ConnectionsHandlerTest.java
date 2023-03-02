@@ -117,8 +117,8 @@ class ConnectionsHandlerTest {
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
   private static final String AZKABAN_USERS = "azkaban_users";
-  private final static String CRON_TIMEZONE_UTC = "UTC";
-  private final static String CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String CRON_TIMEZONE_UTC = "UTC";
+  private static final String CRON_EXPRESSION = "* */2 * * * ?";
 
   @SuppressWarnings("unchecked")
   @BeforeEach

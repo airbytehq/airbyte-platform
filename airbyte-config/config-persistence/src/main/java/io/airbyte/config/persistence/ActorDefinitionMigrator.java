@@ -52,6 +52,13 @@ public class ActorDefinitionMigrator {
     this.database = database;
   }
 
+  /**
+   * Migrate to update to newest definitions.
+   *
+   * @param latestSources latest sources
+   * @param latestDestinations latest destinations
+   * @throws IOException exception while interacting with the db.
+   */
   public void migrate(final List<StandardSourceDefinition> latestSources, final List<StandardDestinationDefinition> latestDestinations)
       throws IOException {
     database.transaction(ctx -> {
@@ -94,6 +101,9 @@ public class ActorDefinitionMigrator {
   }
 
   /**
+   * Get connector docker image to connector definition info.
+   *
+   * @param ctx db context
    * @return A map about current connectors (both source and destination). It maps from connector
    *         repository to its definition id and docker image tag. We identify a connector by its
    *         repository name instead of definition id because connectors can be added manually by
@@ -158,9 +168,9 @@ public class ActorDefinitionMigrator {
    * The custom connector are not present in the seed and thus it is not relevant to validate their
    * latest version. This method allows to filter them out.
    *
-   * @param connectorRepositoryToIdVersionMap
-   * @param configType
-   * @return
+   * @param connectorRepositoryToIdVersionMap connector docker image to connector info
+   * @param configType airbyte config type
+   * @return map of docker image to connector info
    */
   @VisibleForTesting
   Map<String, ConnectorInfo> filterCustomConnector(final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap,
@@ -182,9 +192,18 @@ public class ActorDefinitionMigrator {
   }
 
   /**
+   * Update connector definitions with new batch.
+   *
+   * @param ctx db context
+   * @param configType airbyte config type
+   * @param latestDefinitions latest definitions
    * @param connectorRepositoriesInUse when a connector is used in any standard sync, its definition
    *        will not be updated. This is necessary because the new connector version may not be
    *        backward compatible.
+   * @param connectorRepositoryToIdVersionMap map of connector docker image to connector info
+   * @param <T> type of definition Source Definition or Destination Definition
+   * @return connector counts
+   * @throws IOException exception when interacting with the db
    */
   @VisibleForTesting
   <T> ConnectorCounter updateConnectorDefinitions(final DSLContext ctx,
@@ -291,6 +310,12 @@ public class ActorDefinitionMigrator {
   }
 
   /**
+   * Get definition with new fields. Adds new fields to currentDefinition by pulling them out of
+   * latestDefinition.
+   *
+   * @param currentDefinition current definition
+   * @param latestDefinition latest definition
+   * @param newFields fields to add
    * @return a clone of the current definition with the new fields from the latest definition.
    */
   @VisibleForTesting

@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://docs.gitlab.com/ee/api/oauth2.html#authorization-code-flow
+ * Following docs from https://docs.gitlab.com/ee/api/oauth2.html#authorization-code-flow.
  */
 public class GitlabOAuthFlow extends BaseOAuth2Flow {
 
@@ -104,8 +104,8 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
       throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
     }
     if (data.has("expires_in")) {
-      Instant expires_in = Instant.now(this.clock).plusSeconds(data.get("expires_in").asInt());
-      result.put("token_expiry_date", expires_in.toString());
+      final Instant expiresIn = Instant.now(this.clock).plusSeconds(data.get("expires_in").asInt());
+      result.put("token_expiry_date", expiresIn.toString());
     } else {
       throw new IOException(String.format("Missing 'expires_in' in query params from %s", accessTokenUrl));
     }

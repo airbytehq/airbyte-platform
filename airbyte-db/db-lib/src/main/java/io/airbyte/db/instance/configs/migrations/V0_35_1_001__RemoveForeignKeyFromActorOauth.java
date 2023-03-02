@@ -31,6 +31,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Remove foreign key from actor oauth migration.
+ */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class V0_35_1_001__RemoveForeignKeyFromActorOauth extends BaseJavaMigration {
 

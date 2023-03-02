@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.temporal;
 
+/**
+ * Type of Airbyte workflow that runs in temporal.
+ */
 public enum TemporalJobType {
   GET_SPEC,
   CHECK_CONNECTION,

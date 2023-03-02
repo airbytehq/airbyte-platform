@@ -18,6 +18,9 @@ import javax.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Resource not found exception.
+ */
 @Produces
 @Singleton
 @Requires(classes = NotFoundException.class)

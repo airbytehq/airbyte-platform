@@ -21,6 +21,10 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Convert between API and internal versions of operations models.
+ */
+@SuppressWarnings({"MissingJavadocMethod", "MissingSwitchDefault"})
 public class OperationsConverter {
 
   public static void populateOperatorConfigFromApi(final OperatorConfiguration operatorConfig, final StandardSyncOperation standardSyncOperation) {
@@ -132,7 +136,7 @@ public class OperationsConverter {
   private static class DbtCloudOperationConverter {
 
     // See https://docs.getdbt.com/dbt-cloud/api-v2 for documentation on dbt Cloud API endpoints.
-    final static Pattern dbtUrlPattern = Pattern.compile("^https://cloud\\.getdbt\\.com/api/v2/accounts/(\\d+)/jobs/(\\d+)/run/$");
+    static final Pattern dbtUrlPattern = Pattern.compile("^https://cloud\\.getdbt\\.com/api/v2/accounts/(\\d+)/jobs/(\\d+)/run/$");
     private static final int ACCOUNT_REGEX_GROUP = 1;
     private static final int JOB_REGEX_GROUP = 2;
 

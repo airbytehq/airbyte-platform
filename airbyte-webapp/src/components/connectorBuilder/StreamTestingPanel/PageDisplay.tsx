@@ -40,7 +40,25 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
   const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
-  const formattedResponse = useMemo(() => formatJson(page.response), [page.response]);
+  const formattedResponse = useMemo(() => {
+    if (!page.response || !page.response.body) {
+      return "";
+    }
+    let parsedBody: unknown;
+    try {
+      // body is a string containing JSON most of the time, but not always.
+      // Attempt to parse and fall back to the raw string if unsuccessfull.
+      parsedBody = JSON.parse(page.response.body);
+    } catch {
+      parsedBody = page.response.body;
+    }
+
+    const unpackedBodyResponse = {
+      ...page.response,
+      body: parsedBody,
+    };
+    return formatJson(unpackedBodyResponse);
+  }, [page.response]);
   const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);
 
   let defaultTabIndex = 0;
@@ -93,7 +111,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
             </Tab>
           ))}
           {inferredSchema && (
-            <Tab className={styles.tab}>
+            <Tab className={styles.tab} data-testid="tag-tab-detected-schema">
               {({ selected }) => (
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">

@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add actor definition normalization and dbt normalization columns migration.
+ */
 public class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumns extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumns.class);

@@ -31,6 +31,13 @@ public interface SecretPersistence extends ReadOnlySecretPersistence {
 
   void write(final SecretCoordinate coordinate, final String payload);
 
+  /**
+   * Get secrets persistence for long-lived secrets.
+   *
+   * @param dslContext db context
+   * @param configs application configurations
+   * @return secrets persistence for long-lived secrets
+   */
   static Optional<SecretPersistence> getLongLived(final @Nullable DSLContext dslContext, final Configs configs) {
     switch (configs.getSecretPersistenceType()) {
       case TESTING_CONFIG_DB_TABLE -> {
@@ -52,6 +59,13 @@ public interface SecretPersistence extends ReadOnlySecretPersistence {
     }
   }
 
+  /**
+   * Get secrets hydrator.
+   *
+   * @param dslContext db context
+   * @param configs application configurations
+   * @return secrets hydrator
+   */
   static SecretsHydrator getSecretsHydrator(final @Nullable DSLContext dslContext, final Configs configs) {
     final var persistence = getLongLived(dslContext, configs);
 
@@ -62,6 +76,13 @@ public interface SecretPersistence extends ReadOnlySecretPersistence {
     }
   }
 
+  /**
+   * Get secrets persistence for ephemeral secrets.
+   *
+   * @param dslContext db context
+   * @param configs application configurations
+   * @return secrets persistence for ephemeral secrets
+   */
   static Optional<SecretPersistence> getEphemeral(final DSLContext dslContext, final Configs configs) {
     switch (configs.getSecretPersistenceType()) {
       case TESTING_CONFIG_DB_TABLE -> {

@@ -10,12 +10,12 @@ import io.airbyte.config.StandardWorkspace;
 import java.util.Map;
 
 /**
- * A generic interface for a client that reports errors
+ * A generic interface for a client that reports errors.
  */
 public interface JobErrorReportingClient {
 
   /**
-   * Report a job failure reason
+   * Report a job failure reason.
    */
   void reportJobFailureReason(@Nullable StandardWorkspace workspace,
                               final FailureReason reason,

@@ -1,13 +1,9 @@
 import uniqueId from "lodash/uniqueId";
 import { KeyboardEventHandler, useMemo, useState } from "react";
-import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig } from "react-select";
+import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig, components, InputProps } from "react-select";
 import CreatableSelect from "react-select/creatable";
 
 import styles from "./TagInput.module.scss";
-
-const components = {
-  DropdownIndicator: null,
-};
 
 const customStyles: StylesConfig<Tag, true, GroupBase<Tag>> = {
   multiValue: (provided) => ({
@@ -58,6 +54,7 @@ interface Tag {
 interface TagInputProps {
   name: string;
   fieldValue: string[];
+  itemType?: string;
   onChange: (value: string[]) => void;
   error?: boolean;
   disabled?: boolean;
@@ -73,7 +70,7 @@ const generateStringFromTag = (tag: Tag): string => tag.label;
 
 const delimiters = [",", ";"];
 
-export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, disabled, id, error }) => {
+export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, disabled, id, error, itemType }) => {
   const tags = useMemo(() => fieldValue.map(generateTagFromString), [fieldValue]);
 
   // input value is a tag draft
@@ -98,18 +95,26 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     onChange(updatedTags.map((tag) => generateStringFromTag(tag)));
   };
 
+  function normalizeInput(input: string) {
+    if (itemType !== "number" && itemType !== "integer") {
+      return input.trim();
+    }
+    const parsedInput = itemType === "integer" ? Number.parseInt(input) : Number.parseFloat(input);
+    if (Number.isNaN(parsedInput)) {
+      return "";
+    }
+    return parsedInput.toString();
+  }
+
   // handle when a user types OR pastes in the input
   const handleInputChange = (inputValue: string) => {
     setInputValue(inputValue);
 
     delimiters.forEach((delimiter) => {
       if (inputValue.includes(delimiter)) {
-        const newTagStrings = inputValue
-          .split(delimiter)
-          .map((tag) => tag.trim())
-          .filter(Boolean);
+        const newTagStrings = inputValue.split(delimiter).map(normalizeInput).filter(Boolean);
 
-        inputValue.trim().length > 1 && onChange([...fieldValue, ...newTagStrings]);
+        newTagStrings.length > 0 && onChange([...fieldValue, ...newTagStrings]);
         setInputValue("");
       }
     });
@@ -123,7 +128,8 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     switch (event.key) {
       case "Enter":
       case "Tab":
-        inputValue.trim().length >= 1 && onChange([...fieldValue, inputValue.trim()]);
+        const normalizedInput = normalizeInput(inputValue);
+        normalizedInput.length >= 1 && onChange([...fieldValue, normalizedInput]);
 
         event.preventDefault();
         setInputValue("");
@@ -135,18 +141,29 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
    * This needs to be implemented outside of the onBlur prop of react-select because it's not default behavior.
    */
   const onBlurControl = () => {
-    if (inputValue) {
-      onChange([...fieldValue, inputValue]);
+    const normalizedInput = normalizeInput(inputValue);
+    if (normalizedInput) {
+      onChange([...fieldValue, normalizedInput]);
       setInputValue("");
     }
   };
+
+  const overwrittenComponents = useMemo(
+    () => ({
+      DropdownIndicator: null,
+      Input: (props: InputProps<Tag, true, GroupBase<Tag>>) => (
+        <components.Input {...props} data-testid={`tag-input-${name}`} />
+      ),
+    }),
+    [name]
+  );
 
   return (
     <div data-testid="tag-input" onBlur={onBlurControl}>
       <CreatableSelect
         inputId={id}
         name={name}
-        components={components}
+        components={overwrittenComponents}
         inputValue={inputValue}
         placeholder=""
         aria-invalid={Boolean(error)}

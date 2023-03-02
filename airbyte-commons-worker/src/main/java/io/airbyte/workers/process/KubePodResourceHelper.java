@@ -9,8 +9,17 @@ import io.fabric8.kubernetes.api.model.Pod;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Helpers for working with KubePodProcess.
+ */
 public class KubePodResourceHelper {
 
+  /**
+   * Is the Kube pod process in a terminal state.
+   *
+   * @param pod pod
+   * @return true, if terminal. otherwise, false.
+   */
   public static boolean isTerminal(final Pod pod) {
     if (pod.getStatus() != null) {
       // Check if "main" container has terminated, as that defines whether the parent process has
