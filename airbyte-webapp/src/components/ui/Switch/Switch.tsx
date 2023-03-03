@@ -12,7 +12,6 @@ interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 
   loading?: boolean;
   size?: SwitchSize;
   variant?: SwitchVariant;
-  testId?: string;
 }
 
 export const Switch: React.FC<SwitchProps> = ({
@@ -23,7 +22,6 @@ export const Switch: React.FC<SwitchProps> = ({
   size = "lg",
   value,
   variant = "default",
-  testId,
   ...props
 }) => {
   const labelStyle = classnames(styles.switch, {
@@ -43,7 +41,7 @@ export const Switch: React.FC<SwitchProps> = ({
   });
 
   return (
-    <label className={labelStyle} {...(testId ? { "data-testid": `${testId}-switch` } : {})}>
+    <label className={labelStyle}>
       <input
         {...props}
         aria-checked={(indeterminate ? "mixed" : checked) ?? !!value}
