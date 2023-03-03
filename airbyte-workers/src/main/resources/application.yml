@@ -159,6 +159,7 @@ airbyte:
           memory:
             limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
     normalization:
       main:
         container:
@@ -169,6 +170,7 @@ airbyte:
             limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
       orchestrator:
         cpu:
           limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
