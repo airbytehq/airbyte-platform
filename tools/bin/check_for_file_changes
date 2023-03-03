@@ -24,7 +24,7 @@ if test -n "$diff_output"; then
   echo -e "$red_text""File changes were detected! Lame!""$default_text"
   echo -e "$red_text""This is usually do to forgetting to run a command locally before committing""$default_text"
   echo -e "$red_text""try running the format command and see if you get a diff ""$default_text"
-  echo -e "$red_text""ie: SUB_BUILD=PLATFORM ./gradlew format --scan --info --stacktrace""$default_text"
+  echo -e "$red_text""ie: ./gradlew format --scan --info --stacktrace""$default_text"
 else
   echo -e "$blue_text""No git changes detected! Yay!""$default_text"
 fi

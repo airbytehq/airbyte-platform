@@ -53,4 +53,4 @@ check_success 'init'
 check_success 'airbyte-bootloader'
 
 echo "Running e2e tests via gradle"
-SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --rerun-tasks --scan
+USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --rerun-tasks --scan

@@ -5,24 +5,14 @@
 package io.airbyte.commons.yaml;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SequenceWriter;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
-import com.google.common.collect.AbstractIterator;
-import io.airbyte.commons.jackson.MoreMappers;
-import io.airbyte.commons.lang.CloseableConsumer;
-import io.airbyte.commons.lang.Exceptions;
-import io.airbyte.commons.util.AutoCloseableIterator;
-import io.airbyte.commons.util.AutoCloseableIterators;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Writer;
-import java.util.Iterator;
 
 /**
  * Shared code for interacting with Yaml and Yaml-representation of Jackson {@link JsonNode}.
@@ -31,10 +21,10 @@ import java.util.Iterator;
 public class Yamls {
 
   private static final YAMLFactory YAML_FACTORY = new YAMLFactory();
-  private static final ObjectMapper OBJECT_MAPPER = MoreMappers.initYamlMapper(YAML_FACTORY);
+  private static final ObjectMapper OBJECT_MAPPER = initYamlMapper(YAML_FACTORY);
 
   private static final YAMLFactory YAML_FACTORY_WITHOUT_QUOTES = new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES);
-  private static final ObjectMapper OBJECT_MAPPER_WITHOUT_QUOTES = MoreMappers.initYamlMapper(YAML_FACTORY_WITHOUT_QUOTES);
+  private static final ObjectMapper OBJECT_MAPPER_WITHOUT_QUOTES = initYamlMapper(YAML_FACTORY_WITHOUT_QUOTES);
 
   /**
    * Serialize object to YAML string. String values WILL be wrapped in double quotes.
@@ -111,86 +101,27 @@ public class Yamls {
   }
 
   /**
-   * Deserialize an {@link InputStream} from a list of Yaml.
+   * Deserialize a file containing yaml to a {@link JsonNode}.
    *
-   * @param stream whose contents to deserialize
-   * @return stream as an {@link AutoCloseableIterator}
+   * @param file to deserialize
+   * @return JSON as JsonNode
    */
-  public static AutoCloseableIterator<JsonNode> deserializeArray(final InputStream stream) {
+  public static JsonNode deserialize(final File file) {
     try {
-      final YAMLParser parser = YAML_FACTORY.createParser(stream);
-
-      // Check the first token
-      if (parser.nextToken() != JsonToken.START_ARRAY) {
-        throw new IllegalStateException("Expected content to be an array");
-      }
-
-      final Iterator<JsonNode> iterator = new AbstractIterator<>() {
-
-        @Override
-        protected JsonNode computeNext() {
-          try {
-            while (parser.nextToken() != JsonToken.END_ARRAY) {
-              return parser.readValueAsTree();
-            }
-          } catch (final IOException e) {
-            throw new RuntimeException(e);
-          }
-          return endOfData();
-        }
-
-      };
-
-      return AutoCloseableIterators.fromIterator(iterator, parser::close);
-
+      return OBJECT_MAPPER.readTree(file);
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  // todo (cgardens) - share this with Jsons if ever needed.
-
   /**
-   * Creates a consumer that writes list items to the writer in a streaming fashion.
+   * Init default yaml {@link ObjectMapper}.
    *
-   * @param writer writer to write to
-   * @param <T> type of items being written
-   * @return consumer that is able to write element to a list element by element. must be closed!
+   * @param factory yaml object mapper factory
+   * @return object mapper
    */
-  public static <T> CloseableConsumer<T> listWriter(final Writer writer) {
-    return new YamlConsumer<>(writer, OBJECT_MAPPER);
-  }
-
-  /**
-   * Yaml Consumer for reading large yaml lists incrementally (so that they don't fully need to be in
-   * memory all at once).
-   *
-   * @param <T> type value being consumed
-   */
-  public static class YamlConsumer<T> implements CloseableConsumer<T> {
-
-    private final SequenceWriter sequenceWriter;
-
-    public YamlConsumer(final Writer writer, final ObjectMapper objectMapper) {
-      this.sequenceWriter = Exceptions.toRuntime(() -> objectMapper.writer().writeValuesAsArray(writer));
-
-    }
-
-    @Override
-    public void accept(final T t) {
-      try {
-        sequenceWriter.write(t);
-      } catch (final IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Override
-    public void close() throws Exception {
-      // closing the SequenceWriter closes the Writer that it wraps.
-      sequenceWriter.close();
-    }
-
+  private static ObjectMapper initYamlMapper(final YAMLFactory factory) {
+    return new ObjectMapper(factory).registerModule(new JavaTimeModule());
   }
 
 }

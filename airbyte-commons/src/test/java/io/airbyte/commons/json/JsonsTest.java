@@ -100,17 +100,6 @@ class JsonsTest {
   }
 
   @Test
-  void testTryDeserialize() {
-    assertEquals(
-        Optional.of(new ToClass(ABC, 999, 888L)),
-        Jsons.tryDeserialize("{\"str\":\"abc\", \"num\": 999, \"numLong\": 888}", ToClass.class));
-
-    assertEquals(
-        Optional.of(new ToClass(ABC, 999, 0L)),
-        Jsons.tryDeserialize("{\"str\":\"abc\", \"num\": 999, \"test\": 888}", ToClass.class));
-  }
-
-  @Test
   void testTryDeserializeToJsonNode() {
     assertEquals(
         Optional.of(Jsons.deserialize(SERIALIZED_JSON2)),

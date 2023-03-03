@@ -31,5 +31,12 @@ until $(curl --output /dev/null --fail --silent --max-time 5 --head localhost:80
   sleep 10
 done
 
-echo "Running e2e tests via gradle"
-SUB_BUILD=PLATFORM ./gradlew --no-daemon :airbyte-webapp-e2e-tests:e2etest -PcypressWebappKey=$CYPRESS_WEBAPP_KEY
+echo "Running e2e tests via gradle without cypress key"
+
+if ./gradlew --no-daemon :airbyte-webapp-e2e-tests:e2etest ; then
+  echo "Tests succeeded"
+else
+  echo "Tests failed, retry and record"
+  ./gradlew --no-daemon :airbyte-webapp-e2e-tests:e2etest -PcypressWebappKey=$CYPRESS_WEBAPP_KEY ;
+fi
+
