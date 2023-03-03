@@ -80,7 +80,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           checked={stream.config?.selected}
           onClick={stopPropagationClickHandler}
           disabled={disabled}
-          testId="sync"
+          data-testid="selected-switch"
         />
       </CatalogTreeTableCell>
       {/* TODO: Replace with actual field count for column selection */}
