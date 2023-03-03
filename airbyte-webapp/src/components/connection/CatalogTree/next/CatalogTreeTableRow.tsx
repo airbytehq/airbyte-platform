@@ -17,8 +17,6 @@ import { SyncModeSelect } from "./SyncModeSelect";
 import { useCatalogTreeTableRowProps } from "./useCatalogTreeTableRowProps";
 import { StreamHeaderProps } from "../StreamHeader";
 
-const stopPropagationClickHandler: React.MouseEventHandler<HTMLInputElement> = (event) => event.stopPropagation();
-
 export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
   stream,
   destName,
@@ -65,12 +63,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         {!disabled && (
           <>
             <CatalogTreeTableRowIcon stream={stream} />
-            <CheckBox
-              checkboxSize="sm"
-              checked={isSelected}
-              onChange={selectForBulkEdit}
-              onClick={stopPropagationClickHandler}
-            />
+            <CheckBox checkboxSize="sm" checked={isSelected} onChange={selectForBulkEdit} />
           </>
         )}
       </CatalogTreeTableCell>
@@ -79,7 +72,6 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           size="sm"
           checked={stream.config?.selected}
           onChange={onSelectStream}
-          onClick={stopPropagationClickHandler}
           disabled={disabled}
           data-testid="selected-switch"
         />
@@ -90,12 +82,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           124567
         </Text>
       </CatalogTreeTableCell> */}
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip data-testid="source-namespace-cell">
         <Text size="md" className={styles.cellText}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip data-testid="source-stream-name-cell">
         <Text size="md" className={styles.cellText}>
           {stream.stream?.name}
         </Text>
@@ -144,12 +136,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip data-testid="destination-namespace-cell">
         <Text size="md" className={styles.cellText}>
           {destNamespace}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip data-testid="destination-stream-name-cell">
         <Text size="md" className={styles.cellText}>
           {destName}
         </Text>
