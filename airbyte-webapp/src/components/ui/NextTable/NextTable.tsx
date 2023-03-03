@@ -1,4 +1,4 @@
-import { ColumnDef, flexRender, useReactTable, getCoreRowModel } from "@tanstack/react-table";
+import { ColumnDef, flexRender, useReactTable, getCoreRowModel, VisibilityState } from "@tanstack/react-table";
 import classNames from "classnames";
 import { PropsWithChildren } from "react";
 
@@ -14,6 +14,7 @@ export interface TableProps<T> {
   light?: boolean;
   onClickRow?: (data: T) => void;
   testId?: string;
+  columnVisibility?: VisibilityState;
 }
 
 export const NextTable = <T,>({
@@ -23,10 +24,14 @@ export const NextTable = <T,>({
   data,
   light,
   onClickRow,
+  columnVisibility,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
     data,
+    initialState: {
+      columnVisibility,
+    },
     getCoreRowModel: getCoreRowModel(),
   });
 

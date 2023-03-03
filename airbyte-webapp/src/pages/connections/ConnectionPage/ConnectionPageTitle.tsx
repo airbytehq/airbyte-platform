@@ -13,6 +13,7 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionStatus } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFeature, FeatureItem } from "hooks/services/Feature";
 
 import styles from "./ConnectionPageTitle.module.scss";
@@ -28,6 +29,8 @@ export const ConnectionPageTitle: React.FC = () => {
   const currentStep = params["*"] || ConnectionRoutePaths.Status;
 
   const { connection, schemaRefreshing } = useConnectionEditService();
+
+  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);
 
   const steps = useMemo(() => {
     const steps = [
@@ -45,6 +48,13 @@ export const ConnectionPageTitle: React.FC = () => {
       },
     ];
 
+    if (streamCentricUIEnabled) {
+      steps.push({
+        id: ConnectionRoutePaths.JobHistory,
+        name: <FormattedMessage id="connectionForm.jobHistory" />,
+      });
+    }
+
     connection.status !== ConnectionStatus.deprecated &&
       steps.push({
         id: ConnectionRoutePaths.Settings,
@@ -52,7 +62,7 @@ export const ConnectionPageTitle: React.FC = () => {
       });
 
     return steps;
-  }, [connection.status]);
+  }, [connection.status, streamCentricUIEnabled]);
 
   const onSelectStep = useCallback(
     (id: string) => {

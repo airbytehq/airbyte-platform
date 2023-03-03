@@ -82,7 +82,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.41.00.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.41.00.002";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.40.28.001";
 
   @BeforeEach
@@ -125,7 +125,7 @@ class BootloaderTest {
 
       val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
       val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-      val configRepository = new ConfigRepository(configDatabase);
+      val configRepository = new ConfigRepository(configDatabase, 10800);
       val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -180,7 +180,7 @@ class BootloaderTest {
 
       val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
       val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-      val configRepository = new ConfigRepository(configDatabase);
+      val configRepository = new ConfigRepository(configDatabase, 10800);
       val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -311,7 +311,7 @@ class BootloaderTest {
 
       val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
       val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-      val configRepository = new ConfigRepository(configDatabase);
+      val configRepository = new ConfigRepository(configDatabase, 10800);
       val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -371,7 +371,7 @@ class BootloaderTest {
 
       val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
       val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-      val configRepository = new ConfigRepository(configDatabase);
+      val configRepository = new ConfigRepository(configDatabase, 10800);
       val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
       val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
           configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));

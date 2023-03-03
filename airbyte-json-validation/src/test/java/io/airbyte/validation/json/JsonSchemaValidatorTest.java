@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -94,16 +93,17 @@ class JsonSchemaValidatorTest {
         + "  }\n"
         + "}\n";
 
-    final File schemaFile = IOs.writeFile(Files.createTempDirectory("test"), "schema.json", schema).toFile();
+    final var schemaFile = Files.createTempDirectory("test").resolve("schema.json");
+    IOs.writeFile(schemaFile, schema);
 
     // outer object
-    assertTrue(JsonSchemaValidator.getSchema(schemaFile).get(PROPERTIES).has("field1"));
-    assertFalse(JsonSchemaValidator.getSchema(schemaFile).get(PROPERTIES).has("field2"));
+    assertTrue(JsonSchemaValidator.getSchema(schemaFile.toFile()).get(PROPERTIES).has("field1"));
+    assertFalse(JsonSchemaValidator.getSchema(schemaFile.toFile()).get(PROPERTIES).has("field2"));
     // inner object
-    assertTrue(JsonSchemaValidator.getSchema(schemaFile, "InnerObject").get(PROPERTIES).has("field2"));
-    assertFalse(JsonSchemaValidator.getSchema(schemaFile, "InnerObject").get(PROPERTIES).has("field1"));
+    assertTrue(JsonSchemaValidator.getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field2"));
+    assertFalse(JsonSchemaValidator.getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field1"));
     // non-existent object
-    assertNull(JsonSchemaValidator.getSchema(schemaFile, "NonExistentObject"));
+    assertNull(JsonSchemaValidator.getSchema(schemaFile.toFile(), "NonExistentObject"));
   }
 
   @Test
@@ -116,9 +116,10 @@ class JsonSchemaValidatorTest {
                                    }
                                  }
                                  """;
-    final File schemaFile = IOs.writeFile(Files.createTempDirectory("test"), "WellKnownTypes.json", referencableSchemas).toFile();
+    final var schemaFile = Files.createTempDirectory("test").resolve("WellKnownTypes.json");
+    IOs.writeFile(schemaFile, referencableSchemas);
     JsonSchemaValidator jsonSchemaValidator =
-        new JsonSchemaValidator(new URI("file://" + schemaFile.getParentFile().getAbsolutePath() + "/foo.json"));
+        new JsonSchemaValidator(new URI("file://" + schemaFile.toFile().getParentFile().getAbsolutePath() + "/foo.json"));
 
     Set<String> validationResult = jsonSchemaValidator.validate(
         Jsons.deserialize("""
