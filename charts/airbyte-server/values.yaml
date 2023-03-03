@@ -413,3 +413,8 @@ env_vars: {}
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
+
+
+## deploymentStrategyType [string] - deployment strategy type for airbyte-server deployment.
+## Defaults to Recreate since the pod is using pvc
+deploymentStrategyType: Recreate
