@@ -76,7 +76,7 @@ Our SCSS color variables compile to `rgb(X, Y, Z)`, which is an invalid value in
 > The Airbyte team is currently restructuring how folders are organized in the codebase. This section describes the current folder structure and may be subject to change.
 
 * components - All React components except for page components. See section below for details
-* config - Config system
+* config - App-wide configuration
 * core - General modules used by the app
 * hooks - Shared hooks
 * locales - i18n files.
@@ -99,9 +99,9 @@ Most React components are in `src/components` but components that represent page
 
 The `src/components` folder is divided into sub-folders for each domain in the app such as `connection`, `source`, and `destination`. Core UI components (such as Buttons, tables, etc.) are all located in `src/components/ui`. Components that are shared across different domains but may not be part of the UI library are in `src/components/common`. Sub-folders must be written in `camelCase`.
 
-Within each sub-folder, there are folder for each major component. These folders are written in `PascalCase`, the same way a React component would be named. Within these folders there are a few files:
+Within each sub-folder, there are folders for each major component. These folders are written in `PascalCase`, the same way a React component would be named. Within these folders there are a few files:
 
-* `index.ts` - Used to the main component and supporting functions or types to the app.
+* `index.ts` - Used to export the main component and supporting functions or types to the app.
 * `{MainComponentName}.tsx` - The main component, also exported through `index.ts`
 * `{MainComponentName}.test.tsx` - The test file
 * `{MainComponentName}.module.scss` - The main component's style file
@@ -109,9 +109,9 @@ Within each sub-folder, there are folder for each major component. These folders
 * `types.ts` (optional) - Types shared between different sub-components
 * `utils.ts` (optional) - Any utilities that support the components
 
-When using supporting components, the folder could become rather full of them. In those cases Components should be split into their own folders parallel to the main component, especially when the supporting component also needs to be broken down into multiple sub components.
+When using supporting components, the folder could become rather full of them. In those cases components should be split into their own folders parallel to the main component, especially when the supporting component also needs to be broken down into multiple sub components.
 
-Here's a hypothetical example: The app has a streams panel with a lot of sub-components including a streams table. Instead of placing all the components under `src/components/connection/StreamsPanel`, the table should be broken out into it's own sub-folder as a child of the `connection` folder.
+Here's a hypothetical example: The app has a streams panel with a lot of sub-components including a streams table. Instead of placing all the components under `src/components/connection/StreamsPanel`, the table should be broken out into its own sub-folder as a child of the `connection` folder.
 
 ❌ Incorrect - While StreamsTable is only used in the StreamsPanel, it also has its own sub-components.
 
@@ -168,10 +168,10 @@ Here's an example using the connections pages:
 ```
 components/
   connection/
-    ConnectionsTable/ - Used by AllConnectionsPage
+    ConnectionsTable/ - A table listing all connections for a given workspace
 pages
   connections/
-    AllConnectionsPage/ - The page that renders the list of connections. Uses `components/connection/ConnectionsTable`
+    AllConnectionsPage/ - The connection overview page. Renders a ConnectionsTable
     ConnectionPage/ - The individual connection page
     ConnectionReplicationPage/ - A sub-page of the ConnectionPage that renders the replication "tab"
     ConnectionRoutes.tsx - Defines entire route structure for connections
