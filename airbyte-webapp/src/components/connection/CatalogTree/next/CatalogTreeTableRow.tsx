@@ -78,6 +78,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         <Switch
           size="sm"
           checked={stream.config?.selected}
+          onChange={onSelectStream}
           onClick={stopPropagationClickHandler}
           disabled={disabled}
           data-testid="selected-switch"
