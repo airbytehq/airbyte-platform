@@ -2,7 +2,7 @@ import org.jsonschema2pojo.SourceType
 
 plugins {
     id "java-library"
-    id "com.github.eirnym.js2p" version "1.0"
+    alias(libs.plugins.js2p)
 }
 
 dependencies {
