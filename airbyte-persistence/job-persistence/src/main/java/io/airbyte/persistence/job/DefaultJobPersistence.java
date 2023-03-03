@@ -13,6 +13,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
@@ -735,6 +736,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .and(JOBS.ID.eq(includingJobId))
+        .fetch()
         .stream()
         .findFirst()
         .map(record -> record.get(JOBS.CREATED_AT, OffsetDateTime.class)));
@@ -1013,7 +1015,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static List<Job> getJobsFromResult(final Result<Record> result) {
     // keeps results strictly in order so the sql query controls the sort
-    final List<Job> jobs = new ArrayList<Job>();
+    final List<Job> jobs = new ArrayList<>();
     Job currentJob = null;
     for (final Record entry : result) {
       if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
@@ -1255,19 +1257,26 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private Stream<JsonNode> exportTable(final String schema, final String tableName) throws IOException {
     final Table<Record> tableSql = getTable(schema, tableName);
-    try (final Stream<Record> records = jobDatabase.query(ctx -> ctx.select(DSL.asterisk()).from(tableSql).fetchStream())) {
-      return records.map(record -> {
-        final Set<String> jsonFieldNames = Arrays.stream(record.fields())
-            .filter(f -> "jsonb".equals(f.getDataType().getTypeName()))
-            .map(Field::getName)
-            .collect(Collectors.toSet());
-        final JsonNode row = Jsons.deserialize(record.formatJSON(JdbcUtils.getDefaultJsonFormat()));
-        // for json fields, deserialize them so they are treated as objects instead of strings. this is to
-        // get around that formatJson doesn't handle deserializing them for us.
-        jsonFieldNames.forEach(jsonFieldName -> ((ObjectNode) row).replace(jsonFieldName, Jsons.deserialize(row.get(jsonFieldName).asText())));
-        return row;
+    final Stream<Record> records = jobDatabase.query(ctx -> ctx.select(DSL.asterisk()).from(tableSql).fetch().stream());
+    return records.map(record -> {
+      final Set<String> jsonFieldNames = Arrays.stream(record.fields())
+          .filter(f -> "jsonb".equals(f.getDataType().getTypeName()))
+          .map(Field::getName)
+          .collect(Collectors.toSet());
+      final String json = record.formatJSON(JdbcUtils.getDefaultJsonFormat());
+      final JsonNode row = Jsons.deserialize(json);
+      // for json fields, deserialize them so they are treated as objects instead of strings. this is to
+      // get around that formatJson doesn't handle deserializing them for us.
+      jsonFieldNames.forEach(jsonFieldName -> {
+        // Ensure that missing fields are converted into an empty JSON object in order to pass JSON
+        // validation
+        final String jsonFieldValue = Jsons.serialize(row.get(jsonFieldName));
+        final JsonNode jsonFieldNode =
+            StringUtils.isBlank(jsonFieldValue) ? JsonNodeFactory.instance.objectNode() : Jsons.deserialize(jsonFieldValue);
+        ((ObjectNode) row).replace(jsonFieldName, jsonFieldNode);
       });
-    }
+      return row;
+    });
   }
 
   // todo (cgardens) unused?
@@ -1303,10 +1312,6 @@ public class DefaultJobPersistence implements JobPersistence {
     if (!data.isEmpty()) {
       createSchema(BACKUP_SCHEMA);
       jobDatabase.transaction(ctx -> {
-        // obtain locks on all tables first, to prevent deadlocks
-        for (final JobsDatabaseSchema tableType : data.keySet()) {
-          ctx.execute(String.format("LOCK TABLE %s IN ACCESS EXCLUSIVE MODE", tableType.name()));
-        }
         for (final JobsDatabaseSchema tableType : data.keySet()) {
           if (!incrementalImport) {
             truncateTable(ctx, targetSchema, tableType.name(), BACKUP_SCHEMA);
@@ -1386,7 +1391,7 @@ public class DefaultJobPersistence implements JobPersistence {
         values.forEach(insertStep::values);
 
         if (insertStep.getBindValues().size() > 0) {
-          // LOGGER.debug(insertStep.toString());
+          // LOGGER.debug("Insert step '{}'.", insertStep);
           ctx.batch(insertStep).execute();
         }
       });
@@ -1417,7 +1422,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .findFirst();
     if (maxId.isPresent()) {
       final Sequence<BigInteger> sequenceName = DSL.sequence(DSL.name(schema, String.format("%s_%s_seq", tableType.name().toLowerCase(), "id")));
-      ctx.alterSequenceIfExists(sequenceName).restartWith(maxId.get() + 1).execute();
+      ctx.alterSequenceIfExists(sequenceName).restartWith(BigInteger.valueOf(maxId.get() + 1)).execute();
     }
   }
 
@@ -1477,8 +1482,10 @@ public class DefaultJobPersistence implements JobPersistence {
       return valueNode.asDouble();
     } else if (nodeType == JsonNodeType.NULL) {
       return null;
+    } else if (nodeType == JsonNodeType.MISSING) {
+      return Jsons.serialize(jsonNode);
     }
-    throw new IllegalArgumentException(String.format("Undefined type for column %s", columnName));
+    throw new IllegalArgumentException(String.format("Undefined type '%s' for column %s", nodeType, columnName));
   }
 
   private static Table<Record> getTable(final String schema, final String tableName) {

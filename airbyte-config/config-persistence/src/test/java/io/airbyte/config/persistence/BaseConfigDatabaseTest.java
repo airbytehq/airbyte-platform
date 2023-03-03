@@ -92,7 +92,6 @@ class BaseConfigDatabaseTest {
    */
   @AfterAll
   static void dbDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
     container.close();
   }

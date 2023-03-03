@@ -27,10 +27,9 @@ public class V0_40_18_001__AddIndexToAttemptsAndJobsStatus extends BaseJavaMigra
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      ctx.createIndexIfNotExists("attempts_status_idx").on(ATTEMPTS_TABLE, "status").execute();
-      ctx.createIndexIfNotExists("jobs_status_idx").on(JOBS_TABLE, "status").execute();
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    ctx.createIndexIfNotExists("attempts_status_idx").on(ATTEMPTS_TABLE, "status").execute();
+    ctx.createIndexIfNotExists("jobs_status_idx").on(JOBS_TABLE, "status").execute();
   }
 
 }
