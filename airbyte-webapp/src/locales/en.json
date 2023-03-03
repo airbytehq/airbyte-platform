@@ -165,6 +165,7 @@
   "connectionForm.nonBreakingChangesPreference.ignore": "Ignore",
   "connectionForm.nonBreakingChangesPreference.disable": "Disable connection",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
+  "connectionForm.jobHistory": "Job History",
 
   "connectionForm.modal.destinationNamespace.title": "Destination namespace",
   "connectionForm.modal.destinationNamespace.option.source": "Mirror source structure",
@@ -446,6 +447,12 @@
   "connection.schemaChange.breaking": "Breaking schema updates detected",
   "connection.schemaChange.nonBreaking": "Non-breaking schema updates detected",
   "connection.schemaChange.reviewAction": "Review changes",
+
+  "connection.stream.status.actionRequired": "Action Required",
+  "connection.stream.status.onTrack": "On Track",
+  "connection.stream.status.disabled": "Disabled",
+  "connection.stream.status.error": "Error",
+  "connection.stream.status.behind": "Behind",
 
   "form.frequency": "Replication frequency",
   "form.cronExpression": "Cron expression",
