@@ -1,9 +1,8 @@
 const streamTableRow = (namespace: string, streamName: string) =>
   `div[data-testid='catalog-tree-table-row-${namespace}-${streamName}']`;
-const streamPanel = (namespace: string, streamName: string) =>
-  `div[data-testid='stream-details-panel-${namespace}-${streamName}']`;
-const streamPanelCloseButton = `button[data-testid='stream-panel-close-button']`;
-const streamSyncSwitch = `label[data-testid='sync-switch']`;
+const streamPanel = `div[data-testid='stream-details']`;
+const streamPanelCloseButton = `button[data-testid='stream-details-close-button']`;
+const streamSyncSwitch = `input[data-testid='sync-switch']`;
 const sourceStreamNameCell = `div[data-testid='source-stream-name-cell']`;
 const destinationStreamNameCell = `div[data-testid='destination-stream-name-cell']`;
 const sourceNamespaceCell = `div[data-testid='source-namespace-cell']`;
@@ -12,18 +11,15 @@ const destinationNamespaceCell = `div[data-testid='destination-namespace-cell']`
 export class StreamRowPageObject {
   static getStreamUtilityFunctions(namespace: string, streamName: string) {
     const stream = streamTableRow(namespace, streamName);
-    const panel = streamPanel(namespace, streamName);
 
     const isStreamSyncEnabled = (expectedValue: boolean) =>
       cy.get(stream).within(() => {
-        cy.get(streamSyncSwitch)
-          .get("input")
-          .should(`${expectedValue ? "" : "not."}be.checked`);
+        cy.get(streamSyncSwitch).should(`${expectedValue ? "" : "not."}be.checked`);
       });
 
     const toggleStreamSync = () =>
       cy.get(stream).within(() => {
-        cy.get(streamSyncSwitch).click();
+        cy.get(streamSyncSwitch).closest("label").click();
       });
 
     const isStreamRowHasRemovedStyle = (expectedValue: boolean) =>
@@ -41,9 +37,9 @@ export class StreamRowPageObject {
       cy.get(stream).within(() => cy.get(destinationStreamNameCell).contains(expectedValue));
 
     const openStreamPanel = () => cy.get(stream).within(() => cy.get(destinationNamespaceCell).click());
-    const closeStreamPanel = () => cy.get(panel).within(() => cy.get(streamPanelCloseButton).click());
+    const closeStreamPanel = () => cy.get(streamPanel).within(() => cy.get(streamPanelCloseButton).click());
     const isStreamPanelVisible = (expectedValue: boolean) =>
-      cy.get(panel).should(`${expectedValue ? "" : "not."}exist`);
+      cy.get(streamPanel).should(`${expectedValue ? "" : "not."}exist`);
 
     return {
       isStreamSyncEnabled,
