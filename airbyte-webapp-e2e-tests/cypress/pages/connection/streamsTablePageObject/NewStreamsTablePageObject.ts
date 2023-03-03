@@ -14,7 +14,7 @@ const getFieldSelectButtonTestId = (streamName: string, type: SyncFieldType) =>
   joinTestIds(getTestId(`${type}-select`), getTestId("pill-select-button"));
 const getSourceDefinedTestId = (type: SyncFieldType) => getTestId(`${type}-text`);
 const getStreamSwitchTestId = (namespace: string, streamName: string) =>
-  getRowTestId(namespace, streamName, getTestId("sync-switch"));
+  getRowTestId(namespace, streamName, getTestId("selected-switch"));
 const dropDownOverlayContainer = getTestId("overlayContainer");
 
 const streamSourceFieldName = getTestId("stream-source-field-name");
