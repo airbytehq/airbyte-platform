@@ -9,7 +9,7 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.HealthApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.commons.concurrency.WaitingUtils;
+import io.airbyte.test.concurrency.WaitingUtils;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;

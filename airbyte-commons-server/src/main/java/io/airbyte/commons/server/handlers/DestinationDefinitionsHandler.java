@@ -27,7 +27,6 @@ import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
-import io.airbyte.commons.util.MoreLists;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
@@ -51,6 +50,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * DestinationDefinitionsHandler. Javadocs suppressed because api docs should be used as source of
@@ -155,9 +155,10 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
-    return toDestinationDefinitionReadList(MoreLists.concat(
-        configRepository.listPublicDestinationDefinitions(false),
-        configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false)));
+    return toDestinationDefinitionReadList(
+        Stream.concat(
+            configRepository.listPublicDestinationDefinitions(false).stream(),
+            configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList());
   }
 
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)

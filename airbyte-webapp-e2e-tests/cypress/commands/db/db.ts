@@ -32,6 +32,7 @@ const composeIsTableExistQuery = (tableName: string) =>
       )`;
 
 export const populateDBSource = () => {
+  cleanDBSource();
   runDbQuery(createUsersTableQuery);
   runDbQuery(insertUsersTableQuery);
   runDbQuery(createCitiesTableQuery);

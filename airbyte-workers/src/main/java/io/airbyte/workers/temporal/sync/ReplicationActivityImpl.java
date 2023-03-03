@@ -68,6 +68,7 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.ProcessFactory;
@@ -113,6 +114,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final WorkerConfigs workerConfigs;
+  private final SyncPersistenceFactory syncPersistenceFactory;
 
   public ReplicationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                  @Named("replicationProcessFactory") final ProcessFactory processFactory,
@@ -129,7 +131,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final AirbyteMessageSerDeProvider serDeProvider,
                                  final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                  @Named("replicationWorkerConfigs") final WorkerConfigs workerConfigs,
-                                 final FeatureFlagClient featureFlagClient) {
+                                 final FeatureFlagClient featureFlagClient,
+                                 final SyncPersistenceFactory syncPersistenceFactory) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
@@ -146,6 +149,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.migratorFactory = migratorFactory;
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
+    this.syncPersistenceFactory = syncPersistenceFactory;
   }
 
   // Marking task queue as nullable because we changed activity signature; thus runs started before
@@ -199,7 +203,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                 workerConfigs);
           } else {
             workerFactory =
-                getLegacyWorkerFactory(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput);
+                getLegacyWorkerFactory(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, syncPersistenceFactory);
           }
 
           final TemporalAttemptExecution<StandardSyncInput, ReplicationOutput> temporalAttempt =
@@ -218,6 +222,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
           final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);
+          standardSyncOutput.setCommitStateAsap(syncInput.getCommitStateAsap());
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
@@ -286,7 +291,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                                                                                           final IntegrationLauncherConfig sourceLauncherConfig,
                                                                                                           final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                           final JobRunConfig jobRunConfig,
-                                                                                                          final StandardSyncInput syncInput) {
+                                                                                                          final StandardSyncInput syncInput,
+                                                                                                          final SyncPersistenceFactory syncPersistenceFactory) {
     return () -> {
       final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
           sourceLauncherConfig.getJobId(),
@@ -340,6 +346,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
           new AirbyteMessageTracker(featureFlags),
+          syncPersistenceFactory,
           new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(), WorkerUtils.mapStreamNamesToSchemas(syncInput)),
           metricReporter,
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi()),

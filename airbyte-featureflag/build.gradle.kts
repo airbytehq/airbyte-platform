@@ -4,8 +4,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     `java-library`
     `maven-publish`
-    kotlin("jvm") version "1.8.0"
-    kotlin("kapt") version "1.8.0"
+    kotlin("jvm") version "1.8.10"
+    kotlin("kapt") version "1.8.10"
 }
 
 dependencies {

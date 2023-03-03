@@ -17,8 +17,6 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.db.check.DatabaseCheckException;
 import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
@@ -186,9 +184,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private void initializeCommonDependencies()
       throws ExecutionException, InterruptedException, TimeoutException {
     log.info("Initializing common worker dependencies.");
-
-    // Initialize the metric client
-    MetricClientFactory.initialize(MetricEmittingApps.WORKER);
 
     // Configure logging client
     LogClientSingleton.getInstance().setWorkspaceMdc(workerEnvironment, logConfigs.orElseThrow(),

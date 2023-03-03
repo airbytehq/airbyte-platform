@@ -40,12 +40,10 @@ spec:
         image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
-        {{- if eq .Values.global.deploymentMode "oss"  }}
         - name: KUBE_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        {{- end }}
         {{- if .Values.containerSecurityContext }}
         securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
         {{- end }}

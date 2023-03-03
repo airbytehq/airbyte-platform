@@ -5,7 +5,7 @@ import styles from "./RemoveButton.module.scss";
 
 export const RemoveButton = ({ onClick }: { onClick: () => void }) => {
   return (
-    <button className={styles.removeButton} onClick={onClick}>
+    <button type="button" className={styles.removeButton} onClick={onClick}>
       <FontAwesomeIcon icon={faXmark} />
     </button>
   );

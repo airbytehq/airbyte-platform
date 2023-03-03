@@ -1,10 +1,10 @@
 import classNames from "classnames";
 import React from "react";
 
-import { H5 } from "components/base/Titles";
 import { Text } from "components/ui/Text";
 
 import styles from "./Card.module.scss";
+import { Heading } from "../Heading";
 import { InfoTooltip } from "../Tooltip";
 
 export interface CardProps {
@@ -42,7 +42,9 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
             [styles.withDescription]: description,
           })}
         >
-          <H5 className={classNames(styles.title)}>{title}</H5>
+          <Heading as="h5" className={classNames(styles.title)}>
+            {title}
+          </Heading>
           {description && (
             <InfoTooltip>
               <Text className={styles.infoTooltip} size="sm">

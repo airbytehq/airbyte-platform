@@ -144,6 +144,38 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "reset_request",
       "number of requested resets"),
 
+  STATE_BUFFERING(MetricEmittingApps.WORKER,
+      "state_buffering",
+      "number of state messages being buffered before a flush",
+      MetricTags.GEOGRAPHY),
+
+  STATE_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
+      "state_commit_attempt",
+      "number of attempts to commit states from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATE_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
+      "state_commit_attempt_failed",
+      "number of failed attempts to commit states from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATE_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "state_commit_attempt_successful",
+      "number of successful attempts to commit states from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATE_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
+      "state_commit_not_attempted",
+      "number of attempts to commit states dropped due to an early termination",
+      MetricTags.GEOGRAPHY),
+
+  @Deprecated
+  // To be deleted along with PersistStateActivity
+  STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
+      "state_commit_attempt_from_persist_state",
+      "number of attempts to commit states from the PersistState activity",
+      MetricTags.GEOGRAPHY),
+
   ATTEMPTS_CREATED(
       MetricEmittingApps.WORKER,
       "attempt_created",

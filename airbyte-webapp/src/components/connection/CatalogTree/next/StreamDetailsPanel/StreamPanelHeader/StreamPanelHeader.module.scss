@@ -6,14 +6,23 @@
   margin: variables.$spacing-md variables.$spacing-lg;
   background-color: colors.$grey-50;
 
-  & > :not(button) {
-    padding: variables.$spacing-md;
+  & > :not(.rightActions) {
+    padding-top: variables.$spacing-lg;
+    padding-bottom: variables.$spacing-lg;
   }
 }
 
 .leftActions,
 .rightActions {
   flex: 1 1 130px;
+}
+
+.leftActions {
+  padding-left: variables.$spacing-lg;
+}
+
+.rightActions {
+  padding-right: variables.$spacing-md;
 }
 
 .properties {

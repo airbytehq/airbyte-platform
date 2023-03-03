@@ -106,6 +106,7 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_1 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
+  public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 10800;
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -207,7 +208,8 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static StandardSourceDefinition grantableSourceDefinition1() {
@@ -221,7 +223,8 @@ public class MockData {
         .withIcon("icon-2")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static StandardSourceDefinition grantableSourceDefinition2() {
@@ -236,7 +239,8 @@ public class MockData {
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static StandardSourceDefinition customSourceDefinition() {
@@ -251,7 +255,8 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true);
+        .withCustom(true)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {
@@ -491,7 +496,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false);
 
     final StandardSync standardSync2 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_1, OPERATION_ID_2))
@@ -510,7 +515,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false);
 
     final StandardSync standardSync3 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_1, OPERATION_ID_2))
@@ -529,7 +534,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false);
 
     final StandardSync standardSync4 = new StandardSync()
         .withOperationIds(Collections.emptyList())
@@ -548,7 +553,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false);
 
     final StandardSync standardSync5 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_3))
@@ -567,7 +572,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false);
 
     final StandardSync standardSync6 = new StandardSync()
         .withOperationIds(Arrays.asList())
@@ -586,7 +591,7 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false);
 
     return Arrays.asList(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6);
   }

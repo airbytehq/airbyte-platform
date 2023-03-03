@@ -16,12 +16,15 @@ $container-right-space: variables.$spacing-xl * 2;
   width: calc(100% - (variables.$width-size-menu + $container-right-space));
   z-index: 1000;
   height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
   background: colors.$white;
   border-radius: variables.$border-radius-2xl variables.$border-radius-2xl 0 0;
   box-shadow: variables.$box-shadow-popup;
 }
 
 .tableContainer {
-  height: calc(100% - 64px);
+  flex: 1;
   overflow: auto;
+  padding-bottom: variables.$spacing-xl;
 }
