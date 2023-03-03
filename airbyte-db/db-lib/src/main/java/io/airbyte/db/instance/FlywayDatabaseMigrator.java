@@ -19,6 +19,9 @@ import org.flywaydb.core.api.output.MigrateResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Flyway migration.
+ */
 public class FlywayDatabaseMigrator implements DatabaseMigrator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FlywayDatabaseMigrator.class);

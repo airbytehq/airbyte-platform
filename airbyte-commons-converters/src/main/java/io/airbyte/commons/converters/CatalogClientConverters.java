@@ -28,9 +28,10 @@ import java.util.stream.Collectors;
 public class CatalogClientConverters {
 
   /**
+   * Convert to api model to airbyte protocol model.
    *
-   * @param catalog
-   * @return
+   * @param catalog api model
+   * @return catalog protocol model
    */
   public static io.airbyte.protocol.models.AirbyteCatalog toAirbyteProtocol(final io.airbyte.api.client.model.generated.AirbyteCatalog catalog) {
 
@@ -109,6 +110,7 @@ public class CatalogClientConverters {
   /**
    * Converts a protocol AirbyteCatalog to an OpenAPI client versioned AirbyteCatalog.
    */
+  @SuppressWarnings("LineLength")
   public static io.airbyte.api.client.model.generated.AirbyteCatalog toAirbyteCatalogClientApi(
                                                                                                final io.airbyte.protocol.models.AirbyteCatalog catalog) {
     return new io.airbyte.api.client.model.generated.AirbyteCatalog()
@@ -121,6 +123,7 @@ public class CatalogClientConverters {
             .collect(Collectors.toList()));
   }
 
+  @SuppressWarnings("LineLength")
   private static io.airbyte.api.client.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(
                                                                                                                final io.airbyte.api.client.model.generated.AirbyteStream stream) {
     final io.airbyte.api.client.model.generated.AirbyteStreamConfiguration result =
@@ -139,8 +142,7 @@ public class CatalogClientConverters {
     return result;
   }
 
-  private static io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(
-                                                                                              final AirbyteStream stream) {
+  private static io.airbyte.api.client.model.generated.AirbyteStream toAirbyteStreamClientApi(final AirbyteStream stream) {
     return new io.airbyte.api.client.model.generated.AirbyteStream()
         .name(stream.getName())
         .jsonSchema(stream.getJsonSchema())

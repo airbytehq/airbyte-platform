@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
+import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.text.Sqls;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
@@ -769,6 +769,7 @@ class DefaultJobPersistenceTest {
     return timeSupplier;
   }
 
+  @SuppressWarnings("LineLength")
   @Test
   @DisplayName("Should have valid yaml schemas in exported database")
   void testYamlSchemas() throws IOException {
@@ -851,8 +852,8 @@ class DefaultJobPersistenceTest {
     assertEquals(Optional.of(new AirbyteProtocolVersionRange(v1, v2)), range3);
   }
 
-  private long createJobAt(final Instant created_at) throws IOException {
-    when(timeSupplier.get()).thenReturn(created_at);
+  private long createJobAt(final Instant createdAt) throws IOException {
+    when(timeSupplier.get()).thenReturn(createdAt);
     return jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
   }
 
@@ -1916,14 +1917,14 @@ class DefaultJobPersistenceTest {
         throws IOException, SQLException {
       final Optional<Long> id = jobDatabase.query(
           ctx -> ctx.fetch(
-              "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) " +
-                  "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) " +
-                  "RETURNING id ",
-              Sqls.toSqlName(jobConfig.getConfigType()),
+              "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
+                  + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+                  + "RETURNING id ",
+              toSqlName(jobConfig.getConfigType()),
               scope,
               runDate,
               runDate,
-              Sqls.toSqlName(status),
+              toSqlName(status),
               Jsons.serialize(jobConfig)))
           .stream()
           .findFirst()
@@ -1949,7 +1950,7 @@ class DefaultJobPersistenceTest {
           job.getId(),
           job.getAttemptsCount(),
           logPath,
-          Sqls.toSqlName(AttemptStatus.FAILED),
+          toSqlName(AttemptStatus.FAILED),
           runDate,
           runDate,
           shouldHaveState ? attemptOutputWithState : attemptOutputWithoutState)
@@ -1964,11 +1965,11 @@ class DefaultJobPersistenceTest {
      * controlling deletion logic. Thus, the test case injects overrides for those constants, testing a
      * comprehensive set of combinations to make sure that the logic is robust to reasonable
      * configurations. Extreme configurations such as zero-day retention period are not covered.
-     *
+     * <p>
      * Business rules for deletions. 1. Job must be older than X days or its conn has excessive number
      * of jobs 2. Job cannot be one of the last N jobs on that conn (last N jobs are always kept). 3.
      * Job cannot be holding the most recent saved state (most recent saved state is always kept).
-     *
+     * <p>
      * Testing Goal: Set up jobs according to the parameters passed in. Then delete according to the
      * rules, and make sure the right number of jobs are left. Against one connection/scope,
      * <ol>
@@ -1997,7 +1998,6 @@ class DefaultJobPersistenceTest {
      *        parameters. This was calculated by a human based on understanding the requirements.
      * @param goalOfTestScenario Description of the purpose of that test scenario, so it's easier to
      *        maintain and understand failures.
-     *
      */
     @DisplayName("Should purge older job history but maintain certain more recent ones")
     @ParameterizedTest
@@ -2022,10 +2022,10 @@ class DefaultJobPersistenceTest {
                              final int expectedAfterPurge,
                              final String goalOfTestScenario)
         throws IOException, SQLException {
-      final String CURRENT_SCOPE = UUID.randomUUID().toString();
+      final String currentScope = UUID.randomUUID().toString();
 
       // Decoys - these jobs will help mess up bad sql queries, even though they shouldn't be deleted.
-      final String DECOY_SCOPE = UUID.randomUUID().toString();
+      final String decoyScope = UUID.randomUUID().toString();
 
       // Reconfigure constants to test various combinations of tuning knobs and make sure all work.
       final DefaultJobPersistence jobPersistence =
@@ -2040,8 +2040,8 @@ class DefaultJobPersistenceTest {
       final List<Job> allJobs = new ArrayList<>();
       final List<Job> decoyJobs = new ArrayList<>();
       for (int i = 0; i < numJobs; i++) {
-        allJobs.add(persistJobForJobHistoryTesting(CURRENT_SCOPE, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
-        decoyJobs.add(persistJobForJobHistoryTesting(DECOY_SCOPE, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
+        allJobs.add(persistJobForJobHistoryTesting(currentScope, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
+        decoyJobs.add(persistJobForJobHistoryTesting(decoyScope, SYNC_JOB_CONFIG, JobStatus.FAILED, fakeNow.minusDays(i)));
       }
 
       // At least one job should have state. Find the desired job and add state to it.
@@ -2058,7 +2058,7 @@ class DefaultJobPersistenceTest {
 
       // Execute the job history purge and check what jobs are left.
       ((DefaultJobPersistence) jobPersistence).purgeJobHistory(fakeNow);
-      final List<Job> afterPurge = jobPersistence.listJobs(ConfigType.SYNC, CURRENT_SCOPE, 9999, 0);
+      final List<Job> afterPurge = jobPersistence.listJobs(ConfigType.SYNC, currentScope, 9999, 0);
 
       // Test - contains expected number of jobs and no more than that
       assertEquals(expectedAfterPurge, afterPurge.size(), goalOfTestScenario + " - Incorrect number of jobs remain after deletion.");

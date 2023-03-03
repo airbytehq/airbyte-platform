@@ -25,7 +25,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
-import io.airbyte.commons.text.Sqls;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -76,6 +75,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -92,12 +92,15 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Encapsulates jobs db interactions for the Jobs / Attempts domain models.
+ */
 public class DefaultJobPersistence implements JobPersistence {
 
   // not static because job history test case manipulates these.
-  private final int JOB_HISTORY_MINIMUM_AGE_IN_DAYS;
-  private final int JOB_HISTORY_MINIMUM_RECENCY;
-  private final int JOB_HISTORY_EXCESSIVE_NUMBER_OF_JOBS;
+  private final int jobHistoryMinimumAgeInDays;
+  private final int jobHistoryMinimumRecency;
+  private final int jobHistoryExcessiveNumberOfJobs;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultJobPersistence.class);
   public static final String ATTEMPT_NUMBER = "attempt_number";
@@ -122,7 +125,7 @@ public class DefaultJobPersistence implements JobPersistence {
   public static final String LIMIT_1 = "LIMIT 1 ";
   private static final String JOB_STATUS_IS_NON_TERMINAL = String.format("status IN (%s) ",
       JobStatus.NON_TERMINAL_STATUSES.stream()
-          .map(Sqls::toSqlName)
+          .map(DefaultJobPersistence::toSqlName)
           .map(Names::singleQuote)
           .collect(Collectors.joining(",")));
 
@@ -137,9 +140,9 @@ public class DefaultJobPersistence implements JobPersistence {
                         final int minimumRecencyCount) {
     this.jobDatabase = new ExceptionWrappingDatabase(jobDatabase);
     this.timeSupplier = timeSupplier;
-    JOB_HISTORY_MINIMUM_AGE_IN_DAYS = minimumAgeInDays;
-    JOB_HISTORY_EXCESSIVE_NUMBER_OF_JOBS = excessiveNumberOfJobs;
-    JOB_HISTORY_MINIMUM_RECENCY = minimumRecencyCount;
+    jobHistoryMinimumAgeInDays = minimumAgeInDays;
+    jobHistoryExcessiveNumberOfJobs = excessiveNumberOfJobs;
+    jobHistoryMinimumRecency = minimumRecencyCount;
   }
 
   public DefaultJobPersistence(final Database jobDatabase) {
@@ -170,7 +173,15 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   /**
-   * @param scope This is the primary id of a standard sync (StandardSync#connectionId).
+   * Enqueue a job for a given scope (i.e. almost always at this point just means enqueue a sync or
+   * reset job for a connection).
+   *
+   * @param scope key that will be used to determine if two jobs should not be run at the same time;
+   *        it is the primary id of the standard sync (StandardSync#connectionId)
+   * @param jobConfig configuration for the job
+   * @return job id, if a job is enqueued. no job is enqueued if there is already a job of that type
+   *         in the queue.
+   * @throws IOException when interacting with the db
    */
   @Override
   public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig) throws IOException {
@@ -179,22 +190,22 @@ public class DefaultJobPersistence implements JobPersistence {
 
     final String queueingRequest = Job.REPLICATION_TYPES.contains(jobConfig.getConfigType())
         ? String.format("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE config_type IN (%s) AND scope = '%s' AND status NOT IN (%s)) ",
-            Job.REPLICATION_TYPES.stream().map(Sqls::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")),
+            Job.REPLICATION_TYPES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")),
             scope,
-            JobStatus.TERMINAL_STATUSES.stream().map(Sqls::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")))
+            JobStatus.TERMINAL_STATUSES.stream().map(DefaultJobPersistence::toSqlName).map(Names::singleQuote).collect(Collectors.joining(",")))
         : "";
 
     return jobDatabase.query(
         ctx -> ctx.fetch(
-            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) " +
-                "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) " +
-                queueingRequest +
-                "RETURNING id ",
-            Sqls.toSqlName(jobConfig.getConfigType()),
+            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
+                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+                + queueingRequest
+                + "RETURNING id ",
+            toSqlName(jobConfig.getConfigType()),
             scope,
             now,
             now,
-            Sqls.toSqlName(JobStatus.PENDING),
+            toSqlName(JobStatus.PENDING),
             Jsons.serialize(jobConfig)))
         .stream()
         .findFirst()
@@ -237,7 +248,7 @@ public class DefaultJobPersistence implements JobPersistence {
     job.validateStatusTransition(newStatus);
     ctx.execute(
         "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ?",
-        Sqls.toSqlName(newStatus),
+        toSqlName(newStatus),
         now,
         jobId);
   }
@@ -266,11 +277,12 @@ public class DefaultJobPersistence implements JobPersistence {
 
       // will fail if attempt number already exists for the job id.
       return ctx.fetch(
-          "INSERT INTO attempts(job_id, attempt_number, log_path, status, created_at, updated_at) VALUES(?, ?, ?, CAST(? AS ATTEMPT_STATUS), ?, ?) RETURNING attempt_number",
+          "INSERT INTO attempts(job_id, attempt_number, log_path, status, created_at, updated_at) "
+              + "VALUES(?, ?, ?, CAST(? AS ATTEMPT_STATUS), ?, ?) RETURNING attempt_number",
           jobId,
           job.getAttemptsCount(),
           logPath.toString(),
-          Sqls.toSqlName(AttemptStatus.RUNNING),
+          toSqlName(AttemptStatus.RUNNING),
           now,
           now)
           .stream()
@@ -289,7 +301,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
       ctx.execute(
           "UPDATE attempts SET status = CAST(? as ATTEMPT_STATUS), updated_at = ? , ended_at = ? WHERE job_id = ? AND attempt_number = ?",
-          Sqls.toSqlName(AttemptStatus.FAILED),
+          toSqlName(AttemptStatus.FAILED),
           now,
           now,
           jobId,
@@ -306,7 +318,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
       ctx.execute(
           "UPDATE attempts SET status = CAST(? as ATTEMPT_STATUS), updated_at = ? , ended_at = ? WHERE job_id = ? AND attempt_number = ?",
-          Sqls.toSqlName(AttemptStatus.SUCCEEDED),
+          toSqlName(AttemptStatus.SUCCEEDED),
           now,
           now,
           jobId,
@@ -681,7 +693,7 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Long getJobCount(final Set<ConfigType> configTypes, final String connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
-        .where(JOBS.CONFIG_TYPE.in(Sqls.toSqlNames(configTypes)))
+        .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .fetchOne().into(Long.class));
   }
@@ -695,7 +707,7 @@ public class DefaultJobPersistence implements JobPersistence {
   public List<Job> listJobs(final Set<ConfigType> configTypes, final String configId, final int pagesize, final int offset) throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
-          .where(JOBS.CONFIG_TYPE.in(Sqls.toSqlNames(configTypes)))
+          .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
           .and(JOBS.SCOPE.eq(configId))
           .orderBy(JOBS.CREATED_AT.desc(), JOBS.ID.desc())
           .limit(pagesize)
@@ -707,10 +719,20 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  public List<Job> listJobs(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
+    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, ZoneOffset.UTC);
+    return jobDatabase.query(ctx -> getJobsFromResult(ctx
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(config_type AS VARCHAR) =  ? AND "
+            + " attempts.ended_at > ? ORDER BY jobs.created_at ASC, attempts.created_at ASC", toSqlName(configType),
+            timeConvertedIntoLocalDateTime)));
+  }
+
+  @Override
   public List<Job> listJobsIncludingId(final Set<ConfigType> configTypes, final String connectionId, final long includingJobId, final int pagesize)
       throws IOException {
     final Optional<OffsetDateTime> includingJobCreatedAt = jobDatabase.query(ctx -> ctx.select(JOBS.CREATED_AT).from(JOBS)
-        .where(JOBS.CONFIG_TYPE.in(Sqls.toSqlNames(configTypes)))
+        .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .and(JOBS.ID.eq(includingJobId))
         .stream()
@@ -722,7 +744,7 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     final int countIncludingJob = jobDatabase.query(ctx -> ctx.selectCount().from(JOBS)
-        .where(JOBS.CONFIG_TYPE.in(Sqls.toSqlNames(configTypes)))
+        .where(JOBS.CONFIG_TYPE.in(toSqlNames(configTypes)))
         .and(JOBS.SCOPE.eq(connectionId))
         .and(JOBS.CREATED_AT.greaterOrEqual(includingJobCreatedAt.get()))
         .fetchOne().into(int.class));
@@ -740,11 +762,11 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public List<Job> listJobsWithStatus(final Set<ConfigType> configTypes, final JobStatus status) throws IOException {
     return jobDatabase.query(ctx -> getJobsFromResult(ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            "CAST(config_type AS VARCHAR) IN " + Sqls.toSqlInFragment(configTypes) + AND +
-            "CAST(jobs.status AS VARCHAR) = ? " +
-            ORDER_BY_JOB_TIME_ATTEMPT_TIME,
-            Sqls.toSqlName(status))));
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(config_type AS VARCHAR) IN " + toSqlInFragment(configTypes) + AND
+            + "CAST(jobs.status AS VARCHAR) = ? "
+            + ORDER_BY_JOB_TIME_ATTEMPT_TIME,
+            toSqlName(status))));
   }
 
   @Override
@@ -756,11 +778,11 @@ public class DefaultJobPersistence implements JobPersistence {
   public List<Job> listJobsForConnectionWithStatuses(final UUID connectionId, final Set<ConfigType> configTypes, final Set<JobStatus> statuses)
       throws IOException {
     return jobDatabase.query(ctx -> getJobsFromResult(ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            SCOPE_CLAUSE +
-            "config_type IN " + Sqls.toSqlInFragment(configTypes) + AND +
-            "jobs.status IN " + Sqls.toSqlInFragment(statuses) + " " +
-            ORDER_BY_JOB_TIME_ATTEMPT_TIME,
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + SCOPE_CLAUSE
+            + "config_type IN " + toSqlInFragment(configTypes) + AND
+            + "jobs.status IN " + toSqlInFragment(statuses) + " "
+            + ORDER_BY_JOB_TIME_ATTEMPT_TIME,
             connectionId.toString())));
   }
 
@@ -773,10 +795,10 @@ public class DefaultJobPersistence implements JobPersistence {
 
     final String JobStatusSelect = "SELECT id, status, created_at, updated_at FROM jobs ";
     return jobDatabase.query(ctx -> ctx
-        .fetch(JobStatusSelect + WHERE +
-            SCOPE_CLAUSE +
-            "CAST(config_type AS VARCHAR) in " + Sqls.toSqlInFragment(configTypes) + AND +
-            "created_at >= ? ORDER BY created_at DESC", connectionId.toString(), timeConvertedIntoLocalDateTime))
+        .fetch(JobStatusSelect + WHERE
+            + SCOPE_CLAUSE
+            + "CAST(config_type AS VARCHAR) in " + toSqlInFragment(configTypes) + AND
+            + "created_at >= ? ORDER BY created_at DESC", connectionId.toString(), timeConvertedIntoLocalDateTime))
         .stream()
         .map(r -> new JobWithStatusAndTimestamp(
             r.get("id", Long.class),
@@ -789,13 +811,13 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Job> getLastReplicationJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            "CAST(jobs.config_type AS VARCHAR) in " + Sqls.toSqlInFragment(Job.REPLICATION_TYPES) + AND +
-            SCOPE_CLAUSE +
-            "CAST(jobs.status AS VARCHAR) <> ? " +
-            ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+            + SCOPE_CLAUSE
+            + "CAST(jobs.status AS VARCHAR) <> ? "
+            + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString(),
-            Sqls.toSqlName(JobStatus.CANCELLED))
+            toSqlName(JobStatus.CANCELLED))
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
@@ -804,11 +826,11 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Job> getLastSyncJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            "CAST(jobs.config_type AS VARCHAR) = ? " + AND +
-            "scope = ? " +
-            ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
-            Sqls.toSqlName(ConfigType.SYNC),
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(jobs.config_type AS VARCHAR) = ? " + AND
+            + "scope = ? "
+            + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
+            toSqlName(ConfigType.SYNC),
             connectionId.toString())
         .stream()
         .findFirst()
@@ -830,7 +852,7 @@ public class DefaultJobPersistence implements JobPersistence {
             + WHERE + "CAST(jobs.config_type AS VARCHAR) = ? "
             + AND + scopeInList(connectionIds)
             + "ORDER BY scope, created_at DESC",
-            Sqls.toSqlName(ConfigType.SYNC))
+            toSqlName(ConfigType.SYNC))
         .stream()
         .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
         .collect(Collectors.toList()));
@@ -852,7 +874,7 @@ public class DefaultJobPersistence implements JobPersistence {
             + AND + scopeInList(connectionIds)
             + AND + JOB_STATUS_IS_NON_TERMINAL
             + "ORDER BY scope, created_at DESC",
-            Sqls.toSqlName(ConfigType.SYNC))
+            toSqlName(ConfigType.SYNC))
         .stream()
         .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class)).stream())
         .collect(Collectors.toList()));
@@ -869,13 +891,13 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Job> getFirstReplicationJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            "CAST(jobs.config_type AS VARCHAR) in " + Sqls.toSqlInFragment(Job.REPLICATION_TYPES) + AND +
-            SCOPE_CLAUSE +
-            "CAST(jobs.status AS VARCHAR) <> ? " +
-            "ORDER BY jobs.created_at ASC LIMIT 1",
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+            + SCOPE_CLAUSE
+            + "CAST(jobs.status AS VARCHAR) <> ? "
+            + "ORDER BY jobs.created_at ASC LIMIT 1",
             connectionId.toString(),
-            Sqls.toSqlName(JobStatus.CANCELLED))
+            toSqlName(JobStatus.CANCELLED))
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
@@ -888,23 +910,13 @@ public class DefaultJobPersistence implements JobPersistence {
     // 2. job is excluded if another job of the same scope is already running
     // 3. job is excluded if another job of the same scope is already incomplete
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            "CAST(jobs.status AS VARCHAR) = 'pending' AND " +
-            "jobs.scope NOT IN ( SELECT scope FROM jobs WHERE status = 'running' OR status = 'incomplete' ) " +
-            "ORDER BY jobs.created_at ASC LIMIT 1")
+        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
+            + "CAST(jobs.status AS VARCHAR) = 'pending' AND "
+            + "jobs.scope NOT IN ( SELECT scope FROM jobs WHERE status = 'running' OR status = 'incomplete' ) "
+            + "ORDER BY jobs.created_at ASC LIMIT 1")
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
-  }
-
-  @Override
-  public List<Job> listJobs(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
-    final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, ZoneOffset.UTC);
-    return jobDatabase.query(ctx -> getJobsFromResult(ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE +
-            "CAST(config_type AS VARCHAR) =  ? AND " +
-            " attempts.ended_at > ? ORDER BY jobs.created_at ASC, attempts.created_at ASC", Sqls.toSqlName(configType),
-            timeConvertedIntoLocalDateTime)));
   }
 
   @Override
@@ -912,7 +924,7 @@ public class DefaultJobPersistence implements JobPersistence {
     final LocalDateTime timeConvertedIntoLocalDateTime = LocalDateTime.ofInstant(attemptEndedAtTimestamp, ZoneOffset.UTC);
     return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
         BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + " attempts.ended_at > ? ORDER BY attempts.ended_at ASC",
-        Sqls.toSqlName(configType),
+        toSqlName(configType),
         timeConvertedIntoLocalDateTime)));
   }
 
@@ -1016,6 +1028,28 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobs;
   }
 
+  /**
+   * Generate a string fragment that can be put in the IN clause of a SQL statement. eg. column IN
+   * (value1, value2)
+   *
+   * @param values to encode
+   * @param <T> enum type
+   * @return "'value1', 'value2', 'value3'"
+   */
+  private static <T extends Enum<T>> String toSqlInFragment(final Iterable<T> values) {
+    return StreamSupport.stream(values.spliterator(), false).map(DefaultJobPersistence::toSqlName).map(Names::singleQuote)
+        .collect(Collectors.joining(",", "(", ")"));
+  }
+
+  @VisibleForTesting
+  static <T extends Enum<T>> String toSqlName(final T value) {
+    return value.name().toLowerCase();
+  }
+
+  private static <T extends Enum<T>> Set<String> toSqlNames(final Collection<T> values) {
+    return values.stream().map(DefaultJobPersistence::toSqlName).collect(Collectors.toSet());
+  }
+
   @VisibleForTesting
   static Optional<Job> getJobFromResult(final Result<Record> result) {
     return getJobsFromResult(result).stream().findFirst();
@@ -1025,7 +1059,7 @@ public class DefaultJobPersistence implements JobPersistence {
     return record.get(fieldName, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC);
   }
 
-  private final String SECRET_MIGRATION_STATUS = "secretMigration";
+  private static final String SECRET_MIGRATION_STATUS = "secretMigration";
 
   @Override
   public boolean isSecretMigrated() throws IOException {
@@ -1176,7 +1210,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   /**
-   * List tables from @param schema and @return their names
+   * List tables from @param schema and @return their names.
    */
   private List<String> listTables(final String schema) throws IOException {
     if (schema != null) {
@@ -1190,21 +1224,30 @@ public class DefaultJobPersistence implements JobPersistence {
     }
   }
 
+  /**
+   * Purge job history from N days ago. Only purge jobs that are not the last job for the connection.
+   */
   @Override
   public void purgeJobHistory() {
     purgeJobHistory(LocalDateTime.now());
   }
 
+  /**
+   * Purge job history from N days before a given date. Only purge jobs that are not the last job for
+   * the connection.
+   *
+   * @param asOfDate date to purge before
+   */
   @VisibleForTesting
   public void purgeJobHistory(final LocalDateTime asOfDate) {
     try {
-      final String JOB_HISTORY_PURGE_SQL = MoreResources.readResource("job_history_purge.sql");
+      final String jobHistoryPurgeSql = MoreResources.readResource("job_history_purge.sql");
       // interval '?' days cannot use a ? bind, so we're using %d instead.
-      final String sql = String.format(JOB_HISTORY_PURGE_SQL, (JOB_HISTORY_MINIMUM_AGE_IN_DAYS - 1));
+      final String sql = String.format(jobHistoryPurgeSql, (jobHistoryMinimumAgeInDays - 1));
       jobDatabase.query(ctx -> ctx.execute(sql,
           asOfDate.format(DateTimeFormatter.ofPattern("YYYY-MM-dd")),
-          JOB_HISTORY_EXCESSIVE_NUMBER_OF_JOBS,
-          JOB_HISTORY_MINIMUM_RECENCY));
+          jobHistoryExcessiveNumberOfJobs,
+          jobHistoryMinimumRecency));
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -1218,7 +1261,7 @@ public class DefaultJobPersistence implements JobPersistence {
             .filter(f -> "jsonb".equals(f.getDataType().getTypeName()))
             .map(Field::getName)
             .collect(Collectors.toSet());
-        final JsonNode row = Jsons.deserialize(record.formatJSON(JdbcUtils.getDefaultJSONFormat()));
+        final JsonNode row = Jsons.deserialize(record.formatJSON(JdbcUtils.getDefaultJsonFormat()));
         // for json fields, deserialize them so they are treated as objects instead of strings. this is to
         // get around that formatJson doesn't handle deserializing them for us.
         jsonFieldNames.forEach(jsonFieldName -> ((ObjectNode) row).replace(jsonFieldName, Jsons.deserialize(row.get(jsonFieldName).asText())));
@@ -1227,11 +1270,31 @@ public class DefaultJobPersistence implements JobPersistence {
     }
   }
 
+  // todo (cgardens) unused?
+
+  /**
+   * Import a jobs database.
+   *
+   * @param airbyteVersion is the version of the files to be imported and should match the Airbyte
+   *        version in the Database.
+   * @param data is a Map of table schemas to the associated streams of records to import.
+   * @throws IOException when accessing db
+   */
+  @Deprecated
   @Override
   public void importDatabase(final String airbyteVersion, final Map<JobsDatabaseSchema, Stream<JsonNode>> data) throws IOException {
     importDatabase(airbyteVersion, DEFAULT_SCHEMA, data, false);
   }
 
+  /**
+   * Import a jobs database.
+   *
+   * @param airbyteVersion airbyte version at time of import
+   * @param targetSchema schema to put the db in
+   * @param data data to import
+   * @param incrementalImport is increment import
+   * @throws IOException when accessing db
+   */
   private void importDatabase(final String airbyteVersion,
                               final String targetSchema,
                               final Map<JobsDatabaseSchema, Stream<JsonNode>> data,
@@ -1257,13 +1320,24 @@ public class DefaultJobPersistence implements JobPersistence {
     // TODO write "import success vXX on now()" to audit log table?
   }
 
+  /**
+   * Create a schema in the db.
+   *
+   * @param schema name of schema
+   * @throws IOException when interacting with db
+   */
   private void createSchema(final String schema) throws IOException {
     jobDatabase.query(ctx -> ctx.createSchemaIfNotExists(schema).execute());
   }
 
   /**
    * In a single transaction, truncate all @param tables from @param schema, making backup copies
-   * in @param backupSchema
+   * in @param backupSchema.
+   *
+   * @param ctx db context
+   * @param schema schema of table
+   * @param tableName name of table
+   * @param backupSchema schema to back up table to
    */
   private static void truncateTable(final DSLContext ctx, final String schema, final String tableName, final String backupSchema) {
     final Table<Record> tableSql = getTable(schema, tableName);
@@ -1273,9 +1347,18 @@ public class DefaultJobPersistence implements JobPersistence {
     ctx.truncateTable(tableSql).restartIdentity().cascade().execute();
   }
 
+  // TODO: we need version specific importers to copy data to the database. Issue: #5682.
+  // todo (cgardens) unused?
+
   /**
-   * TODO: we need version specific importers to copy data to the database. Issue: #5682.
+   * Import stream of records into a table.
+   *
+   * @param ctx db context
+   * @param schema schema of table
+   * @param tableType table type
+   * @param jsonStream stream of records
    */
+  @Deprecated
   private static void importTable(final DSLContext ctx, final String schema, final JobsDatabaseSchema tableType, final Stream<JsonNode> jsonStream) {
     LOGGER.info("Importing table {} from archive into database.", tableType.name());
     final Table<Record> tableSql = getTable(schema, tableType.name());
@@ -1308,8 +1391,9 @@ public class DefaultJobPersistence implements JobPersistence {
         }
       });
       final Optional<Field<?>> idColumn = columns.stream().filter(f -> "id".equals(f.getName())).findFirst();
-      if (idColumn.isPresent())
+      if (idColumn.isPresent()) {
         resetIdentityColumn(ctx, schema, tableType);
+      }
     }
   }
 
@@ -1318,8 +1402,12 @@ public class DefaultJobPersistence implements JobPersistence {
    * auto-incremented ID for each new record. When importing batch of records from outside of the DB,
    * we need to update Postgres Internal state to continue auto-incrementing from the latest value or
    * we would risk to violate primary key constraints by inserting new records with duplicate ids.
-   *
+   * <p>
    * This function reset such Identity states (called SQL Sequence objects).
+   *
+   * @param ctx db context
+   * @param schema schema table is in
+   * @param tableType name of table
    */
   private static void resetIdentityColumn(final DSLContext ctx, final String schema, final JobsDatabaseSchema tableType) {
     final Result<Record> result = ctx.fetch(String.format("SELECT MAX(id) FROM %s.%s", schema, tableType.name()));
@@ -1335,7 +1423,10 @@ public class DefaultJobPersistence implements JobPersistence {
 
   /**
    * Insert records into the metadata table to keep track of import Events that were applied on the
-   * database. Update and overwrite the corresponding @param airbyteVersion.
+   * database. Update and overwrite the corresponding
+   *
+   * @param ctx db context
+   * @param airbyteVersion to set in the metadata table
    */
   private static void registerImportMetadata(final DSLContext ctx, final String airbyteVersion) {
     ctx.execute(String.format("INSERT INTO %s VALUES('%s_import_db', '%s');", AIRBYTE_METADATA_TABLE, current_timestamp(), airbyteVersion));
@@ -1348,7 +1439,11 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   /**
-   * Read @param jsonSchema and @returns a list of properties (converted as Field objects)
+   * Get top-level field names of an object. Read jsonSchema and @returns a list of properties
+   * (converted as Field objects)
+   *
+   * @param jsonSchema object whose field names to extract
+   * @return top-level field names
    */
   @SuppressWarnings("PMD.ForLoopCanBeForeach")
   private static List<Field<?>> getFields(final JsonNode jsonSchema) {
@@ -1362,7 +1457,11 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   /**
-   * @return Java Values for the @param columnName in @param jsonNode
+   * Get JSON value from a field in a json object.
+   *
+   * @param jsonNode object from which to extract value
+   * @param columnName name of key to extract
+   * @return Java Values for the @param columnName in jsonNode
    */
   private static Object getJsonNodeValue(final JsonNode jsonNode, final String columnName) {
     if (!jsonNode.has(columnName)) {

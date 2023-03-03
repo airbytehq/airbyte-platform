@@ -18,9 +18,13 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-// NOTE: we suppress this warning because PMD thinks it can be a foreach loop in toApiReads but the
-// compiler disagrees.
-@SuppressWarnings("PMD.ForLoopCanBeForeach")
+/**
+ * Convert between API and internal versions of notification models.
+ *
+ * NOTE: we suppress this warning because PMD thinks it can be a foreach loop in toApiReads but the
+ * compiler disagrees.
+ */
+@SuppressWarnings({"PMD.ForLoopCanBeForeach", "MissingJavadocMethod", "LineLength"})
 public class WorkspaceWebhookConfigsConverter {
 
   public static JsonNode toPersistenceWrite(List<WebhookConfigWrite> apiWebhookConfigs, Supplier<UUID> uuidSupplier) {

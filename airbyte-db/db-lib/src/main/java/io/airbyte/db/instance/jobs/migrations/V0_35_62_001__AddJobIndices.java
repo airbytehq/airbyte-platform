@@ -11,6 +11,9 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add indices to jobs table.
+ */
 public class V0_35_62_001__AddJobIndices extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_35_62_001__AddJobIndices.class);

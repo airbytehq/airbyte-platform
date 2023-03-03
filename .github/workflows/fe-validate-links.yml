@@ -33,7 +33,7 @@ jobs:
           EOF
 
       - name: Run :airbyte-webapp:validateLinks
-        run: SUB_BUILD=PLATFORM ./gradlew --no-daemon :airbyte-webapp:validateLinks --scan
+        run: ./gradlew --no-daemon :airbyte-webapp:validateLinks --scan
 
       - name: Publish Failures to dev-frontend channel
         uses: abinoda/slack-action@master

@@ -60,6 +60,7 @@ public interface SecretsTestCase {
     return Jsons.deserialize(MoreResources.readResource(testCase + "/" + fileName));
   }
 
+  @SuppressWarnings("MissingJavadocMethod")
   default List<String> getExpectedSecretsPaths() throws IOException {
     return Arrays.stream(
         MoreResources.readResource(getName() + "/" + "expectedPaths")

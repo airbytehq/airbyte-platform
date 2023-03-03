@@ -9,6 +9,9 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import java.io.IOException;
 
+/**
+ * Serialize a {@link Version}.
+ */
 public class VersionSerializer extends StdSerializer<Version> {
 
   public VersionSerializer() {

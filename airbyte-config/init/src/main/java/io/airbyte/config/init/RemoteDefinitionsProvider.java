@@ -105,6 +105,11 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     return new ArrayList<>(getDestinationDefinitionsMap().values());
   }
 
+  /**
+   * Get remote definition catalog.
+   *
+   * @return combined catalog
+   */
   @Cacheable
   public CombinedConnectorCatalog getRemoteDefinitionCatalog() {
     try {

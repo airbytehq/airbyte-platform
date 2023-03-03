@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
  * JSONPath is specification for querying JSON objects. More information about the specification can
  * be found here: https://goessner.net/articles/JsonPath/. For those familiar with jq, JSONPath will
  * be most recognizable as "that DSL that jq uses".
- *
+ * <p>
  * We use a java implementation of this specification (repo: https://github.com/json-path/JsonPath).
  * This class wraps that implementation to make it easier to leverage this tool internally.
- *
+ * <p>
  * GOTCHA: Keep in mind with JSONPath, depending on the query, 0, 1, or N values may be returned.
  * The pattern for handling return values is very much like writing SQL queries. When using it, you
  * must consider what the number of return values for your query might be. e.g. for this object: {
@@ -121,7 +121,7 @@ public class JsonPaths {
    *
    * @param jsonPath - path to validate
    */
-  public static void assertIsJsonPath(final String jsonPath) {
+  private static void assertIsJsonPath(final String jsonPath) {
     Preconditions.checkArgument(jsonPath.startsWith("$"));
   }
 
@@ -131,13 +131,13 @@ public class JsonPaths {
    *
    * @param jsonPath - path to validate
    */
-  public static void assertIsSingleReturnQuery(final String jsonPath) {
+  private static void assertIsSingleReturnQuery(final String jsonPath) {
     Preconditions.checkArgument(JsonPath.isPathDefinite(jsonPath), "Cannot accept paths with wildcards because they may return more than one item.");
   }
 
   /**
    * Given a JSONPath, returns all the values that match that path.
-   *
+   * <p>
    * e.g. for this object: { "alpha": [1, 2, 3] }, if the input JSONPath were "$.alpha[*]", this
    * function would return: [1, 2, 3].
    *
@@ -145,13 +145,13 @@ public class JsonPaths {
    * @param jsonPath - path into the json object. must be in the format of JSONPath.
    * @return all values that match the input query
    */
-  public static List<JsonNode> getValues(final JsonNode json, final String jsonPath) {
+  private static List<JsonNode> getValues(final JsonNode json, final String jsonPath) {
     return getInternal(Configuration.defaultConfiguration(), json, jsonPath);
   }
 
   /**
    * Given a JSONPath, returns all the path of all values that match that path.
-   *
+   * <p>
    * e.g. for this object: { "alpha": [1, 2, 3] }, if the input JSONPath were "$.alpha[*]", this
    * function would return: ["$.alpha[0]", "$.alpha[1]", "$.alpha[2]"].
    *
@@ -165,7 +165,7 @@ public class JsonPaths {
    *         specifically that said, we do expect that there will be no duplicates in the returned
    *         list.
    */
-  public static List<String> getPaths(final JsonNode json, final String jsonPath) {
+  private static List<String> getPaths(final JsonNode json, final String jsonPath) {
     return getInternal(GET_PATHS_CONFIGURATION, json, jsonPath)
         .stream()
         .map(JsonNode::asText)
@@ -175,7 +175,7 @@ public class JsonPaths {
   /**
    * Given a JSONPath, returns 1 or 0 values that match the path. Throws if more than 1 value is
    * found.
-   *
+   * <p>
    * THIS SHOULD ONLY BE USED IF THE JSONPATH CAN ONLY EVER RETURN 0 OR 1 VALUES. e.g. don't do
    * "$.alpha[*]"
    *
@@ -190,39 +190,6 @@ public class JsonPaths {
 
     Preconditions.checkState(jsonNodes.size() <= 1, String.format("Path returned more than one item. path: %s items: %s", jsonPath, jsonNodes));
     return jsonNodes.isEmpty() ? Optional.empty() : Optional.of(jsonNodes.get(0));
-  }
-
-  /**
-   * Given a JSONPath, true if path is present in the object, otherwise false. Throws is more than 1
-   * path is found.
-   *
-   * THIS SHOULD ONLY BE USED IF THE JSONPATH CAN ONLY EVER RETURN 0 OR 1 VALUES. e.g. don't do
-   * "$.alpha[*]"
-   *
-   * @param json - json object
-   * @param jsonPath - path into the json object. must be in the format of JSONPath.
-   * @return true if path is present in the object, otherwise false.
-   */
-  public static boolean isPathPresent(final JsonNode json, final String jsonPath) {
-    assertIsSingleReturnQuery(jsonPath);
-
-    final List<String> foundPaths = getPaths(json, jsonPath);
-
-    Preconditions.checkState(foundPaths.size() <= 1, String.format("Path returned more than one item. path: %s items: %s", jsonPath, foundPaths));
-    return !foundPaths.isEmpty();
-  }
-
-  /**
-   * Traverses into a json object and replaces all values that match the input path with the provided
-   * string. Throws if no existing fields match the path.
-   *
-   * @param json - json object
-   * @param jsonPath - path into the json object. must be in the format of JSONPath.
-   * @param replacement - a string value to replace the current value at the jsonPath
-   * @throws PathNotFoundException throws if the path is not present in the object
-   */
-  public static JsonNode replaceAtStringLoud(final JsonNode json, final String jsonPath, final String replacement) {
-    return replaceAtJsonNodeLoud(json, jsonPath, Jsons.jsonNode(replacement));
   }
 
   /**
@@ -258,7 +225,7 @@ public class JsonPaths {
    * @param jsonPath - path into the json object. must be in the format of JSONPath.
    * @param replacement - a json node to replace the current value at the jsonPath
    */
-  public static JsonNode replaceAtJsonNode(final JsonNode json, final String jsonPath, final JsonNode replacement) {
+  private static JsonNode replaceAtJsonNode(final JsonNode json, final String jsonPath, final JsonNode replacement) {
     try {
       return replaceAtJsonNodeLoud(json, jsonPath, replacement);
     } catch (final PathNotFoundException e) {
@@ -291,6 +258,7 @@ public class JsonPaths {
   }
 
   /**
+   * Get values at a JSONPath.
    *
    * @param conf - JsonPath configuration. Primarily used to reuse code to allow fetching values or
    *        paths from a json object

@@ -30,6 +30,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Factory for creating a Docker Process resource.
+ */
 public class DockerProcessFactory implements ProcessFactory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DockerProcessFactory.class);
@@ -69,9 +72,9 @@ public class DockerProcessFactory implements ProcessFactory {
 
   private static Path prepareImageExistsScript() {
     try {
-      final Path basePath = Files.createTempDirectory("scripts");
+      final Path scriptPath = Files.createTempDirectory("scripts").resolve(IMAGE_EXISTS_SCRIPT);
       final String scriptContents = MoreResources.readResource(IMAGE_EXISTS_SCRIPT);
-      final Path scriptPath = IOs.writeFile(basePath, IMAGE_EXISTS_SCRIPT, scriptContents);
+      IOs.writeFile(scriptPath, scriptContents);
       if (!scriptPath.toFile().setExecutable(true)) {
         throw new RuntimeException(String.format("Could not set %s to executable", scriptPath));
       }
@@ -108,7 +111,7 @@ public class DockerProcessFactory implements ProcessFactory {
       }
 
       for (final Map.Entry<String, String> file : files.entrySet()) {
-        IOs.writeFile(jobRoot, file.getKey(), file.getValue());
+        IOs.writeFile(jobRoot.resolve(file.getKey()), file.getValue());
       }
 
       final List<String> cmd = Lists.newArrayList(

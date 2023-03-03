@@ -589,8 +589,8 @@ function builderStreamToDeclarativeSteam(
       type: "SimpleRetriever",
       requester: {
         type: "HttpRequester",
-        url_base: values.global?.urlBase,
-        path: stream.urlPath,
+        url_base: values.global?.urlBase.trim(),
+        path: stream.urlPath.trim(),
         http_method: stream.httpMethod,
         request_parameters: Object.fromEntries(stream.requestOptions.requestParameters),
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),

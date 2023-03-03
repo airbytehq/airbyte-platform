@@ -19,32 +19,46 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.stream.Stream;
 
+/**
+ * Common code for operations on a java Resource.
+ */
 public class MoreResources {
 
-  private static final String UNSTABLE_API_USAGE = "UnstableApiUsage";
-
-  @SuppressWarnings(UNSTABLE_API_USAGE)
-  public static String readResource(final String name) throws IOException {
-    final URL resource = Resources.getResource(name);
+  /**
+   * Read a java Resource entirely into a string.
+   *
+   * @param resourceName name of resource
+   * @return contents of the resource as a string
+   * @throws IOException throw if failure while reading resource
+   */
+  public static String readResource(final String resourceName) throws IOException {
+    final URL resource = Resources.getResource(resourceName);
     return Resources.toString(resource, StandardCharsets.UTF_8);
   }
 
-  @SuppressWarnings(UNSTABLE_API_USAGE)
-  public static String readResource(final Class<?> klass, final String name) throws IOException {
-    final String rootedName = !name.startsWith("/") ? String.format("/%s", name) : name;
+  /**
+   * Read a java Resource entirely into a string.
+   *
+   * @param klass class that resource is attached to
+   * @param resourceName name of resource
+   * @return contents of the resource as a string
+   * @throws IOException throw if failure while reading resource
+   */
+  public static String readResource(final Class<?> klass, final String resourceName) throws IOException {
+    final String rootedName = !resourceName.startsWith("/") ? String.format("/%s", resourceName) : resourceName;
     final URL url = Resources.getResource(klass, rootedName);
     return Resources.toString(url, StandardCharsets.UTF_8);
   }
 
-  @SuppressWarnings(UNSTABLE_API_USAGE)
-  public static File readResourceAsFile(final String name) throws URISyntaxException {
-    return new File(Resources.getResource(name).toURI());
-  }
-
-  @SuppressWarnings(UNSTABLE_API_USAGE)
-  public static byte[] readBytes(final String name) throws IOException {
-    final URL resource = Resources.getResource(name);
-    return Resources.toByteArray(resource);
+  /**
+   * Access a java Resource as a file.
+   *
+   * @param resourceName name of resource
+   * @return file handle to the Resource
+   * @throws URISyntaxException throw if failure while creating file handle
+   */
+  public static File readResourceAsFile(final String resourceName) throws URISyntaxException {
+    return new File(Resources.getResource(resourceName).toURI());
   }
 
   /**

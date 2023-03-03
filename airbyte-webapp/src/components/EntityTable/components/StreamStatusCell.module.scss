@@ -1,0 +1,85 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.bar {
+  width: 100%;
+  max-width: 370px;
+  height: 23px;
+  border-radius: variables.$border-radius-xs;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  gap: 1px;
+
+  .filling {
+    width: 100%;
+    height: 100%;
+
+    &.onTrack {
+      background: colors.$green;
+    }
+
+    &.behind {
+      background: colors.$blue;
+    }
+
+    &.error {
+      background: colors.$red;
+    }
+
+    &.disabled {
+      background: colors.$grey;
+    }
+  }
+}
+
+$contentPadding: 40px;
+
+.tooltipContainer {
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .bar {
+    padding: 0 $contentPadding;
+    margin-bottom: variables.$spacing-md;
+  }
+
+  .tooltipContent {
+    display: flex;
+    align-items: center;
+    padding: 0 $contentPadding;
+    width: 100%;
+
+    .streamsDetail {
+      display: flex;
+      align-items: center;
+      gap: variables.$spacing-sm;
+      flex: 1;
+    }
+
+    .syncContainer {
+      display: flex;
+      align-items: center;
+    }
+  }
+}
+
+// TODO: This could be added to the upcoming Icon component!
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(359deg);
+  }
+}
+
+.syncing {
+  animation-name: spin;
+  animation-duration: 2000ms;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}

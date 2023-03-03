@@ -5,15 +5,17 @@
 package io.airbyte.config.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.io.IOs;
+import com.google.common.base.Charsets;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,7 @@ public class LogClientSingleton {
   private static LogClientSingleton instance;
 
   @VisibleForTesting
-  final static int LOG_TAIL_SIZE = 1000000;
+  static final int LOG_TAIL_SIZE = 1000000;
   @VisibleForTesting
   CloudLogs logClient;
 
@@ -61,6 +63,11 @@ public class LogClientSingleton {
   public static final String APP_LOGGING_CLOUD_PREFIX = "app-logging";
   public static final String JOB_LOGGING_CLOUD_PREFIX = "job-logging";
 
+  /**
+   * Get log client.
+   *
+   * @return log client
+   */
   public static synchronized LogClientSingleton getInstance() {
     if (instance == null) {
       instance = new LogClientSingleton();
@@ -68,14 +75,34 @@ public class LogClientSingleton {
     return instance;
   }
 
+  /**
+   * Get server log root.
+   *
+   * @param workspaceRoot workspace root dir
+   * @return server log path
+   */
   public Path getServerLogsRoot(final Path workspaceRoot) {
     return workspaceRoot.resolve("server/logs");
   }
 
+  /**
+   * Get scheduler log root.
+   *
+   * @param workspaceRoot workspace root dir
+   * @return scheduler log path
+   */
   public Path getSchedulerLogsRoot(final Path workspaceRoot) {
     return workspaceRoot.resolve("scheduler/logs");
   }
 
+  /**
+   * Get server log file.
+   *
+   * @param workspaceRoot workspace root dir
+   * @param workerEnvironment worker type
+   * @param logConfigs log configs
+   * @return server log
+   */
   public File getServerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       return getServerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
@@ -89,6 +116,14 @@ public class LogClientSingleton {
     }
   }
 
+  /**
+   * Get scheduler log file.
+   *
+   * @param workspaceRoot root dir of workspace
+   * @param workerEnvironment worker type
+   * @param logConfigs configuration of logs
+   * @return scheduler log file
+   */
   public File getSchedulerLogFile(final Path workspaceRoot, final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       return getSchedulerLogsRoot(workspaceRoot).resolve(LOG_FILENAME).toFile();
@@ -103,13 +138,22 @@ public class LogClientSingleton {
     }
   }
 
+  /**
+   * Tail log file.
+   *
+   * @param workerEnvironment environment of worker.
+   * @param logConfigs configuration for logs
+   * @param logPath log path
+   * @return last lines in file
+   * @throws IOException exception while accessing logs
+   */
   public List<String> getJobLogFile(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path logPath) throws IOException {
     if (logPath == null || logPath.equals(Path.of(""))) {
       return Collections.emptyList();
     }
 
     if (shouldUseLocalLogs(workerEnvironment)) {
-      return IOs.getTail(LOG_TAIL_SIZE, logPath);
+      return getTail(logPath, LOG_TAIL_SIZE);
     }
 
     final var cloudLogPath = sanitisePath(JOB_LOGGING_CLOUD_PREFIX, logPath);
@@ -134,6 +178,13 @@ public class LogClientSingleton {
     logClient.deleteLogs(logConfigs, cloudLogPath);
   }
 
+  /**
+   * Set job MDC.
+   *
+   * @param workerEnvironment environment of worker.
+   * @param logConfigs configuration for logs
+   * @param path log path
+   */
   public void setJobMdc(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path path) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker job mdc");
@@ -146,6 +197,13 @@ public class LogClientSingleton {
     }
   }
 
+  /**
+   * Set workspace MDC.
+   *
+   * @param workerEnvironment environment of worker.
+   * @param logConfigs configuration for logs
+   * @param path log path
+   */
   public void setWorkspaceMdc(final WorkerEnvironment workerEnvironment, final LogConfigs logConfigs, final Path path) {
     if (shouldUseLocalLogs(workerEnvironment)) {
       LOGGER.debug("Setting docker workspace mdc");
@@ -174,6 +232,40 @@ public class LogClientSingleton {
    */
   private static String sanitisePath(final String prefix, final Path path) {
     return Paths.get(prefix, path.toString()).toString();
+  }
+
+  /**
+   * Read last N lines from a file into a list of string. Each element is a separate line from the
+   * file.
+   *
+   * @param path path of file with file name
+   * @param numLines number of lines to read
+   * @return list of strings where each element is a separate line from the file.
+   * @throws IOException exception while reading the file
+   */
+  private static List<String> getTail(final Path path, final int numLines) throws IOException {
+    if (path == null) {
+      return Collections.emptyList();
+    }
+
+    final File file = path.toFile();
+    if (!file.exists()) {
+      return Collections.emptyList();
+    }
+
+    try (final ReversedLinesFileReader fileReader = new ReversedLinesFileReader(file, Charsets.UTF_8)) {
+      final List<String> lines = new ArrayList<>();
+
+      String line = fileReader.readLine();
+      while (line != null && lines.size() < numLines) {
+        lines.add(line);
+        line = fileReader.readLine();
+      }
+
+      Collections.reverse(lines);
+
+      return lines;
+    }
   }
 
 }

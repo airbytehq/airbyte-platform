@@ -14,10 +14,13 @@ import org.jooq.Record;
 import org.jooq.TableField;
 import org.jooq.impl.TableImpl;
 
+/**
+ * Helpers for interacting with the db.
+ */
 public class PersistenceHelpers {
 
   /**
-   * Helper function to handle null or equal case for the optional strings
+   * Helper function to handle null or equal case for the optional strings.
    *
    * We need to have an explicit check for null values because NULL != "str" is NULL, not a boolean.
    *
@@ -30,7 +33,7 @@ public class PersistenceHelpers {
   }
 
   /**
-   * Helper to delete records from the database
+   * Helper to delete records from the database.
    *
    * @param table the table to delete from
    * @param keyColumn the column to use as a key
