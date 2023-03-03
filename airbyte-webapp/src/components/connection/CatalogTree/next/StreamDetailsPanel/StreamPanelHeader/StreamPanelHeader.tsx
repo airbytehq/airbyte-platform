@@ -19,17 +19,18 @@ interface StreamPanelHeaderProps {
   stream?: AirbyteStream;
 }
 
-interface SomethingProps {
+interface StreamPropertyProps {
   messageId: string;
   value?: string | ReactNode;
+  "data-testid"?: string;
 }
 
-export const StreamProperty: React.FC<SomethingProps> = ({ messageId, value }) => (
-  <span>
-    <Text size="sm" className={styles.streamPropLabel}>
+export const StreamProperty: React.FC<StreamPropertyProps> = ({ messageId, value, "data-testid": testId }) => (
+  <span data-testid={testId}>
+    <Text size="sm" className={styles.streamPropLabel} data-testid={testId ? `${testId}-label` : undefined}>
       <FormattedMessage id={messageId} />
     </Text>
-    <Text size="md" className={styles.streamPropValue}>
+    <Text size="md" className={styles.streamPropValue} data-testid={testId ? `${testId}-value` : undefined}>
       {value}
     </Text>
   </span>
@@ -50,9 +51,20 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
     </>
   );
   return (
-    <FlexContainer className={styles.container} justifyContent="space-between" alignItems="center">
+    <FlexContainer
+      className={styles.container}
+      justifyContent="space-between"
+      alignItems="center"
+      data-testid="stream-details-header"
+    >
       <FlexContainer gap="md" alignItems="center" className={styles.leftActions}>
-        <Switch size="sm" checked={config?.selected} onChange={onSelectedChange} disabled={disabled} />
+        <Switch
+          size="sm"
+          checked={config?.selected}
+          onChange={onSelectedChange}
+          disabled={disabled}
+          data-testid="stream-details-sync-stream-switch"
+        />
         <Text color="grey300" size="xs">
           <FormattedMessage id="form.stream.sync" />
         </Text>
@@ -61,9 +73,10 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
         <StreamProperty
           messageId="form.namespace"
           value={stream?.namespace ?? <FormattedMessage id="form.noNamespace" />}
+          data-testid="stream-details-namespace"
         />
-        <StreamProperty messageId="form.streamName" value={stream?.name} />
-        <StreamProperty messageId="form.syncMode" value={syncMode} />
+        <StreamProperty messageId="form.streamName" value={stream?.name} data-testid="stream-details-stream-name" />
+        <StreamProperty messageId="form.syncMode" value={syncMode} data-testid="stream-details-sync-mode" />
       </FlexContainer>
       <FlexContainer className={styles.rightActions} justifyContent="flex-end">
         <Button
@@ -71,7 +84,7 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
           onClick={onClose}
           className={styles.crossIcon}
           icon={<CrossIcon />}
-          data-testid="stream-panel-close-button"
+          data-testid="stream-details-close-button"
         />
       </FlexContainer>
     </FlexContainer>
