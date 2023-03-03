@@ -137,7 +137,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   tooltip="Set the size of each page"
                   optional
                 />
-                {pageSizeField.value && pageSizeField.value !== "" && (
+                {pageSizeField.value !== undefined && pageSizeField.value !== "" && (
                   <PageSizeOption label="page size" streamFieldPath={streamFieldPath} />
                 )}
                 <PageTokenOption label="cursor value" streamFieldPath={streamFieldPath} />

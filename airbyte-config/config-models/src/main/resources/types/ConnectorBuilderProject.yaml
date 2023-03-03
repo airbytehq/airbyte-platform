@@ -21,6 +21,8 @@ properties:
   actorDefinitionId:
     type: string
     format: uuid
+  hasDraft:
+    type: boolean
   tombstone:
     type: boolean
   manifestDraft:

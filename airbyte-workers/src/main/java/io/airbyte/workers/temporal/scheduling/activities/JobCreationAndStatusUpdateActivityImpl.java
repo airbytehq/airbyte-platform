@@ -15,12 +15,12 @@ import static io.airbyte.persistence.job.models.AttemptStatus.FAILED;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
-import io.airbyte.commons.util.MoreLists;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -77,6 +77,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -477,17 +478,34 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     final List<MetricAttribute> baseMetricAttributes = List.of(
         new MetricAttribute(MetricTags.GEOGRAPHY, geography == null ? null : geography.toString()),
         new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parseAttemptNumberOrNull(attemptNumber)),
-        new MetricAttribute(MetricTags.MIN_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(MoreLists.getOrNull(releaseStagesOrdered, 0))),
-        new MetricAttribute(MetricTags.MAX_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(MoreLists.getOrNull(releaseStagesOrdered, 1))));
+        new MetricAttribute(MetricTags.MIN_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 0))),
+        new MetricAttribute(MetricTags.MAX_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 1))));
 
-    final MetricAttribute[] allMetricAttributes = MoreLists
-        .concat(baseMetricAttributes, additionalAttributes)
+    final MetricAttribute[] allMetricAttributes = Stream.concat(baseMetricAttributes.stream(), additionalAttributes.stream())
+        .toList()
         .toArray(new MetricAttribute[baseMetricAttributes.size() + additionalAttributes.size()]);
     MetricClientFactory.getMetricClient().count(metric, 1, allMetricAttributes);
   }
 
   private void emitAttemptCreatedEvent(final Job job, final int attemptNumber) throws IOException {
     emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_CREATED, job, attemptNumber);
+  }
+
+  /**
+   * Get the value at an index or null if the index is out of bounds.
+   *
+   * @param list list to extract from
+   * @param index index to extra
+   * @param <T> type of the value in the list
+   * @return extract value at index or null if index is out of bounds.
+   */
+  private static <T> T getOrNull(final List<T> list, final int index) {
+    Preconditions.checkNotNull(list);
+    if (list.size() > index) {
+      return list.get(index);
+    } else {
+      return null;
+    }
   }
 
   private void emitAttemptCompletedEvent(final Job job, final Attempt attempt) throws IOException {

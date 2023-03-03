@@ -12,7 +12,6 @@ import io.airbyte.commons.io.IOs;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -46,14 +45,6 @@ class MoreResourcesTest {
   void testReadResourceAsFile() throws URISyntaxException {
     final File file = MoreResources.readResourceAsFile(RESOURCE_TEST);
     assertEquals(CONTENT_1, IOs.readFile(file.toPath()));
-  }
-
-  @Test
-  void testReadBytes() throws IOException {
-    assertEquals(CONTENT_1, new String(MoreResources.readBytes(RESOURCE_TEST), StandardCharsets.UTF_8));
-    assertEquals(CONTENT_2, new String(MoreResources.readBytes("subdir/resource_test_sub"), StandardCharsets.UTF_8));
-
-    assertThrows(IllegalArgumentException.class, () -> MoreResources.readBytes("invalid"));
   }
 
   @Test

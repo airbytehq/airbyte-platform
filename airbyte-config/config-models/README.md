@@ -9,7 +9,7 @@ This module uses `jsonschema2pojo` to generate Java config objects from [json sc
   ```
 - Run the following command under the project root:
   ```sh
-  SUB_BUILD=PLATFORM ./gradlew airbyte-config:config-models:generateJsonSchema2Pojo
+  ./gradlew airbyte-config:config-models:generateJsonSchema2Pojo
   ```
   The generated file is under:
   ```

@@ -18,15 +18,25 @@ import { goToReplicationTab } from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
 import streamsTablePageObject from "pages/connection/streamsTablePageObject";
 import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
+import { runDbQuery } from "commands/db/db";
+import { createUsersTableQuery, dropUsersTableQuery } from "commands/db/queries";
 
 const sourceNamespace = "public";
 
 describe("Connection - creation, updating connection replication settings, deletion", () => {
+  before(() => {
+    runDbQuery(createUsersTableQuery);
+  });
+
   beforeEach(() => {
     initialSetupCompleted();
 
     interceptGetConnectionRequest();
     interceptUpdateConnectionRequest();
+  });
+
+  after(() => {
+    runDbQuery(dropUsersTableQuery);
   });
 
   it("Create Postgres <> LocalJSON connection, check it's creation", () => {

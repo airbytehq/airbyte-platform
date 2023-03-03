@@ -26,14 +26,14 @@ interface StreamPropertyProps {
 }
 
 export const StreamProperty: React.FC<StreamPropertyProps> = ({ messageId, value, "data-testid": testId }) => (
-  <span data-testid={testId}>
-    <Text size="sm" className={styles.streamPropLabel} data-testid={testId ? `${testId}-label` : undefined}>
+  <div data-testid={testId}>
+    <Text as="span" size="sm" className={styles.streamPropLabel} data-testid={testId ? `${testId}-label` : undefined}>
       <FormattedMessage id={messageId} />
     </Text>
-    <Text size="md" className={styles.streamPropValue} data-testid={testId ? `${testId}-value` : undefined}>
+    <Text as="span" size="md" className={styles.streamPropValue} data-testid={testId ? `${testId}-value` : undefined}>
       {value}
     </Text>
-  </span>
+  </div>
 );
 
 export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
@@ -58,13 +58,15 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
       data-testid="stream-details-header"
     >
       <FlexContainer gap="md" alignItems="center" className={styles.leftActions}>
-        <Switch
-          size="sm"
-          checked={config?.selected}
-          onChange={onSelectedChange}
-          disabled={disabled}
-          data-testid="stream-details-sync-stream-switch"
-        />
+        <div>
+          <Switch
+            size="sm"
+            checked={config?.selected}
+            onChange={onSelectedChange}
+            disabled={disabled}
+            data-testid="stream-details-sync-stream-switch"
+          />
+        </div>
         <Text color="grey300" size="xs">
           <FormattedMessage id="form.stream.sync" />
         </Text>

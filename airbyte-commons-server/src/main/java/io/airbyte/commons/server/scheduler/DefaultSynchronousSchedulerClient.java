@@ -208,8 +208,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       final long endedAt = Instant.now().toEpochMilli();
       return SynchronousResponse.fromTemporalResponse(
           temporalResponse,
-          jobOutput.orElse(null),
-          mappedOutput,
+          outputMapper,
           jobId,
           configType,
           connectorDefinitionId,

@@ -1,6 +1,6 @@
 plugins {
     id "base"
-    id "com.github.node-gradle.node" version "3.4.0"
+    alias(libs.plugins.node.gradle)
 }
 
 // Use the node version that's defined in the .nvmrc file
@@ -136,10 +136,10 @@ check.dependsOn validateLinks, licenseCheck, test
 
 build.dependsOn buildStorybook
 
+task assembleApp {
+    dependsOn copyBuildOutput, copyDocs, copyDocAssets
+}
+
 tasks.named("buildDockerImage") {
-    dependsOn copyDocker
-    dependsOn copyBuildOutput
-    dependsOn copyNginx
-    dependsOn copyDocs
-    dependsOn copyDocAssets
+    dependsOn copyDocker, copyNginx, assembleApp
 }

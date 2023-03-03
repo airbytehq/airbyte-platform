@@ -4,30 +4,16 @@
 
 package io.airbyte.commons.util;
 
-import com.google.common.collect.AbstractIterator;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 
 /**
  * Shared code for common operations on {@link Iterator}.
  */
 public class MoreIterators {
-
-  /**
-   * Create an iterator from elements.
-   *
-   * @param elements element to put in iterator
-   * @param <T> type
-   * @return iterator with all elements
-   */
-  public static <T> Iterator<T> of(final T... elements) {
-    return Arrays.asList(elements).iterator();
-  }
 
   /**
    * Create a list from an iterator.
@@ -57,31 +43,6 @@ public class MoreIterators {
       set.add(iterator.next());
     }
     return set;
-  }
-
-  /**
-   * Create an iterator that returns a single value from a supplier.
-   *
-   * @param supplier to provide the value
-   * @param <T> type of the value to be returned
-   * @return iterator that will return the value from the supplier
-   */
-  public static <T> Iterator<T> singletonIteratorFromSupplier(final Supplier<T> supplier) {
-    return new AbstractIterator<T>() {
-
-      private boolean hasSupplied = false;
-
-      @Override
-      protected T computeNext() {
-        if (!hasSupplied) {
-          hasSupplied = true;
-          return supplier.get();
-        } else {
-          return endOfData();
-        }
-      }
-
-    };
   }
 
 }

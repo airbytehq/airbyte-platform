@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
@@ -143,6 +144,7 @@ public class SecretsRepositoryWriter {
   // secrets (i.e. when there is no longLivedSecretPersistence). If we treated all secrets the same
   // (i.e. used a separate db for secrets when the user didn't provide a store), this would be easier
   // to reason about.
+
   /**
    * If a secrets store is present, this method attempts to fetch the existing config and merge its
    * secrets with the passed in config. If there is no secrets store, it just returns the passed in
@@ -269,6 +271,7 @@ public class SecretsRepositoryWriter {
   }
 
   // todo (cgardens) - should a get method be here? this is a writer not a reader.
+
   /**
    * Get service account with no secrets.
    *
@@ -296,8 +299,8 @@ public class SecretsRepositoryWriter {
    */
   public void writeWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException {
-    // Get the schema for the webhook config so we can split out any secret fields.
-    final JsonNode webhookConfigSchema = Jsons.jsonNodeFromYamlFile(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    // Get the schema for the webhook config, so we can split out any secret fields.
+    final JsonNode webhookConfigSchema = Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
     // Check if there's an existing config, so we can re-use the secret coordinates.
     final var previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId(), false);
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();

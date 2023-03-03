@@ -3,7 +3,7 @@
  */
 package io.airbyte.featureflag
 
-import com.launchdarkly.sdk.LDUser
+import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.server.LDClient
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Property
@@ -174,7 +174,7 @@ class LaunchDarklyClientTest {
         val ldClient: LDClient = mockk()
         val flag = slot<String>()
         every {
-            ldClient.boolVariation(capture(flag), any<LDUser>(), any())
+            ldClient.boolVariation(capture(flag), any<LDContext>(), any())
         } answers {
             when (flag.captured) {
                 testTrue.key -> true
@@ -191,9 +191,9 @@ class LaunchDarklyClientTest {
         }
 
         verify {
-            ldClient.boolVariation(testTrue.key, any<LDUser>(), testTrue.default)
-            ldClient.boolVariation(testFalse.key, any<LDUser>(), testFalse.default)
-            ldClient.boolVariation(testDne.key, any<LDUser>(), testDne.default)
+            ldClient.boolVariation(testTrue.key, any<LDContext>(), testTrue.default)
+            ldClient.boolVariation(testFalse.key, any<LDContext>(), testFalse.default)
+            ldClient.boolVariation(testDne.key, any<LDContext>(), testDne.default)
         }
     }
 
@@ -226,7 +226,7 @@ class LaunchDarklyClientTest {
         val ctxAnon = Workspace(ANONYMOUS)
 
         val ldClient: LDClient = mockk()
-        val context = slot<LDUser>()
+        val context = slot<LDContext>()
         every {
             ldClient.boolVariation(testFlag.key, capture(context), any())
         } answers {
@@ -343,7 +343,7 @@ class InjectTest {
     @Property(name = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
     @Test
     fun `LaunchDarklyClient loads if client is defined as ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
-        every { ldClient.boolVariation(flag.key, any<LDUser>(), flag.default) } returns flag.default
+        every { ldClient.boolVariation(flag.key, any<LDContext>(), flag.default) } returns flag.default
 
         assertNotNull(featureFlagClient)
         assertTrue { featureFlagClient is LaunchDarklyClient }
