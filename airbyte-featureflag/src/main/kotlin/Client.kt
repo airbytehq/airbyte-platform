@@ -10,7 +10,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
-import com.launchdarkly.sdk.LDUser
 import com.launchdarkly.sdk.server.LDClient
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
@@ -106,7 +105,7 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
     override fun enabled(flag: Flag, ctx: Context): Boolean {
         return when (flag) {
             is EnvVar -> flag.enabled(ctx)
-            else -> client.boolVariation(flag.key, ctx.toLDUser(), flag.default)
+            else -> client.boolVariation(flag.key, ctx.toLDContext(), flag.default)
         }
     }
 }
@@ -199,42 +198,7 @@ private fun Path.onChange(block: () -> Unit) {
 }
 
 /**
- * LaunchDarkly v5 version
- *
- * LaunchDarkly v6 introduces the LDContext class which replaces the LDUser class,
- * however this is only available to early-access users accounts currently.
- *
- * Once v6 is GA, this method would be removed and replaced with toLDContext.
- */
-private fun Context.toLDUser(): LDUser = when (this) {
-    is Multi -> {
-        val builder = LDUser.Builder(key)
-        with(contexts) {
-            // Add each individual context's value as an attribute on the LDUser.
-            // This allows for more granular targeting of feature-flag rules that target LDUser types.
-            forEach { builder.custom(it.kind, it.key) }
-
-            if (all { it.key == ANONYMOUS.toString() }) {
-                builder.anonymous(true)
-            }
-        }
-        builder.build()
-    }
-
-    else -> {
-        // for LDv5 Users, add the context type and valid as a custom attribute
-        val builder = LDUser.Builder(key).apply { custom(kind, key) }
-        if (this.key == ANONYMOUS.toString()) {
-            builder.anonymous(true)
-        }
-        builder.build()
-    }
-}
-
-/**
  * LaunchDarkly v6 version
- *
- * Replaces toLDUser once LaunchDarkly v6 is GA.
  */
 private fun Context.toLDContext(): LDContext {
     if (this is Multi) {

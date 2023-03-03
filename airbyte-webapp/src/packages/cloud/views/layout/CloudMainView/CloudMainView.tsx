@@ -5,6 +5,7 @@ import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
+import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
@@ -39,6 +40,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
   const isAllowUpdateConnectorsEnabled = useFeature(FeatureItem.AllowUpdateConnectors);
+  const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
 
   const showCreditsBanner =
     cloudWorkspace.creditStatus &&
@@ -95,6 +97,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
       <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />}>
         <SideBar>
           <AirbyteHomeLink />
+          {isShowAdminWarningEnabled && <AdminWorkspaceWarning />}
           <WorkspacePopout>
             {({ onOpen, value }) => (
               <button className={styles.workspaceButton} onClick={onOpen} data-testid="workspaceButton">

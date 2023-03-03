@@ -5,15 +5,17 @@
 package io.airbyte.config.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.io.IOs;
+import com.google.common.base.Charsets;
 import io.airbyte.config.Configs;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,7 +153,7 @@ public class LogClientSingleton {
     }
 
     if (shouldUseLocalLogs(workerEnvironment)) {
-      return IOs.getTail(LOG_TAIL_SIZE, logPath);
+      return getTail(logPath, LOG_TAIL_SIZE);
     }
 
     final var cloudLogPath = sanitisePath(JOB_LOGGING_CLOUD_PREFIX, logPath);
@@ -230,6 +232,40 @@ public class LogClientSingleton {
    */
   private static String sanitisePath(final String prefix, final Path path) {
     return Paths.get(prefix, path.toString()).toString();
+  }
+
+  /**
+   * Read last N lines from a file into a list of string. Each element is a separate line from the
+   * file.
+   *
+   * @param path path of file with file name
+   * @param numLines number of lines to read
+   * @return list of strings where each element is a separate line from the file.
+   * @throws IOException exception while reading the file
+   */
+  private static List<String> getTail(final Path path, final int numLines) throws IOException {
+    if (path == null) {
+      return Collections.emptyList();
+    }
+
+    final File file = path.toFile();
+    if (!file.exists()) {
+      return Collections.emptyList();
+    }
+
+    try (final ReversedLinesFileReader fileReader = new ReversedLinesFileReader(file, Charsets.UTF_8)) {
+      final List<String> lines = new ArrayList<>();
+
+      String line = fileReader.readLine();
+      while (line != null && lines.size() < numLines) {
+        lines.add(line);
+        line = fileReader.readLine();
+      }
+
+      Collections.reverse(lines);
+
+      return lines;
+    }
   }
 
 }

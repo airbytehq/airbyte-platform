@@ -5,12 +5,15 @@
 package io.airbyte.commons.server.scheduler;
 
 import io.airbyte.commons.temporal.JobMetadata;
+import io.airbyte.config.ConnectorJobOutput;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig.ConfigType;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 /**
  * Job metadata for synchronous jobs. Provides common interface for this metadata to make handling
@@ -29,24 +32,26 @@ public class SynchronousJobMetadata {
 
   private final Path logPath;
 
+  private final FailureReason failureReason;
+
   /**
    * Create synchronous job metadata from a temporal response.
    *
    * @param jobMetadata temporal job metadata
+   * @param jobOutput output of job, if available
    * @param id job id
    * @param configType job type
    * @param configId id of resource for job type (i.e. if configType is discover config id is going to
    *        be a source id)
-   * @param connectorConfigurationUpdated whether this job updated the connector configuration
    * @param createdAt time the job was created
    * @param endedAt time the job ended
    * @return synchronous job metadata
    */
   public static SynchronousJobMetadata fromJobMetadata(final JobMetadata jobMetadata,
+                                                       final @Nullable ConnectorJobOutput jobOutput,
                                                        final UUID id,
                                                        final ConfigType configType,
                                                        final UUID configId,
-                                                       final boolean connectorConfigurationUpdated,
                                                        final long createdAt,
                                                        final long endedAt) {
     return new SynchronousJobMetadata(
@@ -56,8 +61,9 @@ public class SynchronousJobMetadata {
         createdAt,
         endedAt,
         jobMetadata.isSucceeded(),
-        connectorConfigurationUpdated,
-        jobMetadata.getLogPath());
+        jobOutput != null ? jobOutput.getConnectorConfigurationUpdated() : false,
+        jobMetadata.getLogPath(),
+        jobOutput != null ? jobOutput.getFailureReason() : null);
   }
 
   public SynchronousJobMetadata(final UUID id,
@@ -67,7 +73,8 @@ public class SynchronousJobMetadata {
                                 final long endedAt,
                                 final boolean succeeded,
                                 final boolean connectorConfigurationUpdated,
-                                final Path logPath) {
+                                final Path logPath,
+                                final FailureReason failureReason) {
     this.id = id;
     this.configType = configType;
     this.configId = configId;
@@ -76,6 +83,7 @@ public class SynchronousJobMetadata {
     this.succeeded = succeeded;
     this.connectorConfigurationUpdated = connectorConfigurationUpdated;
     this.logPath = logPath;
+    this.failureReason = failureReason;
   }
 
   public UUID getId() {
@@ -110,6 +118,10 @@ public class SynchronousJobMetadata {
     return logPath;
   }
 
+  public FailureReason getFailureReason() {
+    return failureReason;
+  }
+
   @Override
   public boolean equals(final Object o) {
     if (this == o) {
@@ -121,12 +133,13 @@ public class SynchronousJobMetadata {
     final SynchronousJobMetadata that = (SynchronousJobMetadata) o;
     return createdAt == that.createdAt && endedAt == that.endedAt && succeeded == that.succeeded
         && connectorConfigurationUpdated == that.connectorConfigurationUpdated && Objects.equals(id, that.id)
-        && configType == that.configType && Objects.equals(configId, that.configId) && Objects.equals(logPath, that.logPath);
+        && configType == that.configType && Objects.equals(configId, that.configId) && Objects.equals(logPath, that.logPath)
+        && Objects.equals(failureReason, that.failureReason);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, configType, configId, createdAt, endedAt, succeeded, connectorConfigurationUpdated, logPath);
+    return Objects.hash(id, configType, configId, createdAt, endedAt, succeeded, connectorConfigurationUpdated, logPath, failureReason);
   }
 
   @Override
@@ -140,6 +153,7 @@ public class SynchronousJobMetadata {
         + ", succeeded=" + succeeded
         + ", connectorConfigurationUpdated=" + connectorConfigurationUpdated
         + ", logPath=" + logPath
+        + ", failureReason=" + failureReason
         + '}';
   }
 
@@ -157,6 +171,7 @@ public class SynchronousJobMetadata {
     final boolean succeeded = true;
     final boolean connectorConfigurationUpdated = false;
     final Path logPath = null;
+    final FailureReason failureReason = null;
 
     return new SynchronousJobMetadata(
         UUID.randomUUID(),
@@ -166,7 +181,8 @@ public class SynchronousJobMetadata {
         now,
         succeeded,
         connectorConfigurationUpdated,
-        logPath);
+        logPath,
+        failureReason);
   }
 
 }

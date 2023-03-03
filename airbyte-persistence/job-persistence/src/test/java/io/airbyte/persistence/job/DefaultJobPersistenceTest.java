@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
+import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.text.Sqls;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
@@ -218,7 +218,6 @@ class DefaultJobPersistenceTest {
 
   @AfterEach
   void tearDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
   }
 
@@ -1920,11 +1919,11 @@ class DefaultJobPersistenceTest {
               "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
                   + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
                   + "RETURNING id ",
-              Sqls.toSqlName(jobConfig.getConfigType()),
+              toSqlName(jobConfig.getConfigType()),
               scope,
               runDate,
               runDate,
-              Sqls.toSqlName(status),
+              toSqlName(status),
               Jsons.serialize(jobConfig)))
           .stream()
           .findFirst()
@@ -1950,7 +1949,7 @@ class DefaultJobPersistenceTest {
           job.getId(),
           job.getAttemptsCount(),
           logPath,
-          Sqls.toSqlName(AttemptStatus.FAILED),
+          toSqlName(AttemptStatus.FAILED),
           runDate,
           runDate,
           shouldHaveState ? attemptOutputWithState : attemptOutputWithoutState)
@@ -1965,11 +1964,11 @@ class DefaultJobPersistenceTest {
      * controlling deletion logic. Thus, the test case injects overrides for those constants, testing a
      * comprehensive set of combinations to make sure that the logic is robust to reasonable
      * configurations. Extreme configurations such as zero-day retention period are not covered.
-     *
+     * <p>
      * Business rules for deletions. 1. Job must be older than X days or its conn has excessive number
      * of jobs 2. Job cannot be one of the last N jobs on that conn (last N jobs are always kept). 3.
      * Job cannot be holding the most recent saved state (most recent saved state is always kept).
-     *
+     * <p>
      * Testing Goal: Set up jobs according to the parameters passed in. Then delete according to the
      * rules, and make sure the right number of jobs are left. Against one connection/scope,
      * <ol>
@@ -1998,7 +1997,6 @@ class DefaultJobPersistenceTest {
      *        parameters. This was calculated by a human based on understanding the requirements.
      * @param goalOfTestScenario Description of the purpose of that test scenario, so it's easier to
      *        maintain and understand failures.
-     *
      */
     @DisplayName("Should purge older job history but maintain certain more recent ones")
     @ParameterizedTest

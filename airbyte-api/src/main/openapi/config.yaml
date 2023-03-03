@@ -508,6 +508,93 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/create:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Create new connector builder project
+      operationId: createConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+  /v1/connector_builder_projects/update:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Update connector builder project
+      operationId: updateConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExistingConnectorBuilderProjectWithWorkspaceId"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+  /v1/connector_builder_projects/delete:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Deletes connector builder project
+      operationId: deleteConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+  /v1/connector_builder_projects/list:
+    post:
+      tags:
+        - connector_builder_project
+      summary: List connector builder projects for workspace
+      operationId: listConnectorBuilderProjects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectReadList"
+  /v1/connector_builder_projects/get_with_manifest:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get a connector builder project with draft manifest
+      operationId: getConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectRead"
   /v1/sources/create:
     post:
       tags:
@@ -2502,6 +2589,92 @@ components:
         - auto
         - us
         - eu
+    # BuilderProject
+    ConnectorBuilderProjectId:
+      type: string
+      format: uuid
+    DeclarativeManifest:
+      description: Low code CDK manifest JSON object
+    DeclarativeManifestRead:
+      type: object
+      properties:
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        isDraft:
+          type: boolean
+    ConnectorBuilderProjectDetails:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        draftManifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    ConnectorBuilderProjectDetailsRead:
+      type: object
+      required:
+        - name
+        - builderProjectId
+        - hasDraft
+      properties:
+        name:
+          type: string
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        hasDraft:
+          type: boolean
+    ConnectorBuilderProjectIdWithWorkspaceId:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+    ExistingConnectorBuilderProjectWithWorkspaceId:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+        - builderProject
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    ConnectorBuilderProjectWithWorkspaceId:
+      type: object
+      required:
+        - workspaceId
+        - builderProject
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    ConnectorBuilderProjectRead:
+      type: object
+      required:
+        - builderProject
+      properties:
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
+        declarativeManifest:
+          $ref: "#/components/schemas/DeclarativeManifestRead"
+    ConnectorBuilderProjectReadList:
+      type: object
+      required:
+        - projects
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
     # SourceDefinition
     SourceDefinitionId:
       type: string
@@ -2586,6 +2759,10 @@ components:
             - custom
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+        maxSecondsBetweenMessages:
+          description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
+          type: integer
+          format: int64
     SourceDefinitionReadList:
       type: object
       required:
@@ -4297,6 +4474,8 @@ components:
           default: false
         logs:
           $ref: "#/components/schemas/LogRead"
+        failureReason:
+          $ref: "#/components/schemas/FailureReason"
     Pagination:
       type: object
       properties:

@@ -1,6 +1,6 @@
 plugins {
     id "base"
-    id "com.github.node-gradle.node" version "3.4.0"
+    alias(libs.plugins.node.gradle)
 }
 
 // Use the node version that's defined in the .nvmrc file
