@@ -26,4 +26,5 @@ export interface Experiments {
   "connection.newTableDesign": boolean;
   "workspace.freeConnectorsProgram.visible": boolean;
   "connectorBuilder.showNavigationLinks": boolean;
+  "billing.billingInsights": boolean;
 }
