@@ -14,7 +14,6 @@ export interface CatalogTreeTableCellProps {
   className?: string;
   withTooltip?: boolean;
   withOverflow?: boolean;
-  testId?: string;
 }
 
 // This lets us avoid the eslint complaint about unused styles
@@ -32,7 +31,7 @@ export const CatalogTreeTableCell: React.FC<React.PropsWithChildren<CatalogTreeT
   withTooltip,
   className,
   children,
-  testId,
+  ...props
 }) => {
   const [tooltipDisabled, setTooltipDisabled] = useState(true);
   const cellContent = useRef<HTMLSpanElement | null>(null);
@@ -73,7 +72,7 @@ export const CatalogTreeTableCell: React.FC<React.PropsWithChildren<CatalogTreeT
   return (
     <div
       className={classNames(styles.tableCell, className, STYLES_BY_SIZE[size], { [styles.withOverflow]: withOverflow })}
-      {...(testId ? { "data-testid": `${testId}-cell` } : {})}
+      {...props}
     >
       {withTooltip ? (
         <Tooltip

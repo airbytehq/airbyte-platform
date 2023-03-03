@@ -82,12 +82,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           124567
         </Text>
       </CatalogTreeTableCell> */}
-      <CatalogTreeTableCell withTooltip testId="source-namespace">
+      <CatalogTreeTableCell withTooltip data-testid="source-namespace-cell">
         <Text size="md" className={styles.cellText}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip testId="source-stream-name">
+      <CatalogTreeTableCell withTooltip data-testid="source-stream-name-cell">
         <Text size="md" className={styles.cellText}>
           {stream.stream?.name}
         </Text>
@@ -136,12 +136,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip testId="destination-namespace">
+      <CatalogTreeTableCell withTooltip data-testid="destination-namespace-cell">
         <Text size="md" className={styles.cellText}>
           {destNamespace}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip testId="destination-stream-name">
+      <CatalogTreeTableCell withTooltip data-testid="destination-stream-name-cell">
         <Text size="md" className={styles.cellText}>
           {destName}
         </Text>
