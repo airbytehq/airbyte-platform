@@ -36,7 +36,7 @@ import streamsTablePageObject from "pages/connection/streamsTablePageObject";
 import { StreamRowPageObject } from "pages/connection/streamsTablePageObject/StreamRowPageObject";
 
 // TODO: Enable this test when the new stream table will be turned on
-describe("Connection - Create new connection", { testIsolation: false }, () => {
+describe.skip("Connection - Create new connection", { testIsolation: false }, () => {
   const streamsTable = new NewStreamsTablePageObject();
 
   let source: Source;
