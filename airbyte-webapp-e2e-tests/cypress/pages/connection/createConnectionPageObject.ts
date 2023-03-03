@@ -45,7 +45,7 @@ export const checkConnectorIconAndTitle = (connectorType: ConnectorType) => {
 
 export const checkColumnNames = () => {
   const columnNames = ["Sync", "Namespace", "Stream name", "Sync mode", "Cursor field", "Primary key"];
-  cy.get(catalogTreeTableHeader).within(() => {
+  cy.get(catalogTreeTableHeader).within(($header) => {
     columnNames.forEach((columnName) => {
       cy.contains(columnName);
     });
