@@ -152,48 +152,37 @@ describe.skip("Connection - Create new connection", { testIsolation: false }, ()
   });
 
   describe("Stream", () => {
-    const {
-      isStreamSyncEnabled,
-      toggleStreamSync,
-      isStreamRowHasRemovedStyle,
-      checkSourceNamespace,
-      checkSourceStreamName,
-      checkDestinationNamespace,
-      checkDestinationStreamName,
-      closeStreamPanel,
-      openStreamPanel,
-      isStreamPanelVisible,
-    } = new StreamRowPageObject("public", "users");
+    const usersStreamRow = new StreamRowPageObject("public", "users");
 
     it("should have checked sync switch by default ", () => {
       // filter table to have only one stream
       streamsTablePageObject.searchStream("users");
       newConnectionPage.checkAmountOfStreamTableRows(1);
 
-      isStreamSyncEnabled(true);
+      usersStreamRow.isStreamSyncEnabled(true);
     });
 
     it("should have unchecked sync switch after click ", () => {
-      toggleStreamSync();
-      isStreamSyncEnabled(false);
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.isStreamSyncEnabled(false);
     });
 
     it("should have removed stream style after click ", () => {
-      isStreamRowHasRemovedStyle(true);
+      usersStreamRow.isStreamRowHasRemovedStyle(true);
     });
 
     it("should have checked sync switch after click and default stream style", () => {
-      toggleStreamSync();
-      isStreamSyncEnabled(true);
-      isStreamRowHasRemovedStyle(false);
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.isStreamSyncEnabled(true);
+      usersStreamRow.isStreamRowHasRemovedStyle(false);
     });
 
     it("should have source namespace name", () => {
-      checkSourceNamespace();
+      usersStreamRow.checkSourceNamespace();
     });
 
     it("should have source stream name", () => {
-      checkSourceStreamName();
+      usersStreamRow.checkSourceStreamName();
     });
 
     // check sync mode by default - should be "Full Refresh | overwrite"
@@ -202,21 +191,21 @@ describe.skip("Connection - Create new connection", { testIsolation: false }, ()
     // change default sync mode - stream row should have light blue background
 
     it("should have default destination namespace name", () => {
-      checkDestinationNamespace("<destination schema>");
+      usersStreamRow.checkDestinationNamespace("<destination schema>");
     });
 
     it("should have default destination stream name", () => {
-      checkDestinationStreamName("users");
+      usersStreamRow.checkDestinationStreamName("users");
     });
 
     it("should open stream details panel by clicking on stream row", () => {
-      openStreamPanel();
-      isStreamPanelVisible(true);
+      usersStreamRow.openStreamPanel();
+      usersStreamRow.isStreamPanelVisible(true);
     });
 
     it("should close stream details panel by clicking on close button", () => {
-      closeStreamPanel();
-      isStreamPanelVisible(false);
+      usersStreamRow.closeStreamPanel();
+      usersStreamRow.isStreamPanelVisible(false);
     });
   });
 

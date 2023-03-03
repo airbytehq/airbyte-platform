@@ -9,26 +9,12 @@ const sourceNamespaceCell = `div[data-testid='source-namespace-cell']`;
 const destinationNamespaceCell = `div[data-testid='destination-namespace-cell']`;
 
 export class StreamRowPageObject {
-  stream: string;
-  namespace: string;
-  streamName: string;
+  private readonly stream: string;
 
-  constructor(namespace: string, streamName: string) {
+  constructor(private readonly namespace: string, private readonly streamName: string) {
     this.namespace = namespace;
     this.streamName = streamName;
     this.stream = streamTableRow(namespace, streamName);
-
-    // bind for destructuring
-    this.isStreamSyncEnabled = this.isStreamSyncEnabled.bind(this);
-    this.toggleStreamSync = this.toggleStreamSync.bind(this);
-    this.isStreamRowHasRemovedStyle = this.isStreamRowHasRemovedStyle.bind(this);
-    this.checkSourceNamespace = this.checkSourceNamespace.bind(this);
-    this.checkSourceStreamName = this.checkSourceStreamName.bind(this);
-    this.checkDestinationNamespace = this.checkDestinationNamespace.bind(this);
-    this.checkDestinationStreamName = this.checkDestinationStreamName.bind(this);
-    this.openStreamPanel = this.openStreamPanel.bind(this);
-    this.closeStreamPanel = this.closeStreamPanel.bind(this);
-    this.isStreamPanelVisible = this.isStreamPanelVisible.bind(this);
   }
 
   isStreamSyncEnabled(expectedValue: boolean) {
