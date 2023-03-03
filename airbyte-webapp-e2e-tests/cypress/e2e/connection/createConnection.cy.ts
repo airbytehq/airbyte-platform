@@ -163,7 +163,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       closeStreamPanel,
       openStreamPanel,
       isStreamPanelVisible,
-    } = StreamRowPageObject.getStreamUtilityFunctions("public", "users");
+    } = new StreamRowPageObject("public", "users");
 
     it("should have checked sync switch by default ", () => {
       // filter table to have only one stream
