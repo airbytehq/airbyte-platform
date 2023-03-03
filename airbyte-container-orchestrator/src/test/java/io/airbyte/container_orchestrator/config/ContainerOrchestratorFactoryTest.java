@@ -19,6 +19,7 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
@@ -66,6 +67,9 @@ class ContainerOrchestratorFactoryTest {
   @Inject
   DestinationApi destinationApi;
 
+  @Inject
+  SyncPersistenceFactory syncPersistenceFactory;
+
   // Tests will fail if this is uncommented, due to how the implementation of the DocumentStoreClient
   // is being created
   // @Inject
@@ -104,29 +108,29 @@ class ContainerOrchestratorFactoryTest {
 
     final var repl = factory.jobOrchestrator(
         ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi);
+        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, syncPersistenceFactory);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
         NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi);
+        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, syncPersistenceFactory);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
         DbtLauncherWorker.DBT, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi);
+        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, syncPersistenceFactory);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
         AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi);
+        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, syncPersistenceFactory);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
       factory.jobOrchestrator(
           "does not exist", envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-          airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi);
+          airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, syncPersistenceFactory);
     } catch (final Exception e) {
       caught = true;
     }
