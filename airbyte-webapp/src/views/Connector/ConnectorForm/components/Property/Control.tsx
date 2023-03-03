@@ -47,7 +47,12 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
             name={name}
             itemType={property.itemType}
             fieldValue={field.value === undefined ? [] : Array.isArray(field.value) ? field.value : [field.value]}
-            onChange={(tagLabels) => helpers.setValue(tagLabels)}
+            onChange={(tagLabels) => {
+              helpers.setValue(tagLabels);
+              if (!meta.touched) {
+                helpers.setTouched(true);
+              }
+            }}
             error={!!meta.error}
             disabled={disabled}
           />

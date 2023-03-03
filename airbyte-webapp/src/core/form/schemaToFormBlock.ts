@@ -177,5 +177,9 @@ const pickDefaultFields = (schema: AirbyteJSONSchema) => {
     delete partialSchema.enum;
   }
 
+  if (typeof schema.items === "object" && !Array.isArray(schema.items) && schema.items.pattern) {
+    partialSchema.pattern = schema.items.pattern;
+  }
+
   return partialSchema;
 };
