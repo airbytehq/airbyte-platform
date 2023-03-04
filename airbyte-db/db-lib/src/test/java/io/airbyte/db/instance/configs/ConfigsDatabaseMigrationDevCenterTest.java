@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.airbyte.commons.io.IOs;
 import io.airbyte.db.instance.DatabaseConstants;
@@ -22,9 +22,8 @@ class ConfigsDatabaseMigrationDevCenterTest {
   @Test
   void testSchemaDump() {
     final MigrationDevCenter devCenter = new ConfigsDatabaseMigrationDevCenter();
-    final String expectedSchemaDump = IOs.readFile(Path.of(DatabaseConstants.CONFIGS_SCHEMA_DUMP_PATH));
-    final String actualSchemaDump = devCenter.dumpSchema(false);
-    assertEquals(expectedSchemaDump.trim(), actualSchemaDump.trim());
+    final String schemaDump = IOs.readFile(Path.of(DatabaseConstants.CONFIGS_SCHEMA_DUMP_PATH));
+    assertEquals(schemaDump.trim(), devCenter.dumpSchema(false));
   }
 
 }

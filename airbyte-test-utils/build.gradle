@@ -17,18 +17,13 @@ dependencies {
     implementation 'io.fabric8:kubernetes-client:5.12.2'
     implementation libs.temporal.sdk
 
+
     api libs.junit.jupiter.api
 
     // Mark as compile only to avoid leaking transitively to connectors
-    compileOnly(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    compileOnly libs.platform.testcontainers.postgresql
 
-    testImplementation(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    testImplementation libs.platform.testcontainers.postgresql
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

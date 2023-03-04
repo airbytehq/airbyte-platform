@@ -39,6 +39,7 @@ class CommonDatabaseCheckTest {
   @AfterEach
   void cleanup() throws Exception {
     DataSourceFactory.close(dataSource);
+    dslContext.close();
     container.stop();
   }
 

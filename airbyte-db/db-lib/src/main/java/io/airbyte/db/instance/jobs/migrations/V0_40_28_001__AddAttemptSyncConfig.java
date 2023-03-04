@@ -26,8 +26,9 @@ public class V0_40_28_001__AddAttemptSyncConfig extends BaseJavaMigration {
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    final DSLContext ctx = DSL.using(context.getConnection());
-    addAttemptSyncConfigToAttempts(ctx);
+    try (final DSLContext ctx = DSL.using(context.getConnection())) {
+      addAttemptSyncConfigToAttempts(ctx);
+    }
   }
 
   private static void addAttemptSyncConfigToAttempts(final DSLContext ctx) {
