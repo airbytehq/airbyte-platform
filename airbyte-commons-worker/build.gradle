@@ -41,10 +41,7 @@ dependencies {
     testImplementation libs.json.path
     testImplementation libs.mockito.inline
     testImplementation libs.postgresql
-    testImplementation(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.jmh.core
     testImplementation libs.jmh.annotations
     testImplementation libs.docker.java

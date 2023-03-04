@@ -105,6 +105,7 @@ public abstract class FlywayMigrationDatabase extends PostgresDatabase {
   public void close() {
     JDBCUtils.safeClose(connection);
     connection = null;
+    dslContext.close();
     try {
       DataSourceFactory.close(dataSource);
     } catch (final Exception e) {

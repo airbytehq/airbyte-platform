@@ -38,9 +38,10 @@ public class V0_40_18_002__AddProgressBarStats extends BaseJavaMigration {
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    final DSLContext ctx = DSL.using(context.getConnection());
-    addEstimatedColumnsToSyncStats(ctx);
-    addStreamStatsTable(ctx);
+    try (final DSLContext ctx = DSL.using(context.getConnection())) {
+      addEstimatedColumnsToSyncStats(ctx);
+      addStreamStatsTable(ctx);
+    }
   }
 
   private static void addEstimatedColumnsToSyncStats(final DSLContext ctx) {

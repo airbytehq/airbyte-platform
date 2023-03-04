@@ -10,8 +10,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 
@@ -48,12 +46,9 @@ public class MetricQueries {
                                         WHERE jobs.id = '%d';""", srcRelStageCol, dstRelStageCol, jobId);
 
     final var res = ctx.fetch(query);
-    final List<?> stages1 = res.getValues(srcRelStageCol);
-    final List<?> stages2 = res.getValues(dstRelStageCol);
-    return Stream.concat(stages1.stream(), stages2.stream())
-        .filter(s -> s != null)
-        .map(s -> ReleaseStage.valueOf(s.toString()))
-        .collect(Collectors.toList());
+    final var stages = res.getValues(srcRelStageCol, ReleaseStage.class);
+    stages.addAll(res.getValues(dstRelStageCol, ReleaseStage.class));
+    return stages;
   }
 
   /**
