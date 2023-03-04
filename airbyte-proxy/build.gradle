@@ -10,6 +10,7 @@ task prepareBuild(type: Copy) {
 tasks.named("buildDockerImage") {
     dependsOn prepareBuild
     dependsOn copyDocker
+    inputs.file "../.env"
 }
 
 task bashTest(type: Exec) {

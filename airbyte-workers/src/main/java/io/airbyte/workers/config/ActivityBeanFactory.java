@@ -121,9 +121,10 @@ public class ActivityBeanFactory {
 
   @Singleton
   @Named("checkActivityOptions")
-  public ActivityOptions checkActivityOptions() {
+  public ActivityOptions checkActivityOptions(@Property(name = "airbyte.activity.check-timeout",
+                                                        defaultValue = "5") final Integer checkTimeoutMinutes) {
     return ActivityOptions.newBuilder()
-        .setScheduleToCloseTimeout(Duration.ofMinutes(5))
+        .setScheduleToCloseTimeout(Duration.ofMinutes(checkTimeoutMinutes))
         .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
   }
