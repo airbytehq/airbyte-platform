@@ -2,9 +2,15 @@ micronaut:
   application:
     name: airbyte-server
   executors:
+    health:
+      type: fixed
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     io:
       type: fixed
-      n-threads: 10  # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}  # Match the data source max pool size below
+    scheduler:
+      type: fixed
+      n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
