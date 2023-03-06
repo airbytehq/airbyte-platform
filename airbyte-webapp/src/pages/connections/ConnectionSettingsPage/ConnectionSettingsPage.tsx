@@ -24,7 +24,8 @@ export const ConnectionSettingsPageInner: React.FC = () => {
   const { connection } = useConnectionEditService();
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const canUpdateDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
-  const canSendSchemaUpdateNotifications = useFeature(FeatureItem.AllowAutoDetectSchema);
+  // TODO: Disabled until feature is implemented in backend
+  const canSendSchemaUpdateNotifications = false; // useFeature(FeatureItem.AllowAutoDetectSchema);
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
   const onDelete = () => deleteConnection(connection);
