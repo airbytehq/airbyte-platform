@@ -118,7 +118,7 @@ public class KubePodProcess implements KubePod {
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
   private static final String DD_ENV_VAR =
       "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
-  private static final List<String> datadogSupportImages = List.of("source-postgres");
+  private static final List<String> DATADOG_SUPPORT_IMAGES = List.of("source-postgres");
   private static final String JAVA_OPTS = "JAVA_OPTS";
   private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
   private static final String DD_PORT = "DD_DOGSTATSD_PORT";
@@ -240,7 +240,7 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
-    if (datadogSupportImages.stream().anyMatch(image::contains)) {
+    if (DATADOG_SUPPORT_IMAGES.stream().anyMatch(image::contains)) {
       addDatadogVars(envVars);
       addServerNameAndVersion(image, envVars);
     }
