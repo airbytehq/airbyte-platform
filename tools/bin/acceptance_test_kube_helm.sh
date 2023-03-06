@@ -100,7 +100,7 @@ fi
 if [ -n "$CI" ]; then
   kubectl expose $(kubectl get po -l app.kubernetes.io/name=server -o name) --name exposed-server-svc --type NodePort --overrides '{ "apiVersion": "v1","spec":{"ports": [{"port":8001,"protocol":"TCP","targetPort":8001,"nodePort":8001}]}}'
 else
-  kubectl port-forward svc/ab-airbyte-server 8001:8001 &
+  kubectl port-forward svc/airbyte-airbyte-server 8001:8001 &
 fi
 
 echo "Running worker integration tests..."
