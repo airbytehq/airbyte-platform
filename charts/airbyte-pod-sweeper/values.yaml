@@ -10,6 +10,7 @@ global:
   serviceAccountName: &service-account-name "airbyte-admin"
   
   secretName: ""
+  env_vars: {}
   database:
     secretName: ""
     secretValue: ""
@@ -229,3 +230,7 @@ replicaCount: 1
 
 ## namespace [string] namespace to deploy pod-sweeper at
 namespace: ""
+
+extraEnv: []
+env_vars: {}
+secrets: {}
