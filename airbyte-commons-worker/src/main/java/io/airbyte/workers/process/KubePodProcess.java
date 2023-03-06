@@ -116,8 +116,14 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
-  public static final String DD_ENV_VAR =
-          "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
+  private static final String DD_ENV_VAR =
+      "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
+  private static final List<String> datadogSupportImages = List.of("source-postgres");
+  private static final String JAVA_OPTS = "JAVA_OPTS";
+  private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
+  private static final String DD_PORT = "DD_DOGSTATSD_PORT";
+  private static final String DD_SERVICE = "DD_SERVICE";
+  private static final String DD_VERSION = "DD_VERSION";
 
   private static final String PIPES_DIR = "/pipes";
   private static final String STDIN_PIPE_FILE = PIPES_DIR + "/stdin";
@@ -234,16 +240,8 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
-    if (image.contains("source-postgres")) {
-      LOGGER.error("----- Image name - {}", image);
-      envVars.add(new EnvVar("JAVA_OPTS", DD_ENV_VAR, null));
-
-      if (System.getenv("DD_AGENT_HOST") != null) {
-        envVars.add(new EnvVar("DD_AGENT_HOST", System.getenv("DD_AGENT_HOST"), null));
-      }
-      if (System.getenv("DD_DOGSTATSD_PORT") != null) {
-        envVars.add(new EnvVar("DD_DOGSTATSD_PORT", System.getenv("DD_DOGSTATSD_PORT"), null));
-      }
+    if (datadogSupportImages.stream().anyMatch(image::contains)) {
+      addDatadogVars(envVars);
       addServerNameAndVersion(image, envVars);
     }
 
@@ -264,12 +262,23 @@ public class KubePodProcess implements KubePod {
     return containerBuilder.build();
   }
 
+  private static void addDatadogVars(List<EnvVar> envVars) {
+    envVars.add(new EnvVar(JAVA_OPTS, DD_ENV_VAR, null));
+
+    if (System.getenv(DD_AGENT_HOST) != null) {
+      envVars.add(new EnvVar(DD_AGENT_HOST, System.getenv(DD_AGENT_HOST), null));
+    }
+    if (System.getenv(DD_PORT) != null) {
+      envVars.add(new EnvVar(DD_PORT, System.getenv(DD_PORT), null));
+    }
+  }
+
   private static void addServerNameAndVersion(String image, List<EnvVar> envVars) {
     String[] imageNameAndVersion = image.split(":");
     int expectedCount = 2;
     if (imageNameAndVersion.length == expectedCount) {
-      envVars.add(new EnvVar("DD_SERVICE", imageNameAndVersion[0], null));
-      envVars.add(new EnvVar("DD_VERSION", imageNameAndVersion[1], null));
+      envVars.add(new EnvVar(DD_SERVICE, imageNameAndVersion[0], null));
+      envVars.add(new EnvVar(DD_VERSION, imageNameAndVersion[1], null));
     }
   }
 
