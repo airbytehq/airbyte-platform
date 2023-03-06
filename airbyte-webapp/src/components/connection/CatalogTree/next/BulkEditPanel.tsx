@@ -142,6 +142,7 @@ export const BulkEditPanel: React.FC = () => {
         </p>
         <div className={styles.syncCellContent}>
           <StreamPathSelect
+            type="cursor"
             withSourceDefinedPill
             disabled={!cursorType}
             variant="strong-blue"
@@ -159,6 +160,7 @@ export const BulkEditPanel: React.FC = () => {
         </p>
         <div className={styles.syncCellContent}>
           <StreamPathSelect
+            type="primary-key"
             withSourceDefinedPill
             disabled={!pkType}
             variant="strong-blue"
