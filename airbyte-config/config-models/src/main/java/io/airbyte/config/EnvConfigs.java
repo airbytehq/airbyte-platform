@@ -7,6 +7,7 @@ package io.airbyte.config;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -348,8 +349,8 @@ public class EnvConfigs implements Configs {
     return getEnvOrDefault(SPEC_CACHE_BUCKET, DEFAULT_SPEC_CACHE_BUCKET);
   }
 
-  public Optional<String> getLocalCatalogPath() {
-    return Optional.ofNullable(getEnv(LOCAL_CONNECTOR_CATALOG_PATH));
+  public String getLocalCatalogPath() {
+    return getEnvOrDefault(LOCAL_CONNECTOR_CATALOG_PATH, AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH);
   }
 
   @Override
