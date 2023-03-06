@@ -47,6 +47,7 @@ import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.process.ProcessFactory;
@@ -74,6 +75,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
   private final JobRunConfig jobRunConfig;
   private final SourceApi sourceApi;
   private final DestinationApi destinationApi;
+  private final SyncPersistenceFactory syncPersistenceFactory;
 
   public ReplicationJobOrchestrator(final Configs configs,
                                     final ProcessFactory processFactory,
@@ -83,7 +85,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
                                     final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                     final JobRunConfig jobRunConfig,
                                     final SourceApi sourceApi,
-                                    final DestinationApi destinationApi) {
+                                    final DestinationApi destinationApi,
+                                    final SyncPersistenceFactory syncPersistenceFactory) {
     this.configs = configs;
     this.processFactory = processFactory;
     this.featureFlags = featureFlags;
@@ -93,6 +96,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
     this.jobRunConfig = jobRunConfig;
     this.sourceApi = sourceApi;
     this.destinationApi = destinationApi;
+    this.syncPersistenceFactory = syncPersistenceFactory;
   }
 
   @Override
@@ -183,6 +187,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
                 Optional.of(syncInput.getCatalog())),
             migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
         new AirbyteMessageTracker(featureFlags),
+        syncPersistenceFactory,
         new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(), WorkerUtils.mapStreamNamesToSchemas(syncInput)),
         metricReporter,
         new ConnectorConfigUpdater(sourceApi, destinationApi),

@@ -23,6 +23,8 @@ import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -50,12 +52,20 @@ public class PersistStateActivityImpl implements PersistStateActivity {
   @Override
   public boolean persist(final UUID connectionId, final StandardSyncOutput syncOutput, final ConfiguredAirbyteCatalog configuredCatalog) {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId.toString()));
+
+    if (syncOutput.getCommitStateAsap() != null && syncOutput.getCommitStateAsap()) {
+      // CommitStateAsap feature flag is true, states have been persisted during the replication activity.
+      return false;
+    }
+
     final State state = syncOutput.getState();
     if (state != null) {
       // todo: these validation logic should happen on server side.
       try {
         final Optional<StateWrapper> maybeStateWrapper = StateMessageHelper.getTypedState(state.getState(), featureFlags.useStreamCapableState());
         if (maybeStateWrapper.isPresent()) {
+          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE, 1);
+
           final ConnectionState previousState =
               AirbyteApiClient.retryWithJitter(
                   () -> airbyteApiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)),

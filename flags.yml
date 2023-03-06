@@ -3,7 +3,7 @@ flags:
     enabled: false
   - name: heartbeat.failSync
     enabled: false
-  - name: normalization.strictComparisonNormalizationEnabled
+  - name: normalization.strictComparisonEnabled
     enabled: false
   - name: platform.commitStatesAsap
     enabled: false

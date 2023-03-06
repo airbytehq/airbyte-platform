@@ -62,18 +62,6 @@ public class MoreResources {
   }
 
   /**
-   * Read a java Resource entirely into a string.
-   *
-   * @param resourceName name of resource
-   * @return contents of the resource as a byte array
-   * @throws IOException throw if failure while reading resource
-   */
-  public static byte[] readBytes(final String resourceName) throws IOException {
-    final URL resource = Resources.getResource(resourceName);
-    return Resources.toByteArray(resource);
-  }
-
-  /**
    * This class is a bit of a hack. Might have unexpected behavior.
    *
    * @param klass class whose resources will be access

@@ -19,17 +19,17 @@ It is necessary to separate this module from the `lib` module, because we use a 
 The code will be automatically generated when this module is compiled. To manually update the generated code, run the `compileJava` task:
 
 ```sh
-SUB_BUILD=PLATFORM ./gradlew :airbyte-db:jooq:compileJava
+./gradlew :airbyte-db:jooq:compileJava
 ```
 
 Or run the following tasks for individual database:
 
 ```sh
 # for configs database
-SUB_BUILD=PLATFORM ./gradlew :airbyte-db:jooq:generateConfigsDatabaseJooq
+./gradlew :airbyte-db:jooq:generateConfigsDatabaseJooq
 
 # for jobs database
-SUB_BUILD=PLATFORM ./gradlew :airbyte-db:jooq:generateJobsDatabaseJooq
+./gradlew :airbyte-db:jooq:generateJobsDatabaseJooq
 ```
 
 ## How to Setup Code Generation for New Database
