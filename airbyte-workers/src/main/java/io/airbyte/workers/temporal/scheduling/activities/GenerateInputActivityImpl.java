@@ -42,6 +42,9 @@ import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -72,6 +75,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
   private final FeatureFlags featureFlags;
+  private final FeatureFlagClient featureFlagClient;
   private final OAuthConfigSupplier oAuthConfigSupplier;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GenerateInputActivity.class);
@@ -82,12 +86,14 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
                                    final StateApi stateApi,
                                    final AttemptApi attemptApi,
                                    final FeatureFlags featureFlags,
+                                   final FeatureFlagClient featureFlagClient,
                                    final OAuthConfigSupplier oAuthConfigSupplier) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.stateApi = stateApi;
     this.attemptApi = attemptApi;
     this.featureFlags = featureFlags;
+    this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
   }
 
@@ -343,7 +349,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withSourceResourceRequirements(config.getSourceResourceRequirements())
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
           .withConnectionId(standardSync.getConnectionId())
-          .withWorkspaceId(config.getWorkspaceId());
+          .withWorkspaceId(config.getWorkspaceId())
+          .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Workspace(config.getWorkspaceId())));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
 

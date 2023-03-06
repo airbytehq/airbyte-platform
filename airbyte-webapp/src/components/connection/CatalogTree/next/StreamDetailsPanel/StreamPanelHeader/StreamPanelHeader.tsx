@@ -25,14 +25,14 @@ interface SomethingProps {
 }
 
 export const StreamProperty: React.FC<SomethingProps> = ({ messageId, value }) => (
-  <span>
-    <Text size="sm" className={styles.streamPropLabel}>
+  <div>
+    <Text as="span" size="sm" className={styles.streamPropLabel}>
       <FormattedMessage id={messageId} />
     </Text>
-    <Text size="md" className={styles.streamPropValue}>
+    <Text as="span" size="md" className={styles.streamPropValue}>
       {value}
     </Text>
-  </span>
+  </div>
 );
 
 export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
@@ -52,7 +52,9 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   return (
     <FlexContainer className={styles.container} justifyContent="space-between" alignItems="center">
       <FlexContainer gap="md" alignItems="center" className={styles.leftActions}>
-        <Switch size="sm" checked={config?.selected} onChange={onSelectedChange} disabled={disabled} />
+        <div>
+          <Switch size="sm" checked={config?.selected} onChange={onSelectedChange} disabled={disabled} />
+        </div>
         <Text color="grey300" size="xs">
           <FormattedMessage id="form.stream.sync" />
         </Text>

@@ -189,7 +189,7 @@ public class OAuthHandler {
   }
 
   @VisibleForTesting
-  protected Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
+  public Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeSourceOauthRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         completeSourceOauthRequest.getSourceDefinitionId());

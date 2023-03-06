@@ -6,10 +6,12 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "hooks/services/Analytics/useAnalyticsService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
+import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { useCurrentWorkspace, WorkspaceServiceProvider } from "services/workspaces/WorkspacesService";
 import { setSegmentAnonymousId, useGetSegmentAnonymousId } from "utils/crossDomainUtils";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
@@ -54,6 +56,8 @@ const MainRoutes: React.FC = () => {
   );
   useAnalyticsRegisterValues(analyticsContext);
 
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+
   return (
     <ApiErrorBoundary>
       <Routes>
@@ -76,6 +80,9 @@ const MainRoutes: React.FC = () => {
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />} />
         <Route path={CloudRoutes.Credits} element={<CreditsPage />} />
+        {showBuilderNavigationLinks && (
+          <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
+        )}
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
     </ApiErrorBoundary>

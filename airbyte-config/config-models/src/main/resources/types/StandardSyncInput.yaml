@@ -74,3 +74,7 @@ properties:
     description: The id of the connection associated with this sync
     type: string
     format: uuid
+  commitStateAsap:
+    description: whether we want to commit states during the replication activity, defaults to false
+    type: boolean
+    default: false

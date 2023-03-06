@@ -1,9 +1,9 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    id "org.openapi.generator" version "5.3.1"
     id 'airbyte-python-docker'
     id 'airbyte-docker'
+    alias(libs.plugins.openapi.generator)
 }
 
 airbytePythonDocker {
