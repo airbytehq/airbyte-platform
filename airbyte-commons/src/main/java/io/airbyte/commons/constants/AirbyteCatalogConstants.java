@@ -27,7 +27,7 @@ public final class AirbyteCatalogConstants {
   public static final String LOCAL_SECRETS_MASKS_PATH = "/" + SEED_SUBDIRECTORY + LOCAL_SECRETS_MASKS_FILE_NAME;
 
   public static final String REMOTE_OSS_CATALOG_URL =
-      "https://connectors.airbyte.com/oss_catalog.json";
+      "https://connectors.airbyte.com/api/v0/catalog/oss_catalog.json";
 
   private AirbyteCatalogConstants() {
     // Private constructor to prevent instantiation
