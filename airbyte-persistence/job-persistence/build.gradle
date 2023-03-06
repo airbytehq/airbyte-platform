@@ -29,10 +29,7 @@ dependencies {
 
     testImplementation project(':airbyte-config:config-persistence')
     testImplementation project(':airbyte-test-utils')
-    testImplementation(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    testImplementation libs.platform.testcontainers.postgresql
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

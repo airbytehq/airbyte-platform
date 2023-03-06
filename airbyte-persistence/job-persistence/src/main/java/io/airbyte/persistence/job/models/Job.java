@@ -277,7 +277,6 @@ public class Job {
         && updatedAtInSecond == job.updatedAtInSecond
         && Objects.equals(scope, job.scope)
         && Objects.equals(config, job.config)
-        && Objects.equals(configType, job.configType)
         && status == job.status
         && Objects.equals(startedAtInSecond, job.startedAtInSecond)
         && Objects.equals(attempts, job.attempts);
@@ -285,7 +284,7 @@ public class Job {
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, scope, config, configType, status, startedAtInSecond, createdAtInSecond, updatedAtInSecond, attempts);
+    return Objects.hash(id, scope, config, status, startedAtInSecond, createdAtInSecond, updatedAtInSecond, attempts);
   }
 
   @Override
@@ -294,7 +293,6 @@ public class Job {
         + "id=" + id
         + ", scope='" + scope + '\''
         + ", config=" + config
-        + ", config_type=" + configType
         + ", status=" + status
         + ", startedAtInSecond=" + startedAtInSecond
         + ", createdAtInSecond=" + createdAtInSecond

@@ -3,8 +3,8 @@
   "version": "0.41.0",
   "private": true,
   "engines": {
-    "node": "16.18.1",
-    "pnpm": "7.26.3"
+    "node": "18.14.2",
+    "pnpm": "7.28.0"
   },
   "scripts": {
     "prepare": "./scripts/install-githooks.sh",
@@ -88,6 +88,7 @@
     "sass": "^1.52.2",
     "semver": "^7.3.8",
     "styled-components": "^5.3.5",
+    "ts-pattern": "^4.2.1",
     "typesafe-actions": "^5.1.0",
     "unified": "^10.1.2",
     "unist-util-visit": "^4.1.0",

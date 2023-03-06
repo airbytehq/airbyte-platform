@@ -32,12 +32,17 @@ public class DatabaseConnectionHelper {
   /**
    * Constructs a configured {@link DSLContext} instance using the provided configuration.
    *
-   * @param dataSource A {@link DataSource} instance
+   * @param container A JDBC Test Container instance.
    * @param dialect The SQL dialect to use with objects created from this context.
    * @return The configured {@link DSLContext}.
    */
-  public static DSLContext createDslContext(final DataSource dataSource, final SQLDialect dialect) {
-    return DSLContextFactory.create(dataSource, dialect);
+  public static DSLContext createDslContext(final JdbcDatabaseContainer container, final SQLDialect dialect) {
+    return DSLContextFactory.create(
+        container.getUsername(),
+        container.getPassword(),
+        container.getDriverClassName(),
+        container.getJdbcUrl(),
+        dialect);
   }
 
 }

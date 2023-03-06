@@ -7,10 +7,10 @@ package io.airbyte.server.apis;
 import io.airbyte.api.generated.HealthApi;
 import io.airbyte.api.model.generated.HealthCheckRead;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
@@ -28,7 +28,7 @@ public class HealthApiController implements HealthApi {
 
   @Override
   @Get(produces = MediaType.APPLICATION_JSON)
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.HEALTH)
   public HealthCheckRead getHealthCheck() {
     return healthCheckHandler.health();
   }

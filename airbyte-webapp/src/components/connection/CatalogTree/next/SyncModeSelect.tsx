@@ -50,6 +50,7 @@ export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({ className, optio
       onChange={onChange}
       className={classNames(styles.pillSelect, className)}
       variant={variant}
+      data-testid="sync-mode-select"
     />
   );
 };

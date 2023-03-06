@@ -200,7 +200,9 @@
         <Logger name="io.temporal" level="INFO" />
         <Logger name="org.apache" level="WARN" />
         <Logger name="httpclient" level="WARN" />
-        <Logger name="com.amazonaws" level="WARN" />
+        <Logger name="com.zaxxer.hikari.pool.HikariPool" level="ERROR" />
+        <Logger name="com.zaxxer.hikari.pool.PoolBase" level="ERROR" />
+        <Logger name="com.zaxxer.hikari.HikariDataSource" level="ERROR" />
         <!--MySQL Debezium connector generates a log whenever it converts an invalid value to empty value.
         Ex: Invalid value '0000-00-00 00:00:00' stored in column 'column_name' of table 'table_name' converted to empty value
         If a database has tons of such values, the logs would be filled with such messages-->

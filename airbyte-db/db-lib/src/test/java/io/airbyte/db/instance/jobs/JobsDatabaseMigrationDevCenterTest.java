@@ -21,9 +21,8 @@ class JobsDatabaseMigrationDevCenterTest {
   @Test
   void testSchemaDump() {
     final MigrationDevCenter devCenter = new JobsDatabaseMigrationDevCenter();
-    final String expectedSchmaDump = IOs.readFile(Path.of(DatabaseConstants.JOBS_SCHEMA_DUMP_PATH));
-    final String actualSchemaDump = devCenter.dumpSchema(false);
-    assertEquals(expectedSchmaDump.trim(), actualSchemaDump.trim());
+    final String schemaDump = IOs.readFile(Path.of(DatabaseConstants.JOBS_SCHEMA_DUMP_PATH));
+    assertEquals(schemaDump.trim(), devCenter.dumpSchema(false));
   }
 
 }

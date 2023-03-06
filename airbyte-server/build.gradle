@@ -52,8 +52,6 @@ dependencies {
     implementation libs.swagger.annotations
     implementation libs.javax.ws.rs.api
 
-    runtimeOnly libs.javax.databind
-
     testImplementation libs.bundles.micronaut.test
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
