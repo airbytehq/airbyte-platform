@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import kotlin.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +130,7 @@ public class DockerProcessFactory implements ProcessFactory {
       LOGGER.info("Creating docker container = {} with resources {} and allowedHosts {}", containerName, resourceRequirements, allowedHosts);
       cmd.add("--name");
       cmd.add(containerName);
-      cmd.addAll(localDebuggingOptions(containerName));
+      cmd.addAll(localDebuggingOptions(containerName, System.getenv("DEBUG_CONTAINER_IMAGE"), System.getenv("DEBUG_CONTAINER_JAVA_OPTS")));
 
       if (networkName != null) {
         cmd.add("--network");
@@ -183,7 +185,7 @@ public class DockerProcessFactory implements ProcessFactory {
    * environment variable, and it matches the image name of a spawned container, this method will add
    * the necessary params to connect a debugger. For example, to enable this for
    * `destination-bigquery` start the services locally with: ``` VERSION="dev"
-   * DEBUG_CONTAINER_IMAGE="destination-bigquery" docker compose -f docker-compose.yaml -f
+   * DEBUG_CONTAINER_IMAGE="destination-bigquery:5005" docker compose -f docker-compose.yaml -f
    * docker-compose.debug.yaml up ``` Additionally you may have to update the image version of your
    * target image to 'dev' in the UI of your local airbyte platform. See the
    * `docker-compose.debug.yaml` file for more context.
@@ -191,15 +193,63 @@ public class DockerProcessFactory implements ProcessFactory {
    * @param containerName the name of the container which could be debugged.
    * @return A list with debugging arguments or an empty list
    */
-  static List<String> localDebuggingOptions(final String containerName) {
-    final boolean shouldAddDebuggerOptions =
-        Optional.ofNullable(System.getenv("DEBUG_CONTAINER_IMAGE")).filter(StringUtils::isNotEmpty)
-            .map(ProcessFactory.extractShortImageName(containerName)::equals).orElse(false)
-            && Optional.ofNullable(System.getenv("DEBUG_CONTAINER_JAVA_OPTS")).isPresent();
-    if (shouldAddDebuggerOptions) {
-      return List.of("-e", "JAVA_TOOL_OPTIONS=" + System.getenv("DEBUG_CONTAINER_JAVA_OPTS"), "-p5005:5005");
-    } else {
+  static List<String> localDebuggingOptions(final String containerName, final String debugContainer, final String javaToolOpts) {
+    // never let this be a cause of failure in production
+    try {
+      // See if the DEBUG_CONTAINER_IMAGE environment variable is set with a debugging port
+      Map<String, String> debuggingConnectors = extractConnectorDebuggingInfo(debugContainer);
+      String shortName = ProcessFactory.extractShortImageName(containerName);
+      Optional<String> port = debuggingConnectors.keySet().stream()
+          .filter(shortName::startsWith)
+          .map(debuggingConnectors::get)
+          .findFirst();
+      Optional<String> javaOpts = Optional.ofNullable(javaToolOpts);
+      if (port.isPresent() && javaOpts.isPresent()) {
+        // A valid connector and port name has been identified, pass along java tool options for debugging
+        String javaToolOptions = "JAVA_TOOL_OPTIONS=" + String.join(":", javaOpts.get(), port.get());
+        String portOption = "-p" + port.get() + ":" + port.get();
+        return List.of("-e", javaToolOptions, portOption);
+      } else {
+        return Collections.emptyList();
+      }
+    } catch (Exception e) {
+      LOGGER.error("Encountered Unexpected error trying to add debugging options", e);
       return Collections.emptyList();
+    }
+  }
+
+  /**
+   * Developers can set the DEBUG_CONTAINER_IMAGE environment variable to a comma delimited list of
+   * <container>:<debugging-port> combos, i.e. 'destination-postgres:5010,source-postgres:5011'. This
+   * will extract the combos into a Map.
+   *
+   * @return a map of connector names to debugging ports
+   */
+  private static Map<String, String> extractConnectorDebuggingInfo(final String debugContainerName) {
+    return Optional.ofNullable(debugContainerName).filter(StringUtils::isNotEmpty)
+        .map(
+            rawValue -> Arrays.stream(rawValue.split(","))
+                .map(DockerProcessFactory::extractDebuggingConnectorPortPair)
+                .filter(Optional::isPresent).map(Optional::get)
+                .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond)))
+        .orElse(Collections.emptyMap());
+  }
+
+  /**
+   * Split a container name and port combination into a Pair
+   *
+   * @param potentialConnector a container port combo split by a colon, i.e.
+   *        "destination-postgres:5005"
+   * @return the split pair of connector and port if the expected pattern is matched or an empty
+   *         optional
+   */
+  private static Optional<Pair<String, String>> extractDebuggingConnectorPortPair(final String potentialConnector) {
+    String[] parts = potentialConnector.split(":");
+    if (parts.length == 2) {
+      return Optional.of(new Pair<>(parts[0], parts[1]));
+    } else {
+      LOGGER.warn("Found incompatible debugging option of {}, should be in the format 'container:port'", potentialConnector);
+      return Optional.empty();
     }
   }
 
