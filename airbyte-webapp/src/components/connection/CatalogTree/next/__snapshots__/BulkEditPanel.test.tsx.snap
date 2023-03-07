@@ -4,6 +4,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
 <body>
   <div>
     <div
+      aria-hidden="false"
       class="<removed-for-snapshot-test>"
     >
       <div

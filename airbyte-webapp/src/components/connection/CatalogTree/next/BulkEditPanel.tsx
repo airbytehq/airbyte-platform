@@ -3,17 +3,17 @@ import intersection from "lodash/intersection";
 import React, { useMemo } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
-import styled from "styled-components";
 
-import { Header } from "components";
 import { SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 
 import { SyncSchemaField, SyncSchemaFieldObject, SyncSchemaStream, traverseSchemaToField } from "core/domain/catalog";
 import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
 import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { isCloudApp } from "utils/app";
 
 import styles from "./BulkEditPanel.module.scss";
 import { StreamPathSelect } from "./StreamPathSelect";
@@ -21,22 +21,6 @@ import { SyncModeOption, SyncModeSelect } from "./SyncModeSelect";
 import { pathDisplayName } from "../PathPopout";
 import { HeaderCell } from "../styles";
 import { flatten, getPathType } from "../utils";
-
-interface SchemaHeaderProps {
-  isActive: boolean;
-}
-
-const SchemaHeader = styled(Header)<SchemaHeaderProps>`
-  position: fixed;
-  bottom: ${(props) => (props.isActive ? 0 : "-100px")};
-  left: 122px;
-  z-index: 1000;
-  width: calc(100% - 152px);
-  height: unset;
-  background: ${({ theme }) => theme.primaryColor};
-  border-radius: 8px 8px 0 0;
-  padding: 10px;
-`;
 
 export function calculateSharedFields(selectedBatchNodes: SyncSchemaStream[]) {
   const primitiveFieldsByStream = selectedBatchNodes.map(({ stream }) => {
@@ -99,7 +83,12 @@ export const BulkEditPanel: React.FC = () => {
   const paths = primitiveFields.map((f) => f.path);
 
   return createPortal(
-    <SchemaHeader isActive={isActive}>
+    <FlexContainer
+      gap="none"
+      alignItems="center"
+      className={classNames(styles.container, { [styles.active]: isActive, [styles.cloud]: isCloudApp() })}
+      aria-hidden={!isActive}
+    >
       <HeaderCell flex={0} className={classNames(styles.headerCell, styles.streamsCounterCell)}>
         <p className={classNames(styles.text, styles.streamsCountNumber)}>{numStreamsSelected}</p>
         <p className={classNames(styles.text, styles.streamsCountText)}>
@@ -180,7 +169,7 @@ export const BulkEditPanel: React.FC = () => {
           <FormattedMessage id="connectionForm.bulkEdit.apply" />
         </Button>
       </HeaderCell>
-    </SchemaHeader>,
+    </FlexContainer>,
     document.body
   );
 };
