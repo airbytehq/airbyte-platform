@@ -795,6 +795,7 @@
   "connectorBuilder.builderPrompt.description": "Build your source with our {adjective} {noun}",
   "connectorBuilder.builderPrompt.adjective": "low-code",
   "connectorBuilder.builderPrompt.noun": "connector builder",
+  "connectorBuilder.cdkVersion": "CDK version: {version}",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

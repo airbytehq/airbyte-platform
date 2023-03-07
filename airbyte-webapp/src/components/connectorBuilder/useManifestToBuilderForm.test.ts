@@ -2,12 +2,12 @@ import merge from "lodash/merge";
 
 import { ConnectorManifest, DeclarativeStream } from "core/request/ConnectorManifest";
 
-import { DEFAULT_BUILDER_FORM_VALUES } from "./types";
+import { DEFAULT_BUILDER_FORM_VALUES, OLDEST_SUPPORTED_CDK_VERSION } from "./types";
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 
 const baseManifest: ConnectorManifest = {
   type: "DeclarativeSource",
-  version: "0.28.0",
+  version: OLDEST_SUPPORTED_CDK_VERSION,
   check: {
     type: "CheckStream",
     stream_names: [],
