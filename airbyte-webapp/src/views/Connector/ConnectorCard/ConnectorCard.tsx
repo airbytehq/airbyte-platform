@@ -171,7 +171,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
         reloadConfig();
       } else {
-        onSubmit(connectorCardValues);
+        await onSubmit(connectorCardValues);
       }
     } catch (e) {
       setErrorStatusRequest(e);

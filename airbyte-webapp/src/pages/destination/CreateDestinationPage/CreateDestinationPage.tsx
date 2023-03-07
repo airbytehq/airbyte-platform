@@ -10,6 +10,7 @@ import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -18,6 +19,7 @@ export const CreateDestinationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_NEW);
 
   const navigate = useNavigate();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
 
@@ -31,9 +33,9 @@ export const CreateDestinationPage: React.FC = () => {
       values,
       destinationConnector: connector,
     });
-    setTimeout(() => {
-      navigate(`../${result.destinationId}`);
-    }, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    clearAllFormChanges();
+    navigate(`../${result.destinationId}`);
   };
 
   return (
