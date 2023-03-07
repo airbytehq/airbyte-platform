@@ -23,11 +23,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 // todo (cgardens) - these are not truly "unit" tests as they are check resources on the internet.
 // we should move them to "integration" tests, when we have facility to do so.
@@ -175,6 +184,36 @@ class DockerProcessFactoryTest {
     }
 
     throw new RuntimeException("Failed to run test docker command after timeout.");
+  }
+
+  static class DebuggingOptionsTestArgumentsProvider implements ArgumentsProvider {
+
+    @Override
+    public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
+      final String options = "OPTIONS";
+      return Stream.of(
+          Arguments.of("repo/project/destination-postgres:latest", "destination-postgres:5005", options,
+              List.of("-e", "JAVA_TOOL_OPTIONS=OPTIONS:5005", "-p5005:5005")),
+          Arguments.of("repo/project/destination-bigquery:latest", "destination-postgres:5005", options, Collections.emptyList()),
+          Arguments.of("repo/project/destination-postgres:latest", "destination-postgres:5005,source-postgres:5010", options,
+              List.of("-e", "JAVA_TOOL_OPTIONS=OPTIONS:5005", "-p5005:5005")),
+          Arguments.of("repo/project/source-postgres:latest", "destination-postgres:5005,source-postgres:5010", options,
+              List.of("-e", "JAVA_TOOL_OPTIONS=OPTIONS:5010", "-p5010:5010")),
+          Arguments.of("repo/project/destination-postgres:latest", null, options, Collections.emptyList()),
+          Arguments.of("repo/project/destination-postgres:latest", null, null, Collections.emptyList()),
+          Arguments.of("repo/project/destination-postgres:latest", "destination-postgres:5005", null, Collections.emptyList()));
+    }
+
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DebuggingOptionsTestArgumentsProvider.class)
+  void testLocalDebuggingOptions(final String containerName,
+                                 final String debugContainerEnvVar,
+                                 final String javaOptions,
+                                 final List<String> expected) {
+    List<String> actual = DockerProcessFactory.localDebuggingOptions(containerName, debugContainerEnvVar, javaOptions);
+    Assertions.assertEquals(actual, expected);
   }
 
 }
