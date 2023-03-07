@@ -141,7 +141,7 @@ endpoints:
     sensitive: true
   loggers:
     enabled: true
-    sensitive: true
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true
