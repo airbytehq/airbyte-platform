@@ -31,6 +31,8 @@ export const enum Action {
   CHECKOUT_START = "CheckoutStart",
   LOAD_MORE_JOBS = "LoadMoreJobs",
   INVITE = "Invite",
+  OAUTH_ATTEMPT = "OAuthAttempt",
+  OAUTH_SUCCESS = "OAuthSuccess",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",
