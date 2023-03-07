@@ -117,7 +117,7 @@ datasources:
   config:
     connection-test-query: SELECT 1
     connection-timeout: 30000
-    maximum-pool-size: 10
+    maximum-pool-size: 35
     minimum-idle: 0
     idle-timeout: 600000
     initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
