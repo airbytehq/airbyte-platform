@@ -1,6 +1,7 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import cartdotdomLogo from "./cartdotcom-logo.svg";
 import styles from "./PersonQuoteCover.module.scss";
 
 export const PersonQuoteCover: React.FC = () => {
@@ -14,12 +15,7 @@ export const PersonQuoteCover: React.FC = () => {
             <FormattedMessage id="login.quoteText" />
           </p>
         </blockquote>
-        <img
-          src="/images/testimonials/cartdotcom-logo.svg"
-          className={styles.companyLogo}
-          alt=""
-          data-testid="quote-company-logo"
-        />
+        <img src={cartdotdomLogo} className={styles.companyLogo} alt="" data-testid="quote-company-logo" />
         <div>
           <h5 className={styles.quoteAuthorFullName} data-testid="quote-author-full-name">
             <FormattedMessage id="login.quoteAuthor" />
