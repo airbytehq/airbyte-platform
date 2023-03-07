@@ -41,7 +41,7 @@ spec:
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         - name: KUBE_NAMESPACE
-          value: {{ .Release.Namespace | quote }}
+          value: {{ .Values.namespace | default .Release.Namespace | quote }}
         # Values from secret
         {{- if .Values.secrets }}
         {{- range $k, $v := .Values.secrets }}
