@@ -97,6 +97,7 @@ specifiers:
   meow: ^9.0.0
   monaco-editor: ^0.34.1
   node-fetch: ^2.6.7
+  normalize.css: ^8.0.1
   optionator: ^0.9.1
   orval: ^6.11.1
   prettier: ^2.6.2
@@ -185,6 +186,7 @@ dependencies:
   launchdarkly-js-client-sdk: 3.1.0
   lodash: 4.17.21
   monaco-editor: 0.34.1
+  normalize.css: 8.0.1
   query-string: 6.14.1
   react: 17.0.2
   react-datepicker: 4.8.0_sfoxds7t5ydpegc3knd667wn6m
@@ -11807,6 +11809,10 @@ packages:
   /normalize-path/3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
+
+  /normalize.css/8.0.1:
+    resolution: {integrity: sha512-qizSNPO93t1YUuUhP22btGOo3chcvDFqFaj2TRybP0DMxkHOCTYwp3n34fel4a31ORXy4m1Xq0Gyqpb5m33qIg==}
+    dev: false
 
   /npm-normalize-package-bin/1.0.1:
     resolution: {integrity: sha512-EPfafl6JL5/rU+ot6P3gRSCpPDW5VmIzX959Ob1+ySFUuuYHWHekXpwdUZcKP5C+DS4GEtdJluwBjnsNDl+fSA==}
