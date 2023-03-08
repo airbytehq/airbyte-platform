@@ -111,7 +111,6 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
-//  private static final List<String> DATADOG_SUPPORT_IMAGES = List.of("source-postgres");
   private static final String JAVA_OPTS = "JAVA_OPTS";
   private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
   private static final String DD_TRACE_AGENT_PORT = "DD_DOGSTATSD_PORT";
