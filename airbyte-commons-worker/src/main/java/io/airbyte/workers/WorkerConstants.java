@@ -21,6 +21,6 @@ public class WorkerConstants {
   public static final String WORKER_ENVIRONMENT = "WORKER_ENVIRONMENT";
 
   public static final String DD_ENV_VAR =
-          "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
+      "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
 
 }
