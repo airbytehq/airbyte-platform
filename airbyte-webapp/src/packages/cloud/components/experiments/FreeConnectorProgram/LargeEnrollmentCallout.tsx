@@ -42,3 +42,5 @@ export const LargeEnrollmentCallout: React.FC = () => {
     </Callout>
   );
 };
+
+export default LargeEnrollmentCallout;
