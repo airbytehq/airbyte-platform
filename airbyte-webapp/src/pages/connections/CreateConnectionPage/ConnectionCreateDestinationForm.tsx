@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { DestinationForm } from "components/destination/DestinationForm";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
@@ -15,6 +16,7 @@ interface ConnectionCreateDestinationFormProps {
 
 export const ConnectionCreateDestinationForm: React.FC<ConnectionCreateDestinationFormProps> = ({ afterSubmit }) => {
   const navigate = useNavigate();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
   const location = useLocation();
 
   const { destinationDefinitions } = useDestinationDefinitionList();
@@ -30,18 +32,18 @@ export const ConnectionCreateDestinationForm: React.FC<ConnectionCreateDestinati
       values,
       destinationConnector: connector,
     });
-    setTimeout(() => {
-      navigate(
-        {},
-        {
-          state: {
-            ...(location.state as Record<string, unknown>),
-            destinationId: result.destinationId,
-          },
-        }
-      );
-      afterSubmit();
-    }, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    clearAllFormChanges();
+    navigate(
+      {},
+      {
+        state: {
+          ...(location.state as Record<string, unknown>),
+          destinationId: result.destinationId,
+        },
+      }
+    );
+    afterSubmit();
   };
 
   const { setDocumentationPanelOpen } = useDocumentationPanelContext();

@@ -3,10 +3,16 @@ export const createTable = (tableName: string, columns: string[]): string =>
 
 export const dropTable = (tableName: string) => `DROP TABLE IF EXISTS ${tableName}`;
 
-export const alterTable = (tableName: string, params: { add?: string[]; drop?: string[] }): string => {
+export const alterTable = (
+  tableName: string,
+  params: { add?: string[]; drop?: string[]; dropConstraints?: string[] }
+): string => {
   const adds = params.add ? params.add.map((add) => `ADD COLUMN ${add}`) : [];
   const drops = params.drop ? params.drop.map((columnName) => `DROP COLUMN ${columnName}`) : [];
-  const alterations = [...adds, ...drops];
+  const dropConstraints = params.dropConstraints
+    ? params.dropConstraints.map((constraint) => `DROP CONSTRAINT ${constraint}`)
+    : [];
+  const alterations = [...adds, ...drops, ...dropConstraints];
 
   return `ALTER TABLE ${tableName} ${alterations.join(", ")};`;
 };
@@ -24,20 +30,47 @@ export const insertMultipleIntoTable = (tableName: string, valuesByColumns: Arra
   valuesByColumns.map((valuesByColumn) => insertIntoTable(tableName, valuesByColumn)).join("\n");
 
 // Users table
-export const createUsersTableQuery = createTable("public.users", [
-  "id SERIAL",
-  "name VARCHAR(200) NULL",
-  "email VARCHAR(200) NULL",
-  "updated_at TIMESTAMP",
-  "CONSTRAINT users_pkey PRIMARY KEY (id)",
-]);
+
+export const getCreateUsersTableQuery = (tableName: string) =>
+  createTable(`public.${tableName}`, [
+    "id SERIAL",
+    "name VARCHAR(200) NULL",
+    "email VARCHAR(200) NULL",
+    "updated_at TIMESTAMP",
+    `CONSTRAINT ${tableName}_pkey PRIMARY KEY (id)`,
+  ]);
+
+export const createUsersTableQuery = getCreateUsersTableQuery("users");
 export const insertUsersTableQuery = insertMultipleIntoTable("public.users", [
   { name: "Abigail", email: "abigail@example.com", updated_at: "2022-12-19 00:00:00" },
   { name: "Andrew", email: "andrew@example.com", updated_at: "2022-12-19 00:00:00" },
   { name: "Kat", email: "kat@example.com", updated_at: "2022-12-19 00:00:00" },
 ]);
 
-export const dropUsersTableQuery = dropTable("public.users");
+export const getDropUsersTableQuery = (tableName: string) => dropTable(`public.${tableName}`);
+
+export const dropUsersTableQuery = getDropUsersTableQuery("users");
+
+// User cars
+
+export const createUserCarsTableQuery = createTable("public.user_cars", [
+  "user_id INTEGER",
+  "car_id INTEGER",
+  "created_at TIMESTAMP",
+]);
+
+export const dropUserCarsTableQuery = dropTable("public.user_cars");
+
+// Accounts table
+
+export const createAccountsTableQuery = createTable("public.accounts", [
+  "id SERIAL",
+  "name VARCHAR(200) NULL",
+  "updated_at TIMESTAMP",
+  "CONSTRAINT accounts_pkey PRIMARY KEY (id)",
+]);
+
+export const dropAccountsTableQuery = dropTable("public.accounts");
 
 // Cities table
 export const createCitiesTableQuery = createTable("public.cities", ["city_code VARCHAR(8)", "city VARCHAR(200)"]);

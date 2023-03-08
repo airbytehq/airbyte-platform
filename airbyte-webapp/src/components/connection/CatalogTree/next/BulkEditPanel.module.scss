@@ -1,5 +1,36 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/z-indices";
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100px);
+  }
+}
+
+$side-margin: variables.$spacing-xl + variables.$spacing-md;
+$spacing-left: variables.$width-size-menu + $side-margin;
+
+.container {
+  position: fixed;
+  left: $spacing-left;
+  width: calc(100% - $spacing-left - $side-margin);
+  bottom: 0;
+  display: none;
+  z-index: z-indices.$bulkEdit;
+  background: colors.$blue;
+  border-radius: variables.$border-radius-md variables.$border-radius-md 0 0;
+  padding: variables.$spacing-md;
+
+  &.active {
+    display: flex;
+    animation: variables.$transition slide-up;
+  }
+
+  &.cloud {
+    width: calc(100% - $spacing-left - variables.$spacing-intercom);
+  }
+}
 
 .headerCell {
   margin-right: variables.$spacing-xl;

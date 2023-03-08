@@ -29,6 +29,7 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - FEATURE_FLAG_CLIENT=${FEATURE_FLAG_CLIENT}
       - LOG_LEVEL=${LOG_LEVEL}
+      - LOCAL_CONNECTOR_CATALOG_PATH=${LOCAL_CONNECTOR_CATALOG_PATH}
     networks:
       - airbyte_internal
     depends_on:

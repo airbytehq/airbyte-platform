@@ -1,0 +1,32 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.requestContainer {
+  height: 91vh;
+  margin-top: variables.$spacing-xl;
+  width: 100%;
+
+  &__erd--previewImage {
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-image: linear-gradient(rgba(0, 0, 0, 50%), rgba(0, 0, 0, 50%)), url("./erd.png");
+  }
+
+  &__schema--previewImage {
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-image: linear-gradient(rgba(0, 0, 0, 30%), rgba(0, 0, 0, 30%)), url("./schema.png");
+  }
+
+  &__messageBox {
+    padding: variables.$spacing-xl;
+    max-width: 70%;
+    background-color: colors.$blue-100;
+    border-radius: variables.$border-radius-md;
+
+    p {
+      color: colors.$dark-blue-900;
+      text-align: center;
+    }
+  }
+}

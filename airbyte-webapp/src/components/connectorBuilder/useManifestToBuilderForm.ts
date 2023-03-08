@@ -20,13 +20,13 @@ import {
 } from "core/request/ConnectorManifest";
 import { useResolveManifest } from "services/connectorBuilder/ConnectorBuilderApiService";
 
+import { CDK_VERSION } from "./cdk";
 import {
   authTypeToKeyToInferredInput,
   BuilderFormAuthenticator,
   BuilderFormValues,
   BuilderPaginator,
   BuilderStream,
-  CDK_VERSION,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   isInterpolatedConfigKey,

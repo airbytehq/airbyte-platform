@@ -1,4 +1,4 @@
-FROM airbyte/gitx:linux-amd64-8a41d85
+FROM airbyte/gitx:linux-amd64-c8a1cdf
 
 COPY entrypoint /entrypoint
 

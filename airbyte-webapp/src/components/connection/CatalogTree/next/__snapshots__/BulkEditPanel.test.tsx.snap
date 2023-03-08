@@ -4,6 +4,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
 <body>
   <div>
     <div
+      aria-hidden="false"
       class="<removed-for-snapshot-test>"
     >
       <div
@@ -59,6 +60,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
         >
           <div
             class="<removed-for-snapshot-test>"
+            data-testid="sync-mode-select"
             role="combobox"
           >
             <span
@@ -77,6 +79,8 @@ exports[`<BulkEditPanel /> should render 1`] = `
               >
                 <button
                   class="<removed-for-snapshot-test>"
+                  data-error="false"
+                  data-testid="pill-select-button"
                   type="button"
                 >
                   <div
@@ -121,6 +125,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
         >
           <div
             class="<removed-for-snapshot-test>"
+            data-testid="cursor-select"
             role="combobox"
           >
             <span
@@ -139,6 +144,8 @@ exports[`<BulkEditPanel /> should render 1`] = `
               >
                 <button
                   class="<removed-for-snapshot-test>"
+                  data-error="false"
+                  data-testid="pill-select-button"
                   disabled=""
                   type="button"
                 >
@@ -186,6 +193,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
         >
           <div
             class="<removed-for-snapshot-test>"
+            data-testid="primary-key-select"
             role="combobox"
           >
             <span
@@ -204,6 +212,8 @@ exports[`<BulkEditPanel /> should render 1`] = `
               >
                 <button
                   class="<removed-for-snapshot-test>"
+                  data-error="false"
+                  data-testid="pill-select-button"
                   disabled=""
                   type="button"
                 >
