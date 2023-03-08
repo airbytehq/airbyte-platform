@@ -5,6 +5,9 @@
 # 1. create an API Key in datadog
 # 2. wget -O dd-java-agent.jar 'https://dtdg.co/latest-java-tracer'
 # 3. DD_API_KEY=[datadog api key] VERSION=dev docker-compose -f docker-compose.yaml -f docker-compose.datadog.yaml up -d
+
+# 4. Optional. For running datadog in connector you need to add connector name to worker:environment:CONNECTOR_DATADOG_SUPPORT_NAMES vars
+# Also you need to add DD_AGENT_HOST var with proper ip to connector Docker.file and rebuild it.
 version: "3.8"
 
 x-datadog: &datadogged
@@ -45,6 +48,7 @@ services:
     <<: *datadogged
     environment:
       - DD_SERVICE=airbyte-worker
+      - CONNECTOR_DATADOG_SUPPORT_NAMES=postgres-source
   server:
     <<: *datadogged
     environment:

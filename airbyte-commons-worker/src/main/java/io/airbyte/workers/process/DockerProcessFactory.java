@@ -15,6 +15,7 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
 import java.io.IOException;
@@ -41,8 +42,6 @@ public class DockerProcessFactory implements ProcessFactory {
   private static final Path DATA_MOUNT_DESTINATION = Path.of("/data");
   private static final Path LOCAL_MOUNT_DESTINATION = Path.of("/local");
   private static final String IMAGE_EXISTS_SCRIPT = "image_exists.sh";
-  private static final String DD_ENV_VAR =
-      "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
   private static final List<String> DATADOG_SUPPORT_IMAGES = List.of("source-postgres");
   public static final String JAVA_OPTS = "JAVA_OPTS";
 
@@ -157,7 +156,7 @@ public class DockerProcessFactory implements ProcessFactory {
 
       if (DATADOG_SUPPORT_IMAGES.stream().anyMatch(imageName::contains)) {
         cmd.add("-e");
-        cmd.add(JAVA_OPTS + "=" + DD_ENV_VAR);
+        cmd.add(JAVA_OPTS + "=" + WorkerConstants.DD_ENV_VAR);
       }
 
       if (!Strings.isNullOrEmpty(entrypoint)) {

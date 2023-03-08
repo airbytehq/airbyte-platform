@@ -13,6 +13,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.workers.WorkerConstants;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -43,13 +44,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -116,12 +111,11 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
-  private static final String DD_ENV_VAR =
-      "-XX:+ExitOnOutOfMemoryError -javaagent:/airbyte/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=30 -Ddd.trace.request_header.tags=User-Agent:http.useragent";
-  private static final List<String> DATADOG_SUPPORT_IMAGES = List.of("source-postgres");
+//  private static final List<String> DATADOG_SUPPORT_IMAGES = List.of("source-postgres");
   private static final String JAVA_OPTS = "JAVA_OPTS";
   private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
-  private static final String DD_PORT = "DD_DOGSTATSD_PORT";
+  private static final String DD_TRACE_AGENT_PORT = "DD_DOGSTATSD_PORT";
+  private static final String DD_SUPPORT_CONNECTOR_NAMES = "DD_SUPPORT_CONNECTOR_NAMES";
   private static final String DD_SERVICE = "DD_SERVICE";
   private static final String DD_VERSION = "DD_VERSION";
 
@@ -239,8 +233,8 @@ public class KubePodProcess implements KubePod {
     final List<EnvVar> envVars = envMap.entrySet().stream()
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
-
-    if (DATADOG_SUPPORT_IMAGES.stream().anyMatch(image::contains)) {
+    LOGGER.error("DD_SUPPORT_CONNECTOR_NAMES: " + DD_SUPPORT_CONNECTOR_NAMES);
+    if (Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(",")).anyMatch(image::contains)) {
       addDatadogVars(envVars);
       addServerNameAndVersion(image, envVars);
     }
@@ -263,13 +257,13 @@ public class KubePodProcess implements KubePod {
   }
 
   private static void addDatadogVars(List<EnvVar> envVars) {
-    envVars.add(new EnvVar(JAVA_OPTS, DD_ENV_VAR, null));
+    envVars.add(new EnvVar(JAVA_OPTS, WorkerConstants.DD_ENV_VAR, null));
 
     if (System.getenv(DD_AGENT_HOST) != null) {
       envVars.add(new EnvVar(DD_AGENT_HOST, System.getenv(DD_AGENT_HOST), null));
     }
-    if (System.getenv(DD_PORT) != null) {
-      envVars.add(new EnvVar(DD_PORT, System.getenv(DD_PORT), null));
+    if (System.getenv(DD_TRACE_AGENT_PORT) != null) {
+      envVars.add(new EnvVar(DD_TRACE_AGENT_PORT, System.getenv(DD_TRACE_AGENT_PORT), null));
     }
   }
 
