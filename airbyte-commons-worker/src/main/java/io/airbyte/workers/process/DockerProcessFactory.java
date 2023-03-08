@@ -156,7 +156,8 @@ public class DockerProcessFactory implements ProcessFactory {
         cmd.add(envEntry.getKey() + "=" + envEntry.getValue());
       }
 
-      if (Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(",")).anyMatch(imageName::contains)) {
+      if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null
+          && Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(",")).anyMatch(imageName::contains)) {
         cmd.add("-e");
         cmd.add(JAVA_OPTS + "=" + WorkerConstants.DD_ENV_VAR);
       }
