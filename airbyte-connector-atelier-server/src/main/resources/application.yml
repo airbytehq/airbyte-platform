@@ -1,0 +1,46 @@
+micronaut:
+  application:
+    name: airbyte-connector-builder-server
+  security:
+    intercept-url-map:
+      - pattern: /** # We could have more granular route security but for immediate simplicity lets apply the same policy
+        http-method: POST
+        access:
+          - isAnonymous()
+  server:
+    port: 80
+  endpoints:
+    v1/list/streams:
+      enabled: true
+      sensitive: true
+    v1/manifest_template:
+      enable: true
+      sensitive: false
+    v1/manifest/resolve:
+      enable: true
+      sensitive: false
+    v1/stream/read:
+      enable: true
+      sensitive: false
+
+airbyte:
+  # connector-builder-server: uncomment when there are connector server specific environment variables we need to specify
+  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  local:
+    docker-mount: ${LOCAL_DOCKER_MOUNT:}
+    root: ${LOCAL_ROOT}
+  role: ${AIRBYTE_ROLE:}
+  tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
+  version: ${AIRBYTE_VERSION}
+  workflow:
+    failure:
+      restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
+  workspace:
+    docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
+    root: ${WORKSPACE_ROOT}
+
+logger:
+  levels:
+    io.airbyte.bootloader: DEBUG
+    # Uncomment to help resolve issues with conditional beans
+    # io.micronaut.context.condition: DEBUG

@@ -57,18 +57,6 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/manifest_template:
-    get:
-      summary: Return a connector manifest template to use as the default value for the yaml editor
-      operationId: getManifestTemplate
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                type: string
-                description: Connector manifest template string
   /v1/manifest/resolve:
     post:
       summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
