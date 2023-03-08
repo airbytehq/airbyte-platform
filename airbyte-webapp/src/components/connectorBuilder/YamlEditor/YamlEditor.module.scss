@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "../builderVariables.scss";
 
 .container {
   display: flex;
@@ -9,11 +10,13 @@
 }
 
 .control {
-  flex: 0 0 auto;
   background-color: colors.$grey-30;
-  display: flex;
   padding: variables.$spacing-md;
-  flex-direction: row-reverse;
+}
+
+.toggleButton {
+  // hard-coded margin so button stays in same spot when switching
+  margin-left: calc((builderVariables.$sideBarWidth - builderVariables.$toggleButtonWidth) / 2 - variables.$spacing-md);
 }
 
 .editorContainer {
