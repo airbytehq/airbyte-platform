@@ -79,7 +79,7 @@ public class SourceApiController implements SourceApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceRead createSource(final SourceCreate sourceCreate) {
-    return ApiHelper.execute(() -> sourceHandler.createSource(sourceCreate));
+    return ApiHelper.execute(() -> sourceHandler.createSourceWithOptionalSecret(sourceCreate));
   }
 
   @Post("/delete")
