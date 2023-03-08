@@ -5,8 +5,9 @@ import { IntlProvider } from "react-intl";
 import { SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
 import en from "locales/en.json";
 
-import { BulkEditPanel, calculateSharedFields, getAvailableSyncModesOptions } from "./BulkEditPanel";
-import { SyncModeOption } from "./SyncModeSelect";
+import { BulkEditPanel } from "./BulkEditPanel";
+import { calculateSharedFields, getAvailableSyncModesOptions } from "./utils";
+import { SyncModeOption } from "../SyncModeSelect";
 
 const MOCK_NODE_1: SyncSchemaStream = {
   stream: {
