@@ -114,7 +114,7 @@ public class KubePodProcess implements KubePod {
   private static final String JAVA_OPTS = "JAVA_OPTS";
   private static final String DD_AGENT_HOST = "DD_AGENT_HOST";
   private static final String DD_TRACE_AGENT_PORT = "DD_DOGSTATSD_PORT";
-  private static final String DD_SUPPORT_CONNECTOR_NAMES = "DD_SUPPORT_CONNECTOR_NAMES";
+  private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
   private static final String DD_SERVICE = "DD_SERVICE";
   private static final String DD_VERSION = "DD_VERSION";
 
