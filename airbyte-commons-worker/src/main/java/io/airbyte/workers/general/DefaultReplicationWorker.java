@@ -200,7 +200,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                          final UUID connectionId,
                          final boolean commitStatesAsap) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
-    final SyncPersistence syncPersistence = commitStatesAsap ? syncPersistenceFactory.get() : null;
+    final SyncPersistence syncPersistence = commitStatesAsap ? syncPersistenceFactory.get(sourceConfig.getCatalog()) : null;
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).

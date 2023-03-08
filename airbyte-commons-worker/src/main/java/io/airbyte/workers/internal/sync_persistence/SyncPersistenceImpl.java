@@ -4,23 +4,34 @@
 
 package io.airbyte.workers.internal.sync_persistence;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
+import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.config.State;
+import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteStateMessage;
+import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.CatalogHelpers;
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.internal.state_aggregator.StateAggregator;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
@@ -46,6 +57,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   final long flushTerminationTimeoutInSeconds = 60;
 
   private UUID connectionId;
+  private ConfiguredAirbyteCatalog configuredAirbyteCatalog;
   private final StateApi stateApi;
   private final StateAggregatorFactory stateAggregatorFactory;
 
@@ -53,6 +65,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   private StateAggregator stateToFlush;
   private final ScheduledExecutorService stateFlushExecutorService;
   private ScheduledFuture<?> stateFlushFuture;
+  private boolean onlyFlushAtTheEnd;
   private final long stateFlushPeriodInSeconds;
 
   public SyncPersistenceImpl(final StateApi stateApi,
@@ -64,6 +77,14 @@ public class SyncPersistenceImpl implements SyncPersistence {
     this.stateFlushExecutorService = scheduledExecutorService;
     this.stateBuffer = this.stateAggregatorFactory.create();
     this.stateFlushPeriodInSeconds = stateFlushPeriodInSeconds;
+    this.onlyFlushAtTheEnd = false;
+  }
+
+  @Override
+  public void setConfiguredAirbyteCatalog(final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
+    // This should get called at most once
+    Preconditions.checkArgument(this.configuredAirbyteCatalog == null);
+    this.configuredAirbyteCatalog = configuredAirbyteCatalog;
   }
 
   @Override
@@ -77,11 +98,27 @@ public class SyncPersistenceImpl implements SyncPersistence {
 
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_BUFFERING, 1);
     stateBuffer.ingest(stateMessage);
-    startBackgroundFlushStateTask();
+    startBackgroundFlushStateTask(connectionId, stateMessage);
   }
 
-  private void startBackgroundFlushStateTask() {
-    if (stateFlushFuture != null) {
+  private void startBackgroundFlushStateTask(final UUID connectionId, final AirbyteStateMessage stateMessage) {
+    if (stateFlushFuture != null || onlyFlushAtTheEnd) {
+      return;
+    }
+
+    // Fetch the current persisted state to see if it is a state migration.
+    // In case of a state migration, we only flush at the end of the sync to avoid dropping states in
+    // case of a sync failure
+    final ConnectionState currentPersistedState;
+    try {
+      currentPersistedState = stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId));
+    } catch (final ApiException e) {
+      log.warn("Failed to check current state for connectionId {}, it will be retried next time we see a state", connectionId, e);
+      return;
+    }
+    if (isMigration(currentPersistedState, stateMessage) && stateMessage.getType() == AirbyteStateType.STREAM) {
+      log.info("State type migration from LEGACY to STREAM detected, all states will be persisted at the end of the sync");
+      onlyFlushAtTheEnd = true;
       return;
     }
 
@@ -93,6 +130,11 @@ public class SyncPersistenceImpl implements SyncPersistence {
             stateFlushExecutorService.scheduleAtFixedRate(this::flushState, runImmediately, stateFlushPeriodInSeconds, TimeUnit.SECONDS);
       }
     }
+  }
+
+  private boolean isMigration(final ConnectionState currentPersistedState, final AirbyteStateMessage stateMessage) {
+    return (!isStateEmpty(currentPersistedState) && currentPersistedState.getStateType() == ConnectionStateType.LEGACY)
+        && stateMessage.getType() != AirbyteStateType.LEGACY;
   }
 
   /**
@@ -141,6 +183,11 @@ public class SyncPersistenceImpl implements SyncPersistence {
     if (hasDataToFlush()) {
       // we still have data to flush
       prepareDataForFlush();
+
+      if (onlyFlushAtTheEnd) {
+        validateStreamMigration();
+      }
+
       try {
         AirbyteApiClient.retryWithJitter(() -> {
           doFlushState();
@@ -217,6 +264,56 @@ public class SyncPersistenceImpl implements SyncPersistence {
     // Only reset stateToFlush if the API call was successful
     stateToFlush = null;
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL, 1);
+  }
+
+  private void validateStreamMigration() {
+    final State state = stateToFlush.getAggregated();
+    final Optional<StateWrapper> maybeStateWrapper = StateMessageHelper.getTypedState(state.getState(), true);
+
+    if (maybeStateWrapper.isPresent() && maybeStateWrapper.get().getStateType() == StateType.STREAM) {
+      Preconditions.checkNotNull(configuredAirbyteCatalog);
+      validateStreamStates(maybeStateWrapper.get(), configuredAirbyteCatalog);
+    }
+  }
+
+  //
+  // NOTE:
+  // The following methods are public because currently shared with PersistStateActivityImpl
+  // Once PersistStateActivityImpl has been deleted, they should become private
+
+  /**
+   * Test whether the connection state is empty.
+   *
+   * @param connectionState The connection state.
+   * @return {@code true} if the connection state is null or empty, {@code false} otherwise.
+   */
+  public static boolean isStateEmpty(final ConnectionState connectionState) {
+    return connectionState == null || connectionState.getState() == null || connectionState.getState().isEmpty();
+  }
+
+  /**
+   * Validate that the LEGACY -> STREAM migration is correct
+   * <p>
+   * During the migration, we will lose any previous stream state that isn't in the new state. To
+   * avoid a potential loss of state, we ensure that all the incremental streams are present in the
+   * new state.
+   *
+   * @param state the new state we want to persist
+   * @param configuredCatalog the configured catalog of the connection of state
+   */
+  @VisibleForTesting
+  public static void validateStreamStates(final StateWrapper state, final ConfiguredAirbyteCatalog configuredCatalog) {
+    final List<StreamDescriptor> stateStreamDescriptors =
+        state.getStateMessages().stream().map(stateMessage -> stateMessage.getStream().getStreamDescriptor()).toList();
+    final List<StreamDescriptor> catalogStreamDescriptors = CatalogHelpers.extractIncrementalStreamDescriptors(configuredCatalog);
+    catalogStreamDescriptors.forEach(streamDescriptor -> {
+      if (!stateStreamDescriptors.contains(streamDescriptor)) {
+        throw new IllegalStateException(
+            "Job ran during migration from Legacy State to Per Stream State. One of the streams that did not have state is: (namespace:"
+                + (streamDescriptor.getNamespace() != null ? streamDescriptor.getNamespace() : "") + ", name:" + streamDescriptor.getName()
+                + "). Job must be retried in order to properly store state.");
+      }
+    });
   }
 
 }
