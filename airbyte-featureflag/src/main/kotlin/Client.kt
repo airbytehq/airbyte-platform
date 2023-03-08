@@ -30,10 +30,10 @@ import kotlin.io.path.notExists
  * Feature-Flag Client interface.
  */
 sealed interface FeatureFlagClient {
-    /**
-     * Returns true if the flag with the provided context should be enabled. Returns false otherwise.
-     */
-    fun enabled(flag: Flag, ctx: Context): Boolean
+  /**
+   * Returns true if the flag with the provided context should be enabled. Returns false otherwise.
+   */
+  fun enabled(flag: Flag, ctx: Context): Boolean
 }
 
 /** Config key used to determine which [FeatureFlagClient] to expose. */
@@ -60,37 +60,37 @@ internal const val CONFIG_FF_PATH = "airbyte.feature-flag.path"
 @Singleton
 @Requires(property = CONFIG_FF_CLIENT, notEquals = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
 class ConfigFileClient(@Property(name = CONFIG_FF_PATH) config: Path?) : FeatureFlagClient {
-    /** [flags] holds the mappings of the flag-name to the flag properties */
-    private var flags: Map<String, ConfigFileFlag> = mapOf()
+  /** [flags] holds the mappings of the flag-name to the flag properties */
+  private var flags: Map<String, ConfigFileFlag> = mapOf()
 
-    /** lock is used for ensuring access to the flags map is handled correctly when the map is being updated. */
-    private val lock = ReentrantReadWriteLock()
+  /** lock is used for ensuring access to the flags map is handled correctly when the map is being updated. */
+  private val lock = ReentrantReadWriteLock()
 
-    init {
-        config?.also { path ->
-            when {
-                path.notExists() -> log.info("path $path does not exist, will return default flag values")
-                !path.isRegularFile() -> log.info("path $path does not reference a file, will return default values")
-                else -> {
-                    flags = readConfig(path)
-                    path.onChange {
-                        lock.write { flags = readConfig(config) }
-                    }
-                }
-            }
+  init {
+    config?.also { path ->
+      when {
+        path.notExists() -> log.info("path $path does not exist, will return default flag values")
+        !path.isRegularFile() -> log.info("path $path does not reference a file, will return default values")
+        else -> {
+          flags = readConfig(path)
+          path.onChange {
+            lock.write { flags = readConfig(config) }
+          }
         }
+      }
     }
+  }
 
-    override fun enabled(flag: Flag, ctx: Context): Boolean {
-        return when (flag) {
-            is EnvVar -> flag.enabled(ctx)
-            else -> lock.read { flags[flag.key]?.enabled ?: flag.default }
-        }
+  override fun enabled(flag: Flag, ctx: Context): Boolean {
+    return when (flag) {
+      is EnvVar -> flag.enabled(ctx)
+      else -> lock.read { flags[flag.key]?.enabled ?: flag.default }
     }
+  }
 
-    companion object {
-        private val log = LoggerFactory.getLogger(ConfigFileClient::class.java)
-    }
+  companion object {
+    private val log = LoggerFactory.getLogger(ConfigFileClient::class.java)
+  }
 }
 
 /**
@@ -102,12 +102,12 @@ class ConfigFileClient(@Property(name = CONFIG_FF_PATH) config: Path?) : Feature
 @Singleton
 @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
 class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
-    override fun enabled(flag: Flag, ctx: Context): Boolean {
-        return when (flag) {
-            is EnvVar -> flag.enabled(ctx)
-            else -> client.boolVariation(flag.key, ctx.toLDContext(), flag.default)
-        }
+  override fun enabled(flag: Flag, ctx: Context): Boolean {
+    return when (flag) {
+      is EnvVar -> flag.enabled(ctx)
+      else -> client.boolVariation(flag.key, ctx.toLDContext(), flag.default)
     }
+  }
 }
 
 /**
@@ -118,19 +118,19 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
  * @param [values] is a map of [Flag.key] to enabled/disabled status.
  */
 class TestClient @JvmOverloads constructor(val values: Map<String, Boolean> = mapOf()) : FeatureFlagClient {
-    override fun enabled(flag: Flag, ctx: Context): Boolean {
-        return when (flag) {
-            is EnvVar -> {
-                // convert to a EnvVar flag with a custom fetcher that uses the [values] of this Test class
-                // instead of fetching from the environment variables
-                EnvVar(envVar = flag.key, default = flag.default, attrs = flag.attrs).apply {
-                    fetcher = { values[flag.key]?.toString() ?: flag.default.toString() }
-                }.enabled(ctx)
-            }
+  override fun enabled(flag: Flag, ctx: Context): Boolean {
+    return when (flag) {
+      is EnvVar -> {
+        // convert to a EnvVar flag with a custom fetcher that uses the [values] of this Test class
+        // instead of fetching from the environment variables
+        EnvVar(envVar = flag.key, default = flag.default, attrs = flag.attrs).apply {
+          fetcher = { values[flag.key]?.toString() ?: flag.default.toString() }
+        }.enabled(ctx)
+      }
 
-            else -> values[flag.key] ?: flag.default
-        }
+      else -> values[flag.key] ?: flag.default
     }
+  }
 }
 
 
@@ -162,7 +162,7 @@ private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
  * @return map of feature-flag name to feature-flag config
  */
 private fun readConfig(path: Path): Map<String, ConfigFileFlag> = yamlMapper.readValue<ConfigFileFlags>(path.toFile()).flags
-    .associateBy { it.name }
+  .associateBy { it.name }
 
 /**
  * Monitors a [Path] for changes, calling [block] when a change is detected.
@@ -171,46 +171,46 @@ private fun readConfig(path: Path): Map<String, ConfigFileFlag> = yamlMapper.rea
  * @param [block] function called anytime a change is detected on this [Path]
  */
 private fun Path.onChange(block: () -> Unit) {
-    val watcher: WatchService = fileSystem.newWatchService()
-    // The watcher service requires a directory to be registered and not an individual file. This Path is an individual file,
-    // hence the `parent` reference to register the parent of this file (which is the directory that contains this file).
-    // As all files within this directory could send events, any file that doesn't match this Path will need to be filtered out.
-    parent.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE)
+  val watcher: WatchService = fileSystem.newWatchService()
+  // The watcher service requires a directory to be registered and not an individual file. This Path is an individual file,
+  // hence the `parent` reference to register the parent of this file (which is the directory that contains this file).
+  // As all files within this directory could send events, any file that doesn't match this Path will need to be filtered out.
+  parent.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE)
 
-    thread(isDaemon = true, name = "feature-flag-watcher", priority = MIN_PRIORITY) {
-        val key = watcher.take()
-        // The context on the poll-events for ENTRY_MODIFY and ENTRY_CREATE events should return a Path,
-        // however officially `Returns: the event context; may be null`, so there is a null check here
-        key.pollEvents().mapNotNull { it.context() as? Path }
-            // As events are generated at the directory level and not the file level, any files that do not match the specific file
-            // this Path represents must be filtered out.
-            // E.g.
-            // If this path is "/tmp/dir/flags.yml",
-            // the directory registered with the WatchService was "/tmp/dir",
-            // and the event's path would be "flags.yml".
-            //
-            // This filter verifies that "/tmp/dir/flags.yml" ends with "flags.yml" before calling the block method.
-            .filter { this.endsWith(it) }
-            .forEach { _ -> block() }
+  thread(isDaemon = true, name = "feature-flag-watcher", priority = MIN_PRIORITY) {
+    val key = watcher.take()
+    // The context on the poll-events for ENTRY_MODIFY and ENTRY_CREATE events should return a Path,
+    // however officially `Returns: the event context; may be null`, so there is a null check here
+    key.pollEvents().mapNotNull { it.context() as? Path }
+      // As events are generated at the directory level and not the file level, any files that do not match the specific file
+      // this Path represents must be filtered out.
+      // E.g.
+      // If this path is "/tmp/dir/flags.yml",
+      // the directory registered with the WatchService was "/tmp/dir",
+      // and the event's path would be "flags.yml".
+      //
+      // This filter verifies that "/tmp/dir/flags.yml" ends with "flags.yml" before calling the block method.
+      .filter { this.endsWith(it) }
+      .forEach { _ -> block() }
 
-        key.reset()
-    }
+    key.reset()
+  }
 }
 
 /**
  * LaunchDarkly v6 version
  */
 private fun Context.toLDContext(): LDContext {
-    if (this is Multi) {
-        val builder = LDContext.multiBuilder()
-        contexts.forEach { builder.add(it.toLDContext()) }
-        return builder.build()
-    }
-
-    val builder = LDContext.builder(ContextKind.of(kind), key)
-    if (key == ANONYMOUS.toString()) {
-        builder.anonymous(true)
-    }
-
+  if (this is Multi) {
+    val builder = LDContext.multiBuilder()
+    contexts.forEach { builder.add(it.toLDContext()) }
     return builder.build()
+  }
+
+  val builder = LDContext.builder(ContextKind.of(kind), key)
+  if (key == ANONYMOUS.toString()) {
+    builder.anonymous(true)
+  }
+
+  return builder.build()
 }

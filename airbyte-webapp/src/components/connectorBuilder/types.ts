@@ -37,6 +37,8 @@ import {
   BasicHttpAuthenticatorType,
 } from "core/request/ConnectorManifest";
 
+import { CDK_VERSION } from "./cdk";
+
 export type EditorView = "ui" | "yaml";
 
 export interface BuilderFormInput {
@@ -104,11 +106,8 @@ export interface BuilderStream {
   unsupportedFields?: Record<string, unknown>;
 }
 
-// 0.28.0 is the version where breaking changes got introduced - older states can't be supported
-export const OLDEST_SUPPORTED_CDK_VERSION = "0.28.0";
-
-// TODO pull in centralized CDK version configuration to ensure it's consistent across all components
-export const CDK_VERSION = "0.28.0";
+// 0.29.0 is the version where breaking changes got introduced - older states can't be supported
+export const OLDEST_SUPPORTED_CDK_VERSION = "0.29.0";
 
 export function versionSupported(version: string) {
   return semver.satisfies(version, `>= ${OLDEST_SUPPORTED_CDK_VERSION} <=${CDK_VERSION}`);

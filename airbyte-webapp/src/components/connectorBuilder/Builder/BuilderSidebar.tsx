@@ -20,6 +20,7 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
+import { CDK_VERSION } from "../cdk";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import {
   BuilderFormValues,
@@ -187,6 +188,14 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       <Button className={styles.resetButton} full variant="clear" onClick={handleResetForm}>
         <FormattedMessage id="connectorBuilder.resetAll" />
       </Button>
+      <Text size="sm" color="grey">
+        <FormattedMessage
+          id="connectorBuilder.cdkVersion"
+          values={{
+            version: CDK_VERSION,
+          }}
+        />
+      </Text>
     </div>
   );
 });

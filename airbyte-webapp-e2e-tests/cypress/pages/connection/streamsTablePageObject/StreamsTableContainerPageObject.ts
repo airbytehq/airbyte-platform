@@ -7,7 +7,7 @@ export class StreamsTablePageObjectBase {
   }
 
   searchStream(value: string) {
-    cy.get(streamNameInput).type(value);
+    cy.get(streamNameInput).clear().type(value);
   }
 
   clearStreamSearch() {

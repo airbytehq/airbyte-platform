@@ -14,6 +14,7 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 object StreamCapableState : EnvVar(envVar = "USE_STREAM_CAPABLE_STATE")
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
 
@@ -23,29 +24,31 @@ object StrictComparisonNormalizationEnabled : Temporary(key = "normalization.str
 
 object CommitStatesAsap : Temporary(key = "platform.commitStatesAsap")
 
-object FieldSelectionEnabled : Temporary(key="connection.columnSelection")
+object FieldSelectionEnabled : Temporary(key = "connection.columnSelection")
 
-object CheckInputGeneration : Temporary(key="connectionManagerWorkflow.checkInputGeneration")
+object CheckInputGeneration : Temporary(key = "connectionManagerWorkflow.checkInputGeneration")
+
+object CheckWithCatalog : Temporary(key="check-with-catalog")
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
-    override fun enabled(ctx: Context): Boolean {
-        val enabledWorkspaceIds: List<String> = fetcher(key)
-            ?.takeIf { it.isNotEmpty() }
-            ?.split(",")
-            ?: listOf()
+  override fun enabled(ctx: Context): Boolean {
+    val enabledWorkspaceIds: List<String> = fetcher(key)
+      ?.takeIf { it.isNotEmpty() }
+      ?.split(",")
+      ?: listOf()
 
-        val contextWorkspaceIds: List<String> = when (ctx) {
-            is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
-            is Workspace -> listOf(ctx.key)
-            else -> listOf()
-        }
-
-        return when (contextWorkspaceIds.any { it in enabledWorkspaceIds }) {
-            true -> true
-            else -> default
-        }
+    val contextWorkspaceIds: List<String> = when (ctx) {
+      is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
+      is Workspace -> listOf(ctx.key)
+      else -> listOf()
     }
+
+    return when (contextWorkspaceIds.any { it in enabledWorkspaceIds }) {
+      true -> true
+      else -> default
+    }
+  }
 }
 
 object ShouldFailSyncIfHeartbeatFailure : Temporary(key = "heartbeat.failSync")
@@ -61,9 +64,9 @@ object ShouldFailSyncIfHeartbeatFailure : Temporary(key = "heartbeat.failSync")
  * @param [attrs] optional attributes associated with this flag
  */
 sealed class Flag(
-    val key: String,
-    internal val default: Boolean = false,
-    internal val attrs: Map<String, String> = mapOf(),
+  val key: String,
+  internal val default: Boolean = false,
+  internal val attrs: Map<String, String> = mapOf(),
 )
 
 /**
@@ -77,9 +80,9 @@ sealed class Flag(
  * @param [attrs] attributes associated with this flag
  */
 open class Temporary @JvmOverloads constructor(
-    key: String,
-    default: Boolean = false,
-    attrs: Map<String, String> = mapOf(),
+  key: String,
+  default: Boolean = false,
+  attrs: Map<String, String> = mapOf(),
 ) : Flag(key = key, default = default, attrs = attrs)
 
 /**
@@ -93,24 +96,24 @@ open class Temporary @JvmOverloads constructor(
  * @param [attrs] attributes associated with this flag
  */
 open class EnvVar @JvmOverloads constructor(
-    envVar: String,
-    default: Boolean = false,
-    attrs: Map<String, String> = mapOf(),
+  envVar: String,
+  default: Boolean = false,
+  attrs: Map<String, String> = mapOf(),
 ) : Flag(key = envVar, default = default, attrs = attrs) {
-    /**
-     * Function used to retrieve the environment-variable, overrideable for testing purposes only.
-     *
-     * This is internal so that it can be modified for unit-testing purposes only!
-     */
-    internal var fetcher: (String) -> String? = { s -> System.getenv(s) }
+  /**
+   * Function used to retrieve the environment-variable, overrideable for testing purposes only.
+   *
+   * This is internal so that it can be modified for unit-testing purposes only!
+   */
+  internal var fetcher: (String) -> String? = { s -> System.getenv(s) }
 
-    /**
-     * Returns true if, and only if, the environment-variable is defined and evaluates to "true".  Otherwise, returns false.
-     */
-    internal open fun enabled(ctx: Context): Boolean {
-        return fetcher(key)
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { it.toBoolean() }
-            ?: default
-    }
+  /**
+   * Returns true if, and only if, the environment-variable is defined and evaluates to "true".  Otherwise, returns false.
+   */
+  internal open fun enabled(ctx: Context): Boolean {
+    return fetcher(key)
+      ?.takeIf { it.isNotEmpty() }
+      ?.let { it.toBoolean() }
+      ?: default
+  }
 }

@@ -11,7 +11,6 @@ export interface Experiments {
   "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;
   "connector.frequentlyUsedDestinationIds": string[];
-  "connector.form.useDatepicker": boolean;
   "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.hideSelfHostedCTA": boolean;
@@ -29,4 +28,5 @@ export interface Experiments {
   "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
   "billing.billingInsights": boolean;
+  "connector.showRequestSchemabutton": boolean;
 }

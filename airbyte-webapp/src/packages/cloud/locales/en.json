@@ -206,6 +206,8 @@
   "freeConnectorProgram.releaseStageBadge.free": "Free",
   "freeConnectorProgram.youCanEnroll": "You can <enrollLink>enroll</enrollLink> in the <b>Free Connector Program</b> to use Alpha and Beta connectors for <freeText>free</freeText>.",
 
+  "experiment.speedyConnection": "<link>Set up your first connection</link> in the next <timer></timer> and get <b>100 additional credits</b> for your trial",
+
   "workspace.adminWorkspaceWarning": "Admin",
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!"
 }

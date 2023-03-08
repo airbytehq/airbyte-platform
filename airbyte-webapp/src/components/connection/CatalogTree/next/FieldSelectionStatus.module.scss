@@ -1,0 +1,42 @@
+@use "scss/colors";
+@use "scss/variables";
+
+@mixin theme($name, $border, $selected, $total, $hover) {
+  &.#{$name} {
+    border: variables.$border-thin solid $border;
+
+    .selected {
+      color: $selected;
+    }
+
+    .total {
+      color: $total;
+    }
+
+    &:hover {
+      border-color: $hover;
+    }
+  }
+}
+
+.container {
+  padding: variables.$spacing-xs 0;
+  width: variables.$spacing-2xl;
+  height: variables.$spacing-xl;
+  border-radius: variables.$border-radius-pill;
+  transition: border-color variables.$transition-out, color variables.$transition-out;
+  margin: auto;
+
+  .selected {
+    // need to be empty since it uses to override the default color
+  }
+
+  .total {
+    font-size: 8px;
+  }
+
+  @include theme("grey", colors.$grey-50, colors.$grey-600, colors.$grey-400, colors.$grey-100);
+  @include theme("blue", colors.$blue-100, colors.$blue-600, colors.$blue-400, colors.$blue-100);
+  @include theme("green", colors.$green-50, colors.$green-600, colors.$green-600, colors.$green-100);
+  @include theme("red", colors.$red-50, colors.$red-600, colors.$red-400, colors.$red-100);
+}

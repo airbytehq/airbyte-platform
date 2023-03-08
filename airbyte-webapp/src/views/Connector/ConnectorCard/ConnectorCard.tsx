@@ -79,7 +79,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
-  const { setDocumentationUrl, setDocumentationPanelOpen } = useDocumentationPanelContext();
+  const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
+    useDocumentationPanelContext();
   const {
     testConnector,
     isTestConnectionInProgress,
@@ -121,11 +122,13 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 
     setDocumentationUrl(selectedConnectorDefinition?.documentationUrl ?? "");
     setDocumentationPanelOpen(true);
+    setSelectedConnectorDefinition(selectedConnectorDefinition);
   }, [
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition,
     setDocumentationPanelOpen,
     setDocumentationUrl,
+    setSelectedConnectorDefinition,
   ]);
 
   const testConnectorWithTracking = async (connectorCardValues?: ConnectorCardValues) => {
@@ -168,7 +171,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
         reloadConfig();
       } else {
-        onSubmit(connectorCardValues);
+        await onSubmit(connectorCardValues);
       }
     } catch (e) {
       setErrorStatusRequest(e);

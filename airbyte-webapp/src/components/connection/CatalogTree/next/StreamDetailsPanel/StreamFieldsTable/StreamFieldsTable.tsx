@@ -150,7 +150,9 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
                   destinationSyncMode={config?.destinationSyncMode}
                 />
               )}
-              <Text size="sm">{pathDisplayName(getValue())}</Text>
+              <Text size="sm" data-testid="stream-source-field-name">
+                {pathDisplayName(getValue())}
+              </Text>
             </FlexContainer>
           </CatalogTreeTableCell>
         ),
@@ -163,7 +165,9 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         id: "sourceDataType",
         header: () => <FormattedMessage id="form.field.dataType" />,
         cell: ({ getValue }) => (
-          <FormattedMessage id={`${getValue()}`} defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })} />
+          <span data-testid="stream-source-field-data-type">
+            <FormattedMessage id={`${getValue()}`} defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })} />
+          </span>
         ),
         meta: {
           thClassName: styles.headerCell,
@@ -233,7 +237,9 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         header: () => <FormattedMessage id="form.field.name" />,
         cell: ({ getValue }) => (
           <CatalogTreeTableCell size="small" withTooltip>
-            <Text size="sm">{pathDisplayName(getValue())}</Text>
+            <Text size="sm" data-testid="stream-destination-field-name">
+              {pathDisplayName(getValue())}
+            </Text>
           </CatalogTreeTableCell>
         ),
         meta: {
