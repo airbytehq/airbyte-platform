@@ -19,10 +19,9 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 
 /**
- * Basic Airbyte Source that emits {@link LimitedSourceProcess#TOTAL_RECORDS} before finishing.
- * Intended for performance testing.
+ * Limited Thin Record Source Process.
  */
-public class LimitedSourceProcess extends Process {
+public class LimitedThinRecordSourceProcess extends Process {
 
   private static final int TOTAL_RECORDS = 2_000_000;
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -50,8 +49,7 @@ public class LimitedSourceProcess extends Process {
           try {
             while (currRecs != TOTAL_RECORDS) {
               var msg = AirbyteMessageUtils.createRecordMessage("s1", "data",
-                  "This is a fairly long sentence to provide some bytes here. More bytes is better as it helps us measure performance."
-                      + "Random append to prevent dead code generation :");
+                  "one word small data");
               os.write(MAPPER.writeValueAsString(msg).getBytes(Charset.defaultCharset()));
               os.write(System.getProperty("line.separator").getBytes(Charset.defaultCharset()));
               currRecs++;
@@ -143,7 +141,5 @@ public class LimitedSourceProcess extends Process {
     }
 
   }
-
-  public static void main(String[] args) {}
 
 }

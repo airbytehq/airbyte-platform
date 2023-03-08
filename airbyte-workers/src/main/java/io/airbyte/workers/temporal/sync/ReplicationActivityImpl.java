@@ -41,6 +41,7 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
+import io.airbyte.featureflag.PerfBackgroundJsonValidation;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -347,7 +348,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
           new AirbyteMessageTracker(featureFlags),
           syncPersistenceFactory,
-          new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(), WorkerUtils.mapStreamNamesToSchemas(syncInput)),
+          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput),
+              featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(syncInput.getWorkspaceId()))),
           metricReporter,
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi()),
           fieldSelectionEnabled);
