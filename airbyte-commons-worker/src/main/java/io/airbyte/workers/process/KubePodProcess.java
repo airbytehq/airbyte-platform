@@ -240,7 +240,8 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
     LOGGER.error("DD_SUPPORT_CONNECTOR_NAMES: " + DD_SUPPORT_CONNECTOR_NAMES);
-    if (Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(",")).anyMatch(image::contains)) {
+    if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null
+        && Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(",")).anyMatch(image::contains)) {
       addDatadogVars(envVars);
       addServerNameAndVersion(image, envVars);
     }
