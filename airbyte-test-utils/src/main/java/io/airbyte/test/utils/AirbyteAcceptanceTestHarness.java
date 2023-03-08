@@ -89,6 +89,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -275,6 +276,7 @@ public class AirbyteAcceptanceTestHarness {
           query.append(line);
         }
       }
+      LOGGER.info("Running query to seed database: {}", query.toString());
       database.query(context -> context.execute(query.toString()));
     } else {
       PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource(postgresSqlInitFile), sourcePsql);
@@ -286,7 +288,9 @@ public class AirbyteAcceptanceTestHarness {
 
   public void cleanup() {
     try {
+      LOGGER.info("Clearing source db data");
       clearSourceDbData();
+      LOGGER.info("Clearing destination db data");
       clearDestinationDbData();
 
       for (final UUID operationId : operationIds) {
@@ -642,7 +646,9 @@ public class AirbyteAcceptanceTestHarness {
     try {
       final Map<Object, Object> dbConfig = (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword, withSchema)
           : localConfig(psql, hiddenPassword, withSchema, isLegacy);
-      return Jsons.jsonNode(dbConfig);
+      final var config = Jsons.jsonNode(dbConfig);
+      LOGGER.info("Using db config: {}", Jsons.toPrettyString(config));
+      return config;
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
@@ -798,7 +804,7 @@ public class AirbyteAcceptanceTestHarness {
     apiClient.getOperationApi().deleteOperation(new OperationIdRequestBody().operationId(destinationId));
   }
 
-  public JobRead getMostRecentSyncJobId(final UUID connectionId) throws Exception {
+  public JobRead getMostRecentSyncJobId(final UUID connectionId) throws ApiException {
     return apiClient.getJobsApi()
         .listJobsFor(new JobListRequestBody().configId(connectionId.toString()).configTypes(List.of(JobConfigType.SYNC)))
         .getJobs()
@@ -876,6 +882,42 @@ public class AirbyteAcceptanceTestHarness {
       sleep(1000);
     }
     return connectionState;
+  }
+
+  /**
+   * Wait until the sync succeeds by polling the Jobs API.
+   *
+   * NOTE: !!! THIS WILL POTENTIALLY POLL FOREVER !!! so make sure the calling code has a deadline;
+   * for example, a test timeout.
+   *
+   * TODO: re-work the collection of polling helpers we have here into a sane set that rely on test
+   * timeouts instead of implementing their own deadline logic.
+   */
+  public void waitForSuccessfulSyncNoTimeout(final UUID connectionId) throws InterruptedException {
+    while (true) {
+      JobRead job;
+      try {
+        job = getMostRecentSyncJobId(connectionId);
+      } catch (NoSuchElementException e) {
+        LOGGER.debug("No job found for the sync. Waiting for the job to be created...");
+        sleep(5000);
+        continue; // To the top of the loop.
+      } catch (ApiException e) {
+        LOGGER.info("Failed to query for job info: {}. Retrying...", e);
+        continue; // To the top of the loop.
+      }
+      try {
+        while (Set.of(JobStatus.PENDING, JobStatus.RUNNING).contains(job.getStatus())) {
+          job = this.apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(job.getId())).getJob();
+          LOGGER.info("waiting: job id: {} config type: {} status: {}", job.getId(), job.getConfigType(), job.getStatus());
+          sleep(3000);
+        }
+        assertEquals(JobStatus.SUCCEEDED, job.getStatus());
+        return; // Don't forget to return!
+      } catch (ApiException e) {
+        LOGGER.info("Caught exception {} while waiting for successful sync. Retrying...", e);
+      }
+    }
   }
 
   public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId) throws Exception {
