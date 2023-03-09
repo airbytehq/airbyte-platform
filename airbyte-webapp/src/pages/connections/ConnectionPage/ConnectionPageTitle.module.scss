@@ -2,7 +2,7 @@
 @use "scss/variables";
 
 .container {
-  width: 650px;
+  width: variables.$width-connection-header;
   margin: 0 auto;
   text-align: center;
   padding: variables.$spacing-lg variables.$spacing-xl 0;
