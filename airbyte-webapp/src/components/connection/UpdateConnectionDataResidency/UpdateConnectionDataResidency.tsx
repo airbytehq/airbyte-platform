@@ -64,7 +64,7 @@ export const UpdateConnectionDataResidency: React.FC = () => {
           />
         </div>
         <div className={styles.dropdownWrapper}>
-          <div className={styles.spinner}>{connectionUpdating && <Spinner small />}</div>
+          <div className={styles.spinner}>{connectionUpdating && <Spinner size="sm" />}</div>
           <div className={styles.dropdown}>
             <DataGeographyDropdown
               isDisabled={connectionUpdating}

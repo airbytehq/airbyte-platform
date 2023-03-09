@@ -2964,6 +2964,9 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         name:
           type: string
+        secretId:
+          example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
+          type: string
     SourceDiscoverSchemaRequestBody:
       type: object
       required:

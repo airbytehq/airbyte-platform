@@ -40,7 +40,7 @@ export const BillingPage: React.FC = () => {
         <React.Suspense
           fallback={
             <div className={styles.creditUsageLoading}>
-              <Spinner small />
+              <Spinner size="sm" />
               <Text>
                 <FormattedMessage id="credits.loadingCreditsUsage" />
               </Text>

@@ -38,6 +38,7 @@ temporal = "1.17.0"
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }
 apache-ant = { module = "org.apache.ant:ant", version = "1.10.10" }
 apache-commons = { module = "org.apache.commons:commons-compress", version = "1.20" }
+apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version = "3.11" }
 apache-commons-text = { module = "org.apache.commons:commons-text", version = "1.10.0" }
 appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0" }
@@ -47,6 +48,7 @@ byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
 connectors-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "connectors-testcontainers" }
+datadog-statsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.0.0" }
 datadog-trace-api = { module = "com.datadoghq:dd-trace-api", version.ref = "datadog-version" }
 datadog-trace-ot = { module = "com.datadoghq:dd-trace-ot", version.ref = "datadog-version" }
 docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }

@@ -123,7 +123,9 @@ class BaseConfigDatabaseTest {
               stream_reset,
               workspace,
               workspace_service_account,
-              connector_builder_project
+              connector_builder_project,
+              declarative_manifest,
+              active_declarative_manifest
             """));
   }
 

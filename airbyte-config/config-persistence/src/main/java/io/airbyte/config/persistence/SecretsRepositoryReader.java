@@ -5,12 +5,15 @@
 package io.airbyte.config.persistence;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -153,6 +156,18 @@ public class SecretsRepositoryReader {
     final JsonNode webhookConfigs = secretsHydrator.hydrate(workspace.getWebhookOperationConfigs());
     workspace.withWebhookOperationConfigs(webhookConfigs);
     return workspace;
+  }
+
+  /**
+   * Given a secret coordinate, fetch the secret.
+   *
+   * @param secretCoordinate secret coordinate
+   * @return JsonNode representing the fetched secret
+   */
+  public JsonNode fetchSecret(final SecretCoordinate secretCoordinate) {
+    ObjectNode node = JsonNodeFactory.instance.objectNode();
+    node.put("_secret", secretCoordinate.getFullCoordinate());
+    return secretsHydrator.hydrateSecretCoordinate(node);
   }
 
 }

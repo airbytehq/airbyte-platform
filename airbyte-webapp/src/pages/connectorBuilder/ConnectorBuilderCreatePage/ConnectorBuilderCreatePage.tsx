@@ -1,7 +1,6 @@
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { load, YAMLException } from "js-yaml";
-import isEqual from "lodash/isEqual";
 import lowerCase from "lodash/lowerCase";
 import startCase from "lodash/startCase";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -9,11 +8,7 @@ import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { HeadTitle } from "components/common/HeadTitle";
-import {
-  BuilderFormValues,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES,
-} from "components/connectorBuilder/types";
+import { BuilderFormValues, DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/types";
 import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
 import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -26,46 +21,35 @@ import { Action, Namespace } from "core/analytics";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification";
-import {
-  ConnectorBuilderLocalStorageProvider,
-  useConnectorBuilderLocalStorage,
-} from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
-import { ReactComponent as AirbyteLogo } from "./airbyte-logo.svg";
-import styles from "./ConnectorBuilderLandingPage.module.scss";
+import styles from "./ConnectorBuilderCreatePage.module.scss";
 import { ReactComponent as ImportYamlImage } from "./import-yaml.svg";
+import { ReactComponent as LoadExistingConnectorImage } from "./load-existing-connector.svg";
 import { ReactComponent as StartFromScratchImage } from "./start-from-scratch.svg";
+import { AirbyteTitle } from "../components/AirbyteTitle";
+import { BackButton } from "../components/BackButton";
+import { useCreateAndNavigate } from "../components/useCreateAndNavigate";
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 const YAML_UPLOAD_ERROR_ID = "connectorBuilder.yamlUpload.error";
 
-const ConnectorBuilderLandingPageInner: React.FC = () => {
+const ConnectorBuilderCreatePageInner: React.FC = () => {
   const analyticsService = useAnalyticsService();
-  const { storedFormValues, setStoredFormValues, storedManifest, setStoredManifest, setStoredEditorView } =
-    useConnectorBuilderLocalStorage();
+  const existingProjects = useListProjects();
+  const [activeTile, setActiveTile] = useState<"yaml" | "empty" | undefined>();
   const navigate = useNavigate();
 
-  // use refs for the intial values because useLocalStorage changes the references on re-render
-  const initialStoredFormValues = useRef<BuilderFormValues>(storedFormValues);
-  const initialStoredManifest = useRef<ConnectorManifest>(storedManifest);
-
-  useEffect(() => {
-    if (
-      !isEqual(initialStoredFormValues.current, DEFAULT_BUILDER_FORM_VALUES) ||
-      !isEqual(initialStoredManifest.current, DEFAULT_JSON_MANIFEST_VALUES)
-    ) {
-      navigate(ConnectorBuilderRoutePaths.Edit, { replace: true });
-    }
-  }, [navigate]);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { createAndNavigate, isLoading: isCreateProjectLoading } = useCreateAndNavigate();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { convertToBuilderFormValues } = useManifestToBuilderForm();
   const [importYamlLoading, setImportYamlLoading] = useState(false);
 
   useEffect(() => {
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONNECTOR_BUILDER_START, {
-      actionDescription: "Connector Builder UI landing page opened",
+      actionDescription: "Connector Builder UI create page opened",
     });
   }, [analyticsService]);
 
@@ -98,45 +82,29 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
                 type: ToastType.ERROR,
               });
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.INVALID_YAML_UPLOADED, {
-                actionDescription: "A file with invalid YAML syntax was uploaded to the Connector Builder landing page",
+                actionDescription: "A file with invalid YAML syntax was uploaded to the Connector Builder create page",
                 error_message: e.reason,
               });
             }
             return;
           }
 
-          let convertedFormValues;
+          let convertedFormValues: BuilderFormValues;
           try {
-            convertedFormValues = await convertToBuilderFormValues(json, DEFAULT_BUILDER_FORM_VALUES);
+            convertedFormValues = await convertToBuilderFormValues(json, DEFAULT_CONNECTOR_NAME);
           } catch (e) {
-            setStoredEditorView("yaml");
-            setStoredManifest(json);
-            navigate(ConnectorBuilderRoutePaths.Edit);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_INCOMPATIBLE_YAML_IMPORTED, {
               actionDescription: "A YAML manifest that's incompatible with the Builder UI was imported",
               error_message: e.message,
             });
+            createAndNavigate({ name: getConnectorName(fileName), manifest: json });
             return;
           }
 
-          if (fileName) {
-            const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
-            if (fileNameNoType === "manifest") {
-              // remove http protocol from beginning of url
-              convertedFormValues.global.connectorName = convertedFormValues.global.urlBase.replace(
-                /(^\w+:|^)\/\//,
-                ""
-              );
-            } else {
-              convertedFormValues.global.connectorName = startCase(fileNameNoType);
-            }
-          }
-          setStoredEditorView("ui");
-          setStoredFormValues(convertedFormValues);
-          navigate(ConnectorBuilderRoutePaths.Edit);
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_COMPATIBLE_YAML_IMPORTED, {
             actionDescription: "A YAML manifest that's compatible with the Builder UI was imported",
           });
+          createAndNavigate({ name: getConnectorName(fileName, convertedFormValues), manifest: json });
         } finally {
           if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -149,58 +117,61 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
         reader.readAsText(file);
       }
     },
-    [
-      analyticsService,
-      convertToBuilderFormValues,
-      navigate,
-      registerNotification,
-      setStoredEditorView,
-      setStoredFormValues,
-      setStoredManifest,
-    ]
+    [analyticsService, convertToBuilderFormValues, createAndNavigate, registerNotification]
   );
 
   // clear out notification on unmount, so it doesn't persist after a redirect
   useEffect(() => {
-    return () => unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
+    return () => {
+      unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
+    };
   }, [unregisterNotificationById]);
+
+  const isLoading = isCreateProjectLoading || importYamlLoading;
 
   return (
     <FlexContainer direction="column" alignItems="center" gap="2xl">
-      <FlexContainer direction="column" gap="md" alignItems="center" className={styles.titleContainer}>
-        <AirbyteLogo />
-        <Heading as="h1" size="lg" className={styles.title}>
-          <FormattedMessage id="connectorBuilder.landingPage.title" />
-        </Heading>
-      </FlexContainer>
-      <Heading as="h1" size="lg">
-        <FormattedMessage id="connectorBuilder.landingPage.prompt" />
-      </Heading>
+      <AirbyteTitle title={<FormattedMessage id="connectorBuilder.createPage.prompt" />} />
       <FlexContainer direction="row" gap="2xl">
         <input type="file" accept=".yml,.yaml" ref={fileInputRef} onChange={handleYamlUpload} hidden />
         <Tile
           image={<ImportYamlImage />}
-          title="connectorBuilder.landingPage.importYaml.title"
-          description="connectorBuilder.landingPage.importYaml.description"
-          buttonText="connectorBuilder.landingPage.importYaml.button"
-          buttonProps={{ isLoading: importYamlLoading }}
+          title="connectorBuilder.createPage.importYaml.title"
+          description="connectorBuilder.createPage.importYaml.description"
+          buttonText="connectorBuilder.createPage.importYaml.button"
+          buttonProps={{ isLoading: activeTile === "yaml" && isLoading, disabled: isLoading }}
           onClick={() => {
             unregisterNotificationById(YAML_UPLOAD_ERROR_ID);
+            setActiveTile("yaml");
             fileInputRef.current?.click();
           }}
           dataTestId="import-yaml"
         />
+        {existingProjects.length > 0 && (
+          <Tile
+            image={<LoadExistingConnectorImage />}
+            title="connectorBuilder.createPage.loadExistingConnector.title"
+            description="connectorBuilder.createPage.loadExistingConnector.description"
+            buttonText="connectorBuilder.createPage.loadExistingConnector.button"
+            buttonProps={{ disabled: isLoading }}
+            onClick={() => {
+              navigate(`../${ConnectorBuilderRoutePaths.Fork}`);
+            }}
+            dataTestId="load-existing-connector"
+          />
+        )}
         <Tile
           image={<StartFromScratchImage />}
-          title="connectorBuilder.landingPage.startFromScratch.title"
-          description="connectorBuilder.landingPage.startFromScratch.description"
-          buttonText="connectorBuilder.landingPage.startFromScratch.button"
+          title="connectorBuilder.createPage.startFromScratch.title"
+          description="connectorBuilder.createPage.startFromScratch.description"
+          buttonText="connectorBuilder.createPage.startFromScratch.button"
+          buttonProps={{ isLoading: activeTile === "empty" && isLoading, disabled: isLoading }}
           onClick={() => {
-            setStoredEditorView("ui");
-            navigate(ConnectorBuilderRoutePaths.Edit);
+            setActiveTile("empty");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.START_FROM_SCRATCH, {
-              actionDescription: "User selected Start From Scratch on the Connector Builder landing page",
+              actionDescription: "User selected Start From Scratch on the Connector Builder create page",
             });
+            createAndNavigate({ name: getConnectorName() });
           }}
           dataTestId="start-from-scratch"
         />
@@ -209,10 +180,23 @@ const ConnectorBuilderLandingPageInner: React.FC = () => {
   );
 };
 
-export const ConnectorBuilderLandingPage: React.FC = () => (
+function getConnectorName(fileName?: string | undefined, formValues?: BuilderFormValues) {
+  if (!fileName) {
+    return DEFAULT_CONNECTOR_NAME;
+  }
+  const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
+  if (fileNameNoType === "manifest" && formValues) {
+    // remove http protocol from beginning of url
+    return formValues.global.urlBase.replace(/(^\w+:|^)\/\//, "");
+  }
+  return startCase(fileNameNoType);
+}
+
+export const ConnectorBuilderCreatePage: React.FC = () => (
   <ConnectorBuilderLocalStorageProvider>
-    <HeadTitle titles={[{ id: "connectorBuilder.landingPage.title" }]} />
-    <ConnectorBuilderLandingPageInner />
+    <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+    <BackButton />
+    <ConnectorBuilderCreatePageInner />
   </ConnectorBuilderLocalStorageProvider>
 );
 
