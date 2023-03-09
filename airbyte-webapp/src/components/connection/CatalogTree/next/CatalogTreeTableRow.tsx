@@ -100,18 +100,13 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         </Text>
       </CatalogTreeTableCell>
       <CatalogTreeTableCell size="fixed" className={styles.syncModeCell}>
-        {disabled ? (
-          <Text size="md" className={styles.cellText}>
-            {syncSchema.syncMode}
-          </Text>
-        ) : (
-          <SyncModeSelect
-            options={availableSyncModes}
-            onChange={onSelectSyncMode}
-            value={syncSchema}
-            variant={pillButtonVariant}
-          />
-        )}
+        <SyncModeSelect
+          options={availableSyncModes}
+          onChange={onSelectSyncMode}
+          value={syncSchema}
+          variant={pillButtonVariant}
+          disabled={disabled}
+        />
       </CatalogTreeTableCell>
       <CatalogTreeTableCell withTooltip>
         {cursorType && (
