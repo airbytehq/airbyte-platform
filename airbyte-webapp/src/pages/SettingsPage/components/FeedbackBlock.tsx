@@ -26,7 +26,7 @@ const FeedbackBlock: React.FC<FeedbackBlockProps> = ({ isLoading, errorMessage, 
   if (isLoading) {
     return (
       <SuccessBlock>
-        <Spinner small />
+        <Spinner size="sm" />
       </SuccessBlock>
     );
   }

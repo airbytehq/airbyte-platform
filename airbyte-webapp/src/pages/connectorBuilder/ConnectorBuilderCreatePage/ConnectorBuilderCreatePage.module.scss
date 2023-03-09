@@ -2,14 +2,6 @@
 @use "scss/variables";
 @use "scss/mixins";
 
-.titleContainer {
-  padding-top: variables.$spacing-2xl;
-}
-
-.title {
-  color: colors.$grey-400;
-}
-
 .tile {
   width: 270px;
   padding: 30px variables.$spacing-xl;

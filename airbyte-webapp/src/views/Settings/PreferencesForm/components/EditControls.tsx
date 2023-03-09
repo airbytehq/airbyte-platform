@@ -44,7 +44,7 @@ const EditControls: React.FC<IProps> = ({ isSubmitting, isValid, dirty, resetFor
     if (isSubmitting) {
       return (
         <SpinnerContainer>
-          <Spinner small />
+          <Spinner size="sm" />
         </SpinnerContainer>
       );
     }

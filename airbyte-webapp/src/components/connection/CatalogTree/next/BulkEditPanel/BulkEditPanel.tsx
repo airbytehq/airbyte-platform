@@ -1,60 +1,29 @@
 import classNames from "classnames";
-import intersection from "lodash/intersection";
 import React, { useMemo } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
 
-import { SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 
-import { SyncSchemaField, SyncSchemaFieldObject, SyncSchemaStream, traverseSchemaToField } from "core/domain/catalog";
+import { SyncSchemaField } from "core/domain/catalog";
 import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
 import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { isCloudApp } from "utils/app";
 
 import styles from "./BulkEditPanel.module.scss";
-import { StreamPathSelect } from "./StreamPathSelect";
-import { SyncModeOption, SyncModeSelect } from "./SyncModeSelect";
-import { pathDisplayName } from "../PathPopout";
-import { HeaderCell } from "../styles";
-import { flatten, getPathType } from "../utils";
-
-export function calculateSharedFields(selectedBatchNodes: SyncSchemaStream[]) {
-  const primitiveFieldsByStream = selectedBatchNodes.map(({ stream }) => {
-    const traversedFields = traverseSchemaToField(stream?.jsonSchema, stream?.name);
-    const flattenedFields = flatten(traversedFields);
-
-    return flattenedFields.filter(SyncSchemaFieldObject.isPrimitive);
-  });
-
-  const pathMap = new Map<string, SyncSchemaField>();
-
-  // calculate intersection of primitive fields across all selected streams
-  primitiveFieldsByStream.forEach((fields, index) => {
-    if (index === 0) {
-      fields.forEach((field) => pathMap.set(pathDisplayName(field.path), field));
-    } else {
-      const fieldMap = new Set(fields.map((f) => pathDisplayName(f.path)));
-      pathMap.forEach((_, k) => (!fieldMap.has(k) ? pathMap.delete(k) : null));
-    }
-  });
-
-  return Array.from(pathMap.values());
-}
-
-export const getAvailableSyncModesOptions = (
-  nodes: SyncSchemaStream[],
-  syncModes?: DestinationSyncMode[]
-): SyncModeOption[] =>
-  SUPPORTED_MODES.filter(([syncMode, destinationSyncMode]) => {
-    const supportableModes = intersection(...nodes.map((n) => n.stream?.supportedSyncModes));
-    return supportableModes.includes(syncMode) && syncModes?.includes(destinationSyncMode);
-  }).map(([syncMode, destinationSyncMode]) => ({
-    value: { syncMode, destinationSyncMode },
-  }));
+import {
+  calculateSelectedSyncMode,
+  calculateSharedFields,
+  calculateSyncSwitchState,
+  getAvailableSyncModesOptions,
+} from "./utils";
+import { HeaderCell } from "../../styles";
+import { getPathType } from "../../utils";
+import { StreamPathSelect } from "../StreamPathSelect";
+import { SyncModeSelect } from "../SyncModeSelect";
 
 export const BulkEditPanel: React.FC = () => {
   const {
@@ -82,6 +51,21 @@ export const BulkEditPanel: React.FC = () => {
 
   const paths = primitiveFields.map((f) => f.path);
 
+  const { syncSwitchChecked, syncSwitchMixed } = useMemo(
+    () => calculateSyncSwitchState(selectedBatchNodes, options),
+    [selectedBatchNodes, options]
+  );
+
+  const selectedSyncMode = useMemo(
+    () => calculateSelectedSyncMode(selectedBatchNodes, options),
+    [options, selectedBatchNodes]
+  );
+
+  const onChangeSyncSwitch = () => {
+    const isChecked = "selected" in options ? options.selected : syncSwitchChecked;
+    onChangeOption({ selected: !isChecked });
+  };
+
   return createPortal(
     <FlexContainer
       gap="none"
@@ -103,8 +87,9 @@ export const BulkEditPanel: React.FC = () => {
           <Switch
             variant="strong-blue"
             size="sm"
-            checked={options.selected}
-            onChange={() => onChangeOption({ selected: !options.selected })}
+            indeterminate={syncSwitchMixed}
+            checked={syncSwitchChecked}
+            onChange={onChangeSyncSwitch}
           />
         </div>
       </HeaderCell>
@@ -116,10 +101,7 @@ export const BulkEditPanel: React.FC = () => {
           <SyncModeSelect
             className={styles.syncModeSelect}
             variant="strong-blue"
-            value={{
-              syncMode: options.syncMode,
-              destinationSyncMode: options.destinationSyncMode,
-            }}
+            value={selectedSyncMode}
             options={availableSyncModesOptions}
             onChange={({ value }) => onChangeOption({ ...value })}
           />

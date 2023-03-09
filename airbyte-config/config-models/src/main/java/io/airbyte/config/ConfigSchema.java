@@ -43,6 +43,8 @@ public enum ConfigSchema implements AirbyteConfig {
       SourceConnection.class,
       sourceConnection -> sourceConnection.getSourceId().toString(),
       "sourceId"),
+  ACTIVE_DECLARATIVE_MANIFEST("ActiveDeclarativeManifest.yaml", ActiveDeclarativeManifest.class),
+  DECLARATIVE_MANIFEST("DeclarativeManifest.yaml", ActiveDeclarativeManifest.class),
 
   // destination
   STANDARD_DESTINATION_DEFINITION("StandardDestinationDefinition.yaml",

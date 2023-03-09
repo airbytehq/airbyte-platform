@@ -25,11 +25,9 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
-import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceImpl;
 import jakarta.inject.Singleton;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -108,7 +106,7 @@ public class PersistStateActivityImpl implements PersistStateActivity {
      *
      * Otherwise, it is okay to update if the previous state is missing or empty.
      */
-    if (featureFlags.needStateValidation() && !isStateEmpty(previousState)) {
+    if (featureFlags.needStateValidation() && !SyncPersistenceImpl.isStateEmpty(previousState)) {
       final StateType newStateType = newState.get().getStateType();
       final StateType prevStateType = convertClientStateTypeToInternal(previousState.getStateType());
 
@@ -118,28 +116,9 @@ public class PersistStateActivityImpl implements PersistStateActivity {
     }
   }
 
-  /**
-   * Test whether the connection state is empty.
-   *
-   * @param connectionState The connection state.
-   * @return {@code true} if the connection state is null or empty, {@code false} otherwise.
-   */
-  private boolean isStateEmpty(final ConnectionState connectionState) {
-    return connectionState == null || connectionState.getState() == null || connectionState.getState().isEmpty();
-  }
-
   @VisibleForTesting
   void validateStreamStates(final StateWrapper state, final ConfiguredAirbyteCatalog configuredCatalog) {
-    final List<StreamDescriptor> stateStreamDescriptors =
-        state.getStateMessages().stream().map(stateMessage -> stateMessage.getStream().getStreamDescriptor()).toList();
-    final List<StreamDescriptor> catalogStreamDescriptors = CatalogHelpers.extractIncrementalStreamDescriptors(configuredCatalog);
-    catalogStreamDescriptors.forEach(streamDescriptor -> {
-      if (!stateStreamDescriptors.contains(streamDescriptor)) {
-        throw new IllegalStateException(
-            "Job ran during migration from Legacy State to Per Stream State. One of the streams that did not have state is: " + streamDescriptor
-                + ". Job must be retried in order to properly store state.");
-      }
-    });
+    SyncPersistenceImpl.validateStreamStates(state, configuredCatalog);
   }
 
 }

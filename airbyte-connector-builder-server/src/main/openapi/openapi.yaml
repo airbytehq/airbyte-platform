@@ -12,7 +12,7 @@ info:
     url: "https://opensource.org/licenses/MIT"
 externalDocs:
   description: Find out more about Connector Builder
-  url: "https://docs.airbyte.com/connector-development/config-based/overview/"
+  url: "https://docs.airbyte.com/connector-development/config-based/connector-builder-ui"
 
 paths:
   /v1/stream/read:

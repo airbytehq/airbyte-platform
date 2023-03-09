@@ -2,6 +2,8 @@
 @use "scss/variables";
 
 .container {
+  width: 650px;
+  margin: 0 auto;
   text-align: center;
   padding: variables.$spacing-lg variables.$spacing-xl 0;
 }

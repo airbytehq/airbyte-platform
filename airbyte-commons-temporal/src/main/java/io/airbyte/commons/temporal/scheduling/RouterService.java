@@ -59,12 +59,8 @@ public class RouterService {
       throw new RuntimeException("Jobtype not expected to call - getTaskQueueForWorkspace - " + jobType);
     }
 
-    if (featureFlags.routeTaskQueueForWorkspaceEnabled() || featureFlags.routeTaskQueueForWorkspaceAllowList().contains(workspaceId.toString())) {
-      final Geography geography = configRepository.getGeographyForWorkspace(workspaceId);
-      return taskQueueMapper.getTaskQueue(geography, jobType);
-    } else {
-      return taskQueueMapper.getTaskQueue(Geography.AUTO, jobType);
-    }
+    final Geography geography = configRepository.getGeographyForWorkspace(workspaceId);
+    return taskQueueMapper.getTaskQueue(geography, jobType);
   }
 
 }
