@@ -76,6 +76,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -373,6 +374,11 @@ public class DefaultJobPersistence implements JobPersistence {
         saveToSyncStatsTable(now, syncStats, attemptId, ctx);
       }
 
+      final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
+      if (CollectionUtils.isNotEmpty(streamSyncStats)) {
+        saveToStreamStatsTable(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
+      }
+
       final NormalizationSummary normalizationSummary = output.getSync().getNormalizationSummary();
       if (normalizationSummary != null) {
         ctx.insertInto(NORMALIZATION_SUMMARIES)
@@ -493,13 +499,8 @@ public class DefaultJobPersistence implements JobPersistence {
               .set(STREAM_STATS.UPDATED_AT, now)
               .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
               .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
-              .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
               .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
-              .set(STREAM_STATS.UPDATED_AT, now)
-              .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
-              .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
               .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
-              .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
               .execute();
         });
   }
