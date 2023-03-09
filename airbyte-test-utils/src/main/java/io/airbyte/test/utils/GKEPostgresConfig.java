@@ -4,14 +4,13 @@
 
 package io.airbyte.test.utils;
 
-import io.airbyte.db.Database;
-import io.airbyte.db.factory.DSLContextFactory;
+import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.factory.DatabaseDriver;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AirbyteAcceptanceTestHarness.Type;
 import java.util.HashMap;
 import java.util.Map;
-import org.jooq.SQLDialect;
+import javax.sql.DataSource;
 import org.postgresql.PGProperty;
 
 /**
@@ -52,17 +51,20 @@ class GKEPostgresConfig {
     return dbConfig;
   }
 
-  static Database getSourceDatabase() {
+  static DataSource getDestinationDataSource() {
     // Note: we set the connection timeout to 30s. The underlying Hikari default is also 30s --
     // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
     // overrides that to MAX_INTEGER unless we explicitly specify it.
-    return new Database(DSLContextFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
-        "jdbc:postgresql://localhost:2000/postgresdb", SQLDialect.POSTGRES, Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30")));
+    return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
+        "jdbc:postgresql://localhost:4000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30"));
   }
 
-  static Database getDestinationDatabase() {
-    return new Database(DSLContextFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
-        "jdbc:postgresql://localhost:4000/postgresdb", SQLDialect.POSTGRES, Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30")));
+  static DataSource getSourceDataSource() {
+    // Note: we set the connection timeout to 30s. The underlying Hikari default is also 30s --
+    // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
+    // overrides that to MAX_INTEGER unless we explicitly specify it.
+    return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
+        "jdbc:postgresql://localhost:2000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30"));
   }
 
 }

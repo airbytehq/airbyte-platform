@@ -67,6 +67,7 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.commons.util.MoreProperties;
 import io.airbyte.db.Database;
+import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.container.AirbyteTestContainer;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -93,6 +94,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.sql.DataSource;
 import org.jooq.JSONB;
 import org.jooq.Record;
 import org.jooq.Result;
@@ -182,6 +184,8 @@ public class AirbyteAcceptanceTestHarness {
   private List<UUID> connectionIds;
   private List<UUID> destinationIds;
   private List<UUID> operationIds;
+  private DataSource sourceDataSource;
+  private DataSource destinationDataSource;
 
   public PostgreSQLContainer getSourcePsql() {
     return sourcePsql;
@@ -267,6 +271,9 @@ public class AirbyteAcceptanceTestHarness {
     operationIds = Lists.newArrayList();
 
     if (isGke) {
+      // Prepare the database data sources.
+      sourceDataSource = GKEPostgresConfig.getSourceDataSource();
+      destinationDataSource = GKEPostgresConfig.getDestinationDataSource();
       // seed database.
       final Database database = getSourceDatabase();
       final Path path = Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI());
@@ -283,6 +290,9 @@ public class AirbyteAcceptanceTestHarness {
 
       destinationPsql = new PostgreSQLContainer("postgres:13-alpine");
       destinationPsql.start();
+
+      sourceDataSource = DatabaseConnectionHelper.createDataSource(sourcePsql);
+      destinationDataSource = DatabaseConnectionHelper.createDataSource(destinationPsql);
     }
   }
 
@@ -311,6 +321,9 @@ public class AirbyteAcceptanceTestHarness {
       if (!isGke) {
         destinationPsql.stop();
       }
+
+      DataSourceFactory.close(sourceDataSource);
+      DataSourceFactory.close(destinationDataSource);
     } catch (final Exception e) {
       LOGGER.error("Error tearing down test fixtures:", e);
     }
@@ -383,21 +396,15 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public Database getSourceDatabase() {
-    if (isKube && isGke) {
-      return GKEPostgresConfig.getSourceDatabase();
-    }
-    return getDatabase(sourcePsql);
+    return getDatabase(sourceDataSource);
   }
 
   public Database getDestinationDatabase() {
-    if (isKube && isGke) {
-      return GKEPostgresConfig.getDestinationDatabase();
-    }
-    return getDatabase(destinationPsql);
+    return getDatabase(destinationDataSource);
   }
 
-  public Database getDatabase(final PostgreSQLContainer db) {
-    return new Database(DatabaseConnectionHelper.createDslContext(db, SQLDialect.POSTGRES));
+  public Database getDatabase(final DataSource dataSource) {
+    return new Database(DatabaseConnectionHelper.createDslContext(dataSource, SQLDialect.POSTGRES));
   }
 
   public Set<SchemaTableNamePair> listAllTables(final Database database) throws SQLException {

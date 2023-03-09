@@ -218,7 +218,6 @@ class DefaultJobPersistenceTest {
 
   @AfterEach
   void tearDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
   }
 

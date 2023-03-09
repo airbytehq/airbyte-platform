@@ -95,6 +95,7 @@ import org.jooq.JoinType;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Record2;
+import org.jooq.RecordMapper;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.Table;
@@ -2159,11 +2160,13 @@ public class ConfigRepository {
       if (fetchManifestDraft) {
         columnsToFetch.add(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT);
       }
+      final RecordMapper<Record, ConnectorBuilderProject> connectionBuilderProjectRecordMapper =
+          fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft;
       return ctx.select(columnsToFetch)
           .from(CONNECTOR_BUILDER_PROJECT)
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId).andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
           .fetch()
-          .map(fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
+          .map(connectionBuilderProjectRecordMapper)
           .stream()
           .findFirst();
     });
