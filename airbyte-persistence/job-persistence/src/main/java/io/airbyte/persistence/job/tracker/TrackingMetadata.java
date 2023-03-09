@@ -239,7 +239,13 @@ public class TrackingMetadata {
         .toList());
   }
 
-  private static JsonNode failureReasonAsJson(final FailureReason failureReason) {
+  /**
+   * Map a FailureReason to a string-to-object map, so it can be attached to telemetry calls.
+   *
+   * @param failureReason failure reason
+   * @return failure reason as a string-to-object map.
+   */
+  public static JsonNode failureReasonAsJson(final FailureReason failureReason) {
     // we want the json to always include failureOrigin and failureType, even when they are null
     final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", failureReason.getFailureOrigin());
