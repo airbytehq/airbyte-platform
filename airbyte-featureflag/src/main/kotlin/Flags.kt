@@ -52,6 +52,7 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 }
 
 object ShouldFailSyncIfHeartbeatFailure : Temporary(key = "heartbeat.failSync")
+object ShouldStartHeartbeatMonitoring : Temporary(key = "heartbeat.enabled")
 
 /**
  * Flag is a sealed class that all feature-flags must inherit from.
