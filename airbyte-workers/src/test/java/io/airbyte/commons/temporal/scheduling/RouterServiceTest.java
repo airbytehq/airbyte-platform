@@ -14,7 +14,6 @@ import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import io.airbyte.config.persistence.ConfigRepository;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,8 +68,7 @@ class RouterServiceTest {
   }
 
   @Test
-  void testGetWorkspaceTaskQueueWithEnabledFlag() throws IOException {
-    Mockito.when(mockFeatureFlag.routeTaskQueueForWorkspaceEnabled()).thenReturn(true);
+  void testGetWorkspaceTaskQueue() throws IOException {
     Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
 
@@ -79,21 +77,6 @@ class RouterServiceTest {
 
     Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
     assertEquals(EU_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
-  }
-
-  @Test
-  void testGetWorkspaceTaskQueueWithDisabledFlag() throws IOException {
-    Mockito.when(mockFeatureFlag.routeTaskQueueForWorkspaceEnabled()).thenReturn(false);
-    Mockito.when(mockFeatureFlag.routeTaskQueueForWorkspaceAllowList()).thenReturn(new HashSet<>());
-
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
-    assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
-
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.US);
-    assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
-
-    Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.EU);
-    assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
   }
 
 }

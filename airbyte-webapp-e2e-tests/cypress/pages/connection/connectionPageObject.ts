@@ -1,13 +1,21 @@
 import { Connection } from "commands/api/types";
 import { getWorkspaceId } from "commands/api/workspace";
+import { interceptGetConnectionRequest, waitForGetConnectionRequest } from "commands/interceptors";
+import { RouteHandler } from "cypress/types/net-stubbing";
 
 const replicationTab = "div[data-id='replication-step']";
 const syncEnabledSwitch = "[data-testid='enabledControl-switch']";
 
-export const visit = (connection: Connection, tab = "") => {
-  cy.intercept("**/web_backend/connections/get").as("getConnection");
+interface VisitOptions {
+  interceptGetHandler?: RouteHandler;
+}
+
+export const visit = (connection: Connection, tab = "", { interceptGetHandler }: VisitOptions = {}) => {
+  interceptGetConnectionRequest(interceptGetHandler);
+
   cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connection.connectionId}/${tab}`);
-  cy.wait("@getConnection", { timeout: 20000 });
+
+  waitForGetConnectionRequest();
 };
 
 export const goToReplicationTab = () => {

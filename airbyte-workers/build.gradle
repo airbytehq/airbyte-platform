@@ -83,6 +83,8 @@ dependencies {
     }
     implementation project(':airbyte-worker-models')
 
+    runtimeOnly libs.javax.databind
+
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
 

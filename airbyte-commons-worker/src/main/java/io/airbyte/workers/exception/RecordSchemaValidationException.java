@@ -10,7 +10,7 @@ import java.util.Set;
  * Exception thrown by the RecordSchemaValidator during a sync when AirbyteRecordMessage data does
  * not conform to its stream's defined JSON schema.
  */
-public class RecordSchemaValidationException extends Exception {
+public class RecordSchemaValidationException extends RuntimeException {
 
   public final Set<String> errorMessages;
 

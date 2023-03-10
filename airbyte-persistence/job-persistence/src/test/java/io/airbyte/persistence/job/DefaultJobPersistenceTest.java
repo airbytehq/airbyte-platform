@@ -218,7 +218,6 @@ class DefaultJobPersistenceTest {
 
   @AfterEach
   void tearDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
   }
 
@@ -280,6 +279,11 @@ class DefaultJobPersistenceTest {
         new SyncStats().withBytesEmitted(100L).withRecordsEmitted(9L).withRecordsCommitted(10L).withDestinationStateMessagesEmitted(1L)
             .withSourceStateMessagesEmitted(4L).withMaxSecondsBeforeSourceStateMessageEmitted(5L).withMeanSecondsBeforeSourceStateMessageEmitted(2L)
             .withMaxSecondsBetweenStateMessageEmittedandCommitted(10L).withMeanSecondsBetweenStateMessageEmittedandCommitted(3L);
+    final String streamName = "stream";
+    final String streamNamespace = "namespace";
+    final StreamSyncStats streamSyncStats = new StreamSyncStats().withStats(
+        new SyncStats().withBytesEmitted(100L).withRecordsEmitted(9L).withEstimatedBytes(200L).withEstimatedRecords(10L))
+        .withStreamNamespace(streamNamespace).withStreamName(streamName);
     final FailureReason failureReason1 = new FailureReason().withFailureOrigin(FailureOrigin.DESTINATION).withFailureType(FailureType.SYSTEM_ERROR)
         .withExternalMessage("There was a normalization error");
     final FailureReason failureReason2 = new FailureReason().withFailureOrigin(FailureOrigin.SOURCE).withFailureType(FailureType.CONFIG_ERROR)
@@ -288,7 +292,9 @@ class DefaultJobPersistenceTest {
     final NormalizationSummary normalizationSummary =
         new NormalizationSummary().withStartTime(10L).withEndTime(500L).withFailures(List.of(failureReason1, failureReason2));
     final StandardSyncOutput standardSyncOutput =
-        new StandardSyncOutput().withStandardSyncSummary(new StandardSyncSummary().withTotalStats(syncStats))
+        new StandardSyncOutput().withStandardSyncSummary(new StandardSyncSummary()
+            .withTotalStats(syncStats)
+            .withStreamStats(List.of(streamSyncStats)))
             .withNormalizationSummary(normalizationSummary);
     final JobOutput jobOutput = new JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput);
 
@@ -300,7 +306,9 @@ class DefaultJobPersistenceTest {
     assertEquals(Optional.of(jobOutput), updated.getAttempts().get(0).getOutput());
     assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
 
-    final SyncStats storedSyncStats = jobPersistence.getAttemptStats(jobId, attemptNumber).combinedStats();
+    final AttemptStats attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber);
+
+    final SyncStats storedSyncStats = attemptStats.combinedStats();
     assertEquals(100L, storedSyncStats.getBytesEmitted());
     assertEquals(9L, storedSyncStats.getRecordsEmitted());
     assertEquals(10L, storedSyncStats.getRecordsCommitted());
@@ -310,6 +318,15 @@ class DefaultJobPersistenceTest {
     assertEquals(2L, storedSyncStats.getMeanSecondsBeforeSourceStateMessageEmitted());
     assertEquals(10L, storedSyncStats.getMaxSecondsBetweenStateMessageEmittedandCommitted());
     assertEquals(3L, storedSyncStats.getMeanSecondsBetweenStateMessageEmittedandCommitted());
+
+    final List<StreamSyncStats> storedStreamSyncStats = attemptStats.perStreamStats();
+    assertEquals(1, storedStreamSyncStats.size());
+    assertEquals(streamName, storedStreamSyncStats.get(0).getStreamName());
+    assertEquals(streamNamespace, storedStreamSyncStats.get(0).getStreamNamespace());
+    assertEquals(streamSyncStats.getStats().getBytesEmitted(), storedStreamSyncStats.get(0).getStats().getBytesEmitted());
+    assertEquals(streamSyncStats.getStats().getRecordsEmitted(), storedStreamSyncStats.get(0).getStats().getRecordsEmitted());
+    assertEquals(streamSyncStats.getStats().getEstimatedRecords(), storedStreamSyncStats.get(0).getStats().getEstimatedRecords());
+    assertEquals(streamSyncStats.getStats().getEstimatedBytes(), storedStreamSyncStats.get(0).getStats().getEstimatedBytes());
 
     final NormalizationSummary storedNormalizationSummary = jobPersistence.getNormalizationSummary(jobId, attemptNumber).stream().findFirst().get();
     assertEquals(10L, storedNormalizationSummary.getStartTime());

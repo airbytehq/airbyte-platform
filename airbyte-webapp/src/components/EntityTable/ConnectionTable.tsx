@@ -208,6 +208,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
       onClickRow={onClickRow}
       testId="connectionsTable"
       columnVisibility={{ "stream-status": streamCentricUIEnabled, name: !streamCentricUIEnabled }}
+      sortedByColumn={sortBy}
     />
   );
 };

@@ -9,7 +9,7 @@
 }
 
 .textContainer {
-  width: 650px;
+  width: variables.$width-connection-header;
   display: flex;
   align-items: center;
   justify-content: center;

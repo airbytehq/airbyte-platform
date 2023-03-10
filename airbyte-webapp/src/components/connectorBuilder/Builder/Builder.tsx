@@ -1,6 +1,5 @@
 import { Form } from "formik";
-import debounce from "lodash/debounce";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -9,7 +8,8 @@ import { BuilderSidebar } from "./BuilderSidebar";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
-import { builderFormValidationSchema, BuilderFormValues } from "../types";
+import { BuilderFormValues } from "../types";
+import { useBuilderErrors } from "../useBuilderErrors";
 
 interface BuilderProps {
   values: BuilderFormValues;
@@ -28,21 +28,15 @@ function getView(selectedView: BuilderView, hasMultipleStreams: boolean) {
   }
 }
 
-export const Builder: React.FC<BuilderProps> = ({ values, toggleYamlEditor, validateForm }) => {
-  const { setBuilderFormValues, selectedView } = useConnectorBuilderFormState();
-  const debouncedSetBuilderFormValues = useMemo(
-    () =>
-      debounce((values) => {
-        // kick off formik validation
-        validateForm();
-        // update upstream state
-        setBuilderFormValues(values, builderFormValidationSchema.isValidSync(values));
-      }, 200),
-    [setBuilderFormValues, validateForm]
-  );
+export const Builder: React.FC<BuilderProps> = ({ values, toggleYamlEditor }) => {
+  const { validateAndTouch } = useBuilderErrors();
+  const { selectedView, blockedOnInvalidState } = useConnectorBuilderFormState();
+
   useEffect(() => {
-    debouncedSetBuilderFormValues(values);
-  }, [values, debouncedSetBuilderFormValues]);
+    if (blockedOnInvalidState) {
+      validateAndTouch();
+    }
+  }, [blockedOnInvalidState, validateAndTouch]);
 
   return (
     <div className={styles.container}>

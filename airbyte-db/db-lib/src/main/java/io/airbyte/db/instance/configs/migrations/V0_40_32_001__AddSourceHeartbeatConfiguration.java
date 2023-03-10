@@ -23,9 +23,8 @@ public class V0_40_32_001__AddSourceHeartbeatConfiguration extends BaseJavaMigra
   public void migrate(final Context context) throws Exception {
     LOGGER.info("Running migration: {}", this.getClass().getSimpleName());
 
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      addSourceHeartbeatConfiguration(ctx);
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    addSourceHeartbeatConfiguration(ctx);
   }
 
   private static void addSourceHeartbeatConfiguration(final DSLContext ctx) {

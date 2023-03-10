@@ -31,6 +31,7 @@ export const CatalogTreeTableCell: React.FC<React.PropsWithChildren<CatalogTreeT
   withTooltip,
   className,
   children,
+  ...props
 }) => {
   const [tooltipDisabled, setTooltipDisabled] = useState(true);
   const cellContent = useRef<HTMLSpanElement | null>(null);
@@ -71,6 +72,7 @@ export const CatalogTreeTableCell: React.FC<React.PropsWithChildren<CatalogTreeT
   return (
     <div
       className={classNames(styles.tableCell, className, STYLES_BY_SIZE[size], { [styles.withOverflow]: withOverflow })}
+      {...props}
     >
       {withTooltip ? (
         <Tooltip
