@@ -10,7 +10,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useModalService } from "hooks/services/Modal";
 
 import { FormikConnectionFormValues } from "./formConfig";
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 import { ControlLabels } from "../../LabeledControl";
 import {
   DestinationStreamNamesFormValueType,
@@ -54,7 +54,7 @@ export const DestinationStreamPrefixName = () => {
   return (
     <Field name="prefix">
       {({ field }: FieldProps<string>) => (
-        <FormFieldWrapper>
+        <FormFieldLayout>
           <ControlLabels
             nextLine
             optional
@@ -80,7 +80,7 @@ export const DestinationStreamPrefixName = () => {
               <FormattedMessage id="form.edit" />
             </Button>
           </FlexContainer>
-        </FormFieldWrapper>
+        </FormFieldLayout>
       )}
     </Field>
   );

@@ -4,7 +4,7 @@
   margin-top: variables.$spacing-md;
 
   &.cloud {
-    margin-right: 68px;
+    margin-right: (variables.$spacing-intercom - variables.$spacing-xl);
   }
 
   transition: opacity variables.$transition-out;

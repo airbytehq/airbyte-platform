@@ -92,7 +92,6 @@ class BaseConfigDatabaseTest {
    */
   @AfterAll
   static void dbDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
     container.close();
   }
@@ -114,6 +113,7 @@ class BaseConfigDatabaseTest {
               actor_catalog_fetch_event,
               actor_definition,
               actor_definition_workspace_grant,
+              actor_definition_config_injection,
               actor_oauth_parameter,
               connection,
               connection_operation,
@@ -122,7 +122,9 @@ class BaseConfigDatabaseTest {
               stream_reset,
               workspace,
               workspace_service_account,
-              connector_builder_project
+              connector_builder_project,
+              declarative_manifest,
+              active_declarative_manifest
             """));
   }
 

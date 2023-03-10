@@ -42,8 +42,11 @@ import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteLogMessage.Level;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
@@ -57,8 +60,12 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.exception.DestinationException;
+import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
@@ -71,6 +78,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -79,6 +88,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -118,6 +128,7 @@ class DefaultReplicationWorkerTest {
   private MetricClient metricClient;
   private WorkerMetricReporter workerMetricReporter;
   private ConnectorConfigUpdater connectorConfigUpdater;
+  private HeartbeatTimeoutChaperone heartbeatTimeoutChaperone;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -141,6 +152,10 @@ class DefaultReplicationWorkerTest {
     connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     metricClient = MetricClientFactory.getMetricClient();
     workerMetricReporter = new WorkerMetricReporter(metricClient, "docker_image:v1.0.0");
+
+    final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
+    heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
 
     when(source.isFinished()).thenReturn(false, false, false, true);
     when(destination.isFinished()).thenReturn(false, false, false, true);
@@ -170,10 +185,14 @@ class DefaultReplicationWorkerTest {
     verify(destination).accept(RECORD_MESSAGE2);
     verify(source, atLeastOnce()).close();
     verify(destination).close();
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE1.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()));
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()));
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE1.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()),
+        new ConcurrentHashMap<>());
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE2.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
+        new ConcurrentHashMap<>());
   }
 
   @Test
@@ -189,12 +208,18 @@ class DefaultReplicationWorkerTest {
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
     verify(destination).accept(RECORD_MESSAGE3);
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE1.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()));
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()));
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE3.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE3.getRecord()));
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE1.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()),
+        new ConcurrentHashMap<>());
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE2.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
+        new ConcurrentHashMap<>());
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE3.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE3.getRecord()),
+        new ConcurrentHashMap<>());
     verify(source).close();
     verify(destination).close();
   }
@@ -353,10 +378,9 @@ class DefaultReplicationWorkerTest {
     // Use a real schema validator to make sure validation doesn't affect this.
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
-    recordSchemaValidator = new RecordSchemaValidator(new TestClient(), syncInput.getWorkspaceId(),
-        Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
-            sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
-    final ReplicationWorker worker = getDefaultReplicationWorker(true);
+    recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()), false);
+    final ReplicationWorker worker = getDefaultReplicationWorker(true, false);
 
     worker.run(syncInput, jobRoot);
 
@@ -376,9 +400,8 @@ class DefaultReplicationWorkerTest {
     // Use a real schema validator to make sure validation doesn't affect this.
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
-    recordSchemaValidator = new RecordSchemaValidator(new TestClient(), syncInput.getWorkspaceId(),
-        Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
-            sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
+    recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()), false);
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
     worker.run(syncInput, jobRoot);
@@ -657,11 +680,53 @@ class DefaultReplicationWorkerTest {
     assertThrows(WorkerException.class, () -> worker.run(syncInput, jobRoot));
   }
 
-  DefaultReplicationWorker getDefaultReplicationWorker() {
-    return getDefaultReplicationWorker(false);
+  @Test
+  void testSourceFailingTimeout() throws Exception {
+    final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
+    final UUID connectionId = UUID.randomUUID();
+    final MetricClient mMetricClient = mock(MetricClient.class);
+    heartbeatTimeoutChaperone =
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
+            connectionId, mMetricClient);
+    source = mock(AirbyteSource.class);
+    when(source.isFinished()).thenReturn(false);
+    when(source.attemptRead()).thenAnswer((Answer<Optional<AirbyteMessage>>) invocation -> {
+      sleep(100);
+      return Optional.of(RECORD_MESSAGE1);
+    });
+
+    final ReplicationWorker worker = getDefaultReplicationWorker(false, true);
+
+    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
+
+    verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    assertEquals(1, actual.getFailures().size());
+    assertEquals(FailureOrigin.SOURCE, actual.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureReason.FailureType.HEARTBEAT_TIMEOUT, actual.getFailures().get(0).getFailureType());
   }
 
-  DefaultReplicationWorker getDefaultReplicationWorker(boolean fieldSelectionEnabled) {
+  @Test
+  void testGetFailureReason() {
+    final long jobId = 1;
+    final int attempt = 1;
+    FailureReason failureReason = DefaultReplicationWorker.getFailureReason(new SourceException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
+    failureReason = DefaultReplicationWorker.getFailureReason(new DestinationException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
+    failureReason = DefaultReplicationWorker.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
+    assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
+    failureReason = DefaultReplicationWorker.getFailureReason(new RuntimeException(), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
+  }
+
+  ReplicationWorker getDefaultReplicationWorker() {
+    return getDefaultReplicationWorker(false, false);
+  }
+
+  private ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled, final boolean heartbeatTimeoutEnabled) {
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -672,7 +737,10 @@ class DefaultReplicationWorkerTest {
         syncPersistenceFactory,
         recordSchemaValidator,
         workerMetricReporter,
-        connectorConfigUpdater, fieldSelectionEnabled);
+        connectorConfigUpdater,
+        fieldSelectionEnabled,
+        heartbeatTimeoutEnabled,
+        heartbeatTimeoutChaperone);
   }
 
 }

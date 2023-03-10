@@ -15,6 +15,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { ConfigMenu } from "./ConfigMenu";
+import octavia from "./pointing.svg";
 import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
@@ -68,7 +69,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
           <Heading as="h2" className={styles.addStreamHeading}>
             <FormattedMessage id="connectorBuilder.noStreamsMessage" />
           </Heading>
-          <img className={styles.logo} alt="" src="/images/octavia/pointing.svg" width={102} />
+          <img className={styles.logo} alt="" src={octavia} width={102} />
         </div>
       )}
       {hasStreams && (

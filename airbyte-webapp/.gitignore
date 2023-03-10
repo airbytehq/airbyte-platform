@@ -40,3 +40,6 @@ storybook-static/
 /src/core/request/AirbyteClient.ts
 /src/core/request/ConnectorBuilderClient.ts
 /src/core/request/ConnectorManifest.ts
+
+# Generated file to make the CDK version available in the webapp
+/src/components/connectorBuilder/cdk.ts

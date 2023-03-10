@@ -18,6 +18,8 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionStatus;
+import io.airbyte.api.model.generated.ConnectionStream;
+import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
@@ -74,13 +76,16 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -403,6 +408,11 @@ public class SchedulerHandler {
     return submitResetConnectionToWorker(connectionIdRequestBody.getConnectionId());
   }
 
+  public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody)
+      throws IOException {
+    return submitResetConnectionStreamsToWorker(connectionStreamRequestBody.getConnectionId(), connectionStreamRequestBody.getStreams());
+  }
+
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) throws IOException {
     return submitCancellationToWorker(jobIdRequestBody.getId());
   }
@@ -516,12 +526,25 @@ public class SchedulerHandler {
   }
 
   private JobInfoRead submitResetConnectionToWorker(final UUID connectionId) throws IOException, IllegalStateException, ConfigNotFoundException {
+    return submitResetConnectionToWorker(connectionId, configRepository.getAllStreamsForConnection(connectionId), false);
+  }
+
+  private JobInfoRead submitResetConnectionToWorker(final UUID connectionId, List<StreamDescriptor> streamsToReset, boolean runSyncImmediately)
+      throws IOException {
     final ManualOperationResult resetConnectionResult = eventRunner.resetConnection(
         connectionId,
-        configRepository.getAllStreamsForConnection(connectionId),
-        false);
+        streamsToReset,
+        runSyncImmediately);
 
     return readJobFromResult(resetConnectionResult);
+  }
+
+  private JobInfoRead submitResetConnectionStreamsToWorker(final UUID connectionId, final List<ConnectionStream> streams)
+      throws IOException, IllegalStateException {
+    return submitResetConnectionToWorker(connectionId,
+        streams.stream().map(s -> new StreamDescriptor().withName(s.getStreamName()).withNamespace(s.getStreamNamespace())).collect(
+            Collectors.toList()),
+        false);
   }
 
   private JobInfoRead readJobFromResult(final ManualOperationResult manualOperationResult) throws IOException, IllegalStateException {

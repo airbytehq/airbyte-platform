@@ -68,8 +68,8 @@ export const useFreeConnectorProgram = () => {
 
   const enrollmentStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
     webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions).then(
-      ({ hasEligibleConnector, hasPaymentAccountSaved }) => {
-        const userIsEligibleToEnroll = !hasPaymentAccountSaved && hasEligibleConnector;
+      ({ hasPaymentAccountSaved }) => {
+        const userIsEligibleToEnroll = !hasPaymentAccountSaved;
 
         return {
           showEnrollmentUi: freeConnectorProgramEnabled && userIsEligibleToEnroll,

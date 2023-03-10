@@ -8,6 +8,9 @@ configurations.all {
 }
 
 dependencies {
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+    api libs.bundles.micronaut.annotation
+
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-config:config-models')

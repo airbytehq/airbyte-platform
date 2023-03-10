@@ -7,7 +7,7 @@ Set up the virtual environment and install dependencies
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install .
+pip install -r requirements.txt
 ```
 
 Then run the server
@@ -27,4 +27,17 @@ This will make sure both this project and the webapp depending on it will stay i
 Run it via Gradle by running this from the Airbyte project root: 
 ```bash
 ./gradlew :airbyte-connector-builder-server:generateOpenApiPythonServer
+```
+
+### Updating dependencies
+In order to use `pip-compile`, make sure you install pip-tools using `pip install pip-tools`.
+
+Application dependencies
+```
+pip-compile
+```
+
+Test dependencies
+```
+pip-compile --extra tests --output-file requirements-tests.txt
 ```

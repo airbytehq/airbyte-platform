@@ -52,12 +52,11 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({ onSubmit, dest
     setDestinationDefinitionId(destinationDefinitionId);
   };
 
-  const onSubmitForm = async (values: ConnectorCardValues) => {
+  const onSubmitForm = async (values: ConnectorCardValues) =>
     onSubmit({
       ...values,
       destinationDefinitionId: destinationDefinitionSpecification?.destinationDefinitionId,
     });
-  };
 
   const frequentlyUsedDestinationIds = useExperiment("connector.frequentlyUsedDestinationIds", [
     ConnectorIds.Destinations.BigQuery,

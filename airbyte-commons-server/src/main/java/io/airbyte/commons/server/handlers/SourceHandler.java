@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -23,6 +24,7 @@ import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -30,6 +32,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -101,6 +104,20 @@ public class SourceHandler {
         oAuthConfigSupplier);
   }
 
+  public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    if (sourceCreate.getSecretId() != null && !sourceCreate.getSecretId().isBlank()) {
+      JsonNode hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.getSecretId());
+      final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
+      // add OAuth Response data to connection configuration
+      sourceCreate.setConnectionConfiguration(
+          OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition.getSpec(), hydratedSecret,
+              sourceCreate.getConnectionConfiguration()));
+    }
+    return createSource(sourceCreate);
+  }
+
+  @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // validate configuration
@@ -369,6 +386,13 @@ public class SourceHandler {
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
         .sourceName(sourceDefinition.getName())
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
+  }
+
+  @VisibleForTesting
+  JsonNode hydrateOAuthResponseSecret(String secretId) {
+    final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
+    return secretsRepositoryReader.fetchSecret(secretCoordinate);
+
   }
 
 }

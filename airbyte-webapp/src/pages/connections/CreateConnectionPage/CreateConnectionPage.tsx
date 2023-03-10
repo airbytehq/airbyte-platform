@@ -12,6 +12,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { StepsIndicator } from "components/ui/StepsIndicator";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -37,6 +38,7 @@ export const CreateConnectionPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW);
   const location = useLocation();
   const { formatMessage } = useIntl();
+  const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
@@ -213,7 +215,7 @@ export const CreateConnectionPage: React.FC = () => {
               }
             />
           )}
-          <InlineEnrollmentCallout withBottomMargin />
+          {fcpEnabled && <InlineEnrollmentCallout withBottomMargin />}
           {renderStep()}
         </FormPageContent>
       </ConnectorDocumentationWrapper>

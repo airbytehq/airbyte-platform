@@ -1,5 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "../builderVariables.scss";
 
 .button {
   cursor: pointer;
@@ -8,13 +9,12 @@
   border-radius: variables.$border-radius-sm;
   padding: 0;
   overflow: hidden;
-
-  // absolute positioning so it is in the same spot in both the ui and yaml views
-  position: absolute;
-  top: 15px;
-  left: 62px;
   display: grid;
   grid-template: 1fr / 1fr 1fr;
+  align-self: center;
+  width: builderVariables.$toggleButtonWidth;
+  flex-basis: auto;
+  flex-shrink: 0;
 }
 
 .text {

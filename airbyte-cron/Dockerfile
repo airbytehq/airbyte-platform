@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:1.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0
 FROM ${JDK_IMAGE} AS cron
 
 ARG VERSION=0.41.0

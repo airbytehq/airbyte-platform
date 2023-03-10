@@ -53,13 +53,11 @@ export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefiniti
     setSourceDefinitionId(sourceDefinitionId);
   };
 
-  const onSubmitForm = (values: ConnectorCardValues) => {
+  const onSubmitForm = (values: ConnectorCardValues) =>
     onSubmit({
       ...values,
       sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
     });
-  };
-
   const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
 
   return (

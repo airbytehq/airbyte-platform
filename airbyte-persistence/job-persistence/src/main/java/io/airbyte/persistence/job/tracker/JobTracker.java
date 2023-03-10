@@ -17,6 +17,8 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConnectorJobOutput;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -94,20 +96,25 @@ public class JobTracker {
    * @param sourceDefinitionId source definition id
    * @param workspaceId workspace id
    * @param jobState job state
-   * @param output output
+   * @param jobOutput job output, if available
    */
-  public void trackCheckConnectionSource(final UUID jobId,
-                                         final UUID sourceDefinitionId,
-                                         final UUID workspaceId,
-                                         final JobState jobState,
-                                         final StandardCheckConnectionOutput output) {
+  public <T> void trackCheckConnectionSource(final UUID jobId,
+                                             final UUID sourceDefinitionId,
+                                             final UUID workspaceId,
+                                             final JobState jobState,
+                                             final @Nullable ConnectorJobOutput jobOutput) {
+
+    final StandardCheckConnectionOutput responseOutput = jobOutput != null ? jobOutput.getCheckConnection() : null;
+    final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
+
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(output);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_SOURCE);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(checkConnMetadata, jobMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 
@@ -118,20 +125,25 @@ public class JobTracker {
    * @param destinationDefinitionId defintion definition id
    * @param workspaceId workspace id
    * @param jobState job state
-   * @param output output
+   * @param jobOutput job output, if available
    */
-  public void trackCheckConnectionDestination(final UUID jobId,
-                                              final UUID destinationDefinitionId,
-                                              final UUID workspaceId,
-                                              final JobState jobState,
-                                              final StandardCheckConnectionOutput output) {
+  public <T> void trackCheckConnectionDestination(final UUID jobId,
+                                                  final UUID destinationDefinitionId,
+                                                  final UUID workspaceId,
+                                                  final JobState jobState,
+                                                  final @Nullable ConnectorJobOutput jobOutput) {
+
+    final StandardCheckConnectionOutput responseOutput = jobOutput != null ? jobOutput.getCheckConnection() : null;
+    final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
+
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(output);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_DESTINATION);
       final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(checkConnMetadata, jobMetadata, destinationDefinitionMetadata, stateMetadata));
+      track(workspaceId, MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, destinationDefinitionMetadata, stateMetadata));
     });
   }
 
@@ -404,11 +416,24 @@ public class JobTracker {
    * job with a failed check. Because of this, tracking just the job attempt status does not capture
    * the whole picture. The `check_connection_outcome` field tracks this.
    */
-  private Map<String, Object> generateCheckConnectionMetadata(final StandardCheckConnectionOutput output) {
+  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output) {
     if (output == null) {
       return Map.of();
     }
-    return Map.of("check_connection_outcome", output.getStatus().toString());
+
+    final Map<String, Object> metadata = new HashMap<>();
+    if (output.getMessage() != null) {
+      metadata.put("check_connection_message", output.getMessage());
+    }
+    metadata.put("check_connection_outcome", output.getStatus().toString());
+    return Collections.unmodifiableMap(metadata);
+  }
+
+  private Map<String, Object> generateFailureReasonMetadata(final @Nullable FailureReason failureReason) {
+    if (failureReason == null) {
+      return Map.of();
+    }
+    return Map.of("failure_reason", TrackingMetadata.failureReasonAsJson(failureReason).toString());
   }
 
   private Map<String, Object> generateDestinationDefinitionMetadata(final UUID destinationDefinitionId)
@@ -435,7 +460,7 @@ public class JobTracker {
     return generateJobMetadata(jobId, configType, 0);
   }
 
-  private Map<String, Object> generateJobMetadata(final String jobId, final ConfigType configType, final int attempt) {
+  private Map<String, Object> generateJobMetadata(final String jobId, final @Nullable ConfigType configType, final int attempt) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
       metadata.put("job_type", configType);
@@ -455,7 +480,7 @@ public class JobTracker {
     }
   }
 
-  private void track(final UUID workspaceId, final Map<String, Object> metadata)
+  private void track(final @Nullable UUID workspaceId, final Map<String, Object> metadata)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     // unfortunate but in the case of jobs that cannot be linked to a workspace there not a sensible way
     // track it.

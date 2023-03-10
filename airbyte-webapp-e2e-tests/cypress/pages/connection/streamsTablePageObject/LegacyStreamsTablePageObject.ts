@@ -1,5 +1,6 @@
-import { IStreamsTablePageObject } from "./IStreamsTablePageObject";
+import { IStreamsTablePageObject, SYNC_MODE_STRINGS } from "./types";
 import { StreamsTablePageObjectBase } from "./StreamsTableContainerPageObject";
+import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
 
 const syncModeDropdown = "div[data-testid='syncSettingsDropdown'] input";
 const getFieldDropdownContainer = (streamName: string, type: Dropdown) => `div[id='${streamName}_${type}_pathPopout']`;
@@ -61,14 +62,16 @@ const checkDropdownField = (streamName: string, dropdownType: Dropdown, expected
 };
 
 export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase implements IStreamsTablePageObject {
-  expandStreamDetailsByName(streamName: string) {
+  showStreamDetails(namespace: string, streamName: string) {
     cy.get(getExpandStreamArrowBtn(streamName)).click();
   }
 
-  selectSyncMode(source: string, dest: string) {
+  selectSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
     cy.get(syncModeDropdown).first().click({ force: true });
 
-    cy.get(`.react-select__option`).contains(`Source:${source}|Dest:${dest}`).click();
+    cy.get(`.react-select__option`)
+      .contains(`Source:${SYNC_MODE_STRINGS[source]}|Dest:${SYNC_MODE_STRINGS[dest]}`)
+      .click();
   }
 
   /**
@@ -76,7 +79,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param cursorValue
    */
-  selectCursorField(streamName: string, cursorValue: string) {
+  selectCursor(streamName: string, cursorValue: string) {
     selectFieldDropdownOption(streamName, "cursor", cursorValue);
   }
 
@@ -85,7 +88,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param primaryKeyValues
    */
-  selectPrimaryKeyField(streamName: string, primaryKeyValues: string[]) {
+  selectPrimaryKeys(streamName: string, primaryKeyValues: string[]) {
     selectFieldDropdownOption(streamName, "primaryKey", primaryKeyValues);
   }
 
@@ -104,7 +107,7 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param expectedValue
    */
-  checkCursorField(streamName: string, expectedValue: string) {
+  checkSelectedCursorField(streamName: string, expectedValue: string) {
     checkDropdownField(streamName, "cursor", expectedValue);
   }
 
@@ -113,19 +116,39 @@ export class LegacyStreamsTablePageObject extends StreamsTablePageObjectBase imp
    * @param streamName
    * @param expectedValues
    */
-  checkPrimaryKey(streamName: string, expectedValues: string[]) {
+  checkSelectedPrimaryKeys(streamName: string, expectedValues: string[]) {
     checkDropdownField(streamName, "primaryKey", expectedValues);
   }
 
-  checkPreFilledPrimaryKeyField(streamName: string, expectedValue: string) {
+  checkSourceDefinedPrimaryKeys(streamName: string, expectedValue: string) {
     cy.get(getPreFilledPrimaryKeyText(streamName)).contains(expectedValue);
   }
 
-  isPrimaryKeyNonExist(streamName: string) {
+  checkNoSourceDefinedPrimaryKeys(namespace: string, streamName: string) {
     cy.get(getPreFilledPrimaryKeyText(streamName)).should("not.exist");
   }
 
-  toggleStreamEnabledState(streamName: string) {
+  enableStream(namespace: string, streamName: string) {
     cy.get(streamSyncEnabledSwitch(streamName)).check({ force: true });
+  }
+
+  checkSourceDefinedCursor(streamName: string, expectedValue: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  hasEmptyCursorSelect(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  hasEmptyPrimaryKeySelect(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  checkNoSourceDefinedCursor(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
+  }
+
+  disableStream(namespace: string, streamName: string): void {
+    throw new Error("Method not implemented.");
   }
 }

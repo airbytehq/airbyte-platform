@@ -82,6 +82,12 @@ task copyComposeFileForMigrationAcceptanceTests(type: Copy) {
 assemble.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
 assemble.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
 
+checkstyleAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
+pmdAcceptanceTests.dependsOn(project.tasks.copyComposeFileForAcceptanceTests)
+
+checkstyleAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+pmdAutomaticMigrationAcceptanceTest.dependsOn(project.tasks.copyComposeFileForMigrationAcceptanceTests)
+
 task acceptanceTests(type: Test) {
     testClassesDirs += sourceSets.acceptanceTests.output.classesDirs
     classpath += sourceSets.acceptanceTests.runtimeClasspath
