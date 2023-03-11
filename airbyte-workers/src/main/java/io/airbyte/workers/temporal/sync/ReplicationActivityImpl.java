@@ -199,12 +199,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory;
 
-          final UUID sourceDefinitionId =
-              airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId();
+          final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
+              () -> airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
+              "get source");
 
-          final long maxSecondsBetweenMessages = airbyteApiClient.getSourceDefinitionApi()
+          final long maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> airbyteApiClient.getSourceDefinitionApi()
               .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))
-              .getMaxSecondsBetweenMessages();
+              .getMaxSecondsBetweenMessages(), "get source definition");
 
           final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(Duration.ofMillis(maxSecondsBetweenMessages));
 
