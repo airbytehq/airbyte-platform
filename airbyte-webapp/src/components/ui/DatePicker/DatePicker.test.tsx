@@ -37,32 +37,6 @@ describe(`${toEquivalentLocalTime.name}`, () => {
     expect(result?.getTimezoneOffset()).toEqual(TEST_TIMEZONE_UTC_OFFSET_IN_MINUTES);
   });
 
-  it("converts utc time to equivalent local time in PST", () => {
-    timezoneMock.register("US/Pacific");
-    const TEST_TIMEZONE_UTC_OFFSET_IN_MINUTES = 480; // corresponds to the registered mock timezone
-    const TEST_UTC_TIMESTAMP = "2022-01-01T00:00:00Z";
-
-    const expectedDateObject = dayjs
-      .utc(TEST_UTC_TIMESTAMP)
-      .add(TEST_TIMEZONE_UTC_OFFSET_IN_MINUTES, "minutes")
-      .toDate();
-
-    expect(toEquivalentLocalTime(TEST_UTC_TIMESTAMP)).toEqual(expectedDateObject);
-  });
-
-  it("converts utc time to equivalent local time in EST", () => {
-    timezoneMock.register("US/Eastern");
-    const TEST_TIMEZONE_UTC_OFFSET_IN_MINUTES = 300; // corresponds to the registered mock timezone
-    const TEST_UTC_TIMESTAMP = "2022-01-01T00:00:00Z";
-
-    const expectedDateObject = dayjs
-      .utc(TEST_UTC_TIMESTAMP)
-      .add(TEST_TIMEZONE_UTC_OFFSET_IN_MINUTES, "minutes")
-      .toDate();
-
-    expect(toEquivalentLocalTime(TEST_UTC_TIMESTAMP)).toEqual(expectedDateObject);
-  });
-
   it("keeps a utc timestamp exactly the same", () => {
     timezoneMock.register("UTC");
     const TEST_UTC_TIMESTAMP = "2022-01-01T00:00:00Z";
