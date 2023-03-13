@@ -25,6 +25,7 @@ micronaut:
     netty:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
   cloud:
