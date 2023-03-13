@@ -30,6 +30,7 @@ import {
 } from "core/request/AirbyteClient";
 import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { ValuesProps } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
@@ -335,6 +336,7 @@ export const useInitialValues = (
 ): FormikConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const { catalogDiff } = connection;
+  const shouldDisableStreamsByDefault = useExperiment("connection.syncCatalogConfig.disabledStreams", false);
 
   // used to determine if we should calculate optimal sync mode
   const newStreamDescriptors = catalogDiff?.transforms
@@ -361,7 +363,8 @@ export const useInitialValues = (
         destDefinitionSpecification?.supportedDestinationSyncModes || [],
         streamTransformsWithBreakingChange,
         isNotCreateMode,
-        newStreamDescriptors
+        newStreamDescriptors,
+        shouldDisableStreamsByDefault
       ),
     [
       streamTransformsWithBreakingChange,
@@ -369,6 +372,7 @@ export const useInitialValues = (
       destDefinitionSpecification?.supportedDestinationSyncModes,
       isNotCreateMode,
       newStreamDescriptors,
+      shouldDisableStreamsByDefault,
     ]
   );
 
