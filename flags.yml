@@ -7,3 +7,5 @@ flags:
     enabled: false
   - name: platform.commitStatesAsap
     enabled: false
+  - name: heartbeat.enabled
+    enabled: false

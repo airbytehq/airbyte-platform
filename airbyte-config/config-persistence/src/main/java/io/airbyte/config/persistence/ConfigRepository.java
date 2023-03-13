@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTIVE_DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
@@ -14,6 +15,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_P
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -35,12 +37,14 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
@@ -91,9 +95,11 @@ import org.jooq.JoinType;
 import org.jooq.Record;
 import org.jooq.Record1;
 import org.jooq.Record2;
+import org.jooq.RecordMapper;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.Table;
+import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2154,11 +2160,13 @@ public class ConfigRepository {
       if (fetchManifestDraft) {
         columnsToFetch.add(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT);
       }
+      final RecordMapper<Record, ConnectorBuilderProject> connectionBuilderProjectRecordMapper =
+          fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft;
       return ctx.select(columnsToFetch)
           .from(CONNECTOR_BUILDER_PROJECT)
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId).andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
           .fetch()
-          .map(fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft)
+          .map(connectionBuilderProjectRecordMapper)
           .stream()
           .findFirst();
     });
@@ -2242,6 +2250,39 @@ public class ConfigRepository {
   }
 
   /**
+   * Write an active declarative manifest. If ACTIVE_DECLARATIVE_MANIFEST.ID is already in the DB, the
+   * entry will be updated
+   *
+   * @param activeDeclarativeManifest active declarative manifest to write
+   * @throws IOException exception while interacting with db
+   */
+  public void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest) throws IOException {
+    database.transaction(ctx -> {
+      final OffsetDateTime timestamp = OffsetDateTime.now();
+      final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(ACTIVE_DECLARATIVE_MANIFEST)
+          .where(matchId));
+
+      if (isExistingConfig) {
+        ctx.update(ACTIVE_DECLARATIVE_MANIFEST)
+            .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
+            .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
+            .where(matchId)
+            .execute();
+      } else {
+        ctx.insertInto(ACTIVE_DECLARATIVE_MANIFEST)
+            .set(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, activeDeclarativeManifest.getActorDefinitionId())
+            .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
+            .set(ACTIVE_DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
+            .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
+            .execute();
+      }
+      return null;
+    });
+  }
+
+  /**
    * Load all config injection for an actor definition.
    *
    * @param actorDefinitionId id of the actor definition to fetch
@@ -2292,6 +2333,118 @@ public class ConfigRepository {
       }
       return null;
     });
+  }
+
+  /**
+   * Insert a declarative manifest. If DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and
+   * DECLARATIVE_MANIFEST.VERSION is already in the DB, an exception will be thrown
+   *
+   * @param declarativeManifest declarative manifest to insert
+   * @throws IOException exception while interacting with db
+   */
+  public void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
+    // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
+    // object that is not null. Therefore, we will validate null values for JSON fields here
+    if (declarativeManifest.getManifest() == null) {
+      throw new DataAccessException("null value in column \"manifest\" of relation \"declarative_manifest\" violates not-null constraint");
+    }
+    if (declarativeManifest.getSpec() == null) {
+      throw new DataAccessException("null value in column \"spec\" of relation \"declarative_manifest\" violates not-null constraint");
+    }
+
+    database.transaction(ctx -> {
+      final OffsetDateTime timestamp = OffsetDateTime.now();
+      ctx.insertInto(DECLARATIVE_MANIFEST)
+          .set(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, declarativeManifest.getActorDefinitionId())
+          .set(DECLARATIVE_MANIFEST.DESCRIPTION, declarativeManifest.getDescription())
+          .set(DECLARATIVE_MANIFEST.MANIFEST, JSONB.valueOf(Jsons.serialize(declarativeManifest.getManifest())))
+          .set(DECLARATIVE_MANIFEST.SPEC, JSONB.valueOf(Jsons.serialize(declarativeManifest.getSpec())))
+          .set(DECLARATIVE_MANIFEST.VERSION, declarativeManifest.getVersion())
+          .set(DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
+          .execute();
+      return null;
+    });
+  }
+
+  /**
+   * Read all declarative manifests by actor definition id without the manifest column.
+   *
+   * @param actorDefinitionId actor definition id
+   * @throws IOException exception while interacting with db
+   */
+  public Stream<DeclarativeManifest> getDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId) throws IOException {
+    return database
+        .query(ctx -> ctx
+            .select(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.SPEC,
+                DECLARATIVE_MANIFEST.VERSION)
+            .from(DECLARATIVE_MANIFEST)
+            .where(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+            .fetch())
+        .map(DbConverter::buildDeclarativeManifestWithoutManifestAndSpec)
+        .stream();
+  }
+
+  /**
+   * Read declarative manifest by actor definition id and version with manifest column.
+   *
+   * @param actorDefinitionId actor definition id
+   * @param version the version of the declarative manifest
+   * @throws IOException exception while interacting with db
+   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
+   *         and DECLARATIVE_MANIFEST.VERSION
+   */
+  public DeclarativeManifest getDeclarativeManifestByActorDefinitionIdAndVersion(final UUID actorDefinitionId, final long version)
+      throws IOException, ConfigNotFoundException {
+    final Optional<DeclarativeManifest> declarativeManifest = database
+        .query(ctx -> ctx
+            .select(DECLARATIVE_MANIFEST.asterisk())
+            .from(DECLARATIVE_MANIFEST)
+            .where(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(actorDefinitionId).and(DECLARATIVE_MANIFEST.VERSION.eq(version)))
+            .fetch())
+        .map(DbConverter::buildDeclarativeManifest)
+        .stream().findFirst();
+    return declarativeManifest.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.DECLARATIVE_MANIFEST,
+        String.format("actorDefinitionId:%s,version:%s", actorDefinitionId, version)));
+  }
+
+  /**
+   * Read currently active declarative manifest by actor definition id by joining with
+   * active_declarative_manifest for the same actor definition id with manifest.
+   *
+   * @param actorDefinitionId actor definition id
+   * @throws IOException exception while interacting with db
+   * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
+   *         that matches the version of an active manifest
+   */
+  public DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId)
+      throws IOException, ConfigNotFoundException {
+    Optional<DeclarativeManifest> declarativeManifest = database
+        .query(ctx -> ctx
+            .select(DECLARATIVE_MANIFEST.asterisk())
+            .from(DECLARATIVE_MANIFEST)
+            .join(ACTIVE_DECLARATIVE_MANIFEST, JoinType.JOIN)
+            .on(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID),
+                DECLARATIVE_MANIFEST.VERSION.eq(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
+            .where(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+            .fetch())
+        .map(DbConverter::buildDeclarativeManifest)
+        .stream().findFirst();
+    return declarativeManifest.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.DECLARATIVE_MANIFEST,
+        String.format("ACTIVE_DECLARATIVE_MANIFEST.actor_definition_id:%s and matching DECLARATIVE_MANIFEST.version", actorDefinitionId)));
+  }
+
+  /**
+   * Read all actor definition ids which have an active declarative manifest pointing to them.
+   *
+   * @throws IOException exception while interacting with db
+   */
+  public Stream<UUID> getActorDefinitionIdsWithActiveDeclarativeManifest() throws IOException {
+    return database
+        .query(ctx -> ctx
+            .select(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID)
+            .from(ACTIVE_DECLARATIVE_MANIFEST)
+            .fetch())
+        .stream().map(record -> record.get(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID));
   }
 
   /**

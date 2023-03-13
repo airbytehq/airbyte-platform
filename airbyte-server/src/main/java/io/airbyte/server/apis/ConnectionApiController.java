@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionSearch;
+import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
@@ -131,6 +132,15 @@ public class ConnectionApiController implements ConnectionApi {
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   public JobInfoRead resetConnection(@Body final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnection(connectionIdRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/reset/stream")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  public JobInfoRead resetConnectionStream(ConnectionStreamRequestBody connectionStreamRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 
 }

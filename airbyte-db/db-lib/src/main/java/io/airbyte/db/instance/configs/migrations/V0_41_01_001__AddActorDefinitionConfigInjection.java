@@ -35,9 +35,8 @@ public class V0_41_01_001__AddActorDefinitionConfigInjection extends BaseJavaMig
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      addConfigInjectionTable(ctx);
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    addConfigInjectionTable(ctx);
   }
 
   private static void addConfigInjectionTable(final DSLContext ctx) {

@@ -4,12 +4,16 @@
 
 package io.airbyte.config.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
@@ -734,6 +738,23 @@ public class MockData {
         .withJsonCredential(Jsons.deserialize(MOCK_SERVICE_ACCOUNT_1));
 
     return Arrays.asList(workspaceServiceAccount);
+  }
+
+  public static DeclarativeManifest declarativeManifest() {
+    try {
+      return new DeclarativeManifest()
+          .withActorDefinitionId(UUID.randomUUID())
+          .withVersion(0L)
+          .withDescription("a description")
+          .withManifest(new ObjectMapper().readTree("{\"manifest\": \"manifest\"}"))
+          .withSpec(new ObjectMapper().readTree("{\"spec\": \"spec\"}"));
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ActiveDeclarativeManifest activeDeclarativeManifest() {
+    return new ActiveDeclarativeManifest().withActorDefinitionId(UUID.randomUUID()).withVersion(1L);
   }
 
   private static Map<String, String> sortMap(final Map<String, String> originalMap) {

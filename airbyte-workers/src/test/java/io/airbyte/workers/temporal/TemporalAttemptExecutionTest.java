@@ -91,7 +91,8 @@ class TemporalAttemptExecutionTest {
         mock(CancellationHandler.class),
         airbyteApiClient,
         () -> "workflow_id", configs.getAirbyteVersionOrWarning(),
-        Optional.of("SYNC"));
+        Optional.of("SYNC"),
+        () -> {});
   }
 
   @AfterAll
