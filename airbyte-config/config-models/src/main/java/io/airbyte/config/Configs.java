@@ -540,6 +540,11 @@ public interface Configs {
    */
   String getJobKubeNamespace();
 
+  /**
+   * Define the Kubernetes service account Job pods are created in.
+   */
+  String getJobKubeServiceAccount();
+
   // Logging/Monitoring/Tracking
 
   /**

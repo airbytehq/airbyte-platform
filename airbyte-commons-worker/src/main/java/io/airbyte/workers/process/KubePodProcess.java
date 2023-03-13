@@ -381,6 +381,7 @@ public class KubePodProcess implements KubePod {
                         final KubernetesClient fabricClient,
                         final String podName,
                         final String namespace,
+                        final String serviceAccount,
                         final String image,
                         final String imagePullPolicy,
                         final String sidecarImagePullPolicy,
@@ -534,11 +535,9 @@ public class KubePodProcess implements KubePod {
         .withLabels(labels)
         .withAnnotations(annotations)
         .endMetadata()
-        .withNewSpec();
-
-    if (isOrchestrator) {
-      podBuilder = podBuilder.withServiceAccount("airbyte-admin").withAutomountServiceAccountToken(true);
-    }
+        .withNewSpec()
+        .withServiceAccount(isOrchestrator ? "airbyte-admin" : serviceAccount)
+        .withAutomountServiceAccountToken(true);
 
     List<LocalObjectReference> pullSecrets = imagePullSecrets
         .stream()

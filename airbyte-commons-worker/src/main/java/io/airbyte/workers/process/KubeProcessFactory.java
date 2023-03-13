@@ -31,6 +31,7 @@ public class KubeProcessFactory implements ProcessFactory {
 
   private final WorkerConfigs workerConfigs;
   private final String namespace;
+  private final String serviceAccount;
   private final KubernetesClient fabricClient;
   private final String kubeHeartbeatUrl;
   private final String processRunnerHost;
@@ -41,12 +42,14 @@ public class KubeProcessFactory implements ProcessFactory {
    */
   public KubeProcessFactory(final WorkerConfigs workerConfigs,
                             final String namespace,
+                            final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl,
                             final boolean isOrchestrator) {
     this(
         workerConfigs,
         namespace,
+        serviceAccount,
         fabricClient,
         kubeHeartbeatUrl,
         Exceptions.toRuntime(() -> InetAddress.getLocalHost().getHostAddress()),
@@ -67,12 +70,14 @@ public class KubeProcessFactory implements ProcessFactory {
   @VisibleForTesting
   public KubeProcessFactory(final WorkerConfigs workerConfigs,
                             final String namespace,
+                            final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl,
                             final String processRunnerHost,
                             final boolean isOrchestrator) {
     this.workerConfigs = workerConfigs;
     this.namespace = namespace;
+    this.serviceAccount = serviceAccount;
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
     this.processRunnerHost = processRunnerHost;
@@ -123,6 +128,7 @@ public class KubeProcessFactory implements ProcessFactory {
           fabricClient,
           podName,
           namespace,
+          serviceAccount,
           imageName,
           workerConfigs.getJobImagePullPolicy(),
           workerConfigs.getSidecarImagePullPolicy(),
