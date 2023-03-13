@@ -12,13 +12,13 @@ data:
   sweep-pod.sh: |
     #!/bin/bash
     get_job_pods () {
-        kubectl -n ${KUBE_NAMESPACE} -L airbyte -l airbyte=job-pod \
+        kubectl --namespace=${KUBE_NAMESPACE} -L airbyte -l airbyte=job-pod \
           --field-selector status.phase!=Running get pods \
           -o=jsonpath='{range .items[*]} {.metadata.name} {.status.phase} {.status.conditions[0].lastTransitionTime} {.status.startTime}{"\n"}{end}'
     }
     delete_pod() {
         printf "From status '%s' since '%s', " $2 $3
-        echo "$1" | grep -v "STATUS" | awk '{print $1}' | xargs --no-run-if-empty kubectl -n ${KUBE_NAMESPACE} delete pod
+        echo "$1" | grep -v "STATUS" | awk '{print $1}' | xargs --no-run-if-empty kubectl --namespace=${KUBE_NAMESPACE} delete pod
     }
     while :
     do
