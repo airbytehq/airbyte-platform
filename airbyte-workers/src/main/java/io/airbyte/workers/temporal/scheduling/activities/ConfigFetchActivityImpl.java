@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
@@ -227,9 +228,11 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = connectionApi.getConnection(requestBody);
+      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
+          () -> connectionApi.getConnection(requestBody),
+          "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getSourceId());
-    } catch (ApiException e) {
+    } catch (Exception e) {
       log.info("Encountered an error fetching the connection's Source ID: ", e);
       return Optional.empty();
     }
@@ -240,9 +243,11 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = connectionApi.getConnection(requestBody);
+      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
+          () -> connectionApi.getConnection(requestBody),
+          "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getStatus());
-    } catch (ApiException e) {
+    } catch (Exception e) {
       log.info("Encountered an error fetching the connection's status: ", e);
       return Optional.empty();
     }
@@ -253,9 +258,11 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = connectionApi.getConnection(requestBody);
+      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
+          () -> connectionApi.getConnection(requestBody),
+          "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getBreakingChange());
-    } catch (ApiException e) {
+    } catch (Exception e) {
       log.info("Encountered an error fetching the connection's breaking change status: ", e);
       return Optional.empty();
     }
