@@ -4,7 +4,7 @@
   "description": "Airbyte e2e testing",
   "private": true,
   "engines": {
-    "node": "16.18.1"
+    "node": "18.14.2"
   },
   "scripts": {
     "cypress:open": "cypress open",

@@ -67,6 +67,7 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
 import io.airbyte.commons.util.MoreProperties;
 import io.airbyte.db.Database;
+import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.container.AirbyteTestContainer;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -89,9 +90,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.sql.DataSource;
 import org.jooq.JSONB;
 import org.jooq.Record;
 import org.jooq.Result;
@@ -181,6 +184,8 @@ public class AirbyteAcceptanceTestHarness {
   private List<UUID> connectionIds;
   private List<UUID> destinationIds;
   private List<UUID> operationIds;
+  private DataSource sourceDataSource;
+  private DataSource destinationDataSource;
 
   public PostgreSQLContainer getSourcePsql() {
     return sourcePsql;
@@ -266,6 +271,9 @@ public class AirbyteAcceptanceTestHarness {
     operationIds = Lists.newArrayList();
 
     if (isGke) {
+      // Prepare the database data sources.
+      sourceDataSource = GKEPostgresConfig.getSourceDataSource();
+      destinationDataSource = GKEPostgresConfig.getDestinationDataSource();
       // seed database.
       final Database database = getSourceDatabase();
       final Path path = Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI());
@@ -275,18 +283,24 @@ public class AirbyteAcceptanceTestHarness {
           query.append(line);
         }
       }
+      LOGGER.info("Running query to seed database: {}", query.toString());
       database.query(context -> context.execute(query.toString()));
     } else {
       PostgreSQLContainerHelper.runSqlScript(MountableFile.forClasspathResource(postgresSqlInitFile), sourcePsql);
 
       destinationPsql = new PostgreSQLContainer("postgres:13-alpine");
       destinationPsql.start();
+
+      sourceDataSource = DatabaseConnectionHelper.createDataSource(sourcePsql);
+      destinationDataSource = DatabaseConnectionHelper.createDataSource(destinationPsql);
     }
   }
 
   public void cleanup() {
     try {
+      LOGGER.info("Clearing source db data");
       clearSourceDbData();
+      LOGGER.info("Clearing destination db data");
       clearDestinationDbData();
 
       for (final UUID operationId : operationIds) {
@@ -307,6 +321,9 @@ public class AirbyteAcceptanceTestHarness {
       if (!isGke) {
         destinationPsql.stop();
       }
+
+      DataSourceFactory.close(sourceDataSource);
+      DataSourceFactory.close(destinationDataSource);
     } catch (final Exception e) {
       LOGGER.error("Error tearing down test fixtures:", e);
     }
@@ -379,21 +396,15 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public Database getSourceDatabase() {
-    if (isKube && isGke) {
-      return GKEPostgresConfig.getSourceDatabase();
-    }
-    return getDatabase(sourcePsql);
+    return getDatabase(sourceDataSource);
   }
 
   public Database getDestinationDatabase() {
-    if (isKube && isGke) {
-      return GKEPostgresConfig.getDestinationDatabase();
-    }
-    return getDatabase(destinationPsql);
+    return getDatabase(destinationDataSource);
   }
 
-  public Database getDatabase(final PostgreSQLContainer db) {
-    return new Database(DatabaseConnectionHelper.createDslContext(db, SQLDialect.POSTGRES));
+  public Database getDatabase(final DataSource dataSource) {
+    return new Database(DatabaseConnectionHelper.createDslContext(dataSource, SQLDialect.POSTGRES));
   }
 
   public Set<SchemaTableNamePair> listAllTables(final Database database) throws SQLException {
@@ -642,7 +653,9 @@ public class AirbyteAcceptanceTestHarness {
     try {
       final Map<Object, Object> dbConfig = (isKube && isGke) ? GKEPostgresConfig.dbConfig(connectorType, hiddenPassword, withSchema)
           : localConfig(psql, hiddenPassword, withSchema, isLegacy);
-      return Jsons.jsonNode(dbConfig);
+      final var config = Jsons.jsonNode(dbConfig);
+      LOGGER.info("Using db config: {}", Jsons.toPrettyString(config));
+      return config;
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
@@ -798,7 +811,7 @@ public class AirbyteAcceptanceTestHarness {
     apiClient.getOperationApi().deleteOperation(new OperationIdRequestBody().operationId(destinationId));
   }
 
-  public JobRead getMostRecentSyncJobId(final UUID connectionId) throws Exception {
+  public JobRead getMostRecentSyncJobId(final UUID connectionId) throws ApiException {
     return apiClient.getJobsApi()
         .listJobsFor(new JobListRequestBody().configId(connectionId.toString()).configTypes(List.of(JobConfigType.SYNC)))
         .getJobs()
@@ -876,6 +889,42 @@ public class AirbyteAcceptanceTestHarness {
       sleep(1000);
     }
     return connectionState;
+  }
+
+  /**
+   * Wait until the sync succeeds by polling the Jobs API.
+   *
+   * NOTE: !!! THIS WILL POTENTIALLY POLL FOREVER !!! so make sure the calling code has a deadline;
+   * for example, a test timeout.
+   *
+   * TODO: re-work the collection of polling helpers we have here into a sane set that rely on test
+   * timeouts instead of implementing their own deadline logic.
+   */
+  public void waitForSuccessfulSyncNoTimeout(final UUID connectionId) throws InterruptedException {
+    while (true) {
+      JobRead job;
+      try {
+        job = getMostRecentSyncJobId(connectionId);
+      } catch (NoSuchElementException e) {
+        LOGGER.debug("No job found for the sync. Waiting for the job to be created...");
+        sleep(5000);
+        continue; // To the top of the loop.
+      } catch (ApiException e) {
+        LOGGER.info("Failed to query for job info: {}. Retrying...", e);
+        continue; // To the top of the loop.
+      }
+      try {
+        while (Set.of(JobStatus.PENDING, JobStatus.RUNNING).contains(job.getStatus())) {
+          job = this.apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(job.getId())).getJob();
+          LOGGER.info("waiting: job id: {} config type: {} status: {}", job.getId(), job.getConfigType(), job.getStatus());
+          sleep(3000);
+        }
+        assertEquals(JobStatus.SUCCEEDED, job.getStatus());
+        return; // Don't forget to return!
+      } catch (ApiException e) {
+        LOGGER.info("Caught exception {} while waiting for successful sync. Retrying...", e);
+      }
+    }
   }
 
   public JobRead waitUntilTheNextJobIsStarted(final UUID connectionId) throws Exception {

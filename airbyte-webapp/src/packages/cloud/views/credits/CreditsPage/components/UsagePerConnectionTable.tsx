@@ -265,8 +265,8 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
       columnHelper.accessor("sourceDefinitionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("connection")}
-            isActive={sortBy === "connection"}
+            onClick={() => onSortClick("sourceDefinitionName")}
+            isActive={sortBy === "sourceDefinitionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.connection" />

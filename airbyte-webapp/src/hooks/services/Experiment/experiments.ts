@@ -29,4 +29,5 @@ export interface Experiments {
   "connection.streamCentricUI.v2": boolean;
   "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
+  "connection.syncCatalogConfig.disabledStreams": boolean;
 }

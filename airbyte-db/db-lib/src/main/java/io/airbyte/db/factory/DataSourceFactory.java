@@ -202,7 +202,7 @@ public class DataSourceFactory {
      * @param driverClassName name of the JDBC driver
      * @return DataSourceBuilder class used to create dynamic fields for DataSource
      */
-    private static long getConnectionTimeoutMs(final Map<String, String> connectionProperties, String driverClassName) {
+    private static long getConnectionTimeoutMs(final Map<String, String> connectionProperties, final String driverClassName) {
       // TODO: the usage of CONNECT_TIMEOUT is Postgres specific, may need to extend for other databases
       if (driverClassName.equals(DatabaseDriver.POSTGRESQL.getDriverClassName())) {
         final String pgPropertyConnectTimeout = CONNECT_TIMEOUT.getName();
@@ -305,6 +305,9 @@ public class DataSourceFactory {
       config.setConnectionTimeout(connectionTimeoutMs);
       config.setPassword(password);
       config.setUsername(username);
+      // Expose stats via JMX
+      // (https://github.com/brettwooldridge/HikariCP/wiki/MBean-(JMX)-Monitoring-and-Management)
+      config.setRegisterMbeans(true);
 
       /*
        * Disable to prevent failing on startup. Applications may start prior to the database container

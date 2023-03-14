@@ -30,6 +30,8 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.ConnectionStatus;
+import io.airbyte.api.model.generated.ConnectionStream;
+import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationCoreConfig;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
@@ -1216,6 +1218,35 @@ class SchedulerHandlerTest {
         .when(jobConverter).getJobInfoRead(any());
 
     schedulerHandler.resetConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+
+    verify(eventRunner).resetConnection(connectionId, streamDescriptors, false);
+  }
+
+  @Test
+  void testResetConnectionStream() throws IOException {
+    final UUID connectionId = UUID.randomUUID();
+    final String streamName = "name";
+    final String streamNamespace = "namespace";
+
+    final long jobId = 123L;
+    final ManualOperationResult manualOperationResult = ManualOperationResult
+        .builder()
+        .failingReason(Optional.empty())
+        .jobId(Optional.of(jobId))
+        .build();
+    final List<StreamDescriptor> streamDescriptors = List.of(new StreamDescriptor().withName(streamName).withNamespace(streamNamespace));
+    final ConnectionStreamRequestBody connectionStreamRequestBody = new ConnectionStreamRequestBody()
+        .connectionId(connectionId)
+        .streams(List.of(new ConnectionStream().streamName(streamName).streamNamespace(streamNamespace)));
+
+    when(eventRunner.resetConnection(connectionId, streamDescriptors, false))
+        .thenReturn(manualOperationResult);
+
+    doReturn(new JobInfoRead())
+        .when(jobConverter).getJobInfoRead(any());
+
+    schedulerHandler
+        .resetConnectionStream(connectionStreamRequestBody);
 
     verify(eventRunner).resetConnection(connectionId, streamDescriptors, false);
   }

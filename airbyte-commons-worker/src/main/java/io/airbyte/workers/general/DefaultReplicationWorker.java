@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
@@ -37,12 +38,12 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
-import io.airbyte.workers.exception.RecordSchemaValidationException;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
@@ -60,13 +61,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
@@ -110,6 +111,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final WorkerMetricReporter metricReporter;
   private final ConnectorConfigUpdater connectorConfigUpdater;
   private final boolean fieldSelectionEnabled;
+  private final boolean heartbeatEnabled;
+  private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
 
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
@@ -121,7 +124,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final RecordSchemaValidator recordSchemaValidator,
                                   final WorkerMetricReporter metricReporter,
                                   final ConnectorConfigUpdater connectorConfigUpdater,
-                                  final boolean fieldSelectionEnabled) {
+                                  final boolean fieldSelectionEnabled,
+                                  final boolean heartbeatEnabled,
+                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -134,6 +139,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.metricReporter = metricReporter;
     this.connectorConfigUpdater = connectorConfigUpdater;
     this.fieldSelectionEnabled = fieldSelectionEnabled;
+    this.heartbeatEnabled = heartbeatEnabled;
+    this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
 
     this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
@@ -201,7 +208,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                          final UUID connectionId,
                          final boolean commitStatesAsap) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
-    final SyncPersistence syncPersistence = commitStatesAsap ? syncPersistenceFactory.get() : null;
+    final SyncPersistence syncPersistence = commitStatesAsap ? syncPersistenceFactory.get(sourceConfig.getCatalog()) : null;
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
@@ -228,34 +235,35 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           });
 
-      final CompletableFuture<?> readSrcAndWriteDstThread = CompletableFuture.runAsync(
-          readFromSrcAndWriteToDstRunnable(
-              source,
-              destination,
-              sourceConfig.getCatalog(),
-              cancelled,
-              mapper,
-              messageTracker,
-              connectorConfigUpdater,
-              mdc,
-              recordSchemaValidator,
-              metricReporter,
-              timeTracker,
-              sourceConfig.getSourceId(),
-              fieldSelectionEnabled),
-          executors)
+      final CompletableFuture<Void> readSrcAndWriteDstThread = CompletableFuture.runAsync(readFromSrcAndWriteToDstRunnable(
+          source,
+          destination,
+          sourceConfig.getCatalog(),
+          cancelled,
+          mapper,
+          messageTracker,
+          connectorConfigUpdater,
+          mdc,
+          recordSchemaValidator,
+          metricReporter,
+          timeTracker,
+          sourceConfig.getSourceId(),
+          fieldSelectionEnabled), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
-              if (ex.getCause() instanceof SourceException) {
-                replicationRunnableFailureRef.set(FailureHelper.sourceFailure(ex, Long.valueOf(jobId), attempt));
-              } else if (ex.getCause() instanceof DestinationException) {
-                replicationRunnableFailureRef.set(FailureHelper.destinationFailure(ex, Long.valueOf(jobId), attempt));
-              } else {
-                replicationRunnableFailureRef.set(FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt));
-              }
+              replicationRunnableFailureRef.set(getFailureReason(ex.getCause(), Long.parseLong(jobId), attempt));
             }
           });
+
+      try {
+        if (heartbeatEnabled) {
+          srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
+        }
+      } catch (HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
+        ApmTraceUtils.addExceptionToTrace(ex);
+        replicationRunnableFailureRef.set(getFailureReason(ex, Long.parseLong(jobId), attempt));
+      }
 
       LOGGER.info("Waiting for source and destination threads to complete.");
       // CompletableFuture#allOf waits until all futures finish before returning, even if one throws an
@@ -272,6 +280,19 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.error("Sync worker failed.", e);
     } finally {
       executors.shutdownNow();
+    }
+  }
+
+  @VisibleForTesting
+  static FailureReason getFailureReason(final Throwable ex, final long jobId, final int attempt) {
+    if (ex instanceof SourceException) {
+      return FailureHelper.sourceFailure(ex, Long.valueOf(jobId), attempt);
+    } else if (ex instanceof DestinationException) {
+      return FailureHelper.destinationFailure(ex, Long.valueOf(jobId), attempt);
+    } else if (ex instanceof HeartbeatTimeoutChaperone.HeartbeatTimeoutException) {
+      return FailureHelper.sourceHeartbeatFailure(ex, Long.valueOf(jobId), attempt);
+    } else {
+      return FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt);
     }
   }
 
@@ -355,7 +376,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
       long recordsRead = 0L;
-      final Map<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new HashMap<>();
+      /*
+       * validationErrors must be a ConcurrentHashMap as it may potentially be updated and read in
+       * different threads concurrently depending on the {@link
+       * io.airbyte.featureflag.PerfBackgroundJsonValidation} feature-flag.
+       */
+      final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
       final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields = new HashMap<>();
       final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields = new HashMap<>();
@@ -626,7 +652,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static void validateSchema(final RecordSchemaValidator recordSchemaValidator,
                                      final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields,
                                      final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields,
-                                     final Map<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors,
+                                     final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors,
                                      final AirbyteMessage message) {
     if (message.getRecord() == null) {
       return;
@@ -635,25 +661,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     final AirbyteRecordMessage record = message.getRecord();
     final AirbyteStreamNameNamespacePair messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record);
     // avoid noise by validating only if the stream has less than 10 records with validation errors
-    final boolean streamHasLessThenTenErrs =
-        validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getRight() < 10;
+    final boolean streamHasLessThenTenErrs = validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getRight() < 10;
     if (streamHasLessThenTenErrs) {
-      try {
-        recordSchemaValidator.validateSchema(record, messageStream);
-        final Set<String> unexpectedFieldNames = unexpectedFields.getOrDefault(messageStream, new HashSet<>());
-        populateUnexpectedFieldNames(record, streamToAllFields.get(messageStream), unexpectedFieldNames);
-        unexpectedFields.put(messageStream, unexpectedFieldNames);
-      } catch (final RecordSchemaValidationException e) {
-        final ImmutablePair<Set<String>, Integer> exceptionWithCount = validationErrors.get(messageStream);
-        if (exceptionWithCount == null) {
-          validationErrors.put(messageStream, new ImmutablePair<>(e.errorMessages, 1));
-        } else {
-          final Integer currentCount = exceptionWithCount.getRight();
-          final Set<String> currentErrorMessages = exceptionWithCount.getLeft();
-          final Set<String> updatedErrorMessages = Stream.concat(currentErrorMessages.stream(), e.errorMessages.stream()).collect(Collectors.toSet());
-          validationErrors.put(messageStream, new ImmutablePair<>(updatedErrorMessages, currentCount + 1));
-        }
-      }
+      recordSchemaValidator.validateSchema(record, messageStream, validationErrors);
+      final Set<String> unexpectedFieldNames = unexpectedFields.getOrDefault(messageStream, new HashSet<>());
+      populateUnexpectedFieldNames(record, streamToAllFields.get(messageStream), unexpectedFieldNames);
+      unexpectedFields.put(messageStream, unexpectedFieldNames);
     }
   }
 

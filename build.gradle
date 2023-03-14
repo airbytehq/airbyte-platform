@@ -225,8 +225,6 @@ subprojects { subproj ->
     // 2) A buildDockerImage task to build the docker image.
     // 3) Make the docker image task depend on the default assemble task.
     if (subproj.hasProperty('dockerImageName')) {
-        project.logger.lifecycle("configuring docker task for $subproj.name")
-
         // Although this task is defined for every subproject with the dockerImageName property,
         // It is not necessarily used for all subprojects. Non-TAR producing projects can ignore this.
         tasks.register("copyGeneratedTar", Copy) {

@@ -10,6 +10,11 @@ export interface TableProps<T> {
   // We can leave type any here since useReactTable options.columns itself is waiting for Array<ColumnDef<T, any>>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: Array<ColumnDef<T, any>>;
+  /**
+   * If the table data is sorted outside this component you can pass the id of the column by which its sorted
+   * to apply the correct sorting style to that column.
+   */
+  sortedByColumn?: string;
   data: T[];
   light?: boolean;
   onClickRow?: (data: T) => void;
@@ -25,6 +30,7 @@ export const NextTable = <T,>({
   light,
   onClickRow,
   columnVisibility,
+  sortedByColumn,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
@@ -42,6 +48,7 @@ export const NextTable = <T,>({
           <tr key={`table-header-${headerGroup.id}}`}>
             {headerGroup.headers.map((header) => {
               const meta = header.column.columnDef.meta as ColumnMeta | undefined;
+              const isSorted = (sortedByColumn && sortedByColumn === header.column.id) || header.column.getIsSorted();
               return (
                 <th
                   colSpan={header.colSpan}
@@ -49,6 +56,7 @@ export const NextTable = <T,>({
                     styles.th,
                     {
                       [styles.light]: light,
+                      [styles.sorted]: isSorted,
                     },
                     meta?.thClassName
                   )}

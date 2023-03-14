@@ -45,9 +45,10 @@ class DatabaseConnectionHelperTest {
   }
 
   @Test
-  void testCreatingADslContextFromATestContainer() {
+  void testCreatingADslContextFromADataSource() {
     final SQLDialect dialect = SQLDialect.POSTGRES;
-    final DSLContext dslContext = DatabaseConnectionHelper.createDslContext(container, dialect);
+    final DataSource dataSource = DatabaseConnectionHelper.createDataSource(container);
+    final DSLContext dslContext = DatabaseConnectionHelper.createDslContext(dataSource, dialect);
     assertNotNull(dslContext);
     assertEquals(dialect, dslContext.configuration().dialect());
   }

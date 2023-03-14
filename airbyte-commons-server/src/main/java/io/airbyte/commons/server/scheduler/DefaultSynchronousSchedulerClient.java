@@ -200,10 +200,9 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       track(jobId, configType, connectorDefinitionId, workspaceId, JobState.STARTED, null);
       final TemporalResponse<ConnectorJobOutput> temporalResponse = executor.get();
       final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
-      final T mappedOutput = jobOutput.map(outputMapper).orElse(null);
       final JobState outputState = temporalResponse.getMetadata().isSucceeded() ? JobState.SUCCEEDED : JobState.FAILED;
 
-      track(jobId, configType, connectorDefinitionId, workspaceId, outputState, mappedOutput);
+      track(jobId, configType, connectorDefinitionId, workspaceId, outputState, jobOutput.orElse(null));
 
       if (outputState == JobState.FAILED && jobOutput.isPresent()) {
         reportError(configType, jobContext, jobOutput.get(), connectorDefinitionId, workspaceId);
@@ -232,20 +231,20 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                          final UUID connectorDefinitionId,
                          final UUID workspaceId,
                          final JobState jobState,
-                         final T value) {
+                         final @Nullable ConnectorJobOutput jobOutput) {
     switch (configType) {
       case CHECK_CONNECTION_SOURCE -> jobTracker.trackCheckConnectionSource(
           jobId,
           connectorDefinitionId,
           workspaceId,
           jobState,
-          (StandardCheckConnectionOutput) value);
+          jobOutput);
       case CHECK_CONNECTION_DESTINATION -> jobTracker.trackCheckConnectionDestination(
           jobId,
           connectorDefinitionId,
           workspaceId,
           jobState,
-          (StandardCheckConnectionOutput) value);
+          jobOutput);
       case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, jobState);
       case GET_SPEC -> {
         // skip tracking for get spec to avoid noise.

@@ -6,22 +6,22 @@ package io.airbyte.workers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.PerfBackgroundJsonValidation;
-import io.airbyte.featureflag.Workspace;
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.exception.RecordSchemaValidationException;
-import java.lang.invoke.MethodHandles;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 /**
  * Validates that AirbyteRecordMessage data conforms to the JSON schema defined by the source's
@@ -29,21 +29,33 @@ import org.slf4j.LoggerFactory;
  */
 public class RecordSchemaValidator {
 
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
-  private final FeatureFlagClient featureFlagClient;
-  private final UUID workspaceId;
   private static final JsonSchemaValidator validator = new JsonSchemaValidator();
+  private final ExecutorService validationExecutor;
   private final Map<AirbyteStreamNameNamespacePair, JsonNode> streams;
+  private final boolean backgroundValidation;
 
-  public RecordSchemaValidator(final FeatureFlagClient featureFlagClient,
-                               final UUID workspaceId,
-                               final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas) {
-    this.featureFlagClient = featureFlagClient;
-    this.workspaceId = workspaceId;
+  /**
+   * Creates a RecordSchemaValidator.
+   *
+   * @param streamNamesToSchemas Name of streams.
+   * @param backgroundValidation Pass true if the json schema validation should occur in a different
+   *        thread. Pass false if the json schema validation should occur in current thread. TODO:
+   *        remove the backgroundValidation parameter when PerfBackgroundJsonValidation feature-flag
+   *        is removed.
+   */
+  public RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas, final boolean backgroundValidation) {
+    this(streamNamesToSchemas, backgroundValidation, Executors.newFixedThreadPool(1));
+  }
+
+  @VisibleForTesting
+  RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas,
+                        final boolean backgroundValidation,
+                        final ExecutorService validationExecutor) {
+    this.backgroundValidation = backgroundValidation;
     // streams is Map of a stream source namespace + name mapped to the stream schema
     // for easy access when we check each record's schema
     this.streams = streamNamesToSchemas;
+    this.validationExecutor = validationExecutor;
     // initialize schema validator to avoid creating validators each time.
     for (final AirbyteStreamNameNamespacePair stream : streamNamesToSchemas.keySet()) {
       // We must choose a JSON validator version for validating the schema
@@ -52,36 +64,58 @@ public class RecordSchemaValidator {
       ((ObjectNode) schema).put("$schema", "http://json-schema.org/draft-07/schema#");
       validator.initializeSchemaValidator(stream.toString(), schema);
     }
-
   }
 
   /**
    * Takes an AirbyteRecordMessage and uses the JsonSchemaValidator to validate that its data conforms
-   * to the stream's schema If it does not, this method throws a RecordSchemaValidationException.
-   *
-   * @param message message
-   * @param messageStream stream the message is associated with
-   * @throws RecordSchemaValidationException exception if record's data does not conform to the
-   *         stream's schema.
+   * to the stream's schema. If it does not, an error is added to the validationErrors map.
    */
-  public void validateSchema(final AirbyteRecordMessage message, final AirbyteStreamNameNamespacePair messageStream)
-      throws RecordSchemaValidationException {
-
-    final JsonNode messageData = message.getData();
-    final JsonNode matchingSchema = streams.get(messageStream);
-
-    if (workspaceId != null) {
-      if (featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(workspaceId))) {
-        log.debug("feature flag enabled for workspace {}", workspaceId);
-      } else {
-        log.debug("feature flag disabled for workspace {}", workspaceId);
-      }
+  public void validateSchema(
+                             final AirbyteRecordMessage message,
+                             final AirbyteStreamNameNamespacePair airbyteStream,
+                             final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+    if (backgroundValidation) {
+      validationExecutor.execute(() -> {
+        try {
+          doValidateSchema(message, airbyteStream);
+        } catch (final RecordSchemaValidationException e) {
+          handleException(e, airbyteStream, validationErrors);
+        }
+      });
     } else {
-      log.debug("workspace id is null");
+      try {
+        doValidateSchema(message, airbyteStream);
+      } catch (final RecordSchemaValidationException e) {
+        handleException(e, airbyteStream, validationErrors);
+      }
     }
+  }
+
+  private void handleException(final RecordSchemaValidationException e,
+                               final AirbyteStreamNameNamespacePair airbyteStream,
+                               final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+    validationErrors.compute(airbyteStream, (k, v) -> {
+      if (v == null) {
+        return new ImmutablePair<>(e.errorMessages, 1);
+      } else {
+        final var updatedErrorMessages = Stream.concat(v.getLeft().stream(), e.errorMessages.stream()).collect(Collectors.toSet());
+        final var updatedCount = v.getRight() + 1;
+        return new ImmutablePair<>(updatedErrorMessages, updatedCount);
+      }
+    });
+  }
+
+  /**
+   * Validates the schema.
+   *
+   * @throws RecordSchemaValidationException If schema is invalid.
+   */
+  private void doValidateSchema(final AirbyteRecordMessage message, final AirbyteStreamNameNamespacePair airbyteStream) {
+    final JsonNode messageData = message.getData();
+    final JsonNode matchingSchema = streams.get(airbyteStream);
 
     try {
-      validator.ensureInitializedSchema(messageStream.toString(), messageData);
+      validator.ensureInitializedSchema(airbyteStream.toString(), messageData);
     } catch (final JsonValidationException e) {
       final List<String[]> invalidRecordDataAndType = validator.getValidationMessageArgs(matchingSchema, messageData);
       final List<String> invalidFields = validator.getValidationMessagePaths(matchingSchema, messageData);
@@ -102,9 +136,8 @@ public class RecordSchemaValidator {
       }
 
       throw new RecordSchemaValidationException(validationMessagesToDisplay,
-          String.format("Record schema validation failed for %s", messageStream), e);
+          String.format("Record schema validation failed for %s", airbyteStream), e);
     }
-
   }
 
 }
