@@ -6,10 +6,10 @@ import { BuilderPrompt } from "components/connectorBuilder/BuilderPrompt";
 import { Card } from "components/ui/Card";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
 import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
-import { SourceDefinitionReadWithLatestTag } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecificationAsync } from "services/connector/SourceDefinitionSpecificationService";
 import { FormError } from "utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
@@ -24,7 +24,7 @@ interface SourceFormProps {
     sourceDefinitionId?: string;
     connectionConfiguration?: ConnectionConfiguration;
   }) => Promise<void>;
-  sourceDefinitions: SourceDefinitionReadWithLatestTag[];
+  sourceDefinitions: SourceDefinitionRead[];
   error?: FormError | null;
 }
 
