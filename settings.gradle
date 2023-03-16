@@ -95,6 +95,7 @@ include ':airbyte-worker-models'
 
 include ':airbyte-bootloader'
 include ':airbyte-commons-server'
+include ':airbyte-connector-atelier-server'
 include ':airbyte-connector-builder-server'
 include ':airbyte-container-orchestrator'
 include ':airbyte-cron'

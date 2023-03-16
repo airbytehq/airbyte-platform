@@ -20,13 +20,13 @@ import {
 } from "core/request/ConnectorManifest";
 import { useResolveManifest } from "services/connectorBuilder/ConnectorBuilderApiService";
 
+import { CDK_VERSION } from "./cdk";
 import {
   authTypeToKeyToInferredInput,
   BuilderFormAuthenticator,
   BuilderFormValues,
   BuilderPaginator,
   BuilderStream,
-  CDK_VERSION,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   isInterpolatedConfigKey,
@@ -44,7 +44,7 @@ export const useManifestToBuilderForm = () => {
 export const convertToBuilderFormValues = async (
   resolve: (manifest: ConnectorManifest) => Promise<ResolveManifest>,
   manifest: ConnectorManifest,
-  currentBuilderFormValues: BuilderFormValues
+  connectorName: string
 ) => {
   let resolveResult: ResolveManifest;
   try {
@@ -68,8 +68,12 @@ export const convertToBuilderFormValues = async (
     );
   }
 
+  return convertToBuilderFormValuesSync(resolvedManifest, connectorName);
+};
+
+export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
   const builderFormValues = cloneDeep(DEFAULT_BUILDER_FORM_VALUES);
-  builderFormValues.global.connectorName = currentBuilderFormValues.global.connectorName;
+  builderFormValues.global.connectorName = connectorName;
   builderFormValues.checkStreams = resolvedManifest.check.stream_names;
 
   const streams = resolvedManifest.streams;

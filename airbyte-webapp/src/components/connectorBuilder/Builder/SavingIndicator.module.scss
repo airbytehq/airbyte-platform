@@ -1,0 +1,20 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.invalid {
+  color: colors.$red;
+}
+
+.text {
+  white-space: nowrap;
+}
+
+.retryButton {
+  padding: 0;
+  height: auto;
+  border: none;
+  background: none;
+  color: colors.$red;
+  font-size: inherit;
+  cursor: pointer;
+}

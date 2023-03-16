@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.features;
 
-import java.util.Set;
-
 /**
  * Interface that describe which features are activated in airbyte. Currently, the only
  * implementation relies on env. Ideally it should be on some DB.
@@ -23,10 +21,6 @@ public interface FeatureFlags {
   boolean logConnectorMessages();
 
   boolean needStateValidation();
-
-  boolean routeTaskQueueForWorkspaceEnabled();
-
-  Set<String> routeTaskQueueForWorkspaceAllowList();
 
   /**
    * Return true if field selection should be applied. See also fieldSelectionWorkspaces.

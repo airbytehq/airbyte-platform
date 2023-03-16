@@ -6,6 +6,7 @@ package io.airbyte.container_orchestrator.config;
 
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
@@ -20,6 +21,8 @@ import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
@@ -32,6 +35,7 @@ import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.env.Environment;
@@ -41,6 +45,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 @Factory
 class ContainerOrchestratorFactory {
@@ -106,11 +112,13 @@ class ContainerOrchestratorFactory {
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final JobRunConfig jobRunConfig,
                                      final SourceApi sourceApi,
-                                     final DestinationApi destinationApi) {
+                                     final DestinationApi destinationApi,
+                                     final SourceDefinitionApi sourceDefinitionApi,
+                                     final SyncPersistenceFactory syncPersistenceFactory) {
     return switch (application) {
       case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, processFactory, featureFlags, featureFlagClient,
           serdeProvider,
-          migratorFactory, jobRunConfig, sourceApi, destinationApi);
+          migratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi, syncPersistenceFactory);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigs, processFactory, jobRunConfig);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
@@ -121,6 +129,17 @@ class ContainerOrchestratorFactory {
   @Singleton
   DocumentStoreClient documentStoreClient(final EnvConfigs config) {
     return StateClients.create(config.getStateStorageCloudConfigs(), Path.of("/state"));
+  }
+
+  @Prototype
+  @Named("syncPersistenceExecutorService")
+  public ScheduledExecutorService syncPersistenceExecutorService() {
+    return Executors.newSingleThreadScheduledExecutor();
+  }
+
+  @Singleton
+  public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
+    return new StateAggregatorFactory(featureFlags);
   }
 
 }

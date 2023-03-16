@@ -2,8 +2,9 @@
   "name": "airbyte-webapp-e2e-tests",
   "version": "0.0.0",
   "description": "Airbyte e2e testing",
+  "private": true,
   "engines": {
-    "node": "16.18.1"
+    "node": "18.15.0"
   },
   "scripts": {
     "cypress:open": "cypress open",
@@ -18,7 +19,7 @@
     "@types/node": "^18.11.9",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
-    "cypress": "^9.2.0",
+    "cypress": "^12.7.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-cypress": "^2.12.1",
     "eslint-plugin-prettier": "^4.0.0",

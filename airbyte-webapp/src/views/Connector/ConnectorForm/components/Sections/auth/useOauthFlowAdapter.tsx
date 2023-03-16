@@ -5,7 +5,7 @@ import merge from "lodash/merge";
 import pick from "lodash/pick";
 import { useMemo, useState } from "react";
 
-import { ConnectorDefinitionSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AuthSpecification } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
@@ -18,7 +18,10 @@ interface Credentials {
   credentials: AuthSpecification;
 }
 
-function useFormikOauthAdapter(connector: ConnectorDefinitionSpecification): {
+function useFormikOauthAdapter(
+  connector: ConnectorDefinitionSpecification,
+  connectorDefinition?: ConnectorDefinition
+): {
   loading: boolean;
   done?: boolean;
   hasRun: boolean;
@@ -50,7 +53,7 @@ function useFormikOauthAdapter(connector: ConnectorDefinitionSpecification): {
     setHasRun(true);
   };
 
-  const { run, loading, done } = useRunOauthFlow(connector, onDone);
+  const { run, loading, done } = useRunOauthFlow({ connector, connectorDefinition, onDone });
   const preparedValues = useMemo(() => getValues<Credentials>(values), [getValues, values]);
 
   const { hasAuthFieldValues } = useAuthentication();

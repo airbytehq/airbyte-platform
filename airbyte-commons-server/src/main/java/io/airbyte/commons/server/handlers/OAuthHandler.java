@@ -44,6 +44,7 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -73,7 +74,7 @@ public class OAuthHandler {
   private final SecretsRepositoryWriter secretsRepositoryWriter;
 
   public OAuthHandler(final ConfigRepository configRepository,
-                      final HttpClient httpClient,
+                      @Named("oauthHttpClient") final HttpClient httpClient,
                       final TrackingClient trackingClient,
                       final SecretsRepositoryReader secretsRepositoryReader,
                       final SecretsRepositoryWriter secretsRepositoryWriter) {
@@ -189,7 +190,7 @@ public class OAuthHandler {
   }
 
   @VisibleForTesting
-  protected Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
+  public Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeSourceOauthRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         completeSourceOauthRequest.getSourceDefinitionId());

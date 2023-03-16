@@ -7,6 +7,8 @@ export const enum Namespace {
   USER = "User",
   CREDITS = "Credits",
   CONNECTOR_BUILDER = "ConnectorBuilder",
+  SCHEMA = "Schema",
+  ERD = "ERD",
 }
 
 export const enum Action {
@@ -29,6 +31,8 @@ export const enum Action {
   CHECKOUT_START = "CheckoutStart",
   LOAD_MORE_JOBS = "LoadMoreJobs",
   INVITE = "Invite",
+  OAUTH_ATTEMPT = "OAuthAttempt",
+  OAUTH_SUCCESS = "OAuthSuccess",
 
   // Connector Builder Actions
   CONNECTOR_BUILDER_START = "ConnectorBuilderStart",

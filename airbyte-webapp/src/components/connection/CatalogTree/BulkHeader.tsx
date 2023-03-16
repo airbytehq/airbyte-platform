@@ -7,39 +7,17 @@ import { SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig
 import { Button } from "components/ui/Button";
 import { Switch } from "components/ui/Switch";
 
-import { SyncSchemaField, SyncSchemaFieldObject, SyncSchemaStream, traverseSchemaToField } from "core/domain/catalog";
+import { SyncSchemaField } from "core/domain/catalog";
 import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
 import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./BulkHeader.module.scss";
-import { pathDisplayName, PathPopout } from "./PathPopout";
+import { calculateSharedFields } from "./next/BulkEditPanel/utils";
+import { PathPopout } from "./PathPopout";
 import { ArrowCell, CheckboxCell, HeaderCell } from "./styles";
 import { SyncSettingsDropdown } from "./SyncSettingsDropdown";
-import { flatten, getPathType } from "./utils";
-
-function calculateSharedFields(selectedBatchNodes: SyncSchemaStream[]) {
-  const primitiveFieldsByStream = selectedBatchNodes.map(({ stream }) => {
-    const traversedFields = traverseSchemaToField(stream?.jsonSchema, stream?.name);
-    const flattenedFields = flatten(traversedFields);
-
-    return flattenedFields.filter(SyncSchemaFieldObject.isPrimitive);
-  });
-
-  const pathMap = new Map<string, SyncSchemaField>();
-
-  // calculate intersection of primitive fields across all selected streams
-  primitiveFieldsByStream.forEach((fields, index) => {
-    if (index === 0) {
-      fields.forEach((field) => pathMap.set(pathDisplayName(field.path), field));
-    } else {
-      const fieldMap = new Set(fields.map((f) => pathDisplayName(f.path)));
-      pathMap.forEach((_, k) => (!fieldMap.has(k) ? pathMap.delete(k) : null));
-    }
-  });
-
-  return Array.from(pathMap.values());
-}
+import { getPathType } from "./utils";
 
 export const BulkHeader: React.FC = () => {
   const {

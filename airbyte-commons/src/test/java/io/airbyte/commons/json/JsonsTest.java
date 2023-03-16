@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.BinaryNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -97,17 +98,6 @@ class JsonsTest {
     assertEquals(
         "{\"test\":\"dGVzdA==\"}",
         Jsons.deserialize("{\"test\":\"dGVzdA==\"}").toString());
-  }
-
-  @Test
-  void testTryDeserialize() {
-    assertEquals(
-        Optional.of(new ToClass(ABC, 999, 888L)),
-        Jsons.tryDeserialize("{\"str\":\"abc\", \"num\": 999, \"numLong\": 888}", ToClass.class));
-
-    assertEquals(
-        Optional.of(new ToClass(ABC, 999, 0L)),
-        Jsons.tryDeserialize("{\"str\":\"abc\", \"num\": 999, \"test\": 888}", ToClass.class));
   }
 
   @Test
@@ -331,6 +321,30 @@ class JsonsTest {
       {PQR, 1},
     }).collect(Collectors.toMap(data -> (String) data[0], data -> data[1]));
     assertEquals(expected, Jsons.flatten(json, true));
+  }
+
+  @Test
+  void testMergeNodes() {
+    final JsonNode mainNode = Jsons
+        .deserialize("{ \"abc\": \"testing\", \"def\": \"asdf\"}");
+    final JsonNode updateNode = Jsons
+        .deserialize("{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}}");
+
+    final JsonNode expected = Jsons.deserialize(
+        "{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}, \"def\": \"asdf\"}");
+    assertEquals(expected, Jsons.mergeNodes(mainNode, updateNode));
+  }
+
+  @Test
+  void testSetNestedValue() {
+    final JsonNode node = Jsons
+        .deserialize("{ \"abc\": \"testing\", \"def\": \"asdf\"}");
+    final JsonNode expected = Jsons.deserialize(
+        "{ \"abc\": \"testing\", \"def\": \"asdf\", \"nest\": {\"key\": \"value\"}}");
+
+    Jsons.setNestedValue(node, List.of("nest", "key"), TextNode.valueOf("value"));
+    assertEquals(expected, node);
+
   }
 
   private static class ToClass {

@@ -8,9 +8,11 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
@@ -20,9 +22,11 @@ import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
@@ -184,7 +188,7 @@ public class DbConverter {
    * @param record db record
    * @return source definition
    */
-  public static StandardSourceDefinition buildStandardSourceDefinition(final Record record) {
+  public static StandardSourceDefinition buildStandardSourceDefinition(final Record record, final long defaultMaxSecondsBetweenMessages) {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
@@ -211,7 +215,10 @@ public class DbConverter {
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class))
         .withSuggestedStreams(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS).data(), SuggestedStreams.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS).data(), SuggestedStreams.class))
+        .withMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
+            ? defaultMaxSecondsBetweenMessages
+            : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue());
   }
 
   /**
@@ -379,8 +386,46 @@ public class DbConverter {
         .withWorkspaceId(record.get(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID))
         .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
         .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
+        .withHasDraft((Boolean) record.get("hasDraft"))
         .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
         .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID));
+  }
+
+  /**
+   * Builder declarative manifest from db record.
+   *
+   * @param record db record
+   * @return declarative manifest
+   */
+  public static DeclarativeManifest buildDeclarativeManifest(final Record record) {
+    return buildDeclarativeManifestWithoutManifestAndSpec(record).withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
+        .withSpec(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.SPEC).data()));
+  }
+
+  /**
+   * Builder declarative manifest without manifest from db record.
+   *
+   * @param record db record
+   * @return declarative manifest
+   */
+  public static DeclarativeManifest buildDeclarativeManifestWithoutManifestAndSpec(final Record record) {
+    return new DeclarativeManifest()
+        .withActorDefinitionId(record.get(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .withDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
+        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION));
+  }
+
+  /**
+   * Actor definition config injection from db record.
+   *
+   * @param record db record
+   * @return actor definition config injection
+   */
+  public static ActorDefinitionConfigInjection buildActorDefinitionConfigInjection(final Record record) {
+    return new ActorDefinitionConfigInjection()
+        .withActorDefinitionId(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID))
+        .withInjectionPath(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH))
+        .withJsonToInject(Jsons.deserialize(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT).data()));
   }
 
 }

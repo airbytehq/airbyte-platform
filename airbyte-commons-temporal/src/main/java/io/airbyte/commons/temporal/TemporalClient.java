@@ -27,6 +27,9 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -80,6 +83,7 @@ public class TemporalClient {
   private final ConnectionManagerUtils connectionManagerUtils;
   private final NotificationUtils notificationUtils;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
                         final WorkflowClient client,
@@ -87,7 +91,8 @@ public class TemporalClient {
                         final StreamResetPersistence streamResetPersistence,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final NotificationUtils notificationUtils,
-                        final StreamResetRecordsHelper streamResetRecordsHelper) {
+                        final StreamResetRecordsHelper streamResetRecordsHelper,
+                        final FeatureFlagClient featureFlagClient) {
     this.workspaceRoot = workspaceRoot;
     this.client = client;
     this.service = service;
@@ -95,6 +100,7 @@ public class TemporalClient {
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationUtils = notificationUtils;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   private final Set<String> workflowNames = new HashSet<>();
@@ -479,7 +485,8 @@ public class TemporalClient {
         .withSourceResourceRequirements(config.getSourceResourceRequirements())
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
         .withConnectionId(connectionId)
-        .withWorkspaceId(config.getWorkspaceId());
+        .withWorkspaceId(config.getWorkspaceId())
+        .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Workspace(config.getWorkspaceId())));
 
     return execute(jobRunConfig,
         () -> getWorkflowStub(SyncWorkflow.class, TemporalJobType.SYNC).run(

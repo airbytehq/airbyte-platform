@@ -9,6 +9,7 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
+import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.text.Sqls;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
@@ -218,7 +218,6 @@ class DefaultJobPersistenceTest {
 
   @AfterEach
   void tearDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
   }
 
@@ -280,6 +279,11 @@ class DefaultJobPersistenceTest {
         new SyncStats().withBytesEmitted(100L).withRecordsEmitted(9L).withRecordsCommitted(10L).withDestinationStateMessagesEmitted(1L)
             .withSourceStateMessagesEmitted(4L).withMaxSecondsBeforeSourceStateMessageEmitted(5L).withMeanSecondsBeforeSourceStateMessageEmitted(2L)
             .withMaxSecondsBetweenStateMessageEmittedandCommitted(10L).withMeanSecondsBetweenStateMessageEmittedandCommitted(3L);
+    final String streamName = "stream";
+    final String streamNamespace = "namespace";
+    final StreamSyncStats streamSyncStats = new StreamSyncStats().withStats(
+        new SyncStats().withBytesEmitted(100L).withRecordsEmitted(9L).withEstimatedBytes(200L).withEstimatedRecords(10L))
+        .withStreamNamespace(streamNamespace).withStreamName(streamName);
     final FailureReason failureReason1 = new FailureReason().withFailureOrigin(FailureOrigin.DESTINATION).withFailureType(FailureType.SYSTEM_ERROR)
         .withExternalMessage("There was a normalization error");
     final FailureReason failureReason2 = new FailureReason().withFailureOrigin(FailureOrigin.SOURCE).withFailureType(FailureType.CONFIG_ERROR)
@@ -288,7 +292,9 @@ class DefaultJobPersistenceTest {
     final NormalizationSummary normalizationSummary =
         new NormalizationSummary().withStartTime(10L).withEndTime(500L).withFailures(List.of(failureReason1, failureReason2));
     final StandardSyncOutput standardSyncOutput =
-        new StandardSyncOutput().withStandardSyncSummary(new StandardSyncSummary().withTotalStats(syncStats))
+        new StandardSyncOutput().withStandardSyncSummary(new StandardSyncSummary()
+            .withTotalStats(syncStats)
+            .withStreamStats(List.of(streamSyncStats)))
             .withNormalizationSummary(normalizationSummary);
     final JobOutput jobOutput = new JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput);
 
@@ -300,7 +306,9 @@ class DefaultJobPersistenceTest {
     assertEquals(Optional.of(jobOutput), updated.getAttempts().get(0).getOutput());
     assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
 
-    final SyncStats storedSyncStats = jobPersistence.getAttemptStats(jobId, attemptNumber).combinedStats();
+    final AttemptStats attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber);
+
+    final SyncStats storedSyncStats = attemptStats.combinedStats();
     assertEquals(100L, storedSyncStats.getBytesEmitted());
     assertEquals(9L, storedSyncStats.getRecordsEmitted());
     assertEquals(10L, storedSyncStats.getRecordsCommitted());
@@ -310,6 +318,15 @@ class DefaultJobPersistenceTest {
     assertEquals(2L, storedSyncStats.getMeanSecondsBeforeSourceStateMessageEmitted());
     assertEquals(10L, storedSyncStats.getMaxSecondsBetweenStateMessageEmittedandCommitted());
     assertEquals(3L, storedSyncStats.getMeanSecondsBetweenStateMessageEmittedandCommitted());
+
+    final List<StreamSyncStats> storedStreamSyncStats = attemptStats.perStreamStats();
+    assertEquals(1, storedStreamSyncStats.size());
+    assertEquals(streamName, storedStreamSyncStats.get(0).getStreamName());
+    assertEquals(streamNamespace, storedStreamSyncStats.get(0).getStreamNamespace());
+    assertEquals(streamSyncStats.getStats().getBytesEmitted(), storedStreamSyncStats.get(0).getStats().getBytesEmitted());
+    assertEquals(streamSyncStats.getStats().getRecordsEmitted(), storedStreamSyncStats.get(0).getStats().getRecordsEmitted());
+    assertEquals(streamSyncStats.getStats().getEstimatedRecords(), storedStreamSyncStats.get(0).getStats().getEstimatedRecords());
+    assertEquals(streamSyncStats.getStats().getEstimatedBytes(), storedStreamSyncStats.get(0).getStats().getEstimatedBytes());
 
     final NormalizationSummary storedNormalizationSummary = jobPersistence.getNormalizationSummary(jobId, attemptNumber).stream().findFirst().get();
     assertEquals(10L, storedNormalizationSummary.getStartTime());
@@ -1920,11 +1937,11 @@ class DefaultJobPersistenceTest {
               "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
                   + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
                   + "RETURNING id ",
-              Sqls.toSqlName(jobConfig.getConfigType()),
+              toSqlName(jobConfig.getConfigType()),
               scope,
               runDate,
               runDate,
-              Sqls.toSqlName(status),
+              toSqlName(status),
               Jsons.serialize(jobConfig)))
           .stream()
           .findFirst()
@@ -1950,7 +1967,7 @@ class DefaultJobPersistenceTest {
           job.getId(),
           job.getAttemptsCount(),
           logPath,
-          Sqls.toSqlName(AttemptStatus.FAILED),
+          toSqlName(AttemptStatus.FAILED),
           runDate,
           runDate,
           shouldHaveState ? attemptOutputWithState : attemptOutputWithoutState)
@@ -1965,11 +1982,11 @@ class DefaultJobPersistenceTest {
      * controlling deletion logic. Thus, the test case injects overrides for those constants, testing a
      * comprehensive set of combinations to make sure that the logic is robust to reasonable
      * configurations. Extreme configurations such as zero-day retention period are not covered.
-     *
+     * <p>
      * Business rules for deletions. 1. Job must be older than X days or its conn has excessive number
      * of jobs 2. Job cannot be one of the last N jobs on that conn (last N jobs are always kept). 3.
      * Job cannot be holding the most recent saved state (most recent saved state is always kept).
-     *
+     * <p>
      * Testing Goal: Set up jobs according to the parameters passed in. Then delete according to the
      * rules, and make sure the right number of jobs are left. Against one connection/scope,
      * <ol>
@@ -1998,7 +2015,6 @@ class DefaultJobPersistenceTest {
      *        parameters. This was calculated by a human based on understanding the requirements.
      * @param goalOfTestScenario Description of the purpose of that test scenario, so it's easier to
      *        maintain and understand failures.
-     *
      */
     @DisplayName("Should purge older job history but maintain certain more recent ones")
     @ParameterizedTest

@@ -15,6 +15,7 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobPersistence;
@@ -79,12 +80,14 @@ public class TemporalBeanFactory {
                                    @Property(name = "airbyte.connector.specific-resource-defaults-enabled",
                                              defaultValue = "false") final boolean connectorSpecificResourceDefaultsEnabled,
                                    final DefaultJobCreator jobCreator,
-                                   final OAuthConfigSupplier oAuthConfigSupplier) {
+                                   final OAuthConfigSupplier oAuthConfigSupplier,
+                                   final ConfigInjector configInjector) {
     return new DefaultSyncJobFactory(
         connectorSpecificResourceDefaultsEnabled,
         jobCreator,
         configRepository,
         oAuthConfigSupplier,
+        configInjector,
         new WorkspaceHelper(configRepository, jobPersistence));
   }
 

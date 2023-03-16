@@ -3,6 +3,11 @@ micronaut:
     name: airbyte-workers
   server:
     port: 9000
+  caches:
+    # used by RecordMetricActivity to cache repeated calls to workspaceApi.getWorkspaceByConnectionId.
+    # entries are UUID connectionIds, so 100,000 entries should be roughly 1.6MB
+    connection-workspace-id:
+      maximumSize: 100_000
 
 airbyte:
   activity:
@@ -83,6 +88,10 @@ airbyte:
     jobs:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
       minimum-migration-version: ${JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:config}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
   internal:
     api:
       auth-header:
@@ -154,6 +163,7 @@ airbyte:
           memory:
             limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
     normalization:
       main:
         container:
@@ -164,6 +174,7 @@ airbyte:
             limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
       orchestrator:
         cpu:
           limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
@@ -229,7 +240,9 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: true
+    enabled: false
+    jdbc:
+      enabled: false
     sensitive: false
   info:
     enabled: true

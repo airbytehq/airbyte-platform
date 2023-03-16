@@ -134,7 +134,13 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
 
   return (
     <div className={styles.content}>
-      <NextTable columns={columns} data={sortingData} onClickRow={onClickRow} testId={`${entity}sTable`} />
+      <NextTable
+        columns={columns}
+        data={sortingData}
+        onClickRow={onClickRow}
+        testId={`${entity}sTable`}
+        sortedByColumn={sortBy === "lastSync" ? "lastSync" : `${sortBy}Name`}
+      />
     </div>
   );
 };

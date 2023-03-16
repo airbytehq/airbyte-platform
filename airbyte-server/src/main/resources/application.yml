@@ -2,9 +2,15 @@ micronaut:
   application:
     name: airbyte-server
   executors:
+    health:
+      type: fixed
+      n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:10} # Match the data source max pool size below
     io:
       type: fixed
-      n-threads: 10  # Match the data source max pool size below
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}  # Match the data source max pool size below
+    scheduler:
+      type: fixed
+      n-threads: ${SCHEDULER_TASK_EXECUTOR_THREADS:25}
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -87,6 +93,7 @@ airbyte:
         sentry:
           dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
+    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
   web-app:
     url: ${WEBAPP_URL:}
   workspace:
@@ -110,7 +117,7 @@ datasources:
   config:
     connection-test-query: SELECT 1
     connection-timeout: 30000
-    maximum-pool-size: 10
+    maximum-pool-size: ${CONFIG_DB_MAX_POOL_SIZE:10}
     minimum-idle: 0
     idle-timeout: 600000
     initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
@@ -127,14 +134,16 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: true
+    enabled: false
+    jdbc:
+      enabled: false
     sensitive: false
   info:
     enabled: true
     sensitive: true
   loggers:
     enabled: true
-    sensitive: true
+    sensitive: false
   refresh:
     enabled: false
     sensitive: true

@@ -2,12 +2,14 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
+$border-radius: variables.$border-radius-lg;
+
 // ------- <table/> --------
 .table {
   border-spacing: 0;
   width: 100%;
   max-width: 100%;
-  border-radius: variables.$border-radius-md;
+  border-radius: $border-radius;
   box-shadow: 0 2px 4px colors.$cardShadowColor;
 
   &.light {
@@ -23,8 +25,8 @@
 
 // --------- <th/> ---------
 .th {
-  background: colors.$dark-blue;
-  color: colors.$white;
+  background: colors.$grey-30;
+  color: colors.$grey-500;
   text-transform: uppercase;
   border-bottom: none;
   text-align: left;
@@ -33,6 +35,11 @@
   font-weight: 600;
   width: auto;
   padding: variables.$spacing-md variables.$spacing-lg variables.$spacing-md;
+
+  &.sorted,
+  &.light.sorted {
+    color: colors.$blue;
+  }
 
   &.light {
     color: colors.$grey;
@@ -47,12 +54,12 @@
 
   &:first-child {
     padding-left: calc(variables.$spacing-2xl + variables.$spacing-sm);
-    border-radius: variables.$border-radius-md 0 0;
+    border-radius: $border-radius 0 0;
   }
 
   &:last-child {
     padding-left: variables.$spacing-lg;
-    border-radius: 0 variables.$spacing-md 0 0;
+    border-radius: 0 $border-radius 0 0;
   }
 }
 
@@ -81,7 +88,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  border-bottom: variables.$border-thin solid colors.$grey-100;
+  border-bottom: variables.$border-thin solid colors.$grey-50;
   width: auto;
 
   &.responsive {
@@ -92,11 +99,11 @@
     border-bottom: none;
 
     &:first-child {
-      border-radius: 0 0 0 variables.$border-radius-md;
+      border-radius: 0 0 0 $border-radius;
     }
 
     &:last-child {
-      border-radius: 0 0 variables.$border-radius-md;
+      border-radius: 0 0 $border-radius;
     }
   }
 }

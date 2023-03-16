@@ -16,7 +16,7 @@ interface MarkdownProps {
   rehypePlugins?: PluggableList;
 }
 
-export const Markdown: React.FC<MarkdownProps> = ({ content, className, rehypePlugins }) => {
+export const Markdown: React.FC<MarkdownProps> = React.memo(({ content, className, rehypePlugins }) => {
   return (
     <ReactMarkdown
       // Open everything except fragment only links in a new tab
@@ -29,4 +29,4 @@ export const Markdown: React.FC<MarkdownProps> = ({ content, className, rehypePl
       children={content || ""}
     />
   );
-};
+});

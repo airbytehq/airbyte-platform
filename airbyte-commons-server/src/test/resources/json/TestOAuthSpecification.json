@@ -1,0 +1,22 @@
+{
+  "spec": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/airbytehq/airbyte/blob/master/airbyte-server/src/test/resources/json/TestSpecification.json",
+    "title": "TestOAuthSpecification",
+    "description": "information output by the connection.",
+    "type": "object",
+    "required": ["client_id", "client_secret", "refresh_token"],
+    "additionalProperties": false,
+    "properties": {
+      "client_id": {
+        "type": "string"
+      },
+      "client_secret": {
+        "type": "string"
+      },
+      "refresh_token": {
+        "type": "string"
+      }
+    }
+  }
+}

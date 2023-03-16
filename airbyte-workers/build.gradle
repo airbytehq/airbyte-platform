@@ -17,6 +17,7 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+    implementation libs.micronaut.cache.caffeine
 
     // Ensure that the versions defined in deps.toml are used
     // instead of versions from transitive dependencies
@@ -81,6 +82,8 @@ dependencies {
         exclude group: 'io.micronaut.sql'
     }
     implementation project(':airbyte-worker-models')
+
+    runtimeOnly libs.javax.databind
 
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor

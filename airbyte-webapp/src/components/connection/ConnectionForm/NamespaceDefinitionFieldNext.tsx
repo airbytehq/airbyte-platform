@@ -11,7 +11,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useModalService } from "hooks/services/Modal";
 
 import { FormikConnectionFormValues } from "./formConfig";
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 import { namespaceDefinitionOptions } from "./types";
 import { ControlLabels } from "../../LabeledControl";
 import {
@@ -68,7 +68,7 @@ export const NamespaceDefinitionFieldNext = () => {
   return (
     <Field name="namespaceDefinition">
       {({ field }: FieldProps<NamespaceDefinitionType>) => (
-        <FormFieldWrapper>
+        <FormFieldLayout>
           <ControlLabels
             label={<FormattedMessage id="connectionForm.namespaceDefinition.title" />}
             infoTooltipContent={<FormattedMessage id="connectionForm.namespaceDefinition.subtitle" />}
@@ -86,7 +86,7 @@ export const NamespaceDefinitionFieldNext = () => {
               <FormattedMessage id="form.edit" />
             </Button>
           </FlexContainer>
-        </FormFieldWrapper>
+        </FormFieldLayout>
       )}
     </Field>
   );

@@ -15,7 +15,7 @@ import jakarta.inject.Singleton
 
 @Factory
 class Factory {
-    @Singleton
-    @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
-    fun ldClient(@Property(name = CONFIG_FF_APIKEY) apiKey: String): LDClient = LDClient(apiKey)
+  @Singleton
+  @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
+  fun ldClient(@Property(name = CONFIG_FF_APIKEY) apiKey: String): LDClient = LDClient(apiKey)
 }

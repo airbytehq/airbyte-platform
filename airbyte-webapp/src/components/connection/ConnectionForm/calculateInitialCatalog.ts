@@ -173,17 +173,36 @@ const getOptimalSyncMode = (
   return streamNode;
 };
 
+const disableStreams = (streamNode: SyncSchemaStream): SyncSchemaStream => {
+  if (!streamNode.config) {
+    return streamNode;
+  }
+  const { config } = streamNode;
+  return {
+    ...streamNode,
+    config: {
+      ...config,
+      selected: false,
+    },
+  };
+};
 const calculateInitialCatalog = (
   schema: SyncSchema,
   supportedDestinationSyncModes: DestinationSyncMode[],
   streamsWithBreakingFieldChanges?: StreamTransform[],
   isNotCreateMode?: boolean,
-  newStreamDescriptors?: StreamDescriptor[]
+  newStreamDescriptors?: StreamDescriptor[],
+  shouldDisableStreamsByDefault?: boolean
 ): SyncSchema => {
   return {
     streams: schema.streams.map<SyncSchemaStream>((apiNode, id) => {
       const nodeWithId: SyncSchemaStream = { ...apiNode, id: id.toString() };
-      const nodeStream = verifySourceDefinedProperties(verifySupportedSyncModes(nodeWithId), isNotCreateMode || false);
+      const nodeStream = verifySourceDefinedProperties(
+        verifySupportedSyncModes(
+          shouldDisableStreamsByDefault && !isNotCreateMode ? disableStreams(nodeWithId) : nodeWithId
+        ),
+        isNotCreateMode || false
+      );
 
       // if the stream is new since a refresh, verify cursor and get optimal sync modes
       const isStreamNew = newStreamDescriptors?.some(

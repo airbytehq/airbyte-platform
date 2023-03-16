@@ -52,7 +52,14 @@ dependencies {
     implementation libs.swagger.annotations
     implementation libs.javax.ws.rs.api
 
+    runtimeOnly libs.javax.databind
+
+    testImplementation libs.bundles.micronaut.test
+    testAnnotationProcessor platform(libs.micronaut.bom)
+    testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
+
     testImplementation project(':airbyte-test-utils')
+    testImplementation libs.bundles.micronaut.test
     testImplementation libs.postgresql
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.mockwebserver
@@ -103,6 +110,14 @@ run {
     environment "TEMPORAL_HOST", "localhost:7233"
 
     environment 'MICRONAUT_ENVIRONMENTS', 'control-plane'
+}
+
+test {
+    environment 'AIRBYTE_VERSION', env.VERSION
+    environment 'MICRONAUT_ENVIRONMENTS', 'test'
+    environment 'SERVICE_NAME', project.name
+
+    systemProperty 'mockito.test.enabled', true
 }
 
 // produce reproducible archives
