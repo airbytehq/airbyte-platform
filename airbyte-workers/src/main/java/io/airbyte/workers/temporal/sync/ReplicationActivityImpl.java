@@ -207,7 +207,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
               .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))
               .getMaxSecondsBetweenMessages(), "get source definition");
 
-          final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(Duration.ofMillis(maxSecondsBetweenMessages));
+          final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
 
           final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
               HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
