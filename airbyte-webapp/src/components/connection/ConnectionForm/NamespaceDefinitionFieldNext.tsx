@@ -5,6 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+import { TextInputContainer } from "components/ui/TextInputContainer";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -73,10 +74,12 @@ export const NamespaceDefinitionFieldNext = () => {
             label={<FormattedMessage id="connectionForm.namespaceDefinition.title" />}
             infoTooltipContent={<FormattedMessage id="connectionForm.namespaceDefinition.subtitle" />}
           />
-          <FlexContainer alignItems="center" justifyContent="space-between">
-            <Text color="grey">
-              <FormattedMessage id={`connectionForm.${namespaceDefinitionOptions[field.value]}`} />
-            </Text>
+          <FlexContainer alignItems="center" justifyContent="space-between" gap="sm">
+            <TextInputContainer disabled>
+              <Text>
+                <FormattedMessage id={`connectionForm.${namespaceDefinitionOptions[field.value]}`} />
+              </Text>
+            </TextInputContainer>
             <Button
               type="button"
               variant="secondary"
