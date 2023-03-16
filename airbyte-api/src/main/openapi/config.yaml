@@ -537,6 +537,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+  /v1/connector_builder_projects/publish:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Publish a connector to the workspace
+      operationId: publishConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderPublishRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionIdBody"
   /v1/connector_builder_projects/update:
     post:
       tags:
@@ -2628,6 +2647,7 @@ components:
       format: uuid
     DeclarativeManifest:
       description: Low code CDK manifest JSON object
+      type: object
     DeclarativeManifestRead:
       type: object
       properties:
@@ -2708,6 +2728,43 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
+    ConnectorBuilderPublishRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+        - name
+        - initialDeclarativeManifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        name:
+          type: string
+        initialDeclarativeManifest:
+          type: object
+          required:
+            - description
+            - manifest
+            - spec
+            - version
+          properties:
+            description:
+              type: string
+            manifest:
+              $ref: "#/components/schemas/DeclarativeManifest"
+            spec:
+              $ref: "#/components/schemas/SourceDefinitionSpecification"
+            version:
+              type: integer
+    SourceDefinitionIdBody:
+      type: object
+      required:
+        - sourceDefinitionId
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     # SourceDefinition
     SourceDefinitionId:
       type: string

@@ -4,19 +4,32 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
+
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
+import io.airbyte.config.ActiveDeclarativeManifest;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
+import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -34,26 +47,21 @@ public class ConnectorBuilderProjectsHandler {
 
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
+  private final ConnectorBuilderSpecAdapter specAdapter;
 
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
-                                         final Supplier<UUID> uuidSupplier) {
+                                         final Supplier<UUID> uuidSupplier,
+                                         final ConnectorBuilderSpecAdapter specAdapter) {
     this.configRepository = configRepository;
     this.uuidSupplier = uuidSupplier;
-  }
-
-  // This should be deleted when cloud is migrated to micronaut
-  @Deprecated(forRemoval = true)
-  public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository) {
-    this.configRepository = configRepository;
-    this.uuidSupplier = UUID::randomUUID;
+    this.specAdapter = specAdapter;
   }
 
   private ConnectorBuilderProject builderProjectFromUpdate(final ExistingConnectorBuilderProjectWithWorkspaceId projectCreate) {
     return new ConnectorBuilderProject().withBuilderProjectId(projectCreate.getBuilderProjectId()).withWorkspaceId(projectCreate.getWorkspaceId())
         .withName(projectCreate.getBuilderProject().getName())
-        .withManifestDraft(projectCreate.getBuilderProject().getDraftManifest() == null ? null
-            : new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()));
+        .withManifestDraft(projectCreate.getBuilderProject().getDraftManifest());
   }
 
   private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
@@ -124,6 +132,68 @@ public class ConnectorBuilderProjectsHandler {
     final Stream<ConnectorBuilderProject> projects = configRepository.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.getWorkspaceId());
 
     return new ConnectorBuilderProjectReadList().projects(projects.map(ConnectorBuilderProjectsHandler::builderProjectToDetailsRead).toList());
+  }
+
+  public SourceDefinitionIdBody publishConnectorBuilderProject(final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody)
+      throws IOException {
+    final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
+    final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
+    final UUID actorDefinitionId = createActorDefinition(connectorBuilderPublishRequestBody.getName(),
+        connectorBuilderPublishRequestBody.getWorkspaceId(),
+        manifest,
+        spec);
+
+    updateConnectorBuilder(connectorBuilderPublishRequestBody.getBuilderProjectId(),
+        actorDefinitionId,
+        manifest,
+        spec,
+        connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getVersion().longValue(),
+        connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getDescription());
+
+    return new SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId);
+  }
+
+  private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
+    final ConnectorSpecification connectorSpecification = specAdapter.adapt(spec);
+    final StandardSourceDefinition source = new StandardSourceDefinition()
+        .withSourceDefinitionId(uuidSupplier.get())
+        .withName(name)
+        // FIXME should be updated as part of https://github.com/airbytehq/airbyte/issues/22575
+        .withDockerImageTag("0.29.0")
+        .withDockerRepository("airbyte/source-declarative-manifest")
+        .withSourceType(SourceType.CUSTOM)
+        .withSpec(connectorSpecification)
+        .withTombstone(false)
+        .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
+        .withPublic(false)
+        .withCustom(true)
+        .withReleaseStage(ReleaseStage.CUSTOM)
+        .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
+    configRepository.writeCustomSourceDefinition(source, workspaceId);
+
+    configRepository.writeActorDefinitionConfigInjectionForPath(
+        new ActorDefinitionConfigInjection()
+            .withActorDefinitionId(source.getSourceDefinitionId())
+            .withInjectionPath("__injected_declarative_manifest")
+            .withJsonToInject(manifest));
+    return source.getSourceDefinitionId();
+  }
+
+  private void updateConnectorBuilder(final UUID builderProjectId,
+                                      final UUID actionDefinitionId,
+                                      final JsonNode manifest,
+                                      final JsonNode spec,
+                                      final Long version,
+                                      final String description)
+      throws IOException {
+    configRepository.insertDeclarativeManifest(new DeclarativeManifest()
+        .withActorDefinitionId(actionDefinitionId)
+        .withVersion(version)
+        .withDescription(description)
+        .withManifest(manifest)
+        .withSpec(spec));
+    configRepository.upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(actionDefinitionId).withVersion(version));
+    configRepository.assignActorDefinitionToConnectorBuilderProject(builderProjectId, actionDefinitionId);
   }
 
 }

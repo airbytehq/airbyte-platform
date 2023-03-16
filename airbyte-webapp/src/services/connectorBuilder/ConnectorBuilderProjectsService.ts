@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
-import { ConnectorBuilderProjectIdWithWorkspaceId } from "core/request/AirbyteClient";
+import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionIdBody } from "core/request/AirbyteClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
@@ -146,5 +146,20 @@ export const useUpdateProject = (projectId: string) => {
         );
       },
     }
+  );
+};
+
+export interface BuilderProjectPublishBody {
+  name: string;
+  projectId: string;
+  manifest: DeclarativeComponentSchema;
+}
+
+export const usePublishProject = () => {
+  const service = useConnectorBuilderProjectsService();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(({ name, projectId, manifest }) =>
+    service.publishBuilderProject(workspaceId, projectId, name, manifest)
   );
 };

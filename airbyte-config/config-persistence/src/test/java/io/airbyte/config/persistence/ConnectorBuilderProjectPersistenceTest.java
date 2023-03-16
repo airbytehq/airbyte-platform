@@ -102,6 +102,17 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     assertNotNull(configRepository.getConnectorBuilderProject(project2.getBuilderProjectId(), false));
   }
 
+  @Test
+  void testAssignActorDefinitionToConnectorBuilderProject() throws IOException, ConfigNotFoundException {
+    final ConnectorBuilderProject connectorBuilderProject = createConnectorBuilderProject(UUID.randomUUID(), "any", false);
+    final UUID aNewActorDefinitionId = UUID.randomUUID();
+
+    configRepository.assignActorDefinitionToConnectorBuilderProject(connectorBuilderProject.getBuilderProjectId(), aNewActorDefinitionId);
+
+    assertEquals(aNewActorDefinitionId,
+        configRepository.getConnectorBuilderProject(connectorBuilderProject.getBuilderProjectId(), false).getActorDefinitionId());
+  }
+
   private void createBaseObjects() throws IOException {
     mainWorkspace = UUID.randomUUID();
     final UUID workspaceId2 = UUID.randomUUID();

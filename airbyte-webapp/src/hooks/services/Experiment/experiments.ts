@@ -25,6 +25,7 @@ export interface Experiments {
   "connection.newTableDesign": boolean;
   "workspace.freeConnectorsProgram.visible": boolean;
   "connectorBuilder.showNavigationLinks": boolean;
+  "connectorBuilder.publishWorkflow": boolean;
   "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
   "billing.billingInsights": boolean;

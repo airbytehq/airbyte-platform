@@ -2250,6 +2250,23 @@ public class ConfigRepository {
   }
 
   /**
+   * Write a builder project to the db.
+   *
+   * @param builderProjectId builder project to update
+   * @param actorDefinitionId the actor definition id associated with the connector builder project
+   * @throws IOException exception while interacting with db
+   */
+  public void assignActorDefinitionToConnectorBuilderProject(UUID builderProjectId, UUID actorDefinitionId) throws IOException {
+    database.transaction(ctx -> {
+      ctx.update(CONNECTOR_BUILDER_PROJECT)
+          .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, actorDefinitionId)
+          .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId))
+          .execute();
+      return null;
+    });
+  }
+
+  /**
    * Write an active declarative manifest. If ACTIVE_DECLARATIVE_MANIFEST.ID is already in the DB, the
    * entry will be updated
    *

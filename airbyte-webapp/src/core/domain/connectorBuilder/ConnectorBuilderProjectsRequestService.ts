@@ -4,6 +4,7 @@ import {
   deleteConnectorBuilderProject,
   listConnectorBuilderProjects,
   updateConnectorBuilderProject,
+  publishConnectorBuilderProject,
 } from "core/request/AirbyteClient";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
@@ -33,5 +34,25 @@ export class ConnectorBuilderProjectsRequestService extends AirbyteRequestServic
 
   public deleteBuilderProject(workspaceId: string, builderProjectId: string) {
     return deleteConnectorBuilderProject({ workspaceId, builderProjectId }, this.requestOptions);
+  }
+
+  public publishBuilderProject(workspaceId: string, projectId: string, name: string, manifest: ConnectorManifest) {
+    return publishConnectorBuilderProject(
+      {
+        workspaceId,
+        builderProjectId: projectId,
+        initialDeclarativeManifest: {
+          manifest,
+          description: "Test release",
+          spec: {
+            documentationUrl: manifest.spec?.documentation_url,
+            connectionSpecification: manifest.spec?.connection_specification,
+          },
+          version: 1,
+        },
+        name,
+      },
+      this.requestOptions
+    );
   }
 }
