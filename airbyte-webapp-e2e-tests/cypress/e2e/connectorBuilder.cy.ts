@@ -86,7 +86,7 @@ describe("Connector builder", { testIsolation: false }, () => {
 
   it("Read - Pagination exceeding page limit", () => {
     configurePagination();
-    enterUrlPath("items/exceeding-page-limit");
+    enterUrlPath("items/exceeding-page-limit/");
 
     testStream();
 
