@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { ValidationError } from "yup";
 
+import octavia from "components/illustrations/octavia-pointing.svg";
 import { Heading } from "components/ui/Heading";
 import { Spinner } from "components/ui/Spinner";
 
@@ -15,7 +16,6 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { ConfigMenu } from "./ConfigMenu";
-import octavia from "./pointing.svg";
 import { StreamSelector } from "./StreamSelector";
 import { StreamTester } from "./StreamTester";
 import styles from "./StreamTestingPanel.module.scss";
