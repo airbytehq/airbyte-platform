@@ -44,7 +44,10 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
@@ -57,6 +60,7 @@ import io.airbyte.workers.utils.ConfigReplacer;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -348,6 +352,12 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           destinationDefinition,
           attemptSyncConfig.getDestinationConfiguration());
 
+      final List<Context> featureFlagContext = new ArrayList<>();
+      featureFlagContext.add(new Workspace(config.getWorkspaceId()));
+      if (standardSync.getConnectionId() != null) {
+        featureFlagContext.add(new Connection(standardSync.getConnectionId()));
+      }
+
       final StandardSyncInput syncInput = new StandardSyncInput()
           .withNamespaceDefinition(config.getNamespaceDefinition())
           .withNamespaceFormat(config.getNamespaceFormat())
@@ -365,7 +375,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
           .withConnectionId(standardSync.getConnectionId())
           .withWorkspaceId(config.getWorkspaceId())
-          .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Workspace(config.getWorkspaceId())));
+          .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Multi(featureFlagContext)));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
 

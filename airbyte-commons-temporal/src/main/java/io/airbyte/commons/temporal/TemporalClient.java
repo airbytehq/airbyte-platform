@@ -28,7 +28,9 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -486,7 +488,8 @@ public class TemporalClient {
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
         .withConnectionId(connectionId)
         .withWorkspaceId(config.getWorkspaceId())
-        .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Workspace(config.getWorkspaceId())));
+        .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE,
+            new Multi(List.of(new Workspace(config.getWorkspaceId()), new Connection(connectionId)))));
 
     return execute(jobRunConfig,
         () -> getWorkflowStub(SyncWorkflow.class, TemporalJobType.SYNC).run(
