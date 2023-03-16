@@ -47,7 +47,12 @@ export const ArraySection: React.FC<ArraySectionProps> = ({ formField, path, dis
   // keep the previous state of the currently edited item around so it can be restored on cancelling the form
   const [originalItem, setOriginalItem] = useState<Record<string, string> | undefined>();
 
-  const items: Array<Record<string, string>> = useMemo(() => field.value ?? [], [field.value]);
+  const items: Array<Record<string, string>> = useMemo(() => {
+    if (field.value === undefined || !Array.isArray(field.value)) {
+      return [];
+    }
+    return field.value;
+  }, [field.value]);
 
   // keep the list of rendered items stable as long as editing is in progress
   const itemsWithOverride = useMemo(() => {
