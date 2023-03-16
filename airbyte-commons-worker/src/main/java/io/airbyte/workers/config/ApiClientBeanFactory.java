@@ -53,6 +53,7 @@ public class ApiClientBeanFactory {
                              @Named("internalApiAuthToken") final BeanProvider<String> internalApiAuthToken,
                              @Named("internalApiScheme") final String internalApiScheme) {
     return new ApiClient()
+        .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setScheme(internalApiScheme)
         .setHost(parseHostName(airbyteApiHost))
         .setPort(parsePort(airbyteApiHost))
