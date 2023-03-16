@@ -23,6 +23,7 @@ node {
     download = true
     version = nodeVersion
     pnpmVersion = pnpmVer
+    distBaseUrl = "https://nodejs-mirror.airbyte.com/dist"
 }
 
 task validateLockFiles {
