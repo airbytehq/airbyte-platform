@@ -1,5 +1,6 @@
 import { Transition } from "history";
 import { dump } from "js-yaml";
+import isEqual from "lodash/isEqual";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { UseQueryResult } from "react-query";
@@ -16,14 +17,17 @@ import {
 } from "components/connectorBuilder/types";
 import { convertToBuilderFormValuesSync } from "components/connectorBuilder/useManifestToBuilderForm";
 
+import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
+import { FormGroupItem } from "core/form/types";
 import {
   StreamRead,
   StreamReadRequestBodyConfig,
   StreamsListReadStreamsItem,
 } from "core/request/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
+import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/request/ConnectorManifest";
 import { useBlocker } from "hooks/router/useBlocker";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
@@ -59,7 +63,7 @@ interface TestStateContext {
   streams: StreamsListReadStreamsItem[];
   streamListErrorMessage: string | undefined;
   testInputJson: StreamReadRequestBodyConfig;
-  setTestInputJson: (value: StreamReadRequestBodyConfig) => void;
+  setTestInputJson: (value: StreamReadRequestBodyConfig | undefined) => void;
   setTestStreamIndex: (streamIndex: number) => void;
   testStreamIndex: number;
   streamRead: UseQueryResult<StreamRead, unknown>;
@@ -229,6 +233,31 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   );
 };
 
+const EMPTY_SCHEMA = {};
+
+function useTestInputDefaultValues(testInputJson: StreamReadRequestBodyConfig | undefined, spec?: Spec) {
+  const currentSpec = useRef<Spec | undefined>(undefined);
+  return useMemo(() => {
+    if (testInputJson) {
+      if (!spec) {
+        // don't have a spec, keep the current input
+        return testInputJson;
+      }
+      if (isEqual(currentSpec.current, spec)) {
+        // spec is the same as before, keep existing input
+        return testInputJson;
+      }
+    }
+    // spec changed, set default values
+    currentSpec.current = spec;
+    const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
+    const formFields = jsonSchemaToFormBlock(jsonSchema);
+    const testInputToUpdate = testInputJson || {};
+    setDefaultValues(formFields as FormGroupItem, testInputToUpdate, { respectExistingValues: true });
+    return testInputToUpdate;
+  }, [spec, testInputJson]);
+}
+
 function useInitializedBuilderProject(projectId: string) {
   const builderProject = useProject(projectId);
   const { mutateAsync: updateProject, error: updateError } = useUpdateProject(projectId);
@@ -335,7 +364,9 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
   // config
-  const [testInputJson, setTestInputJson] = useState<StreamReadRequestBodyConfig>({});
+  const [testInputJson, setTestInputJson] = useState<StreamReadRequestBodyConfig | undefined>();
+
+  const testInputWithDefaults = useTestInputDefaultValues(testInputJson, manifest.spec);
 
   // streams
   const {
@@ -343,7 +374,7 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
     isError: isStreamListError,
     error: streamListError,
     isFetching: isFetchingStreamList,
-  } = useListStreams({ manifest, config: testInputJson });
+  } = useListStreams({ manifest, config: testInputWithDefaults });
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const streamListErrorMessage = isStreamListError
     ? streamListError instanceof Error
@@ -364,13 +395,13 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const streamRead = useReadStream(projectId, {
     manifest,
     stream: streams[testStreamIndex]?.name,
-    config: testInputJson,
+    config: testInputWithDefaults,
   });
 
   const ctx = {
     streams,
     streamListErrorMessage,
-    testInputJson,
+    testInputJson: testInputWithDefaults,
     setTestInputJson,
     testStreamIndex,
     setTestStreamIndex,
