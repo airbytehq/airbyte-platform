@@ -42,6 +42,7 @@ import io.airbyte.oauth.flows.StravaOAuthFlow;
 import io.airbyte.oauth.flows.SurveymonkeyOAuthFlow;
 import io.airbyte.oauth.flows.TikTokMarketingOAuthFlow;
 import io.airbyte.oauth.flows.TrelloOAuthFlow;
+import io.airbyte.oauth.flows.XeroOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskChatOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskSunshineOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskSupportOAuthFlow;
@@ -106,6 +107,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-youtube-analytics", new YouTubeAnalyticsOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-youtube-analytics-business", new YouTubeAnalyticsBusinessOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-drift", new DriftOAuthFlow(configRepository, httpClient));
+    builder.put("airbyte/source-xero", new XeroOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-chat", new ZendeskChatOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-support", new ZendeskSupportOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-talk", new ZendeskTalkOAuthFlow(configRepository, httpClient));
