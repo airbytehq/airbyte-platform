@@ -122,7 +122,7 @@ class GenerateInputActivityTest {
         .withConfiguration(DESTINATION_CONFIGURATION);
     when(configRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destinationConnection);
     when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(mock(StandardDestinationDefinition.class));
-    when(oAuthConfigSupplier.injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION))
+    when(oAuthConfigSupplier.injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION))
         .thenReturn(DESTINATION_CONFIG_WITH_OAUTH);
 
     final StandardSync standardSync = new StandardSync()
@@ -145,7 +145,7 @@ class GenerateInputActivityTest {
         .withConfiguration(SOURCE_CONFIGURATION);
     when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
     when(configRepository.getSourceDefinitionFromSource(SOURCE_ID)).thenReturn(mock(StandardSourceDefinition.class));
-    when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, WORKSPACE_ID, SOURCE_CONFIGURATION))
+    when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
     when(configInjector.injectConfig(SOURCE_CONFIG_WITH_OAUTH, sourceDefinitionId))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG);
@@ -207,8 +207,8 @@ class GenerateInputActivityTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withState(STATE);
 
-    verify(oAuthConfigSupplier).injectSourceOAuthParameters(sourceDefinitionId, WORKSPACE_ID, SOURCE_CONFIGURATION);
-    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
+    verify(oAuthConfigSupplier).injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION);
+    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
 
     verify(attemptApi).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
@@ -277,7 +277,7 @@ class GenerateInputActivityTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withState(STATE);
 
-    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
+    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
 
     verify(attemptApi).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
@@ -297,7 +297,7 @@ class GenerateInputActivityTest {
         .withConfiguration(SOURCE_CONFIGURATION);
     when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
     when(configRepository.getStandardSourceDefinition(sourceDefId)).thenReturn(mock(StandardSourceDefinition.class));
-    when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefId, WORKSPACE_ID, SOURCE_CONFIGURATION))
+    when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()

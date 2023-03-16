@@ -6,8 +6,6 @@ package io.airbyte.oauth;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.flows.AirtableOAuthFlow;
 import io.airbyte.oauth.flows.AmazonAdsOAuthFlow;
@@ -127,15 +125,13 @@ public class OAuthImplementationFactory {
         .build();
   }
 
-  public OAuthFlowImplementation create(final StandardSourceDefinition sourceDefinition) {
-    return create(sourceDefinition.getDockerRepository());
-  }
-
-  public OAuthFlowImplementation create(final StandardDestinationDefinition destinationDefinition) {
-    return create(destinationDefinition.getDockerRepository());
-  }
-
-  private OAuthFlowImplementation create(final String imageName) {
+  /**
+   * Returns the OAuthFlowImplementation for a given source or destination, by docker repository.
+   *
+   * @param imageName - docker repository name for the connector
+   * @return OAuthFlowImplementation
+   */
+  public OAuthFlowImplementation create(final String imageName) {
     if (oauthFlowMapping.containsKey(imageName)) {
       return oauthFlowMapping.get(imageName);
     } else {

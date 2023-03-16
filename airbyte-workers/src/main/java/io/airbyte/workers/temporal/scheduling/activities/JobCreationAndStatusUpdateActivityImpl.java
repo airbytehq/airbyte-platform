@@ -22,6 +22,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
@@ -35,6 +36,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
@@ -101,6 +103,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   private final StreamResetPersistence streamResetPersistence;
   private final JobErrorReporter jobErrorReporter;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public JobCreationAndStatusUpdateActivityImpl(final SyncJobFactory jobFactory,
                                                 final JobPersistence jobPersistence,
@@ -113,7 +116,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
                                                 final JobCreator jobCreator,
                                                 final StreamResetPersistence streamResetPersistence,
                                                 final JobErrorReporter jobErrorReporter,
-                                                final OAuthConfigSupplier oAuthConfigSupplier) {
+                                                final OAuthConfigSupplier oAuthConfigSupplier,
+                                                final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.jobFactory = jobFactory;
     this.jobPersistence = jobPersistence;
     this.temporalWorkerRunFactory = temporalWorkerRunFactory;
@@ -126,6 +130,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     this.streamResetPersistence = streamResetPersistence;
     this.jobErrorReporter = jobErrorReporter;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -149,13 +154,16 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
         final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
             destination.getDestinationDefinitionId(),
+            destination.getDestinationId(),
             destination.getWorkspaceId(),
             destination.getConfiguration());
         destination.setConfiguration(destinationConfiguration);
 
         final StandardDestinationDefinition destinationDef =
             configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
-        final String destinationImageName = destinationDef.getDockerRepository() + ":" + destinationDef.getDockerImageTag();
+        final ActorDefinitionVersion destinationVersion =
+            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getDestinationId());
+        final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
         final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
         for (final var operationId : standardSync.getOperationIds()) {

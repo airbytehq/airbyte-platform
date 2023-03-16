@@ -150,6 +150,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private JsonNode getSourceConfiguration(final SourceConnection source) throws IOException {
     return configInjector.injectConfig(oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
+        source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration()), source.getSourceDefinitionId());
   }
@@ -157,6 +158,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private JsonNode getDestinationConfiguration(final DestinationConnection destination) throws IOException {
     return configInjector.injectConfig(oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
+        destination.getDestinationId(),
         destination.getWorkspaceId(),
         destination.getConfiguration()), destination.getDestinationDefinitionId());
   }
@@ -304,6 +306,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
         final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
             source.getSourceDefinitionId(),
+            source.getSourceId(),
             source.getWorkspaceId(),
             source.getConfiguration());
         attemptSyncConfig.setSourceConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()));
@@ -319,6 +322,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
       final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
           destination.getDestinationDefinitionId(),
+          destination.getDestinationId(),
           destination.getWorkspaceId(),
           destination.getConfiguration());
       attemptSyncConfig.setDestinationConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()));

@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -22,6 +23,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -56,6 +58,7 @@ class DefaultSyncJobFactoryTest {
     final DefaultJobCreator jobCreator = mock(DefaultJobCreator.class);
     final ConfigRepository configRepository = mock(ConfigRepository.class);
     final WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
+    final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     final long jobId = 11L;
 
     final StandardSyncOperation operation = new StandardSyncOperation().withOperationId(operationId);
@@ -79,11 +82,16 @@ class DefaultSyncJobFactoryTest {
     final String dstDockerImage = dstDockerRepo + ":" + dstDockerTag;
     final Version dstProtocolVersion = new Version("0.3.2");
     final StandardSourceDefinition standardSourceDefinition =
-        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId).withDockerRepository(srcDockerRepo)
-            .withDockerImageTag(srcDockerTag).withProtocolVersion(srcProtocolVersion.serialize());
+        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId)
+            .withProtocolVersion(srcProtocolVersion.serialize());
     final StandardDestinationDefinition standardDestinationDefinition =
-        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId).withDockerRepository(dstDockerRepo)
-            .withDockerImageTag(dstDockerTag).withProtocolVersion(dstProtocolVersion.serialize());
+        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId)
+            .withProtocolVersion(dstProtocolVersion.serialize());
+
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceId))
+        .thenReturn(new ActorDefinitionVersion().withDockerRepository(srcDockerRepo).withDockerImageTag(srcDockerTag));
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationId))
+        .thenReturn(new ActorDefinitionVersion().withDockerRepository(dstDockerRepo).withDockerImageTag(dstDockerTag));
 
     when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
     when(configRepository.getSourceConnection(sourceId)).thenReturn(sourceConnection);
@@ -108,11 +116,12 @@ class DefaultSyncJobFactoryTest {
     when(configInjector.injectConfig(any(), eq(sourceDefinitionId))).thenReturn(configAfterInjection);
 
     final OAuthConfigSupplier oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
-    when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any())).thenAnswer(i -> i.getArguments()[2]);
-    when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any())).thenAnswer(i -> i.getArguments()[2]);
+    when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any())).thenAnswer(i -> i.getArguments()[3]);
+    when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any())).thenAnswer(i -> i.getArguments()[3]);
 
     final SyncJobFactory factory =
-        new DefaultSyncJobFactory(true, jobCreator, configRepository, oAuthConfigSupplier, configInjector, workspaceHelper);
+        new DefaultSyncJobFactory(true, jobCreator, configRepository, oAuthConfigSupplier, configInjector, workspaceHelper,
+            actorDefinitionVersionHelper);
     final long actualJobId = factory.create(connectionId);
     assertEquals(jobId, actualJobId);
 
@@ -124,6 +133,8 @@ class DefaultSyncJobFactoryTest {
     assertEquals(configAfterInjection, sourceConnection.getConfiguration());
     verify(configInjector).injectConfig(sourceConfig, sourceDefinitionId);
     verify(configInjector).injectConfig(destinationConfig, destinationDefinitionId);
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceId);
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationId);
   }
 
 }

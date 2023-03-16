@@ -82,6 +82,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       throws IOException {
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
+        source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration());
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
@@ -113,6 +114,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       throws IOException {
     final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
+        destination.getDestinationId(),
         destination.getWorkspaceId(),
         destination.getConfiguration());
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
@@ -145,6 +147,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       throws IOException {
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
+        source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration());
     final JobDiscoverCatalogConfig jobDiscoverCatalogConfig = new JobDiscoverCatalogConfig()
