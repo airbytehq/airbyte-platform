@@ -223,7 +223,7 @@ export const NextUsagePerConnectionTable: React.FC = () => {
             <UsagePerDayGraph chartData={props.row.original.usage} minimized />
             <FlexContainer direction="column" gap="none">
               {props.row.original.totalFreeUsage > 0 && (
-                <Text className={styles["usageValue--green"]} size="sm">
+                <Text className={classNames(styles.usageValue, styles["usageValue--green"])} size="sm">
                   {formatCredits(props.row.original.totalFreeUsage)}
                 </Text>
               )}

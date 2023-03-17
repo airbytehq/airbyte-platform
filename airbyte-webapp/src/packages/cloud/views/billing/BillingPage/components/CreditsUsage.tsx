@@ -46,7 +46,7 @@ const CreditsUsage: React.FC = () => {
     <FlexContainer direction="column">
       {freeAndPaidUsageByTimeframe.length > 0 ? (
         <>
-          <Card title={<FormattedMessage id="credits.totalUsage" />} lightPadding>
+          <Card title={<FormattedMessage id="credits.totalUsage" />} lightPadding className={styles.cardBlock}>
             {isBillingInsightsEnabled ? (
               <UsagePerDayGraph chartData={freeAndPaidUsageByTimeframe} />
             ) : (

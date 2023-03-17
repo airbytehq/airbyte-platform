@@ -37,7 +37,7 @@ export const useCreditsUsage = () => {
       usagePerTimeframe.push({
         timeframe: currentDay.format("YYYY-MM-DD"),
         billedCost: 0,
-        freeUsage: 0,
+        freeUsage: 0.0,
       });
     }
 
