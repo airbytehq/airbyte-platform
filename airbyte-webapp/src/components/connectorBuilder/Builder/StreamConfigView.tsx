@@ -222,7 +222,7 @@ const StreamTab = ({
     className={classNames(styles.tab, { [styles.selectedTab]: selected })}
     onClick={onSelect}
   >
-    {label}
+    <Text>{label}</Text>
     {showErrorIndicator && <Indicator />}
     {showSchemaConflictIndicator && <SchemaConflictIndicator />}
   </button>
