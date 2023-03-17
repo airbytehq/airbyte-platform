@@ -125,10 +125,17 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
             )}
             <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.grey}>
               {chartData.map((item, index) => {
-                // recharts takes an array here, but their types only permit a string or number :/
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore-next-line
-                return <Cell key={`cell-${index}`} radius={item.freeUsage ? 0 : [4, 4, 0, 0]} />;
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    // recharts takes an array here, but their types only permit a string or number :/
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore-next-line
+                    radius={
+                      item.freeUsage && item.freeUsage / (item.freeUsage + item.billedCost) > 0.01 ? 0 : [4, 4, 0, 0]
+                    }
+                  />
+                );
               })}
             </Bar>
             {isEnrolledInFreeConnectorProgram && (
