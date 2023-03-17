@@ -27,6 +27,7 @@ import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
 import static org.jooq.impl.SQLDataType.VARCHAR;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Sets;
@@ -62,12 +63,14 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.metrics.lib.MetricQueries;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
@@ -491,6 +494,17 @@ public class ConfigRepository {
   }
 
   /**
+   * Update the docker image tag for multiple actor definitions at once.
+   *
+   * @param actorDefinitionIds the list of actor definition ids to update
+   * @param targetImageTag the new docker image tag for these actor definitions
+   * @throws IOException - you never know when you IO
+   */
+  public int updateActorDefinitionsDockerImageTag(final List<UUID> actorDefinitionIds, final String targetImageTag) throws IOException {
+    return database.transaction(ctx -> ConfigWriter.writeSourceDefinitionImageTag(actorDefinitionIds, targetImageTag, ctx));
+  }
+
+  /**
    * Wirte custom source definition.
    *
    * @param sourceDefinition source definition
@@ -502,6 +516,28 @@ public class ConfigRepository {
     database.transaction(ctx -> {
       ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
       writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Update a actor definition spec and its config injection on path __injected_declarative_manifest.
+   *
+   * @param actorDefinitionId the ID of the actor definition to update
+   * @param manifest the manifest going in the config injection
+   * @param spec the connector specifiction to update
+   * @throws IOException - you never know when you IO
+   */
+  public void updateDeclarativeActorDefinition(UUID actorDefinitionId, JsonNode manifest, ConnectorSpecification spec) throws IOException {
+    database.transaction(ctx -> {
+      ctx.update(Tables.ACTOR_DEFINITION)
+          .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
+          .where(Tables.ACTOR_DEFINITION.ID.eq(actorDefinitionId))
+          .execute();
+      writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
+          .withActorDefinitionId(actorDefinitionId)
+          .withInjectionPath("__injected_declarative_manifest")
+          .withJsonToInject(manifest), ctx);
       return null;
     });
   }
@@ -2163,7 +2199,9 @@ public class ConfigRepository {
       final RecordMapper<Record, ConnectorBuilderProject> connectionBuilderProjectRecordMapper =
           fetchManifestDraft ? DbConverter::buildConnectorBuilderProject : DbConverter::buildConnectorBuilderProjectWithoutManifestDraft;
       return ctx.select(columnsToFetch)
+          .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
           .from(CONNECTOR_BUILDER_PROJECT)
+          .leftJoin(ACTIVE_DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
           .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId).andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
           .fetch()
           .map(connectionBuilderProjectRecordMapper)
@@ -2186,7 +2224,10 @@ public class ConfigRepository {
     return database
         .query(ctx -> ctx
             .select(BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS)
+            .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
             .from(CONNECTOR_BUILDER_PROJECT)
+            .leftJoin(ACTIVE_DECLARATIVE_MANIFEST)
+            .on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
             .where(matchByWorkspace.andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
             .orderBy(CONNECTOR_BUILDER_PROJECT.NAME.asc())
             .fetch())
@@ -2207,42 +2248,44 @@ public class ConfigRepository {
   }
 
   /**
-   * Write a builder project to the db.
+   * Write name and draft of a builder project. If it doesn't exist under the specified id, it is
+   * created.
    *
-   * @param builderProject builder project to write
+   * @param projectId the id of the project
+   * @param workspaceId the id of the workspace the project is associated with
+   * @param name the name of the project
+   * @param manifestDraft the manifest (can be null for no draft)
    * @throws IOException exception while interacting with db
    */
-  public void writeBuilderProject(final ConnectorBuilderProject builderProject) throws IOException {
+  public void writeBuilderProjectDraft(final UUID projectId, final UUID workspaceId, final String name, final JsonNode manifestDraft)
+      throws IOException {
     database.transaction(ctx -> {
       final OffsetDateTime timestamp = OffsetDateTime.now();
-      final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(builderProject.getBuilderProjectId());
+      final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
       final boolean isExistingConfig = ctx.fetchExists(select()
           .from(CONNECTOR_BUILDER_PROJECT)
           .where(matchId));
 
       if (isExistingConfig) {
         ctx.update(CONNECTOR_BUILDER_PROJECT)
-            .set(CONNECTOR_BUILDER_PROJECT.ID, builderProject.getBuilderProjectId())
-            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, builderProject.getWorkspaceId())
-            .set(CONNECTOR_BUILDER_PROJECT.NAME, builderProject.getName())
-            .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, builderProject.getActorDefinitionId())
+            .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
+            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
+            .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
             .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
-                builderProject.getManifestDraft() == null ? null : JSONB.valueOf(Jsons.serialize(builderProject.getManifestDraft())))
-            .set(WORKSPACE.UPDATED_AT, timestamp)
-            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, builderProject.getTombstone() != null && builderProject.getTombstone())
+                manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
             .where(matchId)
             .execute();
       } else {
         ctx.insertInto(CONNECTOR_BUILDER_PROJECT)
-            .set(CONNECTOR_BUILDER_PROJECT.ID, builderProject.getBuilderProjectId())
-            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, builderProject.getWorkspaceId())
-            .set(CONNECTOR_BUILDER_PROJECT.NAME, builderProject.getName())
-            .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, builderProject.getActorDefinitionId())
+            .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
+            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
+            .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
             .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
-                builderProject.getManifestDraft() == null ? null : JSONB.valueOf(Jsons.serialize(builderProject.getManifestDraft())))
+                manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
             .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
             .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
-            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, builderProject.getTombstone() != null && builderProject.getTombstone())
+            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)
             .execute();
       }
       return null;
@@ -2256,7 +2299,7 @@ public class ConfigRepository {
    * @param actorDefinitionId the actor definition id associated with the connector builder project
    * @throws IOException exception while interacting with db
    */
-  public void assignActorDefinitionToConnectorBuilderProject(UUID builderProjectId, UUID actorDefinitionId) throws IOException {
+  public void assignActorDefinitionToConnectorBuilderProject(final UUID builderProjectId, final UUID actorDefinitionId) throws IOException {
     database.transaction(ctx -> {
       ctx.update(CONNECTOR_BUILDER_PROJECT)
           .set(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, actorDefinitionId)
@@ -2273,30 +2316,27 @@ public class ConfigRepository {
    * @param activeDeclarativeManifest active declarative manifest to write
    * @throws IOException exception while interacting with db
    */
-  public void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest) throws IOException {
-    database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(ACTIVE_DECLARATIVE_MANIFEST)
-          .where(matchId));
+  private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
+    final boolean isExistingConfig = ctx.fetchExists(select()
+        .from(ACTIVE_DECLARATIVE_MANIFEST)
+        .where(matchId));
 
-      if (isExistingConfig) {
-        ctx.update(ACTIVE_DECLARATIVE_MANIFEST)
-            .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
-            .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
-            .where(matchId)
-            .execute();
-      } else {
-        ctx.insertInto(ACTIVE_DECLARATIVE_MANIFEST)
-            .set(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, activeDeclarativeManifest.getActorDefinitionId())
-            .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
-            .set(ACTIVE_DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
-            .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
-            .execute();
-      }
-      return null;
-    });
+    if (isExistingConfig) {
+      ctx.update(ACTIVE_DECLARATIVE_MANIFEST)
+          .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
+          .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
+          .where(matchId)
+          .execute();
+    } else {
+      ctx.insertInto(ACTIVE_DECLARATIVE_MANIFEST)
+          .set(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, activeDeclarativeManifest.getActorDefinitionId())
+          .set(ACTIVE_DECLARATIVE_MANIFEST.VERSION, activeDeclarativeManifest.getVersion())
+          .set(ACTIVE_DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
+          .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
+          .execute();
+    }
   }
 
   /**
@@ -2325,31 +2365,35 @@ public class ConfigRepository {
    */
   public void writeActorDefinitionConfigInjectionForPath(final ActorDefinitionConfigInjection actorDefinitionConfigInjection) throws IOException {
     database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      final Condition matchActorDefinitionIdAndInjectionPath =
-          ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID.eq(actorDefinitionConfigInjection.getActorDefinitionId())
-              .and(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH.eq(actorDefinitionConfigInjection.getInjectionPath()));
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(ACTOR_DEFINITION_CONFIG_INJECTION)
-          .where(matchActorDefinitionIdAndInjectionPath));
-
-      if (isExistingConfig) {
-        ctx.update(ACTOR_DEFINITION_CONFIG_INJECTION)
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT, JSONB.valueOf(Jsons.serialize(actorDefinitionConfigInjection.getJsonToInject())))
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.UPDATED_AT, timestamp)
-            .where(matchActorDefinitionIdAndInjectionPath)
-            .execute();
-      } else {
-        ctx.insertInto(ACTOR_DEFINITION_CONFIG_INJECTION)
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH, actorDefinitionConfigInjection.getInjectionPath())
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID, actorDefinitionConfigInjection.getActorDefinitionId())
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT, JSONB.valueOf(Jsons.serialize(actorDefinitionConfigInjection.getJsonToInject())))
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.CREATED_AT, timestamp)
-            .set(ACTOR_DEFINITION_CONFIG_INJECTION.UPDATED_AT, timestamp)
-            .execute();
-      }
+      writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection, ctx);
       return null;
     });
+  }
+
+  private void writeActorDefinitionConfigInjectionForPath(final ActorDefinitionConfigInjection actorDefinitionConfigInjection, final DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final Condition matchActorDefinitionIdAndInjectionPath =
+        ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID.eq(actorDefinitionConfigInjection.getActorDefinitionId())
+            .and(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH.eq(actorDefinitionConfigInjection.getInjectionPath()));
+    final boolean isExistingConfig = ctx.fetchExists(select()
+        .from(ACTOR_DEFINITION_CONFIG_INJECTION)
+        .where(matchActorDefinitionIdAndInjectionPath));
+
+    if (isExistingConfig) {
+      ctx.update(ACTOR_DEFINITION_CONFIG_INJECTION)
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT, JSONB.valueOf(Jsons.serialize(actorDefinitionConfigInjection.getJsonToInject())))
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.UPDATED_AT, timestamp)
+          .where(matchActorDefinitionIdAndInjectionPath)
+          .execute();
+    } else {
+      ctx.insertInto(ACTOR_DEFINITION_CONFIG_INJECTION)
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH, actorDefinitionConfigInjection.getInjectionPath())
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID, actorDefinitionConfigInjection.getActorDefinitionId())
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT, JSONB.valueOf(Jsons.serialize(actorDefinitionConfigInjection.getJsonToInject())))
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.CREATED_AT, timestamp)
+          .set(ACTOR_DEFINITION_CONFIG_INJECTION.UPDATED_AT, timestamp)
+          .execute();
+    }
   }
 
   /**
@@ -2360,6 +2404,13 @@ public class ConfigRepository {
    * @throws IOException exception while interacting with db
    */
   public void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
+    database.transaction(ctx -> {
+      insertDeclarativeManifest(declarativeManifest, ctx);
+      return null;
+    });
+  }
+
+  private static void insertDeclarativeManifest(DeclarativeManifest declarativeManifest, DSLContext ctx) {
     // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
     // object that is not null. Therefore, we will validate null values for JSON fields here
     if (declarativeManifest.getManifest() == null) {
@@ -2369,16 +2420,30 @@ public class ConfigRepository {
       throw new DataAccessException("null value in column \"spec\" of relation \"declarative_manifest\" violates not-null constraint");
     }
 
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    ctx.insertInto(DECLARATIVE_MANIFEST)
+        .set(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, declarativeManifest.getActorDefinitionId())
+        .set(DECLARATIVE_MANIFEST.DESCRIPTION, declarativeManifest.getDescription())
+        .set(DECLARATIVE_MANIFEST.MANIFEST, JSONB.valueOf(Jsons.serialize(declarativeManifest.getManifest())))
+        .set(DECLARATIVE_MANIFEST.SPEC, JSONB.valueOf(Jsons.serialize(declarativeManifest.getSpec())))
+        .set(DECLARATIVE_MANIFEST.VERSION, declarativeManifest.getVersion())
+        .set(DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
+        .execute();
+  }
+
+  /**
+   * Insert a declarative manifest and its associated active declarative manifest. If
+   * DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID and DECLARATIVE_MANIFEST.VERSION is already in the DB,
+   * an exception will be thrown
+   *
+   * @param declarativeManifest declarative manifest to insert
+   * @throws IOException exception while interacting with db
+   */
+  public void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest) throws IOException {
     database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      ctx.insertInto(DECLARATIVE_MANIFEST)
-          .set(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID, declarativeManifest.getActorDefinitionId())
-          .set(DECLARATIVE_MANIFEST.DESCRIPTION, declarativeManifest.getDescription())
-          .set(DECLARATIVE_MANIFEST.MANIFEST, JSONB.valueOf(Jsons.serialize(declarativeManifest.getManifest())))
-          .set(DECLARATIVE_MANIFEST.SPEC, JSONB.valueOf(Jsons.serialize(declarativeManifest.getSpec())))
-          .set(DECLARATIVE_MANIFEST.VERSION, declarativeManifest.getVersion())
-          .set(DECLARATIVE_MANIFEST.CREATED_AT, timestamp)
-          .execute();
+      insertDeclarativeManifest(declarativeManifest, ctx);
+      upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(declarativeManifest.getActorDefinitionId())
+          .withVersion(declarativeManifest.getVersion()), ctx);
       return null;
     });
   }
@@ -2435,7 +2500,7 @@ public class ConfigRepository {
    */
   public DeclarativeManifest getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(final UUID actorDefinitionId)
       throws IOException, ConfigNotFoundException {
-    Optional<DeclarativeManifest> declarativeManifest = database
+    final Optional<DeclarativeManifest> declarativeManifest = database
         .query(ctx -> ctx
             .select(DECLARATIVE_MANIFEST.asterisk())
             .from(DECLARATIVE_MANIFEST)

@@ -518,6 +518,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/declarative_source_definitions/create_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Create a declarative manifest to be used by the specified source definition
+      operationId: createDeclarativeSourceDefinitionManifest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeclarativeSourceDefinitionCreateManifestRequestBody"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+        "400":
+          description: Definition is not declarative source
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: Version already exists for definition id
   /v1/connector_builder_projects/create:
     post:
       tags:
@@ -531,7 +552,7 @@ paths:
               $ref: "#/components/schemas/ConnectorBuilderProjectWithWorkspaceId"
         required: true
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
@@ -2675,6 +2696,11 @@ components:
           type: string
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        activeDeclarativeManifestVersion:
+          type: integer
+          format: int64
         hasDraft:
           type: boolean
     ConnectorBuilderProjectIdWithWorkspaceId:
@@ -2743,21 +2769,24 @@ components:
         name:
           type: string
         initialDeclarativeManifest:
-          type: object
-          required:
-            - description
-            - manifest
-            - spec
-            - version
-          properties:
-            description:
-              type: string
-            manifest:
-              $ref: "#/components/schemas/DeclarativeManifest"
-            spec:
-              $ref: "#/components/schemas/SourceDefinitionSpecification"
-            version:
-              type: integer
+          $ref: "#/components/schemas/DeclarativeSourceManifest"
+    DeclarativeSourceManifest:
+      type: object
+      required:
+        - description
+        - manifest
+        - spec
+        - version
+      properties:
+        description:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        spec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        version:
+          type: integer
+          format: int64
     SourceDefinitionIdBody:
       type: object
       required:
@@ -2882,6 +2911,22 @@ components:
           $ref: "#/components/schemas/SourceDefinitionId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    DeclarativeSourceDefinitionCreateManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - setAsActiveManifest
+        - declarativeManifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        setAsActiveManifest:
+          type: boolean
+        declarativeManifest:
+          $ref: "#/components/schemas/DeclarativeSourceManifest"
     PrivateSourceDefinitionRead:
       type: object
       required:

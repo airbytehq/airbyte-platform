@@ -27,6 +27,8 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
+import io.airbyte.config.init.CdkVersionProvider;
+import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.init.LocalDefinitionsProvider;
 import io.airbyte.config.init.PostLoadExecutor;
@@ -84,6 +86,7 @@ class BootloaderTest {
   // migration to the prod database
   private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.41.02.001";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.40.28.001";
+  private static final String CDK_VERSION = "1.2.3";
 
   @BeforeEach
   void setup() {
@@ -139,7 +142,11 @@ class BootloaderTest {
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, definitionsProvider, jobsPersistence);
-    val postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, mockedFeatureFlags, jobsPersistence, mockedSecretMigrator);
+    final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
+    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
+    val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
+    val postLoadExecutor =
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, mockedFeatureFlags, jobsPersistence, mockedSecretMigrator);
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
@@ -203,7 +210,10 @@ class BootloaderTest {
         spy(new SecretMigrator(secretsReader, secretsWriter, configRepository, jobsPersistence, Optional.of(secretPersistence)));
 
     val applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, definitionsProvider, jobsPersistence);
-    var postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, mockedFeatureFlags, jobsPersistence, null);
+    final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
+    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
+    val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
+    var postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, mockedFeatureFlags, jobsPersistence, null);
 
     // Bootstrap the database for the test
     val initBootloader =
@@ -248,7 +258,8 @@ class BootloaderTest {
 
     when(mockedFeatureFlags.forceSecretMigration()).thenReturn(false);
 
-    postLoadExecutor = new DefaultPostLoadExecutor(applyDefinitionsHelper, mockedFeatureFlags, jobsPersistence, spiedSecretMigrator);
+    postLoadExecutor =
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, mockedFeatureFlags, jobsPersistence, spiedSecretMigrator);
 
     // Perform secrets migration
     var bootloader =
@@ -323,8 +334,11 @@ class BootloaderTest {
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
     val applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, definitionsProvider, jobsPersistence);
+    final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
+    when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
+    val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
     val postLoadExecutor =
-        new DefaultPostLoadExecutor(applyDefinitionsHelper, mockedFeatureFlags, jobsPersistence, mockedSecretMigrator);
+        new DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, mockedFeatureFlags, jobsPersistence, mockedSecretMigrator);
 
     val bootloader =
         new Bootloader(false, configRepository, configDatabaseInitializer, configsDatabaseMigrator, currentAirbyteVersion,
