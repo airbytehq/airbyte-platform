@@ -24,7 +24,7 @@ import { RoutePaths, DestinationPaths, SourcePaths } from "../../pages/routePath
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const WorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
 const Auth = React.lazy(() => import("packages/cloud/views/auth"));
-const CreditsPage = React.lazy(() => import("packages/cloud/views/credits"));
+const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
 const SpeakeasyRedirectPage = React.lazy(() => import("pages/SpeakeasyRedirectPage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
@@ -79,7 +79,7 @@ const MainRoutes: React.FC = () => {
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />} />
-        <Route path={CloudRoutes.Credits} element={<CreditsPage />} />
+        <Route path={CloudRoutes.Billing} element={<BillingPage />} />
         {showBuilderNavigationLinks && (
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         )}
