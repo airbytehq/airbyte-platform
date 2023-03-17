@@ -1,5 +1,9 @@
 import { defineConfig } from "orval";
 
+// Eslint command to run orval generated code with, that ignores our regular eslint config
+// but only applies rules from the orval specific eslint config
+const eslintOutput = "eslint --fix --no-eslintrc --config .eslintrc.orval.js --no-inline-config";
+
 export default defineConfig({
   api: {
     input: "../airbyte-api/src/main/openapi/config.yaml",
@@ -21,6 +25,9 @@ export default defineConfig({
         },
       },
     },
+    hooks: {
+      afterAllFilesWrite: eslintOutput,
+    },
   },
   connectorBuilder: {
     input: "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
@@ -41,6 +48,9 @@ export default defineConfig({
           name: "apiOverride",
         },
       },
+    },
+    hooks: {
+      afterAllFilesWrite: eslintOutput,
     },
   },
   connectorManifest: {

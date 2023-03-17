@@ -33,7 +33,7 @@ export interface DbtCloudJobInfo {
  */
 export const webBackendGetAvailableDbtJobsForWorkspace = (
   workspaceGetDbtJobsRequest: WorkspaceGetDbtJobsRequest,
-  options?: SecondParameter<typeof apiOverride>
+  options: SecondParameter<typeof apiOverride>
 ) => {
   return apiOverride<WorkspaceGetDbtJobsResponse>(
     {

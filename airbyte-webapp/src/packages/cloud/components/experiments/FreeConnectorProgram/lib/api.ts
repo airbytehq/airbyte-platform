@@ -17,7 +17,7 @@ type SecondParameter<T extends (...args: any) => any> = T extends (config: any, 
  */
 export const webBackendGetFreeConnectorProgramInfoForWorkspace = (
   workspaceIdRequestBody: WorkspaceIdRequestBody,
-  options?: SecondParameter<typeof apiOverride>
+  options: SecondParameter<typeof apiOverride>
 ) => {
   return apiOverride<WorkspaceFreeConnectorProgramInfoResponse>(
     {
