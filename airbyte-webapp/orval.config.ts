@@ -20,8 +20,8 @@ export default defineConfig({
           ...(info.version ? [`OpenAPI spec version: ${info.version}`] : []),
         ],
         mutator: {
-          path: "./src/core/request/apiOverride.ts",
-          name: "apiOverride",
+          path: "./src/core/api/apis.ts",
+          name: "apiCall",
         },
       },
     },
@@ -44,8 +44,8 @@ export default defineConfig({
           ...(info.version ? [`OpenAPI spec version: ${info.version}`] : []),
         ],
         mutator: {
-          path: "./src/core/request/apiOverride.ts",
-          name: "apiOverride",
+          path: "./src/core/api/apis.ts",
+          name: "connectorBuilderApiCall",
         },
       },
     },

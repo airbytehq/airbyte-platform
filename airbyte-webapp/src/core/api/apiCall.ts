@@ -1,12 +1,20 @@
-import { CommonRequestError } from "./CommonRequestError";
-import { RequestMiddleware } from "./RequestMiddleware";
-import { VersionError } from "./VersionError";
-import { AirbyteWebappConfig } from "../../config";
+import { CommonRequestError } from "../request/CommonRequestError";
+import { RequestMiddleware } from "../request/RequestMiddleware";
+import { VersionError } from "../request/VersionError";
 
-export interface ApiOverrideRequestOptions {
-  config: Pick<AirbyteWebappConfig, "apiUrl">;
+export interface ApiCallOptions {
   middlewares: RequestMiddleware[];
   signal?: RequestInit["signal"];
+}
+
+export interface RequestOptions<DataType = unknown> {
+  url: string;
+  method: "get" | "post" | "put" | "delete" | "patch";
+  params?: URLSearchParams;
+  data?: DataType;
+  headers?: HeadersInit;
+  responseType?: "blob";
+  signal?: AbortSignal;
 }
 
 function getRequestBody<U>(data: U) {
@@ -20,27 +28,11 @@ function getRequestBody<U>(data: U) {
   return stringifiedData;
 }
 
-export const apiOverride = async <T, U = unknown>(
-  {
-    url,
-    method,
-    params,
-    data,
-    headers,
-    responseType,
-    signal,
-  }: {
-    url: string;
-    method: "get" | "post" | "put" | "delete" | "patch";
-    params?: URLSearchParams;
-    data?: U;
-    headers?: HeadersInit;
-    responseType?: "blob";
-    signal?: AbortSignal;
-  },
-  options: ApiOverrideRequestOptions
+export const fetchApiCall = async <T, U = unknown>(
+  { url, method, params, data, headers, responseType, signal }: RequestOptions<U>,
+  options: ApiCallOptions,
+  apiUrl: string
 ): Promise<typeof responseType extends "blob" ? Blob : T> => {
-  const { apiUrl } = options.config;
   // Remove the `v1/` in the end of the apiUrl for now, during the transition period
   // to get rid of it from all environment variables.
   const requestUrl = `${apiUrl.replace(/\/v1\/?$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
