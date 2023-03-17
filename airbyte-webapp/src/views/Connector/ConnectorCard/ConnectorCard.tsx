@@ -138,7 +138,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       trackTestConnectorSuccess(selectedConnectorDefinition);
       return response;
     } catch (e) {
-      trackTestConnectorFailure(selectedConnectorDefinition);
+      trackTestConnectorFailure(selectedConnectorDefinition, e.message);
       throw e;
     }
   };
