@@ -31,4 +31,5 @@ export interface Experiments {
   "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
+  "connector.form.simplifyConfiguration": boolean;
 }

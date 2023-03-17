@@ -1,3 +1,5 @@
+@use "scss/colors";
+
 .switchLabel {
   label {
     // don't want bottom padding for switch label, since it is to the right of the switch
@@ -9,4 +11,8 @@
 .defaultLabel {
   display: flex;
   flex-direction: column;
+}
+
+.formatText {
+  color: colors.$grey;
 }

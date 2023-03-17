@@ -52,6 +52,10 @@ $border-width: variables.$border-thick;
   box-shadow: 0 $border-width colors.$grey-100 inset;
   padding: 0 $group-spacing;
 
+  &:not(:empty) {
+    padding-bottom: $group-spacing;
+  }
+
   // only apply padding when there are children, so that empty group sections border is just a single line
   > :first-child {
     padding-top: calc($group-spacing + $title-height/2);
@@ -59,5 +63,9 @@ $border-width: variables.$border-thick;
 
   > div {
     margin-bottom: $group-spacing;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
   }
 }

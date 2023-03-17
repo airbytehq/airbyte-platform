@@ -10,6 +10,8 @@ import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
+import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
+
 import styles from "./BuilderField.module.scss";
 
 interface EnumFieldProps {
@@ -145,7 +147,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
         <Text className={styles.error}>
           <FormattedMessage
             id={meta.error}
-            values={meta.error === "form.pattern.error" && pattern ? { pattern: String(pattern) } : undefined}
+            values={meta.error === FORM_PATTERN_ERROR && pattern ? { pattern: String(pattern) } : undefined}
           />
         </Text>
       )}

@@ -3357,6 +3357,7 @@ components:
     # DESTINATION DEFINITION SPECIFICATION
     DestinationDefinitionSpecification:
       description: The specification for what values are required to configure the destinationDefinition.
+      type: object
       example: { user: { type: string } }
     DestinationDefinitionSpecificationRead:
       type: object

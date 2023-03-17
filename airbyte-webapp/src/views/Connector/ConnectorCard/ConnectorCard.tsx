@@ -259,7 +259,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
           />
         )
       }
-      renderWithCard
     />
   );
 };

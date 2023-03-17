@@ -3,6 +3,7 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import Label from "components/Label";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
@@ -18,6 +19,7 @@ export interface ControlLabelsProps {
   infoTooltipContent?: React.ReactNode;
   optional?: boolean;
   htmlFor?: string;
+  format?: React.ReactNode;
 }
 
 const ControlLabels: React.FC<React.PropsWithChildren<ControlLabelsProps>> = (props) => (
@@ -28,18 +30,21 @@ const ControlLabels: React.FC<React.PropsWithChildren<ControlLabelsProps>> = (pr
       message={props.message}
       nextLine={props.nextLine}
       htmlFor={props.htmlFor}
+      endBlock={props.format}
     >
-      {props.label}
-      {props.infoTooltipContent && (
-        <InfoTooltip className={styles.tooltip} placement="top-start">
-          {props.infoTooltipContent}
-        </InfoTooltip>
-      )}
-      {props.optional && (
-        <Text size="sm" className={styles.optionalText}>
-          <FormattedMessage id="form.optional" />
-        </Text>
-      )}
+      <FlexContainer gap="none" alignItems="center">
+        {props.label}
+        {props.infoTooltipContent && (
+          <InfoTooltip className={styles.tooltip} placement="top-start">
+            {props.infoTooltipContent}
+          </InfoTooltip>
+        )}
+        {props.optional && (
+          <Text size="sm" className={styles.optionalText}>
+            <FormattedMessage id="form.optional" />
+          </Text>
+        )}
+      </FlexContainer>
     </Label>
     {props.children}
   </div>
