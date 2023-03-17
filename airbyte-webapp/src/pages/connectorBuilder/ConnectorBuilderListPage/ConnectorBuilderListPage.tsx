@@ -180,7 +180,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
               icon={<FontAwesomeIcon icon={faPlus} />}
               onClick={() => navigate(ConnectorBuilderRoutePaths.Create)}
               size="sm"
-              data-id="new-custom-connector"
+              data-testid="new-custom-connector"
             >
               <FormattedMessage id="connectorBuilder.listPage.newConnector" />
             </Button>

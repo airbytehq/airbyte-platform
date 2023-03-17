@@ -38,9 +38,14 @@ import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationUpdate;
+import io.airbyte.api.model.generated.FailureOrigin;
+import io.airbyte.api.model.generated.FailureReason;
+import io.airbyte.api.model.generated.FailureType;
 import io.airbyte.api.model.generated.FieldTransform;
+import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
@@ -51,6 +56,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.json.Jsons;
@@ -66,11 +72,13 @@ import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
+import io.airbyte.commons.temporal.JobMetadata;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.SourceConnection;
@@ -96,12 +104,18 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings("unchecked")
@@ -121,6 +135,18 @@ class SchedulerHandlerTest {
   private static final String SHOES = "shoes";
   private static final String SKU = "sku";
   private static final String CONNECTION_URL = "connection_url";
+
+  private static final UUID JOB_ID = UUID.randomUUID();
+  private static final long CREATED_AT = System.currentTimeMillis() / 1000;
+  private static final boolean CONNECTOR_CONFIG_UPDATED = false;
+  private static final Path LOG_PATH = Path.of("log_path");
+  private static final Optional<UUID> CONFIG_ID = Optional.of(UUID.randomUUID());
+  private static final String FAILURE_ORIGIN = "source";
+  private static final String FAILURE_TYPE = "system_error";
+  private static final boolean RETRYABLE = true;
+  private static final String EXTERNAL_MESSAGE = "Source did something wrong";
+  private static final String INTERNAL_MESSAGE = "Internal message related to system error";
+  private static final String STACKTRACE = "Stacktrace";
 
   private static final AirbyteCatalog airbyteCatalog = CatalogHelpers.createAirbyteCatalog(SHOES,
       Field.of(SKU, JsonSchemaType.STRING));
@@ -480,6 +506,135 @@ class SchedulerHandlerTest {
     verify(actorDefinitionVersionHelper, times(2)).getDestinationVersion(destinationDefinition, destination.getDestinationId());
     verify(synchronousSchedulerClient).createDestinationCheckConnectionJob(submittedDestination, DESTINATION_DOCKER_IMAGE,
         new Version(DESTINATION_PROTOCOL_VERSION), false);
+  }
+
+  private static SynchronousJobRead baseSynchronousJobRead() {
+    // return a new base every time this method is called so that we are not updating
+    // fields on the existing one in subsequent tests
+    return new SynchronousJobRead()
+        .id(JOB_ID)
+        .configId(String.valueOf(CONFIG_ID))
+        .configType(JobConfigType.CHECK_CONNECTION_SOURCE)
+        .createdAt(CREATED_AT)
+        .endedAt(CREATED_AT)
+        .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)
+        .logs(new LogRead().logLines(new ArrayList<>()));
+  }
+
+  private static FailureReason mockFailureReasonFromTrace = new FailureReason()
+      .failureOrigin(FailureOrigin.fromValue(FAILURE_ORIGIN))
+      .failureType(FailureType.fromValue(FAILURE_TYPE))
+      .retryable(RETRYABLE)
+      .externalMessage(EXTERNAL_MESSAGE)
+      .internalMessage(INTERNAL_MESSAGE)
+      .stacktrace(STACKTRACE)
+      .timestamp(CREATED_AT);
+
+  private static CheckConnectionRead jobSuccessStatusSuccess = new CheckConnectionRead()
+      .jobInfo(baseSynchronousJobRead().succeeded(true))
+      .status(CheckConnectionRead.StatusEnum.SUCCEEDED);
+
+  private static CheckConnectionRead jobSuccessStatusFailed = new CheckConnectionRead()
+      .jobInfo(baseSynchronousJobRead().succeeded(true))
+      .status(CheckConnectionRead.StatusEnum.FAILED)
+      .message("Something went wrong - check connection failure");
+
+  private static final CheckConnectionRead jobFailedWithFailureReason = new CheckConnectionRead()
+      .jobInfo(baseSynchronousJobRead().succeeded(false).failureReason(mockFailureReasonFromTrace));
+
+  private static final CheckConnectionRead jobFailedWithoutFailureReason = new CheckConnectionRead()
+      .jobInfo(baseSynchronousJobRead().succeeded(false));
+
+  private static Stream<Arguments> provideArguments() {
+    return Stream.of(
+        Arguments.of(Optional.of("succeeded"), false, jobSuccessStatusSuccess),
+        Arguments.of(Optional.of("succeeded"), true, jobFailedWithFailureReason),
+        Arguments.of(Optional.of("failed"), false, jobSuccessStatusFailed),
+        Arguments.of(Optional.of("failed"), true, jobFailedWithFailureReason),
+        Arguments.of(Optional.empty(), false, jobFailedWithoutFailureReason),
+        Arguments.of(Optional.empty(), true, jobFailedWithFailureReason));
+  }
+
+  @ParameterizedTest
+  @MethodSource("provideArguments")
+  void testCheckConnectionReadFormat(final Optional<String> standardCheckConnectionOutputStatusEmittedBySource,
+                                     final boolean traceMessageEmittedBySource,
+                                     final CheckConnectionRead expectedCheckConnectionRead)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+
+    final io.airbyte.config.FailureReason failureReason = new io.airbyte.config.FailureReason()
+        .withFailureOrigin(io.airbyte.config.FailureReason.FailureOrigin.fromValue(FAILURE_ORIGIN))
+        .withFailureType(io.airbyte.config.FailureReason.FailureType.fromValue(FAILURE_TYPE))
+        .withRetryable(RETRYABLE)
+        .withExternalMessage(EXTERNAL_MESSAGE)
+        .withInternalMessage(INTERNAL_MESSAGE)
+        .withStacktrace(STACKTRACE)
+        .withTimestamp(CREATED_AT);
+
+    StandardCheckConnectionOutput checkConnectionOutput;
+    if (standardCheckConnectionOutputStatusEmittedBySource.isPresent()) {
+      final StandardCheckConnectionOutput.Status status =
+          StandardCheckConnectionOutput.Status.fromValue(standardCheckConnectionOutputStatusEmittedBySource.get());
+      final String message = (status == StandardCheckConnectionOutput.Status.FAILED) ? "Something went wrong - check connection failure" : null;
+      checkConnectionOutput = new StandardCheckConnectionOutput().withStatus(status).withMessage(message);
+    } else {
+      checkConnectionOutput = null;
+    }
+
+    // This replicates the behavior of the DefaultCheckConnectionWorker. It always adds both the
+    // failureReason and the checkConnection if they are available.
+    boolean exceptionWouldBeThrown = false;
+    final ConnectorJobOutput connectorJobOutput = new ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION);
+    if (standardCheckConnectionOutputStatusEmittedBySource.isPresent()) {
+      connectorJobOutput.setCheckConnection(checkConnectionOutput);
+    }
+    if (traceMessageEmittedBySource) {
+      connectorJobOutput.setFailureReason(failureReason);
+    }
+    if (!standardCheckConnectionOutputStatusEmittedBySource.isPresent() && !traceMessageEmittedBySource) {
+      exceptionWouldBeThrown = true;
+    }
+
+    // This replicates the behavior of the TemporalClient. If there is a failureReason,
+    // it declares the job a failure.
+    boolean jobSucceeded = !exceptionWouldBeThrown && connectorJobOutput.getFailureReason() == null;
+    final JobMetadata jobMetadata = new JobMetadata(jobSucceeded, LOG_PATH);
+    final SynchronousJobMetadata synchronousJobMetadata = SynchronousJobMetadata.fromJobMetadata(jobMetadata, connectorJobOutput, JOB_ID,
+        ConfigType.CHECK_CONNECTION_SOURCE, CONFIG_ID.get(), CREATED_AT, CREATED_AT);
+
+    final SynchronousResponse<StandardCheckConnectionOutput> checkResponse = new SynchronousResponse<>(checkConnectionOutput, synchronousJobMetadata);
+
+    // Below is just to mock checkSourceConnectionFromSourceCreate as a public interface that uses
+    // reportConnectionStatus
+    final SourceConnection source = new SourceConnection()
+        .withWorkspaceId(SOURCE.getWorkspaceId())
+        .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
+        .withConfiguration(SOURCE.getConfiguration());
+
+    final SourceCoreConfig sourceCoreConfig = new SourceCoreConfig()
+        .sourceDefinitionId(source.getSourceDefinitionId())
+        .connectionConfiguration(source.getConfiguration())
+        .workspaceId(source.getWorkspaceId());
+
+    final Version protocolVersion = new Version(SOURCE_PROTOCOL_VERSION);
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+    when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
+        .thenReturn(sourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersionForWorkspace(sourceDefinition, source.getWorkspaceId())).thenReturn(new ActorDefinitionVersion()
+        .withDockerRepository(SOURCE_DOCKER_REPO)
+        .withDockerImageTag(SOURCE_DOCKER_TAG));
+    when(secretsRepositoryWriter.statefulSplitEphemeralSecrets(
+        eq(source.getConfiguration()),
+        any())).thenReturn(source.getConfiguration());
+    when(synchronousSchedulerClient.createSourceCheckConnectionJob(source, SOURCE_DOCKER_IMAGE, protocolVersion, false))
+        .thenReturn(checkResponse);
+
+    CheckConnectionRead checkConnectionRead = schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig);
+    assertEquals(expectedCheckConnectionRead, checkConnectionRead);
+
   }
 
   @Test

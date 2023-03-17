@@ -18,8 +18,8 @@ const testStreamButton = "button[data-testid='read-stream']";
 const schemaDiff = 'pre[class*="SchemaDiffView"]';
 const sliceDropdown = '[data-testid="tag-select-slice"]';
 
-export const goToConnectorBuilderPage = () => {
-  cy.visit("/connector-builder");
+export const goToConnectorBuilderCreatePage = () => {
+  cy.visit("/connector-builder/create");
   cy.wait(3000);
 };
 

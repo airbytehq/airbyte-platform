@@ -4611,7 +4611,6 @@ components:
     CheckConnectionRead:
       type: object
       required:
-        - status
         - jobInfo
       properties:
         status:
