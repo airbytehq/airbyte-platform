@@ -9,6 +9,7 @@ import svgrPlugin from "vite-plugin-svgr";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 
 import { buildInfo, docMiddleware } from "./packages/vite-plugins";
+import { experimentOverwrites } from "./packages/vite-plugins/experiment-overwrites";
 
 export default defineConfig(({ mode }) => {
   // Load variables from all .env files
@@ -53,6 +54,7 @@ export default defineConfig(({ mode }) => {
         typescript: true,
       }),
       docMiddleware(),
+      experimentOverwrites(),
     ],
     // Use `REACT_APP_` as a prefix for environment variables that should be accessible from within FE code.
     envPrefix: ["REACT_APP_"],

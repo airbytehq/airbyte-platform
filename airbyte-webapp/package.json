@@ -9,9 +9,9 @@
   "scripts": {
     "prepare": "./scripts/install-githooks.sh",
     "prestart": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
-    "start": "NODE_OPTIONS='-r ./scripts/dev-overwrites.js' vite",
+    "start": "vite",
     "prestart:cloud": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
-    "start:cloud": "AB_ENV=${AB_ENV-frontend-dev} NODE_OPTIONS='-r ./scripts/environment.js -r ./scripts/dev-overwrites.js' vite",
+    "start:cloud": "AB_ENV=${AB_ENV-frontend-dev} NODE_OPTIONS='-r ./scripts/environment.js' vite",
     "prebuild": "pnpm run generate-client",
     "build": ". ./scripts/calculate-source-hash.sh && vite build",
     "pretest": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
