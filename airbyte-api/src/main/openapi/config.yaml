@@ -539,6 +539,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "409":
           description: Version already exists for definition id
+  /v1/declarative_source_definitions/list_manifests:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: List all available declarative manifest versions of a declarative source definition
+      operationId: listDeclarativeManifests
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListDeclarativeManifestsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeManifestsReadList"
+        "400":
+          description: Definition is not declarative source
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/connector_builder_projects/create:
     post:
       tags:
@@ -2911,6 +2934,39 @@ components:
           $ref: "#/components/schemas/SourceDefinitionId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ListDeclarativeManifestsRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+    DeclarativeManifestsReadList:
+      type: object
+      required:
+        - manifestVersions
+      properties:
+        manifestVersions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeclarativeManifestVersionRead"
+    DeclarativeManifestVersionRead:
+      type: object
+      required:
+        - version
+        - isActive
+        - description
+      properties:
+        version:
+          type: integer
+          format: int64
+        isActive:
+          type: boolean
+        description:
+          type: string
     DeclarativeSourceDefinitionCreateManifestRequestBody:
       type: object
       required:

@@ -4,7 +4,10 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -15,13 +18,16 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
+import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
@@ -29,6 +35,7 @@ import java.net.URI;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class DeclarativeSourceDefinitionsHandlerTest {
@@ -134,6 +141,36 @@ class DeclarativeSourceDefinitionsHandlerTest {
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)));
     verify(configRepository, times(0)).updateDeclarativeActorDefinition(any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("listManifestVersions should return a list of all manifest versions with their descriptions and status")
+  void testListManifestVersions() throws IOException, ConfigNotFoundException {
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    givenSourceDefinitionAvailableInWorkspace();
+
+    final DeclarativeManifest manifest1 = new DeclarativeManifest().withVersion(1L).withDescription("first version");
+    final DeclarativeManifest manifest2 = new DeclarativeManifest().withVersion(2L).withDescription("second version");
+    final DeclarativeManifest manifest3 = new DeclarativeManifest().withVersion(3L).withDescription("third version");
+
+    when(configRepository.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)).thenReturn(Stream.of(manifest1, manifest2, manifest3));
+    when(configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)).thenReturn(manifest2);
+
+    final DeclarativeManifestsReadList response =
+        handler.listManifestVersions(new ListDeclarativeManifestsRequestBody().sourceDefinitionId(sourceDefinitionId));
+    assertEquals(3, response.getManifestVersions().size());
+
+    assertFalse(response.getManifestVersions().get(0).getIsActive());
+    assertTrue(response.getManifestVersions().get(1).getIsActive());
+    assertFalse(response.getManifestVersions().get(2).getIsActive());
+
+    assertEquals(manifest1.getDescription(), response.getManifestVersions().get(0).getDescription());
+    assertEquals(manifest2.getDescription(), response.getManifestVersions().get(1).getDescription());
+    assertEquals(manifest3.getDescription(), response.getManifestVersions().get(2).getDescription());
+
+    assertEquals(manifest1.getVersion(), response.getManifestVersions().get(0).getVersion());
+    assertEquals(manifest2.getVersion(), response.getManifestVersions().get(1).getVersion());
+    assertEquals(manifest3.getVersion(), response.getManifestVersions().get(2).getVersion());
   }
 
   private void givenSourceDefinitionAvailableInWorkspace() throws IOException {
