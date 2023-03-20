@@ -14,21 +14,23 @@ import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBod
 import io.airbyte.api.model.generated.SourceOauthConsentRequest;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.OAuthHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import java.util.Map;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/source_oauths")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class SourceOauthApiController implements SourceOauthApi {
 
   private final OAuthHandler oAuthHandler;
 
+  @SuppressWarnings("ParameterName")
   public SourceOauthApiController(final OAuthHandler oAuthHandler) {
     this.oAuthHandler = oAuthHandler;
   }
@@ -36,7 +38,7 @@ public class SourceOauthApiController implements SourceOauthApi {
   @Post("/complete_oauth")
   @Secured({EDITOR})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public Map<String, Object> completeSourceOAuth(@Body final CompleteSourceOauthRequest completeSourceOauthRequest) {
     return ApiHelper.execute(() -> oAuthHandler.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest));
@@ -45,7 +47,7 @@ public class SourceOauthApiController implements SourceOauthApi {
   @Post("/get_consent_url")
   @Secured({EDITOR})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public OAuthConsentRead getSourceOAuthConsent(@Body final SourceOauthConsentRequest sourceOauthConsentRequest) {
     return ApiHelper.execute(() -> oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest));
@@ -53,7 +55,7 @@ public class SourceOauthApiController implements SourceOauthApi {
 
   @Post("/oauth_params/create")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public void setInstancewideSourceOauthParams(
                                                @Body final SetInstancewideSourceOauthParamsRequestBody setInstancewideSourceOauthParamsRequestBody) {

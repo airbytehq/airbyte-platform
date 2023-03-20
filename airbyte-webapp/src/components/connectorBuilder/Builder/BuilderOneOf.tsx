@@ -26,7 +26,7 @@ interface BuilderOneOfProps {
   onSelect?: (type: string) => void;
 }
 
-const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<string>> = ({
+const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<{ type: string }>> = ({
   options,
   label,
   tooltip,
@@ -35,7 +35,7 @@ const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<string>> = 
   form,
   onSelect,
 }) => {
-  const value = typePathField.value;
+  const value = typePathField.value.type;
 
   const selectedOption = options.find((option) => option.typeValue === value);
 
@@ -70,8 +70,8 @@ const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<string>> = 
 };
 export const BuilderOneOf: React.FC<BuilderOneOfProps> = (props) => {
   return (
-    <FastField name={`${props.path}.type`}>
-      {(fastFieldProps: FastFieldProps<string>) => <InnerBuilderOneOf {...props} {...fastFieldProps} />}
+    <FastField name={props.path}>
+      {(fastFieldProps: FastFieldProps<{ type: string }>) => <InnerBuilderOneOf {...props} {...fastFieldProps} />}
     </FastField>
   );
 };

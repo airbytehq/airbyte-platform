@@ -15,7 +15,7 @@ NEW_HASH="$( git rev-parse HEAD )"
 git checkout master
 git pull --no-rebase
 
-SUB_BUILD=PLATFORM "$SCRIPT_DIR"/../../gradlew -p "$SCRIPT_DIR"/../.. generate-docker
+"$SCRIPT_DIR"/../../gradlew -p "$SCRIPT_DIR"/../.. generate-docker
 
 cd "$SCRIPT_DIR"/../..
 VERSION=dev docker compose -f "$SCRIPT_DIR"/../../docker-compose.yaml up &
@@ -25,6 +25,6 @@ VERSION=dev docker compose down
 
 git stash
 git checkout $NEW_HASH
-SUB_BUILD=PLATFORM "$SCRIPT_DIR"/../../gradlew -p "$SCRIPT_DIR"/../.. generate-docker
+"$SCRIPT_DIR"/../../gradlew -p "$SCRIPT_DIR"/../.. generate-docker
 
 VERSION=dev docker compose -f "$SCRIPT_DIR"/../../docker-compose.yaml up

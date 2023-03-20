@@ -118,6 +118,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
                     setTestInputJson(values.connectionConfiguration as StreamReadRequestBodyConfig);
                     setIsOpen(false);
                   }}
+                  isEditMode
                   renderFooter={({ dirty, isSubmitting, resetConnectorForm }) => (
                     <div className={styles.inputFormModalFooter}>
                       <FlexContainer>
@@ -125,7 +126,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
                           <Button
                             onClick={() => {
                               resetConnectorForm();
-                              setTestInputJson({});
+                              setTestInputJson(undefined);
                             }}
                             type="button"
                             variant="danger"

@@ -14,7 +14,7 @@ import {
  * Wrapper for DB Query Cypress task
  * @param queryString
  */
-export const runDbQuery = <T>(queryString: string) => cy.task<T>("dbQuery", { query: queryString });
+export const runDbQuery = <T>(...queryStrings: string[]) => cy.task<T>("dbQuery", { query: queryStrings.join(";\n") });
 
 interface TableExistsResponse {
   exists: boolean;
@@ -32,6 +32,7 @@ const composeIsTableExistQuery = (tableName: string) =>
       )`;
 
 export const populateDBSource = () => {
+  cleanDBSource();
   runDbQuery(createUsersTableQuery);
   runDbQuery(insertUsersTableQuery);
   runDbQuery(createCitiesTableQuery);

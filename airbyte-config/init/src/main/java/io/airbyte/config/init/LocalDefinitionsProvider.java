@@ -19,26 +19,41 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This provider contains all definitions according to the local catalog json files.
  */
-final public class LocalDefinitionsProvider implements DefinitionsProvider {
+public final class LocalDefinitionsProvider implements DefinitionsProvider {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(LocalDefinitionsProvider.class);
 
   private static final String LOCAL_CONNECTOR_CATALOG_PATH = CatalogDefinitionsConfig.getLocalConnectorCatalogPath();
 
+  /**
+   * Get combined catalog.
+   *
+   * @return combined catalog
+   */
   public CombinedConnectorCatalog getLocalDefinitionCatalog() {
     try {
       final URL url = Resources.getResource(LOCAL_CONNECTOR_CATALOG_PATH);
+      LOGGER.info("Loading {} local connector catalog definitions from {}", LOCAL_CONNECTOR_CATALOG_PATH, url);
+
       final String jsonString = Resources.toString(url, StandardCharsets.UTF_8);
-      final CombinedConnectorCatalog catalog = Jsons.deserialize(jsonString, CombinedConnectorCatalog.class);
-      return catalog;
+      return Jsons.deserialize(jsonString, CombinedConnectorCatalog.class);
 
     } catch (final Exception e) {
       throw new RuntimeException("Failed to fetch local catalog definitions", e);
     }
   }
 
+  /**
+   * Get map of source definition ids to the definition.
+   *
+   * @return map
+   */
   public Map<UUID, StandardSourceDefinition> getSourceDefinitionsMap() {
     final CombinedConnectorCatalog catalog = getLocalDefinitionCatalog();
     return catalog.getSources().stream().collect(Collectors.toMap(
@@ -47,6 +62,11 @@ final public class LocalDefinitionsProvider implements DefinitionsProvider {
             AirbyteProtocolVersion.getWithDefault(source.getSpec() != null ? source.getSpec().getProtocolVersion() : null).serialize())));
   }
 
+  /**
+   * Get map of destination definition ids to the definition.
+   *
+   * @return map
+   */
   public Map<UUID, StandardDestinationDefinition> getDestinationDefinitionsMap() {
     final CombinedConnectorCatalog catalog = getLocalDefinitionCatalog();
     return catalog.getDestinations().stream().collect(

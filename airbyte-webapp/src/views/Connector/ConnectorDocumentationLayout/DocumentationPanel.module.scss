@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/variables";
 
 .container {
   min-height: 100vh;
@@ -8,4 +9,9 @@
 
 .content {
   padding: 0 35px;
+}
+
+.stepsContainer {
+  padding-top: variables.$spacing-lg;
+  padding-left: variables.$spacing-lg;
 }

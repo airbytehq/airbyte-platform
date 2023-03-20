@@ -16,6 +16,7 @@ import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { links } from "utils/links";
 
@@ -45,6 +46,7 @@ export const CatalogTreeTableHeader: React.FC = () => {
   const { onCheckAll, selectedBatchNodeIds, allChecked } = useBulkEditService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
   const isNewTableDesignEnabled = useNewTableDesignExperiment();
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
     formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
@@ -79,13 +81,11 @@ export const CatalogTreeTableHeader: React.FC = () => {
       <HeaderCell size="fixed" className={styles.syncCell}>
         <FormattedMessage id="sources.sync" />
       </HeaderCell>
-      {/* TODO: Replace with actual header column selection field count */}
-      {/* <HeaderCell size="fixed" className={styles.fieldsCell}>
-        Fields
-        <InfoTooltip>
-          <FormattedMessage id="connectionForm.sourceNamespace.info" />
-        </InfoTooltip>
-      </HeaderCell> */}
+      {isColumnSelectionEnabled && (
+        <HeaderCell size="fixed" className={styles.fieldsCell}>
+          <FormattedMessage id="form.fields" />
+        </HeaderCell>
+      )}
       <HeaderCell>
         <FormattedMessage id="form.namespace" />
         <InfoTooltip>

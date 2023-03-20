@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Decides which Task Queue should be used for a given connection's sync operations, based on the
- * configured {@link Geography}
+ * configured {@link Geography}.
  */
 @Singleton
 @Slf4j
@@ -45,20 +45,22 @@ public class RouterService {
     return taskQueueMapper.getTaskQueue(geography, jobType);
   }
 
-  // This function is only getting called for discover/check functions. Today (02.07) they are behind
-  // feature flag
-  // so even the geography might be in EU they will still be directed to US.
+  /**
+   * This function is only getting called for discover/check functions. Today (02.07) they are behind
+   * feature flag so even the geography might be in EU they will still be directed to US.
+   *
+   * @param workspaceId workspace id
+   * @param jobType job type
+   * @return task queue
+   * @throws IOException while interacting with temporal or db
+   */
   public String getTaskQueueForWorkspace(final UUID workspaceId, final TemporalJobType jobType) throws IOException {
     if (!WORKSPACE_ROUTING_JOB_TYPE_SET.contains(jobType)) {
       throw new RuntimeException("Jobtype not expected to call - getTaskQueueForWorkspace - " + jobType);
     }
 
-    if (featureFlags.routeTaskQueueForWorkspaceEnabled() || featureFlags.routeTaskQueueForWorkspaceAllowList().contains(workspaceId.toString())) {
-      final Geography geography = configRepository.getGeographyForWorkspace(workspaceId);
-      return taskQueueMapper.getTaskQueue(geography, jobType);
-    } else {
-      return taskQueueMapper.getTaskQueue(Geography.AUTO, jobType);
-    }
+    final Geography geography = configRepository.getGeographyForWorkspace(workspaceId);
+    return taskQueueMapper.getTaskQueue(geography, jobType);
   }
 
 }

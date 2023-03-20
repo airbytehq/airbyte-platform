@@ -12,8 +12,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -21,6 +23,8 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.DefaultJobCreator;
@@ -48,9 +52,13 @@ class DefaultSyncJobFactoryTest {
     final JsonNode persistedWebhookConfigs = Jsons.deserialize(
         String.format("{\"webhookConfigs\": [{\"id\": \"%s\", \"name\": \"%s\", \"authToken\": {\"_secret\": \"a-secret_v1\"}}]}",
             workspaceWebhookConfigId, workspaceWebhookName));
+    final JsonNode sourceConfig = new ObjectMapper().readTree("{\"source\": true }");
+    final JsonNode destinationConfig = new ObjectMapper().readTree("{\"destination\": true }");
+    final JsonNode configAfterInjection = new ObjectMapper().readTree("{\"injected\": true }");
     final DefaultJobCreator jobCreator = mock(DefaultJobCreator.class);
     final ConfigRepository configRepository = mock(ConfigRepository.class);
     final WorkspaceHelper workspaceHelper = mock(WorkspaceHelper.class);
+    final ActorDefinitionVersionHelper actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     final long jobId = 11L;
 
     final StandardSyncOperation operation = new StandardSyncOperation().withOperationId(operationId);
@@ -60,9 +68,9 @@ class DefaultSyncJobFactoryTest {
         .withDestinationId(destinationId)
         .withOperationIds(List.of(operationId));
 
-    final SourceConnection sourceConnection = new SourceConnection().withSourceDefinitionId(sourceDefinitionId);
+    final SourceConnection sourceConnection = new SourceConnection().withSourceDefinitionId(sourceDefinitionId).withConfiguration(sourceConfig);
     final DestinationConnection destinationConnection =
-        new DestinationConnection().withDestinationDefinitionId(destinationDefinitionId);
+        new DestinationConnection().withDestinationDefinitionId(destinationDefinitionId).withConfiguration(destinationConfig);
 
     final String srcDockerRepo = "srcrepo";
     final String srcDockerTag = "tag";
@@ -74,11 +82,16 @@ class DefaultSyncJobFactoryTest {
     final String dstDockerImage = dstDockerRepo + ":" + dstDockerTag;
     final Version dstProtocolVersion = new Version("0.3.2");
     final StandardSourceDefinition standardSourceDefinition =
-        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId).withDockerRepository(srcDockerRepo)
-            .withDockerImageTag(srcDockerTag).withProtocolVersion(srcProtocolVersion.serialize());
+        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId)
+            .withProtocolVersion(srcProtocolVersion.serialize());
     final StandardDestinationDefinition standardDestinationDefinition =
-        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId).withDockerRepository(dstDockerRepo)
-            .withDockerImageTag(dstDockerTag).withProtocolVersion(dstProtocolVersion.serialize());
+        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId)
+            .withProtocolVersion(dstProtocolVersion.serialize());
+
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceId))
+        .thenReturn(new ActorDefinitionVersion().withDockerRepository(srcDockerRepo).withDockerImageTag(srcDockerTag));
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationId))
+        .thenReturn(new ActorDefinitionVersion().withDockerRepository(dstDockerRepo).withDockerImageTag(dstDockerTag));
 
     when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
     when(configRepository.getSourceConnection(sourceId)).thenReturn(sourceConnection);
@@ -98,7 +111,17 @@ class DefaultSyncJobFactoryTest {
     when(configRepository.getStandardWorkspaceNoSecrets(any(), eq(true))).thenReturn(
         new StandardWorkspace().withWorkspaceId(workspaceId).withWebhookOperationConfigs(persistedWebhookConfigs));
 
-    final SyncJobFactory factory = new DefaultSyncJobFactory(true, jobCreator, configRepository, mock(OAuthConfigSupplier.class), workspaceHelper);
+    final ConfigInjector configInjector = mock(ConfigInjector.class);
+    when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
+    when(configInjector.injectConfig(any(), eq(sourceDefinitionId))).thenReturn(configAfterInjection);
+
+    final OAuthConfigSupplier oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any())).thenAnswer(i -> i.getArguments()[3]);
+    when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any())).thenAnswer(i -> i.getArguments()[3]);
+
+    final SyncJobFactory factory =
+        new DefaultSyncJobFactory(true, jobCreator, configRepository, oAuthConfigSupplier, configInjector, workspaceHelper,
+            actorDefinitionVersionHelper);
     final long actualJobId = factory.create(connectionId);
     assertEquals(jobId, actualJobId);
 
@@ -106,6 +129,12 @@ class DefaultSyncJobFactoryTest {
         .createSyncJob(sourceConnection, destinationConnection, standardSync, srcDockerImage, srcProtocolVersion, dstDockerImage, dstProtocolVersion,
             operations, persistedWebhookConfigs,
             standardSourceDefinition, standardDestinationDefinition, workspaceId);
+
+    assertEquals(configAfterInjection, sourceConnection.getConfiguration());
+    verify(configInjector).injectConfig(sourceConfig, sourceDefinitionId);
+    verify(configInjector).injectConfig(destinationConfig, destinationDefinitionId);
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceId);
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationId);
   }
 
 }

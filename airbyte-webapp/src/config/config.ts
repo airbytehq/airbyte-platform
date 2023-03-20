@@ -5,6 +5,7 @@ export const config: AirbyteWebappConfig = {
     token: window.SEGMENT_TOKEN ?? process.env.REACT_APP_SEGMENT_TOKEN,
     enabled: !window.TRACKING_STRATEGY || window.TRACKING_STRATEGY === "segment",
   },
+  fathomSiteId: window.FATHOM_SITE_ID ?? process.env.REACT_APP_FATHOM_SITE_ID,
   apiUrl: window.API_URL ?? process.env.REACT_APP_API_URL ?? `http://${window.location.hostname}:8001/api`,
   connectorBuilderApiUrl:
     window.CONNECTOR_BUILDER_API_URL ??

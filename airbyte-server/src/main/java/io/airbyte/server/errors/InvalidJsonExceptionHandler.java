@@ -15,6 +15,9 @@ import io.micronaut.http.annotation.Produces;
 import io.micronaut.http.server.exceptions.ExceptionHandler;
 import jakarta.inject.Singleton;
 
+/**
+ * Invalid json input exception.
+ */
 @Produces
 @Singleton
 @Requires(classes = JsonParseException.class)

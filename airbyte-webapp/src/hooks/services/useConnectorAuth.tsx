@@ -1,16 +1,17 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 
 import { ToastType } from "components/ui/Toast";
 
 import { useConfig } from "config";
-import { ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
 import { DestinationAuthService } from "core/domain/connector/DestinationAuthService";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { SourceAuthService } from "core/domain/connector/SourceAuthService";
 import { DestinationOauthConsentRequest, SourceOauthConsentRequest } from "core/request/AirbyteClient";
 import { isCommonRequestError } from "core/request/CommonRequestError";
+import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
@@ -145,19 +146,26 @@ export function useConnectorAuth(): {
   };
 }
 
-export function useRunOauthFlow(
-  connector: ConnectorDefinitionSpecification,
-  onDone?: (values: Record<string, unknown>) => void
-): {
+export function useRunOauthFlow({
+  connector,
+  connectorDefinition,
+  onDone,
+}: {
+  connector: ConnectorDefinitionSpecification;
+  connectorDefinition?: ConnectorDefinition;
+  onDone?: (values: Record<string, unknown>) => void;
+}): {
   loading: boolean;
   done?: boolean;
   run: (oauthInputParams: Record<string, unknown>) => void;
 } {
   const { getConsentUrl, completeOauthRequest } = useConnectorAuth();
   const param = useRef<SourceOauthConsentRequest | DestinationOauthConsentRequest>();
-
+  const connectorType = isSourceDefinitionSpecification(connector) ? "source" : "destination";
+  const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
   const [{ loading }, onStartOauth] = useAsyncFn(
     async (oauthInputParams: Record<string, unknown>) => {
+      trackOAuthAttemp(connectorDefinition);
       const consentRequestInProgress = await getConsentUrl(connector, oauthInputParams);
 
       param.current = consentRequestInProgress.payload;
@@ -172,7 +180,7 @@ export function useRunOauthFlow(
 
       if (oauthStartedPayload) {
         const completeOauthResponse = await completeOauthRequest(oauthStartedPayload, queryParams);
-
+        trackOAuthSuccess(connectorDefinition);
         onDone?.(completeOauthResponse);
         return true;
       }
@@ -200,6 +208,14 @@ export function useRunOauthFlow(
   const onCloseWindow = useCallback(() => {
     windowObjectReference?.close();
   }, []);
+
+  useEffect(
+    () => () => {
+      // Close popup oauth window when unmounting
+      onCloseWindow();
+    },
+    [onCloseWindow]
+  );
 
   useEvent("message", onOathGranted);
   // Close popup oauth window when we close the original tab

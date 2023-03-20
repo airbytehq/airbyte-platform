@@ -18,6 +18,7 @@ import { User } from "packages/cloud/lib/domain/users";
 import { useGetUserService } from "packages/cloud/services/users/UserService";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
+import { trackSignup } from "utils/fathom";
 
 import { FREE_EMAIL_SERVICE_PROVIDERS } from "./freeEmailProviders";
 import { actions, AuthServiceState, authStateReducer, initialState } from "./reducer";
@@ -109,16 +110,19 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
       companyName: userData.companyName ?? "",
       news: userData.news ?? false,
     });
+    const isCorporate = ctx.hasCorporateEmail(user.email);
 
     analytics.track(Namespace.USER, Action.CREATE, {
       actionDescription: "New user registered",
       user_id: firebaseUser.uid,
       name: user.name,
       email: user.email,
-      isCorporate: ctx.hasCorporateEmail(user.email),
+      isCorporate,
       // Which login provider was used, e.g. "password", "google.com", "github.com"
       provider: firebaseUser.providerData[0]?.providerId,
     });
+
+    trackSignup(isCorporate);
 
     return user;
   };

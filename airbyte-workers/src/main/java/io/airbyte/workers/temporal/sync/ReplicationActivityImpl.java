@@ -19,6 +19,8 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlagHelper;
 import io.airbyte.commons.features.FeatureFlags;
@@ -41,6 +43,8 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
+import io.airbyte.featureflag.PerfBackgroundJsonValidation;
+import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -62,12 +66,15 @@ import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
+import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.process.ProcessFactory;
@@ -79,6 +86,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -88,6 +96,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Replication temporal activity impl.
+ */
 @Singleton
 public class ReplicationActivityImpl implements ReplicationActivity {
 
@@ -110,6 +121,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final WorkerConfigs workerConfigs;
+  private final SyncPersistenceFactory syncPersistenceFactory;
 
   public ReplicationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                  @Named("replicationProcessFactory") final ProcessFactory processFactory,
@@ -126,7 +138,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final AirbyteMessageSerDeProvider serDeProvider,
                                  final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                  @Named("replicationWorkerConfigs") final WorkerConfigs workerConfigs,
-                                 final FeatureFlagClient featureFlagClient) {
+                                 final FeatureFlagClient featureFlagClient,
+                                 final SyncPersistenceFactory syncPersistenceFactory) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
@@ -143,6 +156,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.migratorFactory = migratorFactory;
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
+    this.syncPersistenceFactory = syncPersistenceFactory;
   }
 
   // Marking task queue as nullable because we changed activity signature; thus runs started before
@@ -185,6 +199,23 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory;
 
+          final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
+              () -> airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
+              "get source");
+
+          final long maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> airbyteApiClient.getSourceDefinitionApi()
+              .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))
+              .getMaxSecondsBetweenMessages(), "get source definition");
+
+          final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
+
+          final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
+              HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
+              featureFlagClient,
+              syncInput.getWorkspaceId(),
+              syncInput.getConnectionId(),
+              MetricClientFactory.getMetricClient());
+
           if (containerOrchestratorConfig.isPresent()) {
             workerFactory = getContainerLauncherWorkerFactory(
                 containerOrchestratorConfig.get(),
@@ -196,7 +227,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                 workerConfigs);
           } else {
             workerFactory =
-                getLegacyWorkerFactory(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput);
+                getLegacyWorkerFactory(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, syncPersistenceFactory,
+                    heartbeatMonitor, heartbeatTimeoutChaperone);
           }
 
           final TemporalAttemptExecution<StandardSyncInput, ReplicationOutput> temporalAttempt =
@@ -211,10 +243,18 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context,
-                  Optional.ofNullable(taskQueue));
+                  Optional.ofNullable(taskQueue),
+                  () -> {
+                    try {
+                      heartbeatTimeoutChaperone.close();
+                    } catch (Exception e) {
+                      throw new RuntimeException(e);
+                    }
+                  });
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
           final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);
+          standardSyncOutput.setCommitStateAsap(syncInput.getCommitStateAsap());
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
@@ -278,11 +318,15 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     }
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> getLegacyWorkerFactory(
                                                                                                           final IntegrationLauncherConfig sourceLauncherConfig,
                                                                                                           final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                           final JobRunConfig jobRunConfig,
-                                                                                                          final StandardSyncInput syncInput) {
+                                                                                                          final StandardSyncInput syncInput,
+                                                                                                          final SyncPersistenceFactory syncPersistenceFactory,
+                                                                                                          final HeartbeatMonitor heartbeatMonitor,
+                                                                                                          final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone) {
     return () -> {
       final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
           sourceLauncherConfig.getJobId(),
@@ -309,6 +353,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           : new DefaultAirbyteSource(sourceLauncher,
               new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, sourceLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class)),
+              heartbeatMonitor,
               migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
               featureFlags);
       MetricClientFactory.initialize(MetricEmittingApps.WORKER);
@@ -319,10 +364,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
       // environment-variable flags say so (deprecated).
       // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
-      final boolean fieldSelectionEnabled = workspaceId != null &&
-          (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
+      final boolean fieldSelectionEnabled = workspaceId != null
+          && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
               || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
-
+      final boolean heartbeatTimeoutEnabled = workspaceId != null
+          && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
       return new DefaultReplicationWorker(
           jobRunConfig.getJobId(),
           Math.toIntExact(jobRunConfig.getAttemptId()),
@@ -336,13 +382,18 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
           new AirbyteMessageTracker(featureFlags),
-          new RecordSchemaValidator(featureFlagClient, syncInput.getWorkspaceId(), WorkerUtils.mapStreamNamesToSchemas(syncInput)),
+          syncPersistenceFactory,
+          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput),
+              featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(syncInput.getWorkspaceId()))),
           metricReporter,
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi()),
-          fieldSelectionEnabled);
+          fieldSelectionEnabled,
+          heartbeatTimeoutEnabled,
+          heartbeatTimeoutChaperone);
     };
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> getContainerLauncherWorkerFactory(
                                                                                                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
                                                                                                                      final IntegrationLauncherConfig sourceLauncherConfig,

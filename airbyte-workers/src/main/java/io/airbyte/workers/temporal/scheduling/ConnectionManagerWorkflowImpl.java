@@ -6,7 +6,6 @@ package io.airbyte.workers.temporal.scheduling;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -92,6 +91,9 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * ConnectionManagerWorkflowImpl.
+ */
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
@@ -362,8 +364,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
    * is fully rolled out.
    */
   private boolean shouldRunCheckInputGeneration(final boolean featureFlagEnabled) {
-    if (!featureFlagEnabled)
+    if (!featureFlagEnabled) {
       return false;
+    }
 
     final int generateCheckInputVersion =
         Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
@@ -476,10 +479,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     connectionUpdaterInput.setSkipScheduling(false);
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public void submitManualSync() {
-    traceConnectionId();
     if (workflowState.isRunning()) {
       log.info("Can't schedule a manual workflow if a sync is running for connection {}", connectionId);
       return;
@@ -509,10 +510,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     cancelJob();
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public void connectionUpdated() {
-    traceConnectionId();
     workflowState.setUpdated(true);
   }
 
@@ -546,20 +545,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public WorkflowState getState() {
-    traceConnectionId();
     return workflowState;
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public JobInformation getJobInformation() {
-    traceConnectionId();
     final Long jobId = workflowInternalState.getJobId() != null ? workflowInternalState.getJobId() : NON_RUNNING_JOB_ID;
     final Integer attemptNumber = workflowInternalState.getAttemptNumber();
-    ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId));
     return new JobInformation(
         jobId,
         attemptNumber == null ? NON_RUNNING_ATTEMPT_ID : attemptNumber);
@@ -648,7 +642,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   /**
-   * Similar to runMandatoryActivityWithOutput but for methods that don't return
+   * Similar to runMandatoryActivityWithOutput but for methods that don't return.
    */
   private <INPUT> void runMandatoryActivity(final Consumer<INPUT> consumer, final INPUT input) {
     runMandatoryActivityWithOutput((inputInternal) -> {
@@ -722,7 +716,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   /**
-   * Create a new attempt for a given jobId
+   * Create a new attempt for a given jobId.
    *
    * @param jobId - the jobId associated with the new attempt
    *
@@ -836,7 +830,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   /**
-   * Set the internal status as failed and save the failures reasons
+   * Set the internal status as failed and save the failures reasons.
    *
    * @return True if the job failed, false otherwise
    */
@@ -851,8 +845,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
     // catch normalization failure reasons
     final NormalizationSummary normalizationSummary = standardSyncOutput.getNormalizationSummary();
-    if (normalizationSummary != null && normalizationSummary.getFailures() != null &&
-        !normalizationSummary.getFailures().isEmpty()) {
+    if (normalizationSummary != null && normalizationSummary.getFailures() != null
+        && !normalizationSummary.getFailures().isEmpty()) {
       workflowInternalState.getFailures().addAll(normalizationSummary.getFailures());
       return true;
     }
@@ -860,7 +854,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     return false;
   }
 
-  /**
+  /*
    * Set a job as cancel and continue to the next job if and continue as a reset if needed
    */
   private void reportCancelledAndContinueWith(final boolean skipSchedulingNextRun, final ConnectionUpdaterInput connectionUpdaterInput) {

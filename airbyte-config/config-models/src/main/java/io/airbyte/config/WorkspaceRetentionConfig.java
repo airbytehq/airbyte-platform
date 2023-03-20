@@ -4,6 +4,9 @@
 
 package io.airbyte.config;
 
+/**
+ * Workspace retention.
+ */
 public class WorkspaceRetentionConfig {
 
   private final long minDays;

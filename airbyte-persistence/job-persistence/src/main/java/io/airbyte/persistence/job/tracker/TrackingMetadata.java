@@ -33,8 +33,18 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.util.Strings;
 
+/**
+ * Helpers to fetch stats / metadata about Airbyte domain models and turn them into flat maps that
+ * can be appended to telemetry calls.
+ */
 public class TrackingMetadata {
 
+  /**
+   * Map sync metadata / stats to a string-to-object map so it can be attached to telemetry calls.
+   *
+   * @param standardSync connection
+   * @return metadata / stats as a string-to-object map.
+   */
   public static Map<String, Object> generateSyncMetadata(final StandardSync standardSync) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connection_id", standardSync.getConnectionId());
@@ -78,6 +88,13 @@ public class TrackingMetadata {
     return metadata.build();
   }
 
+  /**
+   * Map destination definition metadata / stats to a string-to-object map so it can be attached to
+   * telemetry calls.
+   *
+   * @param destinationDefinition destination definition
+   * @return metadata / stats as a string-to-object map.
+   */
   public static Map<String, Object> generateDestinationDefinitionMetadata(final StandardDestinationDefinition destinationDefinition) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connector_destination", destinationDefinition.getName());
@@ -90,6 +107,13 @@ public class TrackingMetadata {
     return metadata.build();
   }
 
+  /**
+   * Map source definition metadata / stats to a string-to-object map so it can be attached to
+   * telemetry calls.
+   *
+   * @param sourceDefinition source definition
+   * @return metadata / stats as a string-to-object map.
+   */
   public static Map<String, Object> generateSourceDefinitionMetadata(final StandardSourceDefinition sourceDefinition) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connector_source", sourceDefinition.getName());
@@ -102,6 +126,12 @@ public class TrackingMetadata {
     return metadata.build();
   }
 
+  /**
+   * Map job metadata / stats to a string-to-object map so it can be attached to telemetry calls.
+   *
+   * @param job job
+   * @return metadata / stats as a string-to-object map.
+   */
   public static Map<String, Object> generateJobAttemptMetadata(final Job job) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     if (job != null) {
@@ -115,49 +145,68 @@ public class TrackingMetadata {
             final SyncStats totalStats = syncSummary.getTotalStats();
             final NormalizationSummary normalizationSummary = jobOutput.getSync().getNormalizationSummary();
 
-            if (syncSummary.getStartTime() != null)
+            if (syncSummary.getStartTime() != null) {
               metadata.put("sync_start_time", syncSummary.getStartTime());
-            if (syncSummary.getEndTime() != null && syncSummary.getStartTime() != null)
+            }
+            if (syncSummary.getEndTime() != null && syncSummary.getStartTime() != null) {
               metadata.put("duration", Math.round((syncSummary.getEndTime() - syncSummary.getStartTime()) / 1000.0));
-            if (syncSummary.getBytesSynced() != null)
+            }
+            if (syncSummary.getBytesSynced() != null) {
               metadata.put("volume_mb", syncSummary.getBytesSynced());
-            if (syncSummary.getRecordsSynced() != null)
+            }
+            if (syncSummary.getRecordsSynced() != null) {
               metadata.put("volume_rows", syncSummary.getRecordsSynced());
-            if (totalStats.getSourceStateMessagesEmitted() != null)
+            }
+            if (totalStats.getSourceStateMessagesEmitted() != null) {
               metadata.put("count_state_messages_from_source", syncSummary.getTotalStats().getSourceStateMessagesEmitted());
-            if (totalStats.getDestinationStateMessagesEmitted() != null)
+            }
+            if (totalStats.getDestinationStateMessagesEmitted() != null) {
               metadata.put("count_state_messages_from_destination", syncSummary.getTotalStats().getDestinationStateMessagesEmitted());
-            if (totalStats.getMaxSecondsBeforeSourceStateMessageEmitted() != null)
+            }
+            if (totalStats.getMaxSecondsBeforeSourceStateMessageEmitted() != null) {
               metadata.put("max_seconds_before_source_state_message_emitted",
                   totalStats.getMaxSecondsBeforeSourceStateMessageEmitted());
-            if (totalStats.getMeanSecondsBeforeSourceStateMessageEmitted() != null)
+            }
+            if (totalStats.getMeanSecondsBeforeSourceStateMessageEmitted() != null) {
               metadata.put("mean_seconds_before_source_state_message_emitted",
                   totalStats.getMeanSecondsBeforeSourceStateMessageEmitted());
-            if (totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted() != null)
+            }
+            if (totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted() != null) {
               metadata.put("max_seconds_between_state_message_emit_and_commit",
                   totalStats.getMaxSecondsBetweenStateMessageEmittedandCommitted());
-            if (totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted() != null)
+            }
+            if (totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted() != null) {
               metadata.put("mean_seconds_between_state_message_emit_and_commit",
                   totalStats.getMeanSecondsBetweenStateMessageEmittedandCommitted());
+            }
 
-            if (totalStats.getReplicationStartTime() != null)
+            if (totalStats.getReplicationStartTime() != null) {
               metadata.put("replication_start_time", totalStats.getReplicationStartTime());
-            if (totalStats.getReplicationEndTime() != null)
+            }
+            if (totalStats.getReplicationEndTime() != null) {
               metadata.put("replication_end_time", totalStats.getReplicationEndTime());
-            if (totalStats.getSourceReadStartTime() != null)
+            }
+            if (totalStats.getSourceReadStartTime() != null) {
               metadata.put("source_read_start_time", totalStats.getSourceReadStartTime());
-            if (totalStats.getSourceReadEndTime() != null)
+            }
+            if (totalStats.getSourceReadEndTime() != null) {
               metadata.put("source_read_end_time", totalStats.getSourceReadEndTime());
-            if (totalStats.getDestinationWriteStartTime() != null)
+            }
+            if (totalStats.getDestinationWriteStartTime() != null) {
               metadata.put("destination_write_start_time", totalStats.getDestinationWriteStartTime());
-            if (totalStats.getDestinationWriteEndTime() != null)
+            }
+            if (totalStats.getDestinationWriteEndTime() != null) {
               metadata.put("destination_write_end_time", totalStats.getDestinationWriteEndTime());
+            }
 
             if (normalizationSummary != null) {
-              if (normalizationSummary.getStartTime() != null)
+              if (normalizationSummary.getStartTime() != null) {
                 metadata.put("normalization_start_time", normalizationSummary.getStartTime());
-              if (normalizationSummary.getEndTime() != null)
+
+              }
+              if (normalizationSummary.getEndTime() != null) {
                 metadata.put("normalization_end_time", normalizationSummary.getEndTime());
+              }
             }
           }
         }
@@ -190,7 +239,13 @@ public class TrackingMetadata {
         .toList());
   }
 
-  private static JsonNode failureReasonAsJson(final FailureReason failureReason) {
+  /**
+   * Map a FailureReason to a string-to-object map, so it can be attached to telemetry calls.
+   *
+   * @param failureReason failure reason
+   * @return failure reason as a string-to-object map.
+   */
+  public static JsonNode failureReasonAsJson(final FailureReason failureReason) {
     // we want the json to always include failureOrigin and failureType, even when they are null
     final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", failureReason.getFailureOrigin());

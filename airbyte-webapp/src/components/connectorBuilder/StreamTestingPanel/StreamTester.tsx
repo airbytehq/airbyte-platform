@@ -62,13 +62,15 @@ export const StreamTester: React.FC<{
       : unknownErrorMessage
     : undefined;
 
+  const logContainsError = streamReadData?.logs.some((log) => log.level === "ERROR" || log.level === "FATAL");
+
   useEffect(() => {
-    if (isError) {
+    if (isError || logContainsError) {
       setLogsFlex(1);
     } else {
       setLogsFlex(0);
     }
-  }, [isError]);
+  }, [isError, logContainsError]);
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,

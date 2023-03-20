@@ -153,11 +153,11 @@ describe("BulkEditServiceProvider", () => {
   it("onChangeOption should update options accordingly", () => {
     const wrapper = provider(MOCK_NODES, mockUpdate);
     const { result } = renderHook(() => useBulkEditService(), { wrapper });
-    expect(result.current.options).toEqual({
-      selected: false,
-    });
+    expect(result.current.options).toEqual({});
+
     act(() => {
       result.current.onChangeOption({
+        selected: false,
         syncMode: SyncMode.full_refresh,
         aliasName: "test_1",
         primaryKey: [["test_pk"]],
@@ -174,7 +174,7 @@ describe("BulkEditServiceProvider", () => {
     const wrapper = provider(MOCK_NODES, mockUpdate);
     const { result } = renderHook(() => useBulkEditService(), { wrapper });
     act(() => {
-      result.current.onChangeOption({ syncMode: SyncMode.incremental });
+      result.current.onChangeOption({ syncMode: SyncMode.incremental, selected: false });
       result.current.toggleNode("1");
       result.current.toggleNode("2");
     });
@@ -201,14 +201,14 @@ describe("BulkEditServiceProvider", () => {
         },
       },
     ]);
-    expect(result.current.options).toEqual({ selected: false });
+    expect(result.current.options).toEqual({});
     expect(result.current.selectedBatchNodes).toEqual([]);
   });
   it("onCancel should clear useBulkEditService state to the default values", () => {
     const wrapper = provider(MOCK_NODES, mockUpdate);
     const { result } = renderHook(() => useBulkEditService(), { wrapper });
     act(() => {
-      result.current.onChangeOption({ syncMode: SyncMode.incremental });
+      result.current.onChangeOption({ syncMode: SyncMode.incremental, selected: false });
       result.current.toggleNode("1");
       result.current.toggleNode("2");
     });
@@ -219,7 +219,7 @@ describe("BulkEditServiceProvider", () => {
     act(() => {
       result.current.onCancel();
     });
-    expect(result.current.options).toEqual({ selected: false });
+    expect(result.current.options).toEqual({});
     expect(result.current.selectedBatchNodes).toEqual([]);
   });
 });

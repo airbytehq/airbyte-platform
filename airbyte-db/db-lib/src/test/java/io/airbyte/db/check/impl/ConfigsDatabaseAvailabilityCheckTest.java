@@ -28,11 +28,10 @@ class ConfigsDatabaseAvailabilityCheckTest extends CommonDatabaseCheckTest {
 
   @Test
   void checkDatabaseAvailabilityTimeout() {
-    try (final DSLContext dslContext = mock(DSLContext.class)) {
-      when(dslContext.fetchExists(any(Select.class))).thenThrow(new DataAccessException("test"));
-      final var check = new ConfigsDatabaseAvailabilityCheck(dslContext, TIMEOUT_MS);
-      Assertions.assertThrows(DatabaseCheckException.class, () -> check.check());
-    }
+    final DSLContext dslContext = mock(DSLContext.class);
+    when(dslContext.fetchExists(any(Select.class))).thenThrow(new DataAccessException("test"));
+    final var check = new ConfigsDatabaseAvailabilityCheck(dslContext, TIMEOUT_MS);
+    Assertions.assertThrows(DatabaseCheckException.class, () -> check.check());
   }
 
   @Test

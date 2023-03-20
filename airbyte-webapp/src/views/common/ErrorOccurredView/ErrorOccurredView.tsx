@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 
+import octavia from "./biting-nails.png";
 import styles from "./ErrorOccurredView.module.scss";
 
 interface ErrorOccurredViewProps {
@@ -25,7 +26,7 @@ export const ErrorOccurredView: React.FC<ErrorOccurredViewProps> = ({
   return (
     <div className={styles.errorOccurredView} data-testid="errorView">
       <div className={styles.content}>
-        <img src="/images/octavia/biting-nails.png" alt="" className={styles.octavia} />
+        <img src={octavia} alt="" className={styles.octavia} />
         <Heading as="h2" size="lg" centered>
           <FormattedMessage id="errorView.title" />
         </Heading>

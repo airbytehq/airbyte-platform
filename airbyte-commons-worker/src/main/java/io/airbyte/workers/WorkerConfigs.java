@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 
+/**
+ * Configuration object for a worker.
+ */
 @AllArgsConstructor
 public class WorkerConfigs {
 
@@ -150,6 +153,12 @@ public class WorkerConfigs {
         configs.getJobDefaultEnvMap());
   }
 
+  /**
+   * Build WorkerConfigs from Configs.
+   *
+   * @param configs application configs
+   * @return worker configs
+   */
   public static WorkerConfigs buildReplicationWorkerConfigs(final Configs configs) {
     return new WorkerConfigs(
         configs.getWorkerEnvironment(),

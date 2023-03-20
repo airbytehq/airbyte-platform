@@ -40,7 +40,7 @@ jobs:
     name: "Detect Modified Files"
     # The filtering action does not deal with well scheduled events so skip to avoid errors.
     # See https://github.com/dorny/paths-filter/issues/100 for more info.
-    # This is okay this workflow is only scheduled on master, where we want to build everything
+    # This is okay this workflow is only scheduled on main, where we want to build everything
     # so filtering is not required. Use always() in each start block to force the start task.
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -98,9 +98,9 @@ jobs:
     name: "Frontend: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
     if: |
-      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/master'
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -162,19 +162,20 @@ jobs:
           org.gradle.workers.max=8
           org.gradle.vfs.watch=false
           EOF
-      # TODO: Once we pull these from the metadata service, remove this step
+      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
+      #       since docs are not pulled when running gradle locally.
       - name: Copy docs from connectors repository
         run: |
-          dir=$PWD
-          cd /tmp
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte 
-          cp -R airbyte/docs $dir/docs
-          ls -lah $dir/docs
+          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
+          mkdir -p ./docs
+          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
+          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
+          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
 
       - name: Build :airbyte-webapp
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew --no-daemon :airbyte-webapp:build --scan
+          command: ./gradlew --no-daemon :airbyte-webapp:build --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -227,9 +228,9 @@ jobs:
     name: "Frontend E2E Tests: Start EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on master.
     if: |
-      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/master'
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.build == 'true' || github.ref == 'refs/heads/main'
       || (always() && needs.changes.outputs.backend == 'true')
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -290,17 +291,23 @@ jobs:
           org.gradle.vfs.watch=false
           EOF
 
+      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
+      #       since docs are not pulled when running gradle locally.
+      - name: Copy docs from connectors repository
+        run: |
+          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
+          mkdir -p ./docs
+          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
+          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
+          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
+
       - name: Build Platform Docker Images
-        run: SUB_BUILD=PLATFORM ./gradlew --no-daemon assemble --scan
+        run: ./gradlew --no-daemon assemble --scan
 
       - name: Run End-to-End Frontend Tests
         env:
           CYPRESS_WEBAPP_KEY: ${{ secrets.CYPRESS_WEBAPP_KEY }}
-        uses: Wandalen/wretry.action@master
-        with:
-          command: ./tools/bin/e2e_test.sh
-          attempt_limit: 3
-          attempt_delay: 5000 # in ms
+        run: ./tools/bin/e2e_test.sh
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-frontend-e2e-runner:
@@ -343,8 +350,8 @@ jobs:
     name: "Platform: Start Build EC2 Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -411,7 +418,7 @@ jobs:
       - name: Format
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew format --scan --info --stacktrace
+          command: ./gradlew format --scan --info --stacktrace
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -421,7 +428,7 @@ jobs:
       - name: Build
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew build javadoc --scan
+          command: ./gradlew build javadoc --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -465,13 +472,13 @@ jobs:
       - name: Test if Seed spec is updated
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew format && git --no-pager diff && test -z "$(git --no-pager diff)"
+          command: ./gradlew format && git --no-pager diff && test -z "$(git --no-pager diff)"
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
       # todo (cgardens) - scope by platform.
       - name: Check documentation
-        if: success() && github.ref == 'refs/heads/master'
+        if: success() && github.ref == 'refs/heads/main'
         run: ./tools/site/link_checker.sh check_docs
 
       #       This is only required on the usual github runner. The usual runner does not contain enough disk space for our use.
@@ -488,7 +495,7 @@ jobs:
       - name: Automatic Migration Acceptance Test
         uses: Wandalen/wretry.action@master
         with:
-          command: SUB_BUILD=PLATFORM ./gradlew :airbyte-tests:automaticMigrationAcceptanceTest --scan -i
+          command: ./gradlew :airbyte-tests:automaticMigrationAcceptanceTest --scan -i
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -536,7 +543,7 @@ jobs:
           # Specify top-level and second-level modules. Note there cannot be a space between the comma.
           path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
-          fail-on-error: 'false'
+          fail-on-error: "false"
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -588,8 +595,8 @@ jobs:
     name: "Platform: Start Helm Acceptance Test Runner"
     needs:
       - changes
-    # Because scheduled builds on master require us to skip the changes job. Use always() to force this to run on master.
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/master')
+    # Because scheduled builds on main require us to skip the changes job. Use always() to force this to run on main.
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.build == 'true' || (always() && github.ref == 'refs/heads/main')
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
@@ -617,7 +624,7 @@ jobs:
   helm-acceptance-test:
     name: "Platform: Acceptance Tests (Helm)"
     # In case of self-hosted EC2 errors, removed the `needs` line and switch back to running on ubuntu-latest.
-    needs: [ start-helm-acceptance-test-runner ] # required to start the main job when the runner is ready
+    needs: [start-helm-acceptance-test-runner] # required to start the main job when the runner is ready
     runs-on: ${{ needs.start-helm-acceptance-test-runner.outputs.label }} # run the job on the newly created runner
     # this is the label of the runner
     timeout-minutes: 90
@@ -725,7 +732,7 @@ jobs:
       - name: Build Platform Docker Images
         uses: Wandalen/wretry.action@master
         with:
-          command: pwd && SUB_BUILD=PLATFORM ./gradlew assemble -x test --scan
+          command: pwd && ./gradlew assemble -x test --scan
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
@@ -753,7 +760,7 @@ jobs:
           name: Platform Helm E2E Test Report
           path: "./*/build/test-results/*/*.xml"
           reporter: java-junit
-          fail-on-error: 'false'
+          fail-on-error: "false"
 
       - uses: actions/upload-artifact@v2
         if: failure()
@@ -818,7 +825,7 @@ jobs:
       - platform-build
       # Todo: Kyryl turn this on.
       # - helm-acceptance-test
-    if: ${{ failure() && github.ref == 'refs/heads/master' }}
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout Airbyte
         uses: actions/checkout@v3
@@ -836,7 +843,7 @@ jobs:
           args: >-
             {\"channel\":\"C03BEADRPNY\", \"blocks\":[
             {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS Master failed! :bangbang: \n\n\"}},
+            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS main failed! :bangbang: \n\n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"<@${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}> \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-shocked: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-shocked: \n\"}},
@@ -867,7 +874,7 @@ jobs:
           args: >-
             {\"channel\":\"C03BEADRPNY\", \"blocks\":[
             {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS Master Fixed! :white_check_mark: \n\n\"}},
+            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS Main Fixed! :white_check_mark: \n\n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
             {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n\"}},
             {\"type\":\"divider\"}]}

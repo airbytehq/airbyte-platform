@@ -6,6 +6,9 @@ import styled from "styled-components";
 
 import { Button } from "components/ui/Button";
 
+import { useGetConnectorsOutOfDate, useUpdateAllConnectors } from "hooks/services/useConnector";
+
+import { useUpdatingState } from "./ConnectorsViewContext";
 import styles from "./UpgradeAllButton.module.scss";
 
 const TryArrow = styled(FontAwesomeIcon)`
@@ -31,17 +34,26 @@ const ErrorBlock = styled.div`
 `;
 
 interface UpdateAllButtonProps {
-  onUpdate: () => void;
-  isLoading: boolean;
-  hasError: boolean;
-  hasSuccess: boolean;
-  disabled: boolean;
+  connectorType: "sources" | "destinations";
 }
 
-const UpgradeAllButton: React.FC<UpdateAllButtonProps> = ({ onUpdate, isLoading, hasError, hasSuccess, disabled }) => {
+const UpgradeAllButton: React.FC<UpdateAllButtonProps> = ({ connectorType }) => {
+  const { setUpdatingAll } = useUpdatingState();
+  const { hasNewSourceVersion, hasNewDestinationVersion } = useGetConnectorsOutOfDate();
+  const hasNewVersion = connectorType === "sources" ? hasNewSourceVersion : hasNewDestinationVersion;
+
+  const { mutateAsync, isError, isLoading, isSuccess } = useUpdateAllConnectors(connectorType);
+
+  const handleUpdateAllConnectors = async () => {
+    // Since we want to display the loading state on each connector row that is being updated, we "share" the react-query loading state via context here
+    setUpdatingAll(true);
+    await mutateAsync();
+    setUpdatingAll(false);
+  };
+
   return (
     <UpdateButtonContent>
-      {hasError && (
+      {isError && (
         <ErrorBlock>
           <FormattedMessage id="form.someError" />
         </ErrorBlock>
@@ -49,12 +61,12 @@ const UpgradeAllButton: React.FC<UpdateAllButtonProps> = ({ onUpdate, isLoading,
       <Button
         size="xs"
         className={styles.updateButton}
-        onClick={onUpdate}
+        onClick={handleUpdateAllConnectors}
         isLoading={isLoading}
-        disabled={disabled}
-        icon={hasSuccess ? undefined : <TryArrow icon={faRedoAlt} />}
+        disabled={!hasNewVersion}
+        icon={isSuccess ? undefined : <TryArrow icon={faRedoAlt} />}
       >
-        {hasSuccess ? <FormattedMessage id="admin.upgraded" /> : <FormattedMessage id="admin.upgradeAll" />}
+        {isSuccess ? <FormattedMessage id="admin.upgraded" /> : <FormattedMessage id="admin.upgradeAll" />}
       </Button>
     </UpdateButtonContent>
   );

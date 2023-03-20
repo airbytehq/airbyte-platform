@@ -17,6 +17,7 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.DefaultJobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -24,7 +25,9 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.util.StringUtils;
@@ -33,6 +36,8 @@ import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Factory
 @Slf4j
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
 public class ApplicationBeanFactory {
 
   @Singleton
@@ -145,11 +150,24 @@ public class ApplicationBeanFactory {
 
   @Singleton
   public MetricClient metricClient() {
+    // Initialize the metric client
+    MetricClientFactory.initialize(MetricEmittingApps.WORKER);
     return MetricClientFactory.getMetricClient();
   }
 
   private <T> T convertToEnum(final String value, final Function<String, T> creatorFunction, final T defaultValue) {
     return StringUtils.isNotEmpty(value) ? creatorFunction.apply(value.toUpperCase(Locale.ROOT)) : defaultValue;
+  }
+
+  @Prototype
+  @Named("syncPersistenceExecutorService")
+  public ScheduledExecutorService syncPersistenceExecutorService() {
+    return Executors.newSingleThreadScheduledExecutor();
+  }
+
+  @Singleton
+  public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
+    return new StateAggregatorFactory(featureFlags);
   }
 
 }

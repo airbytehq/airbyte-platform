@@ -4,6 +4,16 @@ info:
     Airbyte Configuration API
     [https://airbyte.io](https://airbyte.io).
 
+    The Configuration API is an internal Airbyte API that is designed for communications between different Airbyte components. 
+    * It's main purpose is to enable the Airbyte Engineering team to configure the internal state of [Airbyte Cloud](https://airbyte.com/airbyte-cloud)
+    * It is also sometimes used by OSS users to configure their own Self-Hosted Airbyte deployment (internal state, etc)
+
+    WARNING 
+    * Airbyte does NOT have active commitments to support this API long-term. 
+    * OSS users can utilize the Configuration API, but at their own risk.
+    * This API is utilized internally by the Airbyte Engineering team and may be modified in the future if the need arises.
+    * Modifications by the Airbyte Engineering team could create breaking changes and OSS users would need to update their code to catch up to any backwards incompatible changes in the API.
+
     This API is a collection of HTTP RPC-style methods. While it is not a REST API, those familiar with REST should find the conventions of this API recognizable.
 
     Here are some conventions that this API follows:
@@ -508,6 +518,133 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/declarative_source_definitions/create_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Create a declarative manifest to be used by the specified source definition
+      operationId: createDeclarativeSourceDefinitionManifest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeclarativeSourceDefinitionCreateManifestRequestBody"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+        "400":
+          description: Definition is not declarative source
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: Version already exists for definition id
+  /v1/connector_builder_projects/create:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Create new connector builder project
+      operationId: createConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectWithWorkspaceId"
+        required: true
+      responses:
+        "201":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+  /v1/connector_builder_projects/publish:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Publish a connector to the workspace
+      operationId: publishConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderPublishRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionIdBody"
+  /v1/connector_builder_projects/update:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Update connector builder project
+      operationId: updateConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExistingConnectorBuilderProjectWithWorkspaceId"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+  /v1/connector_builder_projects/delete:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Deletes connector builder project
+      operationId: deleteConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+  /v1/connector_builder_projects/list:
+    post:
+      tags:
+        - connector_builder_project
+      summary: List connector builder projects for workspace
+      operationId: listConnectorBuilderProjects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectReadList"
+  /v1/connector_builder_projects/get_with_manifest:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get a connector builder project with draft manifest
+      operationId: getConnectorBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectIdWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectRead"
   /v1/sources/create:
     post:
       tags:
@@ -1450,6 +1587,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/reset/stream:
+    post:
+      tags:
+        - connection
+      summary: Reset the data for a specific stream in the connection. Deletes data generated by the stream in the destination. Resets any cursors back to initial state.
+      operationId: resetConnectionStream
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionStreamRequestBody"
         required: true
       responses:
         "200":
@@ -2502,6 +2662,138 @@ components:
         - auto
         - us
         - eu
+    # BuilderProject
+    ConnectorBuilderProjectId:
+      type: string
+      format: uuid
+    DeclarativeManifest:
+      description: Low code CDK manifest JSON object
+      type: object
+    DeclarativeManifestRead:
+      type: object
+      properties:
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        isDraft:
+          type: boolean
+    ConnectorBuilderProjectDetails:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        draftManifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    ConnectorBuilderProjectDetailsRead:
+      type: object
+      required:
+        - name
+        - builderProjectId
+        - hasDraft
+      properties:
+        name:
+          type: string
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        activeDeclarativeManifestVersion:
+          type: integer
+          format: int64
+        hasDraft:
+          type: boolean
+    ConnectorBuilderProjectIdWithWorkspaceId:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+    ExistingConnectorBuilderProjectWithWorkspaceId:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+        - builderProject
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    ConnectorBuilderProjectWithWorkspaceId:
+      type: object
+      required:
+        - workspaceId
+        - builderProject
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetails"
+    ConnectorBuilderProjectRead:
+      type: object
+      required:
+        - builderProject
+      properties:
+        builderProject:
+          $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
+        declarativeManifest:
+          $ref: "#/components/schemas/DeclarativeManifestRead"
+    ConnectorBuilderProjectReadList:
+      type: object
+      required:
+        - projects
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectorBuilderProjectDetailsRead"
+    ConnectorBuilderPublishRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - builderProjectId
+        - name
+        - initialDeclarativeManifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        name:
+          type: string
+        initialDeclarativeManifest:
+          $ref: "#/components/schemas/DeclarativeSourceManifest"
+    DeclarativeSourceManifest:
+      type: object
+      required:
+        - description
+        - manifest
+        - spec
+        - version
+      properties:
+        description:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        spec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        version:
+          type: integer
+          format: int64
+    SourceDefinitionIdBody:
+      type: object
+      required:
+        - sourceDefinitionId
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     # SourceDefinition
     SourceDefinitionId:
       type: string
@@ -2586,6 +2878,10 @@ components:
             - custom
         resourceRequirements:
           $ref: "#/components/schemas/ActorDefinitionResourceRequirements"
+        maxSecondsBetweenMessages:
+          description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
+          type: integer
+          format: int64
     SourceDefinitionReadList:
       type: object
       required:
@@ -2615,6 +2911,22 @@ components:
           $ref: "#/components/schemas/SourceDefinitionId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    DeclarativeSourceDefinitionCreateManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - setAsActiveManifest
+        - declarativeManifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        setAsActiveManifest:
+          type: boolean
+        declarativeManifest:
+          $ref: "#/components/schemas/DeclarativeSourceManifest"
     PrivateSourceDefinitionRead:
       type: object
       required:
@@ -2776,6 +3088,9 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         name:
+          type: string
+        secretId:
+          example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
     SourceDiscoverSchemaRequestBody:
       type: object
@@ -3042,6 +3357,7 @@ components:
     # DESTINATION DEFINITION SPECIFICATION
     DestinationDefinitionSpecification:
       description: The specification for what values are required to configure the destinationDefinition.
+      type: object
       example: { user: { type: string } }
     DestinationDefinitionSpecificationRead:
       type: object
@@ -3225,6 +3541,28 @@ components:
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    ConnectionStream:
+      type: object
+      required:
+        - streamName
+        - streamNamespace
+      properties:
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+    ConnectionStreamRequestBody:
+      type: object
+      required:
+        - connectionId
+        - streams
+      properties:
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionStream"
     DbMigrationRequestBody:
       type: object
       required:
@@ -4190,6 +4528,7 @@ components:
         - system_error
         - manual_cancellation
         - refresh_schema
+        - heartbeat_timeout
     AttemptStatus:
       type: string
       enum:
@@ -4297,6 +4636,8 @@ components:
           default: false
         logs:
           $ref: "#/components/schemas/LogRead"
+        failureReason:
+          $ref: "#/components/schemas/FailureReason"
     Pagination:
       type: object
       properties:
@@ -4316,7 +4657,6 @@ components:
     CheckConnectionRead:
       type: object
       required:
-        - status
         - jobInfo
       properties:
         status:

@@ -13,6 +13,7 @@
   text-align: center;
   box-shadow: variables.$box-shadow-sidebar;
   display: flex;
+  gap: variables.$spacing-md;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;

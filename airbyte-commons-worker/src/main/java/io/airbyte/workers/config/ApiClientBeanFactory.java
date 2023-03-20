@@ -14,6 +14,7 @@ import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
@@ -43,6 +44,7 @@ public class ApiClientBeanFactory {
 
   private static final int JWT_TTL_MINUTES = 5;
 
+  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("apiClient")
   public ApiClient apiClient(
@@ -51,6 +53,7 @@ public class ApiClientBeanFactory {
                              @Named("internalApiAuthToken") final BeanProvider<String> internalApiAuthToken,
                              @Named("internalApiScheme") final String internalApiScheme) {
     return new ApiClient()
+        .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setScheme(internalApiScheme)
         .setHost(parseHostName(airbyteApiHost))
         .setPort(parsePort(airbyteApiHost))
@@ -109,10 +112,16 @@ public class ApiClientBeanFactory {
   }
 
   @Singleton
+  public SourceDefinitionApi sourceDefinitionApi(final ApiClient apiClient) {
+    return new SourceDefinitionApi(apiClient);
+  }
+
+  @Singleton
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
   }
 
+  @SuppressWarnings("MissingJavadocMethod")
   @Singleton
   @Named("internalApiScheme")
   public String internalApiScheme(@Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode, final Environment environment) {
@@ -134,6 +143,7 @@ public class ApiClientBeanFactory {
    * <p>
    * Otherwise, use the AIRBYTE_API_AUTH_HEADER_VALUE from EnvConfigs.
    */
+  @SuppressWarnings("LineLength")
   @Prototype
   @Named("internalApiAuthToken")
   public String internalApiAuthToken(

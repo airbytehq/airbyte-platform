@@ -11,6 +11,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import java.io.IOException;
 
+/**
+ * Deserializer for {@link Version}.
+ */
 public class VersionDeserializer extends StdDeserializer<Version> {
 
   public VersionDeserializer() {

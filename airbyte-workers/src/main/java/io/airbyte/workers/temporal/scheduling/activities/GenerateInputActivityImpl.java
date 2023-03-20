@@ -41,7 +41,14 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -53,6 +60,7 @@ import io.airbyte.workers.utils.ConfigReplacer;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,6 +68,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Generate input for a workflow.
+ */
 @Singleton
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class GenerateInputActivityImpl implements GenerateInputActivity {
@@ -69,21 +80,29 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
   private final FeatureFlags featureFlags;
+  private final FeatureFlagClient featureFlagClient;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+
+  private final ConfigInjector configInjector;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(GenerateInputActivity.class);
 
+  @SuppressWarnings("ParameterName")
   public GenerateInputActivityImpl(final JobPersistence jobPersistence,
                                    final ConfigRepository configRepository,
                                    final StateApi stateApi,
                                    final AttemptApi attemptApi,
                                    final FeatureFlags featureFlags,
-                                   final OAuthConfigSupplier oAuthConfigSupplier) {
+                                   final FeatureFlagClient featureFlagClient,
+                                   final OAuthConfigSupplier oAuthConfigSupplier,
+                                   final ConfigInjector configInjector) {
     this.jobPersistence = jobPersistence;
     this.configRepository = configRepository;
     this.stateApi = stateApi;
     this.attemptApi = attemptApi;
+    this.configInjector = configInjector;
     this.featureFlags = featureFlags;
+    this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
   }
 
@@ -92,8 +111,9 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         () -> stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId)),
         "get state");
 
-    if (state.getStateType() == ConnectionStateType.NOT_SET)
+    if (state.getStateType() == ConnectionStateType.NOT_SET) {
       return Optional.empty();
+    }
 
     final StateWrapper internalState = StateConverter.clientToInternal(state);
     return Optional.of(StateMessageHelper.getState(internalState));
@@ -132,17 +152,19 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
   }
 
   private JsonNode getSourceConfiguration(final SourceConnection source) throws IOException {
-    return oAuthConfigSupplier.injectSourceOAuthParameters(
+    return configInjector.injectConfig(oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
+        source.getSourceId(),
         source.getWorkspaceId(),
-        source.getConfiguration());
+        source.getConfiguration()), source.getSourceDefinitionId());
   }
 
   private JsonNode getDestinationConfiguration(final DestinationConnection destination) throws IOException {
-    return oAuthConfigSupplier.injectDestinationOAuthParameters(
+    return configInjector.injectConfig(oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
+        destination.getDestinationId(),
         destination.getWorkspaceId(),
-        destination.getConfiguration());
+        destination.getConfiguration()), destination.getDestinationDefinitionId());
   }
 
   private IntegrationLauncherConfig getDestinationIntegrationLauncherConfig(final long jobId,
@@ -153,8 +175,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
     final String destinationNormalizationDockerImage = destinationDefinition.getNormalizationConfig() != null
-        ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":" +
-            destinationDefinition.getNormalizationConfig().getNormalizationTag()
+        ? destinationDefinition.getNormalizationConfig().getNormalizationRepository() + ":"
+            + destinationDefinition.getNormalizationConfig().getNormalizationTag()
         : null;
     final String normalizationIntegrationType =
         destinationDefinition.getNormalizationConfig() != null ? destinationDefinition.getNormalizationConfig().getNormalizationIntegrationType()
@@ -286,8 +308,12 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
 
       if (ConfigType.SYNC.equals(jobConfigType)) {
         final SourceConnection source = configRepository.getSourceConnection(standardSync.getSourceId());
-        final JsonNode sourceConfiguration = getSourceConfiguration(source);
-        attemptSyncConfig.setSourceConfiguration(sourceConfiguration);
+        final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
+            source.getSourceDefinitionId(),
+            source.getSourceId(),
+            source.getWorkspaceId(),
+            source.getConfiguration());
+        attemptSyncConfig.setSourceConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()));
       } else if (ConfigType.RESET_CONNECTION.equals(jobConfigType)) {
         final JobResetConnectionConfig resetConnection = job.getConfig().getResetConnection();
         final ResetSourceConfiguration resetSourceConfiguration = resetConnection.getResetSourceConfiguration();
@@ -298,8 +324,12 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
       final DestinationConnection destination = configRepository.getDestinationConnection(standardSync.getDestinationId());
-      final JsonNode destinationConfiguration = getDestinationConfiguration(destination);
-      attemptSyncConfig.setDestinationConfiguration(destinationConfiguration);
+      final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
+          destination.getDestinationDefinitionId(),
+          destination.getDestinationId(),
+          destination.getWorkspaceId(),
+          destination.getConfiguration());
+      attemptSyncConfig.setDestinationConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()));
 
       final StandardSourceDefinition sourceDefinition =
           configRepository.getSourceDefinitionFromSource(standardSync.getSourceId());
@@ -322,6 +352,12 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           destinationDefinition,
           attemptSyncConfig.getDestinationConfiguration());
 
+      final List<Context> featureFlagContext = new ArrayList<>();
+      featureFlagContext.add(new Workspace(config.getWorkspaceId()));
+      if (standardSync.getConnectionId() != null) {
+        featureFlagContext.add(new Connection(standardSync.getConnectionId()));
+      }
+
       final StandardSyncInput syncInput = new StandardSyncInput()
           .withNamespaceDefinition(config.getNamespaceDefinition())
           .withNamespaceFormat(config.getNamespaceFormat())
@@ -338,7 +374,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withSourceResourceRequirements(config.getSourceResourceRequirements())
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
           .withConnectionId(standardSync.getConnectionId())
-          .withWorkspaceId(config.getWorkspaceId());
+          .withWorkspaceId(config.getWorkspaceId())
+          .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Multi(featureFlagContext)));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
 

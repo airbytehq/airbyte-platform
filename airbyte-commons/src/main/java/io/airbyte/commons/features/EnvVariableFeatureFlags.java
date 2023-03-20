@@ -4,14 +4,13 @@
 
 package io.airbyte.commons.features;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Feature Flags pulled from Environment Variables. This is the old way of doing things.
+ */
 public class EnvVariableFeatureFlags implements FeatureFlags {
 
   private static final Logger log = LoggerFactory.getLogger(EnvVariableFeatureFlags.class);
@@ -25,9 +24,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   public static final String APPLY_FIELD_SELECTION = "APPLY_FIELD_SELECTION";
 
   public static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
-
-  private static final String ROUTE_TO_WORKSPACE_GEOGRAPHY_ENABLED = "ROUTE_TO_WORKSPACE_GEOGRAPHY_ENABLED";
-  private static final String ROUTE_TASK_QUEUE_FOR_WORKSPACE_ALLOWLIST = "ROUTE_TASK_QUEUE_FOR_WORKSPACE_ALLOWLIST";
 
   public static final String STRICT_COMPARISON_NORMALIZATION_WORKSPACES = "STRICT_COMPARISON_NORMALIZATION_WORKSPACES";
   public static final String STRICT_COMPARISON_NORMALIZATION_TAG = "STRICT_COMPARISON_NORMALIZATION_TAG";
@@ -75,17 +71,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   }
 
   @Override
-  public boolean routeTaskQueueForWorkspaceEnabled() {
-    return getEnvOrDefault(ROUTE_TO_WORKSPACE_GEOGRAPHY_ENABLED, false, Boolean::parseBoolean);
-  }
-
-  @Override
-  public Set<String> routeTaskQueueForWorkspaceAllowList() {
-    return getEnvOrDefault(ROUTE_TASK_QUEUE_FOR_WORKSPACE_ALLOWLIST, new HashSet<>(),
-        (arg) -> Arrays.stream(arg.split(",")).collect(Collectors.toSet()));
-  }
-
-  @Override
   public String strictComparisonNormalizationWorkspaces() {
     return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_WORKSPACES, "", (arg) -> arg);
   }
@@ -95,6 +80,15 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
     return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison2", (arg) -> arg);
   }
 
+  /**
+   * Get env variable.
+   *
+   * @param key name of env variable
+   * @param defaultValue default value if env variable is not present
+   * @param parser function to parse the env variable
+   * @param <T> type of the env variable
+   * @return the env variable
+   */
   // TODO: refactor in order to use the same method than the ones in EnvConfigs.java
   public <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser) {
     final String value = System.getenv(key);

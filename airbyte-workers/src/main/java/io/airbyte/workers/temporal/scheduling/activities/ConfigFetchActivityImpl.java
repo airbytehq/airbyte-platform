@@ -9,6 +9,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
@@ -47,13 +48,16 @@ import org.quartz.CronExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * ConfigFetchActivityImpl.
+ */
 @Slf4j
 @Singleton
 public class ConfigFetchActivityImpl implements ConfigFetchActivity {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFetchActivityImpl.class);
-  private final static long MS_PER_SECOND = 1000L;
-  private final static long MIN_CRON_INTERVAL_SECONDS = 60;
+  private static final long MS_PER_SECOND = 1000L;
+  private static final long MIN_CRON_INTERVAL_SECONDS = 60;
   private static final Set<UUID> SCHEDULING_NOISE_WORKSPACE_IDS = Set.of(
       // Testing
       UUID.fromString("0ace5e1f-4787-43df-8919-456f5f4d03d1"),
@@ -98,12 +102,13 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   }
 
   /**
-   * @param connectionRead
-   * @param connectionId
-   * @return
-   * @throws IOException
+   * Get time to wait from new schedule. This method consumes the `scheduleType` and `scheduleData`
+   * fields.
    *
-   *         This method consumes the `scheduleType` and `scheduleData` fields.
+   * @param connectionRead connection read
+   * @param connectionId connection id
+   * @return time to wait
+   * @throws IOException exception while interacting with db
    */
   private ScheduleRetrieverOutput getTimeToWaitFromScheduleType(final ConnectionRead connectionRead, final UUID connectionId)
       throws IOException, ApiException {
@@ -125,9 +130,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
       final Duration timeToWait = Duration.ofSeconds(
           Math.max(0, nextRunStart - currentSecondsSupplier.get()));
       return new ScheduleRetrieverOutput(timeToWait);
-    }
-
-    else { // connectionRead.getScheduleType() == ConnectionScheduleType.CRON
+    } else { // connectionRead.getScheduleType() == ConnectionScheduleType.CRON
       final ConnectionScheduleDataCron scheduleCron = connectionRead.getScheduleData().getCron();
       final TimeZone timeZone = DateTimeZone.forID(scheduleCron.getCronTimeZone()).toTimeZone();
       try {
@@ -181,12 +184,12 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   }
 
   /**
-   * @param connectionRead
-   * @param connectionId
-   * @return
-   * @throws IOException
+   * Get wait time from legacy schedule. This method consumes the `schedule` field.
    *
-   *         This method consumes the `schedule` field.
+   * @param connectionRead connection read
+   * @param connectionId connection id
+   * @return time to wait
+   * @throws IOException exception when interacting with the db
    */
   private ScheduleRetrieverOutput getTimeToWaitFromLegacy(final ConnectionRead connectionRead, final UUID connectionId)
       throws IOException, ApiException {
@@ -225,9 +228,11 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = connectionApi.getConnection(requestBody);
+      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
+          () -> connectionApi.getConnection(requestBody),
+          "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getSourceId());
-    } catch (ApiException e) {
+    } catch (Exception e) {
       log.info("Encountered an error fetching the connection's Source ID: ", e);
       return Optional.empty();
     }
@@ -238,9 +243,11 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = connectionApi.getConnection(requestBody);
+      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
+          () -> connectionApi.getConnection(requestBody),
+          "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getStatus());
-    } catch (ApiException e) {
+    } catch (Exception e) {
       log.info("Encountered an error fetching the connection's status: ", e);
       return Optional.empty();
     }
@@ -251,9 +258,11 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     try {
       final io.airbyte.api.client.model.generated.ConnectionIdRequestBody requestBody =
           new io.airbyte.api.client.model.generated.ConnectionIdRequestBody().connectionId(connectionId);
-      final ConnectionRead connectionRead = connectionApi.getConnection(requestBody);
+      final ConnectionRead connectionRead = AirbyteApiClient.retryWithJitter(
+          () -> connectionApi.getConnection(requestBody),
+          "Get a connection by connection Id");
       return Optional.ofNullable(connectionRead.getBreakingChange());
-    } catch (ApiException e) {
+    } catch (Exception e) {
       log.info("Encountered an error fetching the connection's breaking change status: ", e);
       return Optional.empty();
     }

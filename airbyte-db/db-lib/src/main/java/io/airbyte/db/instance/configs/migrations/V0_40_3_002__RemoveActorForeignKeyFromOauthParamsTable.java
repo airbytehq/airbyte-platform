@@ -12,6 +12,9 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Remove actor foreign key from oauth params table migration.
+ */
 public class V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTable.class);

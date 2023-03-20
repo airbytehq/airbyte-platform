@@ -13,13 +13,14 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.StateHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/state")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 public class StateApiController implements StateApi {
@@ -32,7 +33,7 @@ public class StateApiController implements StateApi {
 
   @Post("/create_or_update")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionState createOrUpdateState(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) {
     return ApiHelper.execute(() -> stateHandler.createOrUpdateState(connectionStateCreateOrUpdate));
@@ -41,7 +42,7 @@ public class StateApiController implements StateApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionState getState(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> stateHandler.getState(connectionIdRequestBody));

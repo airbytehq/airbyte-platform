@@ -1,6 +1,5 @@
 import { faSyncAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import classNames from "classnames";
 import { Field, FieldProps } from "formik";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -9,7 +8,6 @@ import { useUnmount } from "react-use";
 import { ControlLabels } from "components";
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
@@ -23,6 +21,7 @@ import { ConnectionConfigurationFormPreview } from "./ConnectionConfigurationFor
 import styles from "./ConnectionFormFields.module.scss";
 import { DestinationStreamPrefixName } from "./DestinationStreamPrefixName";
 import { FormikConnectionFormValues } from "./formConfig";
+import { FormFieldLayout } from "./FormFieldLayout";
 import { NamespaceDefinitionField } from "./NamespaceDefinitionField";
 import { NamespaceDefinitionFieldNext } from "./NamespaceDefinitionFieldNext";
 import { NonBreakingChangesPreferenceField } from "./NonBreakingChangesPreferenceField";
@@ -44,10 +43,6 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
   const { formatMessage } = useIntl();
   const { clearFormChange } = useFormChangeTrackerService();
 
-  const readonlyClass = classNames({
-    [styles.readonly]: mode === "readonly",
-  });
-
   const refreshSchema = useRefreshSourceSchemaWithConfirmationOnDirty(dirty);
 
   useUnmount(() => {
@@ -64,7 +59,7 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
         <Section
           title={<FormattedMessage id="form.configuration" />}
           collapsible={isNewTableDesignEnabled && mode === "edit"}
-          collapsedInitially
+          collapsedInitially={isNewTableDesignEnabled}
           collapsedPreviewInfo={<ConnectionConfigurationFormPreview />}
           testId="configuration"
         >
@@ -81,62 +76,53 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ valu
         </Section>
         {!isNewTableDesignEnabled && (
           <Section title={<FormattedMessage id="connection.streams" />}>
-            <span className={readonlyClass}>
-              <Field name="namespaceDefinition" component={NamespaceDefinitionField} />
-            </span>
+            <Field name="namespaceDefinition" component={NamespaceDefinitionField} />
             {values.namespaceDefinition === NamespaceDefinitionType.customformat && (
               <Field name="namespaceFormat">
                 {({ field, meta }: FieldProps<string>) => (
-                  <FlexContainer alignItems="center">
-                    <div className={styles.leftFieldCol}>
-                      <ControlLabels
-                        className={styles.namespaceFormatLabel}
-                        nextLine
-                        error={!!meta.error}
-                        label={<FormattedMessage id="connectionForm.namespaceFormat.title" />}
-                        infoTooltipContent={<FormattedMessage id="connectionForm.namespaceFormat.subtitle" />}
-                      />
-                    </div>
-                    <div className={classNames(styles.rightFieldCol, readonlyClass)}>
-                      <Input
-                        {...field}
-                        error={!!meta.error}
-                        placeholder={formatMessage({
-                          id: "connectionForm.namespaceFormat.placeholder",
-                        })}
-                      />
-                    </div>
-                  </FlexContainer>
+                  <FormFieldLayout>
+                    <ControlLabels
+                      className={styles.namespaceFormatLabel}
+                      nextLine
+                      error={!!meta.error}
+                      label={<FormattedMessage id="connectionForm.namespaceFormat.title" />}
+                      infoTooltipContent={<FormattedMessage id="connectionForm.namespaceFormat.subtitle" />}
+                    />
+                    <Input
+                      {...field}
+                      error={!!meta.error}
+                      disabled={isSubmitting || mode === "readonly"}
+                      placeholder={formatMessage({
+                        id: "connectionForm.namespaceFormat.placeholder",
+                      })}
+                    />
+                  </FormFieldLayout>
                 )}
               </Field>
             )}
             <Field name="prefix">
               {({ field }: FieldProps<string>) => (
-                <FlexContainer alignItems="center">
-                  <div className={styles.leftFieldCol}>
-                    <ControlLabels
-                      nextLine
-                      optional
-                      label={formatMessage({
-                        id: "form.prefix",
-                      })}
-                      infoTooltipContent={formatMessage({
-                        id: "form.prefix.message",
-                      })}
-                    />
-                  </div>
-                  <div className={styles.rightFieldCol}>
-                    <Input
-                      {...field}
-                      type="text"
-                      placeholder={formatMessage({
-                        id: `form.prefix.placeholder`,
-                      })}
-                      data-testid="prefixInput"
-                      style={{ pointerEvents: mode === "readonly" ? "none" : "auto" }}
-                    />
-                  </div>
-                </FlexContainer>
+                <FormFieldLayout>
+                  <ControlLabels
+                    nextLine
+                    optional
+                    label={formatMessage({
+                      id: "form.prefix",
+                    })}
+                    infoTooltipContent={formatMessage({
+                      id: "form.prefix.message",
+                    })}
+                  />
+                  <Input
+                    {...field}
+                    type="text"
+                    disabled={isSubmitting || mode === "readonly"}
+                    placeholder={formatMessage({
+                      id: `form.prefix.placeholder`,
+                    })}
+                    data-testid="prefixInput"
+                  />
+                </FormFieldLayout>
               )}
             </Field>
           </Section>

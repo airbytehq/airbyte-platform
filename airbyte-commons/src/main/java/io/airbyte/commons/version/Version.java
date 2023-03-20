@@ -65,13 +65,17 @@ public class Version {
   }
 
   /**
-   * Compares two Version to check if they are equivalent.
+   * Compares two Version to check if they are equivalent. Only the major and minor part of the
+   * Version is taken into account.
    *
-   * Only the major and minor part of the Version is taken into account.
+   * @param another version to compare
+   * @return the value 0 if version == another; a value less than 0 if version < another; and a value
+   *         greater than 0 if version > another
    */
   public int compatibleVersionCompareTo(final Version another) {
-    if (isDev() || another.isDev())
+    if (isDev() || another.isDev()) {
       return 0;
+    }
     final int majorDiff = compareVersion(major, another.major);
     if (majorDiff != 0) {
       return majorDiff;
@@ -80,6 +84,9 @@ public class Version {
   }
 
   /**
+   * Test is a provided version is greater than this version.
+   *
+   * @param other version to compare
    * @return true if this is greater than other. otherwise false.
    */
   public boolean greaterThan(final Version other) {
@@ -87,14 +94,20 @@ public class Version {
   }
 
   /**
-   * @return true if this is greater than or equal toother. otherwise false.
+   * Test is a provided version is greater than or equal to this version.
+   *
+   * @param other version to compare
+   * @return true if this is greater than or equal to other. otherwise false.
    */
   public boolean greaterThanOrEqualTo(final Version other) {
     return patchVersionCompareTo(other) >= 0;
   }
 
   /**
-   * @return true if this is less than other. otherwise false.
+   * Test is a provided version is less than to this version.
+   *
+   * @param other version to compare
+   * @return true if this is greater than other. otherwise false.
    */
   public boolean lessThan(final Version other) {
     return patchVersionCompareTo(other) < 0;
@@ -102,6 +115,10 @@ public class Version {
 
   /**
    * Compares two Version to check if they are equivalent (including patch version).
+   *
+   * @param another version to compare
+   * @return the value 0 if version == another; a value less than 0 if version < another; and a value
+   *         greater than 0 if version > another
    */
   public int patchVersionCompareTo(final Version another) {
     if (isDev() || another.isDev()) {
@@ -120,6 +137,10 @@ public class Version {
 
   /**
    * Compares two Version to check if only the patch version was updated.
+   *
+   * @param another version to compare
+   * @return true if exactly the same version or if the same version except for the patch. otherwise,
+   *         false.
    */
   public boolean checkOnlyPatchVersionIsUpdatedComparedTo(final Version another) {
     if (isDev() || another.isDev()) {
@@ -136,6 +157,11 @@ public class Version {
     return compareVersion(patch, another.patch) > 0;
   }
 
+  /**
+   * Test if this version is dev.
+   *
+   * @return true if dev. otherwise, false.
+   */
   public boolean isDev() {
     return version.startsWith(DEV_VERSION_PREFIX);
   }
@@ -149,18 +175,26 @@ public class Version {
     return Integer.compare(Integer.parseInt(v1), Integer.parseInt(v2));
   }
 
+  /**
+   * Compares two Version to check if they are equivalent. Only the major and minor part of the
+   * Version is taken into account.
+   *
+   * @param v1 version to compare
+   * @param v2 version to compare
+   * @return true if compatible. otherwise, false.
+   */
   public static boolean isCompatible(final Version v1, final Version v2) {
     return v1.compatibleVersionCompareTo(v2) == 0;
   }
 
   @Override
   public String toString() {
-    return "Version{" +
-        "version='" + version + '\'' +
-        ", major='" + major + '\'' +
-        ", minor='" + minor + '\'' +
-        ", patch='" + patch + '\'' +
-        '}';
+    return "Version{"
+        + "version='" + version + '\''
+        + ", major='" + major + '\''
+        + ", minor='" + minor + '\''
+        + ", patch='" + patch + '\''
+        + '}';
   }
 
   @Override

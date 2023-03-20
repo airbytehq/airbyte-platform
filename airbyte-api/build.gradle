@@ -1,8 +1,8 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    id "org.openapi.generator" version "6.2.1"
     id "java-library"
+    alias(libs.plugins.openapi.generator)
 }
 
 def specFile = "$projectDir/src/main/openapi/config.yaml"
@@ -30,6 +30,7 @@ tasks.register('generateApiServer',  GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'DeclarativeManifest'               : 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false

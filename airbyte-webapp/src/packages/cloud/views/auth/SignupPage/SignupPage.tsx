@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
@@ -7,6 +7,7 @@ import { Heading } from "components/ui/Heading";
 
 import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
 import { useExperiment } from "hooks/services/Experiment";
+import { trackPageview } from "utils/fathom";
 
 import { Separator } from "./components/Separator";
 import { Disclaimer, SignupForm } from "./components/SignupForm";
@@ -21,6 +22,11 @@ interface SignupPageProps {
 
 const SignupPage: React.FC<SignupPageProps> = ({ highlightStyle }) => {
   useTrackPage(PageTrackingCodes.SIGNUP);
+
+  useEffect(() => {
+    trackPageview();
+  }, []);
+
   const isSimpleLeftSide = useExperiment("authPage.signup.simplifyLeftSide", false);
 
   if (isSimpleLeftSide) {

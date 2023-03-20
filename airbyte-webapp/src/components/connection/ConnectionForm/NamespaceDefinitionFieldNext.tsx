@@ -5,13 +5,14 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+import { TextInputContainer } from "components/ui/TextInputContainer";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
 
 import { FormikConnectionFormValues } from "./formConfig";
-import { FormFieldWrapper } from "./FormFieldWrapper";
+import { FormFieldLayout } from "./FormFieldLayout";
 import { namespaceDefinitionOptions } from "./types";
 import { ControlLabels } from "../../LabeledControl";
 import {
@@ -68,15 +69,17 @@ export const NamespaceDefinitionFieldNext = () => {
   return (
     <Field name="namespaceDefinition">
       {({ field }: FieldProps<NamespaceDefinitionType>) => (
-        <FormFieldWrapper>
+        <FormFieldLayout>
           <ControlLabels
             label={<FormattedMessage id="connectionForm.namespaceDefinition.title" />}
             infoTooltipContent={<FormattedMessage id="connectionForm.namespaceDefinition.subtitle" />}
           />
-          <FlexContainer alignItems="center" justifyContent="space-between">
-            <Text color="grey">
-              <FormattedMessage id={`connectionForm.${namespaceDefinitionOptions[field.value]}`} />
-            </Text>
+          <FlexContainer alignItems="center" justifyContent="space-between" gap="sm">
+            <TextInputContainer disabled>
+              <Text>
+                <FormattedMessage id={`connectionForm.${namespaceDefinitionOptions[field.value]}`} />
+              </Text>
+            </TextInputContainer>
             <Button
               type="button"
               variant="secondary"
@@ -86,7 +89,7 @@ export const NamespaceDefinitionFieldNext = () => {
               <FormattedMessage id="form.edit" />
             </Button>
           </FlexContainer>
-        </FormFieldWrapper>
+        </FormFieldLayout>
       )}
     </Field>
   );

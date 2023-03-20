@@ -52,6 +52,11 @@ public class ApplicationBeanFactory {
     return new EnvVariableFeatureFlags();
   }
 
+  /**
+   * Create JsonSecretsProcessor.
+   *
+   * @return json secrets processor
+   */
   @Singleton
   public JsonSecretsProcessor jsonSecretsProcessor() {
     return JsonSecretsProcessor.builder()
@@ -64,6 +69,7 @@ public class ApplicationBeanFactory {
     return new SecretsRepositoryReader(configRepository, secretsHydrator);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   public SecretsRepositoryWriter secretsRepositoryWriter(final ConfigRepository configRepository,
                                                          @Named("secretPersistence") final Optional<SecretPersistence> secretPersistence,

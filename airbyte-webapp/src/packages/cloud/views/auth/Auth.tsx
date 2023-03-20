@@ -1,13 +1,15 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
+import { useConfig } from "config";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { FirebaseActionRoute } from "packages/cloud/views/FirebaseActionRoute";
+import { loadFathom } from "utils/fathom";
 
 import styles from "./Auth.module.scss";
 import FormContent from "./components/FormContent";
@@ -41,6 +43,11 @@ export const Auth: React.FC = () => {
   const rightSideUrl = useExperiment("authPage.rightSideUrl", undefined);
 
   const toLogin = pathname === CloudRoutes.Signup || pathname === CloudRoutes.FirebaseAction;
+
+  const config = useConfig();
+  useEffect(() => {
+    loadFathom(config.fathomSiteId);
+  }, [config.fathomSiteId]);
 
   return (
     <div className={styles.container}>

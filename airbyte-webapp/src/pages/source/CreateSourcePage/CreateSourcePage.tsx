@@ -9,6 +9,7 @@ import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
@@ -18,7 +19,7 @@ import { SourceForm } from "./SourceForm";
 export const CreateSourcePage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
-
+  const { clearAllFormChanges } = useFormChangeTrackerService();
   const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
 
@@ -33,9 +34,9 @@ export const CreateSourcePage: React.FC = () => {
       throw new Error("No Connector Found");
     }
     const result = await createSource({ values, sourceConnector: connector });
-    setTimeout(() => {
-      navigate(`../${result.sourceId}`);
-    }, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    clearAllFormChanges();
+    navigate(`../${result.sourceId}`);
   };
 
   return (

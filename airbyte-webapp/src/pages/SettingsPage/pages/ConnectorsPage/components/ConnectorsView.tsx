@@ -1,5 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
@@ -12,26 +12,21 @@ import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/Ai
 import { useAvailableConnectorDefinitions } from "hooks/domain/connector/useAvailableConnectorDefinitions";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { isCloudApp } from "utils/app";
 
 import ConnectorCell from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
 import { ConnectorsViewContext } from "./ConnectorsViewContext";
 import CreateConnector from "./CreateConnector";
 import ImageCell from "./ImageCell";
+import { UpdateDestinationConnectorVersionCell } from "./UpdateDestinationConnectorVersionCell";
+import { UpdateSourceConnectorVersionCell } from "./UpdateSourceConnectorVersionCell";
 import UpgradeAllButton from "./UpgradeAllButton";
-import VersionCell from "./VersionCell";
 
-interface ConnectorsViewProps {
+export interface ConnectorsViewProps {
   type: "sources" | "destinations";
-  isUpdateSuccess: boolean;
-  hasNewConnectorVersion?: boolean;
   usedConnectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
   connectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
-  loading: boolean;
   updatingDefinitionId?: string;
-  error?: Error;
-  onUpdate: () => void;
   onUpdateVersion: ({ id, version }: { id: string; version: string }) => void;
   feedbackList: Record<string, string>;
 }
@@ -40,15 +35,11 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   type,
   onUpdateVersion,
   feedbackList,
-  isUpdateSuccess,
-  hasNewConnectorVersion,
   usedConnectorsDefinitions,
-  loading,
   updatingDefinitionId,
-  error,
-  onUpdate,
   connectorsDefinitions,
 }) => {
+  const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
   const workspace = useCurrentWorkspace();
@@ -82,8 +73,10 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
           <ConnectorCell
             connectorName={props.cell.getValue()}
             img={props.row.original.icon}
-            hasUpdate={allowUpdateConnectors && Connector.hasNewerVersion(props.row.original)}
+            currentVersion={props.row.original.dockerImageTag}
             releaseStage={props.row.original.releaseStage}
+            id={Connector.id(props.row.original)}
+            type={type}
           />
         ),
       }),
@@ -102,7 +95,8 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
       }),
       ...(showVersionUpdateColumn
         ? [
-            columnHelper.accessor("latestDockerImageTag", {
+            columnHelper.display({
+              id: "versionUpdate",
               header: () => (
                 <div className={styles.changeToHeader}>
                   <FormattedMessage id="admin.changeTo" />
@@ -110,18 +104,25 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
               ),
               cell: (props) =>
                 allowUpdateConnectors || (allowUploadCustomImage && props.row.original.releaseStage === "custom") ? (
-                  <VersionCell
-                    version={props.cell.getValue() || props.row.original.dockerImageTag}
-                    id={Connector.id(props.row.original)}
-                    onChange={onUpdateVersion}
-                    currentVersion={props.row.original.dockerImageTag}
-                  />
+                  type === "sources" ? (
+                    <UpdateSourceConnectorVersionCell
+                      id={Connector.id(props.row.original)}
+                      onChange={onUpdateVersion}
+                      currentVersion={props.row.original.dockerImageTag}
+                    />
+                  ) : (
+                    <UpdateDestinationConnectorVersionCell
+                      id={Connector.id(props.row.original)}
+                      onChange={onUpdateVersion}
+                      currentVersion={props.row.original.dockerImageTag}
+                    />
+                  )
                 ) : null,
             }),
           ]
         : []),
     ],
-    [columnHelper, allowUpdateConnectors, allowUploadCustomImage, onUpdateVersion]
+    [columnHelper, allowUpdateConnectors, allowUploadCustomImage, onUpdateVersion, type]
   );
 
   const renderHeaderControls = (section: "used" | "available") =>
@@ -129,26 +130,18 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
       (section === "available" && usedConnectorsDefinitions.length === 0)) && (
       <FlexContainer>
         {allowUploadCustomImage && <CreateConnector type={type} />}
-        {/* Connectors are automatically kept up-to-date on Cloud */}
-        {!isCloudApp() && (
-          <UpgradeAllButton
-            disabled={!((hasNewConnectorVersion || isUpdateSuccess) && allowUpdateConnectors)}
-            isLoading={loading}
-            hasError={!!error && !loading}
-            hasSuccess={isUpdateSuccess}
-            onUpdate={onUpdate}
-          />
-        )}
+        {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
       </FlexContainer>
     );
 
   const ctx = useMemo(
     () => ({
-      updatingAll: loading,
+      setUpdatingAll: setUpdatingAllConnectors,
+      updatingAll: updatingAllConnectors,
       updatingDefinitionId,
       feedbackList,
     }),
-    [feedbackList, loading, updatingDefinitionId]
+    [feedbackList, updatingDefinitionId, updatingAllConnectors]
   );
 
   const usedDefinitionColumns = useMemo(
@@ -169,7 +162,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
         <FlexContainer direction="column" gap="2xl">
           {usedConnectorsDefinitions.length > 0 && (
             <FlexContainer direction="column">
-              <FlexContainer className={styles.title} alignItems="center">
+              <FlexContainer alignItems="center">
                 <FlexItem grow>
                   <Heading as="h2">
                     <FormattedMessage id={type === "sources" ? "admin.manageSource" : "admin.manageDestination"} />
@@ -182,7 +175,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
           )}
 
           <FlexContainer direction="column">
-            <FlexContainer className={styles.title} alignItems="center">
+            <FlexContainer alignItems="center">
               <FlexItem grow>
                 <Heading as="h2">
                   <FormattedMessage id={type === "sources" ? "admin.availableSource" : "admin.availableDestinations"} />

@@ -8,9 +8,15 @@ import io.airbyte.commons.temporal.TemporalResponse;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobConfig.ConfigType;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
-import javax.annotation.Nullable;
+import java.util.function.Function;
 
+/**
+ * Response wrapper for synchronous temporal jobs.
+ *
+ * @param <T> output type of the job
+ */
 public class SynchronousResponse<T> {
 
   private final T output;
@@ -24,21 +30,38 @@ public class SynchronousResponse<T> {
     return new SynchronousResponse<>(output, metadata);
   }
 
-  public static <T, U> SynchronousResponse<T> fromTemporalResponse(final TemporalResponse<U> temporalResponse,
-                                                                   @Nullable final ConnectorJobOutput jobOutput,
-                                                                   @Nullable final T responseOutput,
+  /**
+   * Response from synchronous temporal job.
+   *
+   * @param temporalResponse response from temporal client
+   * @param outputMapper function to retrieve output of the job
+   * @param id job id
+   * @param configType job type
+   * @param configId id of resource for job type (i.e. if configType is discover config id is going to
+   *        be a source id)
+   * @param createdAt time the job was created
+   * @param endedAt time the job ended
+   * @param <T> output for job type
+   * @param <U> output type for job type of temporal job
+   * @return response
+   */
+  public static <T, U> SynchronousResponse<T> fromTemporalResponse(final TemporalResponse<ConnectorJobOutput> temporalResponse,
+                                                                   final Function<ConnectorJobOutput, T> outputMapper,
                                                                    final UUID id,
                                                                    final ConfigType configType,
                                                                    final UUID configId,
                                                                    final long createdAt,
                                                                    final long endedAt) {
 
+    final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
+    final T responseOutput = jobOutput.map(outputMapper).orElse(null);
+
     final SynchronousJobMetadata metadata = SynchronousJobMetadata.fromJobMetadata(
         temporalResponse.getMetadata(),
+        jobOutput.orElse(null),
         id,
         configType,
         configId,
-        jobOutput != null ? jobOutput.getConnectorConfigurationUpdated() : false,
         createdAt,
         endedAt);
     return new SynchronousResponse<>(responseOutput, metadata);
@@ -80,10 +103,10 @@ public class SynchronousResponse<T> {
 
   @Override
   public String toString() {
-    return "SynchronousResponse{" +
-        "output=" + output +
-        ", metadata=" + metadata +
-        '}';
+    return "SynchronousResponse{"
+        + "output=" + output
+        + ", metadata=" + metadata
+        + '}';
   }
 
 }

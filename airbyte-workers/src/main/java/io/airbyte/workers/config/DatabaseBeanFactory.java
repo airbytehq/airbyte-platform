@@ -21,7 +21,6 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
@@ -32,7 +31,7 @@ import org.jooq.DSLContext;
  */
 @Factory
 @Slf4j
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod"})
 public class DatabaseBeanFactory {
 
   private static final String BASELINE_DESCRIPTION = "Baseline from file-based migration v1";
@@ -42,14 +41,14 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("configDatabase")
-  public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
+  public Database configDatabase(@Named("config") final DSLContext dslContext) {
     return new Database(dslContext);
   }
 
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
+  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
     return new Database(dslContext);
   }
 
@@ -87,8 +86,9 @@ public class DatabaseBeanFactory {
 
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
-  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase) {
-    return new ConfigRepository(configDatabase);
+  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
+                                           @Value("${airbyte.worker.max-seconds-between-messages}") final long maxSecondsBetweenMessages) {
+    return new ConfigRepository(configDatabase, maxSecondsBetweenMessages);
   }
 
   @Singleton
@@ -109,6 +109,7 @@ public class DatabaseBeanFactory {
     return new StreamResetPersistence(configDatabase);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("configsDatabaseMigrationCheck")
@@ -122,6 +123,7 @@ public class DatabaseBeanFactory {
             configsDatabaseInitializationTimeoutMs);
   }
 
+  @SuppressWarnings("LineLength")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabaseMigrationCheck")

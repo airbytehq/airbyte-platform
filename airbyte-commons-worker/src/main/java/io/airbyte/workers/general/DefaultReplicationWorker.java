@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
@@ -37,15 +38,17 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
-import io.airbyte.workers.exception.RecordSchemaValidationException;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,13 +61,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
@@ -99,6 +102,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final AirbyteMapper mapper;
   private final AirbyteDestination destination;
   private final MessageTracker messageTracker;
+  private final SyncPersistenceFactory syncPersistenceFactory;
 
   private final ExecutorService executors;
   private final AtomicBoolean cancelled;
@@ -107,6 +111,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final WorkerMetricReporter metricReporter;
   private final ConnectorConfigUpdater connectorConfigUpdater;
   private final boolean fieldSelectionEnabled;
+  private final boolean heartbeatEnabled;
+  private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
 
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
@@ -114,21 +120,27 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final AirbyteMapper mapper,
                                   final AirbyteDestination destination,
                                   final MessageTracker messageTracker,
+                                  final SyncPersistenceFactory syncPersistenceFactory,
                                   final RecordSchemaValidator recordSchemaValidator,
                                   final WorkerMetricReporter metricReporter,
                                   final ConnectorConfigUpdater connectorConfigUpdater,
-                                  final boolean fieldSelectionEnabled) {
+                                  final boolean fieldSelectionEnabled,
+                                  final boolean heartbeatEnabled,
+                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
     this.mapper = mapper;
     this.destination = destination;
     this.messageTracker = messageTracker;
+    this.syncPersistenceFactory = syncPersistenceFactory;
     this.executors = Executors.newFixedThreadPool(2);
     this.recordSchemaValidator = recordSchemaValidator;
     this.metricReporter = metricReporter;
     this.connectorConfigUpdater = connectorConfigUpdater;
     this.fieldSelectionEnabled = fieldSelectionEnabled;
+    this.heartbeatEnabled = heartbeatEnabled;
+    this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
 
     this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
@@ -144,12 +156,15 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * @param syncInput all configuration for running replication
    * @param jobRoot file root that worker is allowed to use
    * @return output of the replication attempt (including state)
-   * @throws WorkerException
+   * @throws WorkerException exception from worker
    */
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public final ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
+    LOGGER
+        .info("Committing states from " + (shouldCommitStateAsap(syncInput) ? "replication" : "persistState")
+            + " activity");
     LineGobbler.startSection("REPLICATION");
 
     // todo (cgardens) - this should not be happening in the worker. this is configuration information
@@ -172,7 +187,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
 
       ApmTraceUtils.addTagsToTrace(generateTraceTags(destinationConfig, jobRoot));
-      replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig);
+      replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig,
+          syncInput.getConnectionId(), shouldCommitStateAsap(syncInput));
       timeTracker.trackReplicationEndTime();
 
       return getReplicationOutput(syncInput, destinationConfig, replicationRunnableFailureRef, destinationRunnableFailureRef, timeTracker);
@@ -188,12 +204,15 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                          final ThreadedTimeTracker timeTracker,
                          final AtomicReference<FailureReason> replicationRunnableFailureRef,
                          final AtomicReference<FailureReason> destinationRunnableFailureRef,
-                         final WorkerSourceConfig sourceConfig) {
+                         final WorkerSourceConfig sourceConfig,
+                         final UUID connectionId,
+                         final boolean commitStatesAsap) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
+    final SyncPersistence syncPersistence = commitStatesAsap ? syncPersistenceFactory.get(sourceConfig.getCatalog()) : null;
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
-    try (destination; source) {
+    try (syncPersistence; destination; source) {
       destination.start(destinationConfig, jobRoot);
       timeTracker.trackSourceReadStartTime();
       source.start(sourceConfig, jobRoot);
@@ -202,7 +221,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, messageTracker, connectorConfigUpdater, mdc, timeTracker, destinationConfig.getDestinationId()),
+          readFromDstRunnable(destination, cancelled, messageTracker, syncPersistence, connectorConfigUpdater, mdc, timeTracker,
+              destinationConfig.getDestinationId(), connectionId, commitStatesAsap),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -215,34 +235,35 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           });
 
-      final CompletableFuture<?> readSrcAndWriteDstThread = CompletableFuture.runAsync(
-          readFromSrcAndWriteToDstRunnable(
-              source,
-              destination,
-              sourceConfig.getCatalog(),
-              cancelled,
-              mapper,
-              messageTracker,
-              connectorConfigUpdater,
-              mdc,
-              recordSchemaValidator,
-              metricReporter,
-              timeTracker,
-              sourceConfig.getSourceId(),
-              fieldSelectionEnabled),
-          executors)
+      final CompletableFuture<Void> readSrcAndWriteDstThread = CompletableFuture.runAsync(readFromSrcAndWriteToDstRunnable(
+          source,
+          destination,
+          sourceConfig.getCatalog(),
+          cancelled,
+          mapper,
+          messageTracker,
+          connectorConfigUpdater,
+          mdc,
+          recordSchemaValidator,
+          metricReporter,
+          timeTracker,
+          sourceConfig.getSourceId(),
+          fieldSelectionEnabled), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
-              if (ex.getCause() instanceof SourceException) {
-                replicationRunnableFailureRef.set(FailureHelper.sourceFailure(ex, Long.valueOf(jobId), attempt));
-              } else if (ex.getCause() instanceof DestinationException) {
-                replicationRunnableFailureRef.set(FailureHelper.destinationFailure(ex, Long.valueOf(jobId), attempt));
-              } else {
-                replicationRunnableFailureRef.set(FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt));
-              }
+              replicationRunnableFailureRef.set(getFailureReason(ex.getCause(), Long.parseLong(jobId), attempt));
             }
           });
+
+      try {
+        if (heartbeatEnabled) {
+          srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
+        }
+      } catch (HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
+        ApmTraceUtils.addExceptionToTrace(ex);
+        replicationRunnableFailureRef.set(getFailureReason(ex, Long.parseLong(jobId), attempt));
+      }
 
       LOGGER.info("Waiting for source and destination threads to complete.");
       // CompletableFuture#allOf waits until all futures finish before returning, even if one throws an
@@ -262,14 +283,30 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     }
   }
 
+  @VisibleForTesting
+  static FailureReason getFailureReason(final Throwable ex, final long jobId, final int attempt) {
+    if (ex instanceof SourceException) {
+      return FailureHelper.sourceFailure(ex, Long.valueOf(jobId), attempt);
+    } else if (ex instanceof DestinationException) {
+      return FailureHelper.destinationFailure(ex, Long.valueOf(jobId), attempt);
+    } else if (ex instanceof HeartbeatTimeoutChaperone.HeartbeatTimeoutException) {
+      return FailureHelper.sourceHeartbeatFailure(ex, Long.valueOf(jobId), attempt);
+    } else {
+      return FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt);
+    }
+  }
+
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
                                               final AtomicBoolean cancelled,
                                               final MessageTracker messageTracker,
+                                              final SyncPersistence syncPersistence,
                                               final ConnectorConfigUpdater connectorConfigUpdater,
                                               final Map<String, String> mdc,
                                               final ThreadedTimeTracker timeHolder,
-                                              final UUID destinationId) {
+                                              final UUID destinationId,
+                                              final UUID connectionId,
+                                              final boolean commitStatesAsap) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
@@ -286,6 +323,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             LOGGER.info("State in DefaultReplicationWorker from destination: {}", message);
 
             messageTracker.acceptFromDestination(message);
+            if (commitStatesAsap && message.getType() == Type.STATE) {
+              syncPersistence.persist(connectionId, message.getState());
+            }
 
             try {
               if (message.getType() == Type.CONTROL) {
@@ -336,7 +376,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
       long recordsRead = 0L;
-      final Map<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new HashMap<>();
+      /*
+       * validationErrors must be a ConcurrentHashMap as it may potentially be updated and read in
+       * different threads concurrently depending on the {@link
+       * io.airbyte.featureflag.PerfBackgroundJsonValidation} feature-flag.
+       */
+      final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
       final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields = new HashMap<>();
       final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields = new HashMap<>();
@@ -389,7 +434,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             try {
               source.close();
             } catch (final Exception e) {
-              throw new SourceException("Source cannot be stopped!", e);
+              throw new SourceException("Source didn't exit properly - check the logs!", e);
             }
           }
         }
@@ -461,9 +506,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     // First check if the process was cancelled. Cancellation takes precedence over failures.
     if (cancelled.get()) {
       outputStatus = ReplicationStatus.CANCELLED;
-    }
-    // if the process was not cancelled but still failed, then it's an actual failure
-    else if (hasFailed.get()) {
+      // if the process was not cancelled but still failed, then it's an actual failure
+    } else if (hasFailed.get()) {
       outputStatus = ReplicationStatus.FAILED;
     } else {
       outputStatus = ReplicationStatus.COMPLETED;
@@ -553,8 +597,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * Extracts state out to the {@link ReplicationOutput} so it can be later saved in the
    * PersistStateActivity - State is NOT SAVED here.
    *
-   * @param syncInput
-   * @param output
+   * @param syncInput sync input
+   * @param output sync output
    */
   private void prepStateForLaterSaving(final StandardSyncInput syncInput, final ReplicationOutput output) {
     if (messageTracker.getSourceOutputState().isPresent()) {
@@ -608,7 +652,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static void validateSchema(final RecordSchemaValidator recordSchemaValidator,
                                      final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields,
                                      final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields,
-                                     final Map<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors,
+                                     final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors,
                                      final AirbyteMessage message) {
     if (message.getRecord() == null) {
       return;
@@ -617,25 +661,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     final AirbyteRecordMessage record = message.getRecord();
     final AirbyteStreamNameNamespacePair messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record);
     // avoid noise by validating only if the stream has less than 10 records with validation errors
-    final boolean streamHasLessThenTenErrs =
-        validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getRight() < 10;
+    final boolean streamHasLessThenTenErrs = validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getRight() < 10;
     if (streamHasLessThenTenErrs) {
-      try {
-        recordSchemaValidator.validateSchema(record, messageStream);
-        final Set<String> unexpectedFieldNames = unexpectedFields.getOrDefault(messageStream, new HashSet<>());
-        populateUnexpectedFieldNames(record, streamToAllFields.get(messageStream), unexpectedFieldNames);
-        unexpectedFields.put(messageStream, unexpectedFieldNames);
-      } catch (final RecordSchemaValidationException e) {
-        final ImmutablePair<Set<String>, Integer> exceptionWithCount = validationErrors.get(messageStream);
-        if (exceptionWithCount == null) {
-          validationErrors.put(messageStream, new ImmutablePair<>(e.errorMessages, 1));
-        } else {
-          final Integer currentCount = exceptionWithCount.getRight();
-          final Set<String> currentErrorMessages = exceptionWithCount.getLeft();
-          final Set<String> updatedErrorMessages = Stream.concat(currentErrorMessages.stream(), e.errorMessages.stream()).collect(Collectors.toSet());
-          validationErrors.put(messageStream, new ImmutablePair<>(updatedErrorMessages, currentCount + 1));
-        }
-      }
+      recordSchemaValidator.validateSchema(record, messageStream, validationErrors);
+      final Set<String> unexpectedFieldNames = unexpectedFields.getOrDefault(messageStream, new HashSet<>());
+      populateUnexpectedFieldNames(record, streamToAllFields.get(messageStream), unexpectedFieldNames);
+      unexpectedFields.put(messageStream, unexpectedFieldNames);
     }
   }
 
@@ -661,8 +692,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * the configured catalog. Since the configured catalog only includes the selected fields, this lets
    * us filter records to only the fields explicitly requested.
    *
-   * @param catalog
-   * @param streamToSelectedFields
+   * @param catalog catalog
+   * @param streamToSelectedFields map of stream descriptor to list of selected fields
    */
   private static void populatedStreamToSelectedFields(final ConfiguredAirbyteCatalog catalog,
                                                       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields) {
@@ -682,8 +713,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
    * Populates a map for stream -> all the top-level fields in the catalog. Used to identify any
    * unexpected top-level fields in the records.
    *
-   * @param catalog
-   * @param streamToAllFields
+   * @param catalog catalog
+   * @param streamToAllFields map of stream descriptor to set of all of its fields
    */
   private static void populateStreamToAllFields(final ConfiguredAirbyteCatalog catalog,
                                                 final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields) {
@@ -762,6 +793,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     }
 
     return tags;
+  }
+
+  private static boolean shouldCommitStateAsap(final StandardSyncInput syncInput) {
+    return syncInput.getCommitStateAsap() != null && syncInput.getCommitStateAsap();
   }
 
 }

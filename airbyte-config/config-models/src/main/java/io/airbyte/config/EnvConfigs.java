@@ -7,6 +7,7 @@ package io.airbyte.config;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import io.airbyte.commons.constants.AirbyteCatalogConstants;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.version.AirbyteVersion;
@@ -34,6 +35,9 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Configs from environment variables.
+ */
 @SuppressWarnings({"PMD.LongVariable", "PMD.CyclomaticComplexity", "PMD.AvoidReassigningParameters", "PMD.ConstructorCallsOverridableMethod"})
 public class EnvConfigs implements Configs {
 
@@ -345,8 +349,8 @@ public class EnvConfigs implements Configs {
     return getEnvOrDefault(SPEC_CACHE_BUCKET, DEFAULT_SPEC_CACHE_BUCKET);
   }
 
-  public Optional<String> getLocalCatalogPath() {
-    return Optional.ofNullable(getEnv(LOCAL_CONNECTOR_CATALOG_PATH));
+  public String getLocalCatalogPath() {
+    return getEnvOrDefault(LOCAL_CONNECTOR_CATALOG_PATH, AirbyteCatalogConstants.DEFAULT_LOCAL_CONNECTOR_CATALOG_PATH);
   }
 
   @Override
@@ -870,7 +874,7 @@ public class EnvConfigs implements Configs {
   }
 
   /**
-   * There are two types of environment variables available to the job container:
+   * There are two types of environment variables available to the job container.
    * <ul>
    * <li>Exclusive variables prefixed with JOB_DEFAULT_ENV_PREFIX</li>
    * <li>Shared variables defined in JOB_SHARED_ENVS</li>
@@ -1200,6 +1204,16 @@ public class EnvConfigs implements Configs {
     return getEnvOrDefault(key, defaultValue, parser, false);
   }
 
+  /**
+   * Get env variable or default value.
+   *
+   * @param key of env variable
+   * @param defaultValue to use if env variable is not present
+   * @param parser function to parse env variable to desired type
+   * @param isSecret is the env variable a secret
+   * @param <T> type of env env variable
+   * @return env variable
+   */
   public <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser, final boolean isSecret) {
     final String value = getEnv.apply(key);
     if (value != null && !value.isEmpty()) {
@@ -1210,10 +1224,22 @@ public class EnvConfigs implements Configs {
     }
   }
 
+  /**
+   * Get env variable as string.
+   *
+   * @param name of env variable
+   * @return value of env variable
+   */
   public String getEnv(final String name) {
     return getEnv.apply(name);
   }
 
+  /**
+   * Get env variable or throw if null.
+   *
+   * @param name of env variable
+   * @return value of env variable
+   */
   public String getEnsureEnv(final String name) {
     final String value = getEnv(name);
     Preconditions.checkArgument(value != null, "'%s' environment variable cannot be null", name);

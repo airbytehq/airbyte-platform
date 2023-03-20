@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add schedule to connection migration.
+ */
 public class V0_38_4_001__AddScheduleDataToConfigsTable extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_38_4_001__AddScheduleDataToConfigsTable.class);

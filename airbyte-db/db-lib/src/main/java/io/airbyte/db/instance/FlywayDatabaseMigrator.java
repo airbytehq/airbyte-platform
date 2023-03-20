@@ -10,6 +10,7 @@ import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
@@ -19,9 +20,17 @@ import org.flywaydb.core.api.output.MigrateResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Flyway migration.
+ */
 public class FlywayDatabaseMigrator implements DatabaseMigrator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FlywayDatabaseMigrator.class);
+
+  /**
+   * Set of schemas used to filter the schema dump generated via the jOOQ DDL.
+   */
+  private static final Set<String> SCHEMAS = Set.of("public");
 
   private final Database database;
   private final Flyway flyway;
@@ -59,7 +68,10 @@ public class FlywayDatabaseMigrator implements DatabaseMigrator {
 
   @Override
   public String dumpSchema() throws IOException {
-    return getDisclaimer() + new ExceptionWrappingDatabase(database).query(ctx -> ctx.meta().ddl().queryStream()
+    return getDisclaimer() + new ExceptionWrappingDatabase(database).query(ctx -> ctx.meta()
+        .filterSchemas(s -> SCHEMAS.contains(s.getName()))
+        .ddl()
+        .queryStream()
         .map(query -> query.toString() + ";")
         .filter(statement -> !statement.startsWith("create schema"))
         .collect(Collectors.joining("\n")));
@@ -67,9 +79,9 @@ public class FlywayDatabaseMigrator implements DatabaseMigrator {
 
   protected String getDisclaimer() {
     return """
-           // The content of the file is just to have a basic idea of the current state of the database and is not fully accurate.\040
-           // It is also not used by any piece of code to generate anything.\040
-           // It doesn't contain the enums created in the database and the default values might also be buggy.\s
+           // The content of the file is just to have a basic idea of the current state of the database and is not fully accurate.
+           // It is also not used by any piece of code to generate anything.
+           // It doesn't contain the enums created in the database and the default values might also be buggy.
            """ + '\n';
   }
 

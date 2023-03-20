@@ -12,6 +12,9 @@ import io.temporal.workflow.WorkflowMethod;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * Send notification for a schema change.
+ */
 @WorkflowInterface
 public interface ConnectionNotificationWorkflow {
 

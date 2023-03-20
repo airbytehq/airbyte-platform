@@ -30,7 +30,8 @@ import org.jooq.DSLContext;
  */
 @Factory
 @Slf4j
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "MissingJavadocMethod", "LineLength"})
 public class DatabaseBeanFactory {
 
   private static final String BASELINE_DESCRIPTION = "Baseline from file-based migration v1";
@@ -74,8 +75,9 @@ public class DatabaseBeanFactory {
   }
 
   @Singleton
-  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase) {
-    return new ConfigRepository(configDatabase);
+  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
+                                           @Value("${airbyte.worker.max-seconds-between-messages}") final long maxSecondsBetweenMessages) {
+    return new ConfigRepository(configDatabase, maxSecondsBetweenMessages);
   }
 
   @Singleton

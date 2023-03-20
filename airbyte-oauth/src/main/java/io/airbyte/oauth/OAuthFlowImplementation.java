@@ -12,6 +12,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * OAuth flow impl.
+ */
 public interface OAuthFlowImplementation {
 
   String getSourceConsentUrl(UUID workspaceId,
@@ -49,7 +52,7 @@ public interface OAuthFlowImplementation {
                                                Map<String, Object> queryParams,
                                                String redirectUrl,
                                                JsonNode inputOAuthConfiguration,
-                                               OAuthConfigSpecification oAuthConfigSpecification)
+                                               OAuthConfigSpecification oauthConfigSpecification)
       throws IOException, ConfigNotFoundException, JsonValidationException;
 
 }

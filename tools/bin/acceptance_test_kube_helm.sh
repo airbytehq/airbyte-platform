@@ -80,7 +80,7 @@ fi
 kubectl expose $(kubectl get po -l app.kubernetes.io/name=server -o name) --name exposed-server-svc --type NodePort --overrides '{ "apiVersion": "v1","spec":{"ports": [{"port":8001,"protocol":"TCP","targetPort":8001,"nodePort":8001}]}}'
 
 echo "Running worker integration tests..."
-KUBE=true SUB_BUILD=PLATFORM ./gradlew :airbyte-workers:integrationTest --scan
+KUBE=true ./gradlew :airbyte-workers:integrationTest --scan
 
 echo "Printing system disk usage..."
 df -h
@@ -100,7 +100,7 @@ fi
  docker system df
 
 echo "Running e2e tests via gradle..."
-KUBE=true SUB_BUILD=PLATFORM USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTests --scan
+KUBE=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew -Dorg.gradle.caching=false :airbyte-tests:acceptanceTests --scan
 
 echo "Reverting changes back"
 mv charts/airbyte/Chart.yaml charts/airbyte/Chart.yaml.test

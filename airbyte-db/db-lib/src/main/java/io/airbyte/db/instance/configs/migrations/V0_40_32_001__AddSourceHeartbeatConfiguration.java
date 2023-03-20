@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add override for what the heartbeat should be for a specific connector definition.
+ */
 public class V0_40_32_001__AddSourceHeartbeatConfiguration extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_32_001__AddSourceHeartbeatConfiguration.class);
@@ -20,9 +23,8 @@ public class V0_40_32_001__AddSourceHeartbeatConfiguration extends BaseJavaMigra
   public void migrate(final Context context) throws Exception {
     LOGGER.info("Running migration: {}", this.getClass().getSimpleName());
 
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      addSourceHeartbeatConfiguration(ctx);
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    addSourceHeartbeatConfiguration(ctx);
   }
 
   private static void addSourceHeartbeatConfiguration(final DSLContext ctx) {

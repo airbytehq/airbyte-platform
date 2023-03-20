@@ -17,6 +17,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
+/**
+ * POJO / accessors for the job domain model.
+ */
 public class Job {
 
   public static final Set<ConfigType> REPLICATION_TYPES = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION);
@@ -51,46 +54,102 @@ public class Job {
     this.updatedAtInSecond = updatedAtInSecond;
   }
 
+  /**
+   * Get job id.
+   *
+   * @return job id
+   */
   public long getId() {
     return id;
   }
 
+  /**
+   * Get job type. At this point this is only sync and reset.
+   *
+   * @return config type
+   */
   public ConfigType getConfigType() {
     return configType;
   }
 
+  /**
+   * Get scope for a job.
+   *
+   * @return scope
+   */
   public String getScope() {
     return scope;
   }
 
+  /**
+   * Get config for a job.
+   *
+   * @return config
+   */
   public JobConfig getConfig() {
     return config;
   }
 
+  /**
+   * Get all attempts for the job. No order guarantees.
+   *
+   * @return list of attempts
+   */
   public List<Attempt> getAttempts() {
     return attempts;
   }
 
+  /**
+   * Get number of attempts.
+   *
+   * @return number of attempts
+   */
   public int getAttemptsCount() {
     return attempts.size();
   }
 
+  /**
+   * Get job status.
+   *
+   * @return status of job
+   */
   public JobStatus getStatus() {
     return status;
   }
 
+  /**
+   * Get started at of job in seconds.
+   *
+   * @return started at
+   */
   public Optional<Long> getStartedAtInSecond() {
     return Optional.ofNullable(startedAtInSecond);
   }
 
+  /**
+   * Get create at of job in seconds.
+   *
+   * @return create at
+   */
   public long getCreatedAtInSecond() {
     return createdAtInSecond;
   }
 
+  /**
+   * Get updated at of job in seconds.
+   *
+   * @return updated at
+   */
   public long getUpdatedAtInSecond() {
     return updatedAtInSecond;
   }
 
+  /**
+   * Get the successful attempt, if present. By definition there should only ever be at most one
+   * successful attempt for a job.
+   *
+   * @return successful attempt, if present.
+   */
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   public Optional<Attempt> getSuccessfulAttempt() {
     final List<Attempt> successfulAttempts = getAttempts()
@@ -106,10 +165,20 @@ public class Job {
     }
   }
 
+  /**
+   * Get success output if present.
+   *
+   * @return if present, job output
+   */
   public Optional<JobOutput> getSuccessOutput() {
     return getSuccessfulAttempt().flatMap(Attempt::getOutput);
   }
 
+  /**
+   * Get the last attempt by created_at for the job that failed.
+   *
+   * @return the last attempt. empty optional, if there have been no attempts that have failed.
+   */
   public Optional<Attempt> getLastFailedAttempt() {
     return getAttempts()
         .stream()
@@ -118,6 +187,11 @@ public class Job {
         .findFirst();
   }
 
+  /**
+   * Get the last attempt by created_at for the job that had an output.
+   *
+   * @return the last attempt. empty optional, if there have been no attempts with outputs.
+   */
   public Optional<Attempt> getLastAttemptWithOutput() {
     return getAttempts()
         .stream()
@@ -126,12 +200,23 @@ public class Job {
         .findFirst();
   }
 
+  /**
+   * Get the last attempt by created_at for the job.
+   *
+   * @return the last attempt. empty optional, if there have been no attempts.
+   */
   public Optional<Attempt> getLastAttempt() {
     return getAttempts()
         .stream()
         .max(Comparator.comparing(Attempt::getCreatedAtInSecond));
   }
 
+  /**
+   * Get attempt with a given attempt number.
+   *
+   * @param attemptNumber attempt number to select
+   * @return selected attempt. empty optional, if attempt is not present.
+   */
   public Optional<Attempt> getAttemptByNumber(final int attemptNumber) {
     return getAttempts()
         .stream()
@@ -139,14 +224,31 @@ public class Job {
         .findFirst();
   }
 
+  /**
+   * Test if the job has running attempts.
+   *
+   * @return true if has running. otherwise, false.
+   */
   public boolean hasRunningAttempt() {
     return getAttempts().stream().anyMatch(a -> !Attempt.isAttemptInTerminalState(a));
   }
 
+  /**
+   * Test if the current status is a terminal status.
+   *
+   * @return true if terminal. otherwise, false.
+   */
   public boolean isJobInTerminalState() {
     return JobStatus.TERMINAL_STATUSES.contains(getStatus());
   }
 
+  /**
+   * Validate that it is legal, according to the job status state machine, for the job to transition
+   * from its current status to the provided status.
+   *
+   * @param newStatus candidate new status
+   * @throws IllegalStateException if the new status is not a legal transition
+   */
   public void validateStatusTransition(final JobStatus newStatus) throws IllegalStateException {
     final Set<JobStatus> validNewStatuses = JobStatus.VALID_STATUS_CHANGES.get(status);
 
@@ -170,33 +272,35 @@ public class Job {
       return false;
     }
     final Job job = (Job) o;
-    return id == job.id &&
-        createdAtInSecond == job.createdAtInSecond &&
-        updatedAtInSecond == job.updatedAtInSecond &&
-        Objects.equals(scope, job.scope) &&
-        Objects.equals(config, job.config) &&
-        status == job.status &&
-        Objects.equals(startedAtInSecond, job.startedAtInSecond) &&
-        Objects.equals(attempts, job.attempts);
+    return id == job.id
+        && createdAtInSecond == job.createdAtInSecond
+        && updatedAtInSecond == job.updatedAtInSecond
+        && Objects.equals(scope, job.scope)
+        && Objects.equals(config, job.config)
+        && Objects.equals(configType, job.configType)
+        && status == job.status
+        && Objects.equals(startedAtInSecond, job.startedAtInSecond)
+        && Objects.equals(attempts, job.attempts);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, scope, config, status, startedAtInSecond, createdAtInSecond, updatedAtInSecond, attempts);
+    return Objects.hash(id, scope, config, configType, status, startedAtInSecond, createdAtInSecond, updatedAtInSecond, attempts);
   }
 
   @Override
   public String toString() {
-    return "Job{" +
-        "id=" + id +
-        ", scope='" + scope + '\'' +
-        ", config=" + config +
-        ", status=" + status +
-        ", startedAtInSecond=" + startedAtInSecond +
-        ", createdAtInSecond=" + createdAtInSecond +
-        ", updatedAtInSecond=" + updatedAtInSecond +
-        ", attempts=" + attempts +
-        '}';
+    return "Job{"
+        + "id=" + id
+        + ", scope='" + scope + '\''
+        + ", config=" + config
+        + ", config_type=" + configType
+        + ", status=" + status
+        + ", startedAtInSecond=" + startedAtInSecond
+        + ", createdAtInSecond=" + createdAtInSecond
+        + ", updatedAtInSecond=" + updatedAtInSecond
+        + ", attempts=" + attempts
+        + '}';
   }
 
 }

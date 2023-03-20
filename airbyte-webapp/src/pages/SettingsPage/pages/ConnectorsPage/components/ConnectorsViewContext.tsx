@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 
 interface Context {
+  setUpdatingAll: (isUpdating: boolean) => void;
   updatingAll: boolean;
   updatingDefinitionId?: string;
   feedbackList: Record<string, string>;

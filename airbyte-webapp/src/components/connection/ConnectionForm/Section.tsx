@@ -41,7 +41,12 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
   return (
     <Card className={classNames({ [styles.flexHeight]: flexHeight })}>
       <div
-        className={classNames(styles.section, { [styles.flush]: flush, [styles.flexHeight]: flexHeight }, className)}
+        className={classNames(
+          styles.section,
+          { [styles.flush]: flush, [styles.flexHeight]: flexHeight, [styles.collapsed]: collapsible && isCollapsed },
+          className
+        )}
+        {...(collapsible && isCollapsed ? { onClick: setIsCollapsed } : {})}
       >
         <div className={styles.header}>
           {title && (
@@ -52,7 +57,7 @@ export const Section: React.FC<React.PropsWithChildren<SectionProps>> = ({
           {collapsible && (
             <Button
               variant="clear"
-              onClick={setIsCollapsed}
+              {...(collapsible && !isCollapsed ? { onClick: setIsCollapsed } : {})}
               data-testid={`${testId}-section-expand-arrow`}
               type="button"
             >
