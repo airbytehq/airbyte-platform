@@ -142,8 +142,6 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               <Bar key="free" stackId="a" dataKey="freeUsage" fill={styles.green} radius={[4, 4, 0, 0]}>
                 {chartData.map((item, index) => {
                   return item.freeUsage && item.freeUsage / (item.freeUsage + item.billedCost) < 0.01 ? (
-                    0
-                  ) : [4, 4, 0, 0] ? (
                     <Cell key={`cell-free-${index}`} width={0} />
                   ) : (
                     <Cell key={`cell-free-${index}`} />

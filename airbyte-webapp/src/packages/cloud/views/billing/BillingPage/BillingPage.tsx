@@ -30,8 +30,8 @@ export const BillingPage: React.FC = () => {
 
   return (
     <MainPageWithScroll
-      headTitle={<HeadTitle titles={[{ id: "credits.credits" }]} />}
-      pageTitle={<PageHeader title={<FormattedMessage id="credits.credits" />} />}
+      headTitle={<HeadTitle titles={[{ id: "credits.billing" }]} />}
+      pageTitle={<PageHeader title={<FormattedMessage id="credits.billing" />} />}
     >
       <div className={styles.content}>
         {!emailVerified && <EmailVerificationHint className={styles.emailVerificationHint} />}
