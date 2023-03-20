@@ -22,10 +22,8 @@ dependencies {
     implementation group: 'io.swagger', name: 'swagger-annotations', version: '1.6.2'
 }
 
-mainClassName = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
-
 application {
-    mainClass = mainClassName
+    mainClass = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
     applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
 }
 
