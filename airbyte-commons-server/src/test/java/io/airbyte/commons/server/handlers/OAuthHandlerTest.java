@@ -258,8 +258,10 @@ class OAuthHandlerTest {
 
     final OAuthHandler handlerSpy = Mockito.spy(handler);
 
-    doReturn(Map.of("access_token", "access", "refresh_token", "refresh")).when(handlerSpy).completeSourceOAuth(any());
-    doReturn(Map.of("secret_id", "secret")).when(handlerSpy).writeOAuthResponseSecret(any(), any());
+    doReturn(
+        handler.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy).completeSourceOAuth(any());
+    doReturn(
+        handler.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
 
     handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest);
 

@@ -9,6 +9,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 
 import io.airbyte.api.generated.DestinationOauthApi;
 import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
@@ -21,7 +22,6 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.Map;
 
 @SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/destination_oauths")
@@ -41,7 +41,7 @@ public class DestinationOauthApiController implements DestinationOauthApi {
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public Map<String, Object> completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest) {
+  public CompleteOAuthResponse completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest) {
     return ApiHelper.execute(() -> oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest));
   }
 

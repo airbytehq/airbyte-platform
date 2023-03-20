@@ -4,12 +4,12 @@ info:
     Airbyte Configuration API
     [https://airbyte.io](https://airbyte.io).
 
-    The Configuration API is an internal Airbyte API that is designed for communications between different Airbyte components. 
+    The Configuration API is an internal Airbyte API that is designed for communications between different Airbyte components.
     * It's main purpose is to enable the Airbyte Engineering team to configure the internal state of [Airbyte Cloud](https://airbyte.com/airbyte-cloud)
     * It is also sometimes used by OSS users to configure their own Self-Hosted Airbyte deployment (internal state, etc)
 
-    WARNING 
-    * Airbyte does NOT have active commitments to support this API long-term. 
+    WARNING
+    * Airbyte does NOT have active commitments to support this API long-term.
     * OSS users can utilize the Configuration API, but at their own risk.
     * This API is utilized internally by the Airbyte Engineering team and may be modified in the future if the need arises.
     * Modifications by the Airbyte Engineering team could create breaking changes and OSS users would need to update their code to catch up to any backwards incompatible changes in the API.
@@ -5182,7 +5182,17 @@ components:
           $ref: "#/components/schemas/DestinationId"
     CompleteOAuthResponse:
       type: object
-      additionalProperties: true # Oauth parameters like refresh/access token etc.. will be different per API so we don't specify them in advance
+      required:
+        - request_succeeded
+        - auth_payload
+      properties:
+        request_succeeded:
+          type: boolean
+        request_error:
+          type: string
+        auth_payload:
+          type: object
+          additionalProperties: true # Oauth parameters like refresh/access token etc.. will be different per API, so we don't specify them in advance
     SetInstancewideSourceOauthParamsRequestBody:
       type: object
       required:

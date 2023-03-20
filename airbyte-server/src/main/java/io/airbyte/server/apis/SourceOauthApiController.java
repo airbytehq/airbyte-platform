@@ -8,6 +8,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 
 import io.airbyte.api.generated.SourceOauthApi;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody;
@@ -21,7 +22,6 @@ import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.Map;
 
 @SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/source_oauths")
@@ -40,7 +40,7 @@ public class SourceOauthApiController implements SourceOauthApi {
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
-  public Map<String, Object> completeSourceOAuth(@Body final CompleteSourceOauthRequest completeSourceOauthRequest) {
+  public CompleteOAuthResponse completeSourceOAuth(@Body final CompleteSourceOauthRequest completeSourceOauthRequest) {
     return ApiHelper.execute(() -> oAuthHandler.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest));
   }
 
