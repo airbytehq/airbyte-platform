@@ -9,38 +9,45 @@
   }
 }
 
-.usageValue {
-  padding-right: variables.$spacing-md;
-  min-width: 53px;
-}
+// can be removed after KC's PR is merged
+th.header {
+  padding-left: variables.$spacing-sm;
 
-// todo: remove after cutover
-%lightBackgroundOverride {
-  &.light {
-    background-color: colors.$white;
+  &:first-child {
+    padding-left: variables.$spacing-sm;
+  }
+
+  &:last-child {
+    padding-left: variables.$spacing-sm;
+  }
+
+  &--light {
+    background-color: colors.$white !important;
   }
 }
 
-.thConnection {
-  @extend %lightBackgroundOverride;
+.header {
+  &--nonSortable {
+    margin-left: variables.$spacing-sm;
+  }
 
-  width: 30%;
+  &--sorted {
+    color: colors.$grey-600 !important;
+  }
 }
 
-.thCreditsConsumed {
-  @extend %lightBackgroundOverride;
+.usageValue {
+  padding-right: variables.$spacing-md;
+  min-width: 53px;
+  text-align: right;
 
-  padding-right: 0;
+  &--green {
+    color: colors.$green;
+  }
 }
 
-.thCreditsConsumedPercent {
-  @extend %lightBackgroundOverride;
-
-  padding-left: 0;
-}
-
-.thConnectionId {
-  @extend %lightBackgroundOverride;
-
-  width: 20%;
+.cellText {
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
