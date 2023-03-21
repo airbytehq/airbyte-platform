@@ -2,8 +2,8 @@
 @use "scss/variables";
 
 .container {
-  font-size: 12px;
-  line-height: 15px;
+  font-size: variables.$font-size-sm;
+  line-height: 1.2;
   color: colors.$grey;
 }
 

@@ -1,5 +1,5 @@
-@use "../../../../../../scss/colors";
-@use "../../../../../../scss/variables";
+@use "scss/colors";
+@use "scss/variables";
 
 .container {
   display: flex;
@@ -23,16 +23,16 @@
 
       .hostingText {
         font-weight: 700;
-        font-size: 14px;
-        line-height: 17px;
+        font-size: variables.$font-size-lg;
+        line-height: 1.2;
         color: colors.$dark-blue-900;
         margin: 0;
       }
 
       .deployText {
         font-weight: 400;
-        font-size: 12px;
-        line-height: 15px;
+        font-size: variables.$font-size-sm;
+        line-height: 1.2;
         margin: 0;
         color: colors.$grey-300;
       }

@@ -8,7 +8,7 @@
   align-items: center;
   gap: variables.$spacing-md;
   height: 35px;
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
 }
 
 .content {

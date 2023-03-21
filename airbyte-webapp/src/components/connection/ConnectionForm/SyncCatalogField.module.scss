@@ -7,7 +7,7 @@
   align-items: center;
   flex-direction: row;
   font-weight: 500;
-  font-size: 14px;
-  line-height: 17px;
+  font-size: variables.$font-size-lg;
+  line-height: 1.2;
   padding: variables.$spacing-md variables.$spacing-xl;
 }

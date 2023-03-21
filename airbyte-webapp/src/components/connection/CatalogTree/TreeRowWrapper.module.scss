@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/variables";
 
 .rowWrapper {
   height: 40px;
@@ -16,5 +17,5 @@
 .rowContent {
   height: 100%;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
 }
