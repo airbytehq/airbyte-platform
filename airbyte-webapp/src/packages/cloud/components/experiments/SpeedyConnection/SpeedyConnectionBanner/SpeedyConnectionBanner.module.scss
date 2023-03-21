@@ -1,5 +1,5 @@
-@use "../../../../../../../src/scss/variables";
-@use "../../../../../../../src/scss/colors";
+@use "src/scss/variables";
+@use "src/scss/colors";
 
 .container {
   height: 43px;
@@ -7,8 +7,8 @@
   position: fixed;
   top: 0;
   z-index: 3;
-  font-size: 12px;
-  line-height: 15px;
+  font-size: variables.$font-size-sm;
+  line-height: 1.2;
   padding: 8px;
   display: flex;
   align-items: center;

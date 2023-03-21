@@ -10,9 +10,7 @@ import io.airbyte.analytics.TrackingClientSingleton;
 import io.airbyte.commons.server.scheduler.DefaultSynchronousSchedulerClient;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.TemporalClient;
-import io.airbyte.commons.temporal.scheduling.DefaultTaskQueueMapper;
 import io.airbyte.commons.temporal.scheduling.RouterService;
-import io.airbyte.commons.temporal.scheduling.TaskQueueMapper;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.TrackingStrategy;
@@ -63,11 +61,6 @@ public class TemporalBeanFactory {
                                                  final TrackingClient trackingClient,
                                                  final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     return new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper);
-  }
-
-  @Singleton
-  public TaskQueueMapper taskQueueMapper() {
-    return new DefaultTaskQueueMapper();
   }
 
   @Singleton

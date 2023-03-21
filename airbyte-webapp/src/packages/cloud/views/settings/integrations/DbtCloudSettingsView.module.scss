@@ -18,7 +18,7 @@
 .description {
   color: colors.$grey-300;
   margin-bottom: variables.$spacing-xl;
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
 
   a:link,
   a:visited {

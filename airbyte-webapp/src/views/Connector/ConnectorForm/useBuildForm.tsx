@@ -14,6 +14,7 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectorFormValues } from "./types";
 
@@ -72,6 +73,7 @@ export function useBuildForm(
   initialValues?: Partial<ConnectorFormValues>
 ): BuildFormHook {
   const { formatMessage } = useIntl();
+  const showSimplifiedConfiguration = useExperiment("connector.form.simplifyConfiguration", false);
 
   const isDraft =
     selectedConnectorDefinitionSpecification &&
@@ -144,9 +146,11 @@ export function useBuildForm(
     }, [formBlock, initialValues, isDraft, isEditMode, validationSchema]);
 
     // flatten out the connectionConfiguration properties so they are displayed properly in the ConnectorForm
-    const flattenedFormFields = formBlock.properties.flatMap((block) =>
-      block._type === "formGroup" && block.fieldKey === "connectionConfiguration" ? block.properties : block
-    );
+    const flattenedFormFields = showSimplifiedConfiguration
+      ? formBlock.properties.flatMap((block) =>
+          block._type === "formGroup" && block.fieldKey === "connectionConfiguration" ? block.properties : block
+        )
+      : [formBlock];
 
     const groups: GroupDetails[] = useMemo(() => {
       // ensure that the name group comes first

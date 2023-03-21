@@ -43,7 +43,7 @@ $icon-size: 20px;
   margin: 0 variables.$spacing-xl 1px;
   height: 100%;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
   display: flex;
   flex-direction: row;
 }

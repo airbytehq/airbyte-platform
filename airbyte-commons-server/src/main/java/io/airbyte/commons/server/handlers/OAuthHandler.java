@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
@@ -190,10 +191,10 @@ public class OAuthHandler {
     return result;
   }
 
-  public Map<String, Object> completeSourceOAuthHandleReturnSecret(final CompleteSourceOauthRequest completeSourceOauthRequest)
+  public CompleteOAuthResponse completeSourceOAuthHandleReturnSecret(final CompleteSourceOauthRequest completeSourceOauthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final Map<String, Object> oAuthTokens = completeSourceOAuth(completeSourceOauthRequest);
-    if (completeSourceOauthRequest.getReturnSecretCoordinate()) {
+    final CompleteOAuthResponse oAuthTokens = completeSourceOAuth(completeSourceOauthRequest);
+    if (oAuthTokens != null && completeSourceOauthRequest.getReturnSecretCoordinate()) {
       return writeOAuthResponseSecret(completeSourceOauthRequest.getWorkspaceId(), oAuthTokens);
     } else {
       return oAuthTokens;
@@ -201,7 +202,7 @@ public class OAuthHandler {
   }
 
   @VisibleForTesting
-  public Map<String, Object> completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
+  public CompleteOAuthResponse completeSourceOAuth(final CompleteSourceOauthRequest completeSourceOauthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeSourceOauthRequest.getWorkspaceId(), SOURCE_DEFINITION_ID_KEY,
         completeSourceOauthRequest.getSourceDefinitionId());
@@ -251,10 +252,10 @@ public class OAuthHandler {
     } catch (final Exception e) {
       LOGGER.error(ERROR_MESSAGE, e);
     }
-    return result;
+    return mapToCompleteOAuthResponse(result);
   }
 
-  public Map<String, Object> completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest)
+  public CompleteOAuthResponse completeDestinationOAuth(final CompleteDestinationOAuthRequest completeDestinationOAuthRequest)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final Map<String, Object> traceTags = Map.of(WORKSPACE_ID_KEY, completeDestinationOAuthRequest.getWorkspaceId(), DESTINATION_DEFINITION_ID_KEY,
         completeDestinationOAuthRequest.getDestinationDefinitionId());
@@ -305,7 +306,7 @@ public class OAuthHandler {
     } catch (final Exception e) {
       LOGGER.error(ERROR_MESSAGE, e);
     }
-    return result;
+    return mapToCompleteOAuthResponse(result);
   }
 
   public void setSourceInstancewideOauthParams(final SetInstancewideSourceOauthParamsRequestBody requestBody)
@@ -354,6 +355,29 @@ public class OAuthHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     return TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition);
+  }
+
+  CompleteOAuthResponse mapToCompleteOAuthResponse(Map<String, Object> input) {
+    final CompleteOAuthResponse response = new CompleteOAuthResponse();
+    response.setAuthPayload(new HashMap<>());
+
+    if (input.containsKey("request_succeeded")) {
+      response.setRequestSucceeded("true".equals(input.get("request_succeeded")));
+    } else {
+      response.setRequestSucceeded(true);
+    }
+
+    if (input.containsKey("request_error")) {
+      response.setRequestError(input.get("request_error").toString());
+    }
+
+    input.forEach((k, v) -> {
+      if (k != "request_succeeded" && k != "request_error") {
+        response.getAuthPayload().put(k, v);
+      }
+    });
+
+    return response;
   }
 
   @VisibleForTesting
@@ -415,12 +439,12 @@ public class OAuthHandler {
    * <p>
    * See https://github.com/airbytehq/airbyte/pull/22151#discussion_r1104856648 for full discussion.
    */
-  public Map<String, Object> writeOAuthResponseSecret(final UUID workspaceId, final Map<String, Object> payload) {
+  public CompleteOAuthResponse writeOAuthResponseSecret(final UUID workspaceId, final CompleteOAuthResponse payload) {
 
     try {
       final String payloadString = Jackson.getObjectMapper().writeValueAsString(payload);
       final SecretCoordinate secretCoordinate = secretsRepositoryWriter.storeSecret(generateOAuthSecretCoordinate(workspaceId), payloadString);
-      return Map.of("secretId", secretCoordinate.getFullCoordinate());
+      return mapToCompleteOAuthResponse(Map.of("secretId", secretCoordinate.getFullCoordinate()));
 
     } catch (final JsonProcessingException e) {
       throw new RuntimeException("Json object could not be written to string.", e);

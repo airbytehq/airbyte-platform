@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 
 import { ToastType } from "components/ui/Toast";
@@ -9,7 +9,12 @@ import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecifi
 import { DestinationAuthService } from "core/domain/connector/DestinationAuthService";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { SourceAuthService } from "core/domain/connector/SourceAuthService";
-import { DestinationOauthConsentRequest, SourceOauthConsentRequest } from "core/request/AirbyteClient";
+import {
+  CompleteOAuthResponse,
+  CompleteOAuthResponseAuthPayload,
+  DestinationOauthConsentRequest,
+  SourceOauthConsentRequest,
+} from "core/request/AirbyteClient";
 import { isCommonRequestError } from "core/request/CommonRequestError";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
@@ -51,7 +56,7 @@ export function useConnectorAuth(): {
   completeOauthRequest: (
     params: SourceOauthConsentRequest | DestinationOauthConsentRequest,
     queryParams: Record<string, unknown>
-  ) => Promise<Record<string, unknown>>;
+  ) => Promise<CompleteOAuthResponse>;
 } {
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
@@ -133,7 +138,7 @@ export function useConnectorAuth(): {
     completeOauthRequest: async (
       params: SourceOauthConsentRequest | DestinationOauthConsentRequest,
       queryParams: Record<string, unknown>
-    ): Promise<Record<string, unknown>> => {
+    ): Promise<CompleteOAuthResponse> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload: any = {
         ...params,
@@ -146,6 +151,8 @@ export function useConnectorAuth(): {
   };
 }
 
+const OAUTH_ERROR_ID = "connector.oauthError";
+
 export function useRunOauthFlow({
   connector,
   connectorDefinition,
@@ -153,13 +160,14 @@ export function useRunOauthFlow({
 }: {
   connector: ConnectorDefinitionSpecification;
   connectorDefinition?: ConnectorDefinition;
-  onDone?: (values: Record<string, unknown>) => void;
+  onDone?: (values: CompleteOAuthResponseAuthPayload) => void;
 }): {
   loading: boolean;
   done?: boolean;
   run: (oauthInputParams: Record<string, unknown>) => void;
 } {
   const { getConsentUrl, completeOauthRequest } = useConnectorAuth();
+  const { registerNotification } = useNotificationService();
   const param = useRef<SourceOauthConsentRequest | DestinationOauthConsentRequest>();
   const connectorType = isSourceDefinitionSpecification(connector) ? "source" : "destination";
   const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
@@ -178,14 +186,32 @@ export function useRunOauthFlow({
     async (queryParams: Record<string, unknown>) => {
       const oauthStartedPayload = param.current;
 
-      if (oauthStartedPayload) {
-        const completeOauthResponse = await completeOauthRequest(oauthStartedPayload, queryParams);
-        trackOAuthSuccess(connectorDefinition);
-        onDone?.(completeOauthResponse);
-        return true;
+      if (!oauthStartedPayload) {
+        // unexpected call, no oauth flow was started
+        return false;
       }
 
-      return !!oauthStartedPayload;
+      let completeOauthResponse: CompleteOAuthResponse;
+      try {
+        completeOauthResponse = await completeOauthRequest(oauthStartedPayload, queryParams);
+      } catch (e) {
+        registerNotification({
+          id: OAUTH_ERROR_ID,
+          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: e.message }} />,
+          type: ToastType.ERROR,
+        });
+        return false;
+      }
+
+      if (!completeOauthResponse.request_succeeded || !completeOauthResponse.auth_payload) {
+        // user canceled
+        param.current = undefined;
+        return false;
+      }
+
+      trackOAuthSuccess(connectorDefinition);
+      onDone?.(completeOauthResponse.auth_payload);
+      return true;
     },
     [connector, onDone]
   );
@@ -193,13 +219,8 @@ export function useRunOauthFlow({
   const onOathGranted = useCallback(
     async (event: MessageEvent) => {
       // TODO: check if more secure option is required
-      if (
-        event.origin === window.origin &&
-        // In case of oAuth 1.0a there would be no "state" field
-        // but it would be "oauth_verifier" parameter.
-        (event.data?.state || event.data?.oauth_verifier)
-      ) {
-        await completeOauth(event.data);
+      if (event.data?.airbyte_type === "airbyte_oauth_callback" && event.origin === window.origin) {
+        await completeOauth(event.data.query);
       }
     },
     [completeOauth]
@@ -232,7 +253,8 @@ export function useResolveNavigate(): void {
   const query = useQuery();
 
   useEffectOnce(() => {
-    window.opener?.postMessage(query);
+    // we add "airbyte_type" into the window so that we can catch events only from this window back in `onOathGranted`
+    window.opener?.postMessage({ airbyte_type: "airbyte_oauth_callback", query });
     window.close();
   });
 }

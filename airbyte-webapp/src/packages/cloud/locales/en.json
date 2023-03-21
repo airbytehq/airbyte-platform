@@ -140,6 +140,7 @@
 
   "credits.date": "Date",
   "credits.amount": "Credits",
+  "credits.billing": "Billing",
   "credits.connection": "Connection",
   "credits.source": "Source",
   "credits.destination": "Destination",

@@ -7,7 +7,9 @@ package io.airbyte.server.apis;
 import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 
 import io.airbyte.api.generated.DeclarativeSourceDefinitionsApi;
+import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
+import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -38,11 +40,23 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   @Secured({EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  public void createDeclarativeSourceDefinitionManifest(DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
+  public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
       handler.createDeclarativeSourceDefinitionManifest(requestBody);
       return null;
     });
+  }
+
+  @Override
+  @Post(uri = "/list_manifests")
+  @Status(HttpStatus.OK)
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public DeclarativeManifestsReadList listDeclarativeManifests(
+                                                               final ListDeclarativeManifestsRequestBody requestBody) {
+    return ApiHelper
+        .execute(() -> handler.listManifestVersions(requestBody));
   }
 
 }

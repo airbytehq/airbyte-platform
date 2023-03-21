@@ -375,6 +375,11 @@ public class AirbyteAcceptanceTestHarness {
     return apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId)).getCatalog();
   }
 
+  // Run check Connection workflow.
+  public void checkConnection(final UUID sourceId) throws ApiException {
+    apiClient.getSourceApi().checkConnectionToSource(new SourceIdRequestBody().sourceId(sourceId));
+  }
+
   public AirbyteCatalog discoverSourceSchemaWithoutCache(final UUID sourceId) throws ApiException {
     return apiClient.getSourceApi().discoverSchemaForSource(
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true)).getCatalog();

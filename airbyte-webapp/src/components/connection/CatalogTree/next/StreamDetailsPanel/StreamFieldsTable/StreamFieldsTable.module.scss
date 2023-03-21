@@ -43,8 +43,8 @@ $arrow-cell-fixed-width: 40px;
   color: colors.$grey;
   height: $cell-height;
   font-weight: 400;
-  font-size: 12px;
-  line-height: 15px;
+  font-size: variables.$font-size-sm;
+  line-height: 1.2;
   text-transform: capitalize;
 
   &:first-child {
