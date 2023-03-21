@@ -45,6 +45,7 @@ import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -2212,6 +2213,54 @@ public class ConfigRepository {
   }
 
   /**
+   * Return a versioned manifest associated with a builder project.
+   *
+   * @param builderProjectId ID of the connector_builder_project
+   * @param version the version of the manifest
+   * @return ConnectorBuilderProjectVersionedManifest matching the builderProjectId
+   * @throws ConfigNotFoundException ensures that there a connector_builder_project matching the
+   *         `builderProjectId`, a declarative_manifest with the specified version associated with the
+   *         builder project and an active_declarative_manifest. If either of these conditions is not
+   *         true, this error is thrown
+   * @throws IOException exception while interacting with db
+   */
+  public ConnectorBuilderProjectVersionedManifest getVersionedConnectorBuilderProject(final UUID builderProjectId, final Long version)
+      throws ConfigNotFoundException, IOException {
+    final Optional<ConnectorBuilderProjectVersionedManifest> projectOptional = database.query(ctx -> ctx
+        .select(CONNECTOR_BUILDER_PROJECT.ID,
+            CONNECTOR_BUILDER_PROJECT.NAME,
+            CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID,
+            field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"))
+        .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST)
+        .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
+        .from(CONNECTOR_BUILDER_PROJECT)
+        .join(ACTIVE_DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .join(DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)
+            .andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE)
+            .and(DECLARATIVE_MANIFEST.VERSION.eq(version)))
+        .fetch()
+        .map(ConfigRepository::buildConnectorBuilderProjectVersionedManifest)
+        .stream()
+        .findFirst());
+    return projectOptional.orElseThrow(() -> new ConfigNotFoundException(
+        "CONNECTOR_BUILDER_PROJECTS/DECLARATIVE_MANIFEST/ACTIVE_DECLARATIVE_MANIFEST",
+        String.format("connector_builder_projects.id:%s manifest_version:%s", builderProjectId, version)));
+  }
+
+  private static ConnectorBuilderProjectVersionedManifest buildConnectorBuilderProjectVersionedManifest(final Record record) {
+    return new ConnectorBuilderProjectVersionedManifest()
+        .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
+        .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
+        .withHasDraft((Boolean) record.get("hasDraft"))
+        .withSourceDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
+        .withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
+        .withManifestVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
+        .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION));
+  }
+
+  /**
    * Get connector builder project from a workspace id.
    *
    * @param workspaceId workspace id
@@ -2260,34 +2309,75 @@ public class ConfigRepository {
   public void writeBuilderProjectDraft(final UUID projectId, final UUID workspaceId, final String name, final JsonNode manifestDraft)
       throws IOException {
     database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(CONNECTOR_BUILDER_PROJECT)
-          .where(matchId));
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
+      return null;
+    });
+  }
 
-      if (isExistingConfig) {
-        ctx.update(CONNECTOR_BUILDER_PROJECT)
-            .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
-            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
-            .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
-            .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
-                manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
-            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
-            .where(matchId)
-            .execute();
-      } else {
-        ctx.insertInto(CONNECTOR_BUILDER_PROJECT)
-            .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
-            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
-            .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
-            .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
-                manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
-            .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
-            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
-            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)
-            .execute();
-      }
+  private void writeBuilderProjectDraft(final UUID projectId,
+                                        final UUID workspaceId,
+                                        final String name,
+                                        final JsonNode manifestDraft,
+                                        DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
+    final boolean isExistingConfig = ctx.fetchExists(select()
+        .from(CONNECTOR_BUILDER_PROJECT)
+        .where(matchId));
+
+    if (isExistingConfig) {
+      ctx.update(CONNECTOR_BUILDER_PROJECT)
+          .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
+          .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
+          .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
+          .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
+              manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
+          .where(matchId)
+          .execute();
+    } else {
+      ctx.insertInto(CONNECTOR_BUILDER_PROJECT)
+          .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
+          .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
+          .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
+          .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
+              manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+          .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
+          .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)
+          .execute();
+    }
+  }
+
+  /**
+   * Write name and draft of a builder project. The actor_definition is also updated to match the new
+   * builder project name.
+   *
+   * Actor definition updated this way should always be private (i.e. public=false). As an additional
+   * protection, we want to shield ourselves from users updating public actor definition and
+   * therefore, the name of the actor definition won't be updated if the actor definition is not
+   * public. See
+   * https://github.com/airbytehq/airbyte-platform-internal/pull/5289#discussion_r1142757109.
+   *
+   * @param projectId the id of the project
+   * @param workspaceId the id of the workspace the project is associated with
+   * @param name the name of the project
+   * @param manifestDraft the manifest (can be null for no draft)
+   * @param actorDefinitionId the id of the associated actor definition
+   * @throws IOException exception while interacting with db
+   */
+  public void updateBuilderProjectAndActorDefinition(final UUID projectId,
+                                                     final UUID workspaceId,
+                                                     final String name,
+                                                     final JsonNode manifestDraft,
+                                                     final UUID actorDefinitionId)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
+      ctx.update(ACTOR_DEFINITION)
+          .set(ACTOR_DEFINITION.NAME, name)
+          .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId).and(ACTOR_DEFINITION.PUBLIC.eq(false)))
+          .execute();
       return null;
     });
   }
@@ -2309,13 +2399,6 @@ public class ConfigRepository {
     });
   }
 
-  /**
-   * Write an active declarative manifest. If ACTIVE_DECLARATIVE_MANIFEST.ID is already in the DB, the
-   * entry will be updated
-   *
-   * @param activeDeclarativeManifest active declarative manifest to write
-   * @throws IOException exception while interacting with db
-   */
   private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
