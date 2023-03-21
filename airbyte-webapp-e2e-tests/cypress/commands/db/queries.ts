@@ -119,3 +119,15 @@ export const dropDummyTablesQuery = (amountOfTables: number) => {
   const tables = Array.from({ length: amountOfTables }, (_, index) => `public.dummy_table_${index + 1}`).join(", ");
   return dropTable(tables);
 };
+
+// Lots of tables
+
+export const createTableWithLotsOfColumnsQuery = (() => {
+  const columns: string[] = [];
+  for (let i = 0; i < 50; i++) {
+    columns.push(`field_${i} INTEGER NULL`);
+  }
+  return createTable("public.columns", columns);
+})();
+
+export const dropTableWithLotsOfColumnsQuery = dropTable("public.columns");

@@ -75,6 +75,7 @@ export const Table = <T,>({
             <tr
               className={classNames(styles.tr, { [styles.clickable]: !!onClickRow })}
               key={`table-row-${row.id}`}
+              data-testid={`table-row-${row.id}`}
               onClick={() => onClickRow?.(row.original)}
             >
               {row.getVisibleCells().map((cell) => {
@@ -85,6 +86,7 @@ export const Table = <T,>({
                       [styles.responsive]: meta?.responsive,
                     })}
                     key={`table-cell-${row.id}-${cell.id}`}
+                    data-testid={`table-cell-${row.id}-${cell.id}`}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>

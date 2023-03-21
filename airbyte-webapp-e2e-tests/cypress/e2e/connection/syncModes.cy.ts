@@ -33,6 +33,7 @@ import { initialSetupCompleted } from "commands/workspaces";
 import { RouteHandler } from "cypress/types/net-stubbing";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
+import streamDetails from "pages/connection/streamDetailsPageObject";
 import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
 import { modifySyncCatalogStream } from "utils/connection";
 
@@ -87,6 +88,15 @@ const saveConnectionAndAssertStreams = (
       });
     });
 };
+
+const USER_FIELD_NAMES = ["email", "id", "name", "updated_at"];
+const USER_FIELD_DATA_TYPES = ["String", "Integer", "String", "Datetime"];
+
+const ACCOUNTS_FIELD_NAMES = ["id", "name", "updated_at"];
+const ACCOUNTS_FIELD_DATA_TYPES = ["Integer", "String", "Datetime"];
+
+const USER_CARS_FIELD_NAMES = ["car_id", "created_at", "user_id"];
+const USER_CARS_FIELD_DATA_TYPES = ["Integer", "Datetime", "Integer"];
 
 describe.skip("Connection - sync modes", () => {
   const streamsTable = new NewStreamsTablePageObject();
@@ -160,6 +170,14 @@ describe.skip("Connection - sync modes", () => {
       usersStreamRow.hasNoSourceDefinedCursor();
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
 
+      // Check Stream details table
+      usersStreamRow.showStreamDetails();
+      streamDetails.areFieldsValid({
+        names: USER_FIELD_NAMES,
+        dataTypes: USER_FIELD_DATA_TYPES,
+      });
+      streamDetails.close();
+
       // Save
       saveConnectionAndAssertStreams({
         namespace: "public",
@@ -183,6 +201,14 @@ describe.skip("Connection - sync modes", () => {
       // Verify primary key and cursor
       usersStreamRow.hasNoSourceDefinedCursor();
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
+
+      // Check Stream details table
+      usersStreamRow.showStreamDetails();
+      streamDetails.areFieldsValid({
+        names: USER_FIELD_NAMES,
+        dataTypes: USER_FIELD_DATA_TYPES,
+      });
+      streamDetails.close();
 
       saveConnectionAndAssertStreams({
         namespace: "public",
@@ -215,6 +241,17 @@ describe.skip("Connection - sync modes", () => {
       // Check primary key
       users2StreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
 
+      // Check Stream details table
+      users2StreamRow.showStreamDetails();
+      streamDetails.areFieldsValid({
+        names: USER_FIELD_NAMES,
+        dataTypes: USER_FIELD_DATA_TYPES,
+        cursor,
+        primaryKeys: [primaryKey],
+        hasSourceDefinedPrimaryKeys: true,
+      });
+      streamDetails.close();
+
       saveConnectionAndAssertStreams({
         namespace: "public",
         name: "users2",
@@ -241,6 +278,18 @@ describe.skip("Connection - sync modes", () => {
       // Check cursor and primary key
       accountsStreamRow.hasSourceDefinedCursor(cursor);
       accountsStreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
+
+      // Check Stream details table
+      accountsStreamRow.showStreamDetails();
+      streamDetails.areFieldsValid({
+        names: ACCOUNTS_FIELD_NAMES,
+        dataTypes: ACCOUNTS_FIELD_DATA_TYPES,
+        cursor,
+        hasSourceDefinedCursor: true,
+        primaryKeys: [primaryKey],
+        hasSourceDefinedPrimaryKeys: true,
+      });
+      streamDetails.close();
 
       saveConnectionAndAssertStreams({
         namespace: "public",
@@ -291,6 +340,16 @@ describe.skip("Connection - sync modes", () => {
       userCarsStreamRow.selectPrimaryKeys(primaryKeyValue);
       userCarsStreamRow.hasSelectedPrimaryKeys(primaryKeyValue);
 
+      // Check Stream details table
+      userCarsStreamRow.showStreamDetails();
+      streamDetails.areFieldsValid({
+        names: USER_CARS_FIELD_NAMES,
+        dataTypes: USER_CARS_FIELD_DATA_TYPES,
+        cursor: cursorValue,
+        primaryKeys: primaryKeyValue,
+      });
+      streamDetails.close();
+
       saveConnectionAndAssertStreams({
         namespace: "public",
         name: "user_cars",
@@ -329,6 +388,15 @@ describe.skip("Connection - sync modes", () => {
       // Select cursor
       usersStreamRow.selectCursor(cursor);
       usersStreamRow.hasSelectedCursorField(cursor);
+
+      // Check Stream details table
+      usersStreamRow.showStreamDetails();
+      streamDetails.areFieldsValid({
+        names: USER_FIELD_NAMES,
+        dataTypes: USER_FIELD_DATA_TYPES,
+        cursor,
+      });
+      streamDetails.close();
 
       saveConnectionAndAssertStreams({
         namespace: "public",

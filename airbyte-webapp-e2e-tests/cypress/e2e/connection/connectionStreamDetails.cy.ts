@@ -15,9 +15,9 @@ import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } 
 import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
-  createAccountsTableQuery,
+  createTableWithLotsOfColumnsQuery,
   createUserCarsTableQuery,
-  dropAccountsTableQuery,
+  dropTableWithLotsOfColumnsQuery,
   dropUserCarsTableQuery,
   getCreateUsersTableQuery,
   getDropUsersTableQuery,
@@ -28,12 +28,7 @@ import streamDetails from "pages/connection/streamDetailsPageObject";
 import { StreamRowPageObject } from "pages/connection/streamsTablePageObject/StreamRowPageObject";
 
 const dropTables = () => {
-  runDbQuery(
-    getDropUsersTableQuery("users"),
-    getDropUsersTableQuery("users2"),
-    dropAccountsTableQuery,
-    dropUserCarsTableQuery
-  );
+  runDbQuery(getDropUsersTableQuery("users"), dropUserCarsTableQuery, dropTableWithLotsOfColumnsQuery);
 };
 
 describe.skip("Connection - Stream details", () => {
@@ -46,12 +41,7 @@ describe.skip("Connection - Stream details", () => {
   before(() => {
     dropTables();
 
-    runDbQuery(
-      getCreateUsersTableQuery("users"),
-      getCreateUsersTableQuery("users2"),
-      createAccountsTableQuery,
-      createUserCarsTableQuery
-    );
+    runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
 
     initialSetupCompleted();
 
@@ -113,7 +103,7 @@ describe.skip("Connection - Stream details", () => {
       streamDetails.isNamespace("public");
       streamDetails.isStreamName("users");
       streamDetails.isSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
-      streamDetails.areFieldsValid(fieldNames, fieldTypes);
+      streamDetails.areFieldsValid({ names: fieldNames, dataTypes: fieldTypes });
     });
 
     it("closes", () => {
@@ -133,6 +123,33 @@ describe.skip("Connection - Stream details", () => {
       streamDetails.close();
 
       streamRow.isStreamSyncEnabled(true);
+    });
+  });
+
+  describe("cursor / primary key", () => {
+    const userCarsStreamRow = new StreamRowPageObject("public", "user_cars");
+
+    it("can select cursor and primary key", () => {
+      const cursor = "created_at";
+      const primaryKeys = ["car_id", "user_id"];
+
+      userCarsStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      userCarsStreamRow.showStreamDetails();
+
+      streamDetails.selectCursor(cursor);
+      streamDetails.selectPrimaryKeys(primaryKeys);
+    });
+  });
+
+  describe("scrolling", () => {
+    const columnsStreamRow = new StreamRowPageObject("public", "columns");
+
+    it("selects cursors for stream with many fields", () => {
+      columnsStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.Append);
+      columnsStreamRow.showStreamDetails();
+
+      streamDetails.selectCursor("field_49");
+      streamDetails.selectCursor("field_0");
     });
   });
 });
