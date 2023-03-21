@@ -17,6 +17,11 @@ module.exports = {
       jsx: true,
     },
   },
+  settings: {
+    "import/resolver": {
+      typescript: {},
+    },
+  },
   rules: {
     "jsx-a11y/label-has-associated-control": "error",
     curly: "warn",
