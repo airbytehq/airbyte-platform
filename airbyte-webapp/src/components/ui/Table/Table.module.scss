@@ -34,7 +34,7 @@ $border-radius: variables.$border-radius-lg;
   line-height: 12px;
   font-weight: 600;
   width: auto;
-  padding: variables.$spacing-md variables.$spacing-lg variables.$spacing-md;
+  padding: variables.$spacing-md variables.$spacing-lg;
 
   &.sorted,
   &.light.sorted {
@@ -53,13 +53,16 @@ $border-radius: variables.$border-radius-lg;
   }
 
   &:first-child {
-    padding-left: calc(variables.$spacing-2xl + variables.$spacing-sm);
     border-radius: $border-radius 0 0;
   }
 
   &:last-child {
     padding-left: variables.$spacing-lg;
     border-radius: 0 $border-radius 0 0;
+  }
+
+  > button {
+    padding: 0;
   }
 }
 
@@ -80,7 +83,7 @@ $border-radius: variables.$border-radius-lg;
 // --------- <td/> ---------
 
 .td {
-  padding: variables.$spacing-lg calc(variables.$spacing-md + variables.$spacing-xs);
+  padding: variables.$spacing-md variables.$spacing-lg;
   font-size: variables.$font-size-sm;
   line-height: 1.2;
   font-weight: normal;

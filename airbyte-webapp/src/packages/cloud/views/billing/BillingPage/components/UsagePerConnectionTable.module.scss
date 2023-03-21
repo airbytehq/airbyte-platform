@@ -9,18 +9,7 @@
   }
 }
 
-// can be removed after KC's PR is merged
 th.header {
-  padding-left: variables.$spacing-sm;
-
-  &:first-child {
-    padding-left: variables.$spacing-sm;
-  }
-
-  &:last-child {
-    padding-left: variables.$spacing-sm;
-  }
-
   &--light {
     background-color: colors.$white !important;
   }

@@ -9,3 +9,9 @@ th.width30 {
 .thConnectionSettings {
   width: 1%;
 }
+
+.connectionsTable {
+  th:nth-child(1) {
+    padding-left: 45px;
+  }
+}
