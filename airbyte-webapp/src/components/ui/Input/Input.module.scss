@@ -5,11 +5,12 @@
   width: 100%;
   position: relative;
   background-color: colors.$grey-50;
-  border: 1px solid colors.$grey-50;
+  border: variables.$border-thin solid colors.$grey-50;
   border-radius: variables.$border-radius-xs;
 
   &.light {
     background-color: colors.$white;
+    border: variables.$border-thin solid colors.$grey-100;
   }
 
   &.error {

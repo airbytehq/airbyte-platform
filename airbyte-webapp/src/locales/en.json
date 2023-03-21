@@ -276,7 +276,7 @@
   "sources.incremental": "Incremental - based on...",
   "sources.newSource": "New source",
   "sources.newSourceTitle": "New Source",
-  "sources.selectSource": "Select a source",
+  "sources.selectSourceTitle": "Select the type of source you want to connect",
   "sources.status": "Status",
   "sources.schema": "Schema",
   "sources.schemaSelectAll": "select all",
@@ -351,6 +351,7 @@
 
   "destination.destinationSettings": "Destination Settings",
   "destinations.newDestination": "New destination",
+  "destinations.selectDestinationTitle": "Select the type of destination you want to connect",
   "destinations.description": "<b>Destinations</b> are where you <b>send</b> or <b>push</b> your data to.",
   "destinations.noDestinations": "Destination list is empty",
   "destinations.noSources": "No sources yet",
@@ -599,6 +600,7 @@
   "settings.defaultDataResidencyDescription": "Choose the default preferred data processing location for all of your connections. The default data residency setting only affects new connections. Existing connections will retain their data residency setting. <lnk>Learn more</lnk>.",
   "settings.defaultDataResidencyUpdateError": "There was an error updating the default data residency for this workspace.",
 
+  "connector.noSearchResults": "No connectors match your search.",
   "connector.requestConnectorBlock": "Request a new connector",
   "connector.requestConnector": "Request a new connector",
   "connector.request": "Request",

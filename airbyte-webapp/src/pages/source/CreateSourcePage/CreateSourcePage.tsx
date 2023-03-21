@@ -1,24 +1,30 @@
-import React from "react";
+import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
 import { HeadTitle } from "components/common/HeadTitle";
 import { FormPageContent } from "components/ConnectorBlocks";
+import { SelectConnector } from "components/source/SelectConnector";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
+import styles from "./CreateSourcePage.module.scss";
 import { SourceForm } from "./SourceForm";
 
 export const CreateSourcePage: React.FC = () => {
+  const [selectedSourceDefinitionId, setSelectedSourceDefinitionId] = useState("");
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
+  const newConnectorGridExperiment = useExperiment("connector.form.useSelectConnectorGrid", false);
+
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
@@ -39,16 +45,47 @@ export const CreateSourcePage: React.FC = () => {
     navigate(`../${result.sourceId}`);
   };
 
+  if (!newConnectorGridExperiment) {
+    return (
+      <>
+        <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />{" "}
+        <ConnectorDocumentationWrapper>
+          <PageHeader title={null} middleTitleBlock={<FormattedMessage id="sources.newSourceTitle" />} />
+          <FormPageContent>
+            <SourceForm onSubmit={onSubmitSourceStep} sourceDefinitions={sourceDefinitions} />
+            <CloudInviteUsersHint connectorType="source" />
+          </FormPageContent>
+        </ConnectorDocumentationWrapper>
+      </>
+    );
+  }
+
   return (
     <>
-      <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />{" "}
-      <ConnectorDocumentationWrapper>
-        <PageHeader title={null} middleTitleBlock={<FormattedMessage id="sources.newSourceTitle" />} />
-        <FormPageContent>
-          <SourceForm onSubmit={onSubmitSourceStep} sourceDefinitions={sourceDefinitions} />
-          <CloudInviteUsersHint connectorType="source" />
-        </FormPageContent>
-      </ConnectorDocumentationWrapper>
+      <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
+      {!selectedSourceDefinitionId && (
+        <div className={styles.selectSourceWrapper}>
+          <SelectConnector
+            connectorDefinitions={sourceDefinitions}
+            headingKey="sources.selectSourceTitle"
+            onSelectConnectorDefinition={(id) => setSelectedSourceDefinitionId(id)}
+          />
+        </div>
+      )}
+
+      {selectedSourceDefinitionId && (
+        <ConnectorDocumentationWrapper>
+          <FormPageContent>
+            <PageHeader title={null} middleTitleBlock={<FormattedMessage id="sources.newSourceTitle" />} />
+            <SourceForm
+              onSubmit={onSubmitSourceStep}
+              sourceDefinitions={sourceDefinitions}
+              selectedSourceDefinitionId={selectedSourceDefinitionId}
+            />
+            <CloudInviteUsersHint connectorType="source" />
+          </FormPageContent>
+        </ConnectorDocumentationWrapper>
+      )}
     </>
   );
 };
