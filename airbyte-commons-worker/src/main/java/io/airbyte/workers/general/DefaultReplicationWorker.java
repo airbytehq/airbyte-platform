@@ -521,8 +521,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
     final ReplicationAttemptSummary summary = new ReplicationAttemptSummary()
         .withStatus(outputStatus)
-        .withRecordsSynced(messageTracker.getSyncStatsTracker().getTotalRecordsEmitted()) // TODO (parker) remove in favor of totalRecordsEmitted
-        .withBytesSynced(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()) // TODO (parker) remove in favor of totalBytesEmitted
+        .withRecordsSynced(messageTracker.getSyncStatsTracker().getTotalRecordsEmitted())
+        .withBytesSynced(messageTracker.getSyncStatsTracker().getTotalBytesEmitted())
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.getReplicationStartTime())
