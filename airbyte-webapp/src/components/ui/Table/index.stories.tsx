@@ -1,7 +1,12 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
-import { CellProps } from "react-table";
+import { ComponentMeta, Story } from "@storybook/react";
+import { createColumnHelper } from "@tanstack/react-table";
 
-import { Table } from "./Table";
+import { Table, TableProps } from "./Table";
+
+interface Item {
+  name: string;
+  value: number;
+}
 
 export default {
   title: "UI/Table",
@@ -9,12 +14,10 @@ export default {
   argTypes: {},
 } as ComponentMeta<typeof Table>;
 
-const Template: ComponentStory<typeof Table> = (args) => <Table {...args} />;
-
-interface Item {
-  name: string;
-  value: number;
-}
+const Template =
+  <T,>(): Story<TableProps<T>> =>
+  (args) =>
+    <Table<T> {...args} />;
 
 const data: Item[] = [
   { name: "2017", value: 100 },
@@ -24,20 +27,20 @@ const data: Item[] = [
   { name: "2021", value: 200 },
 ];
 
+const columnHelper = createColumnHelper<Item>();
+
 const columns = [
-  {
-    Header: "Name",
-    accessor: "name",
-    Cell: ({ cell }: CellProps<Item>) => <strong>{cell.value}</strong>,
-  },
-  {
-    Header: "Value",
-    accessor: "value",
-    Cell: ({ cell }: CellProps<Item>) => <>{cell.value}</>,
-  },
+  columnHelper.accessor("name", {
+    header: "Name",
+    cell: ({ getValue }) => <strong>{getValue<string>()}</strong>,
+  }),
+  columnHelper.accessor("value", {
+    header: "Value",
+    cell: ({ getValue }) => getValue<string>(),
+  }),
 ];
 
-export const Primary = Template.bind({});
+export const Primary = Template<Item>().bind({});
 Primary.args = {
   data,
   columns,

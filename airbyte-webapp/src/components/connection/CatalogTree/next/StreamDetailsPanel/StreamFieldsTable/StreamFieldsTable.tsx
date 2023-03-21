@@ -7,8 +7,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { pathDisplayName } from "components/connection/CatalogTree/PathPopout";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
-import { NextTable } from "components/ui/NextTable";
 import { Switch } from "components/ui/Switch";
+import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
@@ -291,5 +291,5 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
     [columnHelper, destination.icon, destinationColumns, source.icon, sourceColumns]
   );
 
-  return <NextTable<TableStream> light columns={columns} data={tableData} className={styles.customTableStyle} />;
+  return <Table<TableStream> light columns={columns} data={tableData} className={styles.customTableStyle} />;
 };

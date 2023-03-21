@@ -10,7 +10,7 @@ import { SortOrderEnum } from "components/EntityTable/types";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
-import { NextTable } from "components/ui/NextTable";
+import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
@@ -239,7 +239,7 @@ export const NextUsagePerConnectionTable: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <NextTable columns={billingInsightsColumns} data={sortingData} light />
+      <Table columns={billingInsightsColumns} data={sortingData} light />
     </div>
   );
 };

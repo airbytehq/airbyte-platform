@@ -5,7 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { HeadTitle } from "components/common/HeadTitle";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { NextTable } from "components/ui/NextTable";
+import { Table } from "components/ui/Table";
 
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
@@ -170,7 +170,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </FlexItem>
                 {renderHeaderControls("used")}
               </FlexContainer>
-              <NextTable columns={usedDefinitionColumns} data={usedConnectorsDefinitions} />
+              <Table columns={usedDefinitionColumns} data={usedConnectorsDefinitions} />
             </FlexContainer>
           )}
 
@@ -183,7 +183,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
               </FlexItem>
               {renderHeaderControls("available")}
             </FlexContainer>
-            <NextTable columns={availableDefinitionColumns} data={availableConnectorDefinitions} />
+            <Table columns={availableDefinitionColumns} data={availableConnectorDefinitions} />
           </FlexContainer>
         </FlexContainer>
       </div>

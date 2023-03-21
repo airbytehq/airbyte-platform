@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { render } from "@testing-library/react";
 
-import { NextTable } from "./NextTable";
+import { Table } from "./Table";
 
 interface Item {
   name: string;
@@ -31,7 +31,7 @@ describe("<NextTable>", () => {
       },
     ];
 
-    const { getByText, container } = render(<NextTable<Item> columns={columns} data={data} />);
+    const { getByText, container } = render(<Table<Item> columns={columns} data={data} />);
     expect(getByText(/2019/)).toBeInTheDocument();
     expect(getByText(/500/)).toBeInTheDocument();
 

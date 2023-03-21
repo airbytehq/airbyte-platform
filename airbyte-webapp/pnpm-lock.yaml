@@ -118,7 +118,6 @@ specifiers:
   react-select: ^5.4.0
   react-select-event: ^5.5.0
   react-slick: ^0.29.0
-  react-table: ^7.8.0
   react-use: ^17.4.0
   react-use-intercom: ^1.5.2
   react-widgets: ^4.6.1
@@ -203,7 +202,6 @@ dependencies:
   react-router-dom: 6.3.0_sfoxds7t5ydpegc3knd667wn6m
   react-select: 5.7.0_ro4ku5z46nsxvn4dbg2mnhgwbu
   react-slick: 0.29.0_sfoxds7t5ydpegc3knd667wn6m
-  react-table: 7.8.0_react@17.0.2
   react-use: 17.4.0_sfoxds7t5ydpegc3knd667wn6m
   react-use-intercom: 1.5.2_sfoxds7t5ydpegc3knd667wn6m
   react-widgets: 4.6.1_sfoxds7t5ydpegc3knd667wn6m
@@ -13422,14 +13420,6 @@ packages:
     engines: {node: '>=0.12.0'}
     dependencies:
       lodash: 4.17.21
-    dev: false
-
-  /react-table/7.8.0_react@17.0.2:
-    resolution: {integrity: sha512-hNaz4ygkZO4bESeFfnfOft73iBUj8K5oKi1EcSHPAibEydfsX2MyU6Z8KCr3mv3C9Kqqh71U+DhZkFvibbnPbA==}
-    peerDependencies:
-      react: ^16.8.3 || ^17.0.0-0 || ^18.0.0
-    dependencies:
-      react: 17.0.2
     dev: false
 
   /react-transition-group/2.9.0_sfoxds7t5ydpegc3knd667wn6m:

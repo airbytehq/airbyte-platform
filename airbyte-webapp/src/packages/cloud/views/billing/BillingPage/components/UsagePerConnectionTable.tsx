@@ -6,7 +6,7 @@ import { FormattedMessage, FormattedNumber } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { SortOrderEnum } from "components/EntityTable/types";
-import { NextTable } from "components/ui/NextTable";
+import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
@@ -175,7 +175,7 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <NextTable columns={columns} data={sortingData} light />
+      <Table columns={columns} data={sortingData} light />
     </div>
   );
 };
