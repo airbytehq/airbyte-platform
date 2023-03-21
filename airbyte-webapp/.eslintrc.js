@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path = require("path");
+
 module.exports = {
   extends: [
     "react-app",
@@ -19,7 +22,9 @@ module.exports = {
   },
   settings: {
     "import/resolver": {
-      typescript: {},
+      typescript: {
+        project: path.resolve(__dirname, "tsconfig.json"),
+      },
     },
   },
   rules: {
