@@ -157,7 +157,8 @@ class SyncWorkflowTest {
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
 
-    when(normalizationActivity.generateNormalizationInputWithMinimumPayload(any(), any(), any())).thenReturn(normalizationInput);
+    when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any()))
+        .thenReturn(normalizationInput);
     when(normalizationSummaryCheckActivity.shouldRunNormalization(any(), any(), any())).thenReturn(true);
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));
