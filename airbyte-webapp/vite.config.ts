@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
       outDir: "build/app",
     },
     server: {
+      host: true,
       port: Number(process.env.PORT) || 3000,
       strictPort: true,
       headers: {
