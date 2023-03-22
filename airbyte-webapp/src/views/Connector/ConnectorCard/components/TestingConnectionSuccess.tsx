@@ -6,7 +6,7 @@ import { StatusIcon } from "components/ui/StatusIcon";
 import { Text } from "components/ui/Text";
 
 const TestingConnectionSuccess: React.FC = () => (
-  <FlexContainer data-id="success-result" justifyContent="center" gap="none">
+  <FlexContainer data-id="success-result" justifyContent="center" alignItems="center">
     <StatusIcon status="success" />
     <Text size="lg">
       <FormattedMessage id="form.successTests" />
