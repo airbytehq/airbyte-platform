@@ -28,7 +28,7 @@ MAX_PAGES_PER_SLICE = 4
 MAX_SLICES = 3
 
 MANIFEST = {
-    "version": "0.1.0",
+    "version": "0.29.0",
     "type": "DeclarativeSource",
     "definitions": {
         "selector": {"extractor": {"field_path": ["items"], "type": "DpathExtractor"}, "type": "RecordSelector"},
@@ -119,7 +119,7 @@ def test_list_streams():
 
 def test_list_streams_with_interpolated_urls():
     manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "type": "DeclarativeSource",
         "streams": [
             {
@@ -152,7 +152,7 @@ def test_list_streams_with_interpolated_urls():
 
 def test_list_streams_with_unresolved_interpolation():
     manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "type": "DeclarativeSource",
         "streams": [
             {
@@ -485,7 +485,7 @@ def test_read_stream_no_records():
 
 def test_invalid_manifest():
     invalid_manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "definitions": {
             "selector": {"extractor": {"field_path": ["items"]}},
             "requester": {"http_method": "GET"},
@@ -738,7 +738,7 @@ def test_resolve_manifest():
     _stream_options = {"name": _stream_name, "primary_key": _stream_primary_key, "url_base": _stream_url_base}
 
     manifest = {
-        "version": "version",
+        "version": "0.30.0",
         "definitions": {
             "schema_loader": {"name": "{{ options.stream_name }}", "file_path": "./source_sendgrid/schemas/{{ options.name }}.yaml"},
             "retriever": {
@@ -770,7 +770,7 @@ def test_resolve_manifest():
 
     expected_resolved_manifest = {
         "type": "DeclarativeSource",
-        "version": "version",
+        "version": "0.30.0",
         "definitions": {
             "schema_loader": {"name": "{{ options.stream_name }}", "file_path": "./source_sendgrid/schemas/{{ options.name }}.yaml"},
             "retriever": {

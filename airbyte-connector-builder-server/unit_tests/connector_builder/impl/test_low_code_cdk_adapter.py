@@ -52,7 +52,7 @@ class MockConcreteStream(HttpStream, ABC):
 
 
 MANIFEST = {
-    "version": "0.1.0",
+    "version": "0.29.0",
     "type": "DeclarativeSource",
     "definitions": {
         "selector": {"extractor": {"field_path": ["items"], "type": "DpathExtractor"}, "type": "RecordSelector"},
@@ -108,7 +108,7 @@ MANIFEST = {
 }
 
 MANIFEST_WITH_REFERENCES = {
-    "version": "0.1.0",
+    "version": "0.29.0",
     "type": "DeclarativeSource",
     "definitions": {
         "selector": {"type": "RecordSelector", "extractor": {"type": "DpathExtractor", "field_path": []}},
@@ -143,7 +143,7 @@ MANIFEST_WITH_REFERENCES = {
 }
 
 MANIFEST_WITH_PAGINATOR = {
-    "version": "0.1.0",
+    "version": "0.29.0",
     "type": "DeclarativeSource",
     "definitions": {},
     "streams": [
@@ -286,7 +286,7 @@ def test_read_streams_with_error(error_formatter):
 
 def test_read_streams_invalid_reference():
     invalid_reference_manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "type": "DeclarativeSource",
         "definitions": {
             "selector": {"type": "RecordSelector", "extractor": {"type": "DpathExtractor", "field_path": []}},
