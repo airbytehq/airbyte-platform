@@ -342,7 +342,7 @@ describe("Conversion successfully results in", () => {
     ]);
   });
 
-  it("schema loader converted to schema", async () => {
+  it("schema loader converted to schema with ordered keys in JSON", async () => {
     const manifest: ConnectorManifest = {
       ...baseManifest,
       streams: [
@@ -350,7 +350,8 @@ describe("Conversion successfully results in", () => {
           schema_loader: {
             type: "InlineSchemaLoader",
             schema: {
-              key: "value",
+              b: "yyy",
+              a: "xxx",
             },
           },
         }),
@@ -359,7 +360,8 @@ describe("Conversion successfully results in", () => {
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].schema).toEqual(
       `{
-  "key": "value"
+  "a": "xxx",
+  "b": "yyy"
 }`
     );
   });

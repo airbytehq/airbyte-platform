@@ -10,6 +10,7 @@ import io.airbyte.api.generated.DeclarativeSourceDefinitionsApi;
 import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
+import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
@@ -43,6 +44,19 @@ public class DeclarativeSourceDefinitionsApiController implements DeclarativeSou
   public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) {
     ApiHelper.execute(() -> {
       handler.createDeclarativeSourceDefinitionManifest(requestBody);
+      return null;
+    });
+  }
+
+  @Override
+  @Post(uri = "/update_active_manifest")
+  @Status(HttpStatus.NO_CONTENT)
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public void updateDeclarativeManifestVersion(UpdateActiveManifestRequestBody requestBody) {
+    ApiHelper.execute(() -> {
+      handler.updateDeclarativeManifestVersion(requestBody);
       return null;
     });
   }

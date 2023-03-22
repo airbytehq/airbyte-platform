@@ -117,5 +117,5 @@ export const useCreditsUsage = () => {
     return array;
   }, [consumptionPerConnectionPerTimeframe]);
 
-  return { data, freeAndPaidUsageByTimeframe, freeAndPaidUsageByConnection, formatCredits };
+  return { freeAndPaidUsageByTimeframe, freeAndPaidUsageByConnection, formatCredits };
 };

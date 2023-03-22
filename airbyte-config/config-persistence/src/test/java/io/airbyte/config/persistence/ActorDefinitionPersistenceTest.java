@@ -9,10 +9,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
@@ -35,7 +32,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
-  private static final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
 
@@ -288,44 +284,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId()).getDockerImageTag());
     assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId()).getDockerImageTag());
     assertEquals(DOCKER_IMAGE_TAG, configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId()).getDockerImageTag());
-  }
-
-  @Test
-  void givenInjectionConfigDoesNotExistWhenUpdateDeclarativeActorDefinitionThenCreateConfigInjectionAndUpdateActorDefinition()
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    configRepository.writeStandardSourceDefinition(MockData.publicSourceDefinition()
-        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-        .withSpec(new ConnectorSpecification().withSupportsDBT(false)));
-
-    JsonNode manifest = new ObjectMapper().readTree("{\"a manifest key\": \"a manifest value\"}");
-    ConnectorSpecification updatedConnectorSpecification = new ConnectorSpecification().withSupportsDBT(true);
-    configRepository.updateDeclarativeActorDefinition(SOURCE_DEFINITION_ID, manifest, updatedConnectorSpecification);
-
-    assertEquals(updatedConnectorSpecification, configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID).getSpec());
-    List<ActorDefinitionConfigInjection> configInjections = configRepository.getActorDefinitionConfigInjections(SOURCE_DEFINITION_ID).toList();
-    assertEquals(1, configInjections.size());
-    assertEquals(manifest, configInjections.get(0).getJsonToInject());
-  }
-
-  @Test
-  void givenInjectionConfigWhenUpdateDeclarativeActorDefinitionThenUpdateActorDefinitionAndConfigInjection()
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    configRepository.writeStandardSourceDefinition(MockData.publicSourceDefinition()
-        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-        .withSpec(new ConnectorSpecification().withSupportsDBT(false)));
-    configRepository.writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
-        .withActorDefinitionId(SOURCE_DEFINITION_ID)
-        .withInjectionPath("__injected_declarative_manifest")
-        .withJsonToInject(null));
-
-    JsonNode manifest = new ObjectMapper().readTree("{\"a manifest key\": \"a manifest value\"}");
-    ConnectorSpecification updatedConnectorSpecification = new ConnectorSpecification().withSupportsDBT(true);
-    configRepository.updateDeclarativeActorDefinition(SOURCE_DEFINITION_ID, manifest, updatedConnectorSpecification);
-
-    assertEquals(updatedConnectorSpecification, configRepository.getStandardSourceDefinition(SOURCE_DEFINITION_ID).getSpec());
-    List<ActorDefinitionConfigInjection> configInjections = configRepository.getActorDefinitionConfigInjections(SOURCE_DEFINITION_ID).toList();
-    assertEquals(1, configInjections.size());
-    assertEquals(manifest, configInjections.get(0).getJsonToInject());
   }
 
   @SuppressWarnings("SameParameterValue")

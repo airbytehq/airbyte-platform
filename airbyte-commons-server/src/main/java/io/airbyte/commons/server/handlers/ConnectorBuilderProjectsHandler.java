@@ -18,10 +18,10 @@ import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
-import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
@@ -47,18 +47,18 @@ public class ConnectorBuilderProjectsHandler {
 
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
-  private final ConnectorBuilderSpecAdapter specAdapter;
+  private final DeclarativeSourceManifestInjector manifestInjector;
   private final CdkVersionProvider cdkVersionProvider;
 
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
                                          final CdkVersionProvider cdkVersionProvider,
                                          final Supplier<UUID> uuidSupplier,
-                                         final ConnectorBuilderSpecAdapter specAdapter) {
+                                         final DeclarativeSourceManifestInjector manifestInjector) {
     this.configRepository = configRepository;
     this.cdkVersionProvider = cdkVersionProvider;
     this.uuidSupplier = uuidSupplier;
-    this.specAdapter = specAdapter;
+    this.manifestInjector = manifestInjector;
   }
 
   private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
@@ -73,11 +73,15 @@ public class ConnectorBuilderProjectsHandler {
     return new ConnectorBuilderProjectIdWithWorkspaceId().workspaceId(workspaceId).builderProjectId(projectId);
   }
 
-  private void validateWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
+  private void validateProjectUnderRightWorkspace(final UUID projectId, final UUID workspaceId) throws ConfigNotFoundException, IOException {
     final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(projectId, false);
+    validateProjectUnderRightWorkspace(project, workspaceId);
+  }
+
+  private void validateProjectUnderRightWorkspace(final ConnectorBuilderProject project, final UUID workspaceId) throws ConfigNotFoundException {
     final UUID actualWorkspaceId = project.getWorkspaceId();
     if (!actualWorkspaceId.equals(workspaceId)) {
-      throw new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, projectId.toString());
+      throw new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, project.getBuilderProjectId().toString());
     }
   }
 
@@ -93,33 +97,76 @@ public class ConnectorBuilderProjectsHandler {
 
   public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId projectUpdate)
       throws IOException, ConfigNotFoundException {
-    validateWorkspace(projectUpdate.getBuilderProjectId(), projectUpdate.getWorkspaceId());
+    final ConnectorBuilderProject connectorBuilderProject = configRepository.getConnectorBuilderProject(projectUpdate.getBuilderProjectId(), false);
+    validateProjectUnderRightWorkspace(connectorBuilderProject, projectUpdate.getWorkspaceId());
 
-    configRepository.writeBuilderProjectDraft(
-        projectUpdate.getBuilderProjectId(),
-        projectUpdate.getWorkspaceId(),
-        projectUpdate.getBuilderProject().getName(),
-        projectUpdate.getBuilderProject().getDraftManifest());
+    if (connectorBuilderProject.getActorDefinitionId() != null) {
+      configRepository.updateBuilderProjectAndActorDefinition(projectUpdate.getBuilderProjectId(),
+          projectUpdate.getWorkspaceId(),
+          projectUpdate.getBuilderProject().getName(),
+          projectUpdate.getBuilderProject().getDraftManifest(),
+          connectorBuilderProject.getActorDefinitionId());
+    } else {
+      configRepository.writeBuilderProjectDraft(projectUpdate.getBuilderProjectId(),
+          projectUpdate.getWorkspaceId(),
+          projectUpdate.getBuilderProject().getName(),
+          projectUpdate.getBuilderProject().getDraftManifest());
+    }
   }
 
   public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId projectDelete)
       throws IOException, ConfigNotFoundException {
-    validateWorkspace(projectDelete.getBuilderProjectId(), projectDelete.getWorkspaceId());
+    validateProjectUnderRightWorkspace(projectDelete.getBuilderProjectId(), projectDelete.getWorkspaceId());
     configRepository.deleteBuilderProject(projectDelete.getBuilderProjectId());
   }
 
   public ConnectorBuilderProjectRead getConnectorBuilderProjectWithManifest(final ConnectorBuilderProjectIdWithWorkspaceId request)
       throws IOException, ConfigNotFoundException {
-    validateWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
-    final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
-    final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project));
-    if (project.getManifestDraft() != null) {
-      final DeclarativeManifestRead manifest = new DeclarativeManifestRead()
-          .manifest(project.getManifestDraft()).isDraft(true);
-      response.setDeclarativeManifest(manifest);
+
+    if (request.getVersion() != null) {
+      validateProjectUnderRightWorkspace(request.getBuilderProjectId(), request.getWorkspaceId());
+      return buildConnectorBuilderProjectVersionManifestRead(
+          configRepository.getVersionedConnectorBuilderProject(request.getBuilderProjectId(), request.getVersion()));
     }
 
+    return getWithManifestWithoutVersion(request);
+  }
+
+  private ConnectorBuilderProjectRead getWithManifestWithoutVersion(final ConnectorBuilderProjectIdWithWorkspaceId request)
+      throws IOException, ConfigNotFoundException {
+    final ConnectorBuilderProject project = configRepository.getConnectorBuilderProject(request.getBuilderProjectId(), true);
+    validateProjectUnderRightWorkspace(project, request.getWorkspaceId());
+    final ConnectorBuilderProjectRead response = new ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project));
+
+    if (project.getManifestDraft() != null) {
+      response.setDeclarativeManifest(new DeclarativeManifestRead()
+          .manifest(project.getManifestDraft())
+          .isDraft(true));
+    } else if (project.getActorDefinitionId() != null) {
+      final DeclarativeManifest declarativeManifest = configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
+          project.getActorDefinitionId());
+      response.setDeclarativeManifest(new DeclarativeManifestRead()
+          .isDraft(false)
+          .manifest(declarativeManifest.getManifest())
+          .version(declarativeManifest.getVersion())
+          .description(declarativeManifest.getDescription()));
+    }
     return response;
+  }
+
+  private static ConnectorBuilderProjectRead buildConnectorBuilderProjectVersionManifestRead(final ConnectorBuilderProjectVersionedManifest project) {
+    return new ConnectorBuilderProjectRead()
+        .builderProject(new ConnectorBuilderProjectDetailsRead()
+            .builderProjectId(project.getBuilderProjectId())
+            .name(project.getName())
+            .hasDraft(project.getHasDraft())
+            .activeDeclarativeManifestVersion(project.getActiveDeclarativeManifestVersion())
+            .sourceDefinitionId(project.getSourceDefinitionId()))
+        .declarativeManifest(new DeclarativeManifestRead()
+            .isDraft(false)
+            .manifest(project.getManifest())
+            .version(project.getManifestVersion())
+            .description(project.getManifestDescription()));
   }
 
   public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -134,6 +181,7 @@ public class ConnectorBuilderProjectsHandler {
       throws IOException {
     final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
     final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
+    manifestInjector.addInjectedDeclarativeManifest(spec);
     final UUID actorDefinitionId = createActorDefinition(connectorBuilderPublishRequestBody.getName(),
         connectorBuilderPublishRequestBody.getWorkspaceId(),
         manifest,
@@ -141,7 +189,7 @@ public class ConnectorBuilderProjectsHandler {
 
     final DeclarativeManifest declarativeManifest = new DeclarativeManifest()
         .withActorDefinitionId(actorDefinitionId)
-        .withVersion(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getVersion().longValue())
+        .withVersion(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getVersion())
         .withDescription(connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getDescription())
         .withManifest(manifest)
         .withSpec(spec);
@@ -152,7 +200,7 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
-    final ConnectorSpecification connectorSpecification = specAdapter.adapt(spec);
+    final ConnectorSpecification connectorSpecification = manifestInjector.createDeclarativeManifestConnectorSpecification(spec);
     final StandardSourceDefinition source = new StandardSourceDefinition()
         .withSourceDefinitionId(uuidSupplier.get())
         .withName(name)
@@ -168,11 +216,7 @@ public class ConnectorBuilderProjectsHandler {
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
     configRepository.writeCustomSourceDefinition(source, workspaceId);
 
-    configRepository.writeActorDefinitionConfigInjectionForPath(
-        new ActorDefinitionConfigInjection()
-            .withActorDefinitionId(source.getSourceDefinitionId())
-            .withInjectionPath("__injected_declarative_manifest")
-            .withJsonToInject(manifest));
+    configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
     return source.getSourceDefinitionId();
   }
 

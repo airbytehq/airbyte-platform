@@ -91,6 +91,13 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
 
+  private static final int MAX_ATTEMPTS = 3;
+  private static final Map<ReleaseStage, Integer> RELEASE_STAGE_ORDER = Map.of(
+      ReleaseStage.custom, 1,
+      ReleaseStage.alpha, 2,
+      ReleaseStage.beta, 3,
+      ReleaseStage.generally_available, 4);
+  private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
   private final SyncJobFactory jobFactory;
   private final JobPersistence jobPersistence;
   private final TemporalWorkerRunFactory temporalWorkerRunFactory;
@@ -131,6 +138,30 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     this.jobErrorReporter = jobErrorReporter;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+  }
+
+  @VisibleForTesting
+  static List<ReleaseStage> orderByReleaseStageAsc(final List<ReleaseStage> releaseStages) {
+    // Using collector to get a mutable list
+    return releaseStages.stream()
+        .filter(stage -> stage != null)
+        .sorted(RELEASE_STAGE_COMPARATOR)
+        .toList();
+  }
+
+  /**
+   * Extract the attempt number from an attempt. If the number is anonymous (not 0,1,2,3) for some
+   * reason return null. We don't want to accidentally have high cardinality here because of a bug.
+   *
+   * @param attemptNumber - attemptNumber to parse
+   * @return extract attempt number or null
+   */
+  private static String parseAttemptNumberOrNull(final int attemptNumber) {
+    if (attemptNumber > MAX_ATTEMPTS) {
+      return null;
+    } else {
+      return Integer.toString(attemptNumber);
+    }
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -437,36 +468,15 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
   }
 
-  private static final int MAX_ATTEMPTS = 3;
-  private static final Map<ReleaseStage, Integer> RELEASE_STAGE_ORDER = Map.of(
-      ReleaseStage.custom, 1,
-      ReleaseStage.alpha, 2,
-      ReleaseStage.beta, 3,
-      ReleaseStage.generally_available, 4);
-  private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
-
-  @VisibleForTesting
-  static List<ReleaseStage> orderByReleaseStageAsc(final List<ReleaseStage> releaseStages) {
-    // Using collector to get a mutable list
-    return releaseStages.stream()
-        .filter(stage -> stage != null)
-        .sorted(RELEASE_STAGE_COMPARATOR)
-        .toList();
-  }
-
-  /**
-   * Extract the attempt number from an attempt. If the number is anonymous (not 0,1,2,3) for some
-   * reason return null. We don't want to accidentally have high cardinality here because of a bug.
-   *
-   * @param attemptNumber - attemptNumber to parse
-   * @return extract attempt number or null
-   */
-  private static String parseAttemptNumberOrNull(final int attemptNumber) {
-    if (attemptNumber > MAX_ATTEMPTS) {
-      return null;
-    } else {
-      return Integer.toString(attemptNumber);
+  private String parseIsJobRunningOnCustomConnectorForMetrics(Job job) {
+    if (job.getConfig() == null || job.getConfig().getSync() == null) {
+      return "null";
     }
+    if (job.getConfig().getSync().getIsSourceCustomConnector() == null
+        || job.getConfig().getSync().getIsDestinationCustomConnector() == null) {
+      return "null";
+    }
+    return String.valueOf(job.getConfig().getSync().getIsSourceCustomConnector() || job.getConfig().getSync().getIsDestinationCustomConnector());
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric, final Job job, final int attemptNumber) throws IOException {
@@ -487,7 +497,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         new MetricAttribute(MetricTags.GEOGRAPHY, geography == null ? null : geography.toString()),
         new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parseAttemptNumberOrNull(attemptNumber)),
         new MetricAttribute(MetricTags.MIN_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 0))),
-        new MetricAttribute(MetricTags.MAX_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 1))));
+        new MetricAttribute(MetricTags.MAX_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 1))),
+        new MetricAttribute(MetricTags.IS_CUSTOM_CONNECTOR_SYNC, parseIsJobRunningOnCustomConnectorForMetrics(job)));
 
     final MetricAttribute[] allMetricAttributes = Stream.concat(baseMetricAttributes.stream(), additionalAttributes.stream())
         .toList()

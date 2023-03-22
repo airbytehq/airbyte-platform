@@ -13,8 +13,8 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
-import { NextTable } from "components/ui/NextTable";
 import { PageHeader } from "components/ui/PageHeader";
+import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { ToastType } from "components/ui/Toast";
@@ -188,7 +188,7 @@ export const ConnectorBuilderListPage: React.FC = () => {
         />
       }
     >
-      <NextTable columns={columns} data={sortedProjects} className={styles.table} />
+      <Table columns={columns} data={sortedProjects} className={styles.table} sortedByColumn={sortBy} />
     </MainPageWithScroll>
   ) : (
     <Navigate to={ConnectorBuilderRoutePaths.Create} />

@@ -62,7 +62,13 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
 
   private static final Duration MAX_DELETION_TIMEOUT = Duration.ofSeconds(45);
 
+  /**
+   * Pod label used to unique identify the pod launched by this worker.
+   */
+  private static final String PROCESS_ID_LABEL_KEY = "process_id";
+
   private final UUID connectionId;
+  private final UUID processId;
   private final String application;
   private final String podNamePrefix;
   private final JobRunConfig jobRunConfig;
@@ -106,6 +112,9 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
     this.temporalUtils = temporalUtils;
     this.workerConfigs = workerConfigs;
     this.isCustomConnector = isCustomConnector;
+
+    // Generate a random UUID to unique identify the pod process
+    processId = UUID.randomUUID();
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -140,7 +149,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         final var allLabels = KubeProcessFactory.getLabels(
             jobRunConfig.getJobId(),
             Math.toIntExact(jobRunConfig.getAttemptId()),
-            Map.of(CONNECTION_ID_LABEL_KEY, connectionId.toString(), SYNC_STEP_KEY, ORCHESTRATOR_STEP));
+            generateMetadataLabels());
 
         final var podNameAndJobPrefix = podNamePrefix + "-job-" + jobRunConfig.getJobId() + "-attempt-";
         final var podName = podNameAndJobPrefix + jobRunConfig.getAttemptId();
@@ -237,6 +246,16 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
     }, activityContext);
   }
 
+  private Map<String, String> generateMetadataLabels() {
+    final Map<String, String> metadataLabels = new HashMap<>();
+    metadataLabels.put(PROCESS_ID_LABEL_KEY, processId.toString());
+    metadataLabels.put(SYNC_STEP_KEY, ORCHESTRATOR_STEP);
+    if (connectionId != null) {
+      metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
+    }
+    return metadataLabels;
+  }
+
   /**
    * It is imperative that we do not run multiple replications, normalizations, syncs, etc. at the
    * same time. Our best bet is to kill everything that is labelled with the connection id and wait
@@ -280,7 +299,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private List<Pod> getNonTerminalPodsWithLabels() {
     return containerOrchestratorConfig.kubernetesClient().pods()
         .inNamespace(containerOrchestratorConfig.namespace())
-        .withLabels(Map.of(CONNECTION_ID_LABEL_KEY, connectionId.toString()))
+        .withLabels(Map.of(PROCESS_ID_LABEL_KEY, processId.toString()))
         .list()
         .getItems()
         .stream()

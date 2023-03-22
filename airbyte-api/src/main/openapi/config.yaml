@@ -539,6 +539,23 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "409":
           description: Version already exists for definition id
+  /v1/declarative_source_definitions/update_active_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Update the declarative manifest version for a source
+      operationId: updateDeclarativeManifestVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActiveManifestRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/list_manifests:
     post:
       tags:
@@ -2699,6 +2716,10 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         isDraft:
           type: boolean
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        description:
+          type: string
     ConnectorBuilderProjectDetails:
       type: object
       required:
@@ -2722,8 +2743,7 @@ components:
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
         activeDeclarativeManifestVersion:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
     ConnectorBuilderProjectIdWithWorkspaceId:
@@ -2736,6 +2756,8 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     ExistingConnectorBuilderProjectWithWorkspaceId:
       type: object
       required:
@@ -2793,6 +2815,9 @@ components:
           type: string
         initialDeclarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+    ManifestVersion:
+      type: integer
+      format: int64
     DeclarativeSourceManifest:
       type: object
       required:
@@ -2808,8 +2833,7 @@ components:
         spec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         version:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/ManifestVersion"
     SourceDefinitionIdBody:
       type: object
       required:
@@ -2983,6 +3007,19 @@ components:
           type: boolean
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+    UpdateActiveManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - version
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     PrivateSourceDefinitionRead:
       type: object
       required:

@@ -1,4 +1,5 @@
 import { ComponentStory, ComponentMeta } from "@storybook/react";
+
 import { mockDestinationsData, mockSourcesData } from "test-utils/mock-data/mockFrequentlyUsedDestinations";
 
 import { FrequentlyUsedConnectorsCard } from "./FrequentlyUsedConnectorsCard";

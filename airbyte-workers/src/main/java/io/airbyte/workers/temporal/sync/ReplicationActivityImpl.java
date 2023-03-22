@@ -17,8 +17,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.invoker.generated.ApiException;
-import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
@@ -224,7 +222,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                 jobRunConfig,
                 syncInput.getResourceRequirements(),
                 () -> context,
-                workerConfigs);
+                workerConfigs,
+                syncInput.getConnectionId());
           } else {
             workerFactory =
                 getLegacyWorkerFactory(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, syncPersistenceFactory,
@@ -401,17 +400,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                                                                                                      final JobRunConfig jobRunConfig,
                                                                                                                      final ResourceRequirements resourceRequirements,
                                                                                                                      final Supplier<ActivityExecutionContext> activityContext,
-                                                                                                                     final WorkerConfigs workerConfigs)
-      throws ApiException {
-    final JobIdRequestBody id = new JobIdRequestBody();
-    id.setId(Long.valueOf(jobRunConfig.getJobId()));
-    final var jobInfo = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getJobsApi().getJobInfoLight(id),
-        "get job info light");
-    LOGGER.info("received response from from jobsApi.getJobInfoLight: {}", jobInfo);
-    final var jobScope = jobInfo.getJob().getConfigId();
-    final var connectionId = UUID.fromString(jobScope);
-
+                                                                                                                     final WorkerConfigs workerConfigs,
+                                                                                                                     final UUID connectionId) {
     return () -> new ReplicationLauncherWorker(
         connectionId,
         containerOrchestratorConfig,

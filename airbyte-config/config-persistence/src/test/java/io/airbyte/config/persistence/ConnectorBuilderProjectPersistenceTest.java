@@ -9,8 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.Jsons;
@@ -25,6 +28,26 @@ import org.junit.jupiter.api.Test;
 class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final Long MANIFEST_VERSION = 123L;
+  private static final UUID A_BUILDER_PROJECT_ID = UUID.randomUUID();
+  private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
+  private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
+  private static final String A_PROJECT_NAME = "a project name";
+  private static final String ANOTHER_PROJECT_NAME = "another project name";
+  private static final UUID ANY_UUID = UUID.randomUUID();
+  private static final String A_DESCRIPTION = "a description";
+  private static final Long ACTIVE_MANIFEST_VERSION = 305L;
+  private static final JsonNode A_MANIFEST;
+  private static final JsonNode ANOTHER_MANIFEST;
+
+  static {
+    try {
+      A_MANIFEST = new ObjectMapper().readTree("{\"a_manifest\": \"manifest_value\"}");
+      ANOTHER_MANIFEST = new ObjectMapper().readTree("{\"another_manifest\": \"another_value\"}");
+    } catch (final JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private ConfigRepository configRepository;
   private UUID mainWorkspace;
 
@@ -102,7 +125,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testListWithNoManifest() throws IOException, ConfigNotFoundException {
+  void testListWithNoManifest() throws IOException {
     createBaseObjects();
 
     // actually set draft to null for first project
@@ -131,6 +154,39 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() throws Exception {
+    configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
+    configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
+    configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition()
+        .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withName(A_PROJECT_NAME)
+        .withPublic(false), A_WORKSPACE_ID);
+
+    configRepository.updateBuilderProjectAndActorDefinition(
+        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);
+
+    final ConnectorBuilderProject updatedConnectorBuilder = configRepository.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, true);
+    assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.getName());
+    assertEquals(ANOTHER_MANIFEST, updatedConnectorBuilder.getManifestDraft());
+    assertEquals(ANOTHER_PROJECT_NAME, configRepository.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).getName());
+  }
+
+  @Test
+  void givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() throws Exception {
+    configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
+    configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
+    configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition()
+        .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withName(A_PROJECT_NAME)
+        .withPublic(true), A_WORKSPACE_ID);
+
+    configRepository.updateBuilderProjectAndActorDefinition(
+        A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);
+
+    assertEquals(A_PROJECT_NAME, configRepository.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).getName());
+  }
+
+  @Test
   void testDelete() throws IOException, ConfigNotFoundException {
     createBaseObjects();
 
@@ -149,6 +205,55 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
 
     assertEquals(aNewActorDefinitionId,
         configRepository.getConnectorBuilderProject(connectorBuilderProject.getBuilderProjectId(), false).getActorDefinitionId());
+  }
+
+  @Test
+  void givenProjectDoesNotExistWhenGetVersionedConnectorBuilderProjectThenThrowException() {
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.getVersionedConnectorBuilderProject(UUID.randomUUID(), 1L));
+  }
+
+  @Test
+  void givenNoMatchingActiveDeclarativeManifestWhenGetVersionedConnectorBuilderProjectThenThrowException() throws IOException {
+    configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, ANY_UUID, A_PROJECT_NAME, new ObjectMapper().readTree("{}"));
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.getVersionedConnectorBuilderProject(A_BUILDER_PROJECT_ID, 1L));
+  }
+
+  @Test
+  void whenGetVersionedConnectorBuilderProjectThenReturnVersionedProject() throws ConfigNotFoundException, IOException {
+    configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, ANY_UUID, A_PROJECT_NAME, new ObjectMapper().readTree("{}"));
+    configRepository.assignActorDefinitionToConnectorBuilderProject(A_BUILDER_PROJECT_ID, A_SOURCE_DEFINITION_ID);
+    configRepository.insertActiveDeclarativeManifest(anyDeclarativeManifest()
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withDescription(A_DESCRIPTION)
+        .withVersion(MANIFEST_VERSION)
+        .withManifest(A_MANIFEST));
+    configRepository.insertActiveDeclarativeManifest(anyDeclarativeManifest()
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withVersion(ACTIVE_MANIFEST_VERSION));
+
+    final ConnectorBuilderProjectVersionedManifest versionedConnectorBuilderProject = configRepository.getVersionedConnectorBuilderProject(
+        A_BUILDER_PROJECT_ID, MANIFEST_VERSION);
+
+    assertEquals(A_PROJECT_NAME, versionedConnectorBuilderProject.getName());
+    assertEquals(A_BUILDER_PROJECT_ID, versionedConnectorBuilderProject.getBuilderProjectId());
+    assertEquals(A_SOURCE_DEFINITION_ID, versionedConnectorBuilderProject.getSourceDefinitionId());
+    assertEquals(ACTIVE_MANIFEST_VERSION, versionedConnectorBuilderProject.getActiveDeclarativeManifestVersion());
+    assertEquals(MANIFEST_VERSION, versionedConnectorBuilderProject.getManifestVersion());
+    assertEquals(A_DESCRIPTION, versionedConnectorBuilderProject.getManifestDescription());
+    assertEquals(A_MANIFEST, versionedConnectorBuilderProject.getManifest());
+  }
+
+  private DeclarativeManifest anyDeclarativeManifest() {
+    try {
+      return new DeclarativeManifest()
+          .withActorDefinitionId(UUID.randomUUID())
+          .withVersion(589345L)
+          .withDescription("description for anyDeclarativeManifest")
+          .withManifest(new ObjectMapper().readTree("{}"))
+          .withSpec(new ObjectMapper().readTree("{}"));
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void createBaseObjects() throws IOException {

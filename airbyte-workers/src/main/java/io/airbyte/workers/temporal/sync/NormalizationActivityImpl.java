@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.commons.features.FeatureFlagHelper;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
@@ -166,7 +165,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
       log.info("Using normalization: " + destinationLauncherConfig.getNormalizationDockerImage());
       if (containerOrchestratorConfig.isPresent()) {
         workerFactory = getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-            () -> context);
+            () -> context, input.getConnectionId());
       } else {
         workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig);
       }
@@ -200,6 +199,7 @@ public class NormalizationActivityImpl implements NormalizationActivity {
    */
   public NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput) {
     return new NormalizationInput()
+        .withConnectionId(syncInput.getConnectionId())
         .withDestinationConfiguration(syncInput.getDestinationConfiguration())
         .withCatalog(syncOutput.getOutputCatalog())
         .withResourceRequirements(normalizationResourceRequirements)
@@ -212,6 +212,20 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                                                          final ConfiguredAirbyteCatalog airbyteCatalog,
                                                                          final UUID workspaceId) {
     return new NormalizationInput()
+        .withDestinationConfiguration(destinationConfiguration)
+        .withCatalog(airbyteCatalog)
+        .withResourceRequirements(normalizationResourceRequirements)
+        .withWorkspaceId(workspaceId);
+  }
+
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
+                                                                                         final ConfiguredAirbyteCatalog airbyteCatalog,
+                                                                                         final UUID workspaceId,
+                                                                                         final UUID connectionId) {
+    return new NormalizationInput()
+        .withConnectionId(connectionId)
         .withDestinationConfiguration(destinationConfiguration)
         .withCatalog(airbyteCatalog)
         .withResourceRequirements(normalizationResourceRequirements)
@@ -260,13 +274,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                                                                                                          final WorkerConfigs workerConfigs,
                                                                                                                          final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                                          final JobRunConfig jobRunConfig,
-                                                                                                                         final Supplier<ActivityExecutionContext> activityContext) {
-    final JobIdRequestBody id = new JobIdRequestBody();
-    id.setId(Long.valueOf(jobRunConfig.getJobId()));
-    final var jobScope = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getJobsApi().getJobInfo(id).getJob().getConfigId(),
-        "get job scope");
-    final var connectionId = UUID.fromString(jobScope);
+                                                                                                                         final Supplier<ActivityExecutionContext> activityContext,
+                                                                                                                         final UUID connectionId) {
     return () -> new NormalizationLauncherWorker(
         connectionId,
         destinationLauncherConfig,
