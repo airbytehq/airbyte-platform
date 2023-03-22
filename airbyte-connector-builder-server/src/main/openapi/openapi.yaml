@@ -93,6 +93,23 @@ paths:
 
 components:
   schemas:
+    LogMessage:
+      type: object
+      required:
+        - message
+        - level
+      properties:
+        message:
+          type: string
+        level:
+          type: string
+          enum:
+            - FATAL
+            - ERROR
+            - WARN
+            - INFO
+            - DEBUG
+            - TRACE
     StreamRead:
       type: object
       required:
@@ -104,7 +121,7 @@ components:
           type: array
           description: The LOG AirbyteMessages that were emitted during the read of this slice
           items:
-            type: object
+            $ref: "#/components/schemas/LogMessage"
             # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteLogMessage"
         slices:
           type: array

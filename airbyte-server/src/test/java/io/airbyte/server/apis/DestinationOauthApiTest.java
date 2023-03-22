@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis;
 
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
@@ -18,7 +19,6 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import java.io.IOException;
-import java.util.HashMap;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -33,7 +33,7 @@ class DestinationOauthApiTest extends BaseControllerTest {
   @Test
   void testCompleteDestinationOAuth() throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(oAuthHandler.completeDestinationOAuth(Mockito.any()))
-        .thenReturn(new HashMap<>())
+        .thenReturn(new CompleteOAuthResponse())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/destination_oauths/complete_oauth";
     testEndpointStatus(

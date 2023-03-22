@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import dayjs from "dayjs";
-import { TestWrapper } from "test-utils/testutils";
 import timezoneMock from "timezone-mock";
+
+import { TestWrapper } from "test-utils/testutils";
 
 import { DatePicker, toEquivalentLocalTime } from "./DatePicker";
 

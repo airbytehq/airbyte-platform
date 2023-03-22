@@ -78,6 +78,13 @@ public class ConfigWriter {
         .stream();
   }
 
+  static int writeSourceDefinitionImageTag(final List<UUID> sourceDefinitionIds, final String targetImageTag, final DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+
+    return ctx.update(ACTOR_DEFINITION).set(ACTOR_DEFINITION.DOCKER_IMAGE_TAG, targetImageTag).set(ACTOR_DEFINITION.UPDATED_AT, timestamp)
+        .where(ACTOR_DEFINITION.ID.in(sourceDefinitionIds).andNot(ACTOR_DEFINITION.DOCKER_IMAGE_TAG.eq(targetImageTag))).execute();
+  }
+
   static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((standardSourceDefinition) -> {

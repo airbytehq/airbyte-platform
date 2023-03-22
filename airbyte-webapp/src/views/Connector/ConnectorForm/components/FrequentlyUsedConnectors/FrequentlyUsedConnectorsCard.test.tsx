@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react";
+
 import { mockDestinationsData } from "test-utils/mock-data/mockFrequentlyUsedDestinations";
 import { TestWrapper } from "test-utils/testutils";
 

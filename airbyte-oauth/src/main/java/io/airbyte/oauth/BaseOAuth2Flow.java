@@ -22,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,10 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
   protected final HttpClient httpClient;
   protected final TokenRequestContentType tokenReqContentType;
   private final Supplier<String> stateSupplier;
+
+  // possible errors enumerated @
+  // https://www.oauth.com/oauth2-servers/server-side-apps/possible-errors/
+  private final List<String> ignoredOauthErrors = Arrays.asList("access_denied");
 
   public BaseOAuth2Flow(final ConfigRepository configRepository, final HttpClient httpClient) {
     this(configRepository, httpClient, BaseOAuth2Flow::generateRandomState);
@@ -154,6 +159,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                  final String redirectUrl)
       throws IOException, ConfigNotFoundException {
     final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
         oAuthParamConfig,
         completeOAuthFlow(
@@ -164,6 +172,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             Jsons.emptyObject(),
             oAuthParamConfig),
         getDefaultOAuthOutputPath());
+
   }
 
   @Override
@@ -176,6 +185,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
       throws IOException, ConfigNotFoundException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
         oAuthParamConfig,
         completeOAuthFlow(
@@ -186,6 +198,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             inputOAuthConfiguration,
             oAuthParamConfig),
         oauthConfigSpecification);
+
   }
 
   @Override
@@ -196,6 +209,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
                                                       final String redirectUrl)
       throws IOException, ConfigNotFoundException {
     final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
         oAuthParamConfig,
         completeOAuthFlow(
@@ -206,6 +222,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             Jsons.emptyObject(),
             oAuthParamConfig),
         getDefaultOAuthOutputPath());
+
   }
 
   @Override
@@ -218,6 +235,9 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
       throws IOException, ConfigNotFoundException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
     final JsonNode oAuthParamConfig = getDestinationOAuthParamConfig(workspaceId, destinationDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
     return formatOAuthOutput(
         oAuthParamConfig,
         completeOAuthFlow(
@@ -228,6 +248,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
             inputOAuthConfiguration,
             oAuthParamConfig),
         oauthConfigSpecification);
+
   }
 
   /**
@@ -293,6 +314,32 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     } else {
       throw new IOException("Undefined 'code' from consent redirected url.");
     }
+  }
+
+  /**
+   * If there is an error param, return it.
+   */
+  protected String extractErrorParameter(final Map<String, Object> queryParams) {
+    if (queryParams.containsKey("error")) {
+      return (String) queryParams.get("error");
+    } else {
+      return null;
+    }
+  }
+
+  private boolean containsIgnoredOAuthError(final Map<String, Object> queryParams) {
+    final String oauthError = extractErrorParameter(queryParams);
+    return oauthError != null && ignoredOauthErrors.contains(oauthError);
+  }
+
+  /**
+   * Return an error payload if the previous oAuth request was stopped.
+   */
+  protected Map<String, Object> buildRequestError(final Map<String, Object> queryParams) {
+    final Map<String, Object> results = new HashMap<>();
+    results.put("request_succeeded", false);
+    results.put("request_error", extractErrorParameter(queryParams));
+    return results;
   }
 
   /**

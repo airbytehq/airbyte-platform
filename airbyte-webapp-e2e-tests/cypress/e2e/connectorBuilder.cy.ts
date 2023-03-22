@@ -1,4 +1,4 @@
-import { goToConnectorBuilderPage, startFromScratch, enterUrlPath, testStream } from "pages/connectorBuilderPage";
+import { goToConnectorBuilderCreatePage, startFromScratch, enterUrlPath, testStream } from "pages/connectorBuilderPage";
 import {
   acceptSchemaWithMismatch,
   assertMaxNumberOfPages,
@@ -29,7 +29,7 @@ describe("Connector builder", { testIsolation: false }, () => {
     cy.clearCookies();
 
     initialSetupCompleted();
-    goToConnectorBuilderPage();
+    goToConnectorBuilderCreatePage();
     startFromScratch();
     configureGlobals();
     configureStream();
@@ -86,7 +86,7 @@ describe("Connector builder", { testIsolation: false }, () => {
 
   it("Read - Pagination exceeding page limit", () => {
     configurePagination();
-    enterUrlPath("items/exceeding-page-limit");
+    enterUrlPath("items/exceeding-page-limit/");
 
     testStream();
 
@@ -113,5 +113,4 @@ describe("Connector builder", { testIsolation: false }, () => {
 
     assertMaxNumberOfSlicesAndPages();
   });
-
 });

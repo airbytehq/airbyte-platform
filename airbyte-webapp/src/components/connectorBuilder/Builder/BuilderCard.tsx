@@ -10,6 +10,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { CheckBox } from "components/ui/CheckBox";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
+import { Text } from "components/ui/Text";
 
 import styles from "./BuilderCard.module.scss";
 import { BuilderStream } from "../types";
@@ -186,7 +187,7 @@ const CopyFromModal: React.FC<{
               }}
               className={styles.streamItem}
             >
-              {getStreamName(stream)}
+              <Text>{getStreamName(stream)}</Text>
             </button>
           )
         )}

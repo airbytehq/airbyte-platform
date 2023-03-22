@@ -6,7 +6,7 @@ import pick from "lodash/pick";
 import { useMemo, useState } from "react";
 
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { AuthSpecification } from "core/request/AirbyteClient";
+import { AuthSpecification, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -32,7 +32,7 @@ function useFormikOauthAdapter(
 
   const { getValues } = useConnectorForm();
 
-  const onDone = (completeOauthResponse: Record<string, unknown>) => {
+  const onDone = (authPayload: CompleteOAuthResponseAuthPayload) => {
     let newValues: ConnectorFormValues<Credentials>;
 
     if (connector.advancedAuth) {
@@ -40,12 +40,12 @@ function useFormikOauthAdapter(
 
       newValues = Object.entries(oauthPaths).reduce(
         (acc, [key, { path_in_connector_config }]) =>
-          setIn(acc, makeConnectionConfigurationPath(path_in_connector_config), completeOauthResponse[key]),
+          setIn(acc, makeConnectionConfigurationPath(path_in_connector_config), authPayload[key]),
         values
       );
     } else {
       newValues = merge({}, values, {
-        connectionConfiguration: completeOauthResponse,
+        connectionConfiguration: authPayload,
       });
     }
 

@@ -5,6 +5,11 @@ plugins {
 configurations.all {
     exclude group: 'io.micronaut.jaxrs'
     exclude group: 'io.micronaut.sql'
+
+    resolutionStrategy {
+        // Force to avoid updated version brought in transitively from Micronaut
+        force libs.platform.testcontainers.postgresql
+    }
 }
 
 dependencies {
@@ -20,15 +25,9 @@ dependencies {
     api libs.junit.jupiter.api
 
     // Mark as compile only to avoid leaking transitively to connectors
-    compileOnly(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    compileOnly libs.platform.testcontainers.postgresql
 
-    testImplementation(libs.platform.testcontainers.postgresql) {
-        // Force to avoid updated version brought in transitively from Micronaut
-        force = true
-    }
+    testImplementation libs.platform.testcontainers.postgresql
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

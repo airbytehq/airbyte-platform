@@ -7,6 +7,7 @@ import re  # noqa: F401
 from typing import Any, Dict, List, Optional  # noqa: F401
 
 from pydantic import AnyUrl, BaseModel, EmailStr, Field, validator  # noqa: F401
+from connector_builder.generated.models.log_message import LogMessage
 from connector_builder.generated.models.stream_read_slices_inner import StreamReadSlicesInner
 
 
@@ -23,7 +24,7 @@ class StreamRead(BaseModel):
         inferred_schema: The inferred_schema of this StreamRead [Optional].
     """
 
-    logs: List[object] = Field(alias="logs")
+    logs: List[LogMessage] = Field(alias="logs")
     slices: List[StreamReadSlicesInner] = Field(alias="slices")
     test_read_limit_reached: bool = Field(alias="test_read_limit_reached")
     inferred_schema: Optional[Dict[str, Any]] = Field(alias="inferred_schema", default=None)

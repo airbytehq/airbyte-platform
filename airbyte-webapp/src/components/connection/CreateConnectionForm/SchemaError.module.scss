@@ -1,0 +1,7 @@
+@use "scss/variables";
+
+.card {
+  margin: auto;
+  max-width: 813px;
+  padding: variables.$spacing-xl;
+}

@@ -15,6 +15,7 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.Configs.WorkerEnvironment;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.DefaultJobCreator;
@@ -67,8 +68,10 @@ public class TemporalBeanFactory {
   @SuppressWarnings("MethodName")
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
-  public OAuthConfigSupplier oAuthConfigSupplier(final ConfigRepository configRepository, final TrackingClient trackingClient) {
-    return new OAuthConfigSupplier(configRepository, trackingClient);
+  public OAuthConfigSupplier oAuthConfigSupplier(final ConfigRepository configRepository,
+                                                 final TrackingClient trackingClient,
+                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    return new OAuthConfigSupplier(configRepository, trackingClient, actorDefinitionVersionHelper);
   }
 
   @SuppressWarnings({"ParameterName", "MissingJavadocMethod"})
@@ -81,14 +84,16 @@ public class TemporalBeanFactory {
                                              defaultValue = "false") final boolean connectorSpecificResourceDefaultsEnabled,
                                    final DefaultJobCreator jobCreator,
                                    final OAuthConfigSupplier oAuthConfigSupplier,
-                                   final ConfigInjector configInjector) {
+                                   final ConfigInjector configInjector,
+                                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     return new DefaultSyncJobFactory(
         connectorSpecificResourceDefaultsEnabled,
         jobCreator,
         configRepository,
         oAuthConfigSupplier,
         configInjector,
-        new WorkspaceHelper(configRepository, jobPersistence));
+        new WorkspaceHelper(configRepository, jobPersistence),
+        actorDefinitionVersionHelper);
   }
 
   @SuppressWarnings("MissingJavadocMethod")

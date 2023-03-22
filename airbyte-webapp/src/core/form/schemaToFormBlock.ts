@@ -25,7 +25,7 @@ export const jsonSchemaToFormBlock = (
   path: string = key,
   parentSchema?: AirbyteJSONSchemaDefinition
 ): FormBlock => {
-  const isRequired = isKeyRequired(key, parentSchema);
+  const isRequired = parentSchema ? isKeyRequired(key, parentSchema) : true;
 
   // TODO: decide what to do with boolean case
   if (typeof jsonSchema === "boolean") {
@@ -164,6 +164,9 @@ const defaultFields = [
 
   // airbyte specific fields
   "airbyte_hidden",
+  "always_show",
+  "pattern_descriptor",
+  "group",
 ] as const;
 
 const pickDefaultFields = (schema: AirbyteJSONSchema) => {

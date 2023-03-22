@@ -103,8 +103,8 @@ class DefaultSynchronousSchedulerClientTest {
     schedulerClient =
         new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier, routerService, configInjector);
 
-    when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
-    when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
+    when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
+    when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
 
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
 

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
@@ -29,6 +30,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
@@ -116,6 +118,9 @@ class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private OAuthConfigSupplier mOAuthConfigSupplier;
 
+  @Mock
+  private ActorDefinitionVersionHelper mActorDefinitionVersionHelper;
+
   @InjectMocks
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
@@ -169,12 +174,16 @@ class JobCreationAndStatusUpdateActivityTest {
     void createResetJob() throws JsonValidationException, ConfigNotFoundException, IOException {
       final StandardSync standardSync = new StandardSync().withDestinationId(DESTINATION_ID);
       Mockito.when(mConfigRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
-      final DestinationConnection destination = new DestinationConnection().withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
+      final DestinationConnection destination = new DestinationConnection()
+          .withDestinationId(DESTINATION_ID)
+          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
       Mockito.when(mConfigRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
       final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-          .withDockerRepository(DOCKER_REPOSITORY)
-          .withDockerImageTag(DOCKER_IMAGE_TAG)
           .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize());
+      Mockito.when(mActorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, DESTINATION_ID))
+          .thenReturn(new ActorDefinitionVersion()
+              .withDockerRepository(DOCKER_REPOSITORY)
+              .withDockerImageTag(DOCKER_IMAGE_TAG));
       Mockito.when(mConfigRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
       final List<StreamDescriptor> streamsToReset = List.of(STREAM_DESCRIPTOR1, STREAM_DESCRIPTOR2);
       Mockito.when(mStreamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset);
@@ -186,7 +195,8 @@ class JobCreationAndStatusUpdateActivityTest {
 
       final JobCreationOutput output = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
 
-      Mockito.verify(mOAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any());
+      Mockito.verify(mOAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any());
+      Mockito.verify(mActorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, DESTINATION_ID);
 
       Assertions.assertThat(output.getJobId()).isEqualTo(JOB_ID);
     }

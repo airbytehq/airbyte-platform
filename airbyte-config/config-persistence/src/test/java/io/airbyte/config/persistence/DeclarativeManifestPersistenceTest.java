@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -110,17 +111,15 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void whenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() throws IOException, ConfigNotFoundException {
-    final DeclarativeManifest declarativeManifest =
+    final DeclarativeManifest activeDeclarativeManifest =
         MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION);
-    configRepository.insertDeclarativeManifest(declarativeManifest);
-    configRepository.insertDeclarativeManifest(
-        MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(ANOTHER_VERSION));
-    configRepository.upsertActiveDeclarativeManifest(
-        MockData.activeDeclarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION));
+    configRepository
+        .insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(ANOTHER_VERSION));
+    configRepository.insertActiveDeclarativeManifest(activeDeclarativeManifest);
 
     final DeclarativeManifest result = configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID);
 
-    assertEquals(declarativeManifest, result);
+    assertEquals(activeDeclarativeManifest, result);
   }
 
   @Test
@@ -128,6 +127,24 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.insertDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION));
     assertThrows(ConfigNotFoundException.class,
         () -> configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
+  }
+
+  @Test
+  void whenGetActorDefinitionIdsWithActiveDeclarativeManifestThenReturnActorDefinitionIds() throws IOException, JsonValidationException {
+    final UUID activeActorDefinitionId = UUID.randomUUID();
+    final UUID anotherActorDefinitionId = UUID.randomUUID();
+    givenActiveDeclarativeManifestWithActorDefinitionId(activeActorDefinitionId);
+    givenActiveDeclarativeManifestWithActorDefinitionId(anotherActorDefinitionId);
+
+    final List<UUID> results = configRepository.getActorDefinitionIdsWithActiveDeclarativeManifest().toList();
+
+    assertEquals(2, results.size());
+    assertEquals(results, List.of(activeActorDefinitionId, anotherActorDefinitionId));
+  }
+
+  void givenActiveDeclarativeManifestWithActorDefinitionId(final UUID actorDefinitionId) throws IOException {
+    final Long version = 4L;
+    configRepository.insertActiveDeclarativeManifest(MockData.declarativeManifest().withActorDefinitionId(actorDefinitionId).withVersion(version));
   }
 
 }

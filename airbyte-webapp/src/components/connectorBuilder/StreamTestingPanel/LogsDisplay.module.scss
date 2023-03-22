@@ -29,3 +29,19 @@
 .error {
   color: colors.$red;
 }
+
+.warning {
+  color: colors.$yellow;
+}
+
+.level {
+  flex-basis: 50px;
+  flex-shrink: 0;
+}
+
+.message {
+  & > pre {
+    white-space: break-spaces;
+    margin: 0;
+  }
+}

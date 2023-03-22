@@ -31,8 +31,15 @@ public interface NormalizationActivity {
   NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput);
 
   @ActivityMethod
+  @Deprecated(forRemoval = true)
   NormalizationInput generateNormalizationInputWithMinimumPayload(final JsonNode destinationConfiguration,
                                                                   final ConfiguredAirbyteCatalog airbyteCatalog,
                                                                   final UUID workspaceId);
+
+  @ActivityMethod
+  NormalizationInput generateNormalizationInputWithMinimumPayloadWithConnectionId(final JsonNode destinationConfiguration,
+                                                                                  final ConfiguredAirbyteCatalog airbyteCatalog,
+                                                                                  final UUID workspaceId,
+                                                                                  final UUID connectionId);
 
 }

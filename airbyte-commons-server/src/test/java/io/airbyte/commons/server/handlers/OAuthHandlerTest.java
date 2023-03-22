@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBod
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
@@ -46,6 +47,7 @@ class OAuthHandlerTest {
   private HttpClient httpClient;
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private static final String CLIENT_ID = "123";
   private static final String CLIENT_ID_KEY = "client_id";
   private static final String CLIENT_SECRET_KEY = "client_secret";
@@ -58,7 +60,9 @@ class OAuthHandlerTest {
     httpClient = Mockito.mock(HttpClient.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
-    handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryReader, secretsRepositoryWriter);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryReader, secretsRepositoryWriter,
+        actorDefinitionVersionHelper);
   }
 
   @Test
@@ -254,8 +258,10 @@ class OAuthHandlerTest {
 
     final OAuthHandler handlerSpy = Mockito.spy(handler);
 
-    doReturn(Map.of("access_token", "access", "refresh_token", "refresh")).when(handlerSpy).completeSourceOAuth(any());
-    doReturn(Map.of("secret_id", "secret")).when(handlerSpy).writeOAuthResponseSecret(any(), any());
+    doReturn(
+        handler.mapToCompleteOAuthResponse(Map.of("access_token", "access", "refresh_token", "refresh"))).when(handlerSpy).completeSourceOAuth(any());
+    doReturn(
+        handler.mapToCompleteOAuthResponse(Map.of("secret_id", "secret"))).when(handlerSpy).writeOAuthResponseSecret(any(), any());
 
     handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest);
 

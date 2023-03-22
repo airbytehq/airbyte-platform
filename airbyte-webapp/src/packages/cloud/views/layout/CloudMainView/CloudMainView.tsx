@@ -32,7 +32,7 @@ import styles from "./CloudMainView.module.scss";
 import { CloudResourcesDropdown } from "./CloudResourcesDropdown";
 import { CloudSupportDropdown } from "./CloudSupportDropdown";
 import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
-import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../credits/CreditsPage/components/LowCreditBalanceHint/LowCreditBalanceHint";
+import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/components/LowCreditBalanceHint/LowCreditBalanceHint";
 import { WorkspacePopout } from "../../workspaces/WorkspacePopout";
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
@@ -65,7 +65,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
         <FormattedMessage
           id={`credits.creditsProblem.${cloudWorkspace.creditStatus}`}
           values={{
-            lnk: (content: React.ReactNode) => <Link to={CloudRoutes.Credits}>{content}</Link>,
+            lnk: (content: React.ReactNode) => <Link to={CloudRoutes.Billing}>{content}</Link>,
           }}
         />
       );
@@ -84,7 +84,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
           id="trial.alertMessage"
           values={{
             remainingDays: trialRemainingDays,
-            lnk: (cta: React.ReactNode) => <Link to={CloudRoutes.Credits}>{cta}</Link>,
+            lnk: (cta: React.ReactNode) => <Link to={CloudRoutes.Billing}>{cta}</Link>,
           }}
         />
       );
@@ -109,9 +109,9 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
             <MainNavItems />
             <MenuContent>
               <NavItem
-                to={CloudRoutes.Credits}
+                to={CloudRoutes.Billing}
                 icon={<CreditsIcon />}
-                label={<FormattedMessage id="sidebar.credits" />}
+                label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
                 withNotification={cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD}
               />

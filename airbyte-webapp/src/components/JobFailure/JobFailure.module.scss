@@ -1,0 +1,35 @@
+@use "scss/variables";
+
+$toggle-icon-width: 17px;
+
+.label {
+  flex-grow: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: variables.$spacing-md;
+  cursor: pointer;
+  color: inherit;
+}
+
+.toggleIcon {
+  width: $toggle-icon-width;
+  display: flex;
+}
+
+.details {
+  padding-left: calc($toggle-icon-width + variables.$spacing-md);
+  overflow: auto;
+}
+
+.downloadButton {
+  padding: 0;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.iconContainer {
+  padding-right: variables.$spacing-lg;
+}

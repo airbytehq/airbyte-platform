@@ -11,8 +11,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: variables.$font-size-lg;
+  line-height: 1.4;
   min-height: 36px;
 
   &:hover {

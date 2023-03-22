@@ -41,8 +41,8 @@
 
 .sectionHeader,
 %sectionHeader {
-  font-size: 14px;
+  font-size: variables.$font-size-lg;
   font-weight: 500;
-  line-height: 17px;
+  line-height: 1.2;
   padding: variables.$spacing-lg variables.$spacing-xl;
 }

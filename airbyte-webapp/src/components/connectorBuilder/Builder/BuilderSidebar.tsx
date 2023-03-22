@@ -12,6 +12,7 @@ import { Text } from "components/ui/Text";
 
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -20,6 +21,7 @@ import { SavingIndicator } from "./SavingIndicator";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { CDK_VERSION } from "../cdk";
 import { DownloadYamlButton } from "../DownloadYamlButton";
+import { PublishButton } from "../PublishButton";
 import { BuilderFormValues, getInferredInputs } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
@@ -62,6 +64,7 @@ interface BuilderSidebarProps {
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className, toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
+  const publishWorkflowEnabled = useExperiment("connectorBuilder.publishWorkflow", false);
   const { hasErrors } = useBuilderErrors();
   const { yamlManifest, selectedView, setSelectedView, builderFormValues } = useConnectorBuilderFormState();
   const { values } = useFormikContext<BuilderFormValues>();
@@ -168,8 +171,9 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           </ViewSelectButton>
         ))}
       </FlexContainer>
-      <FlexContainer direction="column" alignItems="stretch" gap="sm">
-        <DownloadYamlButton className={styles.downloadButton} yamlIsValid yaml={yamlManifest} />
+      <FlexContainer direction="column" alignItems="stretch" gap="md">
+        <DownloadYamlButton yamlIsValid yaml={yamlManifest} />
+        {publishWorkflowEnabled && <PublishButton />}
       </FlexContainer>
       <Text size="sm" color="grey" centered>
         <FormattedMessage

@@ -29,9 +29,9 @@ const requestListener = function (req, res) {
     offset = req.headers["offset"] ? Number(req.headers["offset"]) : 0
     res.setHeader("Content-Type", "application/json");
     res.writeHead(200);
-    if (req.url === "/items") {
+    if (req.url === "/items/") {
       res.end(JSON.stringify({ items: paginateResults(itemsWithoutSlices, offset, PAGE_SIZE) }));
-    } else if(req.url === "/items/exceeding-page-limit") {
+    } else if(req.url === "/items/exceeding-page-limit/") {
       res.end(JSON.stringify({ items: paginateResults(itemsExceedingReadLimit, offset, PAGE_SIZE) }));
     } else {
       item_id = req.url.split("/").pop()

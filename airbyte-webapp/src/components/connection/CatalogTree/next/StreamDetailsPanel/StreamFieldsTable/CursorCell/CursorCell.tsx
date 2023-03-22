@@ -27,18 +27,19 @@ export const CursorCell: React.FC<CursorCellProps> = ({
     return null;
   }
 
-  const isCursorChecked = isCursor(row.original.path);
+  const isSelectedCursor = isCursor(row.original.path);
 
   const radioButton = (
     <RadioButton
       className={styles.radio}
-      checked={isCursorChecked}
+      checked={isSelectedCursor}
       onChange={() => onCursorSelect(row.original.path)}
       disabled={!getValue()}
+      data-testid="field-cursor-radio-button"
     />
   );
 
-  return !getValue() && isCursorChecked ? (
+  return isSelectedCursor && !getValue() ? (
     <Tooltip placement="bottom" control={radioButton} containerClassName={styles.tooltip}>
       <FormattedMessage id="form.field.sourceDefinedCursor" />
       <TooltipLearnMoreLink url={links.sourceDefinedCursorLink} />

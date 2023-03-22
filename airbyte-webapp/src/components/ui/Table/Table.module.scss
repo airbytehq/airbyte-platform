@@ -1,95 +1,112 @@
-@use "scss/variables";
 @use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
 
-.tableView {
+$border-radius: variables.$border-radius-lg;
+
+// ------- <table/> --------
+.table {
   border-spacing: 0;
   width: 100%;
   max-width: 100%;
-  border-radius: variables.$border-radius-lg;
-  box-shadow: 0 2px 4px rgb(26 25 77 / 12%);
+  border-radius: $border-radius;
+  box-shadow: 0 2px 4px colors.$cardShadowColor;
 
   &.light {
     box-shadow: none;
   }
 }
 
-.tableHeader {
-  padding: variables.$spacing-md variables.$spacing-lg;
-  background-color: colors.$dark-blue;
+.thead {
+  position: sticky;
+  top: 0;
+  z-index: z-indices.$tableScroll;
+}
+
+// --------- <th/> ---------
+.th {
+  background: colors.$grey-30;
+  color: colors.$grey-500;
+  text-transform: uppercase;
+  border-bottom: none;
   text-align: left;
   font-size: 10px;
-  border-bottom: none;
+  line-height: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  color: colors.$grey-300;
+  width: auto;
+  padding: variables.$spacing-md variables.$spacing-lg;
+
+  &.sorted,
+  &.light.sorted {
+    color: colors.$blue;
+  }
+
+  &.light {
+    color: colors.$grey;
+    background-color: colors.$grey-50;
+    text-transform: capitalize;
+    border-bottom: none;
+    text-align: left;
+    font-size: 11px;
+    line-height: 12px;
+    font-weight: 400;
+  }
 
   &:first-child {
-    padding-left: variables.$spacing-2xl;
-    border-radius: variables.$border-radius-lg 0 0;
+    border-radius: $border-radius 0 0;
   }
 
   &:last-child {
     padding-left: variables.$spacing-lg;
-    border-radius: 0 variables.$border-radius-lg 0 0;
+    border-radius: 0 $border-radius 0 0;
   }
 
-  &.highlighted {
-    color: colors.$white;
-  }
-
-  &.light {
-    background: none;
-    font-size: 11px;
-    font-weight: 400;
-    text-transform: capitalize;
-
-    &:first-child {
-      padding-left: variables.$spacing-lg;
-    }
+  > button {
+    padding: 0;
   }
 }
 
-.tableData {
-  max-width: none;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 12px;
-  font-weight: normal;
-  color: colors.$dark-blue;
-  padding: variables.$spacing-lg;
-  border-bottom: variables.$border-thin solid colors.$grey-100;
-
-  &.responsive {
-    max-width: 0;
-  }
-}
-
-.tableRow {
+// --------- <tr/> ---------
+.tr {
+  background: colors.$white;
   cursor: auto;
-  background-color: colors.$white;
 
-  &.hasClick {
+  &.clickable {
     cursor: pointer;
-  }
-
-  &.erroredRows {
-    background-color: colors.$red-50;
   }
 
   &:hover {
     background-color: colors.$grey-50;
   }
+}
 
-  &:last-child > .tableData {
+// --------- <td/> ---------
+
+.td {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  font-size: variables.$font-size-sm;
+  line-height: 1.2;
+  font-weight: normal;
+  color: colors.$dark-blue;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: variables.$border-thin solid colors.$grey-50;
+  width: auto;
+
+  &.responsive {
+    max-width: 0;
+  }
+
+  tr:last-child > & {
     border-bottom: none;
 
     &:first-child {
-      border-radius: 0 0 0 variables.$border-radius-lg;
+      border-radius: 0 0 0 $border-radius;
     }
 
     &:last-child {
-      border-radius: 0 0 variables.$border-radius-lg 0;
+      border-radius: 0 0 $border-radius;
     }
   }
 }

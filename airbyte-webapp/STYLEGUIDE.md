@@ -17,6 +17,34 @@ This serves as a living document regarding conventions we have agreed upon as a 
   - .filter(([key, value]) => isDefined(value.default) ✅
   - .filter(([k, v]) => isDefined(v.default) ❌
 
+## Spacing and Layout
+The following recommendations are all in service to two broader principles:
+- compoonents should be reusable in as many different contexts as possible without changing their "internal" CSS
+- the impact on layout and spacing of adding any component to an existing page should be predictable
+
+If naively following the recommendations ever undermines those principles, by all means
+make an exception; but this should only happen rarely, if ever.
+
+### container elements are responsible for the spacing of their contents, or: a component's responsibility ends at its border
+This keeps context-specific spacing definitions as local as possible, and promotes reusing
+elements in new contexts without the need to override or add special cases to pre-existing
+style rules.
+
+- for outer gaps, prefer a `padding` rule on the container to `margin` rules on child elements
+- for inner gaps, prefer flexbox gaps to `margin` rules on child elements
+
+### if you must use margins for spacing between content components, prefer `margin-top` to `margin-bottom`
+Sometimes it's impractical to rewrite a whole pre-existing page layout just to make a
+drive-by change or addition. In these cases, prefer `margin-top` for spacing: it's a
+better fit for the cascading nature of web content and styling.
+
+CSS style rules are applied to elements in source order; once an element has been styled,
+there's nothing following elements can do about it. Preceding elements, however, have the
+[adjacent sibling combinator (`+`)](https://developer.mozilla.org/en-US/docs/Web/CSS/Adjacent_sibling_combinator) as an
+escape hatch to select and style an immediately following element. This is, emphatically,
+a hack, and should not be used anywhere it can be avoided; but flexibility via a hack is
+preferable to no flexibility at all.
+
 ## Exporting
 
 - Export at declaration, not at the bottom. For example:

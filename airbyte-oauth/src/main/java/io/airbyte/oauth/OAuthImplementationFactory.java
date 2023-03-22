@@ -6,8 +6,6 @@ package io.airbyte.oauth;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.flows.AirtableOAuthFlow;
 import io.airbyte.oauth.flows.AmazonAdsOAuthFlow;
@@ -44,6 +42,7 @@ import io.airbyte.oauth.flows.StravaOAuthFlow;
 import io.airbyte.oauth.flows.SurveymonkeyOAuthFlow;
 import io.airbyte.oauth.flows.TikTokMarketingOAuthFlow;
 import io.airbyte.oauth.flows.TrelloOAuthFlow;
+import io.airbyte.oauth.flows.XeroOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskChatOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskSunshineOAuthFlow;
 import io.airbyte.oauth.flows.ZendeskSupportOAuthFlow;
@@ -108,6 +107,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-youtube-analytics", new YouTubeAnalyticsOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-youtube-analytics-business", new YouTubeAnalyticsBusinessOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-drift", new DriftOAuthFlow(configRepository, httpClient));
+    builder.put("airbyte/source-xero", new XeroOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-chat", new ZendeskChatOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-support", new ZendeskSupportOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-talk", new ZendeskTalkOAuthFlow(configRepository, httpClient));
@@ -127,15 +127,13 @@ public class OAuthImplementationFactory {
         .build();
   }
 
-  public OAuthFlowImplementation create(final StandardSourceDefinition sourceDefinition) {
-    return create(sourceDefinition.getDockerRepository());
-  }
-
-  public OAuthFlowImplementation create(final StandardDestinationDefinition destinationDefinition) {
-    return create(destinationDefinition.getDockerRepository());
-  }
-
-  private OAuthFlowImplementation create(final String imageName) {
+  /**
+   * Returns the OAuthFlowImplementation for a given source or destination, by docker repository.
+   *
+   * @param imageName - docker repository name for the connector
+   * @return OAuthFlowImplementation
+   */
+  public OAuthFlowImplementation create(final String imageName) {
     if (oauthFlowMapping.containsKey(imageName)) {
       return oauthFlowMapping.get(imageName);
     } else {

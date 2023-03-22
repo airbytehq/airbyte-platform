@@ -5,7 +5,7 @@ $icon-size: 15px;
 .container {
   display: flex;
   flex-direction: row;
-  padding: variables.$spacing-xl variables.$spacing-xl 0;
+  padding: variables.$spacing-xl variables.$spacing-xl 0 33px;
   height: 43px;
   align-items: center;
   overflow: hidden;
@@ -29,14 +29,13 @@ $icon-size: 15px;
   // A hard-coded px is bad, but it works.
   // Ideally this table will be converted away from div's and
   // flexbox into react-table and this will go away.
-  flex: 2 1 540px;
+  flex: 2 1 583px;
 }
 
 .destination {
   display: flex;
   flex: 1 1 125px;
   align-items: center;
-  gap: variables.$spacing-sm;
 }
 
 .arrowContainer {

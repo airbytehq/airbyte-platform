@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import React from "react";
 
-import styles from "./heading.module.scss";
+import styles from "./Heading.module.scss";
 
 type HeadingSize = "sm" | "md" | "lg" | "xl";
 type HeadingElementType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";

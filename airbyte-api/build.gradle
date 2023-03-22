@@ -30,6 +30,7 @@ tasks.register('generateApiServer',  GenerateTask) {
             'StreamJsonSchema'                  : 'com.fasterxml.jackson.databind.JsonNode',
             'StateBlob'                         : 'com.fasterxml.jackson.databind.JsonNode',
             'FieldSchema'                       : 'com.fasterxml.jackson.databind.JsonNode',
+            'DeclarativeManifest'               : 'com.fasterxml.jackson.databind.JsonNode',
     ]
 
     generateApiDocumentation = false

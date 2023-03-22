@@ -27,10 +27,8 @@ dependencies {
     implementation libs.bundles.micronaut
 }
 
-mainClassName = 'io.airbyte.cron.MicronautCronRunner'
-
 application {
-    mainClass = mainClassName
+    mainClass = 'io.airbyte.cron.MicronautCronRunner'
     applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
 }
 

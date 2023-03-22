@@ -12,11 +12,11 @@ import { FormikPatch } from "core/form/FormikPatch";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
-import { BaseFormRootProps, FormRoot } from "./FormRoot";
+import { FormRootProps, FormRoot } from "./FormRoot";
 import { ConnectorFormValues } from "./types";
 import { useBuildForm } from "./useBuildForm";
 
-interface BaseConnectorFormProps extends Omit<BaseFormRootProps, "formFields" | "castValues"> {
+export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure"> {
   formType: "source" | "destination";
   formId?: string;
   /**
@@ -29,19 +29,6 @@ interface BaseConnectorFormProps extends Omit<BaseFormRootProps, "formFields" | 
   formValues?: Partial<ConnectorFormValues>;
   connectorId?: string;
 }
-
-interface CardConnectorFormProps extends BaseConnectorFormProps {
-  renderWithCard: true;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  full?: boolean;
-}
-
-interface BareConnectorFormProps extends BaseConnectorFormProps {
-  renderWithCard?: false;
-}
-
-export type ConnectorFormProps = CardConnectorFormProps | BareConnectorFormProps;
 
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
@@ -57,7 +44,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     connectorId,
   } = props;
 
-  const { formFields, initialValues, validationSchema } = useBuildForm(
+  const { formFields, initialValues, validationSchema, groups } = useBuildForm(
     Boolean(isEditMode),
     formType,
     selectedConnectorDefinitionSpecification,
@@ -108,7 +95,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
         >
           <FormikPatch />
           <FormChangeTracker changed={dirty} formId={formId} />
-          <FormRoot {...props} formFields={formFields} castValues={castValues} />
+          <FormRoot {...props} formFields={formFields} castValues={castValues} groupStructure={groups} />
         </ConnectorFormContextProvider>
       )}
     </Formik>
