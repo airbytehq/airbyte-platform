@@ -334,6 +334,7 @@ public class WebBackendConnectionsHandler {
         .resourceRequirements(connectionRead.getResourceRequirements())
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
+        .notifySchemaChanges(connectionRead.getNotifySchemaChangesByEmail())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference());
   }
 

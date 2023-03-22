@@ -135,7 +135,6 @@ create table "public"."connection" (
   "breaking_change" boolean not null default false,
   "unsupported_protocol_version" boolean not null default false,
   "field_selection_data" jsonb,
-  "notify_schema_changes" boolean not null default false,
   constraint "connection_pkey"
     primary key ("id")
 );
@@ -169,6 +168,16 @@ create table "public"."declarative_manifest" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "declarative_manifest_pkey"
     primary key ("actor_definition_id", "version")
+);
+create table "public"."notification_configuration" (
+  "id" uuid not null,
+  "enabled" boolean not null,
+  "notification_type" "public"."notification_type" not null,
+  "connection_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "notification_configuration_pkey"
+    primary key ("id")
 );
 create table "public"."operation" (
   "id" uuid not null,
@@ -293,6 +302,10 @@ alter table "public"."connection_operation"
   add constraint "connection_operation_operation_id_fkey"
     foreign key ("operation_id")
     references "public"."operation" ("id");
+alter table "public"."notification_configuration"
+  add constraint "notification_configuration_connection_id_fkey"
+    foreign key ("connection_id")
+    references "public"."connection" ("id");
 alter table "public"."operation"
   add constraint "operation_workspace_id_fkey"
     foreign key ("workspace_id")
