@@ -313,7 +313,7 @@ function manifestSchemaLoaderToBuilderSchema(
 
   if (manifestSchemaLoader.type === "InlineSchemaLoader") {
     const inlineSchemaLoader = manifestSchemaLoader;
-    return inlineSchemaLoader.schema ? formatJson(inlineSchemaLoader.schema) : undefined;
+    return inlineSchemaLoader.schema ? formatJson(inlineSchemaLoader.schema, true) : undefined;
   }
 
   // Return undefined if schema loader is not inline.
