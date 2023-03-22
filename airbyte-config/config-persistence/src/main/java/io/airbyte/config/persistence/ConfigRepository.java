@@ -521,26 +521,12 @@ public class ConfigRepository {
     });
   }
 
-  /**
-   * Update a actor definition spec and its config injection on path __injected_declarative_manifest.
-   *
-   * @param actorDefinitionId the ID of the actor definition to update
-   * @param manifest the manifest going in the config injection
-   * @param spec the connector specifiction to update
-   * @throws IOException - you never know when you IO
-   */
-  public void updateDeclarativeActorDefinition(UUID actorDefinitionId, JsonNode manifest, ConnectorSpecification spec) throws IOException {
-    database.transaction(ctx -> {
-      ctx.update(Tables.ACTOR_DEFINITION)
-          .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
-          .where(Tables.ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-          .execute();
-      writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
-          .withActorDefinitionId(actorDefinitionId)
-          .withInjectionPath("__injected_declarative_manifest")
-          .withJsonToInject(manifest), ctx);
-      return null;
-    });
+  private void updateDeclarativeActorDefinition(ActorDefinitionConfigInjection configInjection, ConnectorSpecification spec, DSLContext ctx) {
+    ctx.update(Tables.ACTOR_DEFINITION)
+        .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
+        .where(Tables.ACTOR_DEFINITION.ID.eq(configInjection.getActorDefinitionId()))
+        .execute();
+    writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
   }
 
   private Stream<StandardDestinationDefinition> destDefQuery(final Optional<UUID> destDefId, final boolean includeTombstone) throws IOException {
@@ -2399,6 +2385,61 @@ public class ConfigRepository {
     });
   }
 
+  /**
+   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
+   *
+   * Note that based on this signature, two problems might occur if the user of this method is not
+   * diligent. This was done because we value more separation of concerns than consistency of the API
+   * of this method. The problems are:
+   *
+   * <pre>
+   * <ul>
+   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
+   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
+   * </ul>
+   * </pre>
+   *
+   * Since we decided not to validate this using the signature of the method, we will validate that
+   * runtime and IllegalArgumentException if there is a mismatch.
+   *
+   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
+   * definition of the repository. Drawbacks: We will need a method
+   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
+   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
+   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
+   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
+   *
+   * Note that this is all in the context of data consistency i.e. that we want to do this in one
+   * transaction. When we split this in many services, we will need to rethink data consistency.
+   *
+   * @param declarativeManifest declarative manifest version to create and make active
+   * @param configInjection configInjection for the manifest
+   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
+   *        being created
+   * @throws IOException exception while interacting with db
+   * @throws IllegalArgumentException if there is a mismatch between the different arguments
+   */
+  public void createDeclarativeManifestAsActiveVersion(DeclarativeManifest declarativeManifest,
+                                                       ActorDefinitionConfigInjection configInjection,
+                                                       ConnectorSpecification connectorSpecification)
+      throws IOException {
+    if (!declarativeManifest.getActorDefinitionId().equals(configInjection.getActorDefinitionId())) {
+      throw new IllegalArgumentException("DeclarativeManifest.actorDefinitionId must match ActorDefinitionConfigInjection.actorDefinitionId");
+    }
+    if (!declarativeManifest.getManifest().equals(configInjection.getJsonToInject())) {
+      throw new IllegalArgumentException("The DeclarativeManifest does not match the config injection");
+    }
+    if (!declarativeManifest.getSpec().get("connectionSpecification").equals(connectorSpecification.getConnectionSpecification())) {
+      throw new IllegalArgumentException("DeclarativeManifest.spec must match ConnectorSpecification.connectionSpecification");
+    }
+
+    database.transaction(ctx -> {
+      updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
+      insertActiveDeclarativeManifest(declarativeManifest, ctx);
+      return null;
+    });
+  }
+
   private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
@@ -2420,6 +2461,52 @@ public class ConfigRepository {
           .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
           .execute();
     }
+  }
+
+  /**
+   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
+   *
+   * Note that based on this signature, two problems might occur if the user of this method is not
+   * diligent. This was done because we value more separation of concerns than consistency of the API
+   * of this method. The problems are:
+   *
+   * <pre>
+   * <ul>
+   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
+   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
+   * </ul>
+   * </pre>
+   *
+   * At that point, we can only hope the user won't cause data consistency issue using this method
+   *
+   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
+   * definition of the repository. Drawbacks: We will need a method
+   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
+   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
+   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
+   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
+   *
+   * Note that this is all in the context of data consistency i.e. that we want to do this in one
+   * transaction. When we split this in many services, we will need to rethink data consistency.
+   *
+   * @param sourceDefinitionId actor definition to update
+   * @param version the version of the manifest to make active. declarative_manifest.version must
+   *        already exist
+   * @param configInjection configInjection for the manifest
+   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
+   *        being made active
+   * @throws IOException exception while interacting with db
+   */
+  public void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
+                                                Long version,
+                                                ActorDefinitionConfigInjection configInjection,
+                                                ConnectorSpecification connectorSpecification)
+      throws IOException {
+    database.transaction(ctx -> {
+      updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
+      upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version), ctx);
+      return null;
+    });
   }
 
   /**
@@ -2529,6 +2616,12 @@ public class ConfigRepository {
           .withVersion(declarativeManifest.getVersion()), ctx);
       return null;
     });
+  }
+
+  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest, DSLContext ctx) {
+    insertDeclarativeManifest(declarativeManifest, ctx);
+    upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(declarativeManifest.getActorDefinitionId())
+        .withVersion(declarativeManifest.getVersion()), ctx);
   }
 
   /**

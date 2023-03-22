@@ -12,6 +12,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
@@ -267,7 +268,7 @@ public class MockData {
         customSourceDefinition());
   }
 
-  private static ConnectorSpecification connectorSpecification() {
+  public static ConnectorSpecification connectorSpecification() {
     return new ConnectorSpecification()
         .withAuthSpecification(new AuthSpecification().withAuthType(AuthType.OAUTH_2_0))
         .withConnectionSpecification(Jsons.jsonNode(CONNECTION_SPECIFICATION))
@@ -748,6 +749,17 @@ public class MockData {
           .withDescription("a description")
           .withManifest(new ObjectMapper().readTree("{\"manifest\": \"manifest\"}"))
           .withSpec(new ObjectMapper().readTree("{\"spec\": \"spec\"}"));
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ActorDefinitionConfigInjection actorDefinitionConfigInjection() {
+    try {
+      return new ActorDefinitionConfigInjection()
+          .withActorDefinitionId(UUID.randomUUID())
+          .withJsonToInject(new ObjectMapper().readTree("{\"json_to_inject\": \"a json value\"}"))
+          .withInjectionPath("an_injection_path");
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }

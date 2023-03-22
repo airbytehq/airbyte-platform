@@ -30,7 +30,7 @@ import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
+import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -65,6 +65,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private static final String A_DOCUMENTATION_URL = "http://documentation.url";
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
+  private static final ActorDefinitionConfigInjection A_CONFIG_INJECTION = new ActorDefinitionConfigInjection().withInjectionPath("something");
   private static final String CDK_VERSION = "8.9.10";
 
   static {
@@ -79,7 +80,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private ConfigRepository configRepository;
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
   private Supplier<UUID> uuidSupplier;
-  private ConnectorBuilderSpecAdapter specAdapter;
+  private DeclarativeSourceManifestInjector manifestInjector;
   private CdkVersionProvider cdkVersionProvider;
   private ConnectorSpecification adaptedConnectorSpecification;
   private UUID workspaceId;
@@ -90,14 +91,14 @@ class ConnectorBuilderProjectsHandlerTest {
   void setUp() throws JsonProcessingException {
     configRepository = mock(ConfigRepository.class);
     uuidSupplier = mock(Supplier.class);
+    manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
-    specAdapter = mock(ConnectorBuilderSpecAdapter.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
-    connectorBuilderProjectsHandler = new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, specAdapter);
+    connectorBuilderProjectsHandler = new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, manifestInjector);
   }
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
@@ -369,11 +370,13 @@ class ConnectorBuilderProjectsHandlerTest {
   @Test
   void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws IOException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
+    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().workspaceId(workspaceId).name(A_SOURCE_NAME)
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
+    verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
     verify(configRepository, times(1)).writeCustomSourceDefinition(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withDockerImageTag(CDK_VERSION)
@@ -387,9 +390,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .withCustom(true)
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(workspaceId));
-    verify(configRepository, times(1))
-        .writeActorDefinitionConfigInjectionForPath(eq(new ActorDefinitionConfigInjection().withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-            .withInjectionPath("__injected_declarative_manifest").withJsonToInject(A_MANIFEST)));
+    verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 
   @Test
@@ -421,7 +422,7 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   private void setupConnectorSpecificationAdapter(final JsonNode spec, final String documentationUrl) {
-    when(specAdapter.adapt(spec)).thenReturn(adaptedConnectorSpecification);
+    when(manifestInjector.createDeclarativeManifestConnectorSpecification(spec)).thenReturn(adaptedConnectorSpecification);
     when(adaptedConnectorSpecification.getDocumentationUrl()).thenReturn(URI.create(documentationUrl));
   }
 
