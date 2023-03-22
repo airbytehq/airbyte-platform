@@ -2,10 +2,6 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-.dropdownMenu {
-  position: relative;
-}
-
 .items {
   z-index: z-indices.$dropdownMenu;
   overflow: auto;

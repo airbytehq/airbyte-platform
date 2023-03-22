@@ -27,6 +27,9 @@ export interface Experiments {
   "connectorBuilder.publishWorkflow": boolean;
   "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
+  "connection.streamCentricUI.lateMultiplier": number;
+  "connection.streamCentricUI.errorMultiplier": number;
+  "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
   "connector.form.simplifyConfiguration": boolean;

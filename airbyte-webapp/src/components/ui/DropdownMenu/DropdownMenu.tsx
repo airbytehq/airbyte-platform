@@ -57,7 +57,7 @@ export const DropdownMenu: React.FC<React.PropsWithChildren<DropdownMenuProps>> 
   };
 
   return (
-    <Menu ref={reference} className={styles.dropdownMenu} as="div">
+    <Menu ref={reference} as="div">
       {({ open }) => (
         <>
           <Menu.Button as={React.Fragment}>{children({ open })}</Menu.Button>
