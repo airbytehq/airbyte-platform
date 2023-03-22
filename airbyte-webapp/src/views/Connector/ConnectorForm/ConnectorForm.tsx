@@ -77,6 +77,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     <Formik
       validateOnBlur
       validateOnChange
+      validateOnMount
       initialValues={initialValues}
       isInitialValid={isInitialValid}
       validationSchema={validationSchema}
