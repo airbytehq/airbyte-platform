@@ -4,9 +4,6 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.PROCESS_EXIT_VALUE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
@@ -159,7 +156,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
             podName,
             mainContainerInfo);
 
-        ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, JOB_ID_KEY, jobRunConfig.getJobId(), JOB_ROOT_KEY, jobRoot));
+        ApmTraceUtils.addTagsToTrace(connectionId, jobRunConfig.getJobId(), jobRoot);
 
         // Use the configuration to create the process.
         process = new AsyncOrchestratorPodProcess(
