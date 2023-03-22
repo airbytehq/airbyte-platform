@@ -19,9 +19,10 @@ import { BottomBlock, FieldItem } from "packages/cloud/views/auth/components/For
 import { FormTitle } from "packages/cloud/views/auth/components/FormTitle";
 
 import styles from "./LoginPage.module.scss";
+import { Disclaimer, EmailField } from "../components/FormFields/FormFields";
+import { LoginSignupNavigation } from "../components/LoginSignupNavigation";
 import { OAuthLogin } from "../OAuthLogin";
 import { Separator } from "../SignupPage/components/Separator";
-import { Disclaimer } from "../SignupPage/components/SignupForm";
 
 const LoginPageValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
@@ -37,7 +38,7 @@ export const LoginPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.LOGIN);
 
   return (
-    <FlexContainer direction="column" gap="xl">
+    <FlexContainer direction="column" gap="xl" className={styles.container}>
       <HeadTitle titles={[{ id: "login.login" }]} />
       <FormTitle>
         <FormattedMessage id="login.loginTitle" />
@@ -68,20 +69,7 @@ export const LoginPage: React.FC = () => {
         {({ isSubmitting }) => (
           <Form>
             <FieldItem>
-              <Field name="email">
-                {({ field, meta }: FieldProps<string>) => (
-                  <LabeledInput
-                    {...field}
-                    label={<FormattedMessage id="login.yourEmail" />}
-                    placeholder={formatMessage({
-                      id: "login.yourEmail.placeholder",
-                    })}
-                    type="text"
-                    error={!!meta.error && meta.touched}
-                    message={meta.touched && meta.error && formatMessage({ id: meta.error })}
-                  />
-                )}
-              </Field>
+              <EmailField />
             </FieldItem>
             <FieldItem>
               <Field name="password">
@@ -117,6 +105,7 @@ export const LoginPage: React.FC = () => {
         )}
       </Formik>
       <Disclaimer />
+      <LoginSignupNavigation to="signup" />
     </FlexContainer>
   );
 };

@@ -1,0 +1,24 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.disclaimer {
+  margin-top: variables.$spacing-xl;
+}
+
+.passwordCheck {
+  &__container {
+    margin-top: variables.$spacing-lg;
+  }
+
+  &__icon {
+    color: colors.$dark-blue-100;
+  }
+
+  &--error {
+    color: colors.$red;
+  }
+
+  &--valid {
+    color: colors.$green;
+  }
+}

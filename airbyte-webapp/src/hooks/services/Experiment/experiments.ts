@@ -14,11 +14,9 @@ export interface Experiments {
   "connector.form.useSelectConnectorGrid": boolean;
   "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
-  "authPage.hideSelfHostedCTA": boolean;
   "authPage.signup.hideName": boolean;
   "authPage.signup.hideCompanyName": boolean;
   "onboarding.speedyConnection": boolean;
-  "authPage.signup.simplifyLeftSide": boolean;
   "connection.onboarding.sources": string;
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
