@@ -8,6 +8,7 @@ import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
+import { isCloudApp } from "utils/app";
 
 import { SCOPE_WORKSPACE } from "../Scope";
 
@@ -25,7 +26,9 @@ function useConnectorBuilderProjectsService() {
 
 export interface BuilderProject {
   name: string;
-  version: string;
+  version: "draft" | number;
+  sourceDefinitionId?: string;
+  activeManifestVersion?: number;
   id: string;
 }
 
@@ -39,12 +42,20 @@ export const useListProjects = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    (await service.list(workspaceId)).projects.map((projectDetails) => ({
-      name: projectDetails.name,
-      // TODO: set version based on activeDeclarativeManifestVersion once it is added to the API
-      version: "draft",
-      id: projectDetails.builderProjectId,
-    }))
+    // FIXME this is a temporary solution to avoid calling an API that's not forwarded in cloud environments yet
+    isCloudApp()
+      ? []
+      : (await service.list(workspaceId)).projects.map(
+          (projectDetails): BuilderProject => ({
+            name: projectDetails.name,
+            version:
+              typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+                ? projectDetails.activeDeclarativeManifestVersion
+                : "draft",
+            sourceDefinitionId: projectDetails.sourceDefinitionId,
+            id: projectDetails.builderProjectId,
+          })
+        )
   );
 };
 
@@ -79,7 +90,7 @@ export const useCreateProject = () => {
             {
               id: builderProjectId,
               name,
-              version: "draft",
+              version: "draft" as const,
             },
           ]
         );

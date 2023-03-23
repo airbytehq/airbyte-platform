@@ -143,25 +143,6 @@ task copyBuildOutput(type: Copy) {
     into 'build/docker/bin/build'
 }
 
-task copyDocs(type: Copy) {
-    dependsOn copyDocker, copyBuildOutput
-
-    from "${project.rootProject.projectDir}/docs/integrations"
-    into "build/docker/bin/build/docs/integrations"
-    // google-ads.md is blocked by Ad Blockers
-    rename ('google-ads.md', 'gglad.md')
-    duplicatesStrategy DuplicatesStrategy.INCLUDE
-}
-
-// Copy images that are used in .md integration documentation docs
-task copyDocAssets(type: Copy) {
-    dependsOn copyDocker, copyBuildOutput
-
-    from "${project.rootProject.projectDir}/docs/.gitbook"
-    into "build/docker/bin/build/docs/.gitbook"
-    duplicatesStrategy DuplicatesStrategy.INCLUDE
-}
-
 task copyNginx(type: Copy) {
     dependsOn copyDocker
 
@@ -174,10 +155,6 @@ check.dependsOn validateLinks, licenseCheck, test
 
 build.dependsOn buildStorybook
 
-task assembleApp {
-    dependsOn copyBuildOutput, copyDocs, copyDocAssets
-}
-
 tasks.named("buildDockerImage") {
-    dependsOn copyDocker, copyNginx, assembleApp
+    dependsOn copyDocker, copyNginx, copyBuildOutput
 }

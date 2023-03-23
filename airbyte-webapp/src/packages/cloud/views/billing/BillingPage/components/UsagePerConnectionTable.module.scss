@@ -9,19 +9,9 @@
   }
 }
 
-th.header {
-  &--light {
-    background-color: colors.$white !important;
-  }
-}
-
 .header {
   &--nonSortable {
     margin-left: variables.$spacing-sm;
-  }
-
-  &--sorted {
-    color: colors.$grey-600 !important;
   }
 }
 

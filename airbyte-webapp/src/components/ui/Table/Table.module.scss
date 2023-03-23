@@ -10,10 +10,9 @@ $border-radius: variables.$border-radius-lg;
   width: 100%;
   max-width: 100%;
   border-radius: $border-radius;
-  box-shadow: 0 2px 4px colors.$cardShadowColor;
 
-  &.light {
-    box-shadow: none;
+  &--default {
+    box-shadow: 0 2px 4px colors.$cardShadowColor;
   }
 }
 
@@ -25,7 +24,6 @@ $border-radius: variables.$border-radius-lg;
 
 // --------- <th/> ---------
 .th {
-  background: colors.$grey-30;
   color: colors.$grey-500;
   text-transform: uppercase;
   border-bottom: none;
@@ -36,20 +34,24 @@ $border-radius: variables.$border-radius-lg;
   width: auto;
   padding: variables.$spacing-md variables.$spacing-lg;
 
-  &.sorted,
-  &.light.sorted {
+  &--sorted {
     color: colors.$blue;
   }
 
-  &.light {
-    color: colors.$grey;
+  &--default {
+    background-color: colors.$grey-30;
+  }
+
+  &--light {
     background-color: colors.$grey-50;
+    color: colors.$grey;
     text-transform: capitalize;
-    border-bottom: none;
-    text-align: left;
     font-size: 11px;
-    line-height: 12px;
     font-weight: 400;
+  }
+
+  &--transparent {
+    background-color: transparent;
   }
 
   &:first-child {
@@ -71,8 +73,12 @@ $border-radius: variables.$border-radius-lg;
   background: colors.$white;
   cursor: auto;
 
-  &.clickable {
+  &--clickable {
     cursor: pointer;
+  }
+
+  &--transparent {
+    background-color: transparent;
   }
 
   &:hover {
@@ -94,7 +100,7 @@ $border-radius: variables.$border-radius-lg;
   border-bottom: variables.$border-thin solid colors.$grey-50;
   width: auto;
 
-  &.responsive {
+  &--responsive {
     max-width: 0;
   }
 

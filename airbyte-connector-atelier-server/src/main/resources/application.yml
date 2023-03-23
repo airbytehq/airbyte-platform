@@ -2,11 +2,8 @@ micronaut:
   application:
     name: airbyte-connector-builder-server
   security:
-    intercept-url-map:
-      - pattern: /** # We could have more granular route security but for immediate simplicity lets apply the same policy
-        http-method: POST
-        access:
-          - isAnonymous()
+    authentication-provider-strategy: ALL
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
   server:
     port: 80
   endpoints:
@@ -20,6 +17,9 @@ micronaut:
       enable: true
       sensitive: false
     v1/stream/read:
+      enable: true
+      sensitive: false
+    v1/health:
       enable: true
       sensitive: false
 

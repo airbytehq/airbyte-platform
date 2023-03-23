@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import classNames from "classnames";
+import React, { useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
@@ -17,6 +18,7 @@ import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelect
 import { StreamPathSelect } from "./StreamPathSelect";
 import { SyncModeSelect } from "./SyncModeSelect";
 import { useCatalogTreeTableRowProps } from "./useCatalogTreeTableRowProps";
+import { useScrollIntoViewStream } from "./useScrollIntoViewStream";
 import { StreamHeaderProps } from "../StreamHeader";
 
 export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
@@ -57,10 +59,14 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
 
   const { streamHeaderContentStyle, pillButtonVariant } = useCatalogTreeTableRowProps(stream);
 
+  const streamNameRef = useRef<HTMLParagraphElement>(null);
+  const namespaceRef = useRef<HTMLParagraphElement>(null);
+  const { isVisible } = useScrollIntoViewStream(stream, namespaceRef, streamNameRef);
+
   return (
     <Row
       onClick={onRowClick}
-      className={streamHeaderContentStyle}
+      className={classNames(streamHeaderContentStyle, { [styles.highlight]: isVisible })}
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
     >
       <CatalogTreeTableCell size="fixed" className={styles.streamRowCheckboxCell}>
@@ -90,12 +96,12 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
         </CatalogTreeTableCell>
       )}
       <CatalogTreeTableCell withTooltip data-testid="source-namespace-cell">
-        <Text size="md" className={styles.cellText}>
+        <Text size="md" className={styles.cellText} ref={namespaceRef}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
         </Text>
       </CatalogTreeTableCell>
       <CatalogTreeTableCell withTooltip data-testid="source-stream-name-cell">
-        <Text size="md" className={styles.cellText}>
+        <Text size="md" className={styles.cellText} ref={streamNameRef}>
           {stream.stream?.name}
         </Text>
       </CatalogTreeTableCell>

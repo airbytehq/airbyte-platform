@@ -10,6 +10,13 @@ import en from "locales/en.json";
 // eslint-disable-next-line css-modules/no-unused-class
 import styles from "./SchemaChangesDetected.module.scss";
 
+const mockedNavigate = jest.fn();
+
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockedNavigate,
+}));
+
 const mockUseConnectionEditService = jest.fn();
 
 jest.doMock("hooks/services/ConnectionEdit/ConnectionEditService", () => ({
@@ -87,13 +94,12 @@ describe("<SchemaChangesDetected />", () => {
       schemaRefreshing: false,
     });
 
-    const refreshSpy = jest.fn();
-    mockUseRefreshSourceSchemaWithConfirmationOnDirty.mockReturnValue(refreshSpy);
+    mockUseRefreshSourceSchemaWithConfirmationOnDirty.mockReturnValue(mockedNavigate);
 
     const { getByRole } = renderComponent();
 
     userEvent.click(getByRole("button"));
 
-    expect(refreshSpy).toHaveBeenCalled();
+    expect(mockedNavigate).toHaveBeenCalledWith("replication", { state: { triggerRefreshSchema: true } });
   });
 });

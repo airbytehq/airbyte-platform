@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+$spinner-size: 10px;
+
+.container {
+  margin-bottom: variables.$spacing-md;
+}
+
+.syncingSpinner {
+  width: $spinner-size;
+  height: $spinner-size;
+}

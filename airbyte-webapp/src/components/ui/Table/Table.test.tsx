@@ -8,7 +8,7 @@ interface Item {
   value: number;
 }
 
-describe("<NextTable>", () => {
+describe("<Table>", () => {
   it("should should render the table with passed data", () => {
     const data: Item[] = [
       { name: "2017", value: 100 },

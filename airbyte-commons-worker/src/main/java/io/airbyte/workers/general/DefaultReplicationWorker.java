@@ -4,9 +4,6 @@
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -187,7 +184,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.debug("field selection enabled: {}", fieldSelectionEnabled);
       final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
 
-      ApmTraceUtils.addTagsToTrace(generateTraceTags(destinationConfig, jobRoot));
+      ApmTraceUtils.addTagsToTrace(destinationConfig.getConnectionId(), jobId, jobRoot);
       replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig,
           syncInput.getConnectionId(), shouldCommitStateAsap(syncInput));
       timeTracker.trackReplicationEndTime();
@@ -784,21 +781,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.info("Error cancelling source: ", e);
     }
 
-  }
-
-  private Map<String, Object> generateTraceTags(final WorkerDestinationConfig destinationConfig, final Path jobRoot) {
-    final Map<String, Object> tags = new HashMap<>();
-
-    tags.put(JOB_ID_KEY, jobId);
-    tags.put(JOB_ROOT_KEY, jobRoot);
-
-    if (destinationConfig != null) {
-      if (destinationConfig.getConnectionId() != null) {
-        tags.put(CONNECTION_ID_KEY, destinationConfig.getConnectionId());
-      }
-    }
-
-    return tags;
   }
 
   private static boolean shouldCommitStateAsap(final StandardSyncInput syncInput) {

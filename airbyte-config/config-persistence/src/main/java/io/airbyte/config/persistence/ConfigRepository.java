@@ -16,6 +16,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -68,6 +69,7 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.metrics.lib.MetricQueries;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -521,7 +523,9 @@ public class ConfigRepository {
     });
   }
 
-  private void updateDeclarativeActorDefinition(ActorDefinitionConfigInjection configInjection, ConnectorSpecification spec, DSLContext ctx) {
+  private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
+                                                final ConnectorSpecification spec,
+                                                final DSLContext ctx) {
     ctx.update(Tables.ACTOR_DEFINITION)
         .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .where(Tables.ACTOR_DEFINITION.ID.eq(configInjection.getActorDefinitionId()))
@@ -1175,7 +1179,9 @@ public class ConfigRepository {
         // group by connection.id so that the groupConcat above works
         .groupBy(CONNECTION.ID)).fetch();
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult);
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
   /**
@@ -1221,7 +1227,9 @@ public class ConfigRepository {
         // group by connection.id so that the groupConcat above works
         .groupBy(CONNECTION.ID)).fetch();
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult);
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
   /**
@@ -1243,10 +1251,19 @@ public class ConfigRepository {
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         .groupBy(CONNECTION.ID)).fetch();
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult);
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
-  private List<StandardSync> getStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult) {
+  private List<NotificationConfigurationRecord> getNotificationConfigurationByConnectionIds(final List<UUID> connnectionIds) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION)
+        .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.in(connnectionIds))
+        .fetch());
+  }
+
+  private List<StandardSync> getStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,
+                                                        final List<NotificationConfigurationRecord> allNeededNotificationConfigurations) {
     final List<StandardSync> standardSyncs = new ArrayList<>();
 
     for (final Record record : connectionAndOperationIdsResult) {
@@ -1257,7 +1274,11 @@ public class ConfigRepository {
           ? Collections.emptyList()
           : Arrays.stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER)).map(UUID::fromString).toList();
 
-      standardSyncs.add(DbConverter.buildStandardSync(record, operationIds));
+      final UUID connectionId = record.get(CONNECTION.ID);
+      final List<NotificationConfigurationRecord> notificationConfigurationsForConnection = allNeededNotificationConfigurations.stream()
+          .filter(notificationConfiguration -> notificationConfiguration.getConnectionId().equals(connectionId))
+          .toList();
+      standardSyncs.add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection));
     }
 
     return standardSyncs;
@@ -2304,7 +2325,7 @@ public class ConfigRepository {
                                         final UUID workspaceId,
                                         final String name,
                                         final JsonNode manifestDraft,
-                                        DSLContext ctx) {
+                                        final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -2419,9 +2440,9 @@ public class ConfigRepository {
    * @throws IOException exception while interacting with db
    * @throws IllegalArgumentException if there is a mismatch between the different arguments
    */
-  public void createDeclarativeManifestAsActiveVersion(DeclarativeManifest declarativeManifest,
-                                                       ActorDefinitionConfigInjection configInjection,
-                                                       ConnectorSpecification connectorSpecification)
+  public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
+                                                       final ActorDefinitionConfigInjection configInjection,
+                                                       final ConnectorSpecification connectorSpecification)
       throws IOException {
     if (!declarativeManifest.getActorDefinitionId().equals(configInjection.getActorDefinitionId())) {
       throw new IllegalArgumentException("DeclarativeManifest.actorDefinitionId must match ActorDefinitionConfigInjection.actorDefinitionId");
@@ -2440,7 +2461,7 @@ public class ConfigRepository {
     });
   }
 
-  private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, DSLContext ctx) {
+  private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -2497,10 +2518,10 @@ public class ConfigRepository {
    *        being made active
    * @throws IOException exception while interacting with db
    */
-  public void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
-                                                Long version,
-                                                ActorDefinitionConfigInjection configInjection,
-                                                ConnectorSpecification connectorSpecification)
+  public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
+                                                final Long version,
+                                                final ActorDefinitionConfigInjection configInjection,
+                                                final ConnectorSpecification connectorSpecification)
       throws IOException {
     database.transaction(ctx -> {
       updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
@@ -2580,7 +2601,7 @@ public class ConfigRepository {
     });
   }
 
-  private static void insertDeclarativeManifest(DeclarativeManifest declarativeManifest, DSLContext ctx) {
+  private static void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
     // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
     // object that is not null. Therefore, we will validate null values for JSON fields here
     if (declarativeManifest.getManifest() == null) {
@@ -2618,7 +2639,7 @@ public class ConfigRepository {
     });
   }
 
-  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest, DSLContext ctx) {
+  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
     insertDeclarativeManifest(declarativeManifest, ctx);
     upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(declarativeManifest.getActorDefinitionId())
         .withVersion(declarativeManifest.getVersion()), ctx);

@@ -33,6 +33,8 @@ object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelect
 object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
+object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

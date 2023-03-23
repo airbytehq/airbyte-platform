@@ -16,7 +16,7 @@ export interface TableProps<T> {
    */
   sortedByColumn?: string;
   data: T[];
-  light?: boolean;
+  variant?: "default" | "light" | "transparent";
   onClickRow?: (data: T) => void;
   testId?: string;
   columnVisibility?: VisibilityState;
@@ -27,7 +27,7 @@ export const Table = <T,>({
   className,
   columns,
   data,
-  light,
+  variant = "default",
   onClickRow,
   columnVisibility,
   sortedByColumn,
@@ -42,7 +42,12 @@ export const Table = <T,>({
   });
 
   return (
-    <table className={classNames(styles.table, className, { [styles.light]: light })} data-testid={testId}>
+    <table
+      className={classNames(styles.table, className, {
+        [styles["table--default"]]: variant === "default",
+      })}
+      data-testid={testId}
+    >
       <thead className={styles.thead}>
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={`table-header-${headerGroup.id}}`}>
@@ -55,8 +60,10 @@ export const Table = <T,>({
                   className={classNames(
                     styles.th,
                     {
-                      [styles.light]: light,
-                      [styles.sorted]: isSorted,
+                      [styles["th--default"]]: variant === "default",
+                      [styles["th--light"]]: variant === "light",
+                      [styles["th--transparent"]]: variant === "transparent",
+                      [styles["th--sorted"]]: isSorted,
                     },
                     meta?.thClassName
                   )}
@@ -73,7 +80,10 @@ export const Table = <T,>({
         {table.getRowModel().rows.map((row) => {
           return (
             <tr
-              className={classNames(styles.tr, { [styles.clickable]: !!onClickRow })}
+              className={classNames(styles.tr, {
+                [styles["tr--transparent"]]: variant === "transparent",
+                [styles["tr--clickable"]]: !!onClickRow,
+              })}
               key={`table-row-${row.id}`}
               data-testid={`table-row-${row.id}`}
               onClick={() => onClickRow?.(row.original)}
@@ -83,7 +93,7 @@ export const Table = <T,>({
                 return (
                   <td
                     className={classNames(styles.td, meta?.tdClassName, {
-                      [styles.responsive]: meta?.responsive,
+                      [styles["td--responsive"]]: meta?.responsive,
                     })}
                     key={`table-cell-${row.id}-${cell.id}`}
                     data-testid={`table-cell-${row.id}-${cell.id}`}

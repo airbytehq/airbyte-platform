@@ -58,7 +58,7 @@ export const UsagePerConnectionTable: React.FC = () => {
       if (sortBy === "totalUsage") {
         result = a.totalUsage - b.totalUsage;
       } else {
-        result = a.connection[sortBy].toLowerCase().localeCompare(b.connection[sortBy].toLowerCase());
+        result = a[sortBy].toLowerCase().localeCompare(b[sortBy].toLowerCase());
       }
       if (sortOrder === SortOrderEnum.DESC) {
         return -1 * result;
@@ -81,17 +81,14 @@ export const UsagePerConnectionTable: React.FC = () => {
       columnHelper.accessor("connection.connectionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("connectionName")}
-            isActive={sortBy === "connectionName"}
+            onClick={() => onSortClick("connection_connectionName")}
+            isActive={sortBy === "connection_connectionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.connection" />
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "connectionName",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -107,17 +104,14 @@ export const UsagePerConnectionTable: React.FC = () => {
       columnHelper.accessor("connection.sourceConnectionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("sourceConnectionName")}
-            isActive={sortBy === "sourceConnectionName"}
+            onClick={() => onSortClick("connection_sourceConnectionName")}
+            isActive={sortBy === "connection_sourceConnectionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.source" />
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "sourceConnectionName",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -144,17 +138,14 @@ export const UsagePerConnectionTable: React.FC = () => {
       columnHelper.accessor("connection.destinationConnectionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("destinationConnectionName")}
-            isActive={sortBy === "destinationConnectionName"}
+            onClick={() => onSortClick("connection_destinationConnectionName")}
+            isActive={sortBy === "connection_destinationConnectionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.destination" />
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "destinationConnectionName",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -188,7 +179,7 @@ export const UsagePerConnectionTable: React.FC = () => {
           </FlexContainer>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], styles["header--nonSortable"]),
+          thClassName: classNames(styles["header--nonSortable"]),
           responsive: true,
         },
       }),
@@ -203,9 +194,6 @@ export const UsagePerConnectionTable: React.FC = () => {
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "totalUsage",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -229,7 +217,7 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <Table columns={billingInsightsColumns} data={sortingData} light />
+      <Table variant="transparent" columns={billingInsightsColumns} data={sortingData} sortedByColumn={sortBy} />
     </div>
   );
 };

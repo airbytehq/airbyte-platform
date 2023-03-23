@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/connection/stream-status-colors";
 
 .bar {
   width: 100%;
@@ -15,20 +16,10 @@
     width: 100%;
     height: 100%;
 
-    &.onTrack {
-      background: colors.$green;
-    }
-
-    &.behind {
-      background: colors.$blue;
-    }
-
-    &.error {
-      background: colors.$red;
-    }
-
-    &.disabled {
-      background: colors.$grey;
+    @each $name, $color in stream-status-colors.$by-stream-status {
+      &--#{$name} {
+        background-color: $color;
+      }
     }
   }
 }
@@ -64,22 +55,4 @@ $contentPadding: 40px;
       align-items: center;
     }
   }
-}
-
-// TODO: This could be added to the upcoming Icon component!
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(359deg);
-  }
-}
-
-.syncing {
-  animation-name: spin;
-  animation-duration: 2000ms;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
 }

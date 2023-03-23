@@ -291,5 +291,5 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
     [columnHelper, destination.icon, destinationColumns, source.icon, sourceColumns]
   );
 
-  return <Table<TableStream> light columns={columns} data={tableData} className={styles.customTableStyle} />;
+  return <Table<TableStream> variant="light" columns={columns} data={tableData} className={styles.customTableStyle} />;
 };
