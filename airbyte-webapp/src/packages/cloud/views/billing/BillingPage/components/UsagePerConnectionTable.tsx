@@ -58,7 +58,7 @@ export const UsagePerConnectionTable: React.FC = () => {
       if (sortBy === "totalUsage") {
         result = a.totalUsage - b.totalUsage;
       } else {
-        result = a[sortBy].toLowerCase().localeCompare(b[sortBy].toLowerCase());
+        result = a.connection[sortBy].toLowerCase().localeCompare(b.connection[sortBy].toLowerCase());
       }
       if (sortOrder === SortOrderEnum.DESC) {
         return -1 * result;
@@ -81,8 +81,8 @@ export const UsagePerConnectionTable: React.FC = () => {
       columnHelper.accessor("connection.connectionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("connection_connectionName")}
-            isActive={sortBy === "connection_connectionName"}
+            onClick={() => onSortClick("connectionName")}
+            isActive={sortBy === "connectionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.connection" />
@@ -104,8 +104,8 @@ export const UsagePerConnectionTable: React.FC = () => {
       columnHelper.accessor("connection.sourceConnectionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("connection_sourceConnectionName")}
-            isActive={sortBy === "connection_sourceConnectionName"}
+            onClick={() => onSortClick("sourceConnectionName")}
+            isActive={sortBy === "sourceConnectionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.source" />
@@ -138,8 +138,8 @@ export const UsagePerConnectionTable: React.FC = () => {
       columnHelper.accessor("connection.destinationConnectionName", {
         header: () => (
           <SortableTableHeader
-            onClick={() => onSortClick("connection_destinationConnectionName")}
-            isActive={sortBy === "connection_destinationConnectionName"}
+            onClick={() => onSortClick("destinationConnectionName")}
+            isActive={sortBy === "destinationConnectionName"}
             isAscending={sortOrder === SortOrderEnum.ASC}
           >
             <FormattedMessage id="credits.destination" />
@@ -217,7 +217,12 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <Table variant="transparent" columns={billingInsightsColumns} data={sortingData} sortedByColumn={sortBy} />
+      <Table
+        variant="transparent"
+        columns={billingInsightsColumns}
+        data={sortingData}
+        sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
+      />
     </div>
   );
 };
