@@ -43,10 +43,35 @@ jobs:
         id: ver
         run: echo "fragment=${VERSION%%-*}" >> $GITHUB_OUTPUT
 
+  test-helm-charts:
+    name: Test helm charts before publishing
+    runs-on: ubuntu-22.04
+    needs: ["generate-semantic-version"]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install kubeconform
+        shell: bash
+        run: go install github.com/yannh/kubeconform/cmd/kubeconform@latest
+
+      - name: Helm lint all charts
+        shell: bash
+        run: |
+          pushd charts/airbyte
+          helm lint --with-subcharts
+          popd
+      
+      - name: Helm template and kubeconform template
+        shell: bash
+        run: |
+          pushd charts/airbyte
+          helm template airbyte ./ | kubeconform -strict -summary -verbose -exit-on-error
+          popd
+
   release-chart:
     name: Chart release
     runs-on: ubuntu-22.04
-    needs: ["generate-semantic-version"]
+    needs: ["generate-semantic-version", "test-helm-charts"]
     permissions: write-all
     steps:
       - uses: actions/checkout@v3
