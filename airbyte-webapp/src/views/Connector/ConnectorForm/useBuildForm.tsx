@@ -150,13 +150,12 @@ export function useBuildForm(
     const flattenedFormFields = useMemo(
       () =>
         formBlock.properties.flatMap((block) =>
-          block._type === "formGroup" &&
-          block.fieldKey === "connectionConfiguration" &&
-          allowOAuthConnector &&
-          authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
-            ? // OAuth button needs to be rendered at root level, so keep around an empty FormGroup for it to be rendered in.
-              // Order it after name and before the rest of the fields.
-              [{ ...block, properties: [], order: Number.MIN_SAFE_INTEGER + 1 }, ...block.properties]
+          block._type === "formGroup" && block.fieldKey === "connectionConfiguration"
+            ? allowOAuthConnector && authPredicateMatchesPath(block.fieldKey, selectedConnectorDefinitionSpecification)
+              ? // OAuth button needs to be rendered at root level, so keep around an empty FormGroup for it to be rendered in.
+                // Order it after name and before the rest of the fields.
+                [{ ...block, properties: [], order: Number.MIN_SAFE_INTEGER + 1 }, ...block.properties]
+              : block.properties
             : block
         ),
       [allowOAuthConnector, formBlock.properties, selectedConnectorDefinitionSpecification]
