@@ -14,6 +14,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_RECORDS_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
@@ -39,6 +40,8 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.PerfBackgroundJsonValidation;
@@ -402,9 +405,10 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                                                                                                      final Supplier<ActivityExecutionContext> activityContext,
                                                                                                                      final WorkerConfigs workerConfigs,
                                                                                                                      final UUID connectionId) {
+    final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorImage(featureFlagClient, containerOrchestratorConfig, connectionId);
     return () -> new ReplicationLauncherWorker(
         connectionId,
-        containerOrchestratorConfig,
+        finalConfig,
         sourceLauncherConfig,
         destinationLauncherConfig,
         jobRunConfig,
@@ -413,6 +417,34 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         serverPort,
         temporalUtils,
         workerConfigs);
+  }
+
+  @VisibleForTesting
+  static ContainerOrchestratorConfig injectContainerOrchestratorImage(FeatureFlagClient client,
+                                                                      ContainerOrchestratorConfig containerOrchestratorConfig,
+                                                                      UUID connectionId) {
+    // This is messy because the ContainerOrchestratorConfig is immutable, so we have to create an
+    // entirely new object.
+    ContainerOrchestratorConfig config = containerOrchestratorConfig;
+    final String injectedOrchestratorImage =
+        client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(connectionId));
+
+    if (!injectedOrchestratorImage.isEmpty()) {
+      config = new ContainerOrchestratorConfig(
+          containerOrchestratorConfig.namespace(),
+          containerOrchestratorConfig.documentStoreClient(),
+          containerOrchestratorConfig.environmentVariables(),
+          containerOrchestratorConfig.kubernetesClient(),
+          containerOrchestratorConfig.secretName(),
+          containerOrchestratorConfig.secretMountPath(),
+          containerOrchestratorConfig.dataPlaneCredsSecretName(),
+          containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
+          injectedOrchestratorImage,
+          containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
+          containerOrchestratorConfig.googleApplicationCredentials(),
+          containerOrchestratorConfig.workerEnvironment());
+    }
+    return config;
   }
 
   private boolean isResetJob(final String dockerImage) {
