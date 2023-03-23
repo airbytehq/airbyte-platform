@@ -32,13 +32,10 @@ jobs:
           helm lint --with-subcharts
           popd
       
-      - name: Helm template and kubeconform template
-        shell: bash
-        run: |
-          go install github.com/yannh/kubeconform/cmd/kubeconform@latest
-          pushd charts/airbyte
-          helm template airbyte ./ | kubeconform -strict -summary -verbose -exit-on-error
-          popd
+      - name: Generate and validate releases
+        uses: shivjm/helm-kubeconform-action@v0.2.0
+        with:
+          chartsDirectory: "charts/airbyte"
 
       - name: Start a local k8s cluster
         uses: jupyterhub/action-k3s-helm@v3
