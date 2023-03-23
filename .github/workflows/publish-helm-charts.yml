@@ -16,10 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install kubeconform
-        shell: bash
-        run: go install github.com/yannh/kubeconform/cmd/kubeconform@latest
-
       - name: Helm lint all charts
         shell: bash
         run: |
@@ -39,6 +35,7 @@ jobs:
       - name: Helm template and kubeconform template
         shell: bash
         run: |
+          go install github.com/yannh/kubeconform/cmd/kubeconform@latest
           pushd charts/airbyte
           helm template airbyte ./ | kubeconform -strict -summary -verbose -exit-on-error
           popd
