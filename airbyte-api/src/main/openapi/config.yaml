@@ -4423,6 +4423,10 @@ components:
           $ref: "#/components/schemas/JobConfigType"
         configId:
           type: string
+        enabledStreams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDescriptor"
         createdAt:
           type: integer
           format: int64
