@@ -11,7 +11,7 @@ on:
 
 jobs:
   test-helm-charts:
-    name: Test helm charts before publishing
+    name: Test helm charts
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
@@ -23,6 +23,10 @@ jobs:
       - name: Helm lint all charts
         shell: bash
         run: |
+          declare -a StringArray=("airbyte-bootloader" "airbyte-server" "airbyte-temporal" "airbyte-webapp" "airbyte-pod-sweeper" "airbyte-worker" "airbyte-metrics" "airbyte-cron" "airbyte-connector-builder-server")
+          for val in ${StringArray[@]}; do
+            pushd ./charts/${val} && helm dep update && popd
+          done
           pushd charts/airbyte
           mv Chart.yaml Chart.yaml.old
           mv Chart.yaml.test Chart.yaml
