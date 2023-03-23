@@ -144,7 +144,7 @@ export const StreamsList = () => {
         <ErrorCallout />
         <div className={styles.tableContainer}>
           <StreamSearchFiltering className={styles.search} />
-          <Table columns={columns} data={filteredStreams} light className={styles.table} />
+          <Table columns={columns} data={filteredStreams} variant="light" className={styles.table} />
         </div>
       </FlexContainer>
     </Card>
