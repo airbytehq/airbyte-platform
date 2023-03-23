@@ -13,7 +13,6 @@ jobs:
   test-helm-charts:
     name: Test helm charts before publishing
     runs-on: ubuntu-22.04
-    needs: ["generate-semantic-version"]
     steps:
       - uses: actions/checkout@v3
 
