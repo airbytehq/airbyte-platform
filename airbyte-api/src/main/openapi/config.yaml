@@ -2544,6 +2544,24 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ListConnectionsForWorkspacesRequestBody:
+      type: object
+      required:
+        - workspaceIds
+        - userId
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        userId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        includeDeleted:
+          type: boolean
+          default: false
     WorkspaceReadList:
       type: object
       required:
