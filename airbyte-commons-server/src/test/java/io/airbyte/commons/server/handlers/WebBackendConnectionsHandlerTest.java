@@ -335,7 +335,9 @@ class WebBackendConnectionsHandlerTest {
             .cpuRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuRequest())
             .cpuLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuLimit())
             .memoryRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryRequest())
-            .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()));
+            .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()))
+        .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true);
   }
 
   @Test
@@ -670,7 +672,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .notifySchemaChanges(false);
+        .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true);
 
     final List<UUID> operationIds = List.of(newOperationId);
 
@@ -687,6 +690,7 @@ class WebBackendConnectionsHandlerTest {
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true)
         .breakingChange(false);
 
     final ConnectionUpdate actual = WebBackendConnectionsHandler.toConnectionPatch(input, operationIds, false);
@@ -750,7 +754,9 @@ class WebBackendConnectionsHandlerTest {
         .schedule(expected.getSchedule())
         .status(expected.getStatus())
         .syncCatalog(expected.getSyncCatalog())
-        .sourceCatalogId(expected.getCatalogId());
+        .sourceCatalogId(expected.getCatalogId())
+        .notifySchemaChanges(expected.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail());
 
     when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
@@ -773,7 +779,10 @@ class WebBackendConnectionsHandlerTest {
             .prefix(expected.getPrefix())
             .syncCatalog(expected.getSyncCatalog())
             .status(expected.getStatus())
-            .schedule(expected.getSchedule()).breakingChange(false));
+            .schedule(expected.getSchedule())
+            .breakingChange(false)
+            .notifySchemaChanges(expected.getNotifySchemaChanges())
+            .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail()));
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(connectionRead.getConnectionId());
 
