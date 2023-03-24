@@ -8,6 +8,7 @@ import { useParams } from "react-router-dom";
 import { useDebounce, useEffectOnce } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
+import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderFormValues,
   convertToManifest,
@@ -15,7 +16,6 @@ import {
   DEFAULT_JSON_MANIFEST_VALUES,
   EditorView,
 } from "components/connectorBuilder/types";
-import { convertToBuilderFormValuesSync } from "components/connectorBuilder/useManifestToBuilderForm";
 
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
