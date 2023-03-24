@@ -373,6 +373,16 @@ public class SchedulerHandler {
     return sourceDiscoverSchemaRead;
   }
 
+  public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final SourceConnection source = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
+    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceIdRequestBody.getSourceId());
+    final ConnectorSpecification spec = sourceVersion.getSpec();
+
+    return getSourceSpecificationRead(sourceDefinition, spec);
+  }
+
   public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID sourceDefinitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
@@ -381,10 +391,15 @@ public class SchedulerHandler {
         actorDefinitionVersionHelper.getSourceVersionForWorkspace(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     final ConnectorSpecification spec = sourceVersion.getSpec();
 
+    return getSourceSpecificationRead(source, spec);
+  }
+
+  private SourceDefinitionSpecificationRead getSourceSpecificationRead(final StandardSourceDefinition sourceDefinition,
+                                                                       final ConnectorSpecification spec) {
     final SourceDefinitionSpecificationRead specRead = new SourceDefinitionSpecificationRead()
         .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(ConfigType.GET_SPEC)))
         .connectionSpecification(spec.getConnectionSpecification())
-        .sourceDefinitionId(sourceDefinitionId);
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId());
 
     if (spec.getDocumentationUrl() != null) {
       specRead.documentationUrl(spec.getDocumentationUrl().toString());
@@ -399,9 +414,19 @@ public class SchedulerHandler {
     return specRead;
   }
 
+  public DestinationDefinitionSpecificationRead getSpecificationForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final DestinationConnection destination = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
+    final StandardDestinationDefinition destinationDefinition =
+        configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationIdRequestBody.getDestinationId());
+    final ConnectorSpecification spec = destinationVersion.getSpec();
+    return getDestinationSpecificationRead(destinationDefinition, spec);
+  }
+
   @SuppressWarnings("LineLength")
-  public DestinationDefinitionSpecificationRead getDestinationSpecification(
-                                                                            final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
+  public DestinationDefinitionSpecificationRead getDestinationSpecification(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID destinationDefinitionId = destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId();
     final StandardDestinationDefinition destination = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
@@ -409,12 +434,17 @@ public class SchedulerHandler {
         actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     final ConnectorSpecification spec = destinationVersion.getSpec();
 
+    return getDestinationSpecificationRead(destination, spec);
+  }
+
+  private DestinationDefinitionSpecificationRead getDestinationSpecificationRead(final StandardDestinationDefinition destinationDefinition,
+                                                                                 final ConnectorSpecification spec) {
     final DestinationDefinitionSpecificationRead specRead = new DestinationDefinitionSpecificationRead()
         .jobInfo(jobConverter.getSynchronousJobRead(SynchronousJobMetadata.mock(ConfigType.GET_SPEC)))
         .supportedDestinationSyncModes(Enums.convertListTo(spec.getSupportedDestinationSyncModes(), DestinationSyncMode.class))
         .connectionSpecification(spec.getConnectionSpecification())
         .documentationUrl(spec.getDocumentationUrl().toString())
-        .destinationDefinitionId(destinationDefinitionId);
+        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
 
     final Optional<AuthSpecification> authSpec = OauthModelConverter.getAuthSpec(spec);
     authSpec.ifPresent(specRead::setAuthSpecification);
