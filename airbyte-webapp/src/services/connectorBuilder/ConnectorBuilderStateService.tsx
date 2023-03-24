@@ -444,6 +444,9 @@ export const useSelectedPageAndSlice = () => {
     setStreamToSelectedSlice((prev) => {
       return { ...prev, [selectedStreamName]: sliceIndex };
     });
+    setStreamToSelectedPage((prev) => {
+      return { ...prev, [selectedStreamName]: 0 };
+    });
   };
   const selectedSlice = streamToSelectedSlice[selectedStreamName] ?? 0;
 
