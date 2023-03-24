@@ -20,7 +20,6 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
-import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -34,7 +33,6 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.DestinationMatcher;
-import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
@@ -620,20 +618,6 @@ public class ConnectionsHandler {
         throw new RuntimeException("Unexpected schedule type");
       }
     }
-  }
-
-  public ConnectionReadList listConnectionsForWorkspaces(ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
-      throws IOException {
-
-    final List<ConnectionRead> connectionReads = Lists.newArrayList();
-    for (final StandardSync standardSync : configRepository.listWorkspaceStandardSyncsPaginated(
-        listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
-        listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
-        PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
-        PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()))) {
-      connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
-    }
-    return new ConnectionReadList().connections(connectionReads);
   }
 
 }

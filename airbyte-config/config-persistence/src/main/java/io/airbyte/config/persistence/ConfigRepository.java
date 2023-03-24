@@ -130,24 +130,6 @@ public class ConfigRepository {
 
   }
 
-  /**
-   * Query object for paginated querying of connections in multiple workspaces.
-   *
-   * @param workspaceIds workspaces to fetch connections for
-   * @param sourceId fetch connections with this source id
-   * @param destinationId fetch connections with this destination id
-   * @param includeDeleted include tombstoned connections
-   * @param pageSize limit
-   * @param rowOffset offset
-   */
-  public record StandardSyncsQueryPaginated(
-                                            @Nonnull List<UUID> workspaceIds,
-                                            List<UUID> sourceId,
-                                            List<UUID> destinationId,
-                                            boolean includeDeleted,
-                                            int pageSize,
-                                            int rowOffset) {}
-
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRepository.class);
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
   private static final String OPERATION_IDS_AGG_DELIMITER = ",";
@@ -1247,61 +1229,6 @@ public class ConfigRepository {
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
-  }
-
-  /**
-   * List connections. Paginated.
-   */
-  public List<StandardSync> listWorkspaceStandardSyncsPaginated(
-                                                                final List<UUID> workspaceIds,
-                                                                final boolean includeDeleted,
-                                                                final int pageSize,
-                                                                final int rowOffset)
-      throws IOException {
-    return listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
-        workspaceIds,
-        null,
-        null,
-        includeDeleted,
-        pageSize,
-        rowOffset));
-  }
-
-  /**
-   * List connections for workspace. Paginated.
-   *
-   * @param standardSyncsQueryPaginated query
-   * @return list of connections
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  public List<StandardSync> listWorkspaceStandardSyncsPaginated(final StandardSyncsQueryPaginated standardSyncsQueryPaginated) throws IOException {
-    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
-        // SELECT connection.* plus the connection's associated operationIds as a concatenated list
-        .select(
-            CONNECTION.asterisk(),
-            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD))
-        .from(CONNECTION)
-
-        // left join with all connection_operation rows that match the connection's id.
-        // left join includes connections that don't have any connection_operations
-        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
-
-        // join with source actors so that we can filter by workspaceId
-        .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
-        .where(ACTOR.WORKSPACE_ID.in(standardSyncsQueryPaginated.workspaceIds())
-            .and(standardSyncsQueryPaginated.destinationId == null || standardSyncsQueryPaginated.destinationId.isEmpty() ? noCondition()
-                : CONNECTION.DESTINATION_ID.in(standardSyncsQueryPaginated.destinationId))
-            .and(standardSyncsQueryPaginated.sourceId == null || standardSyncsQueryPaginated.sourceId.isEmpty() ? noCondition()
-                : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId))
-            .and(standardSyncsQueryPaginated.includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID))
-        .limit(standardSyncsQueryPaginated.pageSize())
-        .offset(standardSyncsQueryPaginated.rowOffset())
-        .fetch();
-
-    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
     return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
