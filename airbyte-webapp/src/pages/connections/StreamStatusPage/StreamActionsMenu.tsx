@@ -9,8 +9,6 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
 import { AirbyteStream } from "core/request/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useResetConnectionStream } from "hooks/services/useConnectionHook";
 
 import { ConnectionRoutePaths } from "../types";
 
@@ -22,9 +20,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
 
-  const { connection } = useConnectionEditService();
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning } = useConnectionSyncContext();
-  const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams } = useConnectionSyncContext();
 
   const options: DropdownMenuOptionType[] = [
     {
@@ -49,7 +45,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
     }
 
     if (option.value === "resetThisStream" && stream) {
-      await resetStream([{ streamNamespace: stream?.namespace || "", streamName: stream?.name }]);
+      await resetStreams([{ streamNamespace: stream?.namespace ?? "", streamName: stream?.name }]);
     }
   };
 

@@ -25,7 +25,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     cancelStarting,
     cancelJob,
     syncConnection,
-    resetConnection,
+    resetStreams,
     resetStarting,
     jobSyncRunning,
     jobResetRunning,
@@ -40,11 +40,11 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       cancelButtonText: "form.noNeed",
       onSubmit: async () => {
         closeConfirmationModal();
-        await resetConnection();
+        await resetStreams();
       },
       submitButtonDataId: "reset",
     });
-  }, [closeConfirmationModal, openConfirmationModal, resetConnection]);
+  }, [closeConfirmationModal, openConfirmationModal, resetStreams]);
 
   return (
     <div className={styles.buttons}>
