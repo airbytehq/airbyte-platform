@@ -250,10 +250,14 @@ function useTestInputDefaultValues(testInputJson: StreamReadRequestBodyConfig | 
     }
     // spec changed, set default values
     currentSpec.current = spec;
-    const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
-    const formFields = jsonSchemaToFormBlock(jsonSchema);
     const testInputToUpdate = testInputJson || {};
-    setDefaultValues(formFields as FormGroupItem, testInputToUpdate, { respectExistingValues: true });
+    try {
+      const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
+      const formFields = jsonSchemaToFormBlock(jsonSchema);
+      setDefaultValues(formFields as FormGroupItem, testInputToUpdate, { respectExistingValues: true });
+    } catch {
+      // spec is user supplied so it might not be valid - prevent crashing the application by just skipping trying to set default values
+    }
     return testInputToUpdate;
   }, [spec, testInputJson]);
 }
