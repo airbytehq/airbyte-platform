@@ -53,4 +53,6 @@ public interface FeatureFlags {
    */
   String strictComparisonNormalizationTag();
 
+  boolean processInGcpDataPlane(final String workspaceId);
+
 }
