@@ -838,7 +838,7 @@ jobs:
       - platform-build
       # Todo: Kyryl turn this on.
       # - helm-acceptance-test
-    if: success()
+    if: ${{ success() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Get Previous Workflow Status
         uses: Mercymeilya/last-workflow-status@v0.3
