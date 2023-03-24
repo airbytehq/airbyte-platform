@@ -1,7 +1,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
 import queryString from "query-string";
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -70,11 +70,14 @@ export const UsagePerConnectionTable: React.FC = () => {
   );
 
   const sortingData = React.useMemo(
-    () => freeAndPaidUsageByConnection.sort(sortData),
+    // It is important that we return this way so that it creates a whole new array
+    // otherwise, ReactTable is unable to recognize that it is a new array and sorting will break.
+    // And it will only break in the minified version (it will look fine in dev mode).
+    () => [...freeAndPaidUsageByConnection.sort(sortData)],
     [sortData, freeAndPaidUsageByConnection]
   );
 
-  const columnHelper = createColumnHelper<ConnectionFreeAndPaidUsage>();
+  const columnHelper = useMemo(() => createColumnHelper<ConnectionFreeAndPaidUsage>(), []);
 
   const billingInsightsColumns = React.useMemo(() => {
     return [
@@ -220,8 +223,8 @@ export const UsagePerConnectionTable: React.FC = () => {
       <Table
         variant="transparent"
         columns={billingInsightsColumns}
-        data={sortingData}
         sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
+        data={sortingData}
       />
     </div>
   );

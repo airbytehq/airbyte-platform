@@ -55,9 +55,9 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
   }, [chartData, minimized]);
 
   return (
-    <div className={classnames({ [styles.container]: !minimized })}>
+    <div className={classnames(styles.container, { [styles["container--full"]]: !minimized })}>
       {chartData && chartData.length > 0 ? (
-        <ResponsiveContainer width={minimized ? 120 : undefined} height={minimized ? 30 : undefined}>
+        <ResponsiveContainer width={minimized ? 100 : undefined} height={minimized ? 30 : undefined}>
           <BarChart data={chartData} margin={minimized ? {} : { right: 12, top: 25 }}>
             {!minimized && (
               <Legend
@@ -123,7 +123,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
                 }}
               />
             )}
-            <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.grey}>
+            <Bar key="paid" stackId="a" dataKey="billedCost" fill={styles.grey} isAnimationActive={!minimized}>
               {chartData.map((item, index) => {
                 return (
                   <Cell
@@ -139,7 +139,14 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
               })}
             </Bar>
             {isEnrolledInFreeConnectorProgram && (
-              <Bar key="free" stackId="a" dataKey="freeUsage" fill={styles.green} radius={[4, 4, 0, 0]}>
+              <Bar
+                key="free"
+                stackId="a"
+                dataKey="freeUsage"
+                fill={styles.green}
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={!minimized}
+              >
                 {chartData.map((item, index) => {
                   return item.freeUsage && item.freeUsage / (item.freeUsage + item.billedCost) < 0.01 ? (
                     <Cell key={`cell-free-${index}`} width={0} />
