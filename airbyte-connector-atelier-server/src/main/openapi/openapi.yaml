@@ -78,6 +78,19 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/health:
+    get:
+      tags:
+        - health
+      summary: Health Check
+      operationId: getHealthCheck
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheckRead"
 
 components:
   schemas:
@@ -264,6 +277,17 @@ components:
         manifest:
           type: object
           description: The config-based connector manifest contents with $refs and $parameters resolved
+    HealthCheckRead:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+          description: Boolean value indicating whether the server is available or not
+        cdk_version:
+          type: string
+          description: The version of the CDK used by the server
 
     # The following exception structs were copied from airbyte-api/src/main/openapi/config.yaml
     InvalidInputProperty:

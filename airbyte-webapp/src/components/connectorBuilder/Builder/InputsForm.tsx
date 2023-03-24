@@ -37,7 +37,7 @@ export function newInputInEditing(): InputInEditing {
   return {
     key: "",
     definition: {},
-    required: false,
+    required: true,
     isNew: true,
     showDefaultValueField: false,
     type: "string",

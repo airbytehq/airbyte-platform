@@ -7,16 +7,9 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { isGdprCountry } from "utils/dataPrivacy";
 
 import { FieldItem, Form } from "./auth/components/FormComponents";
+import { NameField, EmailField, Disclaimer, PasswordField } from "./auth/components/FormFields/FormFields";
 import { FormTitle } from "./auth/components/FormTitle";
-import {
-  Disclaimer,
-  EmailField,
-  NameField,
-  NewsField,
-  PasswordField,
-  SignupButton,
-  SignupFormStatusMessage,
-} from "./auth/SignupPage/components/SignupForm";
+import { NewsField, SignupButton, SignupFormStatusMessage } from "./auth/SignupPage/components/SignupForm";
 import { FieldError } from "../lib/errors/FieldError";
 import { useAuthService } from "../services/auth/AuthService";
 import { EmailLinkErrorCodes } from "../services/auth/types";

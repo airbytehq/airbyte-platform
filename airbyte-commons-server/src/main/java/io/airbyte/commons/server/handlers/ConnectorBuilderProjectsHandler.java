@@ -18,8 +18,7 @@ import io.airbyte.api.model.generated.DeclarativeManifestRead;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
-import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -48,18 +47,18 @@ public class ConnectorBuilderProjectsHandler {
 
   private final ConfigRepository configRepository;
   private final Supplier<UUID> uuidSupplier;
-  private final ConnectorBuilderSpecAdapter specAdapter;
+  private final DeclarativeSourceManifestInjector manifestInjector;
   private final CdkVersionProvider cdkVersionProvider;
 
   @Inject
   public ConnectorBuilderProjectsHandler(final ConfigRepository configRepository,
                                          final CdkVersionProvider cdkVersionProvider,
                                          final Supplier<UUID> uuidSupplier,
-                                         final ConnectorBuilderSpecAdapter specAdapter) {
+                                         final DeclarativeSourceManifestInjector manifestInjector) {
     this.configRepository = configRepository;
     this.cdkVersionProvider = cdkVersionProvider;
     this.uuidSupplier = uuidSupplier;
-    this.specAdapter = specAdapter;
+    this.manifestInjector = manifestInjector;
   }
 
   private static ConnectorBuilderProjectDetailsRead builderProjectToDetailsRead(final ConnectorBuilderProject project) {
@@ -182,6 +181,7 @@ public class ConnectorBuilderProjectsHandler {
       throws IOException {
     final JsonNode manifest = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getManifest();
     final JsonNode spec = connectorBuilderPublishRequestBody.getInitialDeclarativeManifest().getSpec();
+    manifestInjector.addInjectedDeclarativeManifest(spec);
     final UUID actorDefinitionId = createActorDefinition(connectorBuilderPublishRequestBody.getName(),
         connectorBuilderPublishRequestBody.getWorkspaceId(),
         manifest,
@@ -200,7 +200,7 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
-    final ConnectorSpecification connectorSpecification = specAdapter.adapt(spec);
+    final ConnectorSpecification connectorSpecification = manifestInjector.createDeclarativeManifestConnectorSpecification(spec);
     final StandardSourceDefinition source = new StandardSourceDefinition()
         .withSourceDefinitionId(uuidSupplier.get())
         .withName(name)
@@ -216,11 +216,7 @@ public class ConnectorBuilderProjectsHandler {
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
     configRepository.writeCustomSourceDefinition(source, workspaceId);
 
-    configRepository.writeActorDefinitionConfigInjectionForPath(
-        new ActorDefinitionConfigInjection()
-            .withActorDefinitionId(source.getSourceDefinitionId())
-            .withInjectionPath("__injected_declarative_manifest")
-            .withJsonToInject(manifest));
+    configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
     return source.getSourceDefinitionId();
   }
 

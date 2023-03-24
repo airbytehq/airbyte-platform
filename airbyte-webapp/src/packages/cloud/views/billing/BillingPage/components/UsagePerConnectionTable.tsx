@@ -89,9 +89,6 @@ export const UsagePerConnectionTable: React.FC = () => {
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "connectionName",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -115,9 +112,6 @@ export const UsagePerConnectionTable: React.FC = () => {
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "sourceConnectionName",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -152,9 +146,6 @@ export const UsagePerConnectionTable: React.FC = () => {
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "destinationConnectionName",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -188,7 +179,7 @@ export const UsagePerConnectionTable: React.FC = () => {
           </FlexContainer>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], styles["header--nonSortable"]),
+          thClassName: classNames(styles["header--nonSortable"]),
           responsive: true,
         },
       }),
@@ -203,9 +194,6 @@ export const UsagePerConnectionTable: React.FC = () => {
           </SortableTableHeader>
         ),
         meta: {
-          thClassName: classNames(styles.header, styles["header--light"], {
-            [styles["header--sorted"]]: sortBy === "totalUsage",
-          }),
           responsive: true,
         },
         cell: (props) => (
@@ -229,7 +217,12 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <Table columns={billingInsightsColumns} data={sortingData} light />
+      <Table
+        variant="transparent"
+        columns={billingInsightsColumns}
+        data={sortingData}
+        sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
+      />
     </div>
   );
 };

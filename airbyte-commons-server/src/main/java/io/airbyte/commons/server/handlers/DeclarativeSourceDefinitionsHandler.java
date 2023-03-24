@@ -4,23 +4,24 @@
 
 package io.airbyte.commons.server.handlers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.DeclarativeManifestVersionRead;
 import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
+import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
+import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Comparator;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,28 +35,20 @@ import java.util.stream.Stream;
 public class DeclarativeSourceDefinitionsHandler {
 
   private final ConfigRepository configRepository;
-  private final ConnectorBuilderSpecAdapter specAdapter;
+  private final DeclarativeSourceManifestInjector manifestInjector;
 
   @Inject
   public DeclarativeSourceDefinitionsHandler(final ConfigRepository configRepository,
-                                             final ConnectorBuilderSpecAdapter specAdapter) {
+                                             final DeclarativeSourceManifestInjector manifestInjector) {
     this.configRepository = configRepository;
-    this.specAdapter = specAdapter;
+    this.manifestInjector = manifestInjector;
   }
 
-  private void validateDeclarativeSourceDefinition(final UUID sourceDefinitionId, final UUID workspaceId) throws IOException {
-    if (!configRepository.workspaceCanUseCustomDefinition(sourceDefinitionId, workspaceId)) {
-      throw new DeclarativeSourceNotFoundException(
-          String.format("Can't find source definition id `%s` in workspace %s", sourceDefinitionId, workspaceId));
-    }
-  }
+  public void createDeclarativeSourceDefinitionManifest(DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) throws IOException {
+    validateAccessToSource(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
 
-  public void createDeclarativeSourceDefinitionManifest(final DeclarativeSourceDefinitionCreateManifestRequestBody requestBody) throws IOException {
-    validateDeclarativeSourceDefinition(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
-    final Set<Long> existingVersions = configRepository.getDeclarativeManifestsByActorDefinitionId(
-        requestBody.getSourceDefinitionId()).map(DeclarativeManifest::getVersion).collect(Collectors.toSet());
-
-    final long version = requestBody.getDeclarativeManifest().getVersion().longValue();
+    Collection<Long> existingVersions = fetchAvailableManifestVersions(requestBody.getSourceDefinitionId());
+    final long version = requestBody.getDeclarativeManifest().getVersion();
     if (existingVersions.isEmpty()) {
       throw new SourceIsNotDeclarativeException(
           String.format("Source %s is does not have a declarative manifest associated to it", requestBody.getSourceDefinitionId()));
@@ -63,26 +56,56 @@ public class DeclarativeSourceDefinitionsHandler {
       throw new ValueConflictKnownException(String.format("Version '%s' for source %s already exists", version, requestBody.getSourceDefinitionId()));
     }
 
-    final DeclarativeManifest declarativeManifest = new DeclarativeManifest()
+    JsonNode spec = requestBody.getDeclarativeManifest().getSpec();
+    manifestInjector.addInjectedDeclarativeManifest(spec);
+    DeclarativeManifest declarativeManifest = new DeclarativeManifest()
         .withActorDefinitionId(requestBody.getSourceDefinitionId())
         .withVersion(version)
         .withDescription(requestBody.getDeclarativeManifest().getDescription())
         .withManifest(requestBody.getDeclarativeManifest().getManifest())
-        .withSpec(requestBody.getDeclarativeManifest().getSpec());
+        .withSpec(spec);
     if (requestBody.getSetAsActiveManifest()) {
-      final ConnectorSpecification connectorSpecification = specAdapter.adapt(requestBody.getDeclarativeManifest().getSpec());
-      configRepository.updateDeclarativeActorDefinition(requestBody.getSourceDefinitionId(), requestBody.getDeclarativeManifest().getManifest(),
-          connectorSpecification);
-      configRepository.insertActiveDeclarativeManifest(declarativeManifest);
+      configRepository.createDeclarativeManifestAsActiveVersion(declarativeManifest,
+          manifestInjector.createConfigInjection(requestBody.getSourceDefinitionId(), requestBody.getDeclarativeManifest().getManifest()),
+          manifestInjector.createDeclarativeManifestConnectorSpecification(spec));
     } else {
       configRepository.insertDeclarativeManifest(declarativeManifest);
+    }
+  }
+
+  public void updateDeclarativeManifestVersion(UpdateActiveManifestRequestBody requestBody) throws IOException, ConfigNotFoundException {
+    validateAccessToSource(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
+    Collection<Long> existingVersions = fetchAvailableManifestVersions(requestBody.getSourceDefinitionId());
+    if (existingVersions.isEmpty()) {
+      throw new SourceIsNotDeclarativeException(
+          String.format("Source %s is does not have a declarative manifest associated to it", requestBody.getSourceDefinitionId()));
+    }
+
+    final DeclarativeManifest declarativeManifest = configRepository.getDeclarativeManifestByActorDefinitionIdAndVersion(
+        requestBody.getSourceDefinitionId(), requestBody.getVersion());
+    configRepository.setDeclarativeSourceActiveVersion(requestBody.getSourceDefinitionId(),
+        declarativeManifest.getVersion(),
+        manifestInjector.createConfigInjection(declarativeManifest.getActorDefinitionId(), declarativeManifest.getManifest()),
+        manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.getSpec()));
+  }
+
+  private Collection<Long> fetchAvailableManifestVersions(final UUID sourceDefinitionId) throws IOException {
+    return configRepository.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)
+        .map(DeclarativeManifest::getVersion)
+        .collect(Collectors.toSet());
+  }
+
+  private void validateAccessToSource(UUID actorDefinitionId, UUID workspaceId) throws IOException {
+    if (!configRepository.workspaceCanUseCustomDefinition(actorDefinitionId, workspaceId)) {
+      throw new DeclarativeSourceNotFoundException(
+          String.format("Can't find source definition id `%s` in workspace %s", actorDefinitionId, workspaceId));
     }
   }
 
   public DeclarativeManifestsReadList listManifestVersions(
                                                            final ListDeclarativeManifestsRequestBody requestBody)
       throws IOException, ConfigNotFoundException {
-    validateDeclarativeSourceDefinition(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
+    validateAccessToSource(requestBody.getSourceDefinitionId(), requestBody.getWorkspaceId());
     final Stream<DeclarativeManifest> existingVersions = configRepository.getDeclarativeManifestsByActorDefinitionId(
         requestBody.getSourceDefinitionId());
     final DeclarativeManifest activeVersion =

@@ -20,7 +20,11 @@ dependencies {
 
     // OpenAPI code generation dependencies
     implementation group: 'io.swagger', name: 'swagger-annotations', version: '1.6.2'
+
+    implementation project(':airbyte-config:init')
 }
+
+mainClassName = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
 
 application {
     mainClass = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'

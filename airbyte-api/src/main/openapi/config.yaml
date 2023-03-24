@@ -539,6 +539,23 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "409":
           description: Version already exists for definition id
+  /v1/declarative_source_definitions/update_active_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Update the declarative manifest version for a source
+      operationId: updateDeclarativeManifestVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActiveManifestRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/list_manifests:
     post:
       tags:
@@ -2816,8 +2833,7 @@ components:
         spec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         version:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/ManifestVersion"
     SourceDefinitionIdBody:
       type: object
       required:
@@ -2951,7 +2967,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
     DeclarativeManifestsReadList:
       type: object
       required:
@@ -2991,6 +3007,19 @@ components:
           type: boolean
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+    UpdateActiveManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - version
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     PrivateSourceDefinitionRead:
       type: object
       required:
@@ -3690,6 +3719,8 @@ components:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
     WebBackendConnectionCreate:
@@ -3797,6 +3828,8 @@ components:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         breakingChange:
@@ -3846,6 +3879,8 @@ components:
         geography:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
@@ -3902,6 +3937,8 @@ components:
         breakingChange:
           type: boolean
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
@@ -4386,6 +4423,10 @@ components:
           $ref: "#/components/schemas/JobConfigType"
         configId:
           type: string
+        enabledStreams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDescriptor"
         createdAt:
           type: integer
           format: int64
@@ -5298,6 +5339,7 @@ components:
         - isSyncing
         - schemaChange
         - notifySchemaChanges
+        - notifySchemaChangesByEmail
         - nonBreakingChangesPreference
       properties:
         connectionId:
@@ -5358,6 +5400,8 @@ components:
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"

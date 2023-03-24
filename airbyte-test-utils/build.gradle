@@ -19,7 +19,7 @@ dependencies {
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-worker')
 
-    implementation 'io.fabric8:kubernetes-client:5.12.2'
+    implementation libs.bundles.kubernetes.client
     implementation libs.temporal.sdk
 
     api libs.junit.jupiter.api

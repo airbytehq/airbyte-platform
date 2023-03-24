@@ -11,7 +11,6 @@ export const links = {
   termsLink: "https://airbyte.com/terms",
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
-  gitLink: `${BASE_DOCS_LINK}/quickstart/deploy-airbyte`,
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
   productReleaseStages: `${BASE_DOCS_LINK}/project-overview/product-release-stages`,
   slackLink: "https://slack.airbyte.com",

@@ -50,6 +50,8 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -74,7 +76,19 @@ public class DbConverter {
    * @param connectionOperationId connection operation id.
    * @return connection (a.k.a. StandardSync)
    */
-  public static StandardSync buildStandardSync(final Record record, final List<UUID> connectionOperationId) {
+  public static StandardSync buildStandardSync(final Record record,
+                                               final List<UUID> connectionOperationId,
+                                               final List<NotificationConfigurationRecord> notificationConfigurations) {
+    final boolean isWebhookNotificationEnabled = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration
+            .getNotificationType() == NotificationType.webhook && notificationConfiguration.getEnabled())
+        .findAny().isPresent();
+
+    final boolean isEmailNotificationEnabled = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration
+            .getNotificationType() == NotificationType.email && notificationConfiguration.getEnabled())
+        .findAny().isPresent();
+
     return new StandardSync()
         .withConnectionId(record.get(CONNECTION.ID))
         .withNamespaceDefinition(
@@ -106,7 +120,8 @@ public class DbConverter {
         .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withNonBreakingChangesPreference(
             Enums.toEnum(record.get(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, String.class), NonBreakingChangesPreference.class).orElseThrow())
-        .withNotifySchemaChanges(record.get(CONNECTION.NOTIFY_SCHEMA_CHANGES));
+        .withNotifySchemaChanges(isWebhookNotificationEnabled)
+        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
