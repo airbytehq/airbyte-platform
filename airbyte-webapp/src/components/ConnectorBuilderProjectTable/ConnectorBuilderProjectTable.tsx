@@ -75,7 +75,9 @@ export const ConnectorBuilderProjectTable = ({
             <Tooltip
               disabled={value !== "draft"}
               control={
-                <Text className={classNames(styles.versionCell, { [styles.draft]: value === "draft" })}>{value}</Text>
+                <Text className={classNames(styles.versionCell, { [styles.draft]: value === "draft" })}>
+                  {value === "draft" ? <FormattedMessage id="connectorBuilder.draft" /> : `v${value}`}
+                </Text>
               }
             >
               <FormattedMessage id="connectorBuilder.listPage.draftTooltip" />

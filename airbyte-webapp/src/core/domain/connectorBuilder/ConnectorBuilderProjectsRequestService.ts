@@ -5,6 +5,7 @@ import {
   listConnectorBuilderProjects,
   updateConnectorBuilderProject,
   publishConnectorBuilderProject,
+  listDeclarativeManifests,
 } from "core/request/AirbyteClient";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
@@ -13,8 +14,11 @@ export class ConnectorBuilderProjectsRequestService extends AirbyteRequestServic
   public list(workspaceId: string) {
     return listConnectorBuilderProjects({ workspaceId }, this.requestOptions);
   }
-  public getConnectorBuilderProject(workspaceId: string, builderProjectId: string) {
-    return getConnectorBuilderProject({ workspaceId, builderProjectId }, this.requestOptions);
+  public getConnectorBuilderProject(workspaceId: string, builderProjectId: string, version?: number) {
+    return getConnectorBuilderProject({ workspaceId, builderProjectId, version }, this.requestOptions);
+  }
+  public getConnectorBuilderProjectVersions(workspaceId: string, sourceDefinitionId: string) {
+    return listDeclarativeManifests({ workspaceId, sourceDefinitionId }, this.requestOptions);
   }
   public updateBuilderProject(
     workspaceId: string,

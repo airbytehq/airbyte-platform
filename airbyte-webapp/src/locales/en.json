@@ -846,6 +846,7 @@
   "connectorBuilder.forkPage.createLabel": "Create",
   "connectorBuilder.backButtonLabel": "Back",
   "connectorBuilder.cdkVersion": "CDK version: {version}",
+  "connectorBuilder.draft": "Draft",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
