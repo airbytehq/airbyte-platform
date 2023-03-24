@@ -34,7 +34,7 @@ import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
-import io.fabric8.kubernetes.client.internal.readiness.Readiness;
+import io.fabric8.kubernetes.client.readiness.Readiness;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -336,7 +336,7 @@ public class KubePodProcess implements KubePod {
   private static void waitForInitPodToRun(final KubernetesClient client, final Pod podDefinition) throws InterruptedException {
     // todo: this could use the watcher instead of waitUntilConditions
     LOGGER.info("Waiting for init container to be ready before copying files...");
-    final PodResource<Pod> pod =
+    final PodResource pod =
         client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName());
     pod.waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().size() != 0, 5, TimeUnit.MINUTES);
     LOGGER.info("Init container present..");
@@ -540,7 +540,7 @@ public class KubePodProcess implements KubePod {
       podBuilder = podBuilder.withServiceAccount("airbyte-admin").withAutomountServiceAccountToken(true);
     }
 
-    List<LocalObjectReference> pullSecrets = imagePullSecrets
+    final List<LocalObjectReference> pullSecrets = imagePullSecrets
         .stream()
         .map(imagePullSecret -> new LocalObjectReference(imagePullSecret))
         .collect(Collectors.toList());
