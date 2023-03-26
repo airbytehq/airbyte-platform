@@ -375,9 +375,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.info("Replication thread started.");
       long recordsRead = 0L;
       /*
-       * validationErrors must be a ConcurrentHashMap as it may potentially be updated and read in
-       * different threads concurrently depending on the {@link
-       * io.airbyte.featureflag.PerfBackgroundJsonValidation} feature-flag.
+       * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
+       * concurrently for performance.
        */
       final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();

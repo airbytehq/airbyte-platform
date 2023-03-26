@@ -32,36 +32,15 @@ class RecordSchemaValidatorTest {
   private ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors;
 
   @BeforeEach
-  void setup() throws Exception {
+  void setup() {
     final ImmutablePair<StandardSync, StandardSyncInput> syncPair = TestConfigHelpers.createSyncConfig();
     syncInput = syncPair.getValue();
     validationErrors = new ConcurrentHashMap<>();
   }
 
   @Test
-  void testValidateValidSchema() {
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), false);
-
-    recordSchemaValidator.validateSchema(
-        VALID_RECORD.getRecord(), AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
-        validationErrors);
-
-    assertEquals(0, validationErrors.size());
-  }
-
-  @Test
-  void testValidateInvalidSchema() {
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), false);
-    recordSchemaValidator.validateSchema(
-        INVALID_RECORD.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(INVALID_RECORD.getRecord()),
-        validationErrors);
-    assertEquals(1, validationErrors.size());
-  }
-
-  @Test
   void testValidateValidSchemaWithBackgroundValidation() {
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), true);
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
     recordSchemaValidator.validateSchema(VALID_RECORD.getRecord(), AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
         validationErrors);
 
@@ -71,7 +50,7 @@ class RecordSchemaValidatorTest {
   @Test
   void testValidateInvalidSchemaWithBackgroundValidation() throws InterruptedException {
     final var executorService = Executors.newFixedThreadPool(1);
-    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), true, executorService);
+    final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), executorService);
 
     recordSchemaValidator.validateSchema(
         INVALID_RECORD.getRecord(),

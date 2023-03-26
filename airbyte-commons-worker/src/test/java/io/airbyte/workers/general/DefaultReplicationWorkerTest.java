@@ -383,7 +383,7 @@ class DefaultReplicationWorkerTest {
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
     recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
-        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()), false);
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
     final ReplicationWorker worker = getDefaultReplicationWorker(true, false);
 
     worker.run(syncInput, jobRoot);
@@ -405,7 +405,7 @@ class DefaultReplicationWorkerTest {
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
     recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
-        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()), false);
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
     worker.run(syncInput, jobRoot);
