@@ -54,6 +54,8 @@ import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.book_keeping.MessageTracker;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.KubePodProcess;
@@ -202,6 +204,17 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
               || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
       final boolean heartbeatTimeoutEnabled = workspaceId != null
           && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
+
+      // TODO clean up the feature flag init once commitStates and commitStats have been rolled out
+      final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
+      final SyncPersistence syncPersistence = commitStatesAsap
+          ? syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
+              sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog())
+          : null;
+      final boolean commitStatsAsap = DefaultReplicationWorker.shouldCommitStatsAsap(syncInput);
+      final MessageTracker messageTracker =
+          commitStatsAsap ? new AirbyteMessageTracker(syncPersistence, featureFlags) : new AirbyteMessageTracker(featureFlags);
+
       final var replicationWorker = new DefaultReplicationWorker(
           jobRunConfig.getJobId(),
           Math.toIntExact(jobRunConfig.getAttemptId()),
@@ -213,8 +226,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
               new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
-          new AirbyteMessageTracker(featureFlags),
-          syncPersistenceFactory,
+          messageTracker,
+          syncPersistence,
           new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
           metricReporter,
           new ConnectorConfigUpdater(sourceApi, destinationApi),

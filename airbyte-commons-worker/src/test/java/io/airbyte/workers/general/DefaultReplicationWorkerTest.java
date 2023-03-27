@@ -67,7 +67,7 @@ import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import java.io.IOException;
@@ -125,7 +125,7 @@ class DefaultReplicationWorkerTest {
   private WorkerDestinationConfig destinationConfig;
   private AirbyteMessageTracker messageTracker;
   private SyncStatsTracker syncStatsTracker;
-  private SyncPersistenceFactory syncPersistenceFactory;
+  private SyncPersistence syncPersistence;
   private RecordSchemaValidator recordSchemaValidator;
   private MetricClient metricClient;
   private WorkerMetricReporter workerMetricReporter;
@@ -150,7 +150,7 @@ class DefaultReplicationWorkerTest {
     destination = mock(AirbyteDestination.class);
     messageTracker = mock(AirbyteMessageTracker.class);
     syncStatsTracker = mock(SyncStatsTracker.class);
-    syncPersistenceFactory = mock(SyncPersistenceFactory.class);
+    syncPersistence = mock(SyncPersistence.class);
     recordSchemaValidator = mock(RecordSchemaValidator.class);
     connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     metricClient = MetricClientFactory.getMetricClient();
@@ -740,7 +740,7 @@ class DefaultReplicationWorkerTest {
         mapper,
         destination,
         messageTracker,
-        syncPersistenceFactory,
+        syncPersistence,
         recordSchemaValidator,
         workerMetricReporter,
         connectorConfigUpdater,

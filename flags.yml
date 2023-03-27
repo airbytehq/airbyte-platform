@@ -7,5 +7,7 @@ flags:
     serve: false
   - name: platform.commitStatesAsap
     serve: false
+  - name: platform.commitStatsAsap
+    serve: false
   - name: heartbeat.enabled
     serve: false

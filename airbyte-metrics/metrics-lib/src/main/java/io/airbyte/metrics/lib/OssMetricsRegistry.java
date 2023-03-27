@@ -177,6 +177,25 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "number of attempts to commit states dropped due to an early termination",
       MetricTags.GEOGRAPHY),
 
+  STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
+      "stats_commit_attempt",
+      "number of attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
+      "stats_commit_attempt_failed",
+      "number of failed attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "stats_commit_attempt_successful",
+      "number of successful attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
+      "stats_commit_not_attempted",
+      "number of attempts to commit stats dropped due to an early termination",
+      MetricTags.GEOGRAPHY),
   @Deprecated
   // To be deleted along with PersistStateActivity
   STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,

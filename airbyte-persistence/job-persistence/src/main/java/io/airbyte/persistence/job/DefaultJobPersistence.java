@@ -401,10 +401,11 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public void writeStats(final long jobId,
                          final int attemptNumber,
-                         final long estimatedRecords,
-                         final long estimatedBytes,
-                         final long recordsEmitted,
-                         final long bytesEmitted,
+                         final Long estimatedRecords,
+                         final Long estimatedBytes,
+                         final Long recordsEmitted,
+                         final Long bytesEmitted,
+                         final Long recordsCommitted,
                          final List<StreamSyncStats> streamStats)
       throws IOException {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
@@ -415,7 +416,8 @@ public class DefaultJobPersistence implements JobPersistence {
           .withEstimatedRecords(estimatedRecords)
           .withEstimatedBytes(estimatedBytes)
           .withRecordsEmitted(recordsEmitted)
-          .withBytesEmitted(bytesEmitted);
+          .withBytesEmitted(bytesEmitted)
+          .withRecordsCommitted(recordsCommitted);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
       saveToStreamStatsTable(now, streamStats, attemptId, ctx);

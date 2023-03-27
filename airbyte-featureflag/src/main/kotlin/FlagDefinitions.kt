@@ -26,6 +26,8 @@ object StrictComparisonNormalizationEnabled : Temporary<Boolean>(key = "normaliz
 
 object CommitStatesAsap : Temporary<Boolean>(key = "platform.commitStatesAsap", default = false)
 
+object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = false)
+
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
