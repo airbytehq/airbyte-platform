@@ -1,9 +1,9 @@
 import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
 import { getTestId, getTestIds } from "utils/selectors";
-import { SYNC_MODE_STRINGS } from "./streamsTablePageObject/types";
+import { SYNC_MODE_STRINGS } from "./types";
 
 const [
-  streamDetails,
+  streamDetailsPanel,
   syncStreamSwitch,
   namespace,
   streamName,
@@ -87,9 +87,9 @@ interface AreFieldsValidParams {
   hasSourceDefinedPrimaryKeys?: boolean;
 }
 
-class StreamDetailsPageObject {
+export class StreamDetailsPageObject {
   isOpen() {
-    cy.get(streamDetails).should("exist");
+    cy.get(streamDetailsPanel).should("exist");
   }
 
   close() {
@@ -97,7 +97,7 @@ class StreamDetailsPageObject {
   }
 
   isClosed() {
-    cy.get(streamDetails).should("not.exist");
+    cy.get(streamDetailsPanel).should("not.exist");
   }
 
   enableSyncStream() {
@@ -209,4 +209,4 @@ class StreamDetailsPageObject {
   }
 }
 
-export default new StreamDetailsPageObject();
+export const streamDetails = new StreamDetailsPageObject();

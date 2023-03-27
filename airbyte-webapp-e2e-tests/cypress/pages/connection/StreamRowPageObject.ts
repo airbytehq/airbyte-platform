@@ -97,11 +97,11 @@ export class StreamRowPageObject {
   }
 
   checkDestinationNamespace(expectedValue: string) {
-    cy.get(this.stream).within(() => cy.get(destinationNamespaceCell).contains(expectedValue));
+    cy.get(this.stream).within(() => cy.get(destinationNamespaceCell).should("have.text", expectedValue));
   }
 
   checkDestinationStreamName(expectedValue: string) {
-    cy.get(this.stream).within(() => cy.get(destinationStreamNameCell).contains(expectedValue));
+    cy.get(this.stream).within(() => cy.get(destinationStreamNameCell).should("have.text", expectedValue));
   }
 
   showStreamDetails() {

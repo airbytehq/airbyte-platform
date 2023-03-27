@@ -83,6 +83,7 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
                   }
                   value={StreamNameDefinitionValueType.Mirror}
                   checked={field.value === StreamNameDefinitionValueType.Mirror}
+                  data-testid="destination-stream-names-mirror-radio"
                 />
               )}
             </Field>
@@ -102,6 +103,7 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
                   }
                   value={StreamNameDefinitionValueType.Prefix}
                   checked={field.value === StreamNameDefinitionValueType.Prefix}
+                  data-testid="destination-stream-names-prefix-radio"
                 />
               )}
             </Field>
@@ -115,6 +117,7 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
                       id: "connectionForm.modal.destinationStreamNames.input.placeholder",
                     })}
                     error={!!meta.error && meta.touched}
+                    data-testid="destination-stream-names-prefix-input"
                   />
                 )}
               </Field>
@@ -126,10 +129,15 @@ export const DestinationStreamNamesModal: React.FC<DestinationStreamNamesModalPr
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button type="button" variant="secondary" onClick={onCloseModal}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCloseModal}
+              data-testid="destination-stream-names-cancel-button"
+            >
               <FormattedMessage id="form.cancel" />
             </Button>
-            <Button type="submit" disabled={!dirty || !isValid}>
+            <Button type="submit" disabled={!dirty || !isValid} data-testid="destination-stream-names-apply-button">
               <FormattedMessage id="form.apply" />
             </Button>
           </ModalFooter>

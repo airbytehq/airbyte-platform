@@ -13,7 +13,6 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -45,7 +44,6 @@ export const CatalogTreeTableHeader: React.FC = () => {
   const { openModal, closeModal } = useModalService();
   const { onCheckAll, selectedBatchNodeIds, allChecked } = useBulkEditService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
@@ -64,10 +62,7 @@ export const CatalogTreeTableHeader: React.FC = () => {
   };
 
   return (
-    <Header
-      className={classNames(styles.headerContainer, { [styles.newTable]: !!isNewTableDesignEnabled })}
-      data-testid="catalog-tree-table-header"
-    >
+    <Header className={classNames(styles.headerContainer)} data-testid="catalog-tree-table-header">
       <CatalogTreeTableCell size="fixed" className={styles.checkboxCell}>
         {mode !== "readonly" && (
           <CheckBox

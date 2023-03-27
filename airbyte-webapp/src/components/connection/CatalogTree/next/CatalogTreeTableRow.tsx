@@ -5,9 +5,11 @@ import { FormattedMessage } from "react-intl";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Row } from "components/SimpleTableComponents";
 import { CheckBox } from "components/ui/CheckBox";
+import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
+import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
 import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -15,13 +17,33 @@ import { CatalogTreeTableCell } from "./CatalogTreeTableCell";
 import styles from "./CatalogTreeTableRow.module.scss";
 import { CatalogTreeTableRowIcon } from "./CatalogTreeTableRowIcon";
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
-import { StreamPathSelect } from "./StreamPathSelect";
-import { SyncModeSelect } from "./SyncModeSelect";
+import { IndexerType, StreamPathSelect } from "./StreamPathSelect";
+import { SyncModeOption, SyncModeSelect } from "./SyncModeSelect";
 import { useCatalogTreeTableRowProps } from "./useCatalogTreeTableRowProps";
 import { useScrollIntoViewStream } from "./useScrollIntoViewStream";
-import { StreamHeaderProps } from "../StreamHeader";
 
-export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
+interface CatalogTreeTableRowProps {
+  stream: SyncSchemaStream;
+  destName: string;
+  destNamespace: string;
+  availableSyncModes: SyncModeOption[];
+  onSelectSyncMode: (selectedMode: DropDownOptionDataItem) => void;
+  onSelectStream: () => void;
+  primitiveFields: SyncSchemaField[];
+  pkType: IndexerType;
+  onPrimaryKeyChange: (pkPath: Path[]) => void;
+  cursorType: IndexerType;
+  onCursorChange: (cursorPath: Path) => void;
+  isRowExpanded: boolean;
+  fields: SyncSchemaField[];
+  onExpand: () => void;
+  changedSelected: boolean;
+  hasError: boolean;
+  configErrors?: Record<string, string>;
+  disabled?: boolean;
+}
+
+export const CatalogTreeTableRow: React.FC<CatalogTreeTableRowProps> = ({
   stream,
   destName,
   destNamespace,

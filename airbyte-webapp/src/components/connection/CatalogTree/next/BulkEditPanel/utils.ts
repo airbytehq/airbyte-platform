@@ -5,8 +5,7 @@ import { SUPPORTED_MODES } from "components/connection/ConnectionForm/formConfig
 import { SyncSchemaField, SyncSchemaFieldObject, SyncSchemaStream, traverseSchemaToField } from "core/domain/catalog";
 import { AirbyteStreamConfiguration, DestinationSyncMode } from "core/request/AirbyteClient";
 
-import { pathDisplayName } from "../../PathPopout";
-import { flatten } from "../../utils";
+import { flatten, pathDisplayName } from "../../utils";
 import { SyncModeOption, SyncModeValue } from "../SyncModeSelect";
 
 export const getAvailableSyncModesOptions = (

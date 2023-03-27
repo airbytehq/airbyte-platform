@@ -85,6 +85,7 @@ export const NamespaceDefinitionFieldNext = () => {
               variant="secondary"
               disabled={mode === "readonly"}
               onClick={openDestinationNamespaceModal}
+              data-testid="destination-namespace-edit-button"
             >
               <FormattedMessage id="form.edit" />
             </Button>

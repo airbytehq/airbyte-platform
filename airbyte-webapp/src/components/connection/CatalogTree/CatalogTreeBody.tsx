@@ -5,14 +5,10 @@ import { FormikConnectionFormValues } from "components/connection/ConnectionForm
 
 import { SyncSchemaStream } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
-import { BulkHeader } from "./BulkHeader";
 import { CatalogSection } from "./CatalogSection";
 import styles from "./CatalogTreeBody.module.scss";
-import { CatalogTreeHeader } from "./CatalogTreeHeader";
-import { CatalogTreeSubheader } from "./CatalogTreeSubheader";
 import { CatalogTreeTableHeader } from "./next/CatalogTreeTableHeader";
 import { StreamConnectionHeader } from "./next/StreamConnectionHeader";
 
@@ -24,7 +20,6 @@ interface CatalogTreeBodyProps {
 
 export const CatalogTreeBody: React.FC<CatalogTreeBodyProps> = ({ streams, changedStreams, onStreamChanged }) => {
   const { mode } = useConnectionFormService();
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
 
   const onUpdateStream = useCallback(
     (id: string | undefined, newConfig: Partial<AirbyteStreamConfiguration>) => {
@@ -47,18 +42,8 @@ export const CatalogTreeBody: React.FC<CatalogTreeBodyProps> = ({ streams, chang
   return (
     <div data-testid="catalog-tree-table-body">
       <div className={styles.header}>
-        {isNewTableDesignEnabled ? (
-          <>
-            <StreamConnectionHeader />
-            <CatalogTreeTableHeader />
-          </>
-        ) : (
-          <>
-            <CatalogTreeHeader />
-            <CatalogTreeSubheader />
-            <BulkHeader />
-          </>
-        )}
+        <StreamConnectionHeader />
+        <CatalogTreeTableHeader />
       </div>
       {streams.map((streamNode) => (
         <Field key={`schema.streams[${streamNode.id}].config`} name={`schema.streams[${streamNode.id}].config`}>

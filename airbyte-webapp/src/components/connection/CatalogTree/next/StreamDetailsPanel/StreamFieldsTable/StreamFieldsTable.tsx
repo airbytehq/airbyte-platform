@@ -4,7 +4,6 @@ import isEqual from "lodash/isEqual";
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { pathDisplayName } from "components/connection/CatalogTree/PathPopout";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
@@ -22,6 +21,7 @@ import { CursorCell } from "./CursorCell";
 import { PKCell } from "./PKCell";
 import styles from "./StreamFieldsTable.module.scss";
 import { SyncFieldCell } from "./SyncFieldCell";
+import { pathDisplayName } from "../../../utils";
 import { CatalogTreeTableCell } from "../../CatalogTreeTableCell";
 
 export interface TableStream {

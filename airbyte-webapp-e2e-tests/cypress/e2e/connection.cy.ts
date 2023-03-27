@@ -16,15 +16,17 @@ import {
 } from "commands/interceptors";
 import { goToReplicationTab } from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
-import streamsTablePageObject from "pages/connection/streamsTablePageObject";
+import { streamsTable } from "pages/connection/StreamsTablePageObject";
 import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
 import { runDbQuery } from "commands/db/db";
 import { createUsersTableQuery, dropUsersTableQuery } from "commands/db/queries";
+import { streamDetails } from "pages/connection/StreamDetailsPageObject";
 
 const sourceNamespace = "public";
 
 describe("Connection - creation, updating connection replication settings, deletion", () => {
   before(() => {
+    runDbQuery(dropUsersTableQuery);
     runDbQuery(createUsersTableQuery);
   });
 
@@ -39,7 +41,7 @@ describe("Connection - creation, updating connection replication settings, delet
     runDbQuery(dropUsersTableQuery);
   });
 
-  it("Create Postgres <> LocalJSON connection, check it's creation", () => {
+  it("Create Postgres <> LocalJSON connection, check its creation", () => {
     const sourceName = appendRandomString("Test connection source cypress");
     const destName = appendRandomString("Test connection destination cypress");
 
@@ -62,6 +64,7 @@ describe("Connection - creation, updating connection replication settings, delet
     connectionSettings.openConnectionOverviewByDestinationName(destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
     connectionForm.selectSchedule("Every hour");
     connectionForm.fillOutDestinationPrefix("auto_test");
@@ -90,17 +93,19 @@ describe("Connection - creation, updating connection replication settings, delet
     connectionSettings.openConnectionOverviewByDestinationName(destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
     connectionForm.selectSchedule("Every hour");
-    connectionForm.fillOutDestinationPrefix("auto_test");
-    connectionForm.setupDestinationNamespaceCustomFormat("_test");
-    streamsTablePageObject.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+
+    const row = streamsTable.getRow("no-namespace", "pokemon");
+    row.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
 
     const prefix = "auto_test";
     connectionForm.fillOutDestinationPrefix(prefix);
+    connectionForm.setupDestinationNamespaceCustomFormat("_test");
 
     // Ensures the prefix is applied to the streams
-    assert(cy.get(`[title*="${prefix}"]`));
+    row.checkDestinationStreamName(`${prefix}pokemon`);
 
     submitButtonClick();
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -148,6 +153,7 @@ describe("Connection - creation, updating connection replication settings, delet
     createTestConnection(sourceName, destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
     connectionForm.selectSchedule("Cron");
     submitButtonClick();
@@ -190,6 +196,7 @@ describe("Connection - creation, updating connection replication settings, delet
     });
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
     connectionForm.selectSchedule("Every hour");
     submitButtonClick();
@@ -239,12 +246,14 @@ describe("Connection - creation, updating connection replication settings, delet
     connectionSettings.openConnectionOverviewByDestinationName(destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
     const namespace = "_DestinationNamespaceCustomFormat";
     connectionForm.setupDestinationNamespaceCustomFormat(namespace);
 
     // Ensures the DestinationNamespace is applied to the streams
-    assert(cy.get(`[title*="${namespace}"]`));
+    const row = streamsTable.getRow("no-namespace", "pokemon");
+    row.checkDestinationNamespace(`\${SOURCE_NAMESPACE}${namespace}`);
 
     submitButtonClick();
 
@@ -287,7 +296,8 @@ describe("Connection - creation, updating connection replication settings, delet
     const namespace = "<source schema>";
 
     // Ensures the DestinationNamespace is applied to the streams
-    assert(cy.get(`[title*="${namespace}"]`));
+    const row = streamsTable.getRow("no-namespace", "pokemon");
+    row.checkDestinationNamespace(namespace);
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -304,13 +314,15 @@ describe("Connection - creation, updating connection replication settings, delet
     connectionSettings.openConnectionOverviewByDestinationName(destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
     connectionForm.setupDestinationNamespaceDefaultFormat();
 
     const namespace = "<destination schema>";
 
     // Ensures the DestinationNamespace is applied to the streams
-    assert(cy.get(`[title*="${namespace}"]`));
+    const row = streamsTable.getRow("no-namespace", "pokemon");
+    row.checkDestinationNamespace(namespace);
 
     submitButtonClick();
 
@@ -342,6 +354,7 @@ describe("Connection - creation, updating connection replication settings, delet
 describe("Connection - stream details", () => {
   beforeEach(() => {
     initialSetupCompleted();
+    cleanDBSource();
     populateDBSource();
   });
 
@@ -354,8 +367,8 @@ describe("Connection - stream details", () => {
     const destName = appendRandomString("Test connection Postgres destination cypress");
     const streamName = "users";
 
-    const collectionNames = ["email", "id", "name", "updated_at"];
-    const collectionTypes = ["String", "Integer", "String", "Datetime"];
+    const names = ["email", "id", "name", "updated_at"];
+    const dataTypes = ["String", "Integer", "String", "Datetime"];
 
     createTestConnection(sourceName, destName);
 
@@ -364,10 +377,11 @@ describe("Connection - stream details", () => {
     connectionSettings.openConnectionOverviewByDestinationName(destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
-    streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.showStreamDetails(sourceNamespace, streamName);
-    streamsTablePageObject.checkStreamFields(collectionNames, collectionTypes);
+    const row = streamsTable.getRow("public", streamName);
+    row.showStreamDetails();
+    streamDetails.areFieldsValid({ names, dataTypes });
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -398,10 +412,11 @@ describe("Connection sync modes", () => {
     connectionSettings.openConnectionOverviewByDestinationName(destName);
 
     goToReplicationTab();
+    connectionForm.expandConfigurationSection();
 
-    streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.Append);
-    streamsTablePageObject.selectCursor(streamName, "updated_at");
+    let row = streamsTable.getRow("public", streamName);
+    row.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.Append);
+    row.selectCursor("updated_at");
 
     submitButtonClick();
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -418,8 +433,8 @@ describe("Connection sync modes", () => {
 
     goToReplicationTab();
 
-    streamsTablePageObject.searchStream("users");
-    streamsTablePageObject.checkSelectedCursorField(streamName, "updated_at");
+    row = streamsTable.getRow("public", "users");
+    row.hasSelectedCursorField("updated_at");
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -438,10 +453,10 @@ describe("Connection sync modes", () => {
 
     goToReplicationTab();
 
-    streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
-    streamsTablePageObject.selectCursor(streamName, "updated_at");
-    streamsTablePageObject.checkSourceDefinedPrimaryKeys(streamName, "id");
+    const row = streamsTable.getRow("public", streamName);
+    row.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+    row.selectCursor("updated_at");
+    row.hasSourceDefinedPrimaryKeys("id");
 
     submitButtonClick();
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -458,10 +473,8 @@ describe("Connection sync modes", () => {
 
     goToReplicationTab();
 
-    streamsTablePageObject.searchStream(streamName);
-
-    streamsTablePageObject.checkSelectedCursorField(streamName, "updated_at");
-    streamsTablePageObject.checkSourceDefinedPrimaryKeys(streamName, "id");
+    row.hasSelectedCursorField("updated_at");
+    row.hasSourceDefinedPrimaryKeys("id");
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -480,11 +493,11 @@ describe("Connection sync modes", () => {
 
     goToReplicationTab();
 
-    streamsTablePageObject.searchStream(streamName);
-    streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
-    streamsTablePageObject.selectCursor(streamName, "city");
-    streamsTablePageObject.checkNoSourceDefinedPrimaryKeys(sourceNamespace, streamName);
-    streamsTablePageObject.selectPrimaryKeys(streamName, ["city_code"]);
+    const row = streamsTable.getRow("public", streamName);
+    row.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+    row.selectCursor("city");
+    row.hasNoSourceDefinedPrimaryKeys();
+    row.selectPrimaryKeys(["city_code"]);
 
     submitButtonClick(true);
     replicationPage.confirmStreamConfigurationChangedPopup();
@@ -501,10 +514,8 @@ describe("Connection sync modes", () => {
 
     goToReplicationTab();
 
-    streamsTablePageObject.searchStream(streamName);
-
-    streamsTablePageObject.checkSelectedCursorField(streamName, "city");
-    streamsTablePageObject.checkSelectedPrimaryKeys(streamName, ["city_code"]);
+    row.hasSelectedCursorField("city");
+    row.hasSelectedPrimaryKeys(["city_code"]);
 
     deleteSource(sourceName);
     deleteDestination(destName);
@@ -537,7 +548,7 @@ describe("Connection - detect source schema changes in source", () => {
 
     makeChangesInDBSource();
     goToReplicationTab();
-    streamsTablePageObject.refreshSourceSchemaBtnClick();
+    streamsTable.refreshSourceSchemaBtnClick();
 
     catalogDiffModal.shouldExist();
 
@@ -551,7 +562,8 @@ describe("Connection - detect source schema changes in source", () => {
 
     catalogDiffModal.clickCloseButton();
 
-    streamsTablePageObject.enableStream(sourceNamespace, "cars");
+    const row = streamsTable.getRow(sourceNamespace, "cars");
+    row.toggleStreamSync();
 
     submitButtonClick();
     replicationPage.resetModalSaveBtnClick();

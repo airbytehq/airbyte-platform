@@ -28,7 +28,6 @@ import {
   SyncMode,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
@@ -87,8 +86,7 @@ export function useDefaultTransformation(): OperationCreate {
 const createConnectionValidationSchema = (
   mode: ConnectionFormMode,
   allowSubOneHourCronExpressions: boolean,
-  allowAutoDetectSchema: boolean,
-  isNewTableDesignEnabled: boolean
+  allowAutoDetectSchema: boolean
 ) => {
   return yup
     .object({
@@ -173,7 +171,7 @@ const createConnectionValidationSchema = (
                     }
 
                     const errors: yup.ValidationError[] = [];
-                    const pathRoot = isNewTableDesignEnabled ? "syncCatalog" : "schema";
+                    const pathRoot = "syncCatalog";
 
                     // it's possible that primaryKey array is always present
                     // however yup couldn't determine type correctly even with .required() call
@@ -204,11 +202,7 @@ const createConnectionValidationSchema = (
                       );
                     }
 
-                    return errors.length > 0
-                      ? isNewTableDesignEnabled
-                        ? new yup.ValidationError(errors)
-                        : errors[0]
-                      : true;
+                    return errors.length > 0 ? new yup.ValidationError(errors) : true;
                   },
                 }),
             })
@@ -230,17 +224,10 @@ interface CreateConnectionValidationSchemaArgs {
 export const useConnectionValidationSchema = ({ mode }: CreateConnectionValidationSchemaArgs) => {
   const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
 
   return useMemo(
-    () =>
-      createConnectionValidationSchema(
-        mode,
-        allowSubOneHourCronExpressions,
-        allowAutoDetectSchema,
-        isNewTableDesignEnabled
-      ),
-    [allowAutoDetectSchema, allowSubOneHourCronExpressions, isNewTableDesignEnabled, mode]
+    () => createConnectionValidationSchema(mode, allowSubOneHourCronExpressions, allowAutoDetectSchema),
+    [allowAutoDetectSchema, allowSubOneHourCronExpressions, mode]
   );
 };
 

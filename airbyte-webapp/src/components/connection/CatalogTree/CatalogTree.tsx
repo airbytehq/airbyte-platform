@@ -4,7 +4,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
 
 import { SyncSchemaStream } from "core/domain/catalog";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { BulkEditServiceProvider } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { naturalComparatorBy } from "utils/objects";
@@ -25,7 +24,6 @@ const CatalogTreeComponent: React.FC<React.PropsWithChildren<CatalogTreeProps>> 
   onStreamsChanged,
   isLoading,
 }) => {
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
   const { initialValues, mode } = useConnectionFormService();
 
   const [searchString, setSearchString] = useState("");
@@ -91,7 +89,7 @@ const CatalogTreeComponent: React.FC<React.PropsWithChildren<CatalogTreeProps>> 
           />
         </div>
       </LoadingBackdrop>
-      {isNewTableDesignEnabled && <BulkEditPanel />}
+      <BulkEditPanel />
     </BulkEditServiceProvider>
   );
 };
