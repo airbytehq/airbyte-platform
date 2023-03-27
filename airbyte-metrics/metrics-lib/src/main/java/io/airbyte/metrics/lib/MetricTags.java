@@ -15,6 +15,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
 public class MetricTags {
 
   public static final String ATTEMPT_QUEUE = "attempt_queue";
+  public static final String AUTHENTICATION_RESPONSE = "authentication_response";
   public static final String CONNECTION_ID = "connection_id";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";

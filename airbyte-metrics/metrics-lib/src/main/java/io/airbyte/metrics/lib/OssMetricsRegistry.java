@@ -50,14 +50,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "attempt_succeeded_by_release_stage",
       "increments when an attempts succeeds. attempts are double counted as this is tagged by release stage."),
-  AUTHENTICATION_FAILURE(
+  AUTHENTICATION_REQUEST(
       MetricEmittingApps.SERVER,
-      "authentication_failure",
-      "increments when an authentication request fails."),
-  AUTHENTICATION_SUCCESS(
-      MetricEmittingApps.SERVER,
-      "authentication_success",
-      "increments when an authentication request succeeds."),
+      "authentication_request",
+      "increments when an authentication request is attempted."),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",

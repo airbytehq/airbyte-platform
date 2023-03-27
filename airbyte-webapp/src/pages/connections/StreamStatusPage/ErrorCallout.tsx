@@ -11,9 +11,9 @@ import { Text } from "components/ui/Text";
 import { JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useListJobs } from "services/job/JobService";
 
 import styles from "./ErrorCallout.module.scss";
+import { useStreamsListContext } from "./StreamsListContext";
 import { ConnectionRoutePaths } from "../types";
 
 const getLatestErrorMessage = (job: JobWithAttemptsRead | undefined) => {
@@ -34,13 +34,7 @@ export const ErrorCallout = () => {
   const navigate = useNavigate();
   const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
-  const { jobs } = useListJobs({
-    configId: connection.connectionId,
-    configTypes: ["sync", "reset_connection"],
-    pagination: {
-      pageSize: 1,
-    },
-  });
+  const { jobs } = useStreamsListContext();
 
   const { formatMessage } = useIntl();
 

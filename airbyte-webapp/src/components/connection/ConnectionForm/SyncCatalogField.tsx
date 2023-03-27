@@ -2,7 +2,7 @@ import { FieldProps } from "formik";
 import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { CatalogTree } from "components/connection/CatalogTree";
+import { SyncCatalog } from "components/connection/syncCatalog/SyncCatalog";
 import { Heading } from "components/ui/Heading";
 
 import { SyncSchemaStream } from "core/domain/catalog";
@@ -44,7 +44,7 @@ const SyncCatalogFieldComponent: React.FC<React.PropsWithChildren<SchemaViewProp
         </Heading>
         {mode !== "readonly" && additionalControl}
       </div>
-      <CatalogTree streams={streams} onStreamsChanged={onStreamsUpdated} isLoading={isSubmitting} />
+      <SyncCatalog streams={streams} onStreamsChanged={onStreamsUpdated} isLoading={isSubmitting} />
     </>
   );
 };
