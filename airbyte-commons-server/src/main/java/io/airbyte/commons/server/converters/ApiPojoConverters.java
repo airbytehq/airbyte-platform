@@ -158,7 +158,8 @@ public class ApiPojoConverters {
         .breakingChange(standardSync.getBreakingChange())
         .geography(Enums.convertTo(standardSync.getGeography(), Geography.class))
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
-        .notifySchemaChanges(standardSync.getNotifySchemaChanges());
+        .notifySchemaChanges(standardSync.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
 
     if (standardSync.getResourceRequirements() != null) {
       connectionRead.resourceRequirements(resourceRequirementsToApi(standardSync.getResourceRequirements()));

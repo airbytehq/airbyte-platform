@@ -22,8 +22,6 @@ object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
 
-object PerfBackgroundJsonValidation : Temporary<Boolean>(key = "performance.backgroundJsonSchemaValidation", default = false)
-
 object StrictComparisonNormalizationEnabled : Temporary<Boolean>(key = "normalization.strictComparisonEnabled", default = false)
 
 object CommitStatesAsap : Temporary<Boolean>(key = "platform.commitStatesAsap", default = false)
@@ -32,6 +30,8 @@ object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelect
 
 object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
+
+object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {

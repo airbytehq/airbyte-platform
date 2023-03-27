@@ -334,6 +334,7 @@ public class WebBackendConnectionsHandler {
         .resourceRequirements(connectionRead.getResourceRequirements())
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference());
   }
 
@@ -758,6 +759,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.sourceCatalogId(webBackendConnectionPatch.getSourceCatalogId());
     connectionPatch.geography(webBackendConnectionPatch.getGeography());
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
+    connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
     connectionPatch.breakingChange(breakingChange);
 

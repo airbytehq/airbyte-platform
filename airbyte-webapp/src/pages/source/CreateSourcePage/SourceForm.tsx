@@ -26,6 +26,7 @@ interface SourceFormProps {
   }) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
   error?: FormError | null;
+  selectedSourceDefinitionId?: string;
 }
 
 const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: string } => {
@@ -36,11 +37,16 @@ const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: s
   );
 };
 
-export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefinitions, error }) => {
+export const SourceForm: React.FC<SourceFormProps> = ({
+  onSubmit,
+  sourceDefinitions,
+  error,
+  selectedSourceDefinitionId,
+}) => {
   const location = useLocation();
 
   const [sourceDefinitionId, setSourceDefinitionId] = useState<string | null>(
-    hasSourceDefinitionId(location.state) ? location.state.sourceDefinitionId : null
+    selectedSourceDefinitionId ?? (hasSourceDefinitionId(location.state) ? location.state.sourceDefinitionId : null)
   );
 
   const {

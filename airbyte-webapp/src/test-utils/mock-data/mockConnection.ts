@@ -353,5 +353,6 @@ export const mockConnection: WebBackendConnectionRead = {
   catalogId: "bf31d1df-d7ba-4bae-b1ec-dac617b4f70c",
   schemaChange: "no_change",
   notifySchemaChanges: true,
+  notifySchemaChangesByEmail: false,
   nonBreakingChangesPreference: "ignore",
 };

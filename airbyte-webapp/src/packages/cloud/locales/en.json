@@ -1,6 +1,6 @@
 {
   "login.haveAccount": "Already have an account?",
-  "login.DontHaveAccount": "Don’t have an account?",
+  "login.noAccount": "Don’t have an account?",
   "login.login": "Log in",
   "login.signup": "Sign up",
   "login.signup.submitButton": "Sign up",

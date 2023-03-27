@@ -30,7 +30,6 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.PerfBackgroundJsonValidation;
 import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -216,8 +215,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
           new AirbyteMessageTracker(featureFlags),
           syncPersistenceFactory,
-          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput),
-              featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(syncInput.getWorkspaceId()))),
+          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
           metricReporter,
           new ConnectorConfigUpdater(sourceApi, destinationApi),
           fieldSelectionEnabled,

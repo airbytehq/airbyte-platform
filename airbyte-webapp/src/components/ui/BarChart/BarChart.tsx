@@ -10,6 +10,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+
 import { barChartColors, theme } from "theme";
 
 interface BarChartProps {

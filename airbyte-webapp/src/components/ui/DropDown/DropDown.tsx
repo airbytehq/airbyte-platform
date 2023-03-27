@@ -86,4 +86,5 @@ function DropDownInner<T = unknown>(
 
 export const defaultDataItemSort = naturalComparatorBy<DropDownOptionDataItem>((dataItem) => dataItem.label || "");
 
+/** @deprecated please use the ListBox component instead */
 export const DropDown = React.forwardRef(DropDownInner);

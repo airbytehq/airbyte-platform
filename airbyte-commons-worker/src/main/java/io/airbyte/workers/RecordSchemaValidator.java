@@ -32,26 +32,18 @@ public class RecordSchemaValidator {
   private static final JsonSchemaValidator validator = new JsonSchemaValidator();
   private final ExecutorService validationExecutor;
   private final Map<AirbyteStreamNameNamespacePair, JsonNode> streams;
-  private final boolean backgroundValidation;
 
   /**
    * Creates a RecordSchemaValidator.
    *
    * @param streamNamesToSchemas Name of streams.
-   * @param backgroundValidation Pass true if the json schema validation should occur in a different
-   *        thread. Pass false if the json schema validation should occur in current thread. TODO:
-   *        remove the backgroundValidation parameter when PerfBackgroundJsonValidation feature-flag
-   *        is removed.
    */
-  public RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas, final boolean backgroundValidation) {
-    this(streamNamesToSchemas, backgroundValidation, Executors.newFixedThreadPool(1));
+  public RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas) {
+    this(streamNamesToSchemas, Executors.newFixedThreadPool(1));
   }
 
   @VisibleForTesting
-  RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas,
-                        final boolean backgroundValidation,
-                        final ExecutorService validationExecutor) {
-    this.backgroundValidation = backgroundValidation;
+  RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas, final ExecutorService validationExecutor) {
     // streams is Map of a stream source namespace + name mapped to the stream schema
     // for easy access when we check each record's schema
     this.streams = streamNamesToSchemas;
@@ -74,21 +66,13 @@ public class RecordSchemaValidator {
                              final AirbyteRecordMessage message,
                              final AirbyteStreamNameNamespacePair airbyteStream,
                              final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
-    if (backgroundValidation) {
-      validationExecutor.execute(() -> {
-        try {
-          doValidateSchema(message, airbyteStream);
-        } catch (final RecordSchemaValidationException e) {
-          handleException(e, airbyteStream, validationErrors);
-        }
-      });
-    } else {
+    validationExecutor.execute(() -> {
       try {
         doValidateSchema(message, airbyteStream);
       } catch (final RecordSchemaValidationException e) {
         handleException(e, airbyteStream, validationErrors);
       }
-    }
+    });
   }
 
   private void handleException(final RecordSchemaValidationException e,

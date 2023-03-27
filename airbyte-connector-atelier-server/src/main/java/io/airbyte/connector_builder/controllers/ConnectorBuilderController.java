@@ -5,6 +5,7 @@
 package io.airbyte.connector_builder.controllers;
 
 import io.airbyte.connector_builder.api.generated.V1Api;
+import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
@@ -14,9 +15,11 @@ import io.airbyte.connector_builder.api.model.generated.StreamReadSlices;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreams;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
+import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -31,9 +34,18 @@ import java.util.List;
 @Context
 public class ConnectorBuilderController implements V1Api {
 
-  public ConnectorBuilderController() {
-    // Placeholder for now. We just return dummy responses for the base server right now, but we should
-    // define any helper handlers here
+  private final HealthHandler healthHandler;
+
+  public ConnectorBuilderController(final HealthHandler healthHandler) {
+    this.healthHandler = healthHandler;
+  }
+
+  @Override
+  @Get(uri = "/health",
+       produces = MediaType.APPLICATION_JSON)
+  @ExecuteOn(TaskExecutors.IO)
+  public HealthCheckRead getHealthCheck() {
+    return healthHandler.getHealthCheck();
   }
 
   @Override

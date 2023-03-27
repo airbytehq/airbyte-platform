@@ -2,9 +2,11 @@ import classNames from "classnames";
 
 import styles from "./Callout.module.scss";
 
+export type CalloutVariant = "default" | "error" | "info" | "boldInfo" | "actionRequired";
+
 interface CalloutProps {
   className?: string;
-  variant?: "default" | "error" | "info" | "boldInfo";
+  variant?: CalloutVariant;
 }
 
 export const Callout: React.FC<React.PropsWithChildren<CalloutProps>> = ({
@@ -17,6 +19,7 @@ export const Callout: React.FC<React.PropsWithChildren<CalloutProps>> = ({
     [styles.error]: variant === "error",
     [styles.info]: variant === "info",
     [styles.boldInfo]: variant === "boldInfo",
+    [styles.actionRequired]: variant === "actionRequired",
   });
 
   return <div className={containerStyles}>{children}</div>;

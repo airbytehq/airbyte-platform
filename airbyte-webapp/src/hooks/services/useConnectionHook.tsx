@@ -21,6 +21,7 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStatus,
+  ConnectionStream,
   DestinationRead,
   NamespaceDefinitionType,
   OperationCreate,
@@ -123,6 +124,12 @@ export const useResetConnection = () => {
   const service = useConnectionService();
 
   return useMutation((connectionId: string) => service.reset(connectionId));
+};
+
+export const useResetConnectionStream = (connectionId: string) => {
+  const service = useConnectionService();
+
+  return useMutation((streams: ConnectionStream[]) => service.resetStream(connectionId, streams));
 };
 
 const useGetConnection = (connectionId: string, options?: { refetchInterval: number }): WebBackendConnectionRead => {

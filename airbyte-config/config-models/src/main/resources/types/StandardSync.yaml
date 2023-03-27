@@ -127,6 +127,8 @@ properties:
     type: boolean
   notifySchemaChanges:
     type: boolean
+  notifySchemaChangesByEmail:
+    type: boolean
   nonBreakingChangesPreference:
     type: string
     enum:

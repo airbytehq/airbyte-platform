@@ -518,6 +518,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_definition_specifications/get_for_source:
+    post:
+      tags:
+        - source_definition_specification
+      summary: Get specification for a source.
+      operationId: getSpecificationForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionSpecificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/declarative_source_definitions/create_manifest:
     post:
       tags:
@@ -539,6 +562,23 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "409":
           description: Version already exists for definition id
+  /v1/declarative_source_definitions/update_active_manifest:
+    post:
+      tags:
+        - declarative_source_definitions
+      summary: Update the declarative manifest version for a source
+      operationId: updateDeclarativeManifestVersion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActiveManifestRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/list_manifests:
     post:
       tags:
@@ -1161,6 +1201,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDefinitionSpecificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destination_definition_specifications/get_for_destination:
+    post:
+      tags:
+        - destination_definition_specification
+      summary: Get specification for a destination
+      operationId: getSpecificationForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
         required: true
       responses:
         "200":
@@ -2699,6 +2762,10 @@ components:
           $ref: "#/components/schemas/DeclarativeManifest"
         isDraft:
           type: boolean
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        description:
+          type: string
     ConnectorBuilderProjectDetails:
       type: object
       required:
@@ -2722,8 +2789,7 @@ components:
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
         activeDeclarativeManifestVersion:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/ManifestVersion"
         hasDraft:
           type: boolean
     ConnectorBuilderProjectIdWithWorkspaceId:
@@ -2736,6 +2802,8 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:
           $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     ExistingConnectorBuilderProjectWithWorkspaceId:
       type: object
       required:
@@ -2793,6 +2861,9 @@ components:
           type: string
         initialDeclarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+    ManifestVersion:
+      type: integer
+      format: int64
     DeclarativeSourceManifest:
       type: object
       required:
@@ -2808,8 +2879,7 @@ components:
         spec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         version:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/ManifestVersion"
     SourceDefinitionIdBody:
       type: object
       required:
@@ -2943,7 +3013,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
     DeclarativeManifestsReadList:
       type: object
       required:
@@ -2983,6 +3053,19 @@ components:
           type: boolean
         declarativeManifest:
           $ref: "#/components/schemas/DeclarativeSourceManifest"
+    UpdateActiveManifestRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - sourceDefinitionId
+        - version
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
     PrivateSourceDefinitionRead:
       type: object
       required:
@@ -3682,6 +3765,8 @@ components:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
     WebBackendConnectionCreate:
@@ -3789,6 +3874,8 @@ components:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
           type: boolean
+        notifySchemaChangesByEmail:
+          type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
         breakingChange:
@@ -3838,6 +3925,8 @@ components:
         geography:
           $ref: "#/components/schemas/Geography"
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
@@ -3894,6 +3983,8 @@ components:
         breakingChange:
           type: boolean
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
@@ -4378,6 +4469,10 @@ components:
           $ref: "#/components/schemas/JobConfigType"
         configId:
           type: string
+        enabledStreams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDescriptor"
         createdAt:
           type: integer
           format: int64
@@ -5290,6 +5385,7 @@ components:
         - isSyncing
         - schemaChange
         - notifySchemaChanges
+        - notifySchemaChangesByEmail
         - nonBreakingChangesPreference
       properties:
         connectionId:
@@ -5350,6 +5446,8 @@ components:
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
+          type: boolean
+        notifySchemaChangesByEmail:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"

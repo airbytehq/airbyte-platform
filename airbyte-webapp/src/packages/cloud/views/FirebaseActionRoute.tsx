@@ -2,6 +2,7 @@ import React from "react";
 import { useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAsync } from "react-use";
+import { match } from "ts-pattern";
 
 import { ToastType } from "components/ui/Toast";
 
@@ -10,6 +11,7 @@ import { useNotificationService } from "hooks/services/Notification";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
+import { LoginSignupNavigation } from "./auth/components/LoginSignupNavigation";
 import { CloudRoutes } from "../cloudRoutePaths";
 
 const AcceptEmailInvite = React.lazy(() => import("./AcceptEmailInvite"));
@@ -56,17 +58,16 @@ export const VerifyEmailAction: React.FC = () => {
 export const FirebaseActionRoute: React.FC = () => {
   const { mode } = useQuery<{ mode: FirebaseActionMode }>();
 
-  switch (mode) {
-    case FirebaseActionMode.VERIFY_EMAIL:
-      return <VerifyEmailAction />;
-
-    case FirebaseActionMode.RESET_PASSWORD:
-      return <ResetPasswordConfirmPage />;
-
-    case FirebaseActionMode.SIGN_IN:
-      return <AcceptEmailInvite />;
-
-    default:
-      return <Navigate to={CloudRoutes.Login} replace />;
-  }
+  return (
+    <>
+      {match(mode)
+        .with(FirebaseActionMode.VERIFY_EMAIL, () => <VerifyEmailAction />)
+        .with(FirebaseActionMode.SIGN_IN, () => <AcceptEmailInvite />)
+        .with(FirebaseActionMode.RESET_PASSWORD, () => <ResetPasswordConfirmPage />)
+        .otherwise(() => (
+          <Navigate to={CloudRoutes.Login} replace />
+        ))}
+      <LoginSignupNavigation to="login" />
+    </>
+  );
 };

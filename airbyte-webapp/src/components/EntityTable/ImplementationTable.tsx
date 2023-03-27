@@ -4,7 +4,7 @@ import React, { useCallback } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { NextTable } from "components/ui/NextTable";
+import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 
 import { useQuery } from "hooks/useQuery";
@@ -133,15 +133,13 @@ const ImplementationTable: React.FC<IProps> = ({ data, entity, onClickRow }) => 
   );
 
   return (
-    <div className={styles.content}>
-      <NextTable
-        columns={columns}
-        data={sortingData}
-        onClickRow={onClickRow}
-        testId={`${entity}sTable`}
-        sortedByColumn={sortBy === "lastSync" ? "lastSync" : `${sortBy}Name`}
-      />
-    </div>
+    <Table
+      columns={columns}
+      data={sortingData}
+      onClickRow={onClickRow}
+      testId={`${entity}sTable`}
+      sortedByColumn={sortBy === "lastSync" ? "lastSync" : `${sortBy}Name`}
+    />
   );
 };
 

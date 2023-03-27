@@ -2,10 +2,6 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-.dropdownMenu {
-  position: relative;
-}
-
 .items {
   z-index: z-indices.$dropdownMenu;
   overflow: auto;
@@ -52,6 +48,11 @@
 
   &.active {
     background-color: colors.$grey-100;
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.25;
   }
 
   &.iconPositionRight {

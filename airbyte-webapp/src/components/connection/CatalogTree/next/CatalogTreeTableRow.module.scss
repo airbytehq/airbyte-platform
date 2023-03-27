@@ -10,6 +10,20 @@
   }
 }
 
+@keyframes highlight {
+  0% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 47px -5px colors.$blue-200;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .streamHeaderContent {
   @include header-background(colors.$white, colors.$grey-30);
 
@@ -37,6 +51,11 @@
 
   &.disabled {
     background-color: colors.$grey-50;
+  }
+
+  &.highlight {
+    animation: highlight 2s ease-in-out;
+    z-index: 1;
   }
 }
 %streamRowCheckboxCell,

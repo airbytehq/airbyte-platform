@@ -11,7 +11,6 @@ export const links = {
   termsLink: "https://airbyte.com/terms",
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
-  gitLink: `${BASE_DOCS_LINK}/quickstart/deploy-airbyte`,
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
   productReleaseStages: `${BASE_DOCS_LINK}/project-overview/product-release-stages`,
   slackLink: "https://slack.airbyte.com",
@@ -37,7 +36,6 @@ export const links = {
   connectionDataResidency:
     "https://docs.airbyte.com/cloud/managing-airbyte-cloud/#choose-the-data-residency-for-a-connection",
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
-  newTableFeedbackUrl: "https://forms.gle/5wDQHf6hL5sCvLgK7",
 } as const;
 
 export type OutboundLinks = typeof links;

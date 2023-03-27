@@ -3,6 +3,7 @@ import { getByTestId, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import selectEvent from "react-select-event";
+
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { ConnectorDefinition } from "core/domain/connector";

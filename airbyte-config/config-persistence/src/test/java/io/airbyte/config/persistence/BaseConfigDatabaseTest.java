@@ -117,6 +117,7 @@ class BaseConfigDatabaseTest {
               actor_oauth_parameter,
               connection,
               connection_operation,
+              notification_configuration,
               operation,
               state,
               stream_reset,

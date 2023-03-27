@@ -14,6 +14,7 @@
     "start:cloud": "AB_ENV=${AB_ENV-frontend-dev} NODE_OPTIONS='-r ./scripts/environment.js' vite",
     "prebuild": "pnpm run generate-client",
     "build": ". ./scripts/calculate-source-hash.sh && vite build",
+    "postbuild": "./scripts/download-docs.sh",
     "pretest": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "test": "jest --watch",
     "test:ci": "jest --watchAll=false --silent",
@@ -26,7 +27,9 @@
     "stylelint-check": "stylelint-config-prettier-scss-check",
     "license-check": "node ./scripts/license-check.js",
     "generate-client": "./scripts/load-declarative-schema.sh && ts-node --skip-project ./scripts/regenerate-api-clients.ts",
-    "validate-links": "ts-node --skip-project ./scripts/validate-links.ts"
+    "validate-links": "ts-node --skip-project ./scripts/validate-links.ts",
+    "preanalyze-lowcode": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
+    "analyze-lowcode": "ts-node --skip-project ./scripts/analyze-low-code-manifests.ts"
   },
   "dependencies": {
     "@datadog/browser-rum": "^4.21.2",
@@ -74,7 +77,6 @@
     "react-router-dom": "6.3.0",
     "react-select": "^5.4.0",
     "react-slick": "^0.29.0",
-    "react-table": "^7.8.0",
     "react-use": "^17.4.0",
     "react-use-intercom": "^1.5.2",
     "react-widgets": "^4.6.1",
@@ -142,6 +144,7 @@
     "eslint": "^8.36.0",
     "eslint-config-prettier": "^8.7.0",
     "eslint-config-react-app": "^7.0.1",
+    "eslint-import-resolver-typescript": "^3.5.3",
     "eslint-plugin-css-modules": "^2.11.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-jest": "^26.5.3",
@@ -149,6 +152,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-unused-imports": "^2.0.0",
     "express": "^4.18.1",
+    "glob": "^9.3.1",
     "history": "^5.3.0",
     "jest": "^29.5.0",
     "jest-environment-jsdom": "^29.5.0",

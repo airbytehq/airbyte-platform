@@ -9,7 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,16 +24,17 @@ import io.airbyte.api.model.generated.DeclarativeManifestsReadList;
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody;
 import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody;
+import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody;
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException;
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
+import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
-import java.net.URI;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +48,6 @@ class DeclarativeSourceDefinitionsHandlerTest {
   private static final Long A_VERSION = 32L;
   private static final Long ANOTHER_VERSION = 99L;
   private static final String A_DESCRIPTION = "a description";
-  private static final String A_DOCUMENTATION_URL = "http://documentation.url";
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
 
@@ -59,18 +61,20 @@ class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   private ConfigRepository configRepository;
-  private ConnectorBuilderSpecAdapter specAdapter;
+  private DeclarativeSourceManifestInjector manifestInjector;
   private ConnectorSpecification adaptedConnectorSpecification;
+  private ActorDefinitionConfigInjection configInjection;
 
   private DeclarativeSourceDefinitionsHandler handler;
 
   @BeforeEach
   void setUp() throws JsonProcessingException {
     configRepository = mock(ConfigRepository.class);
-    specAdapter = mock(ConnectorBuilderSpecAdapter.class);
+    manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
+    configInjection = mock(ActorDefinitionConfigInjection.class);
 
-    handler = new DeclarativeSourceDefinitionsHandler(configRepository, specAdapter);
+    handler = new DeclarativeSourceDefinitionsHandler(configRepository, manifestInjector);
   }
 
   @Test
@@ -95,7 +99,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
   void givenVersionAlreadyExistsWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() throws IOException {
     givenSourceDefinitionAvailableInWorkspace();
     when(configRepository.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-        .thenReturn(Stream.of(new DeclarativeManifest().withVersion(A_VERSION.longValue())));
+        .thenReturn(Stream.of(new DeclarativeManifest().withVersion(A_VERSION)));
 
     assertThrows(ValueConflictKnownException.class,
         () -> handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
@@ -107,21 +111,23 @@ class DeclarativeSourceDefinitionsHandlerTest {
   void givenSetAsActiveWhenCreateDeclarativeSourceDefinitionManifestThenCreateDeclarativeManifest() throws IOException {
     givenSourceDefinitionAvailableInWorkspace();
     givenSourceIsDeclarative();
-    setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
+    when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
+    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
 
     handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
         .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .setAsActiveManifest(true)
         .declarativeManifest(anyDeclarativeManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
-    verify(configRepository, times(1))
-        .updateDeclarativeActorDefinition(A_SOURCE_DEFINITION_ID, A_MANIFEST, adaptedConnectorSpecification);
-    verify(configRepository, times(1)).insertActiveDeclarativeManifest(eq(new DeclarativeManifest()
+    verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
+    verify(configRepository, times(1)).createDeclarativeManifestAsActiveVersion(eq(new DeclarativeManifest()
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-        .withVersion(A_VERSION.longValue())
+        .withVersion(A_VERSION)
         .withDescription(A_DESCRIPTION)
         .withManifest(A_MANIFEST)
-        .withSpec(A_SPEC)));
+        .withSpec(A_SPEC)),
+        eq(configInjection),
+        eq(adaptedConnectorSpecification));
   }
 
   @Test
@@ -136,11 +142,57 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
     verify(configRepository, times(1)).insertDeclarativeManifest(eq(new DeclarativeManifest()
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-        .withVersion(A_VERSION.longValue())
+        .withVersion(A_VERSION)
         .withDescription(A_DESCRIPTION)
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)));
-    verify(configRepository, times(0)).updateDeclarativeActorDefinition(any(), any(), any());
+    verify(configRepository, times(0)).createDeclarativeManifestAsActiveVersion(any(), any(), any());
+  }
+
+  @Test
+  void givenSourceNotAvailableInWorkspaceWhenUpdateDeclarativeManifestVersionThenThrowException() throws IOException {
+    when(configRepository.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false);
+    assertThrows(DeclarativeSourceNotFoundException.class, () -> handler.updateDeclarativeManifestVersion(
+        new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION)));
+  }
+
+  @Test
+  void givenNoDeclarativeManifestForSourceDefinitionIdWhenUpdateDeclarativeManifestVersionThenThrowException() throws IOException {
+    givenSourceDefinitionAvailableInWorkspace();
+    when(configRepository.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID)).thenReturn(Stream.of());
+
+    assertThrows(SourceIsNotDeclarativeException.class, () -> handler.updateDeclarativeManifestVersion(
+        new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION)));
+  }
+
+  @Test
+  void givenNotFoundWhenUpdateDeclarativeManifestVersionThenThrowException() throws IOException, ConfigNotFoundException {
+    givenSourceDefinitionAvailableInWorkspace();
+    givenSourceIsDeclarative();
+    doThrow(ConfigNotFoundException.class).when(configRepository).getDeclarativeManifestByActorDefinitionIdAndVersion(any(), anyLong());
+
+    assertThrows(ConfigNotFoundException.class, () -> handler.updateDeclarativeManifestVersion(
+        new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION)));
+  }
+
+  @Test
+  void whenUpdateDeclarativeManifestVersionThenSetDeclarativeSourceActiveVersion() throws IOException, ConfigNotFoundException {
+    givenSourceDefinitionAvailableInWorkspace();
+    givenSourceIsDeclarative();
+    when(configRepository.getDeclarativeManifestByActorDefinitionIdAndVersion(A_SOURCE_DEFINITION_ID, A_VERSION))
+        .thenReturn(new DeclarativeManifest()
+            .withVersion(A_VERSION)
+            .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+            .withManifest(A_MANIFEST)
+            .withSpec(A_SPEC));
+    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
+
+    handler.updateDeclarativeManifestVersion(
+        new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
+
+    verify(configRepository, times(1)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
+        adaptedConnectorSpecification);
   }
 
   @Test
@@ -179,12 +231,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
   private void givenSourceIsDeclarative() throws IOException {
     when(configRepository.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-        .thenReturn(Stream.of(new DeclarativeManifest().withVersion(ANOTHER_VERSION.longValue())));
-  }
-
-  private void setupConnectorSpecificationAdapter(final JsonNode spec, final String documentationUrl) {
-    when(specAdapter.adapt(spec)).thenReturn(adaptedConnectorSpecification);
-    when(adaptedConnectorSpecification.getDocumentationUrl()).thenReturn(URI.create(documentationUrl));
+        .thenReturn(Stream.of(new DeclarativeManifest().withVersion(ANOTHER_VERSION)));
   }
 
   private static DeclarativeSourceManifest anyDeclarativeManifest() {

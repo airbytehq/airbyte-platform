@@ -3,15 +3,18 @@ import { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
+import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { NextTable } from "components/ui/NextTable";
+import { Table } from "components/ui/Table";
 
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useAvailableConnectorDefinitions } from "hooks/domain/connector/useAvailableConnectorDefinitions";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
+import { RoutePaths } from "pages/routePaths";
+import { BuilderProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import ConnectorCell from "./ConnectorCell";
 import styles from "./ConnectorsView.module.scss";
@@ -29,7 +32,28 @@ export interface ConnectorsViewProps {
   updatingDefinitionId?: string;
   onUpdateVersion: ({ id, version }: { id: string; version: string }) => void;
   feedbackList: Record<string, string>;
+  connectorBuilderProjects?: BuilderProject[];
 }
+
+function filterByBuilderConnectors(
+  connectorsDefinitions: Array<SourceDefinitionRead | DestinationDefinitionRead>,
+  connectorBuilderProjects?: BuilderProject[]
+) {
+  const builderDefinitionIds = new Set<string>();
+  connectorBuilderProjects?.forEach((project) => {
+    if (project.sourceDefinitionId) {
+      builderDefinitionIds.add(project.sourceDefinitionId);
+    }
+  });
+  return connectorsDefinitions.filter(
+    (definition) =>
+      !builderDefinitionIds.has(
+        "sourceDefinitionId" in definition ? definition.sourceDefinitionId : definition.destinationDefinitionId
+      )
+  );
+}
+
+const columnHelper = createColumnHelper<ConnectorDefinition>();
 
 const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   type,
@@ -38,6 +62,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   usedConnectorsDefinitions,
   updatingDefinitionId,
   connectorsDefinitions,
+  connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
@@ -59,8 +84,6 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     },
     [allowUpdateConnectors, allowUploadCustomImage]
   );
-
-  const columnHelper = createColumnHelper<ConnectorDefinition>();
 
   const renderColumns = useCallback(
     (showVersionUpdateColumn: boolean) => [
@@ -122,17 +145,18 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
           ]
         : []),
     ],
-    [columnHelper, allowUpdateConnectors, allowUploadCustomImage, onUpdateVersion, type]
+    [allowUpdateConnectors, allowUploadCustomImage, onUpdateVersion, type]
   );
 
-  const renderHeaderControls = (section: "used" | "available") =>
-    ((section === "used" && usedConnectorsDefinitions.length > 0) ||
-      (section === "available" && usedConnectorsDefinitions.length === 0)) && (
-      <FlexContainer>
-        {allowUploadCustomImage && <CreateConnector type={type} />}
-        {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
-      </FlexContainer>
-    );
+  const filteredUsedConnectorsDefinitions = useMemo(
+    () => filterByBuilderConnectors(usedConnectorsDefinitions, connectorBuilderProjects),
+    [connectorBuilderProjects, usedConnectorsDefinitions]
+  );
+
+  const filteredAvailableConnectorDefinitions = useMemo(
+    () => filterByBuilderConnectors(availableConnectorDefinitions, connectorBuilderProjects),
+    [connectorBuilderProjects, availableConnectorDefinitions]
+  );
 
   const ctx = useMemo(
     () => ({
@@ -153,6 +177,32 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     [renderColumns, showVersionUpdateColumn, availableConnectorDefinitions]
   );
 
+  const sections: Array<{ title: string; content: React.ReactNode }> = [];
+
+  if (type === "sources" && connectorBuilderProjects && connectorBuilderProjects.length > 0) {
+    sections.push({
+      title: "admin.managerBuilderConnector",
+      content: (
+        <ConnectorBuilderProjectTable
+          projects={connectorBuilderProjects}
+          basePath={`../../${RoutePaths.ConnectorBuilder}/`}
+        />
+      ),
+    });
+  }
+
+  if (usedConnectorsDefinitions.length > 0) {
+    sections.push({
+      title: type === "sources" ? "admin.manageSource" : "admin.manageDestination",
+      content: <Table columns={usedDefinitionColumns} data={filteredUsedConnectorsDefinitions} />,
+    });
+  }
+
+  sections.push({
+    title: type === "sources" ? "admin.availableSource" : "admin.availableDestinations",
+    content: <Table columns={availableDefinitionColumns} data={filteredAvailableConnectorDefinitions} />,
+  });
+
   return (
     <ConnectorsViewContext.Provider value={ctx}>
       <div className={styles.connectorsTable}>
@@ -160,31 +210,24 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
           titles={[{ id: "sidebar.settings" }, { id: type === "sources" ? "admin.sources" : "admin.destinations" }]}
         />
         <FlexContainer direction="column" gap="2xl">
-          {usedConnectorsDefinitions.length > 0 && (
-            <FlexContainer direction="column">
+          {sections.map((section, index) => (
+            <FlexContainer key={index} direction="column">
               <FlexContainer alignItems="center">
                 <FlexItem grow>
                   <Heading as="h2">
-                    <FormattedMessage id={type === "sources" ? "admin.manageSource" : "admin.manageDestination"} />
+                    <FormattedMessage id={section.title} />
                   </Heading>
                 </FlexItem>
-                {renderHeaderControls("used")}
+                {index === 0 && (
+                  <FlexContainer>
+                    {allowUploadCustomImage && <CreateConnector type={type} />}
+                    {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
+                  </FlexContainer>
+                )}
               </FlexContainer>
-              <NextTable columns={usedDefinitionColumns} data={usedConnectorsDefinitions} />
+              {section.content}
             </FlexContainer>
-          )}
-
-          <FlexContainer direction="column">
-            <FlexContainer alignItems="center">
-              <FlexItem grow>
-                <Heading as="h2">
-                  <FormattedMessage id={type === "sources" ? "admin.availableSource" : "admin.availableDestinations"} />
-                </Heading>
-              </FlexItem>
-              {renderHeaderControls("available")}
-            </FlexContainer>
-            <NextTable columns={availableDefinitionColumns} data={availableConnectorDefinitions} />
-          </FlexContainer>
+          ))}
         </FlexContainer>
       </div>
     </ConnectorsViewContext.Provider>

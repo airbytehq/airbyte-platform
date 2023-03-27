@@ -4,9 +4,6 @@
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -45,6 +42,7 @@ import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
+import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
@@ -186,7 +184,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.debug("field selection enabled: {}", fieldSelectionEnabled);
       final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
 
-      ApmTraceUtils.addTagsToTrace(generateTraceTags(destinationConfig, jobRoot));
+      ApmTraceUtils.addTagsToTrace(destinationConfig.getConnectionId(), jobId, jobRoot);
       replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig,
           syncInput.getConnectionId(), shouldCommitStateAsap(syncInput));
       timeTracker.trackReplicationEndTime();
@@ -377,9 +375,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.info("Replication thread started.");
       long recordsRead = 0L;
       /*
-       * validationErrors must be a ConcurrentHashMap as it may potentially be updated and read in
-       * different threads concurrently depending on the {@link
-       * io.airbyte.featureflag.PerfBackgroundJsonValidation} feature-flag.
+       * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
+       * concurrently for performance.
        */
       final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
@@ -427,7 +424,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             recordsRead += 1;
 
             if (recordsRead % 1000 == 0) {
-              LOGGER.info("Records read: {} ({})", recordsRead, FileUtils.byteCountToDisplaySize(messageTracker.getTotalBytesEmitted()));
+              LOGGER.info("Records read: {} ({})", recordsRead,
+                  FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
             }
           } else {
             LOGGER.info("Source has no more messages, closing connection.");
@@ -439,7 +437,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           }
         }
         timeHolder.trackSourceReadEndTime();
-        LOGGER.info("Total records read: {} ({})", recordsRead, FileUtils.byteCountToDisplaySize(messageTracker.getTotalBytesEmitted()));
+        LOGGER.info("Total records read: {} ({})", recordsRead,
+            FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
         if (!validationErrors.isEmpty()) {
           validationErrors.forEach((stream, errorPair) -> {
             LOGGER.warn("Schema validation errors found for stream {}. Error messages: {}", stream, errorPair.getLeft());
@@ -518,8 +517,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
     final ReplicationAttemptSummary summary = new ReplicationAttemptSummary()
         .withStatus(outputStatus)
-        .withRecordsSynced(messageTracker.getTotalRecordsEmitted()) // TODO (parker) remove in favor of totalRecordsEmitted
-        .withBytesSynced(messageTracker.getTotalBytesEmitted()) // TODO (parker) remove in favor of totalBytesEmitted
+        .withRecordsSynced(messageTracker.getSyncStatsTracker().getTotalRecordsEmitted())
+        .withBytesSynced(messageTracker.getSyncStatsTracker().getTotalBytesEmitted())
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.getReplicationStartTime())
@@ -543,15 +542,16 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private SyncStats getTotalStats(final ThreadedTimeTracker timeTracker, final ReplicationStatus outputStatus) {
+    final SyncStatsTracker syncStatsTracker = messageTracker.getSyncStatsTracker();
     final SyncStats totalSyncStats = new SyncStats()
-        .withRecordsEmitted(messageTracker.getTotalRecordsEmitted())
-        .withBytesEmitted(messageTracker.getTotalBytesEmitted())
-        .withSourceStateMessagesEmitted(messageTracker.getTotalSourceStateMessagesEmitted())
-        .withDestinationStateMessagesEmitted(messageTracker.getTotalDestinationStateMessagesEmitted())
-        .withMaxSecondsBeforeSourceStateMessageEmitted(messageTracker.getMaxSecondsToReceiveSourceStateMessage())
-        .withMeanSecondsBeforeSourceStateMessageEmitted(messageTracker.getMeanSecondsToReceiveSourceStateMessage())
-        .withMaxSecondsBetweenStateMessageEmittedandCommitted(messageTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted().orElse(null))
-        .withMeanSecondsBetweenStateMessageEmittedandCommitted(messageTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted().orElse(null))
+        .withRecordsEmitted(syncStatsTracker.getTotalRecordsEmitted())
+        .withBytesEmitted(syncStatsTracker.getTotalBytesEmitted())
+        .withSourceStateMessagesEmitted(syncStatsTracker.getTotalSourceStateMessagesEmitted())
+        .withDestinationStateMessagesEmitted(syncStatsTracker.getTotalDestinationStateMessagesEmitted())
+        .withMaxSecondsBeforeSourceStateMessageEmitted(syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage())
+        .withMeanSecondsBeforeSourceStateMessageEmitted(syncStatsTracker.getMeanSecondsToReceiveSourceStateMessage())
+        .withMaxSecondsBetweenStateMessageEmittedandCommitted(syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted().orElse(null))
+        .withMeanSecondsBetweenStateMessageEmittedandCommitted(syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted().orElse(null))
         .withReplicationStartTime(timeTracker.getReplicationStartTime())
         .withReplicationEndTime(timeTracker.getReplicationEndTime())
         .withSourceReadStartTime(timeTracker.getSourceReadStartTime())
@@ -561,8 +561,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
     if (outputStatus == ReplicationStatus.COMPLETED) {
       totalSyncStats.setRecordsCommitted(totalSyncStats.getRecordsEmitted());
-    } else if (messageTracker.getTotalRecordsCommitted().isPresent()) {
-      totalSyncStats.setRecordsCommitted(messageTracker.getTotalRecordsCommitted().get());
+    } else if (syncStatsTracker.getTotalRecordsCommitted().isPresent()) {
+      totalSyncStats.setRecordsCommitted(syncStatsTracker.getTotalRecordsCommitted().get());
     } else {
       LOGGER.warn("Could not reliably determine committed record counts, committed record stats will be set to null");
       totalSyncStats.setRecordsCommitted(null);
@@ -571,18 +571,20 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private List<StreamSyncStats> getPerStreamStats(final ReplicationStatus outputStatus) {
+    final SyncStatsTracker syncStatsTracker = messageTracker.getSyncStatsTracker();
+
     // assume every stream with stats is in streamToEmittedRecords map
-    return messageTracker.getStreamToEmittedRecords().keySet().stream().map(stream -> {
+    return syncStatsTracker.getStreamToEmittedRecords().keySet().stream().map(stream -> {
       final SyncStats syncStats = new SyncStats()
-          .withRecordsEmitted(messageTracker.getStreamToEmittedRecords().get(stream))
-          .withBytesEmitted(messageTracker.getStreamToEmittedBytes().get(stream))
+          .withRecordsEmitted(syncStatsTracker.getStreamToEmittedRecords().get(stream))
+          .withBytesEmitted(syncStatsTracker.getStreamToEmittedBytes().get(stream))
           .withSourceStateMessagesEmitted(null)
           .withDestinationStateMessagesEmitted(null);
 
       if (outputStatus == ReplicationStatus.COMPLETED) {
-        syncStats.setRecordsCommitted(messageTracker.getStreamToEmittedRecords().get(stream));
-      } else if (messageTracker.getStreamToCommittedRecords().isPresent()) {
-        syncStats.setRecordsCommitted(messageTracker.getStreamToCommittedRecords().get().get(stream));
+        syncStats.setRecordsCommitted(syncStatsTracker.getStreamToEmittedRecords().get(stream));
+      } else if (syncStatsTracker.getStreamToCommittedRecords().isPresent()) {
+        syncStats.setRecordsCommitted(syncStatsTracker.getStreamToCommittedRecords().get().get(stream));
       } else {
         syncStats.setRecordsCommitted(null);
       }
@@ -618,7 +620,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.warn("State capture: No state retained.");
     }
 
-    if (messageTracker.getUnreliableStateTimingMetrics()) {
+    if (messageTracker.getSyncStatsTracker().getUnreliableStateTimingMetrics()) {
       metricReporter.trackStateMetricTrackerError();
     }
   }
@@ -778,21 +780,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.info("Error cancelling source: ", e);
     }
 
-  }
-
-  private Map<String, Object> generateTraceTags(final WorkerDestinationConfig destinationConfig, final Path jobRoot) {
-    final Map<String, Object> tags = new HashMap<>();
-
-    tags.put(JOB_ID_KEY, jobId);
-    tags.put(JOB_ROOT_KEY, jobRoot);
-
-    if (destinationConfig != null) {
-      if (destinationConfig.getConnectionId() != null) {
-        tags.put(CONNECTION_ID_KEY, destinationConfig.getConnectionId());
-      }
-    }
-
-    return tags;
   }
 
   private static boolean shouldCommitStateAsap(final StandardSyncInput syncInput) {

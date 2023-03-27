@@ -9,22 +9,14 @@ import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import { useConnectorForm } from "./connectorFormContext";
 import { ConnectorFormValues } from "./types";
-import { makeConnectionConfigurationPath, serverProvidedOauthPaths } from "./utils";
-
-type Path = Array<string | number>;
-
-const isNumerical = (input: string | number): boolean => {
-  return typeof input === "number" || /^\d+$/.test(input);
-};
-
-/**
- * Takes an array of strings or numbers and remove all elements from it that are either
- * a number or a string that just contains a number. This will be used to remove index
- * accessors into oneOf from paths, since they are not part of the field path later.
- */
-const stripNumericalEntries = (paths: Path): string[] => {
-  return paths.filter((p): p is string => !isNumerical(p));
-};
+import {
+  authPredicateMatchesPath,
+  isNumerical,
+  makeConnectionConfigurationPath,
+  Path,
+  serverProvidedOauthPaths,
+  stripNumericalEntries,
+} from "./utils";
 
 /**
  * Takes a list of paths in an array representation as well as a root path in array representation, concats
@@ -228,13 +220,9 @@ export const useAuthentication = (): AuthenticationHook => {
         return false;
       }
 
-      const path = advancedAuth
-        ? advancedAuth.predicateKey && makeConnectionConfigurationPath(advancedAuth.predicateKey)
-        : legacyOauthSpec && makeConnectionConfigurationPath(stripNumericalEntries(legacyOauthSpec.rootObject as Path));
-
-      return fieldPath === (path ?? makeConnectionConfigurationPath());
+      return authPredicateMatchesPath(fieldPath, connectorSpec);
     },
-    [advancedAuth, isAuthButtonVisible, legacyOauthSpec]
+    [connectorSpec, isAuthButtonVisible]
   );
 
   const hasAuthFieldValues: boolean = useMemo(() => {

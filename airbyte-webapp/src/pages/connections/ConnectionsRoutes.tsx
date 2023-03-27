@@ -15,6 +15,7 @@ const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage
 const ConnectionJobHistoryPage = React.lazy(() => import("./ConnectionJobHistoryPage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
+const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
 
 export const ConnectionsRoutes: React.FC = () => {
   const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);
@@ -25,7 +26,7 @@ export const ConnectionsRoutes: React.FC = () => {
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           {streamCentricUIEnabled ? (
             <>
-              <Route path={ConnectionRoutePaths.Status} element={null} />
+              <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />
               <Route path={ConnectionRoutePaths.JobHistory} element={<ConnectionJobHistoryPage />} />
             </>
           ) : (

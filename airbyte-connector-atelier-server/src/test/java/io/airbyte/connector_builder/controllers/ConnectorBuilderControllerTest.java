@@ -6,6 +6,7 @@ package io.airbyte.connector_builder.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
@@ -15,14 +16,24 @@ import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlices;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
+import io.airbyte.connector_builder.handlers.HealthHandler;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ConnectorBuilderControllerTest {
 
+  private HealthHandler healthHandler;
+  private ConnectorBuilderController controller;
+
+  @BeforeEach
+  void setup() {
+    healthHandler = mock(HealthHandler.class);
+    controller = new ConnectorBuilderController(healthHandler);
+  }
+
   @Test
   void testListStreams() {
-    final ConnectorBuilderController controller = new ConnectorBuilderController();
 
     final StreamsListRead streams = controller.listStreams(new StreamsListRequestBody());
 
@@ -31,8 +42,6 @@ class ConnectorBuilderControllerTest {
 
   @Test
   void testReadStream() {
-    final ConnectorBuilderController controller = new ConnectorBuilderController();
-
     final StreamRead readResponse = controller.readStream(new StreamReadRequestBody());
 
     final List<StreamReadSlices> slices = readResponse.getSlices();
@@ -47,8 +56,6 @@ class ConnectorBuilderControllerTest {
 
   @Test
   void testResolveManifest() {
-    final ConnectorBuilderController controller = new ConnectorBuilderController();
-
     final ResolveManifest resolveManifest = controller.resolveManifest(new ResolveManifestRequestBody());
 
     assertNotNull(resolveManifest.getManifest());

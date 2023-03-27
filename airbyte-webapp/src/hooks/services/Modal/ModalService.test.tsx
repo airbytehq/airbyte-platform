@@ -1,6 +1,7 @@
 import { render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffectOnce } from "react-use";
+
 import { useMockIntersectionObserver } from "test-utils/testutils";
 
 import { ModalServiceProvider, useModalService } from "./ModalService";

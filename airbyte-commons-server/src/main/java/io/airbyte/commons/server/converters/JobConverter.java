@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
+import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
@@ -110,6 +111,7 @@ public class JobConverter {
         .id(job.getId())
         .configId(configId)
         .configType(configType)
+        .enabledStreams(extractEnabledStreams(job))
         .resetConfig(extractResetConfigIfReset(job).orElse(null))
         .createdAt(job.getCreatedAtInSecond())
         .updatedAt(job.getUpdatedAtInSecond())
@@ -268,6 +270,13 @@ public class JobConverter {
         .hasRecordsCommitted(!databaseStatus.recordsCommitted().isEmpty())
         .recordsCommitted(databaseStatus.recordsCommitted().orElse(0L))
         .hasNormalizationFailed(databaseStatus.normalizationFailed());
+  }
+
+  private static List<StreamDescriptor> extractEnabledStreams(final Job job) {
+    return job.getConfig().getSync() != null
+        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams().stream()
+            .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())
+        : List.of();
   }
 
 }

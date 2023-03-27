@@ -30,9 +30,10 @@ import io.airbyte.api.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.commons.server.handlers.helpers.ConnectorBuilderSpecAdapter;
+import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
@@ -55,12 +56,16 @@ class ConnectorBuilderProjectsHandlerTest {
 
   private static final UUID A_SOURCE_DEFINITION_ID = UUID.randomUUID();
   private static final UUID A_BUILDER_PROJECT_ID = UUID.randomUUID();
+  private static final UUID A_WORKSPACE_ID = UUID.randomUUID();
   private static final Long A_VERSION = 32L;
+  private static final Long ACTIVE_MANIFEST_VERSION = 865L;
   private static final String A_DESCRIPTION = "a description";
   private static final String A_SOURCE_NAME = "a source name";
+  private static final String A_NAME = "a name";
   private static final String A_DOCUMENTATION_URL = "http://documentation.url";
   private static final JsonNode A_MANIFEST;
   private static final JsonNode A_SPEC;
+  private static final ActorDefinitionConfigInjection A_CONFIG_INJECTION = new ActorDefinitionConfigInjection().withInjectionPath("something");
   private static final String CDK_VERSION = "8.9.10";
 
   static {
@@ -75,7 +80,7 @@ class ConnectorBuilderProjectsHandlerTest {
   private ConfigRepository configRepository;
   private ConnectorBuilderProjectsHandler connectorBuilderProjectsHandler;
   private Supplier<UUID> uuidSupplier;
-  private ConnectorBuilderSpecAdapter specAdapter;
+  private DeclarativeSourceManifestInjector manifestInjector;
   private CdkVersionProvider cdkVersionProvider;
   private ConnectorSpecification adaptedConnectorSpecification;
   private UUID workspaceId;
@@ -86,14 +91,14 @@ class ConnectorBuilderProjectsHandlerTest {
   void setUp() throws JsonProcessingException {
     configRepository = mock(ConfigRepository.class);
     uuidSupplier = mock(Supplier.class);
+    manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
-    specAdapter = mock(ConnectorBuilderSpecAdapter.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
     setupConnectorSpecificationAdapter(any(), "");
     workspaceId = UUID.randomUUID();
 
-    connectorBuilderProjectsHandler = new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, specAdapter);
+    connectorBuilderProjectsHandler = new ConnectorBuilderProjectsHandler(configRepository, cdkVersionProvider, uuidSupplier, manifestInjector);
   }
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
@@ -143,6 +148,25 @@ class ConnectorBuilderProjectsHandlerTest {
     verify(configRepository, times(1))
         .writeBuilderProjectDraft(
             project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(), project.getManifestDraft());
+  }
+
+  @Test
+  void givenActorDefinitionAssociatedWithProjectWhenUpdateConnectorBuilderProjectThenUpdateProjectAndDefinition() throws Exception {
+    when(configRepository.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(anyBuilderProject()
+        .withBuilderProjectId(A_BUILDER_PROJECT_ID)
+        .withWorkspaceId(A_WORKSPACE_ID)
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID));
+
+    connectorBuilderProjectsHandler.updateConnectorBuilderProject(new ExistingConnectorBuilderProjectWithWorkspaceId()
+        .builderProject(new ConnectorBuilderProjectDetails()
+            .name(A_SOURCE_NAME)
+            .draftManifest(A_MANIFEST))
+        .workspaceId(A_WORKSPACE_ID)
+        .builderProjectId(A_BUILDER_PROJECT_ID));
+
+    verify(configRepository, times(1))
+        .updateBuilderProjectAndActorDefinition(
+            A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_SOURCE_NAME, A_MANIFEST, A_SOURCE_DEFINITION_ID);
   }
 
   @Test
@@ -283,6 +307,60 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
+  @DisplayName("getConnectorBuilderProject should return a builder project even if there is no draft")
+  void givenNoVersionButActiveManifestWhenGetConnectorBuilderProjectWithManifestThenReturnActiveVersion()
+      throws IOException, ConfigNotFoundException {
+    final ConnectorBuilderProject project = generateBuilderProject()
+        .withManifestDraft(null)
+        .withHasDraft(false)
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID);
+    when(configRepository.getConnectorBuilderProject(eq(project.getBuilderProjectId()), any(Boolean.class))).thenReturn(project);
+    when(configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID)).thenReturn(new DeclarativeManifest()
+        .withManifest(A_MANIFEST)
+        .withVersion(A_VERSION)
+        .withDescription(A_DESCRIPTION));
+
+    final ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
+        new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId));
+
+    assertEquals(project.getBuilderProjectId(), response.getBuilderProject().getBuilderProjectId());
+    assertFalse(response.getBuilderProject().getHasDraft());
+    assertEquals(A_VERSION, response.getDeclarativeManifest().getVersion());
+    assertEquals(A_MANIFEST, response.getDeclarativeManifest().getManifest());
+    assertEquals(false, response.getDeclarativeManifest().getIsDraft());
+    assertEquals(A_DESCRIPTION, response.getDeclarativeManifest().getDescription());
+  }
+
+  @Test
+  void givenVersionWhenGetConnectorBuilderProjectWithManifestThenReturnSpecificVersion() throws ConfigNotFoundException, IOException {
+    when(configRepository.getConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(false))).thenReturn(
+        new ConnectorBuilderProject().withWorkspaceId(A_WORKSPACE_ID));
+    when(configRepository.getVersionedConnectorBuilderProject(eq(A_BUILDER_PROJECT_ID), eq(A_VERSION))).thenReturn(
+        new ConnectorBuilderProjectVersionedManifest()
+            .withBuilderProjectId(A_BUILDER_PROJECT_ID)
+            .withActiveDeclarativeManifestVersion(ACTIVE_MANIFEST_VERSION)
+            .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
+            .withHasDraft(true)
+            .withName(A_NAME)
+            .withManifest(A_MANIFEST)
+            .withManifestVersion(A_VERSION)
+            .withManifestDescription(A_DESCRIPTION));
+
+    ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
+        new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
+
+    assertEquals(A_BUILDER_PROJECT_ID, response.getBuilderProject().getBuilderProjectId());
+    assertEquals(A_NAME, response.getBuilderProject().getName());
+    assertEquals(ACTIVE_MANIFEST_VERSION, response.getBuilderProject().getActiveDeclarativeManifestVersion());
+    assertEquals(A_SOURCE_DEFINITION_ID, response.getBuilderProject().getSourceDefinitionId());
+    assertEquals(true, response.getBuilderProject().getHasDraft());
+    assertEquals(A_VERSION, response.getDeclarativeManifest().getVersion());
+    assertEquals(A_MANIFEST, response.getDeclarativeManifest().getManifest());
+    assertEquals(false, response.getDeclarativeManifest().getIsDraft());
+    assertEquals(A_DESCRIPTION, response.getDeclarativeManifest().getDescription());
+  }
+
+  @Test
   void whenPublishConnectorBuilderProjectThenReturnActorDefinition() throws IOException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
     final SourceDefinitionIdBody response = connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest());
@@ -292,11 +370,13 @@ class ConnectorBuilderProjectsHandlerTest {
   @Test
   void whenPublishConnectorBuilderProjectThenCreateActorDefinition() throws IOException {
     when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
+    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(A_CONFIG_INJECTION);
     setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().workspaceId(workspaceId).name(A_SOURCE_NAME)
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
+    verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
     verify(configRepository, times(1)).writeCustomSourceDefinition(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withDockerImageTag(CDK_VERSION)
@@ -310,9 +390,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .withCustom(true)
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(workspaceId));
-    verify(configRepository, times(1))
-        .writeActorDefinitionConfigInjectionForPath(eq(new ActorDefinitionConfigInjection().withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-            .withInjectionPath("__injected_declarative_manifest").withJsonToInject(A_MANIFEST)));
+    verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 
   @Test
@@ -339,8 +417,12 @@ class ConnectorBuilderProjectsHandlerTest {
     return new DeclarativeSourceManifest().version(A_VERSION);
   }
 
+  private static ConnectorBuilderProject anyBuilderProject() {
+    return new ConnectorBuilderProject();
+  }
+
   private void setupConnectorSpecificationAdapter(final JsonNode spec, final String documentationUrl) {
-    when(specAdapter.adapt(spec)).thenReturn(adaptedConnectorSpecification);
+    when(manifestInjector.createDeclarativeManifestConnectorSpecification(spec)).thenReturn(adaptedConnectorSpecification);
     when(adaptedConnectorSpecification.getDocumentationUrl()).thenReturn(URI.create(documentationUrl));
   }
 

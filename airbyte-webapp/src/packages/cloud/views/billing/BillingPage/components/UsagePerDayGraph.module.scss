@@ -8,8 +8,11 @@
 
 .container {
   width: 100%;
-  height: 260px;
-  padding: 0 variables.$spacing-2xl variables.$spacing-xl 0;
+
+  &--full {
+    height: 260px;
+    padding: 0 variables.$spacing-2xl variables.$spacing-xl 0;
+  }
 }
 
 :export {

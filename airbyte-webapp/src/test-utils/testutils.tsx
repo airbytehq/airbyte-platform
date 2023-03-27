@@ -126,5 +126,6 @@ export const mockConnection: WebBackendConnectionRead = {
   isSyncing: false,
   schemaChange: "no_change",
   notifySchemaChanges: true,
+  notifySchemaChangesByEmail: false,
   nonBreakingChangesPreference: "ignore",
 };

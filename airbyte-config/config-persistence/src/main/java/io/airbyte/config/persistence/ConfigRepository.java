@@ -16,6 +16,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -45,6 +46,7 @@ import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -67,6 +69,7 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.metrics.lib.MetricQueries;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -520,26 +523,14 @@ public class ConfigRepository {
     });
   }
 
-  /**
-   * Update a actor definition spec and its config injection on path __injected_declarative_manifest.
-   *
-   * @param actorDefinitionId the ID of the actor definition to update
-   * @param manifest the manifest going in the config injection
-   * @param spec the connector specifiction to update
-   * @throws IOException - you never know when you IO
-   */
-  public void updateDeclarativeActorDefinition(UUID actorDefinitionId, JsonNode manifest, ConnectorSpecification spec) throws IOException {
-    database.transaction(ctx -> {
-      ctx.update(Tables.ACTOR_DEFINITION)
-          .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
-          .where(Tables.ACTOR_DEFINITION.ID.eq(actorDefinitionId))
-          .execute();
-      writeActorDefinitionConfigInjectionForPath(new ActorDefinitionConfigInjection()
-          .withActorDefinitionId(actorDefinitionId)
-          .withInjectionPath("__injected_declarative_manifest")
-          .withJsonToInject(manifest), ctx);
-      return null;
-    });
+  private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
+                                                final ConnectorSpecification spec,
+                                                final DSLContext ctx) {
+    ctx.update(Tables.ACTOR_DEFINITION)
+        .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
+        .where(Tables.ACTOR_DEFINITION.ID.eq(configInjection.getActorDefinitionId()))
+        .execute();
+    writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
   }
 
   private Stream<StandardDestinationDefinition> destDefQuery(final Optional<UUID> destDefId, final boolean includeTombstone) throws IOException {
@@ -1188,7 +1179,9 @@ public class ConfigRepository {
         // group by connection.id so that the groupConcat above works
         .groupBy(CONNECTION.ID)).fetch();
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult);
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
   /**
@@ -1234,7 +1227,9 @@ public class ConfigRepository {
         // group by connection.id so that the groupConcat above works
         .groupBy(CONNECTION.ID)).fetch();
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult);
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
   /**
@@ -1256,10 +1251,19 @@ public class ConfigRepository {
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         .groupBy(CONNECTION.ID)).fetch();
 
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult);
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
-  private List<StandardSync> getStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult) {
+  private List<NotificationConfigurationRecord> getNotificationConfigurationByConnectionIds(final List<UUID> connnectionIds) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION)
+        .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.in(connnectionIds))
+        .fetch());
+  }
+
+  private List<StandardSync> getStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,
+                                                        final List<NotificationConfigurationRecord> allNeededNotificationConfigurations) {
     final List<StandardSync> standardSyncs = new ArrayList<>();
 
     for (final Record record : connectionAndOperationIdsResult) {
@@ -1270,7 +1274,11 @@ public class ConfigRepository {
           ? Collections.emptyList()
           : Arrays.stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER)).map(UUID::fromString).toList();
 
-      standardSyncs.add(DbConverter.buildStandardSync(record, operationIds));
+      final UUID connectionId = record.get(CONNECTION.ID);
+      final List<NotificationConfigurationRecord> notificationConfigurationsForConnection = allNeededNotificationConfigurations.stream()
+          .filter(notificationConfiguration -> notificationConfiguration.getConnectionId().equals(connectionId))
+          .toList();
+      standardSyncs.add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection));
     }
 
     return standardSyncs;
@@ -2212,6 +2220,54 @@ public class ConfigRepository {
   }
 
   /**
+   * Return a versioned manifest associated with a builder project.
+   *
+   * @param builderProjectId ID of the connector_builder_project
+   * @param version the version of the manifest
+   * @return ConnectorBuilderProjectVersionedManifest matching the builderProjectId
+   * @throws ConfigNotFoundException ensures that there a connector_builder_project matching the
+   *         `builderProjectId`, a declarative_manifest with the specified version associated with the
+   *         builder project and an active_declarative_manifest. If either of these conditions is not
+   *         true, this error is thrown
+   * @throws IOException exception while interacting with db
+   */
+  public ConnectorBuilderProjectVersionedManifest getVersionedConnectorBuilderProject(final UUID builderProjectId, final Long version)
+      throws ConfigNotFoundException, IOException {
+    final Optional<ConnectorBuilderProjectVersionedManifest> projectOptional = database.query(ctx -> ctx
+        .select(CONNECTOR_BUILDER_PROJECT.ID,
+            CONNECTOR_BUILDER_PROJECT.NAME,
+            CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID,
+            field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"))
+        .select(DECLARATIVE_MANIFEST.VERSION, DECLARATIVE_MANIFEST.DESCRIPTION, DECLARATIVE_MANIFEST.MANIFEST)
+        .select(ACTIVE_DECLARATIVE_MANIFEST.VERSION)
+        .from(CONNECTOR_BUILDER_PROJECT)
+        .join(ACTIVE_DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .join(DECLARATIVE_MANIFEST).on(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .where(CONNECTOR_BUILDER_PROJECT.ID.eq(builderProjectId)
+            .andNot(CONNECTOR_BUILDER_PROJECT.TOMBSTONE)
+            .and(DECLARATIVE_MANIFEST.VERSION.eq(version)))
+        .fetch()
+        .map(ConfigRepository::buildConnectorBuilderProjectVersionedManifest)
+        .stream()
+        .findFirst());
+    return projectOptional.orElseThrow(() -> new ConfigNotFoundException(
+        "CONNECTOR_BUILDER_PROJECTS/DECLARATIVE_MANIFEST/ACTIVE_DECLARATIVE_MANIFEST",
+        String.format("connector_builder_projects.id:%s manifest_version:%s", builderProjectId, version)));
+  }
+
+  private static ConnectorBuilderProjectVersionedManifest buildConnectorBuilderProjectVersionedManifest(final Record record) {
+    return new ConnectorBuilderProjectVersionedManifest()
+        .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
+        .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
+        .withHasDraft((Boolean) record.get("hasDraft"))
+        .withSourceDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION))
+        .withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
+        .withManifestVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
+        .withManifestDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION));
+  }
+
+  /**
    * Get connector builder project from a workspace id.
    *
    * @param workspaceId workspace id
@@ -2260,34 +2316,75 @@ public class ConfigRepository {
   public void writeBuilderProjectDraft(final UUID projectId, final UUID workspaceId, final String name, final JsonNode manifestDraft)
       throws IOException {
     database.transaction(ctx -> {
-      final OffsetDateTime timestamp = OffsetDateTime.now();
-      final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(CONNECTOR_BUILDER_PROJECT)
-          .where(matchId));
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
+      return null;
+    });
+  }
 
-      if (isExistingConfig) {
-        ctx.update(CONNECTOR_BUILDER_PROJECT)
-            .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
-            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
-            .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
-            .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
-                manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
-            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
-            .where(matchId)
-            .execute();
-      } else {
-        ctx.insertInto(CONNECTOR_BUILDER_PROJECT)
-            .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
-            .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
-            .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
-            .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
-                manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
-            .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
-            .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
-            .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)
-            .execute();
-      }
+  private void writeBuilderProjectDraft(final UUID projectId,
+                                        final UUID workspaceId,
+                                        final String name,
+                                        final JsonNode manifestDraft,
+                                        final DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final Condition matchId = CONNECTOR_BUILDER_PROJECT.ID.eq(projectId);
+    final boolean isExistingConfig = ctx.fetchExists(select()
+        .from(CONNECTOR_BUILDER_PROJECT)
+        .where(matchId));
+
+    if (isExistingConfig) {
+      ctx.update(CONNECTOR_BUILDER_PROJECT)
+          .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
+          .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
+          .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
+          .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
+              manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
+          .where(matchId)
+          .execute();
+    } else {
+      ctx.insertInto(CONNECTOR_BUILDER_PROJECT)
+          .set(CONNECTOR_BUILDER_PROJECT.ID, projectId)
+          .set(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, workspaceId)
+          .set(CONNECTOR_BUILDER_PROJECT.NAME, name)
+          .set(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT,
+              manifestDraft != null ? JSONB.valueOf(Jsons.serialize(manifestDraft)) : null)
+          .set(CONNECTOR_BUILDER_PROJECT.CREATED_AT, timestamp)
+          .set(CONNECTOR_BUILDER_PROJECT.UPDATED_AT, timestamp)
+          .set(CONNECTOR_BUILDER_PROJECT.TOMBSTONE, false)
+          .execute();
+    }
+  }
+
+  /**
+   * Write name and draft of a builder project. The actor_definition is also updated to match the new
+   * builder project name.
+   *
+   * Actor definition updated this way should always be private (i.e. public=false). As an additional
+   * protection, we want to shield ourselves from users updating public actor definition and
+   * therefore, the name of the actor definition won't be updated if the actor definition is not
+   * public. See
+   * https://github.com/airbytehq/airbyte-platform-internal/pull/5289#discussion_r1142757109.
+   *
+   * @param projectId the id of the project
+   * @param workspaceId the id of the workspace the project is associated with
+   * @param name the name of the project
+   * @param manifestDraft the manifest (can be null for no draft)
+   * @param actorDefinitionId the id of the associated actor definition
+   * @throws IOException exception while interacting with db
+   */
+  public void updateBuilderProjectAndActorDefinition(final UUID projectId,
+                                                     final UUID workspaceId,
+                                                     final String name,
+                                                     final JsonNode manifestDraft,
+                                                     final UUID actorDefinitionId)
+      throws IOException {
+    database.transaction(ctx -> {
+      writeBuilderProjectDraft(projectId, workspaceId, name, manifestDraft, ctx);
+      ctx.update(ACTOR_DEFINITION)
+          .set(ACTOR_DEFINITION.NAME, name)
+          .where(ACTOR_DEFINITION.ID.eq(actorDefinitionId).and(ACTOR_DEFINITION.PUBLIC.eq(false)))
+          .execute();
       return null;
     });
   }
@@ -2310,13 +2407,61 @@ public class ConfigRepository {
   }
 
   /**
-   * Write an active declarative manifest. If ACTIVE_DECLARATIVE_MANIFEST.ID is already in the DB, the
-   * entry will be updated
+   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
    *
-   * @param activeDeclarativeManifest active declarative manifest to write
+   * Note that based on this signature, two problems might occur if the user of this method is not
+   * diligent. This was done because we value more separation of concerns than consistency of the API
+   * of this method. The problems are:
+   *
+   * <pre>
+   * <ul>
+   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
+   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
+   * </ul>
+   * </pre>
+   *
+   * Since we decided not to validate this using the signature of the method, we will validate that
+   * runtime and IllegalArgumentException if there is a mismatch.
+   *
+   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
+   * definition of the repository. Drawbacks: We will need a method
+   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
+   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
+   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
+   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
+   *
+   * Note that this is all in the context of data consistency i.e. that we want to do this in one
+   * transaction. When we split this in many services, we will need to rethink data consistency.
+   *
+   * @param declarativeManifest declarative manifest version to create and make active
+   * @param configInjection configInjection for the manifest
+   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
+   *        being created
    * @throws IOException exception while interacting with db
+   * @throws IllegalArgumentException if there is a mismatch between the different arguments
    */
-  private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, DSLContext ctx) {
+  public void createDeclarativeManifestAsActiveVersion(final DeclarativeManifest declarativeManifest,
+                                                       final ActorDefinitionConfigInjection configInjection,
+                                                       final ConnectorSpecification connectorSpecification)
+      throws IOException {
+    if (!declarativeManifest.getActorDefinitionId().equals(configInjection.getActorDefinitionId())) {
+      throw new IllegalArgumentException("DeclarativeManifest.actorDefinitionId must match ActorDefinitionConfigInjection.actorDefinitionId");
+    }
+    if (!declarativeManifest.getManifest().equals(configInjection.getJsonToInject())) {
+      throw new IllegalArgumentException("The DeclarativeManifest does not match the config injection");
+    }
+    if (!declarativeManifest.getSpec().get("connectionSpecification").equals(connectorSpecification.getConnectionSpecification())) {
+      throw new IllegalArgumentException("DeclarativeManifest.spec must match ConnectorSpecification.connectionSpecification");
+    }
+
+    database.transaction(ctx -> {
+      updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
+      insertActiveDeclarativeManifest(declarativeManifest, ctx);
+      return null;
+    });
+  }
+
+  private void upsertActiveDeclarativeManifest(final ActiveDeclarativeManifest activeDeclarativeManifest, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final Condition matchId = ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID.eq(activeDeclarativeManifest.getActorDefinitionId());
     final boolean isExistingConfig = ctx.fetchExists(select()
@@ -2337,6 +2482,52 @@ public class ConfigRepository {
           .set(ACTIVE_DECLARATIVE_MANIFEST.UPDATED_AT, timestamp)
           .execute();
     }
+  }
+
+  /**
+   * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
+   *
+   * Note that based on this signature, two problems might occur if the user of this method is not
+   * diligent. This was done because we value more separation of concerns than consistency of the API
+   * of this method. The problems are:
+   *
+   * <pre>
+   * <ul>
+   *   <li>DeclarativeManifest.manifest could be different from the one injected ActorDefinitionConfigInjection.</li>
+   *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
+   * </ul>
+   * </pre>
+   *
+   * At that point, we can only hope the user won't cause data consistency issue using this method
+   *
+   * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
+   * definition of the repository. Drawbacks: We will need a method
+   * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
+   * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
+   * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
+   * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
+   *
+   * Note that this is all in the context of data consistency i.e. that we want to do this in one
+   * transaction. When we split this in many services, we will need to rethink data consistency.
+   *
+   * @param sourceDefinitionId actor definition to update
+   * @param version the version of the manifest to make active. declarative_manifest.version must
+   *        already exist
+   * @param configInjection configInjection for the manifest
+   * @param connectorSpecification connectorSpecification associated with the declarativeManifest
+   *        being made active
+   * @throws IOException exception while interacting with db
+   */
+  public void setDeclarativeSourceActiveVersion(final UUID sourceDefinitionId,
+                                                final Long version,
+                                                final ActorDefinitionConfigInjection configInjection,
+                                                final ConnectorSpecification connectorSpecification)
+      throws IOException {
+    database.transaction(ctx -> {
+      updateDeclarativeActorDefinition(configInjection, connectorSpecification, ctx);
+      upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version), ctx);
+      return null;
+    });
   }
 
   /**
@@ -2410,7 +2601,7 @@ public class ConfigRepository {
     });
   }
 
-  private static void insertDeclarativeManifest(DeclarativeManifest declarativeManifest, DSLContext ctx) {
+  private static void insertDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
     // Since "null" is a valid JSON object, `JSONB.valueOf(Jsons.serialize(null))` returns a valid JSON
     // object that is not null. Therefore, we will validate null values for JSON fields here
     if (declarativeManifest.getManifest() == null) {
@@ -2446,6 +2637,12 @@ public class ConfigRepository {
           .withVersion(declarativeManifest.getVersion()), ctx);
       return null;
     });
+  }
+
+  private void insertActiveDeclarativeManifest(final DeclarativeManifest declarativeManifest, final DSLContext ctx) {
+    insertDeclarativeManifest(declarativeManifest, ctx);
+    upsertActiveDeclarativeManifest(new ActiveDeclarativeManifest().withActorDefinitionId(declarativeManifest.getActorDefinitionId())
+        .withVersion(declarativeManifest.getVersion()), ctx);
   }
 
   /**

@@ -10,6 +10,8 @@ const recordSelectorInput = "[data-testid='tag-input'] input";
 const authType = "[data-testid='global.authenticator']";
 const testInputsButton = "[data-testid='test-inputs']";
 const limitInput = "[name='streams[0].paginator.strategy.page_size']";
+const injectLimitInto = "[data-testid$='paginator.pageSizeOption.inject_into']";
+const injectLimitFieldName = "[name='streams[0].paginator.pageSizeOption.field_name']";
 const injectOffsetInto = "[data-testid$='paginator.pageTokenOption.inject_into']";
 const injectOffsetFieldName = "[name='streams[0].paginator.pageTokenOption.field_name']";
 const testPageItem = "[data-testid='test-pages'] li";
@@ -77,10 +79,18 @@ export const disablePagination = () => {
   getPaginationCheckbox().uncheck({ force: true });
 };
 
-export const configureOffsetPagination = (limit: string, into: string, fieldName: string) => {
+export const configureLimitOffsetPagination = (
+  limit: string,
+  limitInto: string,
+  limitFieldName: string,
+  offsetInto: string,
+  offsetFieldName: string
+) => {
   cy.get(limitInput).type(limit, { force: true });
-  selectFromDropdown(injectOffsetInto, into);
-  cy.get(injectOffsetFieldName).type(fieldName, { force: true });
+  selectFromDropdown(injectLimitInto, limitInto);
+  cy.get(injectLimitFieldName).type(limitFieldName);
+  selectFromDropdown(injectOffsetInto, offsetInto);
+  cy.get(injectOffsetFieldName).type(offsetFieldName, { force: true });
 };
 
 const getStreamSlicerCheckbox = () => {
