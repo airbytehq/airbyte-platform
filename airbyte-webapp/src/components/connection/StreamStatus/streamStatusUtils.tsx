@@ -8,7 +8,6 @@ import { useExperiment } from "hooks/services/Experiment";
 import { AirbyteStreamWithStatusAndConfiguration, FakeStreamConfigWithStatus } from "./getStreamsWithStatus";
 
 export const enum StreamStatusType {
-  // TODO: When we have Actionable Errors, uncomment
   ActionRequired = "actionRequired",
   UpToDate = "upToDate",
   Disabled = "disabled",
@@ -43,9 +42,10 @@ const isUnscheduledStream = (streamConfig: FakeStreamConfigWithStatus | undefine
   ["cron", "manual", undefined].includes(streamConfig?.scheduleType);
 
 const streamHasBeenSynced = (streamConfig: FakeStreamConfigWithStatus) =>
-  streamConfig.latestSyncJobCreatedAt !== undefined;
+  streamConfig.latestAttemptCreatedAt !== undefined;
 
-const streamHasError = (streamConfig: FakeStreamConfigWithStatus) => streamConfig.latestSyncJobStatus === "failed";
+const streamHasError = (streamConfig: FakeStreamConfigWithStatus) =>
+  streamConfig.latestAttemptStatus === "failed" || streamConfig.jobStatus === "failed";
 
 // Status calculation logic comes from this ticket: https://github.com/airbytehq/airbyte/issues/23912
 export const useGetStreamStatus = () => {
