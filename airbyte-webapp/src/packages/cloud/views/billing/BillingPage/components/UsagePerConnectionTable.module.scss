@@ -21,6 +21,10 @@
   }
 }
 
+.disabled {
+  color: colors.$grey-300;
+}
+
 .cellText {
   word-break: break-word;
   overflow: hidden;

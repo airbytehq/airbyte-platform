@@ -37,6 +37,7 @@ export const links = {
   connectionDataResidency:
     "https://docs.airbyte.com/cloud/managing-airbyte-cloud/#choose-the-data-residency-for-a-connection",
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
+  stripeCustomerPortal: "https://billing.stripe.com/p/login/5kAbJs2Gy83H2YwdQQ",
 } as const;
 
 export type OutboundLinks = typeof links;

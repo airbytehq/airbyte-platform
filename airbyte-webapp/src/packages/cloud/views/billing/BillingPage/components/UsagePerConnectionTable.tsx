@@ -14,7 +14,7 @@ import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
-import { ConnectionScheduleType } from "core/request/AirbyteClient";
+import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
 import { useQuery } from "hooks/useQuery";
 import { RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
@@ -98,7 +98,11 @@ export const UsagePerConnectionTable: React.FC = () => {
           <Link
             to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${props.row.original.connection.connectionId}`}
           >
-            <Text size="sm" className={styles.cellText}>
+            <Text
+              size="sm"
+              color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+              className={classNames(styles.cellText)}
+            >
               {props.cell.getValue()}
             </Text>
           </Link>
@@ -123,7 +127,11 @@ export const UsagePerConnectionTable: React.FC = () => {
           >
             <FlexContainer direction="row" alignItems="center">
               <ConnectorIcon icon={props.row.original.connection.sourceIcon} />
-              <Text size="sm" className={styles.cellText}>
+              <Text
+                size="sm"
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+                className={styles.cellText}
+              >
                 {props.cell.getValue()}
               </Text>
             </FlexContainer>
@@ -132,7 +140,15 @@ export const UsagePerConnectionTable: React.FC = () => {
       }),
       columnHelper.display({
         id: "arrow",
-        cell: () => <ArrowRightIcon />,
+        cell: (props) => (
+          <div
+            className={classNames({
+              [styles.disabled]: props.row.original.connection.status === ConnectionStatus.deprecated,
+            })}
+          >
+            <ArrowRightIcon />
+          </div>
+        ),
         meta: {
           thClassName: classNames(styles.header, styles["header--light"]),
           responsive: true,
@@ -157,7 +173,12 @@ export const UsagePerConnectionTable: React.FC = () => {
           >
             <FlexContainer direction="row" alignItems="center">
               <ConnectorIcon icon={props.row.original.connection.destinationIcon} />
-              <Text size="sm">{props.cell.getValue()}</Text>
+              <Text
+                size="sm"
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+              >
+                {props.cell.getValue()}
+              </Text>
             </FlexContainer>
           </Link>
         ),
@@ -167,8 +188,12 @@ export const UsagePerConnectionTable: React.FC = () => {
 
         header: () => <FormattedMessage id="credits.schedule" />,
         cell: (props) => (
-          <FlexContainer className={styles.cell} alignItems="center">
-            <Text size="sm" className={styles.cellText}>
+          <FlexContainer alignItems="center">
+            <Text
+              size="sm"
+              color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+              className={styles.cellText}
+            >
               {props.row.original.connection.connectionScheduleType ===
               (ConnectionScheduleType.manual || ConnectionScheduleType.cron) ? (
                 <FormattedMessage id={`frequency.${props.row.original.connection.connectionScheduleType}`} />
@@ -182,7 +207,7 @@ export const UsagePerConnectionTable: React.FC = () => {
           </FlexContainer>
         ),
         meta: {
-          thClassName: classNames(styles["header--nonSortable"]),
+          thClassName: styles["header--nonSortable"],
           responsive: true,
         },
       }),
@@ -204,11 +229,19 @@ export const UsagePerConnectionTable: React.FC = () => {
             <UsagePerDayGraph chartData={props.row.original.usage} minimized />
             <FlexContainer direction="column" gap="none">
               {props.row.original.totalFreeUsage > 0 && (
-                <Text className={classNames(styles.usageValue, styles["usageValue--green"])} size="sm">
+                <Text
+                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+                  className={classNames(styles.usageValue, styles["usageValue--green"])}
+                  size="sm"
+                >
                   {formatCredits(props.row.original.totalFreeUsage)}
                 </Text>
               )}
-              <Text className={styles.usageValue} size="sm">
+              <Text
+                className={styles.usageValue}
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+                size="sm"
+              >
                 {formatCredits(props.row.original.totalBilledCost)}
               </Text>
             </FlexContainer>
