@@ -758,10 +758,6 @@ public interface Configs {
 
   String getFieldSelectionWorkspaces();
 
-  String getStrictComparisonNormalizationWorkspaces();
-
-  String getStrictComparisonNormalizationTag();
-
   /**
    * Tracking strategy.
    */
