@@ -57,6 +57,10 @@ public final class DatabaseConstants {
    */
   public static final long DEFAULT_ASSERT_DATABASE_TIMEOUT_MS = 2 * DEFAULT_CONNECTION_TIMEOUT_MS;
 
+  public static final String CONNECTION_TABLE = "connection";
+
+  public static final String NOTIFICATION_CONFIGURATION_TABLE = "notification_configuration";
+
   /**
    * Private constructor to prevent instantiation.
    */

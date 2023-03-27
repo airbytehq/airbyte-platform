@@ -21,16 +21,17 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
+@SuppressWarnings("MissingJavadocType")
 @Controller("/api/v1/destination_definitions")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -45,7 +46,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   @Post(uri = "/create_custom")
   @Secured({EDITOR})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.createCustomDestinationDefinition(customDestinationDefinitionCreate));
@@ -53,7 +54,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/delete")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   @Status(HttpStatus.NO_CONTENT)
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
@@ -65,24 +66,26 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/get")
   @Secured({AUTHENTICATED_USER})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody));
   }
 
+  @SuppressWarnings("LineLength")
   @Post(uri = "/get_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.getDestinationDefinitionForWorkspace(destinationDefinitionIdWithWorkspaceId));
   }
 
+  @SuppressWarnings("LineLength")
   @Post(uri = "/grant_definition")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     return ApiHelper
@@ -91,7 +94,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/list")
   @Secured({AUTHENTICATED_USER})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listDestinationDefinitions() {
     return ApiHelper.execute(destinationDefinitionsHandler::listDestinationDefinitions);
@@ -100,7 +103,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
   @Post(uri = "/list_for_workspace")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(workspaceIdRequestBody));
@@ -108,7 +111,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/list_latest")
   @Secured({AUTHENTICATED_USER})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionReadList listLatestDestinationDefinitions() {
     return ApiHelper.execute(destinationDefinitionsHandler::listLatestDestinationDefinitions);
@@ -116,7 +119,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/list_private")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.listPrivateDestinationDefinitions(workspaceIdRequestBody));
@@ -124,7 +127,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/revoke_definition")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId) {
     ApiHelper.execute(() -> {
@@ -135,7 +138,7 @@ public class DestinationDefinitionApiController implements DestinationDefinition
 
   @Post(uri = "/update")
   @Secured({AUTHENTICATED_USER})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate) {
     return ApiHelper.execute(() -> destinationDefinitionsHandler.updateDestinationDefinition(destinationDefinitionUpdate));

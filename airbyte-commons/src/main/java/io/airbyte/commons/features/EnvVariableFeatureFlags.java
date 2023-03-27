@@ -4,10 +4,16 @@
 
 package io.airbyte.commons.features;
 
+import java.util.Arrays;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Feature Flags pulled from Environment Variables. This is the old way of doing things.
+ */
 public class EnvVariableFeatureFlags implements FeatureFlags {
 
   private static final Logger log = LoggerFactory.getLogger(EnvVariableFeatureFlags.class);
@@ -24,6 +30,8 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
 
   public static final String STRICT_COMPARISON_NORMALIZATION_WORKSPACES = "STRICT_COMPARISON_NORMALIZATION_WORKSPACES";
   public static final String STRICT_COMPARISON_NORMALIZATION_TAG = "STRICT_COMPARISON_NORMALIZATION_TAG";
+  public static final String PROCESS_IN_GCP_DATA_PLANE = "PROCESS_IN_GCP_DATA_PLANE";
+  public static final String PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS = "PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS";
 
   @Override
   public boolean autoDisablesFailingConnections() {
@@ -74,9 +82,28 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
 
   @Override
   public String strictComparisonNormalizationTag() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison", (arg) -> arg);
+    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison2", (arg) -> arg);
   }
 
+  @Override
+  public boolean processInGcpDataPlane(final String workspaceId) {
+    boolean isFlagEnabledForAll = getEnvOrDefault(PROCESS_IN_GCP_DATA_PLANE, false, Boolean::parseBoolean);
+    if (isFlagEnabledForAll) {
+      return true;
+    }
+    Set<String> allowlistedWorkspaceIds = getEnvOrDefault(PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS, Set.of(), this::parseStringToSet);
+    return allowlistedWorkspaceIds.contains(workspaceId);
+  }
+
+  /**
+   * Get env variable.
+   *
+   * @param key name of env variable
+   * @param defaultValue default value if env variable is not present
+   * @param parser function to parse the env variable
+   * @param <T> type of the env variable
+   * @return the env variable
+   */
   // TODO: refactor in order to use the same method than the ones in EnvConfigs.java
   public <T> T getEnvOrDefault(final String key, final T defaultValue, final Function<String, T> parser) {
     final String value = System.getenv(key);
@@ -86,6 +113,10 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
       log.debug("Using default value for environment variable {}: '{}'", key, defaultValue);
       return defaultValue;
     }
+  }
+
+  private Set<String> parseStringToSet(String commaSeparatedArg) {
+    return Arrays.stream(commaSeparatedArg.split(",")).collect(Collectors.toSet());
   }
 
 }

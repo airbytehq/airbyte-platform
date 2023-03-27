@@ -27,31 +27,34 @@ export const AllConnectionsPage: React.FC = () => {
 
   return (
     <Suspense fallback={<LoadingPage />}>
-      {connections.length ? (
-        <MainPageWithScroll
-          headTitle={<HeadTitle titles={[{ id: "sidebar.connections" }]} />}
-          pageTitle={
-            <PageHeader
-              title={<FormattedMessage id="sidebar.connections" />}
-              endComponent={
-                <Button
-                  icon={<FontAwesomeIcon icon={faPlus} />}
-                  variant="primary"
-                  size="sm"
-                  onClick={() => onCreateClick()}
-                  data-testid="new-connection-button"
-                >
-                  <FormattedMessage id="connection.newConnection" />
-                </Button>
-              }
-            />
-          }
-        >
-          <ConnectionsTable connections={connections} />
-        </MainPageWithScroll>
-      ) : (
-        <ConnectionOnboarding onCreate={onCreateClick} />
-      )}
+      <>
+        <HeadTitle titles={[{ id: "sidebar.connections" }]} />
+        {connections.length ? (
+          <MainPageWithScroll
+            softScrollEdge={false}
+            pageTitle={
+              <PageHeader
+                title={<FormattedMessage id="sidebar.connections" />}
+                endComponent={
+                  <Button
+                    icon={<FontAwesomeIcon icon={faPlus} />}
+                    variant="primary"
+                    size="sm"
+                    onClick={() => onCreateClick()}
+                    data-testid="new-connection-button"
+                  >
+                    <FormattedMessage id="connection.newConnection" />
+                  </Button>
+                }
+              />
+            }
+          >
+            <ConnectionsTable connections={connections} />
+          </MainPageWithScroll>
+        ) : (
+          <ConnectionOnboarding onCreate={onCreateClick} />
+        )}
+      </>
     </Suspense>
   );
 };

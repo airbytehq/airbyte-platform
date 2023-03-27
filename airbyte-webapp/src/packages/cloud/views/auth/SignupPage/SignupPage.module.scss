@@ -1,11 +1,22 @@
-@use "../../../../../scss/colors";
-@use "../../../../../scss/variables";
+@use "scss/colors";
+@use "scss/variables";
 
-.title {
-  width: 250px;
-  margin-bottom: variables.$spacing-md;
+.container {
+  max-width: 409px;
 }
 
-.highlight {
-  color: colors.$blue;
+.checkIcon {
+  color: colors.$dark-blue-100;
+}
+
+.details {
+  align-self: center;
+  @media (min-width: 500px) {
+    flex-direction: row;
+  }
+}
+
+.detailTextContainer {
+  min-width: fit-content;
+  color: colors.$dark-blue;
 }

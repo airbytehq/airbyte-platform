@@ -10,6 +10,9 @@ import io.airbyte.persistence.job.WorkspaceHelper;
 import io.micronaut.context.annotation.Factory;
 import jakarta.inject.Singleton;
 
+/**
+ * Bean factory for workspace helper.
+ */
 @Factory
 public class HelperBeanFactory {
 

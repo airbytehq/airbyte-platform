@@ -9,7 +9,7 @@ import { DestinationSyncMode, SyncMode } from "core/request/AirbyteClient";
 
 import styles from "./SyncModeSelect.module.scss";
 
-interface SyncModeValue {
+export interface SyncModeValue {
   syncMode: SyncMode;
   destinationSyncMode: DestinationSyncMode;
 }
@@ -24,9 +24,17 @@ interface SyncModeSelectProps {
   options: SyncModeOption[];
   value: Partial<SyncModeValue>;
   variant?: PillButtonVariant;
+  disabled?: boolean;
 }
 
-export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({ className, options, onChange, value, variant }) => {
+export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({
+  className,
+  options,
+  onChange,
+  value,
+  variant,
+  disabled,
+}) => {
   const pillSelectOptions = useMemo(() => {
     return options.map(({ value }) => {
       const { syncMode, destinationSyncMode } = value;
@@ -50,6 +58,8 @@ export const SyncModeSelect: React.FC<SyncModeSelectProps> = ({ className, optio
       onChange={onChange}
       className={classNames(styles.pillSelect, className)}
       variant={variant}
+      disabled={disabled}
+      data-testid="sync-mode-select"
     />
   );
 };

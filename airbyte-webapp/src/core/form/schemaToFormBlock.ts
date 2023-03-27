@@ -25,7 +25,7 @@ export const jsonSchemaToFormBlock = (
   path: string = key,
   parentSchema?: AirbyteJSONSchemaDefinition
 ): FormBlock => {
-  const isRequired = isKeyRequired(key, parentSchema);
+  const isRequired = parentSchema ? isKeyRequired(key, parentSchema) : true;
 
   // TODO: decide what to do with boolean case
   if (typeof jsonSchema === "boolean") {
@@ -119,6 +119,15 @@ export const jsonSchemaToFormBlock = (
     };
   }
 
+  const type = (Array.isArray(jsonSchema.type) ? jsonSchema.type[0] : jsonSchema.type) ?? "null";
+  const itemType =
+    type === "array" &&
+    jsonSchema.items &&
+    !Array.isArray(jsonSchema.items) &&
+    typeof jsonSchema.items === "object" &&
+    !Array.isArray(jsonSchema.items.type) &&
+    jsonSchema.items.type;
+
   return {
     ...pickDefaultFields(jsonSchema),
     _type: "formItem",
@@ -128,7 +137,8 @@ export const jsonSchemaToFormBlock = (
     isSecret: !!jsonSchema.airbyte_secret,
     multiline: !!jsonSchema.multiline,
     format: jsonSchema.format,
-    type: (Array.isArray(jsonSchema.type) ? jsonSchema.type[0] : jsonSchema.type) ?? "null",
+    type,
+    itemType: itemType || undefined,
   };
 };
 
@@ -154,6 +164,9 @@ const defaultFields = [
 
   // airbyte specific fields
   "airbyte_hidden",
+  "always_show",
+  "pattern_descriptor",
+  "group",
 ] as const;
 
 const pickDefaultFields = (schema: AirbyteJSONSchema) => {
@@ -165,6 +178,10 @@ const pickDefaultFields = (schema: AirbyteJSONSchema) => {
     partialSchema.const = schema.default;
     // remove enum key as it has been "picked" already above
     delete partialSchema.enum;
+  }
+
+  if (typeof schema.items === "object" && !Array.isArray(schema.items) && schema.items.pattern) {
+    partialSchema.pattern = schema.items.pattern;
   }
 
   return partialSchema;

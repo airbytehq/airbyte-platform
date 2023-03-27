@@ -1,5 +1,6 @@
 import classnames from "classnames";
 import { Formik } from "formik";
+import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
 
@@ -68,7 +69,7 @@ export const ConnectorBuilderEditPage: React.FC = () => (
   <ConnectorBuilderLocalStorageProvider>
     <ConnectorBuilderFormStateProvider>
       <ConnectorBuilderTestStateProvider>
-        <HeadTitle titles={[{ id: "connectorBuilder.editPage.title" }]} />
+        <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
         <ConnectorBuilderEditPageInner />
       </ConnectorBuilderTestStateProvider>
     </ConnectorBuilderFormStateProvider>
@@ -90,6 +91,22 @@ const Panels = React.memo(
     validateForm: () => void;
   }) => {
     const { formatMessage } = useIntl();
+    const { setBuilderFormValues } = useConnectorBuilderFormState();
+
+    const debouncedSetBuilderFormValues = useMemo(
+      () =>
+        debounce((values) => {
+          // kick off formik validation
+          validateForm();
+          // update upstream state
+          setBuilderFormValues(values, builderFormValidationSchema.isValidSync(values));
+        }, 200),
+      [setBuilderFormValues, validateForm]
+    );
+    useEffect(() => {
+      debouncedSetBuilderFormValues(values);
+    }, [values, debouncedSetBuilderFormValues]);
+
     return (
       <ResizablePanels
         className={classnames({ [styles.gradientBg]: editorView === "yaml", [styles.solidBg]: editorView === "ui" })}

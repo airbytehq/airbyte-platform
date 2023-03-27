@@ -2,10 +2,11 @@ import { Field, FieldInputProps, FieldProps, FormikProps, useField } from "formi
 import { ChangeEvent, useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ControlLabels, Link } from "components";
+import { ControlLabels } from "components";
 import { DropDown, DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import availableCronTimeZones from "config/availableCronTimeZones.json";
@@ -16,6 +17,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { links } from "utils/links";
 
 import { FormikConnectionFormValues, useFrequencyDropdownData } from "./formConfig";
+import { FormFieldLayout } from "./FormFieldLayout";
 import styles from "./ScheduleField.module.scss";
 
 const CRON_DEFAULT_VALUE = {
@@ -135,84 +137,73 @@ export const ScheduleField: React.FC = () => {
     <Field name="scheduleData">
       {({ field, meta, form }: FieldProps<ConnectionScheduleData>) => (
         <>
-          <FlexContainer alignItems="center">
-            <div className={styles.leftFieldCol}>
+          <FormFieldLayout>
+            <ControlLabels
+              className={styles.connectorLabel}
+              nextLine
+              label={formatMessage({
+                id: "form.frequency",
+              })}
+              infoTooltipContent={formatMessage({
+                id: "form.frequency.message",
+              })}
+            />
+            <DropDown
+              {...field}
+              options={frequencies}
+              data-testid="scheduleData"
+              onChange={(item) => {
+                onScheduleChange(item, form);
+              }}
+              value={getBasicScheduleValue(field.value, form)}
+              isDisabled={form.isSubmitting || mode === "readonly"}
+            />
+          </FormFieldLayout>
+          {isCron(form) && (
+            <FormFieldLayout>
               <ControlLabels
                 className={styles.connectorLabel}
                 nextLine
+                error={!!meta.error && meta.touched}
                 label={formatMessage({
-                  id: "form.frequency",
+                  id: "form.cronExpression",
                 })}
-                infoTooltipContent={formatMessage({
-                  id: "form.frequency.message",
-                })}
-              />
-            </div>
-            <div className={styles.rightFieldCol} style={{ pointerEvents: mode === "readonly" ? "none" : "auto" }}>
-              <DropDown
-                {...field}
-                options={frequencies}
-                data-testid="scheduleData"
-                onChange={(item) => {
-                  onScheduleChange(item, form);
-                }}
-                value={getBasicScheduleValue(field.value, form)}
-              />
-            </div>
-          </FlexContainer>
-          {isCron(form) && (
-            <FlexContainer alignItems="center">
-              <div className={styles.leftFieldCol}>
-                <ControlLabels
-                  className={styles.connectorLabel}
-                  nextLine
-                  error={!!meta.error && meta.touched}
-                  label={formatMessage({
-                    id: "form.cronExpression",
-                  })}
-                  infoTooltipContent={formatMessage(
-                    {
-                      id: "form.cronExpression.message",
-                    },
-                    {
-                      lnk: (lnk: React.ReactNode) => (
-                        <Link target="_blank" href={links.cronReferenceLink} as="a">
-                          {lnk}
-                        </Link>
-                      ),
-                    }
-                  )}
-                />
-              </div>
-
-              <div className={styles.rightFieldCol} style={{ pointerEvents: mode === "readonly" ? "none" : "auto" }}>
-                <FlexContainer alignItems="center">
-                  <Input
-                    disabled={mode === "readonly"}
-                    error={!!meta.error}
-                    data-testid="cronExpression"
-                    placeholder={formatMessage({
-                      id: "form.cronExpression.placeholder",
-                    })}
-                    value={field.value?.cron?.cronExpression}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                      onCronChange(event, field, form, "cronExpression")
-                    }
-                  />
-                  <DropDown
-                    className={styles.cronZonesDropdown}
-                    options={cronTimeZones}
-                    value={getZoneValue(field.value?.cron?.cronTimeZone)}
-                    onChange={(item: DropDownOptionDataItem) => onCronChange(item, field, form, "cronTimeZone")}
-                  />
-                </FlexContainer>
-                {cronValidationError && (
-                  <Text className={styles.errorMessage} data-testid="cronExpressionError">
-                    <FormattedMessage id={cronValidationError} />
-                  </Text>
+                infoTooltipContent={formatMessage(
+                  {
+                    id: "form.cronExpression.message",
+                  },
+                  {
+                    lnk: (lnk: React.ReactNode) => <ExternalLink href={links.cronReferenceLink}>{lnk}</ExternalLink>,
+                  }
                 )}
-              </div>
-            </FlexContainer>
+              />
+              <FlexContainer alignItems="center">
+                <Input
+                  disabled={form.isSubmitting || mode === "readonly"}
+                  error={!!meta.error}
+                  data-testid="cronExpression"
+                  placeholder={formatMessage({
+                    id: "form.cronExpression.placeholder",
+                  })}
+                  value={field.value?.cron?.cronExpression}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    onCronChange(event, field, form, "cronExpression")
+                  }
+                />
+                <DropDown
+                  className={styles.cronZonesDropdown}
+                  options={cronTimeZones}
+                  value={getZoneValue(field.value?.cron?.cronTimeZone)}
+                  isDisabled={form.isSubmitting || mode === "readonly"}
+                  onChange={(item: DropDownOptionDataItem) => onCronChange(item, field, form, "cronTimeZone")}
+                />
+              </FlexContainer>
+              {cronValidationError && (
+                <Text className={styles.errorMessage} data-testid="cronExpressionError">
+                  <FormattedMessage id={cronValidationError} />
+                </Text>
+              )}
+            </FormFieldLayout>
           )}
         </>
       )}

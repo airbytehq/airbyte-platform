@@ -39,6 +39,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Sync temporal workflow impl.
+ */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class SyncWorkflowImpl implements SyncWorkflow {
 
@@ -51,6 +54,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
   private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
   private static final int USE_MINIMAL_NORM_INPUT_VERSION = 1;
+
+  private static final String USE_NORMALIZATION_WITH_CONNECTION = "use_normalization_with_connection";
+  private static final int USE_NORMALIZATION_WITH_CONNECTION_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -150,6 +156,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
         } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
           final OperatorDbtInput operatorDbtInput = new OperatorDbtInput()
+              .withConnectionId(syncInput.getConnectionId())
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
               .withOperatorDbt(standardSyncOperation.getOperatorDbt());
 
@@ -192,9 +199,18 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
     } else {
-      return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
-          syncOutput.getOutputCatalog(),
-          syncInput.getWorkspaceId());
+      int withConnectionVersion =
+          Workflow.getVersion(USE_NORMALIZATION_WITH_CONNECTION, Workflow.DEFAULT_VERSION, USE_NORMALIZATION_WITH_CONNECTION_VERSION);
+      if (withConnectionVersion == Workflow.DEFAULT_VERSION) {
+        return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
+            syncOutput.getOutputCatalog(),
+            syncInput.getWorkspaceId());
+      } else {
+        return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
+            syncOutput.getOutputCatalog(),
+            syncInput.getWorkspaceId(),
+            syncInput.getConnectionId());
+      }
     }
   }
 

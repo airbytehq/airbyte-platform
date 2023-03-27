@@ -6,7 +6,11 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,14 +38,17 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
@@ -56,6 +63,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class SourceHandlerTest {
 
@@ -63,6 +71,7 @@ class SourceHandlerTest {
   private SecretsRepositoryReader secretsRepositoryReader;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private StandardSourceDefinition standardSourceDefinition;
+  private ActorDefinitionVersion sourceDefinitionVersion;
   private SourceDefinitionSpecificationRead sourceDefinitionSpecificationRead;
   private SourceConnection sourceConnection;
   private SourceHandler sourceHandler;
@@ -73,6 +82,7 @@ class SourceHandlerTest {
   private JsonSecretsProcessor secretsProcessor;
   private ConnectorSpecification connectorSpecification;
   private OAuthConfigSupplier oAuthConfigSupplier;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final String SHOES = "shoes";
   private static final String SKU = "sku";
@@ -94,6 +104,7 @@ class SourceHandlerTest {
     uuidGenerator = mock(Supplier.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -101,10 +112,12 @@ class SourceHandlerTest {
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("marketo")
         .withDockerRepository("thebestrepo")
-        .withDockerImageTag("thelatesttag")
         .withDocumentationUrl("https://wikipedia.org")
-        .withSpec(connectorSpecification)
         .withIcon(ICON);
+
+    sourceDefinitionVersion = new ActorDefinitionVersion()
+        .withDockerImageTag("thelatesttag")
+        .withSpec(connectorSpecification);
 
     sourceDefinitionSpecificationRead = new SourceDefinitionSpecificationRead()
         .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
@@ -121,7 +134,8 @@ class SourceHandlerTest {
         uuidGenerator,
         secretsProcessor,
         configurationUpdate,
-        oAuthConfigSupplier);
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper);
   }
 
   @Test
@@ -136,7 +150,10 @@ class SourceHandlerTest {
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getWorkspaceId(),
+    when(actorDefinitionVersionHelper.getSourceVersionForWorkspace(standardSourceDefinition, sourceConnection.getWorkspaceId()))
+        .thenReturn(sourceDefinitionVersion);
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
         sourceCreate.getConnectionConfiguration())).thenReturn(sourceCreate.getConnectionConfiguration());
     when(secretsProcessor.prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -151,9 +168,10 @@ class SourceHandlerTest {
 
     verify(secretsProcessor).prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
         sourceConnection.getWorkspaceId(), sourceCreate.getConnectionConfiguration());
     verify(secretsRepositoryWriter).writeSourceConnection(sourceConnection, connectorSpecification);
+    verify(actorDefinitionVersionHelper).getSourceVersionForWorkspace(standardSourceDefinition, sourceConnection.getWorkspaceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
   }
 
@@ -178,10 +196,13 @@ class SourceHandlerTest {
             .thenReturn(newConfiguration);
     when(secretsProcessor.prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
         .thenReturn(newConfiguration);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getWorkspaceId(),
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
         newConfiguration)).thenReturn(newConfiguration);
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId()))
         .thenReturn(standardSourceDefinition);
     when(configRepository.getSourceConnection(sourceConnection.getSourceId()))
@@ -197,9 +218,10 @@ class SourceHandlerTest {
     assertEquals(expectedSourceRead, actualSourceRead);
 
     verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
         sourceConnection.getWorkspaceId(), newConfiguration);
     verify(secretsRepositoryWriter).writeSourceConnection(expectedSourceConnection, connectorSpecification);
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
   }
 
@@ -211,6 +233,8 @@ class SourceHandlerTest {
     when(configRepository.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -223,6 +247,7 @@ class SourceHandlerTest {
     // make sure the icon was loaded into actual svg content
     assertTrue(expectedSourceRead.getIcon().startsWith("<svg>"));
 
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId());
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
   }
@@ -241,6 +266,8 @@ class SourceHandlerTest {
 
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersionForWorkspace(standardSourceDefinition, sourceConnection.getWorkspaceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -249,6 +276,7 @@ class SourceHandlerTest {
     final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
 
     assertEquals(expectedClonedSourceRead, actualSourceRead);
+    verify(actorDefinitionVersionHelper).getSourceVersionForWorkspace(standardSourceDefinition, sourceConnection.getWorkspaceId());
   }
 
   @Test
@@ -267,6 +295,8 @@ class SourceHandlerTest {
 
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersionForWorkspace(standardSourceDefinition, sourceConnection.getWorkspaceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -288,6 +318,8 @@ class SourceHandlerTest {
     when(configRepository.listWorkspaceSourceConnection(sourceConnection.getWorkspaceId())).thenReturn(Lists.newArrayList(sourceConnection));
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -298,6 +330,7 @@ class SourceHandlerTest {
     assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0));
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId());
   }
 
   @Test
@@ -310,6 +343,8 @@ class SourceHandlerTest {
     when(configRepository.listSourcesForDefinition(sourceConnection.getSourceDefinitionId())).thenReturn(Lists.newArrayList(sourceConnection));
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -330,6 +365,8 @@ class SourceHandlerTest {
     when(configRepository.listSourceConnection()).thenReturn(Lists.newArrayList(sourceConnection));
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(
         secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
@@ -364,10 +401,13 @@ class SourceHandlerTest {
     when(secretsRepositoryReader.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getWorkspaceId(),
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(), sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
         newConfiguration)).thenReturn(newConfiguration);
     when(configRepository.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
     when(configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
     when(connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody)).thenReturn(connectionReadList);
     when(
@@ -383,20 +423,54 @@ class SourceHandlerTest {
 
   @Test
   void testWriteDiscoverCatalogResult() throws JsonValidationException, IOException {
-    UUID actorId = UUID.randomUUID();
-    UUID catalogId = UUID.randomUUID();
-    String connectorVersion = "0.0.1";
-    String hashValue = "0123456789abcd";
+    final UUID actorId = UUID.randomUUID();
+    final UUID catalogId = UUID.randomUUID();
+    final String connectorVersion = "0.0.1";
+    final String hashValue = "0123456789abcd";
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(actorId);
 
-    SourceDiscoverSchemaWriteRequestBody request = new SourceDiscoverSchemaWriteRequestBody().catalog(
+    final SourceDiscoverSchemaWriteRequestBody request = new SourceDiscoverSchemaWriteRequestBody().catalog(
         CatalogConverter.toApi(airbyteCatalog, sourceDefinition)).sourceId(actorId).connectorVersion(connectorVersion).configurationHash(hashValue);
 
     when(configRepository.writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
-    DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
+    final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
     verify(configRepository).writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
+  }
+
+  @Test
+  void testCreateSourceHandleSecret() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final ActorDefinitionVersion oauthDefinitionVersion = new ActorDefinitionVersion()
+        .withDockerImageTag("thelatesttag")
+        .withSpec(ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification());
+
+    final SourceHandler sourceHandlerSpy = Mockito.spy(sourceHandler);
+    final SourceCreate sourceCreate = new SourceCreate()
+        .name(sourceConnection.getName())
+        .workspaceId(sourceConnection.getWorkspaceId())
+        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .connectionConfiguration(sourceConnection.getConfiguration());
+
+    doReturn(new SourceRead()).when(sourceHandlerSpy).createSource(any());
+    doReturn(Jsons.emptyObject()).when(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
+    when(configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersionForWorkspace(standardSourceDefinition, sourceCreate.getWorkspaceId()))
+        .thenReturn(oauthDefinitionVersion);
+
+    // Test that calling createSourceHandleSecret only hits old code path if nothing is passed for
+    // secretId
+    sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
+    verify(sourceHandlerSpy).createSource(sourceCreate);
+    verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any());
+
+    // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
+    final SecretCoordinate secretCoordinate = new SecretCoordinate("test", 1);
+    sourceCreate.setSecretId(secretCoordinate.getFullCoordinate());
+    sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
+    verify(sourceHandlerSpy, times(2)).createSource(sourceCreate);
+    verify(sourceHandlerSpy).hydrateOAuthResponseSecret(any());
   }
 
 }

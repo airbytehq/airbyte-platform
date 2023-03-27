@@ -14,13 +14,12 @@ import {
   SyncMode,
 } from "core/request/AirbyteClient";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { naturalComparatorBy } from "utils/objects";
 
-import styles from "./CatalogSection.module.scss";
 import { CatalogTreeTableRow } from "./next/CatalogTreeTableRow";
 import { StreamDetailsPanel } from "./next/StreamDetailsPanel/StreamDetailsPanel";
+import { SyncModeValue } from "./next/SyncModeSelect";
 import {
   updatePrimaryKey,
   toggleFieldInPrimaryKey,
@@ -28,8 +27,7 @@ import {
   updateFieldSelected,
   toggleAllFieldsSelected,
 } from "./streamConfigHelpers/streamConfigHelpers";
-import { StreamFieldTable } from "./StreamFieldTable";
-import { StreamHeader } from "./StreamHeader";
+import { updateStreamSyncMode } from "./streamConfigHelpers/updateStreamSyncMode";
 import { flatten, getPathType } from "./utils";
 
 interface CatalogSectionInnerProps {
@@ -52,7 +50,6 @@ const CatalogSectionInner: React.FC<CatalogSectionInnerProps> = ({
   changedSelected,
 }) => {
   const { stream, config } = streamNode;
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
 
   const fields = useMemo(() => {
     const traversedFields = traverseSchemaToField(stream?.jsonSchema, stream?.name);
@@ -77,8 +74,16 @@ const CatalogSectionInner: React.FC<CatalogSectionInnerProps> = ({
   );
 
   const onSelectSyncMode = useCallback(
-    (data: DropDownOptionDataItem) => updateStreamWithConfig(data.value),
-    [updateStreamWithConfig]
+    (data: DropDownOptionDataItem) => {
+      if (!streamNode.config || !streamNode.stream) {
+        return;
+      }
+      // todo: Remove once new stream table design is released. The old dropdown types data.value as any, hence the cast here.
+      const syncModes = data.value as SyncModeValue;
+      const updatedConfig = updateStreamSyncMode(streamNode.stream, streamNode.config, syncModes);
+      updateStreamWithConfig(updatedConfig);
+    },
+    [streamNode, updateStreamWithConfig]
   );
 
   const onSelectStream = useCallback(
@@ -171,21 +176,16 @@ const CatalogSectionInner: React.FC<CatalogSectionInnerProps> = ({
   );
 
   const destName = prefix + (streamNode.stream?.name ?? "");
-  const configErrors = getIn(
-    errors,
-    isNewTableDesignEnabled ? `syncCatalog.streams[${streamNode.id}].config` : `schema.streams[${streamNode.id}].config`
-  );
+  const configErrors = getIn(errors, `syncCatalog.streams[${streamNode.id}].config`);
   const hasError = configErrors && Object.keys(configErrors).length > 0;
   const pkType = getPathType(pkRequired, shouldDefinePk);
   const cursorType = getPathType(cursorRequired, shouldDefineCursor);
   const hasFields = fields?.length > 0;
   const disabled = mode === "readonly";
 
-  const StreamComponent = isNewTableDesignEnabled ? CatalogTreeTableRow : StreamHeader;
-
   return (
-    <div className={styles.catalogSection}>
-      <StreamComponent
+    <>
+      <CatalogTreeTableRow
         stream={streamNode}
         destNamespace={destNamespace}
         destName={destName}
@@ -205,41 +205,25 @@ const CatalogSectionInner: React.FC<CatalogSectionInnerProps> = ({
         configErrors={configErrors}
         disabled={disabled}
       />
-      {isRowExpanded &&
-        hasFields &&
-        (isNewTableDesignEnabled ? (
-          <StreamDetailsPanel
-            config={config}
-            disabled={mode === "readonly"}
-            syncSchemaFields={flattenedFields}
-            onClose={onExpand}
-            onCursorSelect={onCursorSelect}
-            onPkSelect={onPkSelect}
-            onSelectedChange={onSelectStream}
-            handleFieldToggle={onToggleFieldSelected}
-            shouldDefinePk={shouldDefinePk}
-            shouldDefineCursor={shouldDefineCursor}
-            isCursorDefinitionSupported={cursorRequired}
-            isPKDefinitionSupported={pkRequired}
-            stream={stream}
-            toggleAllFieldsSelected={onToggleAllFieldsSelected}
-          />
-        ) : (
-          <div className={styles.streamFieldTableContainer}>
-            <StreamFieldTable
-              config={config}
-              syncSchemaFields={flattenedFields}
-              onCursorSelect={onCursorSelect}
-              onPkSelect={onPkSelect}
-              handleFieldToggle={onToggleFieldSelected}
-              primaryKeyIndexerType={pkType}
-              cursorIndexerType={cursorType}
-              shouldDefinePrimaryKey={shouldDefinePk}
-              shouldDefineCursor={shouldDefineCursor}
-            />
-          </div>
-        ))}
-    </div>
+      {isRowExpanded && hasFields && (
+        <StreamDetailsPanel
+          config={config}
+          disabled={mode === "readonly"}
+          syncSchemaFields={flattenedFields}
+          onClose={onExpand}
+          onCursorSelect={onCursorSelect}
+          onPkSelect={onPkSelect}
+          onSelectedChange={onSelectStream}
+          handleFieldToggle={onToggleFieldSelected}
+          shouldDefinePk={shouldDefinePk}
+          shouldDefineCursor={shouldDefineCursor}
+          isCursorDefinitionSupported={cursorRequired}
+          isPKDefinitionSupported={pkRequired}
+          stream={stream}
+          toggleAllFieldsSelected={onToggleAllFieldsSelected}
+        />
+      )}
+    </>
   );
 };
 

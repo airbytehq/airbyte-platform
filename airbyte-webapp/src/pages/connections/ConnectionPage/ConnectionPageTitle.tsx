@@ -13,13 +13,14 @@ import { Text } from "components/ui/Text";
 
 import { ConnectionStatus } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFeature, FeatureItem } from "hooks/services/Feature";
 
 import styles from "./ConnectionPageTitle.module.scss";
 import { ConnectionRoutePaths } from "../types";
 
-const InlineEnrollmentCallout = React.lazy(
-  () => import("packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout")
+const LargeEnrollmentCallout = React.lazy(
+  () => import("packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout")
 );
 
 export const ConnectionPageTitle: React.FC = () => {
@@ -27,7 +28,9 @@ export const ConnectionPageTitle: React.FC = () => {
   const navigate = useNavigate();
   const currentStep = params["*"] || ConnectionRoutePaths.Status;
 
-  const { connection } = useConnectionEditService();
+  const { connection, schemaRefreshing } = useConnectionEditService();
+
+  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);
 
   const steps = useMemo(() => {
     const steps = [
@@ -45,6 +48,13 @@ export const ConnectionPageTitle: React.FC = () => {
       },
     ];
 
+    if (streamCentricUIEnabled) {
+      steps.push({
+        id: ConnectionRoutePaths.JobHistory,
+        name: <FormattedMessage id="connectionForm.jobHistory" />,
+      });
+    }
+
     connection.status !== ConnectionStatus.deprecated &&
       steps.push({
         id: ConnectionRoutePaths.Settings,
@@ -52,7 +62,7 @@ export const ConnectionPageTitle: React.FC = () => {
       });
 
     return steps;
-  }, [connection.status]);
+  }, [connection.status, streamCentricUIEnabled]);
 
   const onSelectStep = useCallback(
     (id: string) => {
@@ -82,10 +92,10 @@ export const ConnectionPageTitle: React.FC = () => {
       <div className={styles.statusContainer}>
         <FlexContainer direction="column" gap="none">
           <ConnectionInfoCard />
-          {fcpEnabled && <InlineEnrollmentCallout />}
+          {fcpEnabled && <LargeEnrollmentCallout />}
         </FlexContainer>
       </div>
-      <StepsMenu lightMode data={steps} onSelect={onSelectStep} activeStep={currentStep} />
+      <StepsMenu lightMode data={steps} onSelect={onSelectStep} activeStep={currentStep} disabled={schemaRefreshing} />
     </div>
   );
 };

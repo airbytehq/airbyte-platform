@@ -1,5 +1,11 @@
 flags:
   - name: performance.backgroundJsonSchemaValidation
-    enabled: false
+    serve: false
   - name: heartbeat.failSync
-    enabled: false
+    serve: false
+  - name: normalization.strictComparisonEnabled
+    serve: false
+  - name: platform.commitStatesAsap
+    serve: false
+  - name: heartbeat.enabled
+    serve: false

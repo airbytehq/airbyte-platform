@@ -9,8 +9,8 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_ID_KEY;
 
 import datadog.trace.api.Trace;
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
@@ -22,6 +22,9 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Refresh schema temporal activity impl.
+ */
 @Slf4j
 @Singleton
 public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
@@ -59,7 +62,9 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
         new SourceDiscoverSchemaRequestBody().sourceId(sourceCatalogId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
 
     try {
-      sourceApi.discoverSchemaForSource(requestBody);
+      AirbyteApiClient.retryWithJitter(
+          () -> sourceApi.discoverSchemaForSource(requestBody),
+          "Trigger discover schema");
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       // catching this exception because we don't want to block replication due to a failed schema refresh
@@ -70,12 +75,14 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
   private boolean schemaRefreshRanRecently(final UUID sourceCatalogId) {
     try {
       final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceCatalogId);
-      final ActorCatalogWithUpdatedAt mostRecentFetchEvent = sourceApi.getMostRecentSourceActorCatalog(sourceIdRequestBody);
+      final ActorCatalogWithUpdatedAt mostRecentFetchEvent = AirbyteApiClient.retryWithJitter(
+          () -> sourceApi.getMostRecentSourceActorCatalog(sourceIdRequestBody),
+          "get the most recent source actor catalog");
       if (mostRecentFetchEvent.getUpdatedAt() == null) {
         return false;
       }
-      return mostRecentFetchEvent.getUpdatedAt() > OffsetDateTime.now().minusHours(24l).toEpochSecond();
-    } catch (final ApiException e) {
+      return mostRecentFetchEvent.getUpdatedAt() > OffsetDateTime.now().minusHours(24L).toEpochSecond();
+    } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       // catching this exception because we don't want to block replication due to a failed schema refresh
       log.info("Encountered an error fetching most recent actor catalog fetch event: ", e);

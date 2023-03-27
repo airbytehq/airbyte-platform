@@ -10,14 +10,13 @@ import io.airbyte.commons.protocol.AirbyteMessageMigrator;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
-import io.airbyte.commons.protocol.migrations.v1.AirbyteMessageMigrationV1;
-import io.airbyte.commons.protocol.migrations.v1.ConfiguredAirbyteCatalogMigrationV1;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.lib.NotImplementedMetricClient;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
@@ -28,12 +27,16 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
+import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,19 +44,16 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.mockito.Mockito;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.BenchmarkMode;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.Warmup;
 
+@SuppressWarnings("MissingJavadocType")
 @Slf4j
 public class ReplicationWorkerPerformanceTest {
 
+  public static final Duration DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD = Duration.ofMillis(1);
+
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
-   * {@link LimitedSourceProcess} via the {@link LimitedIntegrationLauncher} and Destination
+   * {@link LimitedFatRecordSourceProcess} via the {@link LimitedIntegrationLauncher} and Destination
    * {@link EmptyAirbyteDestination}.
    * <p>
    * Harness uses Java Micro Benchmark to run the E2E sync a configured number of times. It then
@@ -65,63 +65,78 @@ public class ReplicationWorkerPerformanceTest {
    * To use this, simply run the main method, make yourself a cup of coffee for 5 mins, then look the
    * logs.
    */
-  @Benchmark
+  // @Benchmark
   // SampleTime = the time taken to run the benchmarked method. Use this because we only care about
   // the time taken to sync the entire dataset.
-  @BenchmarkMode(Mode.SampleTime)
+  // @BenchmarkMode(Mode.SampleTime)
   // Warming up the JVM stabilises results however takes longer. Skip this for now since we don't need
   // that fine a result.
-  @Warmup(iterations = 0)
+  // @Warmup(iterations = 0)
   // How many runs to do.
-  @Fork(1)
+  // @Fork(1)
   // Within each run, how many iterations to do.
-  @Measurement(iterations = 2)
-  public void executeOneSync() throws InterruptedException {
+  // @Measurement(iterations = 2)
+  public static void executeOneSync() throws InterruptedException {
+    final var featureFlags = new EnvVariableFeatureFlags();
     final var perDestination = new EmptyAirbyteDestination();
-    final var messageTracker = new AirbyteMessageTracker(new EnvVariableFeatureFlags());
+    final var messageTracker = new AirbyteMessageTracker(featureFlags);
+    final var syncPersistenceFactory = Mockito.mock(SyncPersistenceFactory.class);
     final var connectorConfigUpdater = Mockito.mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
     final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
-    final var workspaceID = UUID.randomUUID();
-    final var validator = new RecordSchemaValidator(new TestClient(), workspaceID, Map.of(
+    final var validator = new RecordSchemaValidator(Map.of(
         new AirbyteStreamNameNamespacePair("s1", null),
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
 
-    final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher();
+    // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
+    // LimitedThinRecordSourceProcess());
+    final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new LimitedFatRecordSourceProcess());
     final var serDeProvider = new AirbyteMessageSerDeProvider(
         List.of(new AirbyteMessageV0Deserializer()),
         List.of(new AirbyteMessageV0Serializer()));
     serDeProvider.initialize();
 
-    final var msgMigrator = new AirbyteMessageMigrator(List.of(new AirbyteMessageMigrationV1()));
+    final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
-    final ConfiguredAirbyteCatalogMigrator catalogMigrator = new ConfiguredAirbyteCatalogMigrator(
-        List.of(new ConfiguredAirbyteCatalogMigrationV1()));
+    final ConfiguredAirbyteCatalogMigrator catalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
     catalogMigrator.initialize();
     final var migratorFactory = new AirbyteProtocolVersionedMigratorFactory(msgMigrator, catalogMigrator);
 
     final var versionFac =
         new VersionedAirbyteStreamFactory(serDeProvider, migratorFactory, new Version("0.2.0"), Optional.empty(),
             Optional.of(RuntimeException.class));
+    final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     final var versionedAbSource =
-        new DefaultAirbyteSource(integrationLauncher, versionFac, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
+        new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
             new EnvVariableFeatureFlags());
+    final var workspaceID = UUID.randomUUID();
+    final FeatureFlagClient featureFlagClient = new TestClient(Map.of("heartbeat.failSync", false));
+    final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
+        io.airbyte.workers.internal.HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
+        featureFlagClient,
+        workspaceID,
+        UUID.randomUUID(),
+        new NotImplementedMetricClient());
 
     final var worker = new DefaultReplicationWorker("1", 0,
         versionedAbSource,
         dstNamespaceMapper,
         perDestination,
         messageTracker,
+        syncPersistenceFactory,
         validator,
         metricReporter,
         connectorConfigUpdater,
-        false);
+        false,
+        false,
+        heartbeatTimeoutChaperone);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {
         final var ignoredPath = Path.of("/");
         final StandardSyncInput testInput = new StandardSyncInput().withCatalog(
-            // The stream fields here are intended to match the records emitted by the LimitedSourceProcess
+            // The stream fields here are intended to match the records emitted by the
+            // LimitedFatRecordSourceProcess
             // class.
             CatalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)));
         output.set(worker.run(testInput, ignoredPath));
@@ -134,13 +149,16 @@ public class ReplicationWorkerPerformanceTest {
     workerThread.join();
     final var summary = output.get().getReplicationAttemptSummary();
     final var mbRead = summary.getBytesSynced() / 1_000_000;
-    final var timeTakenSec = (summary.getEndTime() - summary.getStartTime()) / 1000.0;
-    log.info("MBs read: {}, Time taken sec: {}, MB/s: {}", mbRead, timeTakenSec, mbRead / timeTakenSec);
+    final var timeTakenMs = (summary.getEndTime() - summary.getStartTime());
+    final var timeTakenSec = timeTakenMs / 1000.0;
+    final var recReadSec = summary.getRecordsSynced() / timeTakenSec;
+    log.info("MBs read: {}, Time taken sec: {}, MB/s: {}, records/s: {}", mbRead, timeTakenSec, mbRead / timeTakenSec, recReadSec);
   }
 
   public static void main(final String[] args) throws IOException, InterruptedException {
     // Run this main class to start benchmarking.
-    org.openjdk.jmh.Main.main(args);
+    // org.openjdk.jmh.Main.main(args);
+    executeOneSync();
   }
 
 }

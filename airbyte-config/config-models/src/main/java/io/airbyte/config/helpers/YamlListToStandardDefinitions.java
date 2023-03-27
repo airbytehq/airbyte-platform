@@ -46,7 +46,7 @@ public class YamlListToStandardDefinitions {
     return verifyAndConvertToModelList(StandardDestinationDefinition.class, yamlStr);
   }
 
-  public static JsonNode verifyAndConvertToJsonNode(final String idName, final String yamlStr) {
+  static JsonNode verifyAndConvertToJsonNode(final String idName, final String yamlStr) {
     final var jsonNode = Yamls.deserialize(yamlStr);
     checkYamlIsPresentWithNoDuplicates(jsonNode, idName);
     return jsonNode;

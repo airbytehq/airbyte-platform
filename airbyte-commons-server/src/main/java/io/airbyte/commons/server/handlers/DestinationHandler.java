@@ -21,8 +21,10 @@ import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
@@ -39,6 +41,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings({"MissingJavadocMethod", "ParameterName"})
 @Singleton
 public class DestinationHandler {
 
@@ -51,6 +57,7 @@ public class DestinationHandler {
   private final ConfigurationUpdate configurationUpdate;
   private final JsonSecretsProcessor secretsProcessor;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @VisibleForTesting
   DestinationHandler(final ConfigRepository configRepository,
@@ -61,7 +68,8 @@ public class DestinationHandler {
                      final Supplier<UUID> uuidGenerator,
                      final JsonSecretsProcessor secretsProcessor,
                      final ConfigurationUpdate configurationUpdate,
-                     final OAuthConfigSupplier oAuthConfigSupplier) {
+                     final OAuthConfigSupplier oAuthConfigSupplier,
+                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -71,6 +79,7 @@ public class DestinationHandler {
     this.configurationUpdate = configurationUpdate;
     this.secretsProcessor = secretsProcessor;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   @Inject
@@ -79,7 +88,8 @@ public class DestinationHandler {
                             final SecretsRepositoryWriter secretsRepositoryWriter,
                             final JsonSchemaValidator integrationSchemaValidation,
                             final ConnectionsHandler connectionsHandler,
-                            final OAuthConfigSupplier oAuthConfigSupplier) {
+                            final OAuthConfigSupplier oAuthConfigSupplier,
+                            final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this(
         configRepository,
         secretsRepositoryReader,
@@ -90,14 +100,15 @@ public class DestinationHandler {
         JsonSecretsProcessor.builder()
             .copySecrets(true)
             .build(),
-        new ConfigurationUpdate(configRepository, secretsRepositoryReader),
-        oAuthConfigSupplier);
+        new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper);
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // validate configuration
-    final ConnectorSpecification spec = getSpec(destinationCreate.getDestinationDefinitionId());
+    final ConnectorSpecification spec = getSpecForWorkspaceId(destinationCreate.getDestinationDefinitionId(), destinationCreate.getWorkspaceId());
     validateDestination(spec, destinationCreate.getConnectionConfiguration());
 
     // persist
@@ -108,7 +119,8 @@ public class DestinationHandler {
         destinationCreate.getWorkspaceId(),
         destinationId,
         destinationCreate.getConnectionConfiguration(),
-        false);
+        false,
+        spec);
 
     // read configuration from db
     return buildDestinationRead(configRepository.getDestinationConnection(destinationId), spec);
@@ -136,6 +148,7 @@ public class DestinationHandler {
     }
 
     final var fullConfig = secretsRepositoryReader.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
+    final ConnectorSpecification spec = getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getDestinationId());
 
     // persist
     persistDestinationConnection(
@@ -144,7 +157,8 @@ public class DestinationHandler {
         destination.getWorkspaceId(),
         destination.getDestinationId(),
         fullConfig,
-        true);
+        true,
+        spec);
   }
 
   public DestinationRead updateDestination(final DestinationUpdate destinationUpdate)
@@ -153,7 +167,8 @@ public class DestinationHandler {
     final DestinationConnection updatedDestination = configurationUpdate
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
-    final ConnectorSpecification spec = getSpec(updatedDestination.getDestinationDefinitionId());
+    final ConnectorSpecification spec =
+        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getDestinationId());
 
     // validate configuration
     validateDestination(spec, updatedDestination.getConfiguration());
@@ -165,7 +180,8 @@ public class DestinationHandler {
         updatedDestination.getWorkspaceId(),
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
-        updatedDestination.getTombstone());
+        updatedDestination.getTombstone(),
+        spec);
 
     // read configuration from db
     return buildDestinationRead(
@@ -247,9 +263,19 @@ public class DestinationHandler {
     validator.ensure(spec.getConnectionSpecification(), configuration);
   }
 
-  public ConnectorSpecification getSpec(final UUID destinationDefinitionId)
+  public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return configRepository.getStandardDestinationDefinition(destinationDefinitionId).getSpec();
+    final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationId);
+    return destinationVersion.getSpec();
+  }
+
+  public ConnectorSpecification getSpecForWorkspaceId(final UUID destinationDefinitionId, final UUID workspaceId)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destinationDefinition, workspaceId);
+    return destinationVersion.getSpec();
   }
 
   private void persistDestinationConnection(final String name,
@@ -257,10 +283,11 @@ public class DestinationHandler {
                                             final UUID workspaceId,
                                             final UUID destinationId,
                                             final JsonNode configurationJson,
-                                            final boolean tombstone)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+                                            final boolean tombstone,
+                                            final ConnectorSpecification spec)
+      throws JsonValidationException, IOException {
     final JsonNode oAuthMaskedConfigurationJson =
-        oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson);
+        oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, destinationId, workspaceId, configurationJson);
     final DestinationConnection destinationConnection = new DestinationConnection()
         .withName(name)
         .withDestinationDefinitionId(destinationDefinitionId)
@@ -268,7 +295,7 @@ public class DestinationHandler {
         .withDestinationId(destinationId)
         .withConfiguration(oAuthMaskedConfigurationJson)
         .withTombstone(tombstone);
-    secretsRepositoryWriter.writeDestinationConnection(destinationConnection, getSpec(destinationDefinitionId));
+    secretsRepositoryWriter.writeDestinationConnection(destinationConnection, spec);
   }
 
   private DestinationRead buildDestinationRead(final UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException {
@@ -277,7 +304,8 @@ public class DestinationHandler {
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    final ConnectorSpecification spec = getSpec(destinationConnection.getDestinationDefinitionId());
+    final ConnectorSpecification spec =
+        getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getDestinationId());
     return buildDestinationRead(destinationConnection, spec);
   }
 

@@ -25,6 +25,7 @@ interface DestinationFormProps {
   }) => Promise<void>;
   destinationDefinitions: DestinationDefinitionRead[];
   error?: FormError | null;
+  selectedSourceDefinitionId?: string;
 }
 
 const hasDestinationDefinitionId = (state: unknown): state is { destinationDefinitionId: string } => {
@@ -35,11 +36,17 @@ const hasDestinationDefinitionId = (state: unknown): state is { destinationDefin
   );
 };
 
-export const DestinationForm: React.FC<DestinationFormProps> = ({ onSubmit, destinationDefinitions, error }) => {
+export const DestinationForm: React.FC<DestinationFormProps> = ({
+  onSubmit,
+  destinationDefinitions,
+  error,
+  selectedSourceDefinitionId,
+}) => {
   const location = useLocation();
 
   const [destinationDefinitionId, setDestinationDefinitionId] = useState(
-    hasDestinationDefinitionId(location.state) ? location.state.destinationDefinitionId : null
+    selectedSourceDefinitionId ??
+      (hasDestinationDefinitionId(location.state) ? location.state.destinationDefinitionId : null)
   );
 
   const {
@@ -52,12 +59,11 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({ onSubmit, dest
     setDestinationDefinitionId(destinationDefinitionId);
   };
 
-  const onSubmitForm = async (values: ConnectorCardValues) => {
+  const onSubmitForm = async (values: ConnectorCardValues) =>
     onSubmit({
       ...values,
       destinationDefinitionId: destinationDefinitionSpecification?.destinationDefinitionId,
     });
-  };
 
   const frequentlyUsedDestinationIds = useExperiment("connector.frequentlyUsedDestinationIds", [
     ConnectorIds.Destinations.BigQuery,

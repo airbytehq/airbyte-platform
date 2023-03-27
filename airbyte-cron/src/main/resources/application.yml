@@ -12,6 +12,10 @@ airbyte:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
@@ -29,6 +33,8 @@ airbyte:
       ports: ${TEMPORAL_WORKER_PORTS:}
   tracking-strategy: ${TRACKING_STRATEGY:LOGGING}
   version: ${AIRBYTE_VERSION}
+  worker:
+    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}

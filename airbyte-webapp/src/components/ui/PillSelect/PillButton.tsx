@@ -30,19 +30,20 @@ export const PillButton: React.FC<PillButtonProps> = ({
   hasError = false,
   ...buttonProps
 }) => {
+  const arrayChildren = Children.toArray(children);
   const buttonClassName = classNames(
     styles.button,
     {
       [styles.active]: active,
       [styles.disabled]: buttonProps.disabled,
+      [styles.multi]: arrayChildren.length > 1,
     },
     STYLES_BY_VARIANT[hasError ? "strong-red" : variant],
     buttonProps.className
   );
-  const arrayChildren = Children.toArray(children);
 
   return (
-    <button type="button" {...buttonProps} className={buttonClassName}>
+    <button type="button" {...buttonProps} className={buttonClassName} data-error={hasError}>
       {Children.map(arrayChildren, (child, index) => (
         <>
           <div key={index} className={styles.labelContainer}>

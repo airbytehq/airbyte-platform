@@ -2,4 +2,14 @@
 
 .container {
   margin-top: variables.$spacing-md;
+
+  &.cloud {
+    margin-right: (variables.$spacing-intercom - variables.$spacing-xl);
+  }
+
+  transition: opacity variables.$transition-out;
+
+  &.hidden {
+    opacity: 0;
+  }
 }

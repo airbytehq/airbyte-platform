@@ -1,23 +1,49 @@
-import React, { useMemo } from "react";
+import classNames from "classnames";
+import React, { useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Row } from "components/SimpleTableComponents";
 import { CheckBox } from "components/ui/CheckBox";
+import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
+import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
 import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { CatalogTreeTableCell } from "./CatalogTreeTableCell";
 import styles from "./CatalogTreeTableRow.module.scss";
 import { CatalogTreeTableRowIcon } from "./CatalogTreeTableRowIcon";
-import { StreamPathSelect } from "./StreamPathSelect";
-import { SyncModeSelect } from "./SyncModeSelect";
+import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
+import { IndexerType, StreamPathSelect } from "./StreamPathSelect";
+import { SyncModeOption, SyncModeSelect } from "./SyncModeSelect";
 import { useCatalogTreeTableRowProps } from "./useCatalogTreeTableRowProps";
-import { StreamHeaderProps } from "../StreamHeader";
+import { useScrollIntoViewStream } from "./useScrollIntoViewStream";
 
-export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
+interface CatalogTreeTableRowProps {
+  stream: SyncSchemaStream;
+  destName: string;
+  destNamespace: string;
+  availableSyncModes: SyncModeOption[];
+  onSelectSyncMode: (selectedMode: DropDownOptionDataItem) => void;
+  onSelectStream: () => void;
+  primitiveFields: SyncSchemaField[];
+  pkType: IndexerType;
+  onPrimaryKeyChange: (pkPath: Path[]) => void;
+  cursorType: IndexerType;
+  onCursorChange: (cursorPath: Path) => void;
+  isRowExpanded: boolean;
+  fields: SyncSchemaField[];
+  onExpand: () => void;
+  changedSelected: boolean;
+  hasError: boolean;
+  configErrors?: Record<string, string>;
+  disabled?: boolean;
+}
+
+export const CatalogTreeTableRow: React.FC<CatalogTreeTableRowProps> = ({
   stream,
   destName,
   destNamespace,
@@ -35,7 +61,8 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
   disabled,
   configErrors,
 }) => {
-  const { primaryKey, cursorField, syncMode, destinationSyncMode } = stream.config ?? {};
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
   const { defaultCursorField } = stream.stream ?? {};
   const syncSchema = useMemo(
     () => ({
@@ -49,56 +76,70 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
 
   const paths = useMemo(() => primitiveFields.map((field) => field.path), [primitiveFields]);
   const fieldCount = fields?.length ?? 0;
+  const selectedFieldCount = selectedFields?.length ?? fieldCount;
   const onRowClick = fieldCount > 0 ? () => onExpand() : undefined;
 
   const { streamHeaderContentStyle, pillButtonVariant } = useCatalogTreeTableRowProps(stream);
 
+  const streamNameRef = useRef<HTMLParagraphElement>(null);
+  const namespaceRef = useRef<HTMLParagraphElement>(null);
+  const { isVisible } = useScrollIntoViewStream(stream, namespaceRef, streamNameRef);
+
   return (
     <Row
       onClick={onRowClick}
-      className={streamHeaderContentStyle}
+      className={classNames(streamHeaderContentStyle, { [styles.highlight]: isVisible })}
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
     >
-      <CatalogTreeTableCell size="small" className={styles.streamRowCheckboxCell}>
+      <CatalogTreeTableCell size="fixed" className={styles.streamRowCheckboxCell}>
         {!disabled && (
           <>
             <CatalogTreeTableRowIcon stream={stream} />
-            <CheckBox checked={isSelected} onChange={selectForBulkEdit} />
+            <CheckBox checkboxSize="sm" checked={isSelected} onChange={selectForBulkEdit} />
           </>
         )}
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell size="small">
-        <Switch size="sm" checked={stream.config?.selected} onChange={onSelectStream} disabled={disabled} />
+      <CatalogTreeTableCell size="fixed" className={styles.syncCell}>
+        <Switch
+          size="sm"
+          checked={stream.config?.selected}
+          onChange={onSelectStream}
+          disabled={disabled}
+          data-testid="selected-switch"
+        />
       </CatalogTreeTableCell>
-      {/* <Cell>{fieldCount}</Cell> */}
-      <CatalogTreeTableCell withTooltip>
-        <Text size="md" className={styles.cellText}>
+      {isColumnSelectionEnabled && (
+        <CatalogTreeTableCell size="fixed" className={styles.fieldsCell}>
+          <FieldSelectionStatus
+            selectedFieldCount={selectedFieldCount}
+            totalFieldCount={fieldCount}
+            variant={pillButtonVariant as FieldSelectionStatusVariant}
+          />
+        </CatalogTreeTableCell>
+      )}
+      <CatalogTreeTableCell withTooltip data-testid="source-namespace-cell">
+        <Text size="md" className={styles.cellText} ref={namespaceRef}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
-        <Text size="md" className={styles.cellText}>
+      <CatalogTreeTableCell withTooltip data-testid="source-stream-name-cell">
+        <Text size="md" className={styles.cellText} ref={streamNameRef}>
           {stream.stream?.name}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell size="large">
-        {disabled ? (
-          <Text size="md" className={styles.cellText}>
-            {syncSchema.syncMode}
-          </Text>
-        ) : (
-          // todo: SyncModeSelect should probably have a Tooltip, append/dedupe ends up ellipsing
-          <SyncModeSelect
-            options={availableSyncModes}
-            onChange={onSelectSyncMode}
-            value={syncSchema}
-            variant={pillButtonVariant}
-          />
-        )}
+      <CatalogTreeTableCell size="fixed" className={styles.syncModeCell}>
+        <SyncModeSelect
+          options={availableSyncModes}
+          onChange={onSelectSyncMode}
+          value={syncSchema}
+          variant={pillButtonVariant}
+          disabled={disabled}
+        />
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell>
+      <CatalogTreeTableCell withTooltip>
         {cursorType && (
           <StreamPathSelect
+            type="cursor"
             pathType={cursorType}
             paths={paths}
             path={cursorType === "sourceDefined" ? defaultCursorField : cursorField}
@@ -111,6 +152,7 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
       <CatalogTreeTableCell withTooltip={pkType === "sourceDefined"}>
         {pkType && (
           <StreamPathSelect
+            type="primary-key"
             pathType={pkType}
             paths={paths}
             path={primaryKey}
@@ -121,15 +163,15 @@ export const CatalogTreeTableRow: React.FC<StreamHeaderProps> = ({
           />
         )}
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell size="xsmall">
+      <CatalogTreeTableCell size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip data-testid="destination-namespace-cell">
         <Text size="md" className={styles.cellText}>
           {destNamespace}
         </Text>
       </CatalogTreeTableCell>
-      <CatalogTreeTableCell withTooltip>
+      <CatalogTreeTableCell withTooltip data-testid="destination-stream-name-cell">
         <Text size="md" className={styles.cellText}>
           {destName}
         </Text>

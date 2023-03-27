@@ -49,6 +49,14 @@ public class DatabaseBeanFactory {
     return new Database(dslContext);
   }
 
+  /**
+   * Flyway config.
+   *
+   * @param configFlywayConfigurationProperties flyway configuration
+   * @param configDataSource configs db source
+   * @param baselineVersion baseline version
+   * @return flyway config
+   */
   @Singleton
   @Named("configFlyway")
   public Flyway configFlyway(@Named("config") final FlywayConfigurationProperties configFlywayConfigurationProperties,
@@ -65,10 +73,21 @@ public class DatabaseBeanFactory {
   }
 
   @Singleton
-  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase) {
-    return new ConfigRepository(configDatabase);
+  public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
+                                           @Value("${airbyte.worker.max-seconds-between-messages}") final long maxSecondsBetweenMessages) {
+    return new ConfigRepository(configDatabase, maxSecondsBetweenMessages);
   }
 
+  /**
+   * Database migration check.
+   *
+   * @param dslContext db context
+   * @param configsFlyway config for flyway
+   * @param configsDatabaseMinimumFlywayMigrationVersion minimum flyway migration version
+   * @param configsDatabaseInitializationTimeoutMs timeout
+   * @return check for database migration
+   */
+  @SuppressWarnings("LineLength")
   @Singleton
   @Named("configsDatabaseMigrationCheck")
   public DatabaseMigrationCheck configsDatabaseMigrationCheck(@Named("config") final DSLContext dslContext,

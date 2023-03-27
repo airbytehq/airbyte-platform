@@ -1,10 +1,12 @@
+@use "scss/variables";
+
 .buttonWithMargin {
   margin-right: 12px;
 }
 
 .content {
   width: 585px;
-  font-size: 14px;
+  font-size: variables.$font-size-lg;
   padding: 25px;
   white-space: pre-line;
   overflow: auto;

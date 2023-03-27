@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path = require("path");
+
 module.exports = {
   extends: [
     "react-app",
@@ -15,6 +18,13 @@ module.exports = {
     sourceType: "module",
     ecmaFeatures: {
       jsx: true,
+    },
+  },
+  settings: {
+    "import/resolver": {
+      typescript: {
+        project: path.resolve(__dirname, "tsconfig.json"),
+      },
     },
   },
   rules: {
@@ -98,6 +108,11 @@ module.exports = {
           {
             name: "lodash",
             message: 'Please use `import [function] from "lodash/[function]";` instead.',
+          },
+          {
+            name: "react-router-dom",
+            importNames: ["Link"],
+            message: 'Please use `import { Link, ExternalLink } from "components/ui/Link";` instead.',
           },
         ],
         patterns: ["!lodash/*"],

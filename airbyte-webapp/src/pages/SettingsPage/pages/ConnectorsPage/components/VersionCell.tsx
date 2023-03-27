@@ -11,14 +11,14 @@ import { DEV_IMAGE_TAG } from "core/domain/connector/constants";
 import { useUpdatingState } from "./ConnectorsViewContext";
 import styles from "./VersionCell.module.scss";
 
-interface VersionCellProps {
-  version: string;
+export interface VersionCellProps {
   currentVersion: string;
   id: string;
   onChange: ({ version, id }: { version: string; id: string }) => void;
+  latestVersion?: string;
 }
 
-const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, currentVersion }) => {
+const VersionCell: React.FC<VersionCellProps> = ({ id, onChange, currentVersion, latestVersion }) => {
   const { updatingAll, updatingDefinitionId, feedbackList } = useUpdatingState();
   const feedback = feedbackList[id];
   const updatingCurrent = id === updatingDefinitionId;
@@ -35,12 +35,12 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, curren
     return null;
   };
 
-  const isConnectorUpdatable = currentVersion !== version || currentVersion === DEV_IMAGE_TAG;
+  const isConnectorUpdatable = currentVersion !== latestVersion || currentVersion === DEV_IMAGE_TAG;
 
   return (
     <Formik
       initialValues={{
-        version,
+        version: latestVersion || currentVersion,
       }}
       onSubmit={(values) => onChange({ id, version: values.version })}
     >

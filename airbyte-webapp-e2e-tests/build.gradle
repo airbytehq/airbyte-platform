@@ -1,6 +1,6 @@
 plugins {
     id "base"
-    id "com.github.node-gradle.node" version "3.3.0"
+    alias(libs.plugins.node.gradle)
 }
 
 def nodeVersion = new File("${projectDir}/.nvmrc").text.trim();
@@ -8,6 +8,7 @@ def nodeVersion = new File("${projectDir}/.nvmrc").text.trim();
 node {
     download = true
     version = nodeVersion
+    distBaseUrl = "https://nodejs-mirror.airbyte.com/dist"
 }
 
 task e2etest(type: NpmTask) {

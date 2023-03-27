@@ -116,7 +116,7 @@ class DefaultDiscoverCatalogWorkerTest {
     when(process.getInputStream()).thenReturn(inputStream);
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
 
-    IOs.writeFile(jobRoot, WorkerConstants.SOURCE_CATALOG_JSON_FILENAME, MoreResources.readResource("airbyte_postgres_catalog.json"));
+    IOs.writeFile(jobRoot.resolve(WorkerConstants.SOURCE_CATALOG_JSON_FILENAME), MoreResources.readResource("airbyte_postgres_catalog.json"));
     final AirbyteMessage traceMessage = AirbyteMessageUtils.createErrorMessage("some error from the connector", 123.0);
 
     validCatalogStreamFactory = noop -> Lists.newArrayList(new AirbyteMessage().withType(Type.CATALOG).withCatalog(CATALOG)).stream();

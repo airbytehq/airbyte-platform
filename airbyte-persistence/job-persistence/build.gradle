@@ -2,6 +2,12 @@ plugins {
     id "java-library"
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.platform.testcontainers.postgresql
+    }
+}
+
 dependencies {
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-protocol')
@@ -15,17 +21,17 @@ dependencies {
     implementation project(':airbyte-notification')
     implementation project(':airbyte-analytics')
 
-    implementation 'io.sentry:sentry:6.1.0'
+    implementation libs.sentry.java
     implementation libs.otel.semconv
     implementation libs.otel.sdk
     implementation libs.otel.sdk.testing
     implementation libs.micrometer.statsd
     implementation platform(libs.otel.bom)
-    implementation("io.opentelemetry:opentelemetry-api")
-    implementation("io.opentelemetry:opentelemetry-sdk")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
-
-    implementation 'com.datadoghq:java-dogstatsd-client:4.0.0'
+    implementation 'io.opentelemetry:opentelemetry-api'
+    implementation 'io.opentelemetry:opentelemetry-sdk'
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+    implementation libs.apache.commons.collections
+    implementation libs.datadog.statsd.client
 
     testImplementation project(':airbyte-config:config-persistence')
     testImplementation project(':airbyte-test-utils')

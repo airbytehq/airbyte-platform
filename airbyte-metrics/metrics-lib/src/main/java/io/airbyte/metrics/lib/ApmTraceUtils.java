@@ -4,6 +4,10 @@
 
 package io.airbyte.metrics.lib;
 
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
+import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ROOT_KEY;
+
 import datadog.trace.api.DDTags;
 import datadog.trace.api.interceptor.MutableSpan;
 import io.opentracing.Span;
@@ -12,7 +16,10 @@ import io.opentracing.tag.Tags;
 import io.opentracing.util.GlobalTracer;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Collection of utility methods to help with performance tracing.
@@ -63,6 +70,26 @@ public class ApmTraceUtils {
         span.setTag(formatTag(entry.getKey(), tagPrefix), entry.getValue().toString());
       });
     }
+  }
+
+  /**
+   * Adds all the provided values to the currently active span, if one exists. <br />
+   * All tags added via this method will use the default {@link #TAG_PREFIX} namespace. Any null
+   * values will be ignored.
+   */
+  public static void addTagsToTrace(final UUID connectionId, final String jobId, final Path jobRoot) {
+    final Map<String, Object> tags = new HashMap<>();
+
+    if (connectionId != null) {
+      tags.put(CONNECTION_ID_KEY, connectionId);
+    }
+    if (jobId != null) {
+      tags.put(JOB_ID_KEY, jobId);
+    }
+    if (jobRoot != null) {
+      tags.put(JOB_ROOT_KEY, jobRoot);
+    }
+    addTagsToTrace(tags);
   }
 
   /**

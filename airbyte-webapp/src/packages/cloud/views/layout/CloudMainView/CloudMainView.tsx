@@ -1,11 +1,13 @@
 import classNames from "classnames";
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { Link, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
+import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
+import { Link } from "components/ui/Link";
 
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
@@ -30,7 +32,7 @@ import styles from "./CloudMainView.module.scss";
 import { CloudResourcesDropdown } from "./CloudResourcesDropdown";
 import { CloudSupportDropdown } from "./CloudSupportDropdown";
 import { InsufficientPermissionsErrorBoundary } from "./InsufficientPermissionsErrorBoundary";
-import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../credits/CreditsPage/components/LowCreditBalanceHint/LowCreditBalanceHint";
+import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/components/LowCreditBalanceHint/LowCreditBalanceHint";
 import { WorkspacePopout } from "../../workspaces/WorkspacePopout";
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
@@ -38,6 +40,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
   const isAllowUpdateConnectorsEnabled = useFeature(FeatureItem.AllowUpdateConnectors);
+  const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
 
   const showCreditsBanner =
     cloudWorkspace.creditStatus &&
@@ -62,7 +65,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
         <FormattedMessage
           id={`credits.creditsProblem.${cloudWorkspace.creditStatus}`}
           values={{
-            lnk: (content: React.ReactNode) => <Link to={CloudRoutes.Credits}>{content}</Link>,
+            lnk: (content: React.ReactNode) => <Link to={CloudRoutes.Billing}>{content}</Link>,
           }}
         />
       );
@@ -81,7 +84,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
           id="trial.alertMessage"
           values={{
             remainingDays: trialRemainingDays,
-            lnk: (cta: React.ReactNode) => <Link to={CloudRoutes.Credits}>{cta}</Link>,
+            lnk: (cta: React.ReactNode) => <Link to={CloudRoutes.Billing}>{cta}</Link>,
           }}
         />
       );
@@ -94,6 +97,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
       <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />}>
         <SideBar>
           <AirbyteHomeLink />
+          {isShowAdminWarningEnabled && <AdminWorkspaceWarning />}
           <WorkspacePopout>
             {({ onOpen, value }) => (
               <button className={styles.workspaceButton} onClick={onOpen} data-testid="workspaceButton">
@@ -105,9 +109,9 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
             <MainNavItems />
             <MenuContent>
               <NavItem
-                to={CloudRoutes.Credits}
+                to={CloudRoutes.Billing}
                 icon={<CreditsIcon />}
-                label={<FormattedMessage id="sidebar.credits" />}
+                label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
                 withNotification={cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD}
               />

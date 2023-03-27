@@ -1,6 +1,7 @@
 import { Form, Formik, FormikHelpers, useFormikContext } from "formik";
 import React, { useCallback, useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
 
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
@@ -56,7 +57,8 @@ export const ConnectionReplicationPage: React.FC = () => {
 
   const { connection, schemaRefreshing, schemaHasBeenRefreshed, updateConnection, discardRefreshedSchema } =
     useConnectionEditService();
-  const { initialValues, mode, schemaError, getErrorMessage, setSubmitError } = useConnectionFormService();
+  const { initialValues, mode, schemaError, getErrorMessage, setSubmitError, refreshSchema } =
+    useConnectionFormService();
   const validationSchema = useConnectionValidationSchema({ mode });
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_REPLICATION);
@@ -166,6 +168,13 @@ export const ConnectionReplicationPage: React.FC = () => {
     discardRefreshedSchema();
   });
 
+  const { state } = useLocation();
+  useEffect(() => {
+    if (typeof state === "object" && state && "triggerRefreshSchema" in state && state.triggerRefreshSchema) {
+      refreshSchema();
+    }
+  }, [refreshSchema, state]);
+
   return (
     <div className={styles.content}>
       {schemaError && !schemaRefreshing ? (
@@ -178,17 +187,14 @@ export const ConnectionReplicationPage: React.FC = () => {
           onSubmit={onFormSubmit}
           enableReinitialize
         >
-          {({ values, isSubmitting, isValid, dirty, resetForm, status }) => (
+          {({ isSubmitting, isValid, dirty, resetForm, status, errors }) => (
             <SchemaChangeBackdrop>
               <Form>
                 <ValidateFormOnSchemaRefresh />
-                <ConnectionFormFields
-                  values={values}
-                  isSubmitting={isSubmitting}
-                  dirty={dirty || schemaHasBeenRefreshed}
-                />
-                {status.editControlsVisible && (
+                <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty || schemaHasBeenRefreshed} />
+                <div className={styles.editControlsContainer}>
                   <EditControls
+                    hidden={!status.editControlsVisible}
                     isSubmitting={isSubmitting}
                     submitDisabled={!isValid}
                     dirty={dirty}
@@ -197,10 +203,10 @@ export const ConnectionReplicationPage: React.FC = () => {
                       discardRefreshedSchema();
                     }}
                     successMessage={saved && !dirty && <FormattedMessage id="form.changesSaved" />}
-                    errorMessage={getErrorMessage(isValid, dirty)}
+                    errorMessage={getErrorMessage(isValid, dirty, errors)}
                     enableControls={schemaHasBeenRefreshed || dirty}
                   />
-                )}
+                </div>
               </Form>
             </SchemaChangeBackdrop>
           )}

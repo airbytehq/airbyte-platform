@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { ValidationError } from "yup";
 
+import octavia from "components/illustrations/octavia-pointing.svg";
 import { Heading } from "components/ui/Heading";
 import { Spinner } from "components/ui/Spinner";
 
@@ -68,7 +69,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
           <Heading as="h2" className={styles.addStreamHeading}>
             <FormattedMessage id="connectorBuilder.noStreamsMessage" />
           </Heading>
-          <img className={styles.logo} alt="" src="/images/octavia/pointing.svg" width={102} />
+          <img className={styles.logo} alt="" src={octavia} width={102} />
         </div>
       )}
       {hasStreams && (

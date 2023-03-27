@@ -27,6 +27,11 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -59,6 +64,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 
+/**
+ * Airbyte's interface over temporal.
+ */
 @Slf4j
 @Singleton
 public class TemporalClient {
@@ -77,6 +85,7 @@ public class TemporalClient {
   private final ConnectionManagerUtils connectionManagerUtils;
   private final NotificationUtils notificationUtils;
   private final StreamResetRecordsHelper streamResetRecordsHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   public TemporalClient(@Named("workspaceRootTemporal") final Path workspaceRoot,
                         final WorkflowClient client,
@@ -84,7 +93,8 @@ public class TemporalClient {
                         final StreamResetPersistence streamResetPersistence,
                         final ConnectionManagerUtils connectionManagerUtils,
                         final NotificationUtils notificationUtils,
-                        final StreamResetRecordsHelper streamResetRecordsHelper) {
+                        final StreamResetRecordsHelper streamResetRecordsHelper,
+                        final FeatureFlagClient featureFlagClient) {
     this.workspaceRoot = workspaceRoot;
     this.client = client;
     this.service = service;
@@ -92,10 +102,16 @@ public class TemporalClient {
     this.connectionManagerUtils = connectionManagerUtils;
     this.notificationUtils = notificationUtils;
     this.streamResetRecordsHelper = streamResetRecordsHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   private final Set<String> workflowNames = new HashSet<>();
 
+  /**
+   * Restart workflows stuck in a certain status.
+   *
+   * @param executionStatus execution status
+   */
   public void restartClosedWorkflowByStatus(final WorkflowExecutionStatus executionStatus) {
     final Set<UUID> workflowExecutionInfos = fetchClosedWorkflowsByStatus(executionStatus);
 
@@ -121,8 +137,8 @@ public class TemporalClient {
           service.blockingStub().listClosedWorkflowExecutions(workflowExecutionsRequest);
       final WorkflowType connectionManagerWorkflowType = WorkflowType.newBuilder().setName(ConnectionManagerWorkflow.class.getSimpleName()).build();
       workflowExecutionInfos.addAll(listOpenWorkflowExecutionsRequest.getExecutionsList().stream()
-          .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == connectionManagerWorkflowType ||
-              workflowExecutionInfo.getStatus() == executionStatus)
+          .filter(workflowExecutionInfo -> workflowExecutionInfo.getType() == connectionManagerWorkflowType
+              || workflowExecutionInfo.getStatus() == executionStatus)
           .flatMap((workflowExecutionInfo -> extractConnectionIdFromWorkflowId(workflowExecutionInfo.getExecution().getWorkflowId()).stream()))
           .collect(Collectors.toSet()));
       token = listOpenWorkflowExecutionsRequest.getNextPageToken();
@@ -183,6 +199,9 @@ public class TemporalClient {
             stringUUID -> UUID.fromString(stringUUID));
   }
 
+  /**
+   * Result of a manual operation.
+   */
   @Value
   @Builder
   public static class ManualOperationResult {
@@ -197,6 +216,12 @@ public class TemporalClient {
     return connectionManagerUtils.getWorkflowState(client, connectionId);
   }
 
+  /**
+   * Start a manual sync for a connection.
+   *
+   * @param connectionId connection id
+   * @return sync result
+   */
   public ManualOperationResult startNewManualSync(final UUID connectionId) {
     log.info("Manual sync request");
 
@@ -235,6 +260,12 @@ public class TemporalClient {
         Optional.of(jobId), Optional.empty());
   }
 
+  /**
+   * Cancel a running job for a connection.
+   *
+   * @param connectionId connection id
+   * @return cancellation result
+   */
   public ManualOperationResult startNewCancellation(final UUID connectionId) {
     log.info("Manual cancellation request");
 
@@ -268,6 +299,14 @@ public class TemporalClient {
         Optional.of(jobId), Optional.empty());
   }
 
+  /**
+   * Submit a reset connection job to temporal.
+   *
+   * @param connectionId connection id
+   * @param streamsToReset streams that should be rest on the connection
+   * @param syncImmediatelyAfter whether another sync job should be triggered immediately after
+   * @return result of reset connection
+   */
   public ManualOperationResult resetConnection(final UUID connectionId,
                                                final List<StreamDescriptor> streamsToReset,
                                                final boolean syncImmediatelyAfter) {
@@ -327,6 +366,14 @@ public class TemporalClient {
     }
   }
 
+  /**
+   * Submit a spec job to temporal.
+   *
+   * @param jobId job id
+   * @param attempt attempt
+   * @param config spec config
+   * @return spec output
+   */
   public TemporalResponse<ConnectorJobOutput> submitGetSpec(final UUID jobId, final int attempt, final JobGetSpecConfig config) {
     final JobRunConfig jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt);
 
@@ -340,6 +387,15 @@ public class TemporalClient {
 
   }
 
+  /**
+   * Submit a check job to temporal.
+   *
+   * @param jobId job id
+   * @param attempt attempt
+   * @param taskQueue task queue to submit the job to
+   * @param config check config
+   * @return check output
+   */
   public TemporalResponse<ConnectorJobOutput> submitCheckConnection(final UUID jobId,
                                                                     final int attempt,
                                                                     final String taskQueue,
@@ -360,6 +416,15 @@ public class TemporalClient {
         () -> getWorkflowStubWithTaskQueue(CheckConnectionWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
   }
 
+  /**
+   * Submit a discover job to temporal.
+   *
+   * @param jobId job id
+   * @param attempt attempt
+   * @param taskQueue task queue to submit the job to
+   * @param config discover config
+   * @return discover output
+   */
   public TemporalResponse<ConnectorJobOutput> submitDiscoverSchema(final UUID jobId,
                                                                    final int attempt,
                                                                    final String taskQueue,
@@ -378,6 +443,16 @@ public class TemporalClient {
         () -> getWorkflowStubWithTaskQueue(DiscoverCatalogWorkflow.class, taskQueue).run(jobRunConfig, launcherConfig, input));
   }
 
+  /**
+   * Submit a sync job to temporal.
+   *
+   * @param jobId job id
+   * @param attempt attempt
+   * @param config sync config
+   * @param attemptConfig attempt config
+   * @param connectionId connection id
+   * @return sync output
+   */
   public TemporalResponse<StandardSyncOutput> submitSync(final long jobId,
                                                          final int attempt,
                                                          final JobSyncConfig config,
@@ -412,7 +487,9 @@ public class TemporalClient {
         .withSourceResourceRequirements(config.getSourceResourceRequirements())
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
         .withConnectionId(connectionId)
-        .withWorkspaceId(config.getWorkspaceId());
+        .withWorkspaceId(config.getWorkspaceId())
+        .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE,
+            new Multi(List.of(new Workspace(config.getWorkspaceId()), new Connection(connectionId)))));
 
     return execute(jobRunConfig,
         () -> getWorkflowStub(SyncWorkflow.class, TemporalJobType.SYNC).run(
@@ -423,6 +500,12 @@ public class TemporalClient {
             connectionId));
   }
 
+  /**
+   * Run update to start connection manager workflows for connection ids.
+   *
+   * @param connectionIds connection ids
+   */
+  // todo (cgardens) - i dunno what this is
   public void migrateSyncIfNeeded(final Set<UUID> connectionIds) {
     final StopWatch globalMigrationWatch = new StopWatch();
     globalMigrationWatch.start();
@@ -480,6 +563,12 @@ public class TemporalClient {
     return client.newWorkflowStub(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue));
   }
 
+  /**
+   * Signal to the connection manager workflow asynchronously that there has been a change to the
+   * connection's configuration.
+   *
+   * @param connectionId connection id
+   */
   public ConnectionManagerWorkflow submitConnectionUpdaterAsync(final UUID connectionId) {
     log.info("Starting the scheduler temporal wf");
     final ConnectionManagerWorkflow connectionManagerWorkflow =
@@ -490,7 +579,9 @@ public class TemporalClient {
           do {
             Thread.sleep(DELAY_BETWEEN_QUERY_MS);
           } while (!isWorkflowReachable(connectionId));
-        } catch (final InterruptedException e) {}
+        } catch (final InterruptedException e) {
+          // no op
+        }
         return null;
       }).get(60, TimeUnit.SECONDS);
     } catch (final InterruptedException | ExecutionException e) {
@@ -503,7 +594,7 @@ public class TemporalClient {
   }
 
   /**
-   * This will cancel a workflow even if the connection is deleted already
+   * This will cancel a workflow even if the connection is deleted already.
    *
    * @param connectionId - connectionId to cancel
    */
@@ -515,6 +606,12 @@ public class TemporalClient {
     notificationUtils.sendSchemaChangeNotification(client, connectionId, url);
   }
 
+  /**
+   * Signal to the connection manager workflow that there has been a change to the connection's
+   * configuration.
+   *
+   * @param connectionId connection id
+   */
   public void update(final UUID connectionId) {
     final ConnectionManagerWorkflow connectionManagerWorkflow;
     try {

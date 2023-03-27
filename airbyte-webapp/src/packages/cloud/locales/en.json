@@ -1,6 +1,6 @@
 {
   "login.haveAccount": "Already have an account?",
-  "login.DontHaveAccount": "Don’t have an account?",
+  "login.noAccount": "Don’t have an account?",
   "login.login": "Log in",
   "login.signup": "Sign up",
   "login.signup.submitButton": "Sign up",
@@ -65,6 +65,7 @@
   "connection.dbtCloudJobs.genericError": "There was an error communicating with dbt Cloud.",
   "connection.dbtCloudJobs.explanation": "After an Airbyte sync job has completed, the following jobs will run",
   "connection.dbtCloudJobs.noJobs": "No transformations",
+  "connection.dbtCloudJobs.noJobsFoundForAccount": "No jobs found for this <lnk>dbt Cloud</lnk> account",
   "connection.dbtCloudJobs.job.title": "dbt Cloud transform",
   "connection.dbtCloudJobs.job.accountId": "Account ID",
   "connection.dbtCloudJobs.job.jobId": "Job ID",
@@ -140,12 +141,19 @@
 
   "credits.date": "Date",
   "credits.amount": "Credits",
+  "credits.billing": "Billing",
+  "credits.connection": "Connection",
+  "credits.source": "Source",
+  "credits.destination": "Destination",
+  "credits.schedule": "Schedule",
+  "credits.freeUsage": "Free Connector Program",
+  "credits.billedCost": "Billed",
+  "credits.totalUsage": "Total credits usage",
 
   "credits.loadingCreditsUsage": "Loading credits usage …",
   "credits.usagePerConnection": "Usage per connection",
-  "credits.connection": "Connection",
   "credits.usage": "Usage",
-  "credits.noData": "Data is empty",
+  "credits.noData": "No credits usage data available.  Sync a connection to get started!",
   "credits.creditsProblem.negative_within_grace_period": "Your workspace is out of credits! Please add more credits to make sure your syncs with GA connectors keep running!",
   "credits.creditsProblem.negative_beyond_grace_period": "You’re out of credits! To set up connections and run syncs with GA connectors, <lnk>add credits</lnk>.",
   "credits.creditsProblem.negative_max_threshold": "You’re out of credits! To set up connections and run syncs with GA connectors, <lnk>add credits</lnk>.",
@@ -184,6 +192,7 @@
   "inviteUsersHint.cta": "Invite users",
 
   "sidebar.credits": "Credits",
+  "sidebar.billing": "Billing",
 
   "freeConnectorProgram.title": "Free Connector Program",
   "freeConnectorProgram.enrollNow": "Enroll now!",
@@ -200,5 +209,10 @@
   "freeConnectorProgram.enrollmentModal.enrollButtonText": "Enroll now!",
   "freeConnectorProgram.enrollmentModal.unvalidatedEmailButtonText": "Resend email validation",
   "freeConnectorProgram.releaseStageBadge.free": "Free",
-  "freeConnectorProgram.youCanEnroll": "You can <enrollLink>enroll</enrollLink> in the <b>Free Connector Program</b> to use Alpha and Beta connectors for <freeText>free</freeText>."
+  "freeConnectorProgram.youCanEnroll": "You can <enrollLink>enroll</enrollLink> in the <b>Free Connector Program</b> to use Alpha and Beta connectors for <freeText>free</freeText>.",
+
+  "experiment.speedyConnection": "<link>Set up your first connection</link> in the next <timer></timer> and get <b>100 additional credits</b> for your trial",
+
+  "workspace.adminWorkspaceWarning": "Admin",
+  "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!"
 }

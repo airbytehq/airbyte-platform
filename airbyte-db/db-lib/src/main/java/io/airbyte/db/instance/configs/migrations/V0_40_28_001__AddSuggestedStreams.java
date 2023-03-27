@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add suggested streams migration.
+ */
 public class V0_40_28_001__AddSuggestedStreams extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_28_001__AddSuggestedStreams.class);
@@ -23,9 +26,8 @@ public class V0_40_28_001__AddSuggestedStreams extends BaseJavaMigration {
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      addSuggestedStreams(ctx);
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    addSuggestedStreams(ctx);
   }
 
   private static void addSuggestedStreams(final DSLContext ctx) {

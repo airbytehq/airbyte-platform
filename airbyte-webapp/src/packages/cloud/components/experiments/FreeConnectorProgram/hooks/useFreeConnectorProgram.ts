@@ -6,7 +6,6 @@ import { useEffectOnce } from "react-use";
 
 import { ToastType } from "components/ui/Toast";
 
-import { MissingConfigError, useConfig } from "config";
 import { pollUntil } from "core/request/pollUntil";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -20,13 +19,8 @@ export const STRIPE_SUCCESS_QUERY = "fcpEnrollmentSuccess";
 
 export const useFreeConnectorProgram = () => {
   const workspaceId = useCurrentWorkspaceId();
-  const { cloudApiUrl } = useConfig();
-  if (!cloudApiUrl) {
-    throw new MissingConfigError("Missing required configuration cloudApiUrl");
-  }
-  const config = { apiUrl: cloudApiUrl };
   const middlewares = useDefaultRequestMiddlewares();
-  const requestOptions = { config, middlewares };
+  const requestOptions = { middlewares };
   const freeConnectorProgramEnabled = useExperiment("workspace.freeConnectorsProgram.visible", false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [userDidEnroll, setUserDidEnroll] = useState(false);
@@ -34,16 +28,20 @@ export const useFreeConnectorProgram = () => {
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
 
+  const removeStripeSuccessQuery = () => {
+    const { [STRIPE_SUCCESS_QUERY]: _, ...unrelatedSearchParams } = Object.fromEntries(searchParams);
+    setSearchParams(unrelatedSearchParams, { replace: true });
+  };
+
   useEffectOnce(() => {
     if (searchParams.has(STRIPE_SUCCESS_QUERY)) {
-      // Remove the stripe parameter from the URL
       pollUntil(
         () => webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions),
         ({ hasPaymentAccountSaved }) => hasPaymentAccountSaved,
         { intervalMs: 1000, maxTimeoutMs: 10000 }
       ).then((maybeFcpInfo) => {
         if (maybeFcpInfo) {
-          setSearchParams({}, { replace: true });
+          removeStripeSuccessQuery();
           setUserDidEnroll(true);
           registerNotification({
             id: "fcp/enrollment-success",
@@ -64,8 +62,8 @@ export const useFreeConnectorProgram = () => {
 
   const enrollmentStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
     webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions).then(
-      ({ hasEligibleConnector, hasPaymentAccountSaved }) => {
-        const userIsEligibleToEnroll = !hasPaymentAccountSaved && hasEligibleConnector;
+      ({ hasPaymentAccountSaved }) => {
+        const userIsEligibleToEnroll = !hasPaymentAccountSaved;
 
         return {
           showEnrollmentUi: freeConnectorProgramEnabled && userIsEligibleToEnroll,

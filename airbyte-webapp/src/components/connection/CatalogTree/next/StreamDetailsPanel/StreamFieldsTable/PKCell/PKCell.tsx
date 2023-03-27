@@ -20,13 +20,18 @@ export const PKCell: React.FC<PKCellProps> = ({ getValue, row, isPKDefinitionSup
     return null;
   }
 
-  const isPKChecked = isPrimaryKey(row.original.path);
+  const isSelectedPrimaryKey = isPrimaryKey(row.original.path);
 
   const checkbox = (
-    <CheckBox checked={isPKChecked} onChange={() => onPkSelect(row.original.path)} disabled={!getValue()} />
+    <CheckBox
+      checked={isSelectedPrimaryKey}
+      onChange={() => onPkSelect(row.original.path)}
+      disabled={!getValue()}
+      data-testid="field-primary-key-checkbox"
+    />
   );
 
-  return !getValue() && isPKChecked ? (
+  return isSelectedPrimaryKey && !getValue() ? (
     <Tooltip placement="bottom" control={checkbox}>
       <FormattedMessage id="form.field.sourceDefinedPK" />
       <TooltipLearnMoreLink url={links.sourceDefinedPKLink} />

@@ -21,6 +21,7 @@ import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -452,45 +453,6 @@ class JobTrackerTest {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), additionalExpectedMetadata);
   }
 
-  void testAsynchronousAttemptWithFailures(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
-    final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
-    linkedHashMap.put("failureOrigin", "source");
-    linkedHashMap.put("failureType", "config_error");
-    linkedHashMap.put("internalMessage", "Internal config error error msg");
-    linkedHashMap.put("externalMessage", "Config error related msg");
-    linkedHashMap.put(METADATA, ImmutableMap.of(SOME, METADATA));
-    linkedHashMap.put("retryable", true);
-    linkedHashMap.put("timestamp", 1010);
-    final JsonNode configFailureJson = Jsons.jsonNode(linkedHashMap);
-
-    final LinkedHashMap<String, Object> linkedHashMap1 = new LinkedHashMap<>();
-    linkedHashMap1.put("failureOrigin", "replication");
-    linkedHashMap1.put("failureType", "system_error");
-    linkedHashMap1.put("internalMessage", "Internal system error error msg");
-    linkedHashMap1.put("externalMessage", "System error related msg");
-    linkedHashMap1.put(METADATA, ImmutableMap.of(SOME, METADATA));
-    linkedHashMap1.put("retryable", true);
-    linkedHashMap1.put("timestamp", 1100);
-    final JsonNode systemFailureJson = Jsons.jsonNode(linkedHashMap1);
-
-    final LinkedHashMap<String, Object> linkedHashMap2 = new LinkedHashMap<>();
-    linkedHashMap2.put("failureOrigin", null);
-    linkedHashMap2.put("failureType", null);
-    linkedHashMap2.put("internalMessage", "Internal unknown error error msg");
-    linkedHashMap2.put("externalMessage", "Unknown error related msg");
-    linkedHashMap2.put(METADATA, ImmutableMap.of(SOME, METADATA));
-    linkedHashMap2.put("retryable", true);
-    linkedHashMap2.put("timestamp", 1110);
-    final JsonNode unknownFailureJson = Jsons.jsonNode(linkedHashMap2);
-
-    final Map<String, Object> failureMetadata = ImmutableMap.of(
-        "failure_reasons", Jsons.arrayNode().addAll(Arrays.asList(configFailureJson, systemFailureJson, unknownFailureJson)).toString(),
-        "main_failure_reason", configFailureJson.toString());
-    testAsynchronousAttempt(configType, getJobWithFailuresMock(configType, LONG_JOB_ID),
-        MoreMaps.merge(additionalExpectedMetadata, failureMetadata));
-  }
-
   void testAsynchronousAttempt(final ConfigType configType, final Job job, final Map<String, Object> additionalExpectedMetadata)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
@@ -512,6 +474,52 @@ class JobTrackerTest {
 
     jobTracker.trackSync(job, JobState.FAILED);
     assertCorrectMessageForFailedState(manualMetadata);
+  }
+
+  private JsonNode configFailureJson() {
+    final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
+    linkedHashMap.put("failureOrigin", "source");
+    linkedHashMap.put("failureType", "config_error");
+    linkedHashMap.put("internalMessage", "Internal config error error msg");
+    linkedHashMap.put("externalMessage", "Config error related msg");
+    linkedHashMap.put(METADATA, ImmutableMap.of(SOME, METADATA));
+    linkedHashMap.put("retryable", true);
+    linkedHashMap.put("timestamp", 1010);
+    return Jsons.jsonNode(linkedHashMap);
+  }
+
+  private JsonNode systemFailureJson() {
+    final LinkedHashMap<String, Object> linkedHashMap1 = new LinkedHashMap<>();
+    linkedHashMap1.put("failureOrigin", "replication");
+    linkedHashMap1.put("failureType", "system_error");
+    linkedHashMap1.put("internalMessage", "Internal system error error msg");
+    linkedHashMap1.put("externalMessage", "System error related msg");
+    linkedHashMap1.put(METADATA, ImmutableMap.of(SOME, METADATA));
+    linkedHashMap1.put("retryable", true);
+    linkedHashMap1.put("timestamp", 1100);
+    return Jsons.jsonNode(linkedHashMap1);
+  }
+
+  private JsonNode unknownFailureJson() {
+    final LinkedHashMap<String, Object> linkedHashMap2 = new LinkedHashMap<>();
+    linkedHashMap2.put("failureOrigin", null);
+    linkedHashMap2.put("failureType", null);
+    linkedHashMap2.put("internalMessage", "Internal unknown error error msg");
+    linkedHashMap2.put("externalMessage", "Unknown error related msg");
+    linkedHashMap2.put(METADATA, ImmutableMap.of(SOME, METADATA));
+    linkedHashMap2.put("retryable", true);
+    linkedHashMap2.put("timestamp", 1110);
+    return Jsons.jsonNode(linkedHashMap2);
+  }
+
+  void testAsynchronousAttemptWithFailures(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+
+    final Map<String, Object> failureMetadata = ImmutableMap.of(
+        "failure_reasons", Jsons.arrayNode().addAll(Arrays.asList(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
+        "main_failure_reason", configFailureJson().toString());
+    testAsynchronousAttempt(configType, getJobWithFailuresMock(configType, LONG_JOB_ID),
+        MoreMaps.merge(additionalExpectedMetadata, failureMetadata));
   }
 
   private Job getJobMock(final ConfigType configType, final long jobId) throws ConfigNotFoundException, IOException, JsonValidationException {
@@ -625,10 +633,8 @@ class JobTrackerTest {
     return job;
   }
 
-  private List<Attempt> getAttemptsWithFailuresMock() {
-    final Attempt attemptWithSingleFailure = getAttemptMock();
-    final AttemptFailureSummary singleFailureSummary = mock(AttemptFailureSummary.class);
-    final FailureReason configFailureReason = new FailureReason()
+  private FailureReason getConfigFailureReasonMock() {
+    return new FailureReason()
         .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
         .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
         .withRetryable(true)
@@ -637,12 +643,10 @@ class JobTrackerTest {
         .withInternalMessage("Internal config error error msg")
         .withStacktrace("Don't include stacktrace in call to track")
         .withTimestamp(SYNC_START_TIME + 10);
-    when(singleFailureSummary.getFailures()).thenReturn(List.of(configFailureReason));
-    when(attemptWithSingleFailure.getFailureSummary()).thenReturn(Optional.of(singleFailureSummary));
+  }
 
-    final Attempt attemptWithMultipleFailures = getAttemptMock();
-    final AttemptFailureSummary multipleFailuresSummary = mock(AttemptFailureSummary.class);
-    final FailureReason systemFailureReason = new FailureReason()
+  private FailureReason getSystemFailureReasonMock() {
+    return new FailureReason()
         .withFailureOrigin(FailureReason.FailureOrigin.REPLICATION)
         .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
         .withRetryable(true)
@@ -651,14 +655,27 @@ class JobTrackerTest {
         .withInternalMessage("Internal system error error msg")
         .withStacktrace("Don't include stacktrace in call to track")
         .withTimestamp(SYNC_START_TIME + 100);
-    final FailureReason unknownFailureReason = new FailureReason()
+  }
+
+  private FailureReason getUnknownFailureReasonMock() {
+    return new FailureReason()
         .withRetryable(true)
         .withMetadata(new Metadata().withAdditionalProperty(SOME, METADATA))
         .withExternalMessage("Unknown error related msg")
         .withInternalMessage("Internal unknown error error msg")
         .withStacktrace("Don't include stacktrace in call to track")
         .withTimestamp(SYNC_START_TIME + 110);
-    when(multipleFailuresSummary.getFailures()).thenReturn(List.of(systemFailureReason, unknownFailureReason));
+  }
+
+  private List<Attempt> getAttemptsWithFailuresMock() {
+    final Attempt attemptWithSingleFailure = getAttemptMock();
+    final AttemptFailureSummary singleFailureSummary = mock(AttemptFailureSummary.class);
+    when(singleFailureSummary.getFailures()).thenReturn(List.of(getConfigFailureReasonMock()));
+    when(attemptWithSingleFailure.getFailureSummary()).thenReturn(Optional.of(singleFailureSummary));
+
+    final Attempt attemptWithMultipleFailures = getAttemptMock();
+    final AttemptFailureSummary multipleFailuresSummary = mock(AttemptFailureSummary.class);
+    when(multipleFailuresSummary.getFailures()).thenReturn(List.of(getSystemFailureReasonMock(), getUnknownFailureReasonMock()));
     when(attemptWithMultipleFailures.getFailureSummary()).thenReturn(Optional.of(multipleFailuresSummary));
 
     final Attempt attemptWithNoFailures = getAttemptMock();
@@ -695,7 +712,7 @@ class JobTrackerTest {
         .build();
   }
 
-  private void assertCheckConnCorrectMessageForEachState(final BiConsumer<JobState, StandardCheckConnectionOutput> jobStateConsumer,
+  private void assertCheckConnCorrectMessageForEachState(final BiConsumer<JobState, ConnectorJobOutput> jobStateConsumer,
                                                          final Map<String, Object> metadata,
                                                          final boolean workspaceSet) {
     reset(trackingClient);
@@ -703,23 +720,32 @@ class JobTrackerTest {
     // Output does not exist when job has started.
     jobStateConsumer.accept(JobState.STARTED, null);
 
-    final var successOutput = new StandardCheckConnectionOutput();
-    successOutput.setStatus(Status.SUCCEEDED);
-    jobStateConsumer.accept(JobState.SUCCEEDED, successOutput);
+    final var connectionCheckSuccessOutput = new StandardCheckConnectionOutput();
+    connectionCheckSuccessOutput.setStatus(Status.SUCCEEDED);
+    final var checkConnectionSuccessJobOutput = new ConnectorJobOutput().withCheckConnection(connectionCheckSuccessOutput);
+    jobStateConsumer.accept(JobState.SUCCEEDED, checkConnectionSuccessJobOutput);
     final ImmutableMap<String, Object> checkConnSuccessMetadata = ImmutableMap.of("check_connection_outcome", "succeeded");
 
-    final var failureOutput = new StandardCheckConnectionOutput();
-    failureOutput.setStatus(Status.FAILED);
-    jobStateConsumer.accept(JobState.SUCCEEDED, failureOutput);
-    final ImmutableMap<String, Object> checkConnFailureMetadata = ImmutableMap.of("check_connection_outcome", "failed");
+    final var connectionCheckFailureOutput = new StandardCheckConnectionOutput();
+    connectionCheckFailureOutput.setStatus(Status.FAILED);
+    connectionCheckFailureOutput.setMessage("Please check your Personal Access Token.");
+    final var checkConnectionFailureJobOutput = new ConnectorJobOutput().withCheckConnection(connectionCheckFailureOutput);
+    jobStateConsumer.accept(JobState.SUCCEEDED, checkConnectionFailureJobOutput); // The job still succeeded, only the connection check failed
+    final ImmutableMap<String, Object> checkConnFailureMetadata = ImmutableMap.of(
+        "check_connection_outcome", "failed",
+        "check_connection_message", "Please check your Personal Access Token.");
 
     // Failure implies the job threw an exception which almost always meant no output.
-    jobStateConsumer.accept(JobState.FAILED, null);
+    final var failedCheckJobOutput = new ConnectorJobOutput();
+    failedCheckJobOutput.setFailureReason(getConfigFailureReasonMock());
+    jobStateConsumer.accept(JobState.FAILED, failedCheckJobOutput);
+    final ImmutableMap<String, Object> failedCheckJobMetadata = ImmutableMap.of("failure_reason", configFailureJson().toString());
+
     if (workspaceSet) {
       assertCorrectMessageForStartedState(metadata);
       assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnSuccessMetadata));
       assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnFailureMetadata));
-      assertCorrectMessageForFailedState(metadata);
+      assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedCheckJobMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }

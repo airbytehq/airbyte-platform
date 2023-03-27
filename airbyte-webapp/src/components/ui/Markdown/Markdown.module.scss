@@ -88,3 +88,18 @@
     margin-bottom: variables.$spacing-sm;
   }
 }
+
+.codeCopyButton {
+  position: absolute;
+  opacity: 0;
+  right: variables.$spacing-md;
+  top: variables.$spacing-md;
+}
+
+.codeBlock {
+  position: relative;
+
+  &:hover .codeCopyButton {
+    opacity: 1;
+  }
+}

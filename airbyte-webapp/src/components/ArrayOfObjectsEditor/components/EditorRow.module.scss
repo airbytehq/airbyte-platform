@@ -1,5 +1,5 @@
-@use "../../../scss/colors";
-@use "../../../scss/variables";
+@use "scss/colors";
+@use "scss/variables";
 
 .container + .container {
   border-top: 1px solid colors.$white;
@@ -12,8 +12,8 @@
   flex-direction: row;
   color: colors.$dark-blue;
   font-weight: 400;
-  font-size: 12px;
-  line-height: 17px;
+  font-size: variables.$font-size-sm;
+  line-height: 1.4;
   padding: variables.$spacing-xs variables.$spacing-xs variables.$spacing-xs variables.$spacing-md;
   gap: variables.$spacing-xs;
 }

@@ -28,6 +28,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("MissingJavadocType")
 class TrelloOAuthFlowTest {
 
   private static final String REDIRECT_URL = "https://airbyte.io";
@@ -77,7 +78,7 @@ class TrelloOAuthFlowTest {
   void testGetSourceConsentUrl() throws IOException, InterruptedException, ConfigNotFoundException {
     final String consentUrl =
         trelloOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
-    assertEquals("https://trello.com/1/OAuthAuthorizeToken?oauth_token=test_token", consentUrl);
+    assertEquals("https://trello.com/1/OAuthAuthorizeToken?oauth_token=test_token&expiration=never", consentUrl);
   }
 
   @Test

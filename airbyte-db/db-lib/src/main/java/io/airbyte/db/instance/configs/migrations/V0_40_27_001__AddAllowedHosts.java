@@ -12,6 +12,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add allowed hosts migration.
+ */
 public class V0_40_27_001__AddAllowedHosts extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(V0_40_27_001__AddAllowedHosts.class);
@@ -23,9 +26,8 @@ public class V0_40_27_001__AddAllowedHosts extends BaseJavaMigration {
     // Warning: please do not use any jOOQ generated code to write a migration.
     // As database schema changes, the generated jOOQ code can be deprecated. So
     // old migration may not compile if there is any generated code.
-    try (final DSLContext ctx = DSL.using(context.getConnection())) {
-      addAllowedHostsToActorDefinition(ctx);
-    }
+    final DSLContext ctx = DSL.using(context.getConnection());
+    addAllowedHostsToActorDefinition(ctx);
   }
 
   private static void addAllowedHostsToActorDefinition(final DSLContext ctx) {

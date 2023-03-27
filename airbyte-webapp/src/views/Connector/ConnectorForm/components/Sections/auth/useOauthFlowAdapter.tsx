@@ -5,8 +5,8 @@ import merge from "lodash/merge";
 import pick from "lodash/pick";
 import { useMemo, useState } from "react";
 
-import { ConnectorDefinitionSpecification } from "core/domain/connector";
-import { AuthSpecification } from "core/request/AirbyteClient";
+import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { AuthSpecification, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -18,7 +18,10 @@ interface Credentials {
   credentials: AuthSpecification;
 }
 
-function useFormikOauthAdapter(connector: ConnectorDefinitionSpecification): {
+function useFormikOauthAdapter(
+  connector: ConnectorDefinitionSpecification,
+  connectorDefinition?: ConnectorDefinition
+): {
   loading: boolean;
   done?: boolean;
   hasRun: boolean;
@@ -29,7 +32,7 @@ function useFormikOauthAdapter(connector: ConnectorDefinitionSpecification): {
 
   const { getValues } = useConnectorForm();
 
-  const onDone = (completeOauthResponse: Record<string, unknown>) => {
+  const onDone = (authPayload: CompleteOAuthResponseAuthPayload) => {
     let newValues: ConnectorFormValues<Credentials>;
 
     if (connector.advancedAuth) {
@@ -37,12 +40,12 @@ function useFormikOauthAdapter(connector: ConnectorDefinitionSpecification): {
 
       newValues = Object.entries(oauthPaths).reduce(
         (acc, [key, { path_in_connector_config }]) =>
-          setIn(acc, makeConnectionConfigurationPath(path_in_connector_config), completeOauthResponse[key]),
+          setIn(acc, makeConnectionConfigurationPath(path_in_connector_config), authPayload[key]),
         values
       );
     } else {
       newValues = merge({}, values, {
-        connectionConfiguration: completeOauthResponse,
+        connectionConfiguration: authPayload,
       });
     }
 
@@ -50,7 +53,7 @@ function useFormikOauthAdapter(connector: ConnectorDefinitionSpecification): {
     setHasRun(true);
   };
 
-  const { run, loading, done } = useRunOauthFlow(connector, onDone);
+  const { run, loading, done } = useRunOauthFlow({ connector, connectorDefinition, onDone });
   const preparedValues = useMemo(() => getValues<Credentials>(values), [getValues, values]);
 
   const { hasAuthFieldValues } = useAuthentication();

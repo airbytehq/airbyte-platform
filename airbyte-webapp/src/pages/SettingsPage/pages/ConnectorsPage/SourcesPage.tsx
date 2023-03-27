@@ -1,19 +1,18 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { useAsyncFn } from "react-use";
 
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import { useGetConnectorsOutOfDate, useUpdateSourceDefinitions } from "hooks/services/useConnector";
+import { useExperiment } from "hooks/services/Experiment";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useSourceDefinitionList, useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
+import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
-import ConnectorsView from "./components/ConnectorsView";
+import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView";
 
 const SourcesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_SOURCE);
 
-  const [isUpdateSuccess, setIsUpdateSuccess] = useState(false);
   const [feedbackList, setFeedbackList] = useState<Record<string, string>>({});
   const feedbackListRef = useRef(feedbackList);
   feedbackListRef.current = feedbackList;
@@ -22,11 +21,10 @@ const SourcesPage: React.FC = () => {
   const { sources } = useSourceList();
   const { sourceDefinitions } = useSourceDefinitionList();
 
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();
-
-  const { hasNewSourceVersion } = useGetConnectorsOutOfDate();
-  const { updateAllSourceVersions } = useUpdateSourceDefinitions();
 
   const onUpdateVersion = useCallback(
     async ({ id, version }: { id: string; version: string }) => {
@@ -65,30 +63,23 @@ const SourcesPage: React.FC = () => {
     return Array.from(sourceDefinitionMap.values());
   }, [sources, sourceDefinitions]);
 
-  const [{ loading, error }, onUpdate] = useAsyncFn(async () => {
-    setIsUpdateSuccess(false);
-    await updateAllSourceVersions();
-    setIsUpdateSuccess(true);
-    setTimeout(() => {
-      setIsUpdateSuccess(false);
-    }, 2000);
-  }, [updateAllSourceVersions]);
+  const ConnectorsViewComponent = showBuilderNavigationLinks ? WithBuilderProjects : ConnectorsView;
 
   return (
-    <ConnectorsView
+    <ConnectorsViewComponent
       type="sources"
-      loading={loading}
       updatingDefinitionId={updatingDefinitionId}
-      error={error}
-      isUpdateSuccess={isUpdateSuccess}
-      hasNewConnectorVersion={hasNewSourceVersion}
       usedConnectorsDefinitions={usedSourcesDefinitions}
       connectorsDefinitions={sourceDefinitions}
       feedbackList={feedbackList}
       onUpdateVersion={onUpdateVersion}
-      onUpdate={onUpdate}
     />
   );
+};
+
+export const WithBuilderProjects: React.FC<Omit<ConnectorsViewProps, "connectorBuilderProjects">> = (props) => {
+  const projects = useListProjects();
+  return <ConnectorsView {...props} connectorBuilderProjects={projects} />;
 };
 
 export default SourcesPage;

@@ -34,7 +34,7 @@ import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
-import io.fabric8.kubernetes.client.internal.readiness.Readiness;
+import io.fabric8.kubernetes.client.readiness.Readiness;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -161,6 +161,14 @@ public class KubePodProcess implements KubePod {
   private final CompletableFuture<Integer> exitCodeFuture;
   private final SharedIndexInformer<Pod> podInformer;
 
+  /**
+   * Get pod IP.
+   *
+   * @param client kube client
+   * @param podName pod name
+   * @param podNamespace pod namespace
+   * @return pod's ip address
+   */
   public static String getPodIP(final KubernetesClient client, final String podName, final String podNamespace) {
     final var pod = client.pods().inNamespace(podNamespace).withName(podName).get();
     if (pod == null) {
@@ -241,6 +249,12 @@ public class KubePodProcess implements KubePod {
     return containerBuilder.build();
   }
 
+  /**
+   * Create port list for pod.
+   *
+   * @param internalToExternalPorts internal to external pots
+   * @return container ports
+   */
   public static List<ContainerPort> createContainerPortList(final Map<Integer, Integer> internalToExternalPorts) {
     return internalToExternalPorts.keySet().stream()
         .map(integer -> new ContainerPortBuilder()
@@ -249,6 +263,13 @@ public class KubePodProcess implements KubePod {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Copy files to kube pod.
+   *
+   * @param client kube client
+   * @param podDefinition pod to copy to
+   * @param files files to copy
+   */
   public static void copyFilesToKubeConfigVolume(final KubernetesClient client,
                                                  final Pod podDefinition,
                                                  final Map<String, String> files) {
@@ -315,7 +336,7 @@ public class KubePodProcess implements KubePod {
   private static void waitForInitPodToRun(final KubernetesClient client, final Pod podDefinition) throws InterruptedException {
     // todo: this could use the watcher instead of waitUntilConditions
     LOGGER.info("Waiting for init container to be ready before copying files...");
-    final PodResource<Pod> pod =
+    final PodResource pod =
         client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName());
     pod.waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().size() != 0, 5, TimeUnit.MINUTES);
     LOGGER.info("Init container present..");
@@ -354,7 +375,7 @@ public class KubePodProcess implements KubePod {
         .toArray(Toleration[]::new);
   }
 
-  @SuppressWarnings("PMD.InvalidLogMessageFormat")
+  @SuppressWarnings({"PMD.InvalidLogMessageFormat", "VariableDeclarationUsageDistance"})
   public KubePodProcess(final boolean isOrchestrator,
                         final String processRunnerHost,
                         final KubernetesClient fabricClient,
@@ -519,7 +540,7 @@ public class KubePodProcess implements KubePod {
       podBuilder = podBuilder.withServiceAccount("airbyte-admin").withAutomountServiceAccountToken(true);
     }
 
-    List<LocalObjectReference> pullSecrets = imagePullSecrets
+    final List<LocalObjectReference> pullSecrets = imagePullSecrets
         .stream()
         .map(imagePullSecret -> new LocalObjectReference(imagePullSecret))
         .collect(Collectors.toList());
@@ -800,6 +821,12 @@ public class KubePodProcess implements KubePod {
     };
   }
 
+  /**
+   * Get resource requirements builder.
+   *
+   * @param resourceRequirements resource requirements
+   * @return builder
+   */
   public static ResourceRequirementsBuilder getResourceRequirementsBuilder(final ResourceRequirements resourceRequirements) {
     if (resourceRequirements != null) {
       final Map<String, Quantity> requestMap = new HashMap<>();

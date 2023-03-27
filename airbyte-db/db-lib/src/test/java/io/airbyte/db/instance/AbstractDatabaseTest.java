@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public abstract class AbstractDatabaseTest {
 
   protected static PostgreSQLContainer<?> container;
@@ -50,7 +51,6 @@ public abstract class AbstractDatabaseTest {
 
   @AfterEach
   void tearDown() throws Exception {
-    dslContext.close();
     DataSourceFactory.close(dataSource);
   }
 

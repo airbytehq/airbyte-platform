@@ -17,6 +17,9 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
+/**
+ * Amazon Sellers OAuth.
+ */
 public class AmazonSellerPartnerOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://sellercentral.amazon.com/apps/authorize/consent";

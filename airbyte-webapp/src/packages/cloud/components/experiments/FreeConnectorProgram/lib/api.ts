@@ -1,5 +1,5 @@
+import { cloudApiCall } from "core/api";
 import { WorkspaceId } from "core/request/AirbyteClient";
-import { apiOverride } from "core/request/apiOverride";
 
 export type WebBackendGetFreeConnectorProgramInfoForWorkspaceResult = NonNullable<
   Awaited<ReturnType<typeof webBackendGetFreeConnectorProgramInfoForWorkspace>>
@@ -17,9 +17,9 @@ type SecondParameter<T extends (...args: any) => any> = T extends (config: any, 
  */
 export const webBackendGetFreeConnectorProgramInfoForWorkspace = (
   workspaceIdRequestBody: WorkspaceIdRequestBody,
-  options?: SecondParameter<typeof apiOverride>
+  options: SecondParameter<typeof cloudApiCall>
 ) => {
-  return apiOverride<WorkspaceFreeConnectorProgramInfoResponse>(
+  return cloudApiCall<WorkspaceFreeConnectorProgramInfoResponse>(
     {
       url: `/v1/web_backend/cloud_workspaces/free_connector_program_info`,
       method: "post",

@@ -1,4 +1,4 @@
-import { apiOverride } from "core/request/apiOverride";
+import { cloudPublicApiCall } from "core/api";
 
 export interface RedirectUrlResponse {
   redirectUrl?: string;
@@ -11,8 +11,8 @@ type SecondParameter<T extends (...args: any) => any> = T extends (config: any, 
  * Return a JSON datastructure that contains the URL that should be redirected to in the redirectUrl field.
  * @summary Get the Speakeasy Callback URL
  */
-export const getSpeakeasyCallbackUrl = (options?: SecondParameter<typeof apiOverride>, signal?: AbortSignal) => {
-  return apiOverride<RedirectUrlResponse>({ url: `/speakeasy_callback_url`, method: "get", signal }, options);
+export const getSpeakeasyCallbackUrl = (options: SecondParameter<typeof cloudPublicApiCall>, signal?: AbortSignal) => {
+  return cloudPublicApiCall<RedirectUrlResponse>({ url: `/speakeasy_callback_url`, method: "get", signal }, options);
 };
 
 type AwaitedInput<T> = PromiseLike<T> | T;

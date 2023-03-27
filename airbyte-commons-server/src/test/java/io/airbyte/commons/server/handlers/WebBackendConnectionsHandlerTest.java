@@ -335,7 +335,9 @@ class WebBackendConnectionsHandlerTest {
             .cpuRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuRequest())
             .cpuLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuLimit())
             .memoryRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryRequest())
-            .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()));
+            .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()))
+        .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true);
   }
 
   @Test
@@ -670,7 +672,8 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(catalog)
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .notifySchemaChanges(false);
+        .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true);
 
     final List<UUID> operationIds = List.of(newOperationId);
 
@@ -687,6 +690,7 @@ class WebBackendConnectionsHandlerTest {
         .geography(Geography.US)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
+        .notifySchemaChangesByEmail(true)
         .breakingChange(false);
 
     final ConnectionUpdate actual = WebBackendConnectionsHandler.toConnectionPatch(input, operationIds, false);
@@ -699,7 +703,8 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
-            "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges");
+            "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges",
+            "notifySchemaChangesByEmail");
 
     final Set<String> methods = Arrays.stream(ConnectionCreate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionCreate.class)
@@ -721,7 +726,8 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
-            "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "nonBreakingChangesPreference");
+            "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "notifySchemaChangesByEmail",
+            "nonBreakingChangesPreference");
 
     final Set<String> methods = Arrays.stream(ConnectionUpdate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionUpdate.class)
@@ -748,7 +754,9 @@ class WebBackendConnectionsHandlerTest {
         .schedule(expected.getSchedule())
         .status(expected.getStatus())
         .syncCatalog(expected.getSyncCatalog())
-        .sourceCatalogId(expected.getCatalogId());
+        .sourceCatalogId(expected.getCatalogId())
+        .notifySchemaChanges(expected.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail());
 
     when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
         .thenReturn(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog());
@@ -771,7 +779,10 @@ class WebBackendConnectionsHandlerTest {
             .prefix(expected.getPrefix())
             .syncCatalog(expected.getSyncCatalog())
             .status(expected.getStatus())
-            .schedule(expected.getSchedule()).breakingChange(false));
+            .schedule(expected.getSchedule())
+            .breakingChange(false)
+            .notifySchemaChanges(expected.getNotifySchemaChanges())
+            .notifySchemaChangesByEmail(expected.getNotifySchemaChangesByEmail()));
     when(operationsHandler.listOperationsForConnection(any())).thenReturn(operationReadList);
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(connectionRead.getConnectionId());
 
@@ -1091,7 +1102,9 @@ class WebBackendConnectionsHandlerTest {
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
 
     when(configRepository.getMostRecentActorCatalogForSource(sourceId)).thenReturn(Optional.of(new ActorCatalog().withCatalog(Jsons.deserialize(
-        "{\"streams\": [{\"name\": \"cat_names\", \"namespace\": \"public\", \"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));
+        "{\"streams\": [{\"name\": \"cat_names\", "
+            + "\"namespace\": \"public\", "
+            + "\"json_schema\": {\"type\": \"object\", \"properties\": {\"id\": {\"type\": \"number\", \"airbyte_type\": \"integer\"}}}}]}"))));
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff, catalogDiff);
 
     when(configRepository.getConfiguredCatalogForConnection(expected.getConnectionId()))
@@ -1118,9 +1131,9 @@ class WebBackendConnectionsHandlerTest {
     assertEquals(expectedWithNewSchema.getSyncCatalog(), result.getSyncCatalog());
 
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
-    ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
+    final ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
     verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture());
-    List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
+    final List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
     // Expect the ConnectionUpdate object to have breakingChange: false
     assertEquals(false, connectionUpdateValues.get(0).getBreakingChange());
 

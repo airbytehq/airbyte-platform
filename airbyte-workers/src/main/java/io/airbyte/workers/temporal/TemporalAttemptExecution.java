@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-/*
+/**
  * This class represents a single run of a worker. It handles making sure the correct inputs and
  * outputs are passed to the selected worker. It also makes sures that the outputs of the worker are
  * persisted to the db.
@@ -52,6 +52,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
   private final AirbyteApiClient airbyteApiClient;
   private final String airbyteVersion;
   private final Optional<String> replicationTaskQueue;
+  private final Runnable finalizer;
 
   public TemporalAttemptExecution(final Path workspaceRoot,
                                   final WorkerEnvironment workerEnvironment,
@@ -73,7 +74,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
         airbyteApiClient,
         () -> activityContext.get().getInfo().getWorkflowId(),
         airbyteVersion,
-        Optional.empty());
+        Optional.empty(),
+        () -> {});
   }
 
   public TemporalAttemptExecution(final Path workspaceRoot,
@@ -86,7 +88,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
                                   final AirbyteApiClient airbyteApiClient,
                                   final String airbyteVersion,
                                   final Supplier<ActivityExecutionContext> activityContext,
-                                  final Optional<String> replicationTaskQueue) {
+                                  final Optional<String> replicationTaskQueue,
+                                  final Runnable finalizer) {
     this(
         workspaceRoot, workerEnvironment, logConfigs,
         jobRunConfig,
@@ -97,7 +100,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
         airbyteApiClient,
         () -> activityContext.get().getInfo().getWorkflowId(),
         airbyteVersion,
-        replicationTaskQueue);
+        replicationTaskQueue,
+        finalizer);
   }
 
   @VisibleForTesting
@@ -112,7 +116,8 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
                            final AirbyteApiClient airbyteApiClient,
                            final Supplier<String> workflowIdProvider,
                            final String airbyteVersion,
-                           final Optional<String> replicationTaskQueue) {
+                           final Optional<String> replicationTaskQueue,
+                           final Runnable finalizer) {
     this.jobRunConfig = jobRunConfig;
 
     this.jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
@@ -125,6 +130,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
     this.airbyteApiClient = airbyteApiClient;
     this.airbyteVersion = airbyteVersion;
     this.replicationTaskQueue = replicationTaskQueue;
+    this.finalizer = finalizer;
   }
 
   @Override
@@ -162,6 +168,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
       } finally {
         LOGGER.info("Stopping cancellation check scheduling...");
         scheduledExecutor.shutdown();
+        finalizer.run();
       }
     } catch (final Exception e) {
       throw Activity.wrap(e);

@@ -79,7 +79,10 @@ import java.util.stream.Collectors;
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
  * it is easier for a react frontend to consume. It should NOT have direct access to the database.
  * It should operate exclusively by calling other endpoints that are exposed in the API.
+ *
+ * Javadocs suppressed because api docs should be used as source of truth.
  **/
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class WebBackendConnectionsHandler {
 
@@ -131,6 +134,7 @@ public class WebBackendConnectionsHandler {
     return Enums.convertTo(stateHandler.getState(connectionIdRequestBody).getStateType(), ConnectionStateType.class);
   }
 
+  @SuppressWarnings("LineLength")
   public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody)
       throws IOException {
 
@@ -225,7 +229,7 @@ public class WebBackendConnectionsHandler {
     return webBackendConnectionRead;
   }
 
-  static private WebBackendConnectionListItem buildWebBackendConnectionListItem(
+  private static WebBackendConnectionListItem buildWebBackendConnectionListItem(
                                                                                 final StandardSync standardSync,
                                                                                 final Map<UUID, SourceSnippetRead> sourceReadById,
                                                                                 final Map<UUID, DestinationSnippetRead> destinationReadById,
@@ -330,6 +334,7 @@ public class WebBackendConnectionsHandler {
         .resourceRequirements(connectionRead.getResourceRequirements())
         .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference());
   }
 
@@ -754,6 +759,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.sourceCatalogId(webBackendConnectionPatch.getSourceCatalogId());
     connectionPatch.geography(webBackendConnectionPatch.getGeography());
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
+    connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
     connectionPatch.breakingChange(breakingChange);
 

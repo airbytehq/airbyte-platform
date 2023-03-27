@@ -12,7 +12,7 @@ info:
     url: "https://opensource.org/licenses/MIT"
 externalDocs:
   description: Find out more about Connector Builder
-  url: "https://docs.airbyte.com/connector-development/config-based/overview/"
+  url: "https://docs.airbyte.com/connector-development/config-based/connector-builder-ui"
 
 paths:
   /v1/stream/read:
@@ -71,7 +71,7 @@ paths:
                 description: Connector manifest template string
   /v1/manifest/resolve:
     post:
-      summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $options resolved and flattened
+      summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
       operationId: resolveManifest
       requestBody:
         content:
@@ -93,6 +93,23 @@ paths:
 
 components:
   schemas:
+    LogMessage:
+      type: object
+      required:
+        - message
+        - level
+      properties:
+        message:
+          type: string
+        level:
+          type: string
+          enum:
+            - FATAL
+            - ERROR
+            - WARN
+            - INFO
+            - DEBUG
+            - TRACE
     StreamRead:
       type: object
       required:
@@ -104,7 +121,7 @@ components:
           type: array
           description: The LOG AirbyteMessages that were emitted during the read of this slice
           items:
-            type: object
+            $ref: "#/components/schemas/LogMessage"
             # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteLogMessage"
         slices:
           type: array
@@ -213,14 +230,12 @@ components:
           type: integer
           description: The status of the response
         body:
-          type: object
+          type: string
           description: The body of the HTTP response, if present
         headers:
           type: object
           description: The headers of the HTTP response, if any
     # --- Commenting out for now since they do not work with our orval openapi client generator ---
-    # ConnectorManifest:
-    #   $ref: ../../../../airbyte-cdk/python/airbyte_cdk/sources/declarative/config_component_schema.json
     # AirbyteProtocol:
     #   $ref: ../../../../airbyte-protocol/protocol-models/src/main/resources/airbyte_protocol/airbyte_protocol.yaml
     StreamsListRequestBody:
@@ -277,7 +292,7 @@ components:
       properties:
         manifest:
           type: object
-          description: The config-based connector manifest contents with $refs and $options resolved
+          description: The config-based connector manifest contents with $refs and $parameters resolved
 
     # The following exception structs were copied from airbyte-api/src/main/openapi/config.yaml
     InvalidInputProperty:

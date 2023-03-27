@@ -1,3 +1,9 @@
+@use "scss/variables";
+
 .forgotPassword {
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
+}
+
+.container {
+  max-width: 409px;
 }

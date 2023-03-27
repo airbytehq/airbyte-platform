@@ -1,0 +1,22 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.table {
+  td {
+    padding-top: variables.$spacing-sm;
+    padding-bottom: variables.$spacing-sm;
+  }
+}
+
+.draft {
+  color: colors.$grey-400;
+}
+
+.nameCell {
+  // FIXME temporary solution to align with other connectors, should be removed after connectors page revamp
+  padding-left: 25px;
+}
+
+.versionCell {
+  padding-left: variables.$spacing-sm;
+}

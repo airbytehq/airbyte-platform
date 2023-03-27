@@ -7,11 +7,13 @@ package io.airbyte.config.persistence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.config.persistence.split_secrets.SecretCoordinateToPayload;
 import io.airbyte.config.persistence.split_secrets.SecretPersistence;
 import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
@@ -64,6 +66,15 @@ public class SecretsRepositoryWriter {
     }
   }
 
+  /**
+   * Write a source with its secrets to the appropriate persistence. Secrets go to secrets store and
+   * the rest of the object (with pointers to the secrets store) get saved in the db.
+   *
+   * @param source to write
+   * @param connectorSpecification spec for the destination
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   // validates too!
   public void writeSourceConnection(final SourceConnection source, final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException {
@@ -90,6 +101,15 @@ public class SecretsRepositoryWriter {
     }
   }
 
+  /**
+   * Write a destination with its secrets to the appropriate persistence. Secrets go to secrets store
+   * and the rest of the object (with pointers to the secrets store) get saved in the db.
+   *
+   * @param destination to write
+   * @param connectorSpecification spec for the destination
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public void writeDestinationConnection(final DestinationConnection destination, final ConnectorSpecification connectorSpecification)
       throws JsonValidationException, IOException {
     final var previousDestinationConnection = getDestinationIfExists(destination.getDestinationId())
@@ -124,6 +144,7 @@ public class SecretsRepositoryWriter {
   // secrets (i.e. when there is no longLivedSecretPersistence). If we treated all secrets the same
   // (i.e. used a separate db for secrets when the user didn't provide a store), this would be easier
   // to reason about.
+
   /**
    * If a secrets store is present, this method attempts to fetch the existing config and merge its
    * secrets with the passed in config. If there is no secrets store, it just returns the passed in
@@ -169,6 +190,9 @@ public class SecretsRepositoryWriter {
   }
 
   /**
+   * Takes in a connector configuration with secrets. Saves the secrets and returns the configuration
+   * object with the secrets removed and replaced with pointers to the secrets store.
+   *
    * @param fullConfig full config
    * @param spec connector specification
    * @return partial config
@@ -190,6 +214,14 @@ public class SecretsRepositoryWriter {
     }
   }
 
+  /**
+   * Write a service account with its secrets to the appropriate persistence. Secrets go to secrets
+   * store and the rest of the object (with pointers to the secrets store) get saved in the db.
+   *
+   * @param workspaceServiceAccount to write
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public void writeServiceAccountJsonCredentials(final WorkspaceServiceAccount workspaceServiceAccount)
       throws JsonValidationException, IOException {
     final WorkspaceServiceAccount workspaceServiceAccountForDB = getWorkspaceServiceAccountWithSecretCoordinate(workspaceServiceAccount);
@@ -238,6 +270,16 @@ public class SecretsRepositoryWriter {
     return workspaceServiceAccount;
   }
 
+  // todo (cgardens) - should a get method be here? this is a writer not a reader.
+
+  /**
+   * Get service account with no secrets.
+   *
+   * @param workspaceId workspace id
+   * @return service account object with no secrets
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public Optional<WorkspaceServiceAccount> getOptionalWorkspaceServiceAccount(final UUID workspaceId)
       throws JsonValidationException, IOException {
     try {
@@ -247,10 +289,18 @@ public class SecretsRepositoryWriter {
     }
   }
 
+  /**
+   * Write a workspace with its secrets to the appropriate persistence. Secrets go to secrets store
+   * and the rest of the object (with pointers to the secrets store) get saved in the db.
+   *
+   * @param workspace to save
+   * @throws JsonValidationException if the workspace is or contains invalid json
+   * @throws IOException if there is an issue while interacting with the secrets store or db.
+   */
   public void writeWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException {
-    // Get the schema for the webhook config so we can split out any secret fields.
-    final JsonNode webhookConfigSchema = Jsons.jsonNodeFromFile(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    // Get the schema for the webhook config, so we can split out any secret fields.
+    final JsonNode webhookConfigSchema = Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
     // Check if there's an existing config, so we can re-use the secret coordinates.
     final var previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId(), false);
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();
@@ -278,6 +328,14 @@ public class SecretsRepositoryWriter {
     } catch (final JsonValidationException | IOException | ConfigNotFoundException e) {
       return Optional.empty();
     }
+  }
+
+  /**
+   * No frills, given a coordinate, just store the payload.
+   */
+  public SecretCoordinate storeSecret(final SecretCoordinate secretCoordinate, final String payload) {
+    longLivedSecretPersistence.get().write(secretCoordinate, payload);
+    return secretCoordinate;
   }
 
 }

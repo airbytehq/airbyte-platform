@@ -1,0 +1,83 @@
+@use "scss/variables";
+@use "scss/colors";
+
+$icon-width: 10px;
+
+.container:not(:last-child) {
+  margin-bottom: variables.$spacing-xl;
+}
+
+.footer {
+  border-top: 1px solid colors.$grey-100;
+  padding-top: variables.$spacing-xl;
+}
+
+.button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+}
+
+.buttonSection {
+  font-size: 14px;
+}
+
+.buttonOpen {
+  color: colors.$blue-400;
+  transition: color variables.$transition;
+
+  &:hover {
+    color: colors.$blue-500;
+  }
+}
+
+.buttonClosed {
+  color: colors.$grey-400;
+  transition: color variables.$transition;
+
+  &:hover {
+    color: colors.$grey-500;
+  }
+}
+
+.buttonClosedSection {
+  color: colors.$dark-blue;
+  transition: color variables.$transition;
+
+  &:hover {
+    color: colors.$dark-blue-1000;
+  }
+}
+
+.label {
+  color: inherit;
+  font-size: inherit;
+}
+
+.icon {
+  width: $icon-width;
+  transition: transform variables.$transition;
+}
+
+.iconOpen {
+  transform: rotate(90deg);
+}
+
+.iconClosed {
+  transform: rotate(0);
+}
+
+.body {
+  width: 100%;
+  padding-left: calc($icon-width + variables.$spacing-sm);
+
+  > div:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.errorIndicator {
+  margin-left: variables.$spacing-xs;
+}

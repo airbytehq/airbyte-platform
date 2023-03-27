@@ -7,6 +7,7 @@ package io.airbyte.persistence.job.factory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -14,6 +15,8 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
+import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.DefaultJobCreator;
@@ -23,24 +26,33 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Creates a sync job record in the db.
+ */
 public class DefaultSyncJobFactory implements SyncJobFactory {
 
   private final boolean connectorSpecificResourceDefaultsEnabled;
   private final DefaultJobCreator jobCreator;
   private final ConfigRepository configRepository;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ConfigInjector configInjector;
   private final WorkspaceHelper workspaceHelper;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public DefaultSyncJobFactory(final boolean connectorSpecificResourceDefaultsEnabled,
                                final DefaultJobCreator jobCreator,
                                final ConfigRepository configRepository,
-                               final OAuthConfigSupplier oAuthConfigSupplier,
-                               final WorkspaceHelper workspaceHelper) {
+                               final OAuthConfigSupplier oauthConfigSupplier,
+                               final ConfigInjector configInjector,
+                               final WorkspaceHelper workspaceHelper,
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.connectorSpecificResourceDefaultsEnabled = connectorSpecificResourceDefaultsEnabled;
     this.jobCreator = jobCreator;
     this.configRepository = configRepository;
-    this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.oAuthConfigSupplier = oauthConfigSupplier;
+    this.configInjector = configInjector;
     this.workspaceHelper = workspaceHelper;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   @Override
@@ -53,21 +65,28 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
       final DestinationConnection destinationConnection = configRepository.getDestinationConnection(standardSync.getDestinationId());
       final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
           sourceConnection.getSourceDefinitionId(),
+          sourceConnection.getSourceId(),
           sourceConnection.getWorkspaceId(),
           sourceConnection.getConfiguration());
-      sourceConnection.withConfiguration(sourceConfiguration);
+      sourceConnection.withConfiguration(configInjector.injectConfig(sourceConfiguration, sourceConnection.getSourceDefinitionId()));
       final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
           destinationConnection.getDestinationDefinitionId(),
+          destinationConnection.getDestinationId(),
           destinationConnection.getWorkspaceId(),
           destinationConnection.getConfiguration());
-      destinationConnection.withConfiguration(destinationConfiguration);
+      destinationConnection
+          .withConfiguration(configInjector.injectConfig(destinationConfiguration, destinationConnection.getDestinationDefinitionId()));
       final StandardSourceDefinition sourceDefinition = configRepository
           .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
       final StandardDestinationDefinition destinationDefinition = configRepository
           .getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
 
-      final String sourceImageName = sourceDefinition.getDockerRepository() + ":" + sourceDefinition.getDockerImageTag();
-      final String destinationImageName = destinationDefinition.getDockerRepository() + ":" + destinationDefinition.getDockerImageTag();
+      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, standardSync.getSourceId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, standardSync.getDestinationId());
+
+      final String sourceImageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
+      final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
       final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
       for (final var operationId : standardSync.getOperationIds()) {

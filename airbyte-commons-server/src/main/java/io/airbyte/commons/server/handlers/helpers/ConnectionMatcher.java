@@ -8,6 +8,9 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionSearch;
 import org.apache.logging.log4j.util.Strings;
 
+/**
+ * Constructs a query for finding a query.
+ */
 public class ConnectionMatcher implements Matchable<ConnectionRead> {
 
   private final ConnectionSearch search;
@@ -45,6 +48,8 @@ public class ConnectionMatcher implements Matchable<ConnectionRead> {
     fromSearch.sourceCatalogId(query.getSourceCatalogId());
     fromSearch.geography(query.getGeography());
     fromSearch.breakingChange(query.getBreakingChange());
+    fromSearch.notifySchemaChanges(query.getNotifySchemaChanges());
+    fromSearch.notifySchemaChangesByEmail(query.getNotifySchemaChangesByEmail());
 
     return fromSearch;
   }

@@ -8,7 +8,10 @@ import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { TagInput } from "components/ui/TagInput";
 import { Text } from "components/ui/Text";
+import { TextArea } from "components/ui/TextArea";
 import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
+
+import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
 
 import styles from "./BuilderField.module.scss";
 
@@ -40,9 +43,15 @@ interface BaseFieldProps {
 
 export type BuilderFieldProps = BaseFieldProps &
   (
-    | { type: "string" | "number" | "integer"; onChange?: (newValue: string) => void; onBlur?: (value: string) => void }
+    | {
+        type: "string" | "number" | "integer";
+        onChange?: (newValue: string) => void;
+        onBlur?: (value: string) => void;
+        disabled?: boolean;
+      }
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
     | { type: "array"; onChange?: (newValue: string[]) => void }
+    | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
   );
 
@@ -116,19 +125,40 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           error={hasError}
           readOnly={readOnly}
           adornment={adornment}
+          disabled={props.disabled}
           onBlur={(e) => {
             field.onBlur(e);
             props.onBlur?.(e.target.value);
           }}
         />
       )}
-      {props.type === "array" && (
-        <ArrayField
-          name={path}
-          value={(field.value as string[] | undefined) ?? []}
-          setValue={setValue}
+      {props.type === "textarea" && (
+        <TextArea
+          {...field}
+          onChange={(e) => {
+            field.onChange(e);
+            if (e.target.value === "") {
+              form.setFieldValue(path, undefined);
+            }
+          }}
+          className={props.className}
+          value={(field.value as string) ?? ""}
           error={hasError}
+          readOnly={readOnly}
+          onBlur={(e) => {
+            field.onBlur(e);
+          }}
         />
+      )}
+      {props.type === "array" && (
+        <div data-testid={`tag-input-${path}`}>
+          <ArrayField
+            name={path}
+            value={(field.value as string[] | undefined) ?? []}
+            setValue={setValue}
+            error={hasError}
+          />
+        </div>
       )}
       {props.type === "enum" && (
         <EnumField
@@ -143,7 +173,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
         <Text className={styles.error}>
           <FormattedMessage
             id={meta.error}
-            values={meta.error === "form.pattern.error" && pattern ? { pattern: String(pattern) } : undefined}
+            values={meta.error === FORM_PATTERN_ERROR && pattern ? { pattern: String(pattern) } : undefined}
           />
         </Text>
       )}
@@ -154,7 +184,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
 export const BuilderField: React.FC<BuilderFieldProps> = (props) => {
   return (
     // The key is set to enforce a re-render of the component if the type change, otherwise changes in props might not be reflected correctly
-    <FastField name={props.path} key={props.type}>
+    <FastField name={props.path} key={`${props.type}_${props.label}`}>
       {({ field, form, meta }: FastFieldProps<unknown>) => (
         <InnerBuilderField {...props} field={field} form={form} meta={meta} />
       )}

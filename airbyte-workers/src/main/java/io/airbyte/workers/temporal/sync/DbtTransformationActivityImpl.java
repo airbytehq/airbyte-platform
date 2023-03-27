@@ -11,7 +11,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.CancellationHandler;
@@ -46,6 +45,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * DbtTransformationActivityImpl.
+ */
 @Singleton
 public class DbtTransformationActivityImpl implements DbtTransformationActivity {
 
@@ -113,7 +115,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
           if (containerOrchestratorConfig.isPresent()) {
             workerFactory =
                 getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-                    () -> context);
+                    () -> context, input.getConnectionId());
           } else {
             workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig, resourceRequirements);
           }
@@ -148,18 +150,13 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                 destinationLauncherConfig.getNormalizationIntegrationType())));
   }
 
+  @SuppressWarnings("LineLength")
   private CheckedSupplier<Worker<OperatorDbtInput, Void>, Exception> getContainerLauncherWorkerFactory(
                                                                                                        final WorkerConfigs workerConfigs,
                                                                                                        final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                        final JobRunConfig jobRunConfig,
-                                                                                                       final Supplier<ActivityExecutionContext> activityContext) {
-    final JobIdRequestBody id = new JobIdRequestBody();
-    id.setId(Long.valueOf(jobRunConfig.getJobId()));
-
-    final var jobScope = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getJobsApi().getJobInfo(id).getJob().getConfigId(),
-        "get job scope");
-    final var connectionId = UUID.fromString(jobScope);
+                                                                                                       final Supplier<ActivityExecutionContext> activityContext,
+                                                                                                       final UUID connectionId) {
 
     return () -> new DbtLauncherWorker(
         connectionId,

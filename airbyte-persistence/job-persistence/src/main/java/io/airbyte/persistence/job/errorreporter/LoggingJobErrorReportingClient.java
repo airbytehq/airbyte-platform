@@ -11,6 +11,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Log job error reports.
+ */
 public class LoggingJobErrorReportingClient implements JobErrorReportingClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LoggingJobErrorReportingClient.class);

@@ -11,10 +11,12 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
@@ -29,6 +31,7 @@ import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class ConfigurationUpdateTest {
 
@@ -49,7 +52,8 @@ class ConfigurationUpdateTest {
       .put(JdbcUtils.PASSWORD_KEY, "xyz")
       .build());
   private static final StandardSourceDefinition SOURCE_DEFINITION = new StandardSourceDefinition()
-      .withDockerRepository(IMAGE_REPOSITORY)
+      .withDockerRepository(IMAGE_REPOSITORY);
+  private static final ActorDefinitionVersion DEFINITION_VERSION = new ActorDefinitionVersion()
       .withDockerImageTag(IMAGE_TAG)
       .withSpec(CONNECTOR_SPECIFICATION);
   private static final SourceConnection ORIGINAL_SOURCE_CONNECTION = new SourceConnection()
@@ -77,36 +81,42 @@ class ConfigurationUpdateTest {
   private SecretsRepositoryReader secretsRepositoryReader;
   private JsonSecretsProcessor secretsProcessor;
   private ConfigurationUpdate configurationUpdate;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @BeforeEach
   void setup() {
     configRepository = mock(ConfigRepository.class);
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsProcessor = mock(JsonSecretsProcessor.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
-    configurationUpdate = new ConfigurationUpdate(configRepository, secretsRepositoryReader, secretsProcessor);
+    configurationUpdate = new ConfigurationUpdate(configRepository, secretsRepositoryReader, secretsProcessor, actorDefinitionVersionHelper);
   }
 
   @Test
   void testSourceUpdate() throws JsonValidationException, IOException, ConfigNotFoundException {
     when(secretsRepositoryReader.getSourceConnectionWithSecrets(UUID1)).thenReturn(ORIGINAL_SOURCE_CONNECTION);
     when(configRepository.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
+    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, UUID1)).thenReturn(DEFINITION_VERSION);
     when(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION);
 
     final SourceConnection actual = configurationUpdate.source(UUID1, ORIGINAL_SOURCE_CONNECTION.getName(), NEW_CONFIGURATION);
 
     assertEquals(NEW_SOURCE_CONNECTION, actual);
+    Mockito.verify(actorDefinitionVersionHelper).getSourceVersion(SOURCE_DEFINITION, UUID1);
   }
 
   @Test
   void testDestinationUpdate() throws JsonValidationException, IOException, ConfigNotFoundException {
     when(secretsRepositoryReader.getDestinationConnectionWithSecrets(UUID1)).thenReturn(ORIGINAL_DESTINATION_CONNECTION);
     when(configRepository.getStandardDestinationDefinition(UUID2)).thenReturn(DESTINATION_DEFINITION);
+    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, UUID1)).thenReturn(DEFINITION_VERSION);
     when(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION);
 
     final DestinationConnection actual = configurationUpdate.destination(UUID1, ORIGINAL_DESTINATION_CONNECTION.getName(), NEW_CONFIGURATION);
 
     assertEquals(NEW_DESTINATION_CONNECTION, actual);
+    Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, UUID1);
   }
 
 }

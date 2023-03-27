@@ -1,20 +1,9 @@
 import React, { Dispatch, SetStateAction, useContext } from "react";
 import { useLocalStorage } from "react-use";
 
-import {
-  BuilderFormValues,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES,
-  EditorView,
-} from "components/connectorBuilder/types";
-
-import { ConnectorManifest } from "core/request/ConnectorManifest";
+import { EditorView } from "components/connectorBuilder/types";
 
 interface LocalStorageContext {
-  storedFormValues: BuilderFormValues;
-  setStoredFormValues: (values: BuilderFormValues) => void;
-  storedManifest: ConnectorManifest;
-  setStoredManifest: (manifest: ConnectorManifest) => void;
   storedEditorView: EditorView;
   setStoredEditorView: (view: EditorView) => void;
 }
@@ -22,23 +11,9 @@ interface LocalStorageContext {
 export const ConnectorBuilderLocalStorageContext = React.createContext<LocalStorageContext | null>(null);
 
 export const ConnectorBuilderLocalStorageProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const [storedFormValues, setStoredFormValues] = useLocalStorageFixed<BuilderFormValues>(
-    "connectorBuilderFormValues",
-    DEFAULT_BUILDER_FORM_VALUES
-  );
-
-  const [storedManifest, setStoredManifest] = useLocalStorageFixed<ConnectorManifest>(
-    "connectorBuilderJsonManifest",
-    DEFAULT_JSON_MANIFEST_VALUES
-  );
-
   const [storedEditorView, setStoredEditorView] = useLocalStorageFixed<EditorView>("connectorBuilderEditorView", "ui");
 
   const ctx = {
-    storedFormValues,
-    setStoredFormValues,
-    storedManifest,
-    setStoredManifest,
     storedEditorView,
     setStoredEditorView,
   };

@@ -3,7 +3,7 @@ import * as yup from "yup";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
 import { jsonSchemaToFormBlock } from "./schemaToFormBlock";
-import { buildYupFormForJsonSchema } from "./schemaToYup";
+import { buildYupFormForJsonSchema, FORM_PATTERN_ERROR } from "./schemaToYup";
 
 // Note: We have to check yup schema with JSON.stringify
 // as exactly same objects throw now equality due to `Received: serializes to the same string` error
@@ -180,7 +180,7 @@ describe("yup schema validations", () => {
           api_key: "X",
         },
       });
-    }).toThrowError("form.pattern.error");
+    }).toThrowError(FORM_PATTERN_ERROR);
   });
 
   it("strips out properties belonging to other conditions", () => {

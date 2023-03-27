@@ -51,6 +51,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 public class ConnectionHelpers {
 
   private static final String STREAM_NAME_BASE = "users-data";
@@ -132,7 +133,9 @@ public class ConnectionHelpers {
         .withDestinationId(destinationId)
         .withOperationIds(List.of(UUID.randomUUID()))
         .withManual(true)
-        .withBreakingChange(isBroken);
+        .withBreakingChange(isBroken)
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(true);
   }
 
   public static ConnectionSchedule generateBasicConnectionSchedule() {
@@ -164,7 +167,9 @@ public class ConnectionHelpers {
                                                               final List<UUID> operationIds,
                                                               final UUID sourceCatalogId,
                                                               final Geography geography,
-                                                              final boolean breaking) {
+                                                              final boolean breaking,
+                                                              final Boolean notifySchemaChange,
+                                                              final Boolean notifySchemaChangeByEmail) {
 
     return new ConnectionRead()
         .connectionId(connectionId)
@@ -186,7 +191,9 @@ public class ConnectionHelpers {
             .memoryLimit(TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()))
         .sourceCatalogId(sourceCatalogId)
         .geography(geography)
-        .breakingChange(breaking);
+        .breakingChange(breaking)
+        .notifySchemaChanges(notifySchemaChange)
+        .notifySchemaChangesByEmail(notifySchemaChangeByEmail);
   }
 
   public static ConnectionRead generateExpectedConnectionRead(final StandardSync standardSync) {
@@ -197,7 +204,9 @@ public class ConnectionHelpers {
         standardSync.getOperationIds(),
         standardSync.getSourceCatalogId(),
         Enums.convertTo(standardSync.getGeography(), Geography.class),
-        standardSync.getBreakingChange());
+        standardSync.getBreakingChange(),
+        standardSync.getNotifySchemaChanges(),
+        standardSync.getNotifySchemaChangesByEmail());
 
     if (standardSync.getSchedule() == null) {
       connectionRead.schedule(null);
@@ -230,7 +239,9 @@ public class ConnectionHelpers {
         .prefix(standardSync.getPrefix())
         .sourceCatalogId(standardSync.getSourceCatalogId())
         .geography(ApiPojoConverters.toApiGeography(standardSync.getGeography()))
-        .breakingChange(standardSync.getBreakingChange());
+        .breakingChange(standardSync.getBreakingChange())
+        .notifySchemaChanges(standardSync.getNotifySchemaChanges())
+        .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
 
     if (standardSync.getNamespaceDefinition() != null) {
       connectionRead

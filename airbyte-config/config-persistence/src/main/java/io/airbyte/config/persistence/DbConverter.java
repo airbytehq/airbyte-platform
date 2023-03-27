@@ -4,12 +4,16 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTIVE_DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
@@ -19,8 +23,11 @@ import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
@@ -43,6 +50,8 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -60,7 +69,26 @@ import org.jooq.Record;
  */
 public class DbConverter {
 
-  public static StandardSync buildStandardSync(final Record record, final List<UUID> connectionOperationId) {
+  /**
+   * Build connection (a.k.a. StandardSync) from db record.
+   *
+   * @param record db record.
+   * @param connectionOperationId connection operation id.
+   * @return connection (a.k.a. StandardSync)
+   */
+  public static StandardSync buildStandardSync(final Record record,
+                                               final List<UUID> connectionOperationId,
+                                               final List<NotificationConfigurationRecord> notificationConfigurations) {
+    final boolean isWebhookNotificationEnabled = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration
+            .getNotificationType() == NotificationType.webhook && notificationConfiguration.getEnabled())
+        .findAny().isPresent();
+
+    final boolean isEmailNotificationEnabled = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration
+            .getNotificationType() == NotificationType.email && notificationConfiguration.getEnabled())
+        .findAny().isPresent();
+
     return new StandardSync()
         .withConnectionId(record.get(CONNECTION.ID))
         .withNamespaceDefinition(
@@ -92,7 +120,8 @@ public class DbConverter {
         .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withNonBreakingChangesPreference(
             Enums.toEnum(record.get(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, String.class), NonBreakingChangesPreference.class).orElseThrow())
-        .withNotifySchemaChanges(record.get(CONNECTION.NOTIFY_SCHEMA_CHANGES));
+        .withNotifySchemaChanges(isWebhookNotificationEnabled)
+        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
@@ -104,6 +133,12 @@ public class DbConverter {
     return configuredAirbyteCatalog;
   }
 
+  /**
+   * Build workspace from db record.
+   *
+   * @param record db record
+   * @return workspace
+   */
   public static StandardWorkspace buildStandardWorkspace(final Record record) {
     final List<Notification> notificationList = new ArrayList<>();
     final List fetchedNotifications = Jsons.deserialize(record.get(WORKSPACE.NOTIFICATIONS).data(), List.class);
@@ -131,6 +166,12 @@ public class DbConverter {
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()));
   }
 
+  /**
+   * Build source from db record.
+   *
+   * @param record db record
+   * @return source
+   */
   public static SourceConnection buildSourceConnection(final Record record) {
     return new SourceConnection()
         .withSourceId(record.get(ACTOR.ID))
@@ -141,6 +182,12 @@ public class DbConverter {
         .withName(record.get(ACTOR.NAME));
   }
 
+  /**
+   * Build destination from db record.
+   *
+   * @param record db record
+   * @return destination
+   */
   public static DestinationConnection buildDestinationConnection(final Record record) {
     return new DestinationConnection()
         .withDestinationId(record.get(ACTOR.ID))
@@ -151,7 +198,13 @@ public class DbConverter {
         .withName(record.get(ACTOR.NAME));
   }
 
-  public static StandardSourceDefinition buildStandardSourceDefinition(final Record record) {
+  /**
+   * Build source definition from db record.
+   *
+   * @param record db record
+   * @return source definition
+   */
+  public static StandardSourceDefinition buildStandardSourceDefinition(final Record record, final long defaultMaxSecondsBetweenMessages) {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
@@ -178,9 +231,18 @@ public class DbConverter {
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class))
         .withSuggestedStreams(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS).data(), SuggestedStreams.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS).data(), SuggestedStreams.class))
+        .withMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
+            ? defaultMaxSecondsBetweenMessages
+            : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue());
   }
 
+  /**
+   * Build destination definition from db record.
+   *
+   * @param record db record
+   * @return destination definition
+   */
   public static StandardDestinationDefinition buildStandardDestinationDefinition(final Record record) {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
@@ -217,6 +279,12 @@ public class DbConverter {
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class));
   }
 
+  /**
+   * Build destination oauth parameters from db record.
+   *
+   * @param record db record
+   * @return destination oauth parameter
+   */
   public static DestinationOAuthParameter buildDestinationOAuthParameter(final Record record) {
     return new DestinationOAuthParameter()
         .withOauthParameterId(record.get(ACTOR_OAUTH_PARAMETER.ID))
@@ -225,6 +293,12 @@ public class DbConverter {
         .withDestinationDefinitionId(record.get(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID));
   }
 
+  /**
+   * Build source oauth parameters from db record.
+   *
+   * @param record db record
+   * @return source oauth parameters
+   */
   public static SourceOAuthParameter buildSourceOAuthParameter(final Record record) {
     return new SourceOAuthParameter()
         .withOauthParameterId(record.get(ACTOR_OAUTH_PARAMETER.ID))
@@ -233,6 +307,12 @@ public class DbConverter {
         .withSourceDefinitionId(record.get(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID));
   }
 
+  /**
+   * Build actor catalog from db record.
+   *
+   * @param record db record
+   * @return actor catalog
+   */
   public static ActorCatalog buildActorCatalog(final Record record) {
     return new ActorCatalog()
         .withId(record.get(ACTOR_CATALOG.ID))
@@ -240,6 +320,12 @@ public class DbConverter {
         .withCatalogHash(record.get(ACTOR_CATALOG.CATALOG_HASH));
   }
 
+  /**
+   * Build actor catalog with updated at from db record.
+   *
+   * @param record db record
+   * @return actor catalog with last updated at
+   */
   public static ActorCatalogWithUpdatedAt buildActorCatalogWithUpdatedAt(final Record record) {
     return new ActorCatalogWithUpdatedAt()
         .withId(record.get(ACTOR_CATALOG.ID))
@@ -248,6 +334,12 @@ public class DbConverter {
         .withUpdatedAt(record.get(ACTOR_CATALOG_FETCH_EVENT.CREATED_AT, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC));
   }
 
+  /**
+   * Parse airbyte catalog from JSON string.
+   *
+   * @param airbyteCatalogString catalog as JSON string
+   * @return airbyte catalog
+   */
   public static AirbyteCatalog parseAirbyteCatalog(final String airbyteCatalogString) {
     final AirbyteCatalog airbyteCatalog = Jsons.deserialize(airbyteCatalogString, AirbyteCatalog.class);
     // On-the-fly migration of persisted data types related objects (protocol v0->v1)
@@ -257,6 +349,12 @@ public class DbConverter {
     return airbyteCatalog;
   }
 
+  /**
+   * Build actor catalog fetch event from db record.
+   *
+   * @param record db record
+   * @return actor catalog fetch event
+   */
   public static ActorCatalogFetchEvent buildActorCatalogFetchEvent(final Record record) {
     return new ActorCatalogFetchEvent()
         .withActorId(record.get(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID))
@@ -264,6 +362,12 @@ public class DbConverter {
         .withCreatedAt(record.get(ACTOR_CATALOG_FETCH_EVENT.CREATED_AT, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC));
   }
 
+  /**
+   * Build workspace service account from db record.
+   *
+   * @param record db record
+   * @return workspace service account
+   */
   public static WorkspaceServiceAccount buildWorkspaceServiceAccount(final Record record) {
     return new WorkspaceServiceAccount()
         .withWorkspaceId(record.get(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID))
@@ -273,6 +377,72 @@ public class DbConverter {
             : Jsons.deserialize(record.get(WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL).data()))
         .withHmacKey(record.get(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY).data()));
+  }
+
+  /**
+   * Builder connector builder with manifest project from db record.
+   *
+   * @param record db record
+   * @return connector builder project
+   */
+  public static ConnectorBuilderProject buildConnectorBuilderProject(final Record record) {
+    return buildConnectorBuilderProjectWithoutManifestDraft(record)
+        .withManifestDraft(record.get(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT) == null ? null
+            : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT).data()));
+  }
+
+  /**
+   * Builder connector builder without manifest project from db record.
+   *
+   * @param record db record
+   * @return connector builder project
+   */
+  public static ConnectorBuilderProject buildConnectorBuilderProjectWithoutManifestDraft(final Record record) {
+    return new ConnectorBuilderProject()
+        .withWorkspaceId(record.get(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID))
+        .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
+        .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
+        .withHasDraft((Boolean) record.get("hasDraft"))
+        .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
+        .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION));
+  }
+
+  /**
+   * Builder declarative manifest from db record.
+   *
+   * @param record db record
+   * @return declarative manifest
+   */
+  public static DeclarativeManifest buildDeclarativeManifest(final Record record) {
+    return buildDeclarativeManifestWithoutManifestAndSpec(record).withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
+        .withSpec(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.SPEC).data()));
+  }
+
+  /**
+   * Builder declarative manifest without manifest from db record.
+   *
+   * @param record db record
+   * @return declarative manifest
+   */
+  public static DeclarativeManifest buildDeclarativeManifestWithoutManifestAndSpec(final Record record) {
+    return new DeclarativeManifest()
+        .withActorDefinitionId(record.get(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .withDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
+        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION));
+  }
+
+  /**
+   * Actor definition config injection from db record.
+   *
+   * @param record db record
+   * @return actor definition config injection
+   */
+  public static ActorDefinitionConfigInjection buildActorDefinitionConfigInjection(final Record record) {
+    return new ActorDefinitionConfigInjection()
+        .withActorDefinitionId(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID))
+        .withInjectionPath(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH))
+        .withJsonToInject(Jsons.deserialize(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT).data()));
   }
 
 }

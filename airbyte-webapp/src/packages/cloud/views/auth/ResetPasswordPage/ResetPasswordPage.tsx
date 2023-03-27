@@ -3,9 +3,11 @@ import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { LabeledInput, Link } from "components";
+import { LabeledInput } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Link } from "components/ui/Link";
 import { ToastType } from "components/ui/Toast";
 
 import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
@@ -15,19 +17,20 @@ import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
 import { BottomBlock, FieldItem, Form } from "../components/FormComponents";
 import { FormTitle } from "../components/FormTitle";
+import { LoginSignupNavigation } from "../components/LoginSignupNavigation";
 
 const ResetPasswordPageValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
 });
 
-const ResetPasswordPage: React.FC = () => {
+export const ResetPasswordPage: React.FC = () => {
   const { requirePasswordReset } = useAuthService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
 
   useTrackPage(PageTrackingCodes.RESET_PASSWORD);
   return (
-    <div>
+    <FlexContainer direction="column" gap="xl">
       <HeadTitle titles={[{ id: "login.resetPassword" }]} />
       <FormTitle>
         <FormattedMessage id="login.resetPassword" />
@@ -74,7 +77,7 @@ const ResetPasswordPage: React.FC = () => {
               </Field>
             </FieldItem>
             <BottomBlock>
-              <Link to={CloudRoutes.Login} $light>
+              <Link to={CloudRoutes.Login}>
                 <FormattedMessage id="login.backLogin" />
               </Link>
               <Button type="submit" isLoading={isSubmitting} data-testid="login.resetPassword">
@@ -84,8 +87,7 @@ const ResetPasswordPage: React.FC = () => {
           </Form>
         )}
       </Formik>
-    </div>
+      <LoginSignupNavigation to="signup" />
+    </FlexContainer>
   );
 };
-
-export default ResetPasswordPage;

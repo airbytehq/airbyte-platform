@@ -2,12 +2,10 @@ import { useMemo } from "react";
 
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { getExcludedConnectorIds } from "core/domain/connector/constants";
-import { WorkspaceRead } from "core/request/AirbyteClient";
-import { DestinationDefinitionReadWithLatestTag } from "services/connector/DestinationDefinitionService";
-import { SourceDefinitionReadWithLatestTag } from "services/connector/SourceDefinitionService";
+import { SourceDefinitionRead, DestinationDefinitionRead, WorkspaceRead } from "core/request/AirbyteClient";
 
 export const useAvailableConnectorDefinitions = <
-  T extends SourceDefinitionReadWithLatestTag | DestinationDefinitionReadWithLatestTag | ConnectorDefinition
+  T extends SourceDefinitionRead | DestinationDefinitionRead | ConnectorDefinition
 >(
   connectionDefinitions: T[],
   workspace: WorkspaceRead

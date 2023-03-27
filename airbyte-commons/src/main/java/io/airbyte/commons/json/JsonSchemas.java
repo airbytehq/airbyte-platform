@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Shared code for interacting with JSONSchema.
+ */
 // todo (cgardens) - we need the ability to identify jsonschemas that Airbyte considers invalid for
 // a connector (e.g. "not" keyword).
 @Slf4j
@@ -64,10 +67,15 @@ public class JsonSchemas {
     }
   }
 
-  /*
+  /**
    * JsonReferenceProcessor relies on all the json in consumes being in a file system (not in a jar).
    * This method copies all the json configs out of the jar into a temporary directory so that
    * JsonReferenceProcessor can find them.
+   *
+   * @param resourceDir location of the resource that contains the JSONSchema files
+   * @param klass class with which the resource is associated
+   * @param <T> type of class
+   * @return path to where the files have been copied
    */
   public static <T> Path prepareSchemas(final String resourceDir, final Class<T> klass) {
     try {
@@ -81,8 +89,7 @@ public class JsonSchemas {
       final Path configRoot = Files.createTempDirectory("schemas");
       for (final String filename : filenames) {
         IOs.writeFile(
-            configRoot,
-            filename,
+            configRoot.resolve(filename),
             MoreResources.readResource(String.format("%s/%s", resourceDir, filename)));
       }
 
@@ -104,24 +111,6 @@ public class JsonSchemas {
   }
 
   /**
-   * Traverse a JsonSchema object. At each node, map a value.
-   *
-   * @param jsonSchema - JsonSchema object to traverse
-   * @param mapper - accepts the current node and the path to that node. whatever is returned will be
-   *        collected and returned by the final collection.
-   * @param <T> - type of objects being collected
-   * @return - collection of all items that were collected during the traversal. Returns a { @link
-   *         Collection } because there is no order or uniqueness guarantee so neither List nor Set
-   *         make sense.
-   */
-  public static <T> List<T> traverseJsonSchemaWithCollector(final JsonNode jsonSchema, final BiFunction<JsonNode, List<FieldNameOrList>, T> mapper) {
-    // for the sake of code reuse, use the filtered collector method but makes sure the filter always
-    // returns true.
-    return traverseJsonSchemaWithFilteredCollector(jsonSchema,
-        (node, path) -> Optional.ofNullable(mapper.apply(node, path)));
-  }
-
-  /**
    * Traverse a JsonSchema object. At each node, optionally map a value.
    *
    * @param jsonSchema - JsonSchema object to traverse
@@ -132,8 +121,8 @@ public class JsonSchemas {
    * @return - collection of all items that were collected during the traversal. Returns values in
    *         preoorder traversal order.
    */
-  public static <T> List<T> traverseJsonSchemaWithFilteredCollector(final JsonNode jsonSchema,
-                                                                    final BiFunction<JsonNode, List<FieldNameOrList>, Optional<T>> mapper) {
+  private static <T> List<T> traverseJsonSchemaWithFilteredCollector(final JsonNode jsonSchema,
+                                                                     final BiFunction<JsonNode, List<FieldNameOrList>, Optional<T>> mapper) {
     final List<T> collector = new ArrayList<>();
     traverseJsonSchema(jsonSchema,
         (node, path) -> mapper.apply(node, path).ifPresent(collector::add));
@@ -160,9 +149,8 @@ public class JsonSchemas {
   }
 
   /**
-   * Recursive, depth-first implementation of { @link JsonSchemas#traverseJsonSchema(final JsonNode
-   * jsonNode, final BiConsumer<JsonNode, List<String>> consumer) }. Takes path as argument so that
-   * the path can be passed to the consumer.
+   * Recursive, depth-first implementation of JsonSchemas#traverseJsonSchema(...). Takes path as
+   * argument so that the path can be passed to the consumer.
    *
    * @param jsonSchemaNode - jsonschema object to traverse.
    * @param consumer - consumer to be called at each node. it accepts the current node and the path to
@@ -211,6 +199,9 @@ public class JsonSchemas {
           } else {
             log.warn("The object is a properties key or a combo keyword. The traversal is silently stopped. Current schema: " + jsonSchemaNode);
           }
+        }
+        default -> {
+          // no op
         }
       }
     }
@@ -332,10 +323,10 @@ public class JsonSchemas {
 
     @Override
     public String toString() {
-      return "FieldNameOrList{" +
-          "fieldName='" + fieldName + '\'' +
-          ", isList=" + isList +
-          '}';
+      return "FieldNameOrList{"
+          + "fieldName='" + fieldName + '\''
+          + ", isList=" + isList
+          + '}';
     }
 
   }

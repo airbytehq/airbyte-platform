@@ -21,6 +21,7 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStatus,
+  ConnectionStream,
   DestinationRead,
   NamespaceDefinitionType,
   OperationCreate,
@@ -125,6 +126,12 @@ export const useResetConnection = () => {
   return useMutation((connectionId: string) => service.reset(connectionId));
 };
 
+export const useResetConnectionStream = (connectionId: string) => {
+  const service = useConnectionService();
+
+  return useMutation((streams: ConnectionStream[]) => service.resetStream(connectionId, streams));
+};
+
 const useGetConnection = (connectionId: string, options?: { refetchInterval: number }): WebBackendConnectionRead => {
   const service = useWebConnectionService();
 
@@ -153,7 +160,9 @@ const useCreateConnection = () => {
         sourceCatalogId,
       });
 
-      const enabledStreams = values.syncCatalog.streams.filter((stream) => stream.config?.selected).length;
+      const enabledStreams = values.syncCatalog.streams
+        .map((stream) => stream.config?.selected && stream.stream?.name)
+        .filter(Boolean);
 
       analyticsService.track(Namespace.CONNECTION, Action.CREATE, {
         actionDescription: "New connection created",
@@ -163,7 +172,8 @@ const useCreateConnection = () => {
         connector_destination_definition: destination?.destinationName,
         connector_destination_definition_id: destinationDefinition?.destinationDefinitionId,
         available_streams: values.syncCatalog.streams.length,
-        enabled_streams: enabledStreams,
+        enabled_streams: enabledStreams.length,
+        enabled_streams_list: JSON.stringify(enabledStreams),
       });
 
       return response;

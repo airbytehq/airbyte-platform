@@ -8,7 +8,12 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import jakarta.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Based on geography and temporal job type returns the appropriate task queue.
+ */
+@Slf4j
 @Singleton
 public class DefaultTaskQueueMapper implements TaskQueueMapper {
 
@@ -23,6 +28,7 @@ public class DefaultTaskQueueMapper implements TaskQueueMapper {
   // To override this behavior, define a new TaskQueueMapper bean with the @Primary annotation.
   @Override
   public String getTaskQueue(final Geography geography, final TemporalJobType jobType) {
+    log.info("Called DefaultTaskQueueMapper getTaskQueue for geography {}", geography);
     switch (jobType) {
       case CHECK_CONNECTION:
         return DEFAULT_CHECK_TASK_QUEUE;

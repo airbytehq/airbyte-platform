@@ -10,11 +10,26 @@
   }
 }
 
+@keyframes highlight {
+  0% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 47px -5px colors.$blue-200;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .streamHeaderContent {
   @include header-background(colors.$white, colors.$grey-30);
 
   border-bottom: 1px solid colors.$grey-50;
   padding: 0;
+  padding-right: variables.$spacing-xl;
   margin-bottom: 1px;
   gap: variables.$spacing-sm;
   min-height: 50px;
@@ -37,16 +52,41 @@
   &.disabled {
     background-color: colors.$grey-50;
   }
+
+  &.highlight {
+    animation: highlight 2s ease-in-out;
+    z-index: 1;
+  }
 }
 %streamRowCheckboxCell,
 .streamRowCheckboxCell {
-  max-width: 53px;
+  width: 53px;
   text-align: center;
   font-size: 10px;
   line-height: 13px;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: variables.$spacing-sm;
+}
+
+.syncCell {
+  width: 35px;
+  text-align: center;
+}
+
+.fieldsCell {
+  width: 60px;
+  text-align: center;
+}
+
+.syncModeCell {
+  width: 225px;
+}
+
+.arrowCell {
+  width: 20px;
+  text-align: center;
 }
 
 .cellText {

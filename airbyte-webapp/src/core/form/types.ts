@@ -2,6 +2,11 @@ import { JSONSchema7Type, JSONSchema7TypeName } from "json-schema";
 
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
+export interface GroupDetails {
+  id: string;
+  title?: string;
+}
+
 /**
  * When turning the JSON schema into `FormBlock`s,
  * some often used props are copied over for easy access.
@@ -18,6 +23,9 @@ type FormRelevantJSONSchema = Pick<
   | "airbyte_hidden"
   | "enum"
   | "format"
+  | "always_show"
+  | "pattern_descriptor"
+  | "group"
 >;
 
 interface FormItem extends FormRelevantJSONSchema {
@@ -29,6 +37,10 @@ interface FormItem extends FormRelevantJSONSchema {
 export interface FormBaseItem extends FormItem {
   _type: "formItem";
   type: JSONSchema7TypeName;
+  /**
+   * In case type is array, itemType specifies the type of the items
+   * */
+  itemType?: JSONSchema7TypeName;
   isSecret?: boolean;
   multiline?: boolean;
 }

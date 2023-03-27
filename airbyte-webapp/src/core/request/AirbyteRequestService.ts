@@ -1,10 +1,13 @@
 import merge from "lodash/merge";
 
-import { ApiOverrideRequestOptions } from "./apiOverride";
 import { CommonRequestError } from "./CommonRequestError";
 import { RequestMiddleware } from "./RequestMiddleware";
 import { VersionError } from "./VersionError";
+import { ApiCallOptions } from "../api/apiCall";
 
+/**
+ * @deprecated This class will be removed soon and should no longer be used or extended.
+ */
 abstract class AirbyteRequestService {
   private readonly rootUrl: string;
 
@@ -14,9 +17,8 @@ abstract class AirbyteRequestService {
     this.rootUrl = rootUrl.replace(/\/v1\/?$/, "");
   }
 
-  protected get requestOptions(): ApiOverrideRequestOptions {
+  protected get requestOptions(): ApiCallOptions {
     return {
-      config: { apiUrl: this.rootUrl },
       middlewares: this.middlewares,
     };
   }
@@ -31,6 +33,7 @@ abstract class AirbyteRequestService {
         body: body ? JSON.stringify(body) : undefined,
         headers: {
           "Content-Type": "application/json",
+          "X-Airbyte-Analytic-Source": "webapp",
         },
       },
       options

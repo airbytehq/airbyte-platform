@@ -43,6 +43,8 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -72,9 +74,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+/**
+ * Setup for Temporal Client test suite.
+ */
 @SuppressWarnings("PMD.JUnit5TestShouldBePackagePrivate")
 public class TemporalClientTest {
 
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID JOB_UUID = UUID.randomUUID();
   private static final long JOB_ID = 11L;
@@ -109,6 +115,7 @@ public class TemporalClientTest {
   private ConnectionManagerUtils connectionManagerUtils;
   private NotificationUtils notificationUtils;
   private StreamResetRecordsHelper streamResetRecordsHelper;
+  private FeatureFlagClient featureFlagClient;
   private Path workspaceRoot;
 
   @BeforeEach
@@ -126,9 +133,10 @@ public class TemporalClientTest {
     connectionManagerUtils = spy(new ConnectionManagerUtils());
     notificationUtils = spy(new NotificationUtils());
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
+    featureFlagClient = new TestClient();
     temporalClient =
         spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils, notificationUtils,
-            streamResetRecordsHelper));
+            streamResetRecordsHelper, featureFlagClient));
   }
 
   @Nested
@@ -144,7 +152,7 @@ public class TemporalClientTest {
 
       temporalClient = spy(
           new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils, mNotificationUtils,
-              streamResetRecordsHelper));
+              streamResetRecordsHelper, featureFlagClient));
     }
 
     @Test
@@ -280,7 +288,8 @@ public class TemporalClientTest {
           .withSourceDockerImage(IMAGE_NAME1)
           .withDestinationDockerImage(IMAGE_NAME2)
           .withOperationSequence(List.of())
-          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog());
+          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog())
+          .withWorkspaceId(WORKSPACE_ID);
       final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
           .withSourceConfiguration(Jsons.emptyObject())
           .withDestinationConfiguration(Jsons.emptyObject());
@@ -357,7 +366,8 @@ public class TemporalClientTest {
           .withSourceDockerImage(IMAGE_NAME1)
           .withDestinationDockerImage(IMAGE_NAME2)
           .withOperationSequence(List.of())
-          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog());
+          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog())
+          .withWorkspaceId(WORKSPACE_ID);
 
       temporalClient.submitSync(JOB_ID, ATTEMPT_ID, syncConfig, attemptSyncConfig, CONNECTION_ID);
       temporalClient.forceDeleteWorkflow(CONNECTION_ID);

@@ -1,0 +1,6 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  gap: 2 * variables.$spacing-2xl;
+}

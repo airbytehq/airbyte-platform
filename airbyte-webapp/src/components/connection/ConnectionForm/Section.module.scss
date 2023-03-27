@@ -1,10 +1,23 @@
 @use "scss/variables";
+@use "scss/colors";
+
+$icon-size: 16px;
+
+.flexHeight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
 .section {
   padding: variables.$spacing-xl;
   display: flex;
   flex-direction: column;
   gap: variables.$spacing-lg;
+
+  &.collapsed {
+    cursor: pointer;
+  }
 
   // TODO: We may be able to get rid of this.
   &:not(:last-child) {
@@ -14,5 +27,22 @@
   &.flush {
     padding: 0;
     gap: 0;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+
+  .arrow {
+    font-size: $icon-size;
+    line-height: $icon-size;
+    color: colors.$dark-blue;
+    transition: 0.3s;
+    cursor: pointer;
+
+    &.expanded {
+      transform: rotate(90deg);
+    }
   }
 }

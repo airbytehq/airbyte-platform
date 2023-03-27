@@ -20,9 +20,21 @@ import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
-import io.airbyte.config.*;
+import io.airbyte.config.FailureReason;
+import io.airbyte.config.NormalizationInput;
+import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.OperatorDbtInput;
+import io.airbyte.config.OperatorWebhook;
+import io.airbyte.config.OperatorWebhookInput;
+import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.StandardSync;
+import io.airbyte.config.StandardSyncInput;
+import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
+import io.airbyte.config.StandardSyncOutput;
+import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -145,7 +157,8 @@ class SyncWorkflowTest {
     refreshSchemaActivity = mock(RefreshSchemaActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
 
-    when(normalizationActivity.generateNormalizationInputWithMinimumPayload(any(), any(), any())).thenReturn(normalizationInput);
+    when(normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(any(), any(), any(), any()))
+        .thenReturn(normalizationInput);
     when(normalizationSummaryCheckActivity.shouldRunNormalization(any(), any(), any())).thenReturn(true);
 
     when(configFetchActivity.getSourceId(sync.getConnectionId())).thenReturn(Optional.of(SOURCE_ID));

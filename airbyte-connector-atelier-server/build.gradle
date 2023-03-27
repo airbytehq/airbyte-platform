@@ -1,0 +1,90 @@
+import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
+
+plugins {
+    id "org.openapi.generator" version "5.3.1" // todo: can we upgrade this to a later version?
+    id 'application'
+}
+
+dependencies {
+    // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service
+    implementation libs.bundles.datadog
+    // implementation libs.bundles.temporal  uncomment this when we start using temporal to invoke connector commands
+    implementation libs.sentry.java
+
+    // Micronaut dependencies
+    annotationProcessor platform(libs.micronaut.bom)
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+
+    implementation platform(libs.micronaut.bom)
+    implementation libs.bundles.micronaut
+
+    // OpenAPI code generation dependencies
+    implementation group: 'io.swagger', name: 'swagger-annotations', version: '1.6.2'
+
+    implementation project(':airbyte-config:init')
+}
+
+mainClassName = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
+
+application {
+    mainClass = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
+    applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
+}
+
+Properties env = new Properties()
+rootProject.file('.env.dev').withInputStream { env.load(it) }
+
+run {
+    // default for running on local machine.
+    env.each { entry ->
+        environment entry.getKey(), entry.getValue()
+    }
+
+    environment 'AIRBYTE_ROLE', System.getenv('AIRBYTE_ROLE')
+    environment 'AIRBYTE_VERSION', env.VERSION
+}
+
+task generateOpenApiServer(type: GenerateTask) {
+    def generatedCodeDir = "$buildDir/generated/api/server"
+
+    inputSpec = "$projectDir/src/main/openapi/openapi.yaml"
+    outputDir = generatedCodeDir
+
+    generatorName = "jaxrs-spec"
+    apiPackage = "io.airbyte.connector_builder.api.generated"
+    invokerPackage = "io.airbyte.connector_builder.api.invoker.generated"
+    modelPackage = "io.airbyte.connector_builder.api.model.generated"
+
+    // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid
+    configOptions = [
+            dateLibrary                   : "java8",
+            generatePom                   : "false",
+            interfaceOnly                 : "true",
+            /*
+            JAX-RS generator does not respect nullable properties defined in the OpenApi Spec.
+            It means that if a field is not nullable but not set it is still returning a null value for this field in the serialized json.
+            The below Jackson annotation is made to only keep non null values in serialized json.
+            We are not yet using nullable=true properties in our OpenApi so this is a valid workaround at the moment to circumvent the default JAX-RS behavior described above.
+            Feel free to read the conversation on https://github.com/airbytehq/airbyte/pull/13370 for more details.
+            */
+            additionalModelTypeAnnotations: "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
+    ]
+}
+compileJava.dependsOn tasks.generateOpenApiServer
+
+// Ensures that the generated models are compiled during the build step so they are available for use at runtime
+sourceSets {
+    main {
+        java {
+            srcDirs "$buildDir/generated/api/server/src/gen/java"
+        }
+        resources {
+            srcDir "$projectDir/src/main/openapi/"
+        }
+    }
+}
+
+tasks.named("buildDockerImage") {
+    dependsOn generateOpenApiServer
+    dependsOn copyGeneratedTar
+}

@@ -20,6 +20,9 @@ import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Create normalization summaries migration.
+ */
 // TODO: update migration description in the class name
 public class V0_40_4_002__CreateNormalizationSummaries extends BaseJavaMigration {
 

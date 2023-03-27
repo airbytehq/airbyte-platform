@@ -45,7 +45,7 @@ const Template: StoryObj<typeof ConnectorForm> = {
       args.selectedConnectorDefinitionSpecification.documentationUrl = "";
     }
 
-    return <ConnectorForm {...args} renderWithCard />;
+    return <ConnectorForm {...args} />;
   },
 };
 
@@ -315,7 +315,6 @@ export const Preview: StoryObj<React.FC<React.ComponentProps<typeof ConnectorFor
     };
     return (
       <ConnectorForm
-        renderWithCard
         formType={props.formType}
         renderFooter={() => (
           <div>
@@ -338,7 +337,6 @@ export const Preview: StoryObj<React.FC<React.ComponentProps<typeof ConnectorFor
   },
   argTypes: {
     formValues: hidden,
-    renderWithCard: hidden,
     title: hidden,
     description: hidden,
     full: hidden,

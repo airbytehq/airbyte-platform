@@ -32,7 +32,7 @@ export const CloudSupportDropdown: React.FC = () => {
       ]}
       onChange={handleChatUs}
       label={<FormattedMessage id="sidebar.support" />}
-      icon={<FontAwesomeIcon icon={faQuestionCircle} size="2x" />}
+      icon={<FontAwesomeIcon icon={faQuestionCircle} style={{ height: "22px" }} />}
     />
   );
 };

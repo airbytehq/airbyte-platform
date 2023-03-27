@@ -52,10 +52,14 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.CheckWithCatalog;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Collections;
@@ -71,6 +75,10 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * ConnectionsHandler. Javadocs suppressed because api docs should be used as source of truth.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 @Singleton
 public class ConnectionsHandler {
 
@@ -82,6 +90,8 @@ public class ConnectionsHandler {
   private final TrackingClient trackingClient;
   private final EventRunner eventRunner;
   private final ConnectionHelper connectionHelper;
+  @Inject
+  FeatureFlagClient featureFlagClient;
 
   @VisibleForTesting
   ConnectionsHandler(final ConfigRepository configRepository,
@@ -177,7 +187,11 @@ public class ConnectionsHandler {
     } else {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
-
+    final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
+    if (workspaceId != null && featureFlagClient.enabled(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
+      // TODO this is the hook for future check with catalog work
+      LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
+    }
     configRepository.writeStandardSync(standardSync);
 
     trackNewConnection(standardSync);
@@ -413,11 +427,6 @@ public class ConnectionsHandler {
     return listConnectionsForWorkspace(workspaceIdRequestBody, false);
   }
 
-  public ConnectionReadList listAllConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
-    return listConnectionsForWorkspace(workspaceIdRequestBody, true);
-  }
-
   public ConnectionReadList listConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody, final boolean includeDeleted)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
@@ -427,6 +436,11 @@ public class ConnectionsHandler {
     }
 
     return new ConnectionReadList().connections(connectionReads);
+  }
+
+  public ConnectionReadList listAllConnectionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return listConnectionsForWorkspace(workspaceIdRequestBody, true);
   }
 
   public ConnectionReadList listConnectionsForSource(final UUID sourceId, final boolean includeDeleted) throws IOException {
@@ -555,9 +569,9 @@ public class ConnectionsHandler {
     final ConnectionMatcher connectionMatcher = new ConnectionMatcher(connectionSearch);
     final ConnectionRead connectionReadFromSearch = connectionMatcher.match(connectionRead);
 
-    return (connectionReadFromSearch == null || connectionReadFromSearch.equals(connectionRead)) &&
-        matchSearch(connectionSearch.getSource(), sourceRead) &&
-        matchSearch(connectionSearch.getDestination(), destinationRead);
+    return (connectionReadFromSearch == null || connectionReadFromSearch.equals(connectionRead))
+        && matchSearch(connectionSearch.getSource(), sourceRead)
+        && matchSearch(connectionSearch.getDestination(), destinationRead);
   }
 
   // todo (cgardens) - make this static. requires removing one bad dependency in SourceHandlerTest

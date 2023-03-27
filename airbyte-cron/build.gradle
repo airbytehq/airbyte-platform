@@ -4,8 +4,8 @@ plugins {
 
 dependencies {
     implementation 'com.auth0:java-jwt:3.19.2'
-    implementation 'io.fabric8:kubernetes-client:5.12.2'
-    implementation 'io.sentry:sentry:6.3.1'
+    implementation libs.bundles.kubernetes.client
+    implementation libs.sentry.java
     implementation libs.bundles.temporal
     implementation libs.bundles.datadog
 
@@ -27,10 +27,8 @@ dependencies {
     implementation libs.bundles.micronaut
 }
 
-mainClassName = 'io.airbyte.cron.MicronautCronRunner'
-
 application {
-    mainClass = mainClassName
+    mainClass = 'io.airbyte.cron.MicronautCronRunner'
     applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
 }
 

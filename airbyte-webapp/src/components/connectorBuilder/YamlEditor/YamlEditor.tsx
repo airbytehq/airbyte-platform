@@ -7,16 +7,21 @@ import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CodeEditor } from "components/ui/CodeEditor";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 
 import { Action, Namespace } from "core/analytics";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { NameInput } from "./NameInput";
 import styles from "./YamlEditor.module.scss";
+import { SavingIndicator } from "../Builder/SavingIndicator";
 import { UiYamlToggleButton } from "../Builder/UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
+import { PublishButton } from "../PublishButton";
 import { convertToManifest } from "../types";
 import { useManifestToBuilderForm } from "../useManifestToBuilderForm";
 
@@ -28,6 +33,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
   const { setValues } = useFormikContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const publishWorkflowEnabled = useExperiment("connectorBuilder.publishWorkflow", false);
   const yamlEditorRef = useRef<editor.IStandaloneCodeEditor>();
   const {
     yamlManifest,
@@ -43,6 +49,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
 
   // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
   const debouncedSetJsonManifest = useMemo(() => debounce(setJsonManifest, 200), [setJsonManifest]);
+  const initialLoad = useRef(true);
 
   const monaco = useMonaco();
 
@@ -54,7 +61,12 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
       try {
         const json = load(yamlValue) as ConnectorManifest;
         setYamlIsValid(true);
-        debouncedSetJsonManifest(json);
+        // skip setting the manifest on the first load as it just got passed in and is synced already
+        if (initialLoad.current) {
+          initialLoad.current = false;
+        } else {
+          debouncedSetJsonManifest(json);
+        }
 
         // clear editor error markers
         if (yamlEditorModel) {
@@ -90,7 +102,10 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   const handleToggleYamlEditor = async () => {
     if (yamlIsDirty) {
       try {
-        const convertedFormValues = await convertToBuilderFormValues(jsonManifest, builderFormValues);
+        const convertedFormValues = await convertToBuilderFormValues(
+          jsonManifest,
+          builderFormValues.global.connectorName
+        );
         setValues(convertedFormValues);
         toggleYamlEditor();
       } catch (e) {
@@ -121,10 +136,17 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.control}>
-        <UiYamlToggleButton yamlSelected onClick={handleToggleYamlEditor} />
-        <DownloadYamlButton yaml={yamlValue} yamlIsValid={yamlIsValid} />
-      </div>
+      <FlexContainer alignItems="center" className={styles.control}>
+        <UiYamlToggleButton yamlSelected onClick={handleToggleYamlEditor} className={styles.toggleButton} />
+        <NameInput />
+        <SavingIndicator />
+        <FlexItem grow>
+          <FlexContainer justifyContent="flex-end">
+            <DownloadYamlButton yaml={yamlValue} yamlIsValid={yamlIsValid} />
+            {publishWorkflowEnabled && <PublishButton />}
+          </FlexContainer>
+        </FlexItem>
+      </FlexContainer>
       <div className={styles.editorContainer}>
         <CodeEditor
           value={yamlValue}

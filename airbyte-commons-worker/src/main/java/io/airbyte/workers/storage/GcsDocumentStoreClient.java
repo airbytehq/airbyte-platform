@@ -23,6 +23,13 @@ public class GcsDocumentStoreClient implements DocumentStoreClient {
   private final Path root;
   private final Storage gcsClient;
 
+  /**
+   * Get GCS client.
+   *
+   * @param config gcs config
+   * @param root root path
+   * @return gcs client
+   */
   public static GcsDocumentStoreClient create(final GcsConfig config, final Path root) {
     return new GcsDocumentStoreClient(
         new DefaultGcsClientFactory(config).get(),

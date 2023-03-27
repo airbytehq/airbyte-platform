@@ -13,13 +13,13 @@ import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { links } from "utils/links";
 
-import { CatalogTreeTableCell } from "./CatalogTreeTableCell";
+import { CatalogTreeTableCell, CatalogTreeTableCellProps } from "./CatalogTreeTableCell";
 import styles from "./CatalogTreeTableHeader.module.scss";
 import {
   DestinationNamespaceFormValueType,
@@ -31,25 +31,20 @@ import {
   StreamNameDefinitionValueType,
 } from "../../DestinationStreamNamesModal/DestinationStreamNamesModal";
 
-const HeaderCell: React.FC<React.PropsWithChildren<Parameters<typeof CatalogTreeTableCell>[0]>> = ({
-  size,
-  children,
-}) => {
-  return (
-    <CatalogTreeTableCell size={size}>
-      <Text size="sm" className={styles.cellText}>
-        {children}
-      </Text>
-    </CatalogTreeTableCell>
-  );
-};
+const HeaderCell: React.FC<React.PropsWithChildren<CatalogTreeTableCellProps>> = ({ children, ...tableCellProps }) => (
+  <CatalogTreeTableCell {...tableCellProps} withOverflow>
+    <Text size="sm" className={styles.headerCellText}>
+      {children}
+    </Text>
+  </CatalogTreeTableCell>
+);
 
 export const CatalogTreeTableHeader: React.FC = () => {
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
   const { onCheckAll, selectedBatchNodeIds, allChecked } = useBulkEditService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
     formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
@@ -67,25 +62,25 @@ export const CatalogTreeTableHeader: React.FC = () => {
   };
 
   return (
-    <Header
-      className={classNames(styles.headerContainer, { [styles.newTable]: !!isNewTableDesignEnabled })}
-      data-testid="catalog-tree-table-header"
-    >
-      <CatalogTreeTableCell size="small" className={styles.checkboxCell}>
+    <Header className={classNames(styles.headerContainer)} data-testid="catalog-tree-table-header">
+      <CatalogTreeTableCell size="fixed" className={styles.checkboxCell}>
         {mode !== "readonly" && (
           <CheckBox
+            checkboxSize="sm"
             onChange={onCheckAll}
             indeterminate={selectedBatchNodeIds.length > 0 && !allChecked}
             checked={allChecked}
           />
         )}
       </CatalogTreeTableCell>
-      <HeaderCell size="small">
+      <HeaderCell size="fixed" className={styles.syncCell}>
         <FormattedMessage id="sources.sync" />
       </HeaderCell>
-      {/* <TextCell>
-        <FormattedMessage id="form.fields" />
-      </TextCell> */}
+      {isColumnSelectionEnabled && (
+        <HeaderCell size="fixed" className={styles.fieldsCell}>
+          <FormattedMessage id="form.fields" />
+        </HeaderCell>
+      )}
       <HeaderCell>
         <FormattedMessage id="form.namespace" />
         <InfoTooltip>
@@ -98,7 +93,7 @@ export const CatalogTreeTableHeader: React.FC = () => {
           <FormattedMessage id="connectionForm.sourceStreamName.info" />
         </InfoTooltip>
       </HeaderCell>
-      <HeaderCell size="large">
+      <HeaderCell size="fixed" className={styles.syncModeCell}>
         <FormattedMessage id="form.syncMode" />
         <InfoTooltip>
           <FormattedMessage id="connectionForm.syncType.info" />
@@ -117,7 +112,7 @@ export const CatalogTreeTableHeader: React.FC = () => {
           <FormattedMessage id="connectionForm.primaryKey.info" />
         </InfoTooltip>
       </HeaderCell>
-      <CatalogTreeTableCell size="xsmall" />
+      <CatalogTreeTableCell size="fixed" className={styles.arrowCell} />
       <HeaderCell>
         <FormattedMessage id="form.namespace" />
         <Button

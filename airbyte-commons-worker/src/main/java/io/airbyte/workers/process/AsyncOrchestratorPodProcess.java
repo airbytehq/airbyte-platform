@@ -16,11 +16,13 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder;
+import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -93,6 +95,11 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     this.serverPort = serverPort;
   }
 
+  /**
+   * Get output of the process.
+   *
+   * @return output, if exists.
+   */
   public Optional<String> getOutput() {
     final var possibleOutput = getDocument(AsyncKubePodStatus.SUCCEEDED.name());
 
@@ -174,20 +181,24 @@ public class AsyncOrchestratorPodProcess implements KubePod {
 
   @Override
   public void destroy() {
-    final var wasDestroyed = kubernetesClient.pods()
+    final List<StatusDetails> destroyed = kubernetesClient.pods()
         .inNamespace(getInfo().namespace())
         .withName(getInfo().name())
         .withPropagationPolicy(DeletionPropagation.FOREGROUND)
         .delete();
 
-    if (wasDestroyed) {
+    if (CollectionUtils.isNotEmpty(destroyed)) {
       log.info("Deleted pod {} in namespace {}", getInfo().name(), getInfo().namespace());
     } else {
       log.warn("Wasn't able to delete pod {} from namespace {}", getInfo().name(), getInfo().namespace());
     }
   }
 
-  // implementation copied from Process.java since this isn't a real Process
+  /**
+   * Implementation copied from Process.java since this isn't a real Process.
+   *
+   * @return true, if has exited. otherwise, false.
+   */
   public boolean hasExited() {
     try {
       exitValue();
@@ -197,6 +208,14 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     }
   }
 
+  /**
+   * Wait for pod process to complete.
+   *
+   * @param timeout timeout magnitude
+   * @param unit timeout unit
+   * @return true, if exits within time. otherwise, false.
+   * @throws InterruptedException exception if interrupted while waiting
+   */
   public boolean waitFor(final long timeout, final TimeUnit unit) throws InterruptedException {
     // implementation copied from Process.java since this isn't a real Process
     long remainingNanos = unit.toNanos(timeout);
@@ -267,11 +286,6 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       }
 
       @Override
-      public int waitFor() throws InterruptedException {
-        return AsyncOrchestratorPodProcess.this.waitFor();
-      }
-
-      @Override
       public int exitValue() {
         return AsyncOrchestratorPodProcess.this.exitValue();
       }
@@ -279,6 +293,11 @@ public class AsyncOrchestratorPodProcess implements KubePod {
       @Override
       public void destroy() {
         AsyncOrchestratorPodProcess.this.destroy();
+      }
+
+      @Override
+      public int waitFor() throws InterruptedException {
+        return AsyncOrchestratorPodProcess.this.waitFor();
       }
 
       @Override
@@ -316,6 +335,15 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     }
   }
 
+  /**
+   * Create orchestrator pod process.
+   *
+   * @param allLabels label
+   * @param resourceRequirements resource reqs
+   * @param fileMap file map
+   * @param portMap port map
+   * @param nodeSelectors node selectors
+   */
   // but does that mean there won't be a docker equivalent?
   public void create(final Map<String, String> allLabels,
                      final ResourceRequirements resourceRequirements,

@@ -5,13 +5,18 @@
 package io.airbyte.test.utils;
 
 import io.airbyte.db.Database;
-import io.airbyte.db.factory.DSLContextFactory;
+import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.factory.DatabaseDriver;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AirbyteAcceptanceTestHarness.Type;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
-import org.jooq.SQLDialect;
+import javax.sql.DataSource;
+import org.postgresql.PGProperty;
 
 /**
  * This class is used to provide information related to the test databases for running the
@@ -22,8 +27,14 @@ import org.jooq.SQLDialect;
  */
 class GKEPostgresConfig {
 
-  private static final String SOURCE_HOST = "postgres-source-svc";
-  private static final String DESTINATION_HOST = "postgres-destination-svc";
+  // NOTE: these two hosts refer to services named `acceptance-test-postgres-[source|destination]-svc`
+  // in the `acceptance-tests` namespace, running in the same cluster as the check/discover/sync
+  // workers.
+  //
+  // The namespace here needs to be in sync with the namespaces created in
+  // tools/bin/gke-kube-acceptance-test/acceptance_test_kube_gke.sh.
+  private static final String SOURCE_HOST = "acceptance-test-postgres-source-svc.acceptance-tests.svc.cluster.local";
+  private static final String DESTINATION_HOST = "acceptance-test-postgres-destination-svc.acceptance-tests.svc.cluster.local";
   private static final Integer PORT = 5432;
   private static final String USERNAME = "postgresadmin";
   private static final String PASSWORD = "admin123";
@@ -45,14 +56,30 @@ class GKEPostgresConfig {
     return dbConfig;
   }
 
-  static Database getSourceDatabase() {
-    return new Database(DSLContextFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
-        "jdbc:postgresql://localhost:2000/postgresdb", SQLDialect.POSTGRES));
+  static DataSource getDestinationDataSource() {
+    // Note: we set the connection timeout to 30s. The underlying Hikari default is also 30s --
+    // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
+    // overrides that to MAX_INTEGER unless we explicitly specify it.
+    return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
+        "jdbc:postgresql://localhost:4000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30"));
   }
 
-  static Database getDestinationDatabase() {
-    return new Database(DSLContextFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
-        "jdbc:postgresql://localhost:4000/postgresdb", SQLDialect.POSTGRES));
+  static DataSource getSourceDataSource() {
+    // Note: we set the connection timeout to 30s. The underlying Hikari default is also 30s --
+    // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
+    // overrides that to MAX_INTEGER unless we explicitly specify it.
+    return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
+        "jdbc:postgresql://localhost:2000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30"));
+  }
+
+  static void runSqlScript(final Path scriptFilePath, final Database db) throws SQLException, IOException {
+    final StringBuilder query = new StringBuilder();
+    for (final String line : java.nio.file.Files.readAllLines(scriptFilePath, StandardCharsets.UTF_8)) {
+      if (line != null && !line.isEmpty()) {
+        query.append(line);
+      }
+    }
+    db.query(context -> context.execute(query.toString()));
   }
 
 }

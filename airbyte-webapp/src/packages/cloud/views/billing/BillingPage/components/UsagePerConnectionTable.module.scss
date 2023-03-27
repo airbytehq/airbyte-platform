@@ -1,0 +1,28 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.content {
+  a {
+    text-decoration: none;
+  }
+}
+
+.header {
+  &--nonSortable {
+    margin-left: variables.$spacing-sm;
+  }
+}
+
+.usageValue {
+  text-align: right;
+
+  &--green {
+    color: colors.$green;
+  }
+}
+
+.cellText {
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

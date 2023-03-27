@@ -25,6 +25,7 @@ import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -41,6 +42,9 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Temporal job client for synchronous jobs (i.e. spec, check, discover).
+ */
 public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSynchronousSchedulerClient.class);
@@ -53,17 +57,21 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   private final OAuthConfigSupplier oAuthConfigSupplier;
 
   private final RouterService routerService;
+  private final ConfigInjector configInjector;
 
+  @SuppressWarnings("ParameterName")
   public DefaultSynchronousSchedulerClient(final TemporalClient temporalClient,
                                            final JobTracker jobTracker,
                                            final JobErrorReporter jobErrorReporter,
                                            final OAuthConfigSupplier oAuthConfigSupplier,
-                                           final RouterService routerService) {
+                                           final RouterService routerService,
+                                           final ConfigInjector configInjector) {
     this.temporalClient = temporalClient;
     this.jobTracker = jobTracker;
     this.jobErrorReporter = jobErrorReporter;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.routerService = routerService;
+    this.configInjector = configInjector;
   }
 
   @Override
@@ -74,19 +82,20 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       throws IOException {
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
+        source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration());
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
         .withActorType(ActorType.SOURCE)
         .withActorId(source.getSourceId())
-        .withConnectionConfiguration(sourceConfiguration)
+        .withConnectionConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()))
         .withDockerImage(dockerImage)
         .withProtocolVersion(protocolVersion)
         .withIsCustomConnector(isCustomConnector);
 
     final UUID jobId = UUID.randomUUID();
     final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage);
-    String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
+    final String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
 
     return execute(
         ConfigType.CHECK_CONNECTION_SOURCE,
@@ -105,19 +114,20 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       throws IOException {
     final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
+        destination.getDestinationId(),
         destination.getWorkspaceId(),
         destination.getConfiguration());
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
         .withActorType(ActorType.DESTINATION)
         .withActorId(destination.getDestinationId())
-        .withConnectionConfiguration(destinationConfiguration)
+        .withConnectionConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()))
         .withDockerImage(dockerImage)
         .withProtocolVersion(protocolVersion)
         .withIsCustomConnector(isCustomConnector);
 
     final UUID jobId = UUID.randomUUID();
     final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage);
-    String taskQueue = routerService.getTaskQueueForWorkspace(destination.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
+    final String taskQueue = routerService.getTaskQueueForWorkspace(destination.getWorkspaceId(), TemporalJobType.CHECK_CONNECTION);
 
     return execute(
         ConfigType.CHECK_CONNECTION_DESTINATION,
@@ -137,10 +147,11 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       throws IOException {
     final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
+        source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration());
     final JobDiscoverCatalogConfig jobDiscoverCatalogConfig = new JobDiscoverCatalogConfig()
-        .withConnectionConfiguration(sourceConfiguration)
+        .withConnectionConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()))
         .withDockerImage(dockerImage)
         .withProtocolVersion(protocolVersion)
         .withSourceId(source.getSourceId().toString())
@@ -152,7 +163,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     final UUID jobId = UUID.randomUUID();
     final ConnectorJobReportingContext jobReportingContext = new ConnectorJobReportingContext(jobId, dockerImage);
 
-    String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.DISCOVER_SCHEMA);
+    final String taskQueue = routerService.getTaskQueueForWorkspace(source.getWorkspaceId(), TemporalJobType.DISCOVER_SCHEMA);
 
     return execute(
         ConfigType.DISCOVER_SCHEMA,
@@ -192,10 +203,9 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       track(jobId, configType, connectorDefinitionId, workspaceId, JobState.STARTED, null);
       final TemporalResponse<ConnectorJobOutput> temporalResponse = executor.get();
       final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
-      final T mappedOutput = jobOutput.map(outputMapper).orElse(null);
       final JobState outputState = temporalResponse.getMetadata().isSucceeded() ? JobState.SUCCEEDED : JobState.FAILED;
 
-      track(jobId, configType, connectorDefinitionId, workspaceId, outputState, mappedOutput);
+      track(jobId, configType, connectorDefinitionId, workspaceId, outputState, jobOutput.orElse(null));
 
       if (outputState == JobState.FAILED && jobOutput.isPresent()) {
         reportError(configType, jobContext, jobOutput.get(), connectorDefinitionId, workspaceId);
@@ -204,8 +214,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       final long endedAt = Instant.now().toEpochMilli();
       return SynchronousResponse.fromTemporalResponse(
           temporalResponse,
-          jobOutput.orElse(null),
-          mappedOutput,
+          outputMapper,
           jobId,
           configType,
           connectorDefinitionId,
@@ -217,7 +226,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     }
   }
 
-  /**
+  /*
    * @param connectorDefinitionId either source or destination definition id
    */
   private <T> void track(final UUID jobId,
@@ -225,20 +234,20 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                          final UUID connectorDefinitionId,
                          final UUID workspaceId,
                          final JobState jobState,
-                         final T value) {
+                         final @Nullable ConnectorJobOutput jobOutput) {
     switch (configType) {
       case CHECK_CONNECTION_SOURCE -> jobTracker.trackCheckConnectionSource(
           jobId,
           connectorDefinitionId,
           workspaceId,
           jobState,
-          (StandardCheckConnectionOutput) value);
+          jobOutput);
       case CHECK_CONNECTION_DESTINATION -> jobTracker.trackCheckConnectionDestination(
           jobId,
           connectorDefinitionId,
           workspaceId,
           jobState,
-          (StandardCheckConnectionOutput) value);
+          jobOutput);
       case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, jobState);
       case GET_SPEC -> {
         // skip tracking for get spec to avoid noise.

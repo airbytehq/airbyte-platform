@@ -18,6 +18,8 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
+ * Google OAuth.
+ *
  * Following docs from https://developers.google.com/identity/protocols/oauth2/web-server
  */
 public abstract class GoogleOAuthFlow extends BaseOAuth2Flow {
@@ -62,6 +64,8 @@ public abstract class GoogleOAuthFlow extends BaseOAuth2Flow {
   }
 
   /**
+   * Get scope.
+   *
    * @return the scope for the specific google oauth implementation.
    */
   protected abstract String getScope();

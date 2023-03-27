@@ -4,10 +4,7 @@
 
 package io.airbyte.commons.io;
 
-import com.google.common.base.Charsets;
 import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,32 +12,22 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
-import org.apache.commons.io.input.ReversedLinesFileReader;
 
+/**
+ * Common code for handling IO.
+ */
 public class IOs {
 
-  public static Path writeFile(final Path path, final String fileName, final String contents) {
-    final Path filePath = path.resolve(fileName);
-    return writeFile(filePath, contents);
-  }
-
-  public static Path writeFile(final Path filePath, final byte[] contents) {
-    try {
-      Files.write(filePath, contents);
-      return filePath;
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public static Path writeFile(final Path filePath, final String contents) {
+  /**
+   * Write a string to a file.
+   *
+   * @param filePath path with file name to write to
+   * @param contents string to write to file
+   */
+  public static void writeFile(final Path filePath, final String contents) {
     try {
       Files.writeString(filePath, contents, StandardCharsets.UTF_8);
-      return filePath;
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -63,10 +50,12 @@ public class IOs {
     }
   }
 
-  public static String readFile(final Path path, final String fileName) {
-    return readFile(path.resolve(fileName));
-  }
-
+  /**
+   * Read file to a string.
+   *
+   * @param fullpath path of file with file name
+   * @return string representation of the file
+   */
   public static String readFile(final Path fullpath) {
     try {
       return Files.readString(fullpath, StandardCharsets.UTF_8);
@@ -75,47 +64,12 @@ public class IOs {
     }
   }
 
-  public static List<String> getTail(final int numLines, final Path path) throws IOException {
-    if (path == null) {
-      return Collections.emptyList();
-    }
-
-    final File file = path.toFile();
-    if (!file.exists()) {
-      return Collections.emptyList();
-    }
-
-    try (final ReversedLinesFileReader fileReader = new ReversedLinesFileReader(file, Charsets.UTF_8)) {
-      final List<String> lines = new ArrayList<>();
-
-      String line = fileReader.readLine();
-      while (line != null && lines.size() < numLines) {
-        lines.add(line);
-        line = fileReader.readLine();
-      }
-
-      Collections.reverse(lines);
-
-      return lines;
-    }
-  }
-
-  public static InputStream inputStream(final Path path) {
-    try {
-      return Files.newInputStream(path);
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public static void silentClose(final Closeable closeable) {
-    try {
-      closeable.close();
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
+  /**
+   * Create a {@link BufferedReader} from an {@link InputStream}.
+   *
+   * @param inputStream input stream to decorate with a buffered reader
+   * @return buffered reader that decorates provided input stream.
+   */
   public static BufferedReader newBufferedReader(final InputStream inputStream) {
     return new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
   }

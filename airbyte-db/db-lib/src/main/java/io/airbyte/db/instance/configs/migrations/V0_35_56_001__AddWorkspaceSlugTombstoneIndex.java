@@ -11,6 +11,9 @@ import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Add workspace slug and tombstone index migration.
+ */
 public class V0_35_56_001__AddWorkspaceSlugTombstoneIndex extends BaseJavaMigration {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(

@@ -4,12 +4,17 @@
 
 package io.airbyte.config.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
@@ -62,6 +67,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Data;
 
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType", "LineLength"})
 public class MockData {
 
   public static final UUID WORKSPACE_ID_1 = UUID.randomUUID();
@@ -101,6 +107,7 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_1 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
+  public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 10800;
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -202,7 +209,8 @@ public class MockData {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static StandardSourceDefinition grantableSourceDefinition1() {
@@ -216,7 +224,8 @@ public class MockData {
         .withIcon("icon-2")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static StandardSourceDefinition grantableSourceDefinition2() {
@@ -231,7 +240,8 @@ public class MockData {
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(false);
+        .withCustom(false)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static StandardSourceDefinition customSourceDefinition() {
@@ -246,7 +256,8 @@ public class MockData {
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true);
+        .withCustom(true)
+        .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
   }
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {
@@ -257,7 +268,7 @@ public class MockData {
         customSourceDefinition());
   }
 
-  private static ConnectorSpecification connectorSpecification() {
+  public static ConnectorSpecification connectorSpecification() {
     return new ConnectorSpecification()
         .withAuthSpecification(new AuthSpecification().withAuthType(AuthType.OAUTH_2_0))
         .withConnectionSpecification(Jsons.jsonNode(CONNECTION_SPECIFICATION))
@@ -486,7 +497,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync2 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_1, OPERATION_ID_2))
@@ -505,7 +517,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync3 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_1, OPERATION_ID_2))
@@ -524,7 +537,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync4 = new StandardSync()
         .withOperationIds(Collections.emptyList())
@@ -543,7 +557,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync5 = new StandardSync()
         .withOperationIds(Arrays.asList(OPERATION_ID_3))
@@ -562,7 +577,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     final StandardSync standardSync6 = new StandardSync()
         .withOperationIds(Arrays.asList())
@@ -581,7 +597,8 @@ public class MockData {
         .withGeography(Geography.AUTO)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true);
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false);
 
     return Arrays.asList(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6);
   }
@@ -686,7 +703,7 @@ public class MockData {
 
   public static List<ActorCatalogFetchEventWithCreationDate> actorCatalogFetchEventsForAggregationTest() {
     final OffsetDateTime now = OffsetDateTime.now();
-    final OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1l);
+    final OffsetDateTime yesterday = OffsetDateTime.now().minusDays(1L);
 
     final ActorCatalogFetchEvent actorCatalogFetchEvent1 = new ActorCatalogFetchEvent()
         .withId(ACTOR_CATALOG_FETCH_EVENT_ID_1)
@@ -728,6 +745,34 @@ public class MockData {
         .withJsonCredential(Jsons.deserialize(MOCK_SERVICE_ACCOUNT_1));
 
     return Arrays.asList(workspaceServiceAccount);
+  }
+
+  public static DeclarativeManifest declarativeManifest() {
+    try {
+      return new DeclarativeManifest()
+          .withActorDefinitionId(UUID.randomUUID())
+          .withVersion(0L)
+          .withDescription("a description")
+          .withManifest(new ObjectMapper().readTree("{\"manifest\": \"manifest\"}"))
+          .withSpec(new ObjectMapper().readTree("{\"spec\": \"spec\"}"));
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ActorDefinitionConfigInjection actorDefinitionConfigInjection() {
+    try {
+      return new ActorDefinitionConfigInjection()
+          .withActorDefinitionId(UUID.randomUUID())
+          .withJsonToInject(new ObjectMapper().readTree("{\"json_to_inject\": \"a json value\"}"))
+          .withInjectionPath("an_injection_path");
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ActiveDeclarativeManifest activeDeclarativeManifest() {
+    return new ActiveDeclarativeManifest().withActorDefinitionId(UUID.randomUUID()).withVersion(1L);
   }
 
   private static Map<String, String> sortMap(final Map<String, String> originalMap) {
