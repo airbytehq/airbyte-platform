@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { DefaultLogoCatalog } from "components/common/DefaultLogoCatalog";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -22,6 +21,7 @@ import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { BuilderProject, useDeleteProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import styles from "./ConnectorBuilderProjectTable.module.scss";
+import { DefaultLogoCatalog } from "./DefaultLogoCatalog";
 
 const columnHelper = createColumnHelper<BuilderProject>();
 
@@ -60,7 +60,7 @@ export const ConnectorBuilderProjectTable = ({
             <FormattedMessage id="connectorBuilder.listPage.name" />
           ),
         cell: (props) => (
-          <FlexContainer alignItems="center" className={styles.nameCell}>
+          <FlexContainer alignItems="center">
             {/* TODO: replace with custom logos once available */}
             <DefaultLogoCatalog />
             <Text>{props.cell.getValue()}</Text>
