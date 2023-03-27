@@ -67,6 +67,7 @@ const fullCatalogDiff: CatalogDiff = {
       updateStream: [
         { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
         { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
+        { transformType: "remove_field", fieldName: ["users", "id"], breaking: true },
         { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
         {
           transformType: "remove_field",
@@ -77,6 +78,13 @@ const fullCatalogDiff: CatalogDiff = {
           breaking: false,
         },
         {
+          transformType: "remove_field",
+          fieldName: "universe.milky_way_galaxy.earth.ocean.pacific.great_barrier_reef.creatures.fish.names.id".split(
+            "."
+          ),
+          breaking: true,
+        },
+        {
           transformType: "update_field_schema",
           breaking: false,
           fieldName: ["users", "address"],
@@ -85,7 +93,19 @@ const fullCatalogDiff: CatalogDiff = {
         {
           transformType: "update_field_schema",
           breaking: false,
-          fieldName: ["package_dimensions", "size", "width", "updated_at"],
+          fieldName: ["package", "dimensions", "size", "width", "updated_at"],
+          updateFieldSchema: { oldSchema: { type: "string" }, newSchema: { type: "DateTime" } },
+        },
+        {
+          transformType: "update_field_schema",
+          breaking: true,
+          fieldName: ["users", "id"],
+          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+        },
+        {
+          transformType: "update_field_schema",
+          breaking: true,
+          fieldName: ["package", "from", "address", "country", "id"],
           updateFieldSchema: { oldSchema: { type: "string" }, newSchema: { type: "DateTime" } },
         },
       ],
