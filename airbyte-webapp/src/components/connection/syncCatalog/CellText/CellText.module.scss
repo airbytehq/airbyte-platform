@@ -1,0 +1,46 @@
+$xsmall: 20px;
+$small: 35px;
+$medium: 45px;
+$large: 200px;
+
+.container {
+  &:not(.fixed) {
+    flex-grow: 1;
+    flex-shrink: 0;
+  }
+
+  &:not(.withOverflow) [data-type="text"] {
+    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &.xsmall {
+    flex-basis: $xsmall;
+    min-width: $xsmall;
+  }
+
+  &.small {
+    flex-basis: $small;
+    min-width: $small;
+  }
+
+  &.medium {
+    flex-basis: $medium;
+    min-width: $medium;
+  }
+
+  &.large {
+    flex-basis: $large;
+    min-width: $large;
+  }
+}
+
+.noEllipsis > * {
+  overflow: visible;
+}
+
+.fullWidthTooltip {
+  max-width: none;
+}
