@@ -1,18 +1,9 @@
 @use "scss/variables";
 @use "scss/colors";
-@use "scss/mixins";
 
 .container {
   padding: variables.$spacing-lg;
   position: relative;
-}
-
-.connectorImg {
-  @include mixins.shadow;
-
-  width: 90px;
-  border-radius: variables.$border-radius-2xl;
-  padding: variables.$spacing-xl;
 }
 
 .connectorName {
@@ -31,10 +22,6 @@
   color: colors.$blue;
   flex-grow: 1;
   position: static;
-}
-
-.resetButton {
-  margin-top: variables.$spacing-sm;
 }
 
 .viewButton {

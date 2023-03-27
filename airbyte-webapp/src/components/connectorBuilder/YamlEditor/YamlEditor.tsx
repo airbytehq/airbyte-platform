@@ -13,6 +13,7 @@ import { Action, Namespace } from "core/analytics";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { NameInput } from "./NameInput";
@@ -20,6 +21,7 @@ import styles from "./YamlEditor.module.scss";
 import { SavingIndicator } from "../Builder/SavingIndicator";
 import { UiYamlToggleButton } from "../Builder/UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
+import { PublishButton } from "../PublishButton";
 import { convertToManifest } from "../types";
 import { useManifestToBuilderForm } from "../useManifestToBuilderForm";
 
@@ -31,6 +33,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
   const { setValues } = useFormikContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const publishWorkflowEnabled = useExperiment("connectorBuilder.publishWorkflow", false);
   const yamlEditorRef = useRef<editor.IStandaloneCodeEditor>();
   const {
     yamlManifest,
@@ -140,6 +143,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
         <FlexItem grow>
           <FlexContainer justifyContent="flex-end">
             <DownloadYamlButton yaml={yamlValue} yamlIsValid={yamlIsValid} />
+            {publishWorkflowEnabled && <PublishButton />}
           </FlexContainer>
         </FlexItem>
       </FlexContainer>

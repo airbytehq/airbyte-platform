@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
-import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionIdBody } from "core/request/AirbyteClient";
+import {
+  ConnectorBuilderProjectIdWithWorkspaceId,
+  ConnectorBuilderProjectRead,
+  SourceDefinitionIdBody,
+} from "core/request/AirbyteClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
@@ -66,6 +70,18 @@ export const useListVersions = (project?: BuilderProject) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(connectorBuilderProjectsKeys.versions(project?.id), async () => {
+    if (!project?.sourceDefinitionId) {
+      return [];
+    }
+    return (await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)).manifestVersions;
+  });
+};
+
+export const useListVersionsSuspense = (project?: BuilderProject) => {
+  const service = useConnectorBuilderProjectsService();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useSuspenseQuery(connectorBuilderProjectsKeys.versions(project?.id), async () => {
     if (!project?.sourceDefinitionId) {
       return [];
     }
@@ -181,14 +197,79 @@ export const useUpdateProject = (projectId: string) => {
 export interface BuilderProjectPublishBody {
   name: string;
   projectId: string;
+  description: string;
   manifest: DeclarativeComponentSchema;
 }
 
 export const usePublishProject = () => {
   const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(({ name, projectId, manifest }) =>
-    service.publishBuilderProject(workspaceId, projectId, name, manifest)
+  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
+    ({ name, projectId, description, manifest }) =>
+      service.publishBuilderProject(workspaceId, projectId, name, description, manifest),
+    {
+      onSuccess(data, context) {
+        queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.detail(context.projectId),
+          (project: ConnectorBuilderProjectRead | undefined) => {
+            if (!project) {
+              throw new Error("invariant: current project not in cache");
+            }
+            return {
+              ...project,
+              builderProject: {
+                ...project.builderProject,
+                sourceDefinitionId: data.sourceDefinitionId,
+              },
+            };
+          }
+        );
+      },
+    }
+  );
+};
+
+export interface NewVersionBody {
+  sourceDefinitionId: string;
+  projectId: string;
+  description: string;
+  version: number;
+  useAsActiveVersion: boolean;
+  manifest: DeclarativeComponentSchema;
+}
+
+export const useReleaseNewVersion = () => {
+  const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<void, Error, NewVersionBody>(
+    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest }) =>
+      service.releaseNewVersion(workspaceId, sourceDefinitionId, description, version, useAsActiveVersion, manifest),
+    {
+      onSuccess(_data, context) {
+        queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.detail(context.projectId),
+          (project: ConnectorBuilderProjectRead | undefined) => {
+            if (!project) {
+              throw new Error("invariant: current project not in cache");
+            }
+            return {
+              ...project,
+              builderProject: {
+                ...project.builderProject,
+                activeDeclarativeManifestVersion: context.useAsActiveVersion
+                  ? context.version
+                  : project.builderProject.activeDeclarativeManifestVersion,
+              },
+            };
+          }
+        );
+      },
+    }
   );
 };
