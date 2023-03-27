@@ -449,7 +449,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         unexpectedFields.forEach((stream, unexpectedFieldNames) -> {
           if (!unexpectedFieldNames.isEmpty()) {
             LOGGER.warn("Source {} has unexpected fields [{}] in stream {}", sourceId, String.join(", ", unexpectedFieldNames), stream);
-            // TODO(mfsiega-airbyte): publish this as a metric.
+            metricReporter.trackUnexpectedFields(stream, unexpectedFieldNames);
           }
         });
 

@@ -105,16 +105,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   NUM_SOURCE_STREAMS_WITH_RECORD_SCHEMA_VALIDATION_ERRORS(MetricEmittingApps.WORKER,
       "record_schema_validation_error",
       "number of record schema validation errors"),
+  NUM_SOURCE_STREAMS_WITH_UNEXPECTED_RECORD_FIELDS(MetricEmittingApps.WORKER,
+      "schemas_unexpected_fields",
+      "number of schemas with unexpected fields"),
   NUM_TOTAL_SCHEDULED_SYNCS_IN_LAST_DAY(
       MetricEmittingApps.METRICS_REPORTER,
       "num_total_scheduled_syncs_last_day",
       "number of total syncs runs in last day."),
-
   NUM_UNUSUALLY_LONG_SYNCS(
       MetricEmittingApps.METRICS_REPORTER,
       "num_unusually_long_syncs",
       "number of unusual long syncs compared to their historic performance."),
-
   OLDEST_PENDING_JOB_AGE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "oldest_pending_job_age_secs",
       "oldest pending job in seconds"),
@@ -151,27 +152,22 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),
-
   STATE_BUFFERING(MetricEmittingApps.WORKER,
       "state_buffering",
       "number of state messages being buffered before a flush",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "state_commit_attempt",
       "number of attempts to commit states from the orchestrator/workers",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "state_commit_attempt_failed",
       "number of failed attempts to commit states from the orchestrator/workers",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "state_commit_attempt_successful",
       "number of successful attempts to commit states from the orchestrator/workers",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
       "state_commit_not_attempted",
       "number of attempts to commit states dropped due to an early termination",

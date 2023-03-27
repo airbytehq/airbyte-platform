@@ -3,21 +3,31 @@
 #
 # Usage:
 # 1. create an API Key in datadog
-# 2. wget -O dd-java-agent.jar 'https://dtdg.co/latest-java-tracer'
+# 2. wget -O dd-java-agent.jar 'https://dtdg.co/latest-java-tracer'.  NOTE: be sure this is downloaded to the directory you are running docker-compose from.  Probably /oss.  Docker won't warn you if the file is missing.
 # 3. DD_API_KEY=[datadog api key] VERSION=dev docker-compose -f docker-compose.yaml -f docker-compose.datadog.yaml up -d
 version: "3.8"
 
-x-datadog: &datadogged
+x-datadog-volumes: &datadogged-volumes
   volumes:
     - type: bind
       source: ./dd-java-agent.jar
       target: /dd-java-agent.jar
-  environment:
-    - DD_AGENT_HOST=airbyte-datadog
-    - DD_TRACE_AGENT_URL=http://airbyte-datadog:8126
-    - JAVA_OPTS=-javaagent:/dd-java-agent.jar
+
+x-datadog-environment: &datadogged-environment
+  METRIC_CLIENT: ${METRIC_CLIENT:-datadog}
+  PUBLISH_METRICS: "true"
+  DD_AGENT_HOST: airbyte-datadog
+  DD_DOGSTATSD_PORT: ${DD_DOGSTATSD_PORT:-8125}
+  DD_TRACE_AGENT_URL: http://airbyte-datadog
+  JAVA_OPTS: -javaagent:/dd-java-agent.jar
 
 services:
+  db:
+    ports:
+      - 8011:5432
+    networks:
+      - airbyte_internal
+      - airbyte_public
   datadog:
     image: datadog/agent:7-rc
     container_name: airbyte-datadog
@@ -34,22 +44,27 @@ services:
     networks:
       - airbyte_internal
   init:
-    <<: *datadogged
+    <<: *datadogged-volumes
     environment:
-      - DD_SERVICE=airbyte-init
+      <<: *datadogged-environment
+      DD_SERVICE: airbyte-init
   bootloader:
-    <<: *datadogged
+    <<: *datadogged-volumes
     environment:
-      - DD_SERVICE=airbyte-bootloader
+      <<: *datadogged-environment
+      DD_SERVICE: airbyte-bootloader
   worker:
-    <<: *datadogged
+    <<: *datadogged-volumes
     environment:
-      - DD_SERVICE=airbyte-worker
+      <<: *datadogged-environment
+      DD_SERVICE: airbyte-worker
   server:
-    <<: *datadogged
+    <<: *datadogged-volumes
     environment:
-      - DD_SERVICE=airbyte-server
+      <<: *datadogged-environment
+      DD_SERVICE: airbyte-server
   airbyte-cron:
-    <<: *datadogged
+    <<: *datadogged-volumes
     environment:
-      - DD_SERVICE=airbyte-cron
+      <<: *datadogged-environment
+      DD_SERVICE: airbyte-cron
