@@ -67,6 +67,8 @@ jobs:
         shell: bash
         run: |
           kubectl port-forward svc/airbyte-airbyte-server-svc 8001:8001 &
+          curl localhost:8001/api/v1/health
+          curl -I localhost:8001/api/v1/health
           if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8001/api/v1/health)" != "200" ]];
           then
             exit 25
