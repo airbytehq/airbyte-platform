@@ -24,10 +24,6 @@ jobs:
             pushd ./charts/${val} && helm dep update && popd
           done
           pushd charts/airbyte
-          mv Chart.yaml Chart.yaml.old
-          mv Chart.yaml.test Chart.yaml
-          mv values.yaml values.yaml.old
-          mv values.yaml.test values.yaml
           helm dep update
           helm lint --with-subcharts
           popd
