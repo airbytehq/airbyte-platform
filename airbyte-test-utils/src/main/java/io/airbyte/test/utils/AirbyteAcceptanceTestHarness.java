@@ -108,6 +108,7 @@ import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -162,6 +163,7 @@ public class AirbyteAcceptanceTestHarness {
   public static final String AWESOME_PEOPLE_TABLE_NAME = "awesome_people";
 
   private static final String DEFAULT_POSTGRES_INIT_SQL_FILE = "postgres_init.sql";
+  private static final String ECHO_SERVER_IMAGE = "mendhak/http-https-echo:29";
 
   // Used for bypassing SSL modification for db configs
   private static final String IS_TEST = "is_test";
@@ -179,6 +181,7 @@ public class AirbyteAcceptanceTestHarness {
    */
   private PostgreSQLContainer sourcePsql;
   private PostgreSQLContainer destinationPsql;
+  private GenericContainer echoServer;
   private AirbyteTestContainer airbyteTestContainer;
   private AirbyteApiClient apiClient;
   private final UUID defaultWorkspaceId;
@@ -229,6 +232,9 @@ public class AirbyteAcceptanceTestHarness {
 
       destinationPsql = new PostgreSQLContainer(DESTINATION_POSTGRES_IMAGE_NAME);
       destinationPsql.start();
+
+      echoServer = new GenericContainer(DockerImageName.parse(ECHO_SERVER_IMAGE)).withExposedPorts(8080);
+      echoServer.start();
     }
 
     if (isKube && !isGke) {
@@ -266,11 +272,12 @@ public class AirbyteAcceptanceTestHarness {
     if (!isGke) {
       sourcePsql.stop();
       destinationPsql.stop();
+      echoServer.stop();
     } else {
       try {
         DataSourceFactory.close(sourceDataSource);
         DataSourceFactory.close(destinationDataSource);
-      } catch (Exception e) {
+      } catch (final Exception e) {
         LOGGER.warn("Failed to close data sources: {}", e);
       }
     }
@@ -396,14 +403,14 @@ public class AirbyteAcceptanceTestHarness {
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true)).getCatalog(), "discover source schema no cache", 10, 60, 3);
   }
 
-  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(UUID destinationDefinitionId) throws ApiException {
+  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId) throws ApiException {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionSpecificationApi()
         .getDestinationDefinitionSpecification(
             new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(UUID.randomUUID())),
         "get destination definition spec", 10, 60, 3);
   }
 
-  public SourceDefinitionSpecificationRead getSourceDefinitionSpec(UUID sourceDefinitionId) throws ApiException {
+  public SourceDefinitionSpecificationRead getSourceDefinitionSpec(final UUID sourceDefinitionId) throws ApiException {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getSourceDefinitionSpecificationApi()
         .getSourceDefinitionSpecification(
             new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(UUID.randomUUID())),
@@ -690,7 +697,7 @@ public class AirbyteAcceptanceTestHarness {
         .collect(Collectors.toList());
   }
 
-  private List<JsonNode> retrieveDestinationRecords(final Database database, final String table) throws SQLException {
+  public List<JsonNode> retrieveDestinationRecords(final Database database, final String table) throws SQLException {
     return database.query(context -> context.fetch(String.format("SELECT * FROM %s;", table)))
         .stream()
         .map(Record::intoMap)
@@ -756,19 +763,7 @@ public class AirbyteAcceptanceTestHarness {
       throws UnknownHostException {
     final Map<Object, Object> dbConfig = new HashMap<>();
     // don't use psql.getHost() directly since the ip we need differs depending on environment
-    if (isKube) {
-      if (isMinikube) {
-        // used with minikube driver=none instance
-        dbConfig.put(JdbcUtils.HOST_KEY, Inet4Address.getLocalHost().getHostAddress());
-      } else {
-        // used on a single node with docker driver
-        dbConfig.put(JdbcUtils.HOST_KEY, "host.docker.internal");
-      }
-    } else if (isMac) {
-      dbConfig.put(JdbcUtils.HOST_KEY, "host.docker.internal");
-    } else {
-      dbConfig.put(JdbcUtils.HOST_KEY, "localhost");
-    }
+    dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
 
     if (hiddenPassword) {
       dbConfig.put(JdbcUtils.PASSWORD_KEY, "**********");
@@ -792,6 +787,33 @@ public class AirbyteAcceptanceTestHarness {
       dbConfig.put(JdbcUtils.SCHEMA_KEY, "public");
     }
     return dbConfig;
+  }
+
+  public String getEchoServerUrl() {
+    if (isGke) {
+      return "http://localhost:6000";
+    }
+    return String.format("http://%s:%s/", getHostname(), echoServer.getFirstMappedPort());
+  }
+
+  private String getHostname() {
+    if (isKube) {
+      if (isMinikube) {
+        // used with minikube driver=none instance
+        try {
+          return Inet4Address.getLocalHost().getHostAddress();
+        } catch (final UnknownHostException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        // used on a single node with docker driver
+        return "host.docker.internal";
+      }
+    } else if (isMac) {
+      return "host.docker.internal";
+    } else {
+      return "localhost";
+    }
   }
 
   public SourceDefinitionRead createE2eSourceDefinition(final UUID workspaceId) throws ApiException {
@@ -962,7 +984,7 @@ public class AirbyteAcceptanceTestHarness {
       sleep(1000);
       try {
         job = jobsApi.getJobInfo(new JobIdRequestBody().id(job.getId())).getJob();
-      } catch (ApiException e) {
+      } catch (final ApiException e) {
         // TODO(mfsiega-airbyte): consolidate our polling/retrying logic.
         LOGGER.warn("error querying jobs api, retrying...");
       }
@@ -1016,11 +1038,11 @@ public class AirbyteAcceptanceTestHarness {
       JobRead job;
       try {
         job = getMostRecentSyncJobId(connectionId);
-      } catch (NoSuchElementException e) {
+      } catch (final NoSuchElementException e) {
         LOGGER.debug("No job found for the sync. Waiting for the job to be created...");
         sleep(5000);
         continue; // To the top of the loop.
-      } catch (ApiException e) {
+      } catch (final ApiException e) {
         LOGGER.info("Failed to query for job info: {}. Retrying...", e);
         sleep(3000);
         continue; // To the top of the loop.
@@ -1033,7 +1055,7 @@ public class AirbyteAcceptanceTestHarness {
         }
         assertEquals(JobStatus.SUCCEEDED, job.getStatus());
         return; // Don't forget to return!
-      } catch (ApiException e) {
+      } catch (final ApiException e) {
         LOGGER.info("Caught exception {} while waiting for successful sync. Retrying...", e);
       }
     }
