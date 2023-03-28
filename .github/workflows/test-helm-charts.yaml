@@ -11,49 +11,33 @@ on:
 
 jobs:
   test-helm-charts:
-    name: Test helm charts before publishing
+    name: Test helm charts
     runs-on: ubuntu-22.04
-    needs: ["generate-semantic-version"]
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install kubeconform
-        shell: bash
-        run: go install github.com/yannh/kubeconform/cmd/kubeconform@latest
 
       - name: Helm lint all charts
         shell: bash
         run: |
+          declare -a StringArray=("airbyte-bootloader" "airbyte-server" "airbyte-temporal" "airbyte-webapp" "airbyte-pod-sweeper" "airbyte-worker" "airbyte-metrics" "airbyte-cron" "airbyte-connector-builder-server")
+          for val in ${StringArray[@]}; do
+            pushd ./charts/${val} && helm dep update && popd
+          done
           pushd charts/airbyte
-          mv Chart.yaml Chart.yaml.old
-          mv Chart.yaml.test Chart.yaml
-          mv values.yaml values.yaml.old
-          mv values.yaml.test values.yaml
           helm dep update
           helm lint --with-subcharts
           popd
       
-      - name: Helm template and kubeconform template
-        shell: bash
-        run: |
-          pushd charts/airbyte
-          helm template airbyte ./ | kubeconform -strict -summary -verbose -exit-on-error
-          popd
-
-      - name: Start a local k8s cluster
-        uses: jupyterhub/action-k3s-helm@v3
+      - name: Validate
+        uses: nlamirault/helm-kubeconform-action@v0.1.0
         with:
-          k3s-version: v1.21.2+k3s1
-          helm-version: v3.9.4
-          extra-setup-args: --docker --kube-apiserver-arg service-node-port-range=6000-32767 --kubelet-arg=cgroup-driver=systemd
+          charts: ./charts/airbyte
 
+      - name: Start minikube
+        uses: medyagh/setup-minikube@master
       - name: Try the cluster !
-        uses: Wandalen/wretry.action@master
-        with:
-          command: kubectl get pods -A
-          attempt_limit: 3
-          attempt_delay: 3000 # in ms
-      
+        run: kubectl get pods -A
+            
       - name: Deploy helm chart to k3s cluster
         shell: bash
         run: |
@@ -64,8 +48,14 @@ jobs:
       - name: Perform curl requests to test out the deployment
         shell: bash
         run: |
-          kubectl expose $(kubectl get po -l app.kubernetes.io/name=server -o name) --name exposed-server-svc --type NodePort --overrides '{ "apiVersion": "v1","spec":{"ports": [{"port":8001,"protocol":"TCP","targetPort":8001,"nodePort":8001}]}}'
-          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8000/api/v1/health)" != "200" ]];
+          echo "Sleeping for 300 seconds to wait for server to fully start"
+          sleep 300
+          kubectl expose deployment airbyte-server --type=NodePort
+          minikube service list
+          minikube service airbyte-server --url
+          curl $(minikube service airbyte-server --url)/api/v1/health
+          curl -I $(minikube service airbyte-server --url)/api/v1/health
+          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' $(minikube service airbyte-server --url)/api/v1/health)" != "200" ]];
           then
             exit 25
           fi
