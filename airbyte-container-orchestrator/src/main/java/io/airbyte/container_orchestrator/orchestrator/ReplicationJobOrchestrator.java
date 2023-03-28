@@ -30,6 +30,7 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
+import io.airbyte.featureflag.PerformNewJsonDeser;
 import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -180,7 +181,8 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB.equals(sourceLauncherConfig.getDockerImage()) ? new EmptyAirbyteSource(
             featureFlags.useStreamCapableState())
             : new DefaultAirbyteSource(sourceLauncher,
-                getStreamFactory(sourceLauncherConfig.getProtocolVersion(), syncInput.getCatalog(), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
+                getStreamFactory(sourceLauncherConfig.getProtocolVersion(), syncInput.getCatalog(), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER,
+                    syncInput.getWorkspaceId()),
                 heartbeatMonitor,
                 migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
                 featureFlags);
@@ -222,7 +224,7 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
           new NamespacingMapper(syncInput.getNamespaceDefinition(), syncInput.getNamespaceFormat(), syncInput.getPrefix()),
           new DefaultAirbyteDestination(destinationLauncher,
               getStreamFactory(destinationLauncherConfig.getProtocolVersion(), syncInput.getCatalog(),
-                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),
+                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, syncInput.getWorkspaceId()),
               new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
@@ -247,11 +249,13 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
 
   private AirbyteStreamFactory getStreamFactory(final Version protocolVersion,
                                                 final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
-                                                final MdcScope.Builder mdcScope) {
+                                                final MdcScope.Builder mdcScope,
+                                                final UUID workspaceId) {
+    final var performNewJsonDeser = featureFlagClient.boolVariation(PerformNewJsonDeser.INSTANCE, new Workspace(workspaceId));
     return protocolVersion != null
         ? new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.of(configuredAirbyteCatalog), mdcScope,
-            Optional.of(RuntimeException.class))
-        : new DefaultAirbyteStreamFactory(mdcScope);
+            Optional.of(RuntimeException.class), performNewJsonDeser)
+        : new DefaultAirbyteStreamFactory(mdcScope, performNewJsonDeser);
   }
 
 }

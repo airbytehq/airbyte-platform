@@ -104,7 +104,7 @@ public class ReplicationWorkerPerformanceTest {
 
     final var versionFac =
         new VersionedAirbyteStreamFactory(serDeProvider, migratorFactory, new Version("0.2.0"), Optional.empty(),
-            Optional.of(RuntimeException.class));
+            Optional.of(RuntimeException.class), true);
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     final var versionedAbSource =
         new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),

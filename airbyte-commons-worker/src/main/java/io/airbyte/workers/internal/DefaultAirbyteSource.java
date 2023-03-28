@@ -15,7 +15,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
-import io.airbyte.commons.protocol.DefaultProtocolSerializer;
 import io.airbyte.commons.protocol.ProtocolSerializer;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.protocol.models.AirbyteMessage;
@@ -61,13 +60,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
   private final boolean featureFlagLogConnectorMsgs;
-
-  public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
-                              final FeatureFlags featureFlags,
-                              final HeartbeatMonitor heartbeatMonitor) {
-    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), heartbeatMonitor, new DefaultProtocolSerializer(),
-        featureFlags);
-  }
 
   public DefaultAirbyteSource(final IntegrationLauncher integrationLauncher,
                               final AirbyteStreamFactory streamFactory,

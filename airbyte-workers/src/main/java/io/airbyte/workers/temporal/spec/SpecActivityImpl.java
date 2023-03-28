@@ -133,7 +133,7 @@ public class SpecActivityImpl implements SpecActivity {
     final Version protocolVersion =
         launcherConfig.getProtocolVersion() != null ? launcherConfig.getProtocolVersion() : migratorFactory.getMostRecentVersion();
     // Try to detect version from the stream
-    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty())
+    return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.empty(), Optional.empty(), true)
         .withDetectVersion(true);
   }
 

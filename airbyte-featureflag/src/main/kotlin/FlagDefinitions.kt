@@ -35,6 +35,8 @@ object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
+object PerformNewJsonDeser : Temporary<Boolean>(key = "perform-new-json-deser", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

@@ -424,7 +424,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
             recordsRead += 1;
 
-            if (recordsRead % 1000 == 0) {
+            if (recordsRead % 5000 == 0) {
               LOGGER.info("Records read: {} ({})", recordsRead,
                   FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
             }

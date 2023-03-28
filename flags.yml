@@ -9,3 +9,5 @@ flags:
     serve: false
   - name: heartbeat.enabled
     serve: false
+  - name: perform-new-json-deser
+    serve: false
