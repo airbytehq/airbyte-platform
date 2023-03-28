@@ -16,7 +16,7 @@ export interface TableProps<T> {
    */
   sortedByColumn?: string;
   data: T[];
-  variant?: "default" | "light" | "transparent";
+  variant?: "default" | "light" | "white";
   onClickRow?: (data: T) => void;
   testId?: string;
   columnVisibility?: VisibilityState;
@@ -62,7 +62,7 @@ export const Table = <T,>({
                     {
                       [styles["th--default"]]: variant === "default",
                       [styles["th--light"]]: variant === "light",
-                      [styles["th--transparent"]]: variant === "transparent",
+                      [styles["th--white"]]: variant === "white",
                       [styles["th--sorted"]]: isSorted,
                     },
                     meta?.thClassName
@@ -81,7 +81,6 @@ export const Table = <T,>({
           return (
             <tr
               className={classNames(styles.tr, {
-                [styles["tr--transparent"]]: variant === "transparent",
                 [styles["tr--clickable"]]: !!onClickRow,
               })}
               key={`table-row-${row.id}`}
