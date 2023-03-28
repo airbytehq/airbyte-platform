@@ -32,10 +32,10 @@ jobs:
           helm lint --with-subcharts
           popd
       
-      - name: Generate and validate releases
-        uses: shivjm/helm-kubeconform-action@v0.2.0
+      - name: Validate
+        uses: nlamirault/helm-kubeconform-action@v0.1.0
         with:
-          chartsDirectory: "charts/airbyte"
+          charts: ./charts/airbyte
 
       - name: Start a local k8s cluster
         uses: jupyterhub/action-k3s-helm@v3
