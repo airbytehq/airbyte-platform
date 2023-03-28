@@ -389,7 +389,13 @@ public class AirbyteAcceptanceTestHarness {
 
   public AirbyteCatalog discoverSourceSchema(final UUID sourceId) throws ApiException {
     return AirbyteApiClient.retryWithJitter(
-        () -> apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId)).getCatalog(),
+        () -> {
+          final var result = apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody().sourceId(sourceId)).getCatalog();
+          if (result == null) {
+            throw new RuntimeException("no catalog returned, retrying...");
+          }
+          return result;
+        },
         "discover source schema", 10, 60, 3);
   }
 
