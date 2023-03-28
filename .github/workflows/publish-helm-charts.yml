@@ -37,19 +37,10 @@ jobs:
         with:
           charts: ./charts/airbyte
 
-      - name: Start a local k8s cluster
-        uses: jupyterhub/action-k3s-helm@v3
-        with:
-          k3s-version: v1.21.2+k3s1
-          helm-version: v3.9.4
-          extra-setup-args: --docker --kube-apiserver-arg service-node-port-range=6000-32767 --kubelet-arg=cgroup-driver=systemd
-
+      - name: Start minikube
+        uses: medyagh/setup-minikube@master
       - name: Try the cluster !
-        uses: Wandalen/wretry.action@master
-        with:
-          command: kubectl get pods -A
-          attempt_limit: 3
-          attempt_delay: 3000 # in ms
+        run: kubectl get pods -A
       
       - name: Deploy helm chart to k3s cluster
         shell: bash
@@ -61,8 +52,9 @@ jobs:
       - name: Perform curl requests to test out the deployment
         shell: bash
         run: |
-          kubectl expose $(kubectl get po -l app.kubernetes.io/name=server -o name) --name exposed-server-svc --type NodePort --overrides '{ "apiVersion": "v1","spec":{"ports": [{"port":8001,"protocol":"TCP","targetPort":8001,"nodePort":8001}]}}'
-          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8000/api/v1/health)" != "200" ]];
+          minikube service list
+          minikube service airbyte-airbyte-server-svc --url
+          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' $(minikube service airbyte-airbyte-server-svc --url)/api/v1/health)" != "200" ]];
           then
             exit 25
           fi
