@@ -3,9 +3,11 @@ flags:
     serve: false
   - name: heartbeat.failSync
     serve: false
-  - name: normalization.strictComparisonEnabled
-    serve: false
   - name: platform.commitStatesAsap
     serve: false
+  - name: platform.commitStatsAsap
+    serve: false
   - name: heartbeat.enabled
+    serve: false
+  - name: perform-new-json-deser
     serve: false

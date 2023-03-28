@@ -33,7 +33,7 @@ export const getExcludedConnectorIds = (workspaceId?: string): string[] =>
         ConnectorIds.Sources.Drift, // hide Source Drift https://github.com/airbytehq/airbyte/issues/24270
         // revert me
         ...(workspaceId !== "d705a766-e9e3-4689-85cb-52143422317d" // `oauth-testing` workspace for review
-          ? [ConnectorIds.Sources.YouTubeAnalyticsBusiness] // Youtube Analytics Business
+          ? [] // add actor_difinition_id here, once needed
           : []),
         //
       ]

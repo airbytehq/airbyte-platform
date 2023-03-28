@@ -33,8 +33,8 @@ import { initialSetupCompleted } from "commands/workspaces";
 import { RouteHandler } from "cypress/types/net-stubbing";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
-import streamDetails from "pages/connection/streamDetailsPageObject";
-import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
+import { streamDetails } from "pages/connection/StreamDetailsPageObject";
+import { streamsTable } from "pages/connection/StreamsTablePageObject";
 import { modifySyncCatalogStream } from "utils/connection";
 
 const dropTables = () => {
@@ -98,8 +98,7 @@ const ACCOUNTS_FIELD_DATA_TYPES = ["Integer", "String", "Datetime"];
 const USER_CARS_FIELD_NAMES = ["car_id", "created_at", "user_id"];
 const USER_CARS_FIELD_DATA_TYPES = ["Integer", "Datetime", "Integer"];
 
-describe.skip("Connection - sync modes", () => {
-  const streamsTable = new NewStreamsTablePageObject();
+describe("Connection - sync modes", () => {
   const usersStreamRow = streamsTable.getRow("public", "users");
 
   let source: Source;

@@ -31,7 +31,7 @@ class DeclarativeSourceManifestInjectorTest {
       A_SPEC = new ObjectMapper().readTree(
           "{\"connectionSpecification\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"required\":[],\"properties\":{},\"additionalProperties\":true}}\n");
       A_MANIFEST = new ObjectMapper().readTree("{\"manifest_key\": \"manifest value\"}");
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }
@@ -45,23 +45,24 @@ class DeclarativeSourceManifestInjectorTest {
 
   @Test
   void whenAddInjectedDeclarativeManifestThenJsonHasInjectedDeclarativeManifestProperty() throws JsonProcessingException {
-    JsonNode spec = A_SPEC.deepCopy();
+    final JsonNode spec = A_SPEC.deepCopy();
     injector.addInjectedDeclarativeManifest(spec);
     assertEquals(
-        new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {\"type\": \"object\", \"additionalProperties\": true}}"),
+        new ObjectMapper()
+            .readTree("{\"__injected_declarative_manifest\": {\"type\": \"object\", \"additionalProperties\": true, \"airbyte_hidden\": true}}"),
         spec.path("connectionSpecification").path("properties"));
   }
 
   @Test
   void whenCreateConfigInjectionThenReturnConfigInjection() {
-    ActorDefinitionConfigInjection configInjection = injector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST);
+    final ActorDefinitionConfigInjection configInjection = injector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST);
     assertEquals(new ActorDefinitionConfigInjection().withActorDefinitionId(A_SOURCE_DEFINITION_ID)
         .withInjectionPath("__injected_declarative_manifest").withJsonToInject(A_MANIFEST), configInjection);
   }
 
   @Test
   void whenAdaptDeclarativeManifestThenReturnConnectorSpecification() {
-    ConnectorSpecification connectorSpecification = injector.createDeclarativeManifestConnectorSpecification(A_SPEC);
+    final ConnectorSpecification connectorSpecification = injector.createDeclarativeManifestConnectorSpecification(A_SPEC);
     assertEquals(new ConnectorSpecification()
         .withSupportsDBT(false)
         .withSupportsNormalization(false)
@@ -72,13 +73,13 @@ class DeclarativeSourceManifestInjectorTest {
 
   @Test
   void givenDocumentationUrlWhenAdaptDeclarativeManifestThenReturnConnectorSpecificationHasDocumentationUrl() {
-    JsonNode spec = givenSpecWithDocumentationUrl(DOCUMENTATION_URL);
-    ConnectorSpecification connectorSpecification = injector.createDeclarativeManifestConnectorSpecification(spec);
+    final JsonNode spec = givenSpecWithDocumentationUrl(DOCUMENTATION_URL);
+    final ConnectorSpecification connectorSpecification = injector.createDeclarativeManifestConnectorSpecification(spec);
     assertEquals(DOCUMENTATION_URL, connectorSpecification.getDocumentationUrl());
   }
 
-  private JsonNode givenSpecWithDocumentationUrl(URI documentationUrl) {
-    JsonNode spec = A_SPEC.deepCopy();
+  private JsonNode givenSpecWithDocumentationUrl(final URI documentationUrl) {
+    final JsonNode spec = A_SPEC.deepCopy();
     ((ObjectNode) spec).put("documentationUrl", documentationUrl.toString());
     return spec;
   }

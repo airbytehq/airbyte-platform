@@ -78,3 +78,7 @@ properties:
     description: whether we want to commit states during the replication activity, defaults to false
     type: boolean
     default: false
+  commitStatsAsap:
+    description: whether we want to commit stats during the replication activity, defaults to false
+    type: boolean
+    default: false

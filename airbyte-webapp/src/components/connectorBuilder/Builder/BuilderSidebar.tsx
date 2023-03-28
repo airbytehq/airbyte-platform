@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import { useFormikContext } from "formik";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import Indicator from "components/Indicator";
 import { FlexContainer } from "components/ui/Flex";
@@ -20,6 +20,7 @@ import styles from "./BuilderSidebar.module.scss";
 import { SavingIndicator } from "./SavingIndicator";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { CDK_VERSION } from "../cdk";
+import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { PublishButton } from "../PublishButton";
 import { BuilderFormValues, getInferredInputs } from "../types";
@@ -63,7 +64,6 @@ interface BuilderSidebarProps {
 
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className, toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
-  const { formatMessage } = useIntl();
   const publishWorkflowEnabled = useExperiment("connectorBuilder.publishWorkflow", false);
   const { hasErrors } = useBuilderErrors();
   const { yamlManifest, selectedView, setSelectedView, builderFormValues } = useConnectorBuilderFormState();
@@ -77,12 +77,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       <UiYamlToggleButton yamlSelected={false} onClick={toggleYamlEditor} />
 
       <FlexContainer direction="column" alignItems="center">
-        {/* TODO: replace with uploaded img when that functionality is added */}
-        <img
-          className={styles.connectorImg}
-          src="/logo.png"
-          alt={formatMessage({ id: "connectorBuilder.connectorImgAlt" })}
-        />
+        <ConnectorImage />
 
         <div className={styles.connectorName}>
           <Heading as="h2" size="sm">

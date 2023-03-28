@@ -162,15 +162,6 @@ jobs:
           org.gradle.workers.max=8
           org.gradle.vfs.watch=false
           EOF
-      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
-      #       since docs are not pulled when running gradle locally.
-      - name: Copy docs from connectors repository
-        run: |
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
-          mkdir -p ./docs
-          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
-          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
-          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
 
       - name: Build :airbyte-webapp
         uses: Wandalen/wretry.action@master
@@ -290,16 +281,6 @@ jobs:
           org.gradle.workers.max=8
           org.gradle.vfs.watch=false
           EOF
-
-      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
-      #       since docs are not pulled when running gradle locally.
-      - name: Copy docs from connectors repository
-        run: |
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
-          mkdir -p ./docs
-          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
-          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
-          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
 
       - name: Build Platform Docker Images
         run: ./gradlew --no-daemon assemble --scan
@@ -857,7 +838,7 @@ jobs:
       - platform-build
       # Todo: Kyryl turn this on.
       # - helm-acceptance-test
-    if: success()
+    if: ${{ success() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Get Previous Workflow Status
         uses: Mercymeilya/last-workflow-status@v0.3

@@ -50,6 +50,11 @@
     background-color: colors.$grey-100;
   }
 
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.25;
+  }
+
   &.iconPositionRight {
     flex-direction: row-reverse;
 

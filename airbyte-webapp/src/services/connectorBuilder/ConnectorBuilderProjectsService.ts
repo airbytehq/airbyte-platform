@@ -1,19 +1,25 @@
-import { useMutation, useQueryClient } from "react-query";
+import { useMutation, useQuery, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
-import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionIdBody } from "core/request/AirbyteClient";
+import {
+  ConnectorBuilderProjectIdWithWorkspaceId,
+  ConnectorBuilderProjectRead,
+  SourceDefinitionIdBody,
+} from "core/request/AirbyteClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
+import { isCloudApp } from "utils/app";
 
 import { SCOPE_WORKSPACE } from "../Scope";
 
 const connectorBuilderProjectsKeys = {
   all: [SCOPE_WORKSPACE, "connectorBuilderProjects"] as const,
   detail: (projectId: string) => [...connectorBuilderProjectsKeys.all, "details", projectId] as const,
+  versions: (projectId?: string) => [...connectorBuilderProjectsKeys.all, "versions", projectId] as const,
   list: (workspaceId: string) => [...connectorBuilderProjectsKeys.all, "list", workspaceId] as const,
 };
 
@@ -25,8 +31,10 @@ function useConnectorBuilderProjectsService() {
 
 export interface BuilderProject {
   name: string;
-  version: string;
+  version: "draft" | number;
+  sourceDefinitionId?: string;
   id: string;
+  hasDraft?: boolean;
 }
 
 export interface BuilderProjectWithManifest {
@@ -39,18 +47,51 @@ export const useListProjects = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    (await service.list(workspaceId)).projects.map((projectDetails) => ({
-      name: projectDetails.name,
-      // TODO: set version based on activeDeclarativeManifestVersion once it is added to the API
-      version: "draft",
-      id: projectDetails.builderProjectId,
-    }))
+    // FIXME this is a temporary solution to avoid calling an API that's not forwarded in cloud environments yet
+    isCloudApp()
+      ? []
+      : (await service.list(workspaceId)).projects.map(
+          (projectDetails): BuilderProject => ({
+            name: projectDetails.name,
+            version:
+              typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+                ? projectDetails.activeDeclarativeManifestVersion
+                : "draft",
+            sourceDefinitionId: projectDetails.sourceDefinitionId,
+            id: projectDetails.builderProjectId,
+            hasDraft: projectDetails.hasDraft,
+          })
+        )
   );
+};
+
+export const useListVersions = (project?: BuilderProject) => {
+  const service = useConnectorBuilderProjectsService();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useQuery(connectorBuilderProjectsKeys.versions(project?.id), async () => {
+    if (!project?.sourceDefinitionId) {
+      return [];
+    }
+    return (await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)).manifestVersions;
+  });
+};
+
+export const useListVersionsSuspense = (project?: BuilderProject) => {
+  const service = useConnectorBuilderProjectsService();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useSuspenseQuery(connectorBuilderProjectsKeys.versions(project?.id), async () => {
+    if (!project?.sourceDefinitionId) {
+      return [];
+    }
+    return (await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)).manifestVersions;
+  });
 };
 
 export type CreateProjectContext =
   | { name: string; manifest?: DeclarativeComponentSchema }
-  | { name: string; forkProjectId: string };
+  | { name: string; forkProjectId: string; version?: "draft" | number };
 
 export const useCreateProject = () => {
   const service = useConnectorBuilderProjectsService();
@@ -62,7 +103,11 @@ export const useCreateProject = () => {
       const name = context.name;
       let manifest;
       if ("forkProjectId" in context) {
-        const { declarativeManifest } = await service.getConnectorBuilderProject(workspaceId, context.forkProjectId);
+        const { declarativeManifest } = await service.getConnectorBuilderProject(
+          workspaceId,
+          context.forkProjectId,
+          context.version !== "draft" ? context.version : undefined
+        );
         manifest = declarativeManifest?.manifest as DeclarativeComponentSchema | undefined;
       } else {
         manifest = context.manifest;
@@ -79,7 +124,7 @@ export const useCreateProject = () => {
             {
               id: builderProjectId,
               name,
-              version: "draft",
+              version: "draft" as const,
             },
           ]
         );
@@ -152,14 +197,79 @@ export const useUpdateProject = (projectId: string) => {
 export interface BuilderProjectPublishBody {
   name: string;
   projectId: string;
+  description: string;
   manifest: DeclarativeComponentSchema;
 }
 
 export const usePublishProject = () => {
   const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(({ name, projectId, manifest }) =>
-    service.publishBuilderProject(workspaceId, projectId, name, manifest)
+  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
+    ({ name, projectId, description, manifest }) =>
+      service.publishBuilderProject(workspaceId, projectId, name, description, manifest),
+    {
+      onSuccess(data, context) {
+        queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.detail(context.projectId),
+          (project: ConnectorBuilderProjectRead | undefined) => {
+            if (!project) {
+              throw new Error("invariant: current project not in cache");
+            }
+            return {
+              ...project,
+              builderProject: {
+                ...project.builderProject,
+                sourceDefinitionId: data.sourceDefinitionId,
+              },
+            };
+          }
+        );
+      },
+    }
+  );
+};
+
+export interface NewVersionBody {
+  sourceDefinitionId: string;
+  projectId: string;
+  description: string;
+  version: number;
+  useAsActiveVersion: boolean;
+  manifest: DeclarativeComponentSchema;
+}
+
+export const useReleaseNewVersion = () => {
+  const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<void, Error, NewVersionBody>(
+    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest }) =>
+      service.releaseNewVersion(workspaceId, sourceDefinitionId, description, version, useAsActiveVersion, manifest),
+    {
+      onSuccess(_data, context) {
+        queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.detail(context.projectId),
+          (project: ConnectorBuilderProjectRead | undefined) => {
+            if (!project) {
+              throw new Error("invariant: current project not in cache");
+            }
+            return {
+              ...project,
+              builderProject: {
+                ...project.builderProject,
+                activeDeclarativeManifestVersion: context.useAsActiveVersion
+                  ? context.version
+                  : project.builderProject.activeDeclarativeManifestVersion,
+              },
+            };
+          }
+        );
+      },
+    }
   );
 };

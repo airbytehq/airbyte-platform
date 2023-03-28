@@ -2,7 +2,7 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Card } from "components/ui/Card";
-import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 
 import styles from "./CreditsUsage.module.scss";
 import { EmptyState } from "./EmptyState";
@@ -14,21 +14,26 @@ const CreditsUsage: React.FC = () => {
   const { freeAndPaidUsageByTimeframe } = useCreditsUsage();
 
   return (
-    <FlexContainer direction="column">
+    <Card className={styles.card}>
       {freeAndPaidUsageByTimeframe.length > 0 ? (
         <>
-          <Card title={<FormattedMessage id="credits.totalUsage" />} lightPadding className={styles.cardBlock}>
+          <div className={styles.section}>
+            <Heading as="h5" size="sm" className={styles.heading}>
+              <FormattedMessage id="credits.totalCreditsUsage" />
+            </Heading>
             <UsagePerDayGraph chartData={freeAndPaidUsageByTimeframe} />
-          </Card>
-
-          <Card title={<FormattedMessage id="credits.usagePerConnection" />} lightPadding className={styles.cardBlock}>
+          </div>
+          <div className={styles.section}>
+            <Heading as="h5" size="sm" className={styles.heading}>
+              <FormattedMessage id="credits.usagePerConnection" />
+            </Heading>
             <UsagePerConnectionTable />
-          </Card>
+          </div>
         </>
       ) : (
         <EmptyState />
       )}
-    </FlexContainer>
+    </Card>
   );
 };
 

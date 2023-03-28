@@ -58,8 +58,10 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
-    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, MdcScope.DEFAULT_BUILDER, exceptionClass);
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
+                                       final boolean shouldPerformNewJsonDeser) {
+    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, MdcScope.DEFAULT_BUILDER, exceptionClass,
+        shouldPerformNewJsonDeser);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -67,9 +69,10 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final MdcScope.Builder containerLogMdcBuilder,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
+                                       final boolean shouldPerformNewJsonDeser) {
     // TODO AirbyteProtocolPredicate needs to be updated to be protocol version aware
-    super(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, exceptionClass);
+    super(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, exceptionClass, shouldPerformNewJsonDeser);
     Preconditions.checkNotNull(protocolVersion);
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
@@ -171,7 +174,15 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
     this.protocolVersion = protocolVersion;
   }
 
-  @Override
+  /**
+   * This was initially implemented as an override on the
+   * {@link DefaultAirbyteStreamFactory#toAirbyteMessage(String)}. However, rollout of the type system
+   * was deprioritized. In the mean time, the performance work uncovered some low-hanging fruit in the
+   * deserialization process that changes the signature of the toAirbyteMessage method.
+   * <p>
+   * This is left here for posterity when the types work is picked up. It is not currently used. This
+   * means message unwrapping is still done by DefaultAirbyteStreamFactory.
+   */
   protected Stream<AirbyteMessage> toAirbyteMessage(final JsonNode json) {
     try {
       final AirbyteMessage message = migrator.upgrade(deserializer.deserialize(json), configuredAirbyteCatalog);

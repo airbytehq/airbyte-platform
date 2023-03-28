@@ -3,7 +3,7 @@ import merge from "lodash/merge";
 import { CommonRequestError } from "./CommonRequestError";
 import { RequestMiddleware } from "./RequestMiddleware";
 import { VersionError } from "./VersionError";
-import { ApiCallOptions } from "../api/apiCall";
+import { ApiCallOptions } from "../api";
 
 /**
  * @deprecated This class will be removed soon and should no longer be used or extended.

@@ -4,6 +4,7 @@ import React from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
+import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
@@ -19,27 +20,32 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
 
+  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams } = useConnectionSyncContext();
+
   const options: DropdownMenuOptionType[] = [
     {
-      as: "button",
       displayName: formatMessage({ id: "connection.stream.actions.resetThisStream" }),
+      value: "resetThisStream",
+      disabled: syncStarting || jobSyncRunning || resetStarting || jobResetRunning,
     },
     {
-      as: "button",
       displayName: formatMessage({ id: "connection.stream.actions.showInReplicationTable" }),
       value: "showInReplicationTable",
     },
     {
-      as: "button",
       displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
     },
   ];
 
-  const onOptionClick = (option: DropdownMenuOptionType) => {
+  const onOptionClick = async (option: DropdownMenuOptionType) => {
     if (option.value === "showInReplicationTable") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
         state: { namespace: stream?.namespace, streamName: stream?.name },
       });
+    }
+
+    if (option.value === "resetThisStream" && stream) {
+      await resetStreams([{ streamNamespace: stream?.namespace ?? "", streamName: stream?.name }]);
     }
   };
 

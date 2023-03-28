@@ -38,7 +38,7 @@ dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-container-orchestrator')
 
-    implementation 'io.fabric8:kubernetes-client:5.12.2'
+    implementation libs.bundles.kubernetes.client
     implementation libs.platform.testcontainers
 
     acceptanceTestsImplementation project(':airbyte-api')

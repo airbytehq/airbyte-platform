@@ -56,7 +56,6 @@ import io.airbyte.oauth.flows.google.GoogleAnalyticsPropertyIdOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleAnalyticsViewIdOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSearchConsoleOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSheetsOAuthFlow;
-import io.airbyte.oauth.flows.google.YouTubeAnalyticsBusinessOAuthFlow;
 import io.airbyte.oauth.flows.google.YouTubeAnalyticsOAuthFlow;
 import java.net.http.HttpClient;
 import java.util.Map;
@@ -105,7 +104,6 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-trello", new TrelloOAuthFlow(configRepository));
     builder.put("airbyte/source-gitlab", new GitlabOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-youtube-analytics", new YouTubeAnalyticsOAuthFlow(configRepository, httpClient));
-    builder.put("airbyte/source-youtube-analytics-business", new YouTubeAnalyticsBusinessOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-drift", new DriftOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-xero", new XeroOAuthFlow(configRepository, httpClient));
     builder.put("airbyte/source-zendesk-chat", new ZendeskChatOAuthFlow(configRepository, httpClient));

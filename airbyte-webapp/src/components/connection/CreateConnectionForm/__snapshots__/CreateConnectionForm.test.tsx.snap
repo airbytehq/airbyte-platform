@@ -262,6 +262,174 @@ exports[`CreateConnectionForm should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         >
+                          Destination Namespace
+                          <span
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <span
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <span
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <svg
+                                  fill="none"
+                                  height="11"
+                                  viewBox="0 0 14 14"
+                                  width="11"
+                                >
+                                  <path
+                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              </span>
+                            </span>
+                          </span>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <div
+                      class="<removed-for-snapshot-test>"
+                      data-testid="textInputContainer"
+                    >
+                      <p
+                        class="<removed-for-snapshot-test>"
+                        data-type="text"
+                      >
+                        Destination default
+                      </p>
+                    </div>
+                    <button
+                      class="<removed-for-snapshot-test>"
+                      data-testid="destination-namespace-edit-button"
+                      type="button"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        Edit
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="<removed-for-snapshot-test>"
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <label
+                      class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          Destination Stream Prefix
+                          <span
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <span
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <span
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <svg
+                                  fill="none"
+                                  height="11"
+                                  viewBox="0 0 14 14"
+                                  width="11"
+                                >
+                                  <path
+                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              </span>
+                            </span>
+                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            Optional
+                          </p>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <div
+                      class="<removed-for-snapshot-test>"
+                      data-testid="textInputContainer"
+                    >
+                      <p
+                        class="<removed-for-snapshot-test>"
+                        data-type="text"
+                      >
+                        Mirror source name
+                      </p>
+                    </div>
+                    <button
+                      class="<removed-for-snapshot-test>"
+                      data-testid="destination-stream-prefix-edit-button"
+                      type="button"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        Edit
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="<removed-for-snapshot-test>"
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <label
+                      class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
                           Non-breaking schema updates detected
                           <span
                             class="<removed-for-snapshot-test>"
@@ -387,230 +555,6 @@ exports[`CreateConnectionForm should render 1`] = `
             >
               <div
                 class="<removed-for-snapshot-test>"
-              >
-                <h2
-                  class="<removed-for-snapshot-test>"
-                >
-                  Streams
-                </h2>
-              </div>
-              <div
-                class="<removed-for-snapshot-test>"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <label
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          Destination Namespace
-                          <span
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <span
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
-                                >
-                                  <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
-                              </span>
-                            </span>
-                          </span>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                      </div>
-                    </label>
-                  </div>
-                </div>
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                    data-testid="namespaceDefinition"
-                    role="combobox"
-                  >
-                    <span
-                      class="<removed-for-snapshot-test>"
-                      id="react-select-4-live-region"
-                    />
-                    <span
-                      aria-atomic="false"
-                      aria-live="polite"
-                      aria-relevant="additions text"
-                      class="<removed-for-snapshot-test>"
-                    />
-                    <div
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                            >
-                              Destination default
-                            </div>
-                          </div>
-                        </div>
-                        <input
-                          aria-autocomplete="list"
-                          aria-expanded="false"
-                          aria-haspopup="true"
-                          aria-readonly="true"
-                          class="<removed-for-snapshot-test>"
-                          id="react-select-4-input"
-                          inputmode="none"
-                          role="combobox"
-                          tabindex="0"
-                          value=""
-                        />
-                      </div>
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          aria-hidden="true"
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            class="<removed-for-snapshot-test>"
-                            data-icon="sort-down"
-                            data-prefix="fas"
-                            focusable="false"
-                            role="img"
-                            viewBox="0 0 320 512"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M182.6 470.6c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-9.2-9.2-11.9-22.9-6.9-34.9s16.6-19.8 29.6-19.8H288c12.9 0 24.6 7.8 29.6 19.8s2.2 25.7-6.9 34.9l-128 128z"
-                              fill="currentColor"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    <input
-                      name="namespaceDefinition"
-                      type="hidden"
-                      value="destination"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div
-                class="<removed-for-snapshot-test>"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <label
-                      class="<removed-for-snapshot-test>"
-                    >
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          Destination Stream Prefix
-                          <span
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <span
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
-                                >
-                                  <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
-                              </span>
-                            </span>
-                          </span>
-                          <p
-                            class="<removed-for-snapshot-test>"
-                            data-type="text"
-                          >
-                            Optional
-                          </p>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                      </div>
-                    </label>
-                  </div>
-                </div>
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <div
-                    class="<removed-for-snapshot-test>"
-                    data-testid="input-container"
-                  >
-                    <input
-                      class="<removed-for-snapshot-test>"
-                      data-testid="prefixInput"
-                      name="prefix"
-                      placeholder="prefix"
-                      type="text"
-                      value=""
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            class="<removed-for-snapshot-test>"
-          >
-            <div
-              class="<removed-for-snapshot-test>"
-            >
-              <div
-                class="<removed-for-snapshot-test>"
               />
               <div
                 class="<removed-for-snapshot-test>"
@@ -679,6 +623,77 @@ exports[`CreateConnectionForm should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         >
+                          <h5
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <span
+                              class="<removed-for-snapshot-test>"
+                              data-testid="connector-header-group-icon-container-source"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <img
+                                  alt=""
+                                  class="<removed-for-snapshot-test>"
+                                  src="data:image/svg+xml;utf8,%0A%20%20%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22250%22%20height%3D%22250%22%20fill%3D%22none%22%3E%0A%20%20%20%20%3Cpath%20fill%3D%22%23e8e8ed%22%20fill-rule%3D%22evenodd%22%20d%3D%22M95.775%2053.416c20.364-22.88%2054.087-29.592%2081.811-16.385%2036.836%2017.549%2050.274%2062.252%2030.219%2096.734l-45.115%2077.487a18.994%2018.994%200%200%201-11.536%208.784%2019.12%2019.12%200%200%201-14.412-1.878l54.62-93.829c14.55-25.027%204.818-57.467-21.888-70.24-20.038-9.583-44.533-4.795-59.336%2011.685a50.008%2050.008%200%200%200-12.902%2032.877%2049.989%2049.989%200%200%200%2016.664%2037.87l-31.887%2054.875a18.917%2018.917%200%200%201-4.885%205.534%2019.041%2019.041%200%200%201-6.647%203.255%2019.13%2019.13%200%200%201-7.395.482%2019.087%2019.087%200%200%201-7.018-2.365l34.617-59.575a68.424%2068.424%200%200%201-10.524-23.544l-21.213%2036.579a18.994%2018.994%200%200%201-11.535%208.784A19.123%2019.123%200%200%201%2033%20158.668l54.856-94.356a70.296%2070.296%200%200%201%207.919-10.896Zm63.314%2030.034c13.211%207.577%2017.774%2024.427%2010.13%2037.54l-52.603%2090.251a18.997%2018.997%200%200%201-11.536%208.784%2019.122%2019.122%200%200%201-14.412-1.878l48.843-84.024a27.778%2027.778%200%200%201-10.825-4.847%2027.545%2027.545%200%200%201-7.783-8.907%2027.344%2027.344%200%200%201-3.307-11.326%2027.293%2027.293%200%200%201%201.776-11.66%2027.454%2027.454%200%200%201%206.533-9.846%2027.703%2027.703%200%200%201%2010.087-6.222%2027.858%2027.858%200%200%201%2023.097%202.135Zm-19.134%2016.961a8.645%208.645%200%200%200-2.232%202.529h-.003a8.565%208.565%200%200%200%20.632%209.556%208.68%208.68%200%200%200%204.097%202.915%208.738%208.738%200%200%200%205.036.163%208.692%208.692%200%200%200%204.279-2.642%208.59%208.59%200%200%200%202.079-4.558%208.563%208.563%200%200%200-.821-4.938%208.645%208.645%200%200%200-3.444-3.652%208.72%208.72%200%200%200-6.586-.86%208.7%208.7%200%200%200-3.037%201.487Z%22%20clip-rule%3D%22evenodd%22%2F%3E%0A%20%20%3C%2Fsvg%3E%0A"
+                                />
+                              </div>
+                              Source
+                            </span>
+                          </h5>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <svg
+                              fill="none"
+                              height="11"
+                              viewBox="0 0 11 11"
+                              width="11"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M0.546248 4.13H6.20575L4.09375 2.018C4.02775 1.941 3.99475 1.853 3.99475 1.754C3.99475 1.655 4.02775 1.567 4.09375 1.49L4.98475 0.6155C5.06175 0.5385 5.14975 0.5 5.24875 0.5C5.34775 0.5 5.43575 0.5385 5.51275 0.6155L9.95125 5.054C10.0282 5.131 10.0667 5.219 10.0667 5.318C10.0667 5.417 10.0282 5.505 9.95125 5.582L5.51275 10.0205C5.43575 10.0975 5.34775 10.136 5.24875 10.136C5.14975 10.136 5.06175 10.0975 4.98475 10.0205L4.09375 9.146C4.02775 9.069 3.99475 8.981 3.99475 8.882C3.99475 8.783 4.02775 8.695 4.09375 8.618L6.35425 6.3575H0.546248C0.436247 6.3575 0.345498 6.32175 0.273998 6.25025C0.202498 6.17875 0.166748 6.088 0.166748 5.978V4.493C0.166748 4.394 0.202498 4.30875 0.273998 4.23725C0.345498 4.16575 0.436247 4.13 0.546248 4.13Z"
+                                fill="currentColor"
+                              />
+                            </svg>
+                          </div>
+                          <div
+                            class="<removed-for-snapshot-test>"
+                          >
+                            <h5
+                              class="<removed-for-snapshot-test>"
+                            >
+                              <span
+                                class="<removed-for-snapshot-test>"
+                                data-testid="connector-header-group-icon-container-destination"
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <img
+                                    alt=""
+                                    class="<removed-for-snapshot-test>"
+                                    src="data:image/svg+xml;utf8,%0A%20%20%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22250%22%20height%3D%22250%22%20fill%3D%22none%22%3E%0A%20%20%20%20%3Cpath%20fill%3D%22%23e8e8ed%22%20fill-rule%3D%22evenodd%22%20d%3D%22M95.775%2053.416c20.364-22.88%2054.087-29.592%2081.811-16.385%2036.836%2017.549%2050.274%2062.252%2030.219%2096.734l-45.115%2077.487a18.994%2018.994%200%200%201-11.536%208.784%2019.12%2019.12%200%200%201-14.412-1.878l54.62-93.829c14.55-25.027%204.818-57.467-21.888-70.24-20.038-9.583-44.533-4.795-59.336%2011.685a50.008%2050.008%200%200%200-12.902%2032.877%2049.989%2049.989%200%200%200%2016.664%2037.87l-31.887%2054.875a18.917%2018.917%200%200%201-4.885%205.534%2019.041%2019.041%200%200%201-6.647%203.255%2019.13%2019.13%200%200%201-7.395.482%2019.087%2019.087%200%200%201-7.018-2.365l34.617-59.575a68.424%2068.424%200%200%201-10.524-23.544l-21.213%2036.579a18.994%2018.994%200%200%201-11.535%208.784A19.123%2019.123%200%200%201%2033%20158.668l54.856-94.356a70.296%2070.296%200%200%201%207.919-10.896Zm63.314%2030.034c13.211%207.577%2017.774%2024.427%2010.13%2037.54l-52.603%2090.251a18.997%2018.997%200%200%201-11.536%208.784%2019.122%2019.122%200%200%201-14.412-1.878l48.843-84.024a27.778%2027.778%200%200%201-10.825-4.847%2027.545%2027.545%200%200%201-7.783-8.907%2027.344%2027.344%200%200%201-3.307-11.326%2027.293%2027.293%200%200%201%201.776-11.66%2027.454%2027.454%200%200%201%206.533-9.846%2027.703%2027.703%200%200%201%2010.087-6.222%2027.858%2027.858%200%200%201%2023.097%202.135Zm-19.134%2016.961a8.645%208.645%200%200%200-2.232%202.529h-.003a8.565%208.565%200%200%200%20.632%209.556%208.68%208.68%200%200%200%204.097%202.915%208.738%208.738%200%200%200%205.036.163%208.692%208.692%200%200%200%204.279-2.642%208.59%208.59%200%200%200%202.079-4.558%208.563%208.563%200%200%200-.821-4.938%208.645%208.645%200%200%200-3.444-3.652%208.72%208.72%200%200%200-6.586-.86%208.7%208.7%200%200%200-3.037%201.487Z%22%20clip-rule%3D%22evenodd%22%2F%3E%0A%20%20%3C%2Fsvg%3E%0A"
+                                  />
+                                </div>
+                                Destination
+                              </span>
+                            </h5>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="catalog-tree-table-header"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
                           <label
                             class="<removed-for-snapshot-test>"
                           >
@@ -690,385 +705,456 @@ exports[`CreateConnectionForm should render 1`] = `
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
-                        />
-                        <div
-                          class="<removed-for-snapshot-test>"
                         >
-                          Sync
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            Sync
+                          </p>
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Source
-                          <span
+                          <p
                             class="<removed-for-snapshot-test>"
+                            data-type="text"
                           >
+                            Namespace
                             <span
                               class="<removed-for-snapshot-test>"
                             >
                               <span
                                 class="<removed-for-snapshot-test>"
                               >
-                                <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
+                                <span
+                                  class="<removed-for-snapshot-test>"
                                 >
-                                  <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
+                                  <svg
+                                    fill="none"
+                                    height="11"
+                                    viewBox="0 0 14 14"
+                                    width="11"
+                                  >
+                                    <path
+                                      d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </span>
                               </span>
                             </span>
-                          </span>
+                          </p>
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
-                        />
-                        <div
-                          class="<removed-for-snapshot-test>"
                         >
-                          Sync mode
-                          <span
+                          <p
                             class="<removed-for-snapshot-test>"
+                            data-type="text"
                           >
+                            Stream name
                             <span
                               class="<removed-for-snapshot-test>"
                             >
                               <span
                                 class="<removed-for-snapshot-test>"
                               >
-                                <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
+                                <span
+                                  class="<removed-for-snapshot-test>"
                                 >
-                                  <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
+                                  <svg
+                                    fill="none"
+                                    height="11"
+                                    viewBox="0 0 14 14"
+                                    width="11"
+                                  >
+                                    <path
+                                      d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </span>
                               </span>
                             </span>
-                          </span>
+                          </p>
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Cursor field
-                          <span
+                          <p
                             class="<removed-for-snapshot-test>"
+                            data-type="text"
                           >
+                            Sync mode
                             <span
                               class="<removed-for-snapshot-test>"
                             >
                               <span
                                 class="<removed-for-snapshot-test>"
                               >
-                                <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
+                                <span
+                                  class="<removed-for-snapshot-test>"
                                 >
-                                  <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
+                                  <svg
+                                    fill="none"
+                                    height="11"
+                                    viewBox="0 0 14 14"
+                                    width="11"
+                                  >
+                                    <path
+                                      d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </span>
                               </span>
                             </span>
-                          </span>
+                          </p>
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Primary key
-                          <span
+                          <p
                             class="<removed-for-snapshot-test>"
+                            data-type="text"
                           >
+                            Cursor field
                             <span
                               class="<removed-for-snapshot-test>"
                             >
                               <span
                                 class="<removed-for-snapshot-test>"
                               >
-                                <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
+                                <span
+                                  class="<removed-for-snapshot-test>"
                                 >
-                                  <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
-                                    fill="currentColor"
-                                  />
-                                </svg>
+                                  <svg
+                                    fill="none"
+                                    height="11"
+                                    viewBox="0 0 14 14"
+                                    width="11"
+                                  >
+                                    <path
+                                      d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </span>
                               </span>
                             </span>
-                          </span>
+                          </p>
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Destination
-                          <span
+                          <p
                             class="<removed-for-snapshot-test>"
+                            data-type="text"
                           >
+                            Primary key
                             <span
                               class="<removed-for-snapshot-test>"
                             >
                               <span
                                 class="<removed-for-snapshot-test>"
                               >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <svg
+                                    fill="none"
+                                    height="11"
+                                    viewBox="0 0 14 14"
+                                    width="11"
+                                  >
+                                    <path
+                                      d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                      fill="currentColor"
+                                    />
+                                  </svg>
+                                </span>
+                              </span>
+                            </span>
+                          </p>
+                        </div>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        />
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            Namespace
+                            <button
+                              class="<removed-for-snapshot-test>"
+                              type="button"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
                                 <svg
-                                  fill="none"
-                                  height="11"
-                                  viewBox="0 0 14 14"
-                                  width="11"
+                                  aria-hidden="true"
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="gear"
+                                  data-prefix="fas"
+                                  focusable="false"
+                                  role="img"
+                                  viewBox="0 0 512 512"
+                                  xmlns="http://www.w3.org/2000/svg"
                                 >
                                   <path
-                                    d="M7.00016 13.6663C3.31816 13.6663 0.333496 10.6817 0.333496 6.99967C0.333496 3.31767 3.31816 0.333008 7.00016 0.333008C10.6822 0.333008 13.6668 3.31767 13.6668 6.99967C13.6668 10.6817 10.6822 13.6663 7.00016 13.6663ZM7.00016 12.333C8.41465 12.333 9.77121 11.7711 10.7714 10.7709C11.7716 9.77072 12.3335 8.41416 12.3335 6.99967C12.3335 5.58519 11.7716 4.22863 10.7714 3.22844C9.77121 2.22824 8.41465 1.66634 7.00016 1.66634C5.58567 1.66634 4.22912 2.22824 3.22893 3.22844C2.22873 4.22863 1.66683 5.58519 1.66683 6.99967C1.66683 8.41416 2.22873 9.77072 3.22893 10.7709C4.22912 11.7711 5.58567 12.333 7.00016 12.333ZM6.3335 3.66634H7.66683V4.99967H6.3335V3.66634ZM6.3335 6.33301H7.66683V10.333H6.3335V6.33301Z"
+                                    d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336c44.2 0 80-35.8 80-80s-35.8-80-80-80s-80 35.8-80 80s35.8 80 80 80z"
                                     fill="currentColor"
                                   />
                                 </svg>
-                              </span>
-                            </span>
-                          </span>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                      </div>
-                      <div
-                        class="<removed-for-snapshot-test>"
-                      >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          Namespace
+                              </div>
+                            </button>
+                          </p>
                         </div>
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Stream name
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          Source | Destination
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          Namespace
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          Stream name
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            Stream name
+                            <button
+                              class="<removed-for-snapshot-test>"
+                              type="button"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <svg
+                                  aria-hidden="true"
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="gear"
+                                  data-prefix="fas"
+                                  focusable="false"
+                                  role="img"
+                                  viewBox="0 0 512 512"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336c44.2 0 80-35.8 80-80s-35.8-80-80-80s-80 35.8-80 80s35.8 80 80 80z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              </div>
+                            </button>
+                          </p>
                         </div>
                       </div>
                     </div>
                     <div
                       class="<removed-for-snapshot-test>"
+                      data-testid="catalog-tree-table-row-no-namespace-pokemon"
                     >
                       <div
                         class="<removed-for-snapshot-test>"
                       >
                         <div
                           class="<removed-for-snapshot-test>"
+                        />
+                        <label
+                          class="<removed-for-snapshot-test>"
                         >
-                          <div
+                          <input
+                            aria-checked="false"
+                            type="checkbox"
+                          />
+                        </label>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <label
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <input
+                            aria-checked="true"
+                            checked=""
+                            class="<removed-for-snapshot-test>"
+                            data-testid="selected-switch"
+                            type="checkbox"
+                            value=""
+                          />
+                          <span
                             class="<removed-for-snapshot-test>"
                           />
-                          <label
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <input
-                              aria-checked="false"
-                              type="checkbox"
-                            />
-                          </label>
-                        </div>
+                        </label>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="source-namespace-cell"
+                      >
+                        <span
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <span>
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              No namespace
+                            </p>
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="source-stream-name-cell"
+                      >
+                        <span
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <span>
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              pokemon
+                            </p>
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
                         <div
                           class="<removed-for-snapshot-test>"
+                          data-testid="sync-mode-select"
+                          role="combobox"
                         >
                           <span
                             class="<removed-for-snapshot-test>"
-                            data-testid="pokemon_expandStreamDetails"
-                          >
-                            <svg
-                              aria-hidden="true"
-                              class="<removed-for-snapshot-test>"
-                              data-icon="chevron-right"
-                              data-prefix="fas"
-                              focusable="false"
-                              role="img"
-                              viewBox="0 0 384 512"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M342.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L274.7 256 105.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          </span>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <div
+                            id="react-select-4-live-region"
+                          />
+                          <span
+                            aria-atomic="false"
+                            aria-live="polite"
+                            aria-relevant="additions text"
                             class="<removed-for-snapshot-test>"
-                          >
-                            <label
-                              class="<removed-for-snapshot-test>"
-                            >
-                              <input
-                                aria-checked="true"
-                                checked=""
-                                class="<removed-for-snapshot-test>"
-                                data-testid="pokemon-stream-sync-switch"
-                                type="checkbox"
-                                value=""
-                              />
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              />
-                            </label>
-                          </div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            title=""
-                          >
+                          />
+                          <div>
                             <span
                               class="<removed-for-snapshot-test>"
                             >
-                              No namespace
-                            </span>
-                          </div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            data-testid="streamNameCell"
-                            title="pokemon"
-                          >
-                            pokemon
-                          </div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="syncSettingsDropdown"
-                              role="combobox"
-                            >
-                              <span
+                              <button
                                 class="<removed-for-snapshot-test>"
-                                id="react-select-5-live-region"
-                              />
-                              <span
-                                aria-atomic="false"
-                                aria-live="polite"
-                                aria-relevant="additions text"
-                                class="<removed-for-snapshot-test>"
-                              />
-                              <div
-                                class="<removed-for-snapshot-test>"
+                                data-error="false"
+                                data-testid="pill-select-button"
+                                type="button"
                               >
                                 <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <div
+                                  <span
                                     class="<removed-for-snapshot-test>"
+                                    data-type="text"
                                   >
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                    >
-                                      <div>
-                                        Full refresh
-                                      </div>
-                                      <div
-                                        class="<removed-for-snapshot-test>"
-                                      >
-                                        |
-                                      </div>
-                                      <div>
-                                        Overwrite
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <input
-                                    aria-autocomplete="list"
-                                    aria-expanded="false"
-                                    aria-haspopup="true"
-                                    aria-readonly="true"
-                                    class="<removed-for-snapshot-test>"
-                                    id="react-select-5-input"
-                                    inputmode="none"
-                                    role="combobox"
-                                    tabindex="0"
-                                    value=""
-                                  />
+                                    Full refresh
+                                  </span>
                                 </div>
                                 <div
                                   class="<removed-for-snapshot-test>"
+                                />
+                                <div
+                                  class="<removed-for-snapshot-test>"
                                 >
-                                  <div
-                                    aria-hidden="true"
+                                  <span
                                     class="<removed-for-snapshot-test>"
+                                    data-type="text"
                                   >
-                                    <svg
-                                      aria-hidden="true"
-                                      class="<removed-for-snapshot-test>"
-                                      data-icon="sort-down"
-                                      data-prefix="fas"
-                                      focusable="false"
-                                      role="img"
-                                      viewBox="0 0 320 512"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <path
-                                        d="M182.6 470.6c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-9.2-9.2-11.9-22.9-6.9-34.9s16.6-19.8 29.6-19.8H288c12.9 0 24.6 7.8 29.6 19.8s2.2 25.7-6.9 34.9l-128 128z"
-                                        fill="currentColor"
-                                      />
-                                    </svg>
-                                  </div>
+                                    Overwrite
+                                  </span>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          />
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            style="width: 0px;"
-                          />
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            title="'<destination schema>"
-                          >
-                            '&lt;destination schema&gt;
-                          </div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                            title="pokemon"
-                          >
-                            pokemon
+                                <svg
+                                  aria-hidden="true"
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="caret-down"
+                                  data-prefix="fas"
+                                  focusable="false"
+                                  role="img"
+                                  viewBox="0 0 320 512"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              </button>
+                            </span>
                           </div>
                         </div>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <span
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <span />
+                        </span>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      />
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <svg
+                          fill="none"
+                          height="11"
+                          viewBox="0 0 11 11"
+                          width="11"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M0.546248 4.13H6.20575L4.09375 2.018C4.02775 1.941 3.99475 1.853 3.99475 1.754C3.99475 1.655 4.02775 1.567 4.09375 1.49L4.98475 0.6155C5.06175 0.5385 5.14975 0.5 5.24875 0.5C5.34775 0.5 5.43575 0.5385 5.51275 0.6155L9.95125 5.054C10.0282 5.131 10.0667 5.219 10.0667 5.318C10.0667 5.417 10.0282 5.505 9.95125 5.582L5.51275 10.0205C5.43575 10.0975 5.34775 10.136 5.24875 10.136C5.14975 10.136 5.06175 10.0975 4.98475 10.0205L4.09375 9.146C4.02775 9.069 3.99475 8.981 3.99475 8.882C3.99475 8.783 4.02775 8.695 4.09375 8.618L6.35425 6.3575H0.546248C0.436247 6.3575 0.345498 6.32175 0.273998 6.25025C0.202498 6.17875 0.166748 6.088 0.166748 5.978V4.493C0.166748 4.394 0.202498 4.30875 0.273998 4.23725C0.345498 4.16575 0.436247 4.13 0.546248 4.13Z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="destination-namespace-cell"
+                      >
+                        <span
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <span>
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              '&lt;destination schema&gt;
+                            </p>
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="destination-stream-name-cell"
+                      >
+                        <span
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <span>
+                            <p
+                              class="<removed-for-snapshot-test>"
+                              data-type="text"
+                            >
+                              pokemon
+                            </p>
+                          </span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1208,6 +1294,275 @@ exports[`CreateConnectionForm should render 1`] = `
           </div>
         </div>
       </form>
+    </div>
+  </div>
+  <div
+    aria-hidden="true"
+    class="<removed-for-snapshot-test>"
+  >
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <p
+        class="<removed-for-snapshot-test>"
+      >
+        0
+      </p>
+      <p
+        class="<removed-for-snapshot-test>"
+      >
+        Streams
+      </p>
+    </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <p
+        class="<removed-for-snapshot-test>"
+      >
+        Sync
+      </p>
+      <div
+        class="<removed-for-snapshot-test>"
+      >
+        <label
+          class="<removed-for-snapshot-test>"
+        >
+          <input
+            aria-checked="true"
+            checked=""
+            class="<removed-for-snapshot-test>"
+            type="checkbox"
+            value=""
+          />
+          <span
+            class="<removed-for-snapshot-test>"
+          />
+        </label>
+      </div>
+    </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <p
+        class="<removed-for-snapshot-test>"
+      >
+        Sync mode
+      </p>
+      <div
+        class="<removed-for-snapshot-test>"
+      >
+        <div
+          class="<removed-for-snapshot-test>"
+          data-testid="sync-mode-select"
+          role="combobox"
+        >
+          <span
+            class="<removed-for-snapshot-test>"
+            id="react-select-5-live-region"
+          />
+          <span
+            aria-atomic="false"
+            aria-live="polite"
+            aria-relevant="additions text"
+            class="<removed-for-snapshot-test>"
+          />
+          <div>
+            <span
+              class="<removed-for-snapshot-test>"
+            >
+              <button
+                class="<removed-for-snapshot-test>"
+                data-error="false"
+                data-testid="pill-select-button"
+                type="button"
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <span
+                    class="<removed-for-snapshot-test>"
+                    data-type="text"
+                  />
+                </div>
+                <svg
+                  aria-hidden="true"
+                  class="<removed-for-snapshot-test>"
+                  data-icon="caret-down"
+                  data-prefix="fas"
+                  focusable="false"
+                  role="img"
+                  viewBox="0 0 320 512"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <p
+        class="<removed-for-snapshot-test>"
+      >
+        Cursor field
+      </p>
+      <div
+        class="<removed-for-snapshot-test>"
+      >
+        <div
+          class="<removed-for-snapshot-test>"
+          data-testid="cursor-select"
+          role="combobox"
+        >
+          <span
+            class="<removed-for-snapshot-test>"
+            id="react-select-6-live-region"
+          />
+          <span
+            aria-atomic="false"
+            aria-live="polite"
+            aria-relevant="additions text"
+            class="<removed-for-snapshot-test>"
+          />
+          <div>
+            <span
+              class="<removed-for-snapshot-test>"
+            >
+              <button
+                class="<removed-for-snapshot-test>"
+                data-error="false"
+                data-testid="pill-select-button"
+                disabled=""
+                type="button"
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <span
+                    class="<removed-for-snapshot-test>"
+                    data-type="text"
+                  >
+                    Not available
+                  </span>
+                </div>
+                <svg
+                  aria-hidden="true"
+                  class="<removed-for-snapshot-test>"
+                  data-icon="caret-down"
+                  data-prefix="fas"
+                  focusable="false"
+                  role="img"
+                  viewBox="0 0 320 512"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <p
+        class="<removed-for-snapshot-test>"
+      >
+        Primary key
+      </p>
+      <div
+        class="<removed-for-snapshot-test>"
+      >
+        <div
+          class="<removed-for-snapshot-test>"
+          data-testid="primary-key-select"
+          role="combobox"
+        >
+          <span
+            class="<removed-for-snapshot-test>"
+            id="react-select-7-live-region"
+          />
+          <span
+            aria-atomic="false"
+            aria-live="polite"
+            aria-relevant="additions text"
+            class="<removed-for-snapshot-test>"
+          />
+          <div>
+            <span
+              class="<removed-for-snapshot-test>"
+            >
+              <button
+                class="<removed-for-snapshot-test>"
+                data-error="false"
+                data-testid="pill-select-button"
+                disabled=""
+                type="button"
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <span
+                    class="<removed-for-snapshot-test>"
+                    data-type="text"
+                  >
+                    Not available
+                  </span>
+                </div>
+                <svg
+                  aria-hidden="true"
+                  class="<removed-for-snapshot-test>"
+                  data-icon="caret-down"
+                  data-prefix="fas"
+                  focusable="false"
+                  role="img"
+                  viewBox="0 0 320 512"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="<removed-for-snapshot-test>"
+    >
+      <button
+        class="<removed-for-snapshot-test>"
+      >
+        <div
+          class="<removed-for-snapshot-test>"
+        >
+          Cancel
+        </div>
+      </button>
+      <button
+        class="<removed-for-snapshot-test>"
+      >
+        <div
+          class="<removed-for-snapshot-test>"
+        >
+          Apply
+        </div>
+      </button>
     </div>
   </div>
 </body>

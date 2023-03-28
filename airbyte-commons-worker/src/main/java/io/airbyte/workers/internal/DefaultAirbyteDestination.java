@@ -6,6 +6,7 @@ package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
@@ -63,8 +64,9 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
   private Iterator<AirbyteMessage> messageIterator = null;
   private Integer exitValue = null;
 
+  @VisibleForTesting
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher) {
-    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), new DefaultAirbyteMessageBufferedWriterFactory(),
+    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER, true), new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer());
 
   }

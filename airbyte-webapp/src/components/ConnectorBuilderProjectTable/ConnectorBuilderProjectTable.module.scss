@@ -1,0 +1,17 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.table {
+  td {
+    padding-top: variables.$spacing-sm;
+    padding-bottom: variables.$spacing-sm;
+  }
+}
+
+.draft {
+  color: colors.$grey-400;
+}
+
+.versionCell {
+  padding-left: variables.$spacing-sm;
+}

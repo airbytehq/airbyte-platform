@@ -21,6 +21,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
@@ -30,7 +31,9 @@ import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteGlobalState;
+import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.AirbyteStreamState;
@@ -38,6 +41,7 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
+import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import java.util.List;
 import java.util.UUID;
@@ -55,15 +59,21 @@ class SyncPersistenceImplTest {
   private final long flushPeriod = 60;
 
   private SyncPersistenceImpl syncPersistence;
+  private SyncStatsTracker syncStatsTracker;
   private StateApi stateApi;
+  private AttemptApi attemptApi;
   private ScheduledExecutorService executorService;
   private ArgumentCaptor<Runnable> actualFlushMethod;
 
   private UUID connectionId;
+  private Long jobId;
+  private Integer attemptNumber;
 
   @BeforeEach
   void beforeEach() {
     connectionId = UUID.randomUUID();
+    jobId = (long) (Math.random() * Long.MAX_VALUE);
+    attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -74,11 +84,16 @@ class SyncPersistenceImplTest {
     when(executorService.scheduleAtFixedRate(actualFlushMethod.capture(), eq(0L), eq(flushPeriod), eq(TimeUnit.SECONDS)))
         .thenReturn(mock(ScheduledFuture.class));
 
+    syncStatsTracker = mock(SyncStatsTracker.class);
+
     // Setting syncPersistence
     stateApi = mock(StateApi.class);
+    attemptApi = mock(AttemptApi.class);
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
     when(featureFlags.useStreamCapableState()).thenReturn(true);
-    syncPersistence = new SyncPersistenceImpl(stateApi, new StateAggregatorFactory(featureFlags), executorService, flushPeriod);
+    syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(featureFlags), syncStatsTracker, executorService,
+        flushPeriod);
+    syncPersistence.setConnectionContext(connectionId, jobId, attemptNumber, null);
   }
 
   @AfterEach
@@ -167,9 +182,62 @@ class SyncPersistenceImplTest {
   }
 
   @Test
+  void testStatsFlushBasicEmissions() throws ApiException {
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    syncPersistence.persist(connectionId, getStreamState("a", 1));
+
+    actualFlushMethod.getValue().run();
+    verify(stateApi).createOrUpdateState(any());
+    verify(attemptApi).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+
+    // We should not emit stats if there is no state to persist
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    actualFlushMethod.getValue().run();
+    verify(stateApi, never()).createOrUpdateState(any());
+    verify(attemptApi, never()).saveStats(any());
+  }
+
+  @Test
+  void testStatsAreNotPersistedWhenStateFails() throws ApiException {
+    // We should not save stats if persist state failed
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    syncPersistence.persist(connectionId, getStreamState("b", 2));
+    when(stateApi.createOrUpdateState(any())).thenThrow(new ApiException());
+    actualFlushMethod.getValue().run();
+    verify(stateApi).createOrUpdateState(any());
+    verify(attemptApi, never()).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+    reset(stateApi);
+
+    // Next sync should attempt to flush everything
+    actualFlushMethod.getValue().run();
+    verify(stateApi).createOrUpdateState(any());
+    verify(attemptApi).saveStats(any());
+  }
+
+  @Test
+  void testStatsFailuresAreRetriedOnFollowingRunsEvenWithoutNewStates() throws ApiException {
+    // If we failed to save stats, we should retry on the next schedule even if there were no new states
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    syncPersistence.persist(connectionId, getStreamState("a", 3));
+    when(attemptApi.saveStats(any())).thenThrow(new ApiException());
+    actualFlushMethod.getValue().run();
+    verify(stateApi).createOrUpdateState(any());
+    verify(attemptApi).saveStats(any());
+    clearInvocations(stateApi, attemptApi);
+    reset(attemptApi);
+
+    actualFlushMethod.getValue().run();
+    verify(stateApi, never()).createOrUpdateState(any());
+    verify(attemptApi).saveStats(any());
+  }
+
+  @Test
   void testClose() throws InterruptedException, ApiException {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     final AirbyteStateMessage stateA2 = getStreamState("A", 2);
+    syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, stateA2);
 
     // Shutdown, we expect the executor service to be stopped and an stateApi to be called
@@ -177,6 +245,7 @@ class SyncPersistenceImplTest {
     syncPersistence.close();
     verify(executorService).shutdown();
     verifyStateUpdateApiCall(List.of(stateA2));
+    verify(attemptApi).saveStats(any());
   }
 
   @Test
@@ -202,6 +271,7 @@ class SyncPersistenceImplTest {
   @Test
   void testCloseShouldAttemptToRetryFinalFlush() throws ApiException, InterruptedException {
     final AirbyteStateMessage state = getStreamState("final retry", 2);
+    syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, state);
 
     // Setup some API failures
@@ -213,6 +283,7 @@ class SyncPersistenceImplTest {
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
     syncPersistence.close();
     verify(stateApi, times(2)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
+    verify(attemptApi, times(1)).saveStats(any());
   }
 
   @Test
@@ -303,7 +374,7 @@ class SyncPersistenceImplTest {
     verify(executorService, never()).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
 
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
-    syncPersistence.setConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog()
+    syncPersistence.setConnectionContext(connectionId, jobId, attemptNumber, new ConfiguredAirbyteCatalog()
         .withStreams(List.of(
             new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("migration1")).withSyncMode(SyncMode.INCREMENTAL),
             new ConfiguredAirbyteStream().withStream(new AirbyteStream().withName("migration2")).withSyncMode(SyncMode.INCREMENTAL))));
@@ -343,6 +414,93 @@ class SyncPersistenceImplTest {
     // Since the first state check failed, we should be flushing both states on the first flush
     actualFlushMethod.getValue().run();
     verifyStateUpdateApiCall(List.of(s1, s2));
+  }
+
+  @Test
+  void testSyncStatsTrackerWrapping() {
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    verify(syncStatsTracker).updateStats(new AirbyteRecordMessage());
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.updateEstimates(new AirbyteEstimateTraceMessage());
+    verify(syncStatsTracker).updateEstimates(new AirbyteEstimateTraceMessage());
+    clearInvocations();
+
+    syncPersistence.updateDestinationStateStats(new AirbyteStateMessage());
+    verify(syncStatsTracker).updateDestinationStateStats(new AirbyteStateMessage());
+    clearInvocations();
+
+    syncPersistence.updateSourceStatesStats(new AirbyteStateMessage());
+    verify(syncStatsTracker).updateSourceStatesStats(new AirbyteStateMessage());
+    clearInvocations();
+
+    syncPersistence.getStreamToCommittedRecords();
+    verify(syncStatsTracker).getStreamToCommittedRecords();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getStreamToEmittedRecords();
+    verify(syncStatsTracker).getStreamToEmittedRecords();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getStreamToEstimatedRecords();
+    verify(syncStatsTracker).getStreamToEstimatedRecords();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getStreamToEmittedBytes();
+    verify(syncStatsTracker).getStreamToEmittedBytes();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getStreamToEstimatedBytes();
+    verify(syncStatsTracker).getStreamToEstimatedBytes();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalRecordsEmitted();
+    verify(syncStatsTracker).getTotalRecordsEmitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalRecordsEstimated();
+    verify(syncStatsTracker).getTotalRecordsEstimated();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalBytesEmitted();
+    verify(syncStatsTracker).getTotalBytesEmitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalBytesEstimated();
+    verify(syncStatsTracker).getTotalBytesEstimated();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalRecordsCommitted();
+    verify(syncStatsTracker).getTotalRecordsCommitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalSourceStateMessagesEmitted();
+    verify(syncStatsTracker).getTotalSourceStateMessagesEmitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalDestinationStateMessagesEmitted();
+    verify(syncStatsTracker).getTotalDestinationStateMessagesEmitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getMaxSecondsToReceiveSourceStateMessage();
+    verify(syncStatsTracker).getMaxSecondsToReceiveSourceStateMessage();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getMeanSecondsToReceiveSourceStateMessage();
+    verify(syncStatsTracker).getMeanSecondsToReceiveSourceStateMessage();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getMaxSecondsBetweenStateMessageEmittedAndCommitted();
+    verify(syncStatsTracker).getMaxSecondsBetweenStateMessageEmittedAndCommitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getMeanSecondsBetweenStateMessageEmittedAndCommitted();
+    verify(syncStatsTracker).getMeanSecondsBetweenStateMessageEmittedAndCommitted();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getUnreliableStateTimingMetrics();
+    verify(syncStatsTracker).getUnreliableStateTimingMetrics();
+    clearInvocations(syncStatsTracker);
   }
 
   private void verifyStateUpdateApiCall(final List<AirbyteStateMessage> expectedStateMessages) {

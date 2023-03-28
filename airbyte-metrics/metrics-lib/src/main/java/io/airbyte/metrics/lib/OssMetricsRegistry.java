@@ -50,6 +50,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "attempt_succeeded_by_release_stage",
       "increments when an attempts succeeds. attempts are double counted as this is tagged by release stage."),
+  AUTHENTICATION_REQUEST(
+      MetricEmittingApps.SERVER,
+      "authentication_request",
+      "increments when an authentication request is attempted."),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -101,16 +105,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   NUM_SOURCE_STREAMS_WITH_RECORD_SCHEMA_VALIDATION_ERRORS(MetricEmittingApps.WORKER,
       "record_schema_validation_error",
       "number of record schema validation errors"),
+  NUM_SOURCE_STREAMS_WITH_UNEXPECTED_RECORD_FIELDS(MetricEmittingApps.WORKER,
+      "schemas_unexpected_fields",
+      "number of schemas with unexpected fields"),
   NUM_TOTAL_SCHEDULED_SYNCS_IN_LAST_DAY(
       MetricEmittingApps.METRICS_REPORTER,
       "num_total_scheduled_syncs_last_day",
       "number of total syncs runs in last day."),
-
   NUM_UNUSUALLY_LONG_SYNCS(
       MetricEmittingApps.METRICS_REPORTER,
       "num_unusually_long_syncs",
       "number of unusual long syncs compared to their historic performance."),
-
   OLDEST_PENDING_JOB_AGE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "oldest_pending_job_age_secs",
       "oldest pending job in seconds"),
@@ -147,32 +152,46 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),
-
   STATE_BUFFERING(MetricEmittingApps.WORKER,
       "state_buffering",
       "number of state messages being buffered before a flush",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "state_commit_attempt",
       "number of attempts to commit states from the orchestrator/workers",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "state_commit_attempt_failed",
       "number of failed attempts to commit states from the orchestrator/workers",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "state_commit_attempt_successful",
       "number of successful attempts to commit states from the orchestrator/workers",
       MetricTags.GEOGRAPHY),
-
   STATE_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
       "state_commit_not_attempted",
       "number of attempts to commit states dropped due to an early termination",
       MetricTags.GEOGRAPHY),
 
+  STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
+      "stats_commit_attempt",
+      "number of attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
+      "stats_commit_attempt_failed",
+      "number of failed attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "stats_commit_attempt_successful",
+      "number of successful attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
+      "stats_commit_not_attempted",
+      "number of attempts to commit stats dropped due to an early termination",
+      MetricTags.GEOGRAPHY),
   @Deprecated
   // To be deleted along with PersistStateActivity
   STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,

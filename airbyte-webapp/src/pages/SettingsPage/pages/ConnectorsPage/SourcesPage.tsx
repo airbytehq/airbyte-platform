@@ -3,10 +3,12 @@ import { useIntl } from "react-intl";
 
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useSourceDefinitionList, useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
+import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
-import ConnectorsView from "./components/ConnectorsView";
+import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView";
 
 const SourcesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_SOURCE);
@@ -18,6 +20,8 @@ const SourcesPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
   const { sourceDefinitions } = useSourceDefinitionList();
+
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
 
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();
@@ -59,8 +63,10 @@ const SourcesPage: React.FC = () => {
     return Array.from(sourceDefinitionMap.values());
   }, [sources, sourceDefinitions]);
 
+  const ConnectorsViewComponent = showBuilderNavigationLinks ? WithBuilderProjects : ConnectorsView;
+
   return (
-    <ConnectorsView
+    <ConnectorsViewComponent
       type="sources"
       updatingDefinitionId={updatingDefinitionId}
       usedConnectorsDefinitions={usedSourcesDefinitions}
@@ -69,6 +75,11 @@ const SourcesPage: React.FC = () => {
       onUpdateVersion={onUpdateVersion}
     />
   );
+};
+
+export const WithBuilderProjects: React.FC<Omit<ConnectorsViewProps, "connectorBuilderProjects">> = (props) => {
+  const projects = useListProjects();
+  return <ConnectorsView {...props} connectorBuilderProjects={projects} />;
 };
 
 export default SourcesPage;

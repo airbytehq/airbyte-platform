@@ -1,0 +1,10 @@
+@use "scss/variables";
+@use "scss/mixins";
+
+.connectorImg {
+  @include mixins.shadow;
+
+  width: 90px;
+  border-radius: variables.$border-radius-2xl;
+  padding: variables.$spacing-xl;
+}

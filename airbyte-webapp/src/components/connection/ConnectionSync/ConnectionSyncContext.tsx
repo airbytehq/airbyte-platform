@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { ConnectionStream, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useResetConnection, useSyncConnection } from "hooks/services/useConnectionHook";
+import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
 import { useCancelJob } from "services/job/JobService";
 
 const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
@@ -29,9 +29,19 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
   }, [jobs, doCancelJob]);
 
   const { mutateAsync: doResetConnection, isLoading: resetStarting } = useResetConnection();
-  const resetConnection = useCallback(async () => {
-    setActiveJob((await doResetConnection(connection.connectionId)).job);
-  }, [connection.connectionId, doResetConnection]);
+  const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const resetStreams = useCallback(
+    async (streams?: ConnectionStream[]) => {
+      if (streams) {
+        // Reset a set of streams.
+        setActiveJob((await resetStream(streams)).job);
+      } else {
+        // Reset all selected streams
+        setActiveJob((await doResetConnection(connection.connectionId)).job);
+      }
+    },
+    [connection.connectionId, doResetConnection, resetStream]
+  );
 
   const jobSyncRunning = useMemo(
     () => activeJob?.status === "running" && activeJob.configType === "sync",
@@ -48,7 +58,7 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
     jobSyncRunning,
     cancelJob,
     cancelStarting,
-    resetConnection,
+    resetStreams,
     resetStarting,
     jobResetRunning,
     activeJob,

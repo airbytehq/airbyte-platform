@@ -19,5 +19,6 @@ const code = `{
 export const Primary = Template.bind({});
 Primary.args = {
   value: code,
+  height: "250px",
   language: "json",
 };

@@ -155,6 +155,22 @@ public class Jsons {
   }
 
   /**
+   * Deserialize a string to a JSON object.
+   *
+   * @param jsonString to deserialize.
+   * @param klass to deserialize to.
+   * @param <T> type of input object.
+   * @return optional as type T.
+   */
+  public static <T> Optional<T> tryDeserialize(final String jsonString, final Class<T> klass) {
+    try {
+      return Optional.of(OBJECT_MAPPER.readValue(jsonString, klass));
+    } catch (final Throwable e) {
+      return Optional.empty();
+    }
+  }
+
+  /**
    * Convert an object to {@link JsonNode}.
    *
    * @param object to convert

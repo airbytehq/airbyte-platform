@@ -19,7 +19,7 @@ const DefaultControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<
 };
 
 export interface Option<T> {
-  label: string;
+  label: React.ReactNode;
   value: T;
   icon?: React.ReactNode;
 }
@@ -61,8 +61,12 @@ export const ListBox = <T,>({
         {/* wrap in div to make `position: absolute` on Listbox.Options result in correct vertical positioning */}
         <div className={styles.optionsContainer}>
           <Listbox.Options className={classNames(styles.optionsMenu)}>
-            {options.map(({ label, value, icon }) => (
-              <Listbox.Option key={label} value={value} className={classNames(styles.option, optionClassName)}>
+            {options.map(({ label, value, icon }, index) => (
+              <Listbox.Option
+                key={typeof label === "string" ? label : index}
+                value={value}
+                className={classNames(styles.option, optionClassName)}
+              >
                 {({ active, selected }) => (
                   <div
                     className={classNames(styles.optionValue, selected && selectedOptionClassName, {

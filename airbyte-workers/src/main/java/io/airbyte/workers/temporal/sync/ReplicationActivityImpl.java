@@ -14,6 +14,7 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_RECORDS_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
@@ -39,9 +40,11 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.PerfBackgroundJsonValidation;
+import io.airbyte.featureflag.PerformNewJsonDeser;
 import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -70,8 +73,10 @@ import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.IntegrationLauncher;
@@ -346,12 +351,15 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           destinationLauncherConfig.getIsCustomConnector(),
           featureFlags);
 
+      final UUID workspaceId = syncInput.getWorkspaceId();
+      final boolean shouldPerformNewJsonDeser = featureFlagClient.boolVariation(PerformNewJsonDeser.INSTANCE, new Workspace(workspaceId));
       // reset jobs use an empty source to induce resetting all data in destination.
       final AirbyteSource airbyteSource = isResetJob(sourceLauncherConfig.getDockerImage())
           ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
           : new DefaultAirbyteSource(sourceLauncher,
               new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, sourceLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class)),
+                  Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class),
+                  shouldPerformNewJsonDeser),
               heartbeatMonitor,
               migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
               featureFlags);
@@ -359,7 +367,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       final MetricClient metricClient = MetricClientFactory.getMetricClient();
       final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
-      final UUID workspaceId = syncInput.getWorkspaceId();
       // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
       // environment-variable flags say so (deprecated).
       // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
@@ -368,6 +375,16 @@ public class ReplicationActivityImpl implements ReplicationActivity {
               || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
       final boolean heartbeatTimeoutEnabled = workspaceId != null
           && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
+
+      final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
+      final SyncPersistence syncPersistence = commitStatesAsap
+          ? syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
+              sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog())
+          : null;
+      final boolean commitStatsAsap = DefaultReplicationWorker.shouldCommitStatsAsap(syncInput);
+      final MessageTracker messageTracker =
+          commitStatsAsap ? new AirbyteMessageTracker(syncPersistence, featureFlags) : new AirbyteMessageTracker(featureFlags);
+
       return new DefaultReplicationWorker(
           jobRunConfig.getJobId(),
           Math.toIntExact(jobRunConfig.getAttemptId()),
@@ -376,14 +393,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           new DefaultAirbyteDestination(destinationLauncher,
               new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog()),
-                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, Optional.of(DestinationException.class)),
+                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, Optional.of(DestinationException.class), shouldPerformNewJsonDeser),
               new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
-          new AirbyteMessageTracker(featureFlags),
-          syncPersistenceFactory,
-          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput),
-              featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(syncInput.getWorkspaceId()))),
+          messageTracker,
+          syncPersistence,
+          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
           metricReporter,
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi()),
           fieldSelectionEnabled,
@@ -402,9 +418,10 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                                                                                                      final Supplier<ActivityExecutionContext> activityContext,
                                                                                                                      final WorkerConfigs workerConfigs,
                                                                                                                      final UUID connectionId) {
+    final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorImage(featureFlagClient, containerOrchestratorConfig, connectionId);
     return () -> new ReplicationLauncherWorker(
         connectionId,
-        containerOrchestratorConfig,
+        finalConfig,
         sourceLauncherConfig,
         destinationLauncherConfig,
         jobRunConfig,
@@ -413,6 +430,34 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         serverPort,
         temporalUtils,
         workerConfigs);
+  }
+
+  @VisibleForTesting
+  static ContainerOrchestratorConfig injectContainerOrchestratorImage(FeatureFlagClient client,
+                                                                      ContainerOrchestratorConfig containerOrchestratorConfig,
+                                                                      UUID connectionId) {
+    // This is messy because the ContainerOrchestratorConfig is immutable, so we have to create an
+    // entirely new object.
+    ContainerOrchestratorConfig config = containerOrchestratorConfig;
+    final String injectedOrchestratorImage =
+        client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(connectionId));
+
+    if (!injectedOrchestratorImage.isEmpty()) {
+      config = new ContainerOrchestratorConfig(
+          containerOrchestratorConfig.namespace(),
+          containerOrchestratorConfig.documentStoreClient(),
+          containerOrchestratorConfig.environmentVariables(),
+          containerOrchestratorConfig.kubernetesClient(),
+          containerOrchestratorConfig.secretName(),
+          containerOrchestratorConfig.secretMountPath(),
+          containerOrchestratorConfig.dataPlaneCredsSecretName(),
+          containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
+          injectedOrchestratorImage,
+          containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
+          containerOrchestratorConfig.googleApplicationCredentials(),
+          containerOrchestratorConfig.workerEnvironment());
+    }
+    return config;
   }
 
   private boolean isResetJob(final String dockerImage) {

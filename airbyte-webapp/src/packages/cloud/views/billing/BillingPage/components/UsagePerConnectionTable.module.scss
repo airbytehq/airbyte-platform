@@ -2,16 +2,8 @@
 @use "scss/colors";
 
 .content {
-  padding: 0 variables.$spacing-lg;
-
   a {
     text-decoration: none;
-  }
-}
-
-th.header {
-  &--light {
-    background-color: colors.$white !important;
   }
 }
 
@@ -19,20 +11,18 @@ th.header {
   &--nonSortable {
     margin-left: variables.$spacing-sm;
   }
-
-  &--sorted {
-    color: colors.$grey-600 !important;
-  }
 }
 
 .usageValue {
-  padding-right: variables.$spacing-md;
-  min-width: 53px;
   text-align: right;
 
   &--green {
     color: colors.$green;
   }
+}
+
+.disabled {
+  color: colors.$grey-300;
 }
 
 .cellText {

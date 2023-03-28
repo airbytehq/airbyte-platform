@@ -96,12 +96,14 @@ export function generateGroupsAndSections(
 
 function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): BlockGroup[] {
   const groupMap = new Map<string | undefined, FormBlock[]>();
-  blocks.forEach((block) => {
-    if (!groupMap.has(block.group)) {
-      groupMap.set(block.group, []);
-    }
-    groupMap.get(block.group)?.push(block);
-  });
+  blocks
+    .filter((block) => !block.airbyte_hidden)
+    .forEach((block) => {
+      if (!groupMap.has(block.group)) {
+        groupMap.set(block.group, []);
+      }
+      groupMap.get(block.group)?.push(block);
+    });
   const groups = [...groupMap.entries()];
 
   const groupIdToStructure = Object.fromEntries(

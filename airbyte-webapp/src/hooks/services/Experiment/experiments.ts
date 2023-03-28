@@ -21,7 +21,6 @@ export interface Experiments {
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connection.newTableDesign": boolean;
   "workspace.freeConnectorsProgram.visible": boolean;
   "connectorBuilder.showNavigationLinks": boolean;
   "connectorBuilder.publishWorkflow": boolean;
@@ -29,8 +28,10 @@ export interface Experiments {
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.errorMultiplier": number;
+  "connection.streamCentricUI.numberOfLogsToLoad": number;
   "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
   "connector.form.simplifyConfiguration": boolean;
+  "billing.newTrialPolicy": boolean;
 }

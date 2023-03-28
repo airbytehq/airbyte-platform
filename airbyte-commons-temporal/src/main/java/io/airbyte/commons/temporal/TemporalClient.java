@@ -28,6 +28,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.CommitStatsAsap;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
@@ -474,6 +475,8 @@ public class TemporalClient {
         .withProtocolVersion(config.getDestinationProtocolVersion())
         .withIsCustomConnector(config.getIsDestinationCustomConnector());
 
+    final Multi featureFlagContext = new Multi(List.of(new Workspace(config.getWorkspaceId()), new Connection(connectionId)));
+
     final StandardSyncInput input = new StandardSyncInput()
         .withNamespaceDefinition(config.getNamespaceDefinition())
         .withNamespaceFormat(config.getNamespaceFormat())
@@ -488,8 +491,8 @@ public class TemporalClient {
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
         .withConnectionId(connectionId)
         .withWorkspaceId(config.getWorkspaceId())
-        .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE,
-            new Multi(List.of(new Workspace(config.getWorkspaceId()), new Connection(connectionId)))));
+        .withCommitStateAsap(featureFlagClient.boolVariation(CommitStatesAsap.INSTANCE, featureFlagContext))
+        .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, featureFlagContext));
 
     return execute(jobRunConfig,
         () -> getWorkflowStub(SyncWorkflow.class, TemporalJobType.SYNC).run(

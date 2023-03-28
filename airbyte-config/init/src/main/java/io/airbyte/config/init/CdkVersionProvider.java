@@ -24,7 +24,7 @@ public class CdkVersionProvider {
     try {
       final URL url = Resources.getResource("CDK_VERSION");
 
-      final String cdkVersion = Resources.toString(url, StandardCharsets.UTF_8);
+      final String cdkVersion = Resources.toString(url, StandardCharsets.UTF_8).strip();
 
       return cdkVersion;
     } catch (final Exception e) {

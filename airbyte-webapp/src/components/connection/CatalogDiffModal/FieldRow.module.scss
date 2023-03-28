@@ -50,6 +50,10 @@ tr:last-child .content {
     color: colors.$blue-100;
     margin-left: -5px;
   }
+
+  &.breakingChange {
+    color: colors.$red;
+  }
 }
 
 .iconContainer {
@@ -60,16 +64,34 @@ tr:last-child .content {
   margin: 0 variables.$spacing-md;
 }
 
+.field {
+  display: flex;
+}
+
 .fieldName {
   @include mixins.overflow-ellipsis;
 
-  :not(.withType) & {
-    max-width: 470px;
+  flex-grow: 2;
+
+  .row & {
+    width: 470px;
+
+    &:has(+ .breakingSchemaChange) {
+      width: calc(470px - 22px);
+    }
   }
 
-  .withType & {
-    max-width: 200px;
+  .row:is(.withType) & {
+    width: 200px;
+
+    &:has(+ .breakingSchemaChange) {
+      width: calc(200px - 22px);
+    }
   }
+}
+
+.breakingSchemaChange {
+  margin-right: 10px;
 }
 
 .cell {
