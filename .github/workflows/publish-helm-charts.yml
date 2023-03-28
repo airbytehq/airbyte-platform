@@ -42,8 +42,23 @@ jobs:
       - name: Try the cluster !
         run: kubectl get pods -A
       
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      - name: Install tmate and it's dependencies
+        uses: Wandalen/wretry.action@master
+        with:
+          command: |
+            sudo apt-get -y install tmate
+          attempt_limit: 3
+          attempt_delay: 2000 # in ms
+
+      - name: Start tmate session in background
+        shell: bash
+        run: |
+          tmate -S /tmp/tmate.sock new-session -d               # Launch tmate in a headless mode
+          tmate -S /tmp/tmate.sock wait tmate-ready             # Blocks until the SSH connection is established
+          tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'    # Prints the SSH connection string
+          tmate -S /tmp/tmate.sock display -p '#{tmate_ssh_ro}' # Prints the read-only SSH connection string
+          tmate -S /tmp/tmate.sock display -p '#{tmate_web}'    # Prints the web connection string
+          tmate -S /tmp/tmate.sock display -p '#{tmate_web_ro}' # Prints the read-only web connection string
       
       - name: Deploy helm chart to k3s cluster
         shell: bash
