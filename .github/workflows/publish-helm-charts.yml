@@ -66,6 +66,8 @@ jobs:
       - name: Perform curl requests to test out the deployment
         shell: bash
         run: |
+          echo "Sleeping for 300 seconds to wait for server to fully start"
+          sleep 300
           kubectl port-forward svc/airbyte-airbyte-server-svc 8001:8001 &
           curl localhost:8001/api/v1/health
           curl -I localhost:8001/api/v1/health
@@ -73,3 +75,7 @@ jobs:
           then
             exit 25
           fi
+      
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
