@@ -42,6 +42,9 @@ jobs:
       - name: Try the cluster !
         run: kubectl get pods -A
       
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+      
       - name: Deploy helm chart to k3s cluster
         shell: bash
         run: |
@@ -54,7 +57,7 @@ jobs:
         run: |
           minikube service list
           minikube service airbyte-airbyte-server-svc --url
-          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' $(minikube service airbyte-airbyte-server-svc --url)/api/v1/health)" != "200" ]];
+          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' $()/api/v1/health)" != "200" ]];
           then
             exit 25
           fi
