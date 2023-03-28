@@ -66,9 +66,8 @@ jobs:
       - name: Perform curl requests to test out the deployment
         shell: bash
         run: |
-          minikube service list
-          minikube service airbyte-airbyte-server-svc --url
-          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' $()/api/v1/health)" != "200" ]];
+          kubectl port-forward svc/airbyte-airbyte-server-svc 8001:8001 &
+          if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8001/api/v1/health)" != "200" ]];
           then
             exit 25
           fi
