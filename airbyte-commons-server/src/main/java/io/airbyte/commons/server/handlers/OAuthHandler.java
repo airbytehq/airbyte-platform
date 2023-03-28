@@ -99,9 +99,8 @@ public class OAuthHandler {
     ApmTraceUtils.addTagsToRootSpan(traceTags);
     final StandardSourceDefinition sourceDefinition =
         configRepository.getStandardSourceDefinition(sourceOauthConsentRequest.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = sourceOauthConsentRequest.getSourceId() != null
-        ? actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceOauthConsentRequest.getSourceId())
-        : actorDefinitionVersionHelper.getSourceVersionForWorkspace(sourceDefinition, sourceOauthConsentRequest.getWorkspaceId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
+        sourceOauthConsentRequest.getWorkspaceId(), sourceOauthConsentRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
     final ConnectorSpecification spec = sourceVersion.getSpec();
     final Map<String, Object> metadata = generateSourceMetadata(sourceOauthConsentRequest.getSourceDefinitionId());
@@ -149,9 +148,8 @@ public class OAuthHandler {
 
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getStandardDestinationDefinition(destinationOauthConsentRequest.getDestinationDefinitionId());
-    final ActorDefinitionVersion destinationVersion = destinationOauthConsentRequest.getDestinationId() != null
-        ? actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationOauthConsentRequest.getDestinationId())
-        : actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destinationDefinition, destinationOauthConsentRequest.getWorkspaceId());
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
+        destinationOauthConsentRequest.getWorkspaceId(), destinationOauthConsentRequest.getDestinationId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
     final ConnectorSpecification spec = destinationVersion.getSpec();
     final Map<String, Object> metadata = generateDestinationMetadata(destinationOauthConsentRequest.getDestinationDefinitionId());
@@ -211,9 +209,8 @@ public class OAuthHandler {
 
     final StandardSourceDefinition sourceDefinition =
         configRepository.getStandardSourceDefinition(completeSourceOauthRequest.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = completeSourceOauthRequest.getSourceId() != null
-        ? actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, completeSourceOauthRequest.getSourceId())
-        : actorDefinitionVersionHelper.getSourceVersionForWorkspace(sourceDefinition, completeSourceOauthRequest.getWorkspaceId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
+        completeSourceOauthRequest.getWorkspaceId(), completeSourceOauthRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
     final ConnectorSpecification spec = sourceVersion.getSpec();
     final Map<String, Object> metadata = generateSourceMetadata(completeSourceOauthRequest.getSourceDefinitionId());
@@ -264,9 +261,8 @@ public class OAuthHandler {
 
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getStandardDestinationDefinition(completeDestinationOAuthRequest.getDestinationDefinitionId());
-    final ActorDefinitionVersion destinationVersion = completeDestinationOAuthRequest.getDestinationId() != null
-        ? actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, completeDestinationOAuthRequest.getDestinationId())
-        : actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destinationDefinition, completeDestinationOAuthRequest.getWorkspaceId());
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
+        completeDestinationOAuthRequest.getWorkspaceId(), completeDestinationOAuthRequest.getDestinationId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
     final ConnectorSpecification spec = destinationVersion.getSpec();
     final Map<String, Object> metadata = generateDestinationMetadata(completeDestinationOAuthRequest.getDestinationDefinitionId());

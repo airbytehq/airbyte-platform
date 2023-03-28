@@ -315,7 +315,8 @@ public class SourceHandler {
   private SourceRead buildSourceRead(final SourceConnection sourceConnection)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConnection.getSourceId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
     final ConnectorSpecification spec = sourceVersion.getSpec();
     return buildSourceRead(sourceConnection, spec);
   }
@@ -348,14 +349,14 @@ public class SourceHandler {
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceId);
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     return sourceVersion.getSpec();
   }
 
   private ConnectorSpecification getSpecFromSourceDefinitionIdForWorkspace(final UUID sourceDefId, final UUID workspaceId)
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceDefId);
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersionForWorkspace(sourceDef, workspaceId);
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
     return sourceVersion.getSpec();
   }
 

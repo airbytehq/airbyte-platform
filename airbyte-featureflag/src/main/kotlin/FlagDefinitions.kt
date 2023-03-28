@@ -33,6 +33,8 @@ object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelect
 object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
+object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
+
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
 object PerformNewJsonDeser : Temporary<Boolean>(key = "perform-new-json-deser", default = false)

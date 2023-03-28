@@ -148,7 +148,8 @@ public class DestinationHandler {
     }
 
     final var fullConfig = secretsRepositoryReader.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-    final ConnectorSpecification spec = getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getDestinationId());
+    final ConnectorSpecification spec =
+        getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
     // persist
     persistDestinationConnection(
@@ -168,7 +169,8 @@ public class DestinationHandler {
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
     final ConnectorSpecification spec =
-        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getDestinationId());
+        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
+            updatedDestination.getDestinationId());
 
     // validate configuration
     validateDestination(spec, updatedDestination.getConfiguration());
@@ -263,18 +265,18 @@ public class DestinationHandler {
     validator.ensure(spec.getConnectionSpecification(), configuration);
   }
 
-  public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID destinationId)
+  public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID workspaceId, final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationId);
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
     return destinationVersion.getSpec();
   }
 
   public ConnectorSpecification getSpecForWorkspaceId(final UUID destinationDefinitionId, final UUID workspaceId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destinationDefinition, workspaceId);
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
     return destinationVersion.getSpec();
   }
 
@@ -305,7 +307,8 @@ public class DestinationHandler {
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final ConnectorSpecification spec =
-        getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getDestinationId());
+        getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
+            destinationConnection.getDestinationId());
     return buildDestinationRead(destinationConnection, spec);
   }
 
