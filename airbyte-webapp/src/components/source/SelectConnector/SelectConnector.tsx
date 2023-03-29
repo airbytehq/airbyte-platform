@@ -2,10 +2,6 @@ import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ConnectorIcon } from "components/common/ConnectorIcon";
-import { ReleaseStageBadge } from "components/ReleaseStageBadge";
-import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
@@ -16,15 +12,19 @@ import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
+import { ConnectorButton } from "./ConnectorButton";
+import { RequestNewConnectorButton } from "./RequestNewConnectorButton";
 import styles from "./SelectConnector.module.scss";
 
 interface SelectConnectorProps {
+  connectorType: "source" | "destination";
   connectorDefinitions: ConnectorDefinition[];
   headingKey: string;
   onSelectConnectorDefinition: (id: string) => void;
 }
 
 export const SelectConnector: React.FC<SelectConnectorProps> = ({
+  connectorType,
   connectorDefinitions,
   headingKey,
   onSelectConnectorDefinition,
@@ -55,7 +55,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       title: formatMessage({ id: "connector.requestConnector" }),
       content: () => (
         <RequestConnectorModal
-          connectorType="source"
+          connectorType={connectorType}
           workspaceEmail={email}
           searchedConnectorName={searchTerm}
           onClose={closeModal}
@@ -75,43 +75,21 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
         </div>
       </div>
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--right"])} />
+      {filteredDefinitions.length === 0 && (
+        <div className={styles.selectConnector__noMatches}>
+          <Text centered>
+            <FormattedMessage id="connector.noSearchResults" />
+          </Text>
+        </div>
+      )}
       <div className={styles.selectConnector__grid}>
         {filteredDefinitions.map((definition) => {
           const key = isSourceDefinition(definition)
             ? definition.sourceDefinitionId
             : definition.destinationDefinitionId;
-          return (
-            <button
-              className={styles.selectConnector__button}
-              onClick={() => handleConnectorButtonClick(definition)}
-              key={key}
-            >
-              <ConnectorIcon icon={definition.icon} className={styles.selectConnector__icon} />
-
-              <span className={styles.selectConnector__text}>
-                <Text size="lg" bold>
-                  {definition.name}
-                </Text>
-              </span>
-
-              <span className={styles.selectConnector__releaseStage}>
-                <ReleaseStageBadge stage={definition.releaseStage} />
-              </span>
-            </button>
-          );
+          return <ConnectorButton definition={definition} onClick={handleConnectorButtonClick} key={key} />;
         })}
-        <div className={styles.selectConnector__noMatches}>
-          {filteredDefinitions.length === 0 && (
-            <Text centered>
-              <FormattedMessage id="connector.noSearchResults" />
-            </Text>
-          )}
-          <FlexContainer justifyContent="center">
-            <Button onClick={onOpenRequestConnectorModal} variant="secondary">
-              <FormattedMessage id="connector.requestConnector" />
-            </Button>
-          </FlexContainer>
-        </div>
+        <RequestNewConnectorButton onClick={onOpenRequestConnectorModal} />
       </div>
     </div>
   );
