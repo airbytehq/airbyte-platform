@@ -247,6 +247,8 @@ services:
       - 80
     environment:
       - AIRBYTE_VERSION=${VERSION}
+      - CDK_VERSION=${CDK_VERSION}
+      - PYTHON_VERSION=${PYTHON_VERSION}
     networks:
       - airbyte_internal
     depends_on:

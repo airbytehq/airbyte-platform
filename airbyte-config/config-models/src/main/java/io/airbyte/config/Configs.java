@@ -759,6 +759,13 @@ public interface Configs {
   String getFieldSelectionWorkspaces();
 
   /**
+   * Connector Builder configs.
+   */
+  String getCdkPython();
+
+  String getCdkEntrypoint();
+
+  /**
    * Tracking strategy.
    */
   enum TrackingStrategy {

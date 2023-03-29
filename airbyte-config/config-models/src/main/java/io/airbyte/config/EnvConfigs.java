@@ -248,6 +248,9 @@ public class EnvConfigs implements Configs {
   private final LogConfigs logConfigs;
   private final CloudStorageConfigs stateStorageCloudConfigs;
 
+  public static final String CDK_PYTHON = "CDK_PYTHON";
+  public static final String CDK_ENTRYPOINT = "CDK_ENTRYPOINT";
+
   /**
    * Constructs {@link EnvConfigs} from actual environment variables.
    */
@@ -1164,6 +1167,16 @@ public class EnvConfigs implements Configs {
   @Override
   public int getActivityNumberOfAttempt() {
     return Integer.parseInt(getEnvOrDefault(ACTIVITY_MAX_ATTEMPT, "5"));
+  }
+
+  @Override
+  public String getCdkPython() {
+    return getEnv(CDK_PYTHON);
+  }
+
+  @Override
+  public String getCdkEntrypoint() {
+    return getEnv(CDK_ENTRYPOINT);
   }
 
   // Helpers

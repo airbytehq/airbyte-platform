@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/catherine/airbyte_repos/airbyte/airbyte-cdk/python/connector_builder/main.py", line 70, in <module>
+    raise Exception("Unhandled Exception")
+Exception: Unhandled Exception
