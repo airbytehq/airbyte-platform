@@ -54,4 +54,8 @@ dependencies {
     testImplementation libs.reactor.test
 }
 
+test {
+  maxHeapSize = '2g'
+}
+
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
