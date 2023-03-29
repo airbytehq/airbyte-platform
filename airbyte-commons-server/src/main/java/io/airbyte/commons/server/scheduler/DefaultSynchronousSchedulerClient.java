@@ -248,7 +248,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
           workspaceId,
           jobState,
           jobOutput);
-      case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, jobState);
+      case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, jobState, jobOutput);
       case GET_SPEC -> {
         // skip tracking for get spec to avoid noise.
       }
