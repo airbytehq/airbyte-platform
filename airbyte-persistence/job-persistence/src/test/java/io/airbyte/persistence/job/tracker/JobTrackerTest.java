@@ -277,8 +277,14 @@ class JobTrackerTest {
             .withDockerImageTag(CONNECTOR_VERSION));
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    assertCorrectMessageForEachState((jobState) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, jobState), metadata);
-    assertCorrectMessageForEachState((jobState) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, jobState), metadata);
+    assertDiscoverCorrectMessageForEachState(
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, jobState, output),
+        metadata,
+        true);
+    assertDiscoverCorrectMessageForEachState(
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, jobState, output),
+        metadata,
+        false);
   }
 
   @Test
@@ -746,6 +752,34 @@ class JobTrackerTest {
       assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnSuccessMetadata));
       assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnFailureMetadata));
       assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedCheckJobMetadata));
+    } else {
+      verifyNoInteractions(trackingClient);
+    }
+  }
+
+  private void assertDiscoverCorrectMessageForEachState(final BiConsumer<JobState, ConnectorJobOutput> jobStateConsumer,
+                                                        final Map<String, Object> metadata,
+                                                        final boolean workspaceSet) {
+    reset(trackingClient);
+
+    // Output does not exist when job has started.
+    jobStateConsumer.accept(JobState.STARTED, null);
+
+    final UUID discoverCatalogID = UUID.randomUUID();
+    final var discoverSuccessJobOutput = new ConnectorJobOutput().withDiscoverCatalogId(discoverCatalogID);
+    jobStateConsumer.accept(JobState.SUCCEEDED, discoverSuccessJobOutput);
+
+    // Failure implies the job threw an exception which almost always meant no output.
+    final var failedDiscoverOutput = new ConnectorJobOutput();
+    failedDiscoverOutput.setFailureReason(getSystemFailureReasonMock());
+    jobStateConsumer.accept(JobState.FAILED, failedDiscoverOutput);
+
+    final ImmutableMap<String, Object> failedDiscoverMetadata = ImmutableMap.of("failure_reason", systemFailureJson().toString());
+
+    if (workspaceSet) {
+      assertCorrectMessageForStartedState(metadata);
+      assertCorrectMessageForSucceededState(metadata);
+      assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedDiscoverMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }

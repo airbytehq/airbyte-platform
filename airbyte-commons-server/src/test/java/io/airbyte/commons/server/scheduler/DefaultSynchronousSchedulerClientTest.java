@@ -31,6 +31,7 @@ import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobDiscoverCatalogConfig;
@@ -144,8 +145,8 @@ class DefaultSynchronousSchedulerClientTest {
       assertTrue(response.getMetadata().isSucceeded());
       assertEquals(LOG_PATH, response.getMetadata().getLogPath());
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.SUCCEEDED));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.SUCCEEDED), eq(jobOutput));
       verifyNoInteractions(jobErrorReporter);
     }
 
@@ -155,7 +156,9 @@ class DefaultSynchronousSchedulerClientTest {
       final UUID sourceDefinitionId = UUID.randomUUID();
       final Supplier<TemporalResponse<ConnectorJobOutput>> function = mock(Supplier.class);
       final Function<ConnectorJobOutput, UUID> mapperFunction = ConnectorJobOutput::getDiscoverCatalogId;
-      when(function.get()).thenReturn(new TemporalResponse<>(null, createMetadata(false)));
+      final FailureReason failureReason = new FailureReason();
+      final ConnectorJobOutput failedJobOutput = new ConnectorJobOutput().withFailureReason(failureReason);
+      when(function.get()).thenReturn(new TemporalResponse<>(failedJobOutput, createMetadata(false)));
 
       final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
       final SynchronousResponse<UUID> response = schedulerClient
@@ -169,9 +172,8 @@ class DefaultSynchronousSchedulerClientTest {
       assertFalse(response.getMetadata().isSucceeded());
       assertEquals(LOG_PATH, response.getMetadata().getLogPath());
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.FAILED));
-      verifyNoInteractions(jobErrorReporter);
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.FAILED), eq(failedJobOutput));
     }
 
     @SuppressWarnings(UNCHECKED)
@@ -181,15 +183,14 @@ class DefaultSynchronousSchedulerClientTest {
       final Supplier<TemporalResponse<ConnectorJobOutput>> function = mock(Supplier.class);
       final Function<ConnectorJobOutput, UUID> mapperFunction = ConnectorJobOutput::getDiscoverCatalogId;
       when(function.get()).thenThrow(new RuntimeException());
-
       final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
       assertThrows(
           RuntimeException.class,
           () -> schedulerClient.execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function,
               mapperFunction, WORKSPACE_ID));
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.FAILED));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.FAILED), eq(null));
       verifyNoInteractions(jobErrorReporter);
     }
 
