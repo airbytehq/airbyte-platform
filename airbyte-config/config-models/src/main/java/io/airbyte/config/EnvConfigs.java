@@ -170,7 +170,7 @@ public class EnvConfigs implements Configs {
   private static final String MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE = "MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE";
 
   public static final String METRIC_CLIENT = "METRIC_CLIENT";
-  private static final String OTEL_COLLECTOR_ENDPOINT = "OTEL_COLLECTOR_ENDPOINT";
+  public static final String OTEL_COLLECTOR_ENDPOINT = "OTEL_COLLECTOR_ENDPOINT";
 
   public static final String REMOTE_CONNECTOR_CATALOG_URL = "REMOTE_CONNECTOR_CATALOG_URL";
 

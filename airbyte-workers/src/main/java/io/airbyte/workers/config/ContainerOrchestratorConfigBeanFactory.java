@@ -108,6 +108,7 @@ public class ContainerOrchestratorConfigBeanFactory {
     final Configs configs = new EnvConfigs();
     environmentVariables.put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient());
     environmentVariables.put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey());
+    environmentVariables.put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint());
     environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, configs.getSocatSidecarKubeCpuLimit());
     environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest());
 

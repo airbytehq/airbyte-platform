@@ -241,6 +241,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
             .put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest())
             .put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey())
             .put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient())
+            .put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint())
             .build());
   }
 

@@ -70,6 +70,7 @@ class AirbyteIntegrationLauncherTest {
               .put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, CONFIGS.getSocatSidecarKubeCpuRequest())
               .put(EnvConfigs.LAUNCHDARKLY_KEY, CONFIGS.getLaunchDarklyKey())
               .put(EnvConfigs.FEATURE_FLAG_CLIENT, CONFIGS.getFeatureFlagClient())
+              .put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, CONFIGS.getOtelCollectorEndpoint())
               .build());
 
   private WorkerConfigs workerConfigs;
