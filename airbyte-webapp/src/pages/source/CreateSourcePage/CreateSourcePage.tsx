@@ -6,6 +6,7 @@ import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
 import { HeadTitle } from "components/common/HeadTitle";
 import { FormPageContent } from "components/ConnectorBlocks";
 import { SelectConnector } from "components/source/SelectConnector";
+import { Box } from "components/ui/Box";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
@@ -16,7 +17,6 @@ import { useCreateSource } from "hooks/services/useSourceHook";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
-import styles from "./CreateSourcePage.module.scss";
 import { SourceForm } from "./SourceForm";
 
 export const CreateSourcePage: React.FC = () => {
@@ -64,13 +64,14 @@ export const CreateSourcePage: React.FC = () => {
     <>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
       {!selectedSourceDefinitionId && (
-        <div className={styles.selectSourceWrapper}>
+        <Box pb="2xl">
           <SelectConnector
+            connectorType="source"
             connectorDefinitions={sourceDefinitions}
             headingKey="sources.selectSourceTitle"
             onSelectConnectorDefinition={(id) => setSelectedSourceDefinitionId(id)}
           />
-        </div>
+        </Box>
       )}
 
       {selectedSourceDefinitionId && (

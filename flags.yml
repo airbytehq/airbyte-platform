@@ -9,5 +9,7 @@ flags:
     serve: false
   - name: heartbeat.enabled
     serve: false
+  - name: connectors.versionOverridesEnabled
+    serve: true
   - name: perform-new-json-deser
     serve: false

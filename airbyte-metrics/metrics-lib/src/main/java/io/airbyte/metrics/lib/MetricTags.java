@@ -16,6 +16,8 @@ public class MetricTags {
 
   public static final String ATTEMPT_QUEUE = "attempt_queue";
   public static final String AUTHENTICATION_RESPONSE = "authentication_response";
+  public static final String AUTHENTICATION_RESPONSE_FAILURE_REASON = "authentication_response_failure_reason";
+  public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
   public static final String CONNECTION_ID = "connection_id";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";

@@ -254,7 +254,7 @@ export const UsagePerConnectionTable: React.FC = () => {
   return (
     <div className={styles.content}>
       <Table
-        variant="transparent"
+        variant="white"
         columns={billingInsightsColumns}
         sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
         data={sortingData}

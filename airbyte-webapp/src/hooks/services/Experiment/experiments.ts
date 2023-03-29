@@ -33,5 +33,6 @@ export interface Experiments {
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
   "connector.form.simplifyConfiguration": boolean;
+  "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
 }

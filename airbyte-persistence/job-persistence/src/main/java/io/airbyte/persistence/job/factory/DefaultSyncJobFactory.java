@@ -81,9 +81,10 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
       final StandardDestinationDefinition destinationDefinition = configRepository
           .getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
 
-      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, standardSync.getSourceId());
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
       final ActorDefinitionVersion destinationVersion =
-          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, standardSync.getDestinationId());
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
       final String sourceImageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
       final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();

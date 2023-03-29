@@ -124,6 +124,7 @@ class JobCreationAndStatusUpdateActivityTest {
   @InjectMocks
   private JobCreationAndStatusUpdateActivityImpl jobCreationAndStatusUpdateActivity;
 
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
   private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
@@ -176,11 +177,12 @@ class JobCreationAndStatusUpdateActivityTest {
       Mockito.when(mConfigRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
       final DestinationConnection destination = new DestinationConnection()
           .withDestinationId(DESTINATION_ID)
+          .withWorkspaceId(WORKSPACE_ID)
           .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
       Mockito.when(mConfigRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
       final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
           .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize());
-      Mockito.when(mActorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, DESTINATION_ID))
+      Mockito.when(mActorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
           .thenReturn(new ActorDefinitionVersion()
               .withDockerRepository(DOCKER_REPOSITORY)
               .withDockerImageTag(DOCKER_IMAGE_TAG));
@@ -196,7 +198,7 @@ class JobCreationAndStatusUpdateActivityTest {
       final JobCreationOutput output = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID));
 
       Mockito.verify(mOAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any());
-      Mockito.verify(mActorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, DESTINATION_ID);
+      Mockito.verify(mActorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID);
 
       Assertions.assertThat(output.getJobId()).isEqualTo(JOB_ID);
     }

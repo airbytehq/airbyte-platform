@@ -193,7 +193,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         final StandardDestinationDefinition destinationDef =
             configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
         final ActorDefinitionVersion destinationVersion =
-            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getDestinationId());
+            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
         final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
         final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
