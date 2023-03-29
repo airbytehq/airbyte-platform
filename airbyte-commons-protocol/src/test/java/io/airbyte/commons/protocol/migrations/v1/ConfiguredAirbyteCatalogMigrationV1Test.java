@@ -61,7 +61,7 @@ class ConfiguredAirbyteCatalogMigrationV1Test {
             {
               "stream": {
                 "json_schema": {
-                  "$ref": "WellKnownTypes.json#/definitions/String"
+                  "type": "string"
                 }
               }
             }
@@ -81,7 +81,7 @@ class ConfiguredAirbyteCatalogMigrationV1Test {
             new ConfiguredAirbyteStream().withStream(new AirbyteStream().withJsonSchema(
                 Jsons.deserialize("""
                                   {
-                                    "$ref": "WellKnownTypes.json#/definitions/String"
+                                    "type": "string"
                                   }
                                   """)))));
 
