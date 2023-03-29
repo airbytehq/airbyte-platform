@@ -2,13 +2,13 @@ flags:
   - name: performance.backgroundJsonSchemaValidation
     serve: false
   - name: heartbeat.failSync
-    serve: false
+    serve: true
   - name: platform.commitStatesAsap
     serve: false
   - name: platform.commitStatsAsap
     serve: false
   - name: heartbeat.enabled
-    serve: false
+    serve: true
   - name: connectors.versionOverridesEnabled
     serve: true
   - name: perform-new-json-deser
