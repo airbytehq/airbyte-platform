@@ -268,6 +268,7 @@ components:
       properties:
         manifest:
           type: object
+          x-java-type: com.fasterxml.jackson.databind.JsonNode
           description: The config-based connector manifest contents
     ResolveManifest:
       type: object
@@ -276,6 +277,7 @@ components:
       properties:
         manifest:
           type: object
+          x-java-type: com.fasterxml.jackson.databind.JsonNode
           description: The config-based connector manifest contents with $refs and $parameters resolved
     HealthCheckRead:
       type: object

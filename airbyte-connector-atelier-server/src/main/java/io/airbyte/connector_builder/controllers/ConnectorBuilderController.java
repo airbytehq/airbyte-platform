@@ -16,6 +16,7 @@ import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreams;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.airbyte.connector_builder.handlers.HealthHandler;
+import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
@@ -35,9 +36,13 @@ import java.util.List;
 public class ConnectorBuilderController implements V1Api {
 
   private final HealthHandler healthHandler;
+  private final ResolveManifestHandler resolveManifestHandler;
 
-  public ConnectorBuilderController(final HealthHandler healthHandler) {
+  public ConnectorBuilderController(
+                                    final HealthHandler healthHandler,
+                                    final ResolveManifestHandler resolveManifestHandler) {
     this.healthHandler = healthHandler;
+    this.resolveManifestHandler = resolveManifestHandler;
   }
 
   @Override
@@ -89,9 +94,7 @@ public class ConnectorBuilderController implements V1Api {
         produces = MediaType.APPLICATION_JSON)
   @ExecuteOn(TaskExecutors.IO)
   public ResolveManifest resolveManifest(final ResolveManifestRequestBody resolveManifestRequestBody) {
-    final ResolveManifest resolvedManifest = new ResolveManifest();
-    resolvedManifest.setManifest("Resolved a manifest");
-    return resolvedManifest;
+    return resolveManifestHandler.resolveManifest(resolveManifestRequestBody);
   }
 
 }

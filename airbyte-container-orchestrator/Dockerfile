@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.1
 FROM ${JDK_IMAGE} AS orchestrator
 
 ARG DOCKER_BUILD_ARCH=amd64
@@ -17,9 +17,6 @@ ENV VERSION=${VERSION}
 ENV AIRBYTE_ENTRYPOINT "/app/${APPLICATION}-${VERSION}/bin/${APPLICATION}"
 
 WORKDIR /app
-
-# Grab well-known types file
-COPY WellKnownTypes.json /app
 
 # Move orchestrator app
 ADD bin/${APPLICATION}-${VERSION}.tar /app

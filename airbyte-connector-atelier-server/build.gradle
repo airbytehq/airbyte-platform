@@ -6,6 +6,8 @@ plugins {
 }
 
 dependencies {
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+
     // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service
     implementation libs.bundles.datadog
     // implementation libs.bundles.temporal  uncomment this when we start using temporal to invoke connector commands
@@ -21,7 +23,16 @@ dependencies {
     // OpenAPI code generation dependencies
     implementation group: 'io.swagger', name: 'swagger-annotations', version: '1.6.2'
 
+    // Internal dependencies
+    implementation project(':airbyte-commons')
+    implementation project(':airbyte-commons-protocol')
+    implementation project(':airbyte-commons-server')
+    implementation project(':airbyte-commons-worker')
+    implementation project(':airbyte-config:config-models')
+    implementation project(':airbyte-config:config-persistence')
     implementation project(':airbyte-config:init')
+
+    implementation libs.airbyte.protocol
 }
 
 mainClassName = 'io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner'
@@ -42,6 +53,10 @@ run {
 
     environment 'AIRBYTE_ROLE', System.getenv('AIRBYTE_ROLE')
     environment 'AIRBYTE_VERSION', env.VERSION
+
+    // Required for local, non-dockerized development
+    environment 'CDK_PYTHON', System.getenv('CDK_PYTHON')  // path to CDK virtual environment
+    environment 'CDK_ENTRYPOINT', System.getenv('CDK_ENTRYPOINT')  // path to CDK connector builder's main.py
 }
 
 task generateOpenApiServer(type: GenerateTask) {
@@ -84,7 +99,20 @@ sourceSets {
     }
 }
 
+def readValueFromFile(String filePath) {
+    return new File(filePath).text.trim()
+}
+
 tasks.named("buildDockerImage") {
+    // Set build args
+    // Current CDK version used by the Connector Builder and workers running Connector Builder connectors
+    String cdkVersion = new File(
+            project.projectDir.parentFile,
+            'airbyte-connector-builder-resources/CDK_VERSION').text.trim()
+    buildArgs['CDK_VERSION'] = cdkVersion
+    // Current Python version used by the CDK image
+    buildArgs['PYTHON_VERSION'] = System.getenv('PYTHON_VERSION') ?: '3.9.11'
+
     dependsOn generateOpenApiServer
     dependsOn copyGeneratedTar
 }

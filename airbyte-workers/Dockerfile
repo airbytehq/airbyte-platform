@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.1
 FROM ${JDK_IMAGE} AS worker
 
 ARG DOCKER_BUILD_ARCH=amd64
@@ -19,9 +19,6 @@ WORKDIR /app
 
 # Move worker app
 ADD bin/${APPLICATION}-${VERSION}.tar /app
-
-# Grab well-known types file
-COPY WellKnownTypes.json /app
 
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
