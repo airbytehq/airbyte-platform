@@ -8,6 +8,11 @@ import styles from "./Box.stories.module.scss";
 export default {
   title: "ui/Box",
   component: Box,
+  argTypes: {
+    className: {
+      control: false,
+    },
+  },
 } as StoryObj<typeof Box>;
 
 export const Default: StoryObj<typeof Box> = {
@@ -17,10 +22,10 @@ export const Default: StoryObj<typeof Box> = {
   render: (args) => (
     <>
       <Text size="lg">
-        The dashed border appears outside the <code>{"<Box>"}</code> to help visualize margins.
+        The dashed border is around the <code>{"<Box>"}</code>. You'll see margins around the `Box` tomato colored.
       </Text>
-      <div style={{ border: "1px dashed black" }}>
-        <Box {...args}>
+      <div style={{ display: "flex", backgroundColor: "tomato" }}>
+        <Box {...args} className={styles.box}>
           <Text size="lg">
             This text is wrapped in a <code>{"<Box>"}</code>. It has standard spacing values for margin and padding,
             which you can control via props. You can use this component to achieve simple layouts without needing to
@@ -28,6 +33,9 @@ export const Default: StoryObj<typeof Box> = {
           </Text>
         </Box>
       </div>
+      <Text size="lg">
+        Just some text below the <code>Box</code>.
+      </Text>
     </>
   ),
 };
