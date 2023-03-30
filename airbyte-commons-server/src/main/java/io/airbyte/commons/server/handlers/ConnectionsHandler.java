@@ -633,6 +633,7 @@ public class ConnectionsHandler {
         listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
         PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
         PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()));
+
     for (final Entry<UUID, List<StandardSync>> entry : workspaceIdToStandardSyncsMap.entrySet()) {
       UUID workspaceId = entry.getKey();
       for (StandardSync standardSync : entry.getValue()) {

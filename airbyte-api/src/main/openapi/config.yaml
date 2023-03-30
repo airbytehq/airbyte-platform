@@ -2608,6 +2608,20 @@ components:
         includeDeleted:
           type: boolean
           default: false
+    ListResourcesForWorkspacesRequestBody:
+      type: object
+      required:
+        - workspaceIds
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        includeDeleted:
+          type: boolean
+          default: false
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     WorkspaceReadList:
       type: object
       required:

@@ -10,6 +10,7 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SourceCloneConfiguration;
 import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
@@ -31,6 +32,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
@@ -220,6 +222,23 @@ public class SourceHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final List<SourceConnection> sourceConnections = configRepository.listWorkspaceSourceConnection(workspaceIdRequestBody.getWorkspaceId());
+
+    final List<SourceRead> reads = Lists.newArrayList();
+    for (final SourceConnection sc : sourceConnections) {
+      reads.add(buildSourceRead(sc));
+    }
+
+    return new SourceReadList().sources(reads);
+  }
+
+  public SourceReadList listSourcesForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final List<SourceConnection> sourceConnections =
+        configRepository.listWorkspacesSourceConnections(new ResourcesQueryPaginated(
+            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {

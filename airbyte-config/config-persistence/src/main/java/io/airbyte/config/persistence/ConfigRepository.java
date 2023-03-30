@@ -148,6 +148,20 @@ public class ConfigRepository {
                                             int pageSize,
                                             int rowOffset) {}
 
+  /**
+   * Query object for paginated querying of sources/destinations in multiple workspaces.
+   *
+   * @param workspaceIds workspaces to fetch resources for
+   * @param includeDeleted include tombstoned resources
+   * @param pageSize limit
+   * @param rowOffset offset
+   */
+  public record ResourcesQueryPaginated(
+                                        @Nonnull List<UUID> workspaceIds,
+                                        boolean includeDeleted,
+                                        int pageSize,
+                                        int rowOffset) {}
+
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRepository.class);
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
   private static final String OPERATION_IDS_AGG_DELIMITER = ",";
@@ -268,6 +282,26 @@ public class ConfigRepository {
         .fetch())
         .stream()
         .map(DbConverter::buildStandardWorkspace);
+  }
+
+  /**
+   * List workspaces (paginated).
+   *
+   * @param resourcesQueryPaginated - contains all the information we need to paginate
+   * @return A List of StandardWorkspace objectjs
+   * @throws IOException you never know when you IO
+   */
+  public List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
+        .and(WORKSPACE.ID.in(resourcesQueryPaginated.workspaceIds()))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildStandardWorkspace)
+        .toList();
   }
 
   /**
@@ -958,6 +992,25 @@ public class ConfigRepository {
     return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
   }
 
+  /**
+   * Returns all sources for a set of workspaces. Does not contain secrets.
+   *
+   * @param resourcesQueryPaginated - Includes all the things we might want to query
+   * @return sources
+   * @throws IOException - you never know when you IO
+   */
+  public List<SourceConnection> listWorkspacesSourceConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
+        .and(ACTOR.WORKSPACE_ID.in(resourcesQueryPaginated.workspaceIds()))
+        .and(resourcesQueryPaginated.includeDeleted() ? noCondition() : ACTOR.TOMBSTONE.notEqual(true))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch());
+    return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
+  }
+
   private Stream<DestinationConnection> listDestinationQuery(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
@@ -1064,6 +1117,25 @@ public class ConfigRepository {
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
         .and(ACTOR.WORKSPACE_ID.eq(workspaceId))
         .andNot(ACTOR.TOMBSTONE).fetch());
+    return result.stream().map(DbConverter::buildDestinationConnection).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns all destinations for a list of workspaces. Does not contain secrets.
+   *
+   * @param resourcesQueryPaginated - Includes all the things we might want to query
+   * @return destinations
+   * @throws IOException - you never know when you IO
+   */
+  public List<DestinationConnection> listWorkspacesDestinationConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+        .and(ACTOR.WORKSPACE_ID.in(resourcesQueryPaginated.workspaceIds()))
+        .and(resourcesQueryPaginated.includeDeleted() ? noCondition() : ACTOR.TOMBSTONE.notEqual(true))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch());
     return result.stream().map(DbConverter::buildDestinationConnection).collect(Collectors.toList());
   }
 
