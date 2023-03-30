@@ -6,6 +6,7 @@ import * as yup from "yup";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
+import { Spinner } from "components/ui/Spinner";
 import { ToastType } from "components/ui/Toast";
 
 import { Action, Namespace } from "core/analytics";
@@ -13,7 +14,7 @@ import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import {
-  useListVersionsSuspense,
+  useListVersions,
   usePublishProject,
   useReleaseNewVersion,
 } from "services/connectorBuilder/ConnectorBuilderProjectsService";
@@ -29,12 +30,12 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const analyticsService = useAnalyticsService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { projectId, lastValidJsonManifest, currentProject } = useConnectorBuilderFormState();
-  const versions = useListVersionsSuspense(currentProject);
+  const { data: versions, isLoading: isLoadingVersions } = useListVersions(currentProject);
   const { mutateAsync: sendPublishRequest } = usePublishProject();
   const { mutateAsync: sendNewVersionRequest } = useReleaseNewVersion();
   const [connectorNameField, , nameHelpers] = useField<string>("global.connectorName");
 
-  const minVersion = versions.length > 0 ? Math.max(...versions.map((version) => version.version)) + 1 : 1;
+  const minVersion = versions && versions.length > 0 ? Math.max(...versions.map((version) => version.version)) + 1 : 1;
 
   const initialValues = useMemo(
     () => ({
@@ -56,6 +57,26 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       }),
     [minVersion]
   );
+
+  if (isLoadingVersions) {
+    return (
+      <Modal
+        size="sm"
+        title={
+          <FormattedMessage
+            id={currentProject.sourceDefinitionId ? "connectorBuilder.releaseNewVersion" : "connectorBuilder.publish"}
+          />
+        }
+        onClose={onClose}
+      >
+        <ModalBody>
+          <FlexContainer justifyContent="center">
+            <Spinner />
+          </FlexContainer>
+        </ModalBody>
+      </Modal>
+    );
+  }
 
   return (
     <Formik
