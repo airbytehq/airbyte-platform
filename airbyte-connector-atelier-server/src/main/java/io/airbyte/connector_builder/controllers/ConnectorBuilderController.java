@@ -9,14 +9,14 @@ import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
-import io.airbyte.connector_builder.api.model.generated.StreamReadPages;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
-import io.airbyte.connector_builder.api.model.generated.StreamReadSlices;
+import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
+import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInnerPagesInner;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
-import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreams;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
+import io.airbyte.connector_builder.handlers.StreamsHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
@@ -37,12 +37,14 @@ public class ConnectorBuilderController implements V1Api {
 
   private final HealthHandler healthHandler;
   private final ResolveManifestHandler resolveManifestHandler;
+  private final StreamsHandler streamsHandler;
 
-  public ConnectorBuilderController(
-                                    final HealthHandler healthHandler,
-                                    final ResolveManifestHandler resolveManifestHandler) {
+  public ConnectorBuilderController(final HealthHandler healthHandler,
+                                    final ResolveManifestHandler resolveManifestHandler,
+                                    final StreamsHandler streamsHandler) {
     this.healthHandler = healthHandler;
     this.resolveManifestHandler = resolveManifestHandler;
+    this.streamsHandler = streamsHandler;
   }
 
   @Override
@@ -58,16 +60,7 @@ public class ConnectorBuilderController implements V1Api {
         produces = MediaType.APPLICATION_JSON)
   @ExecuteOn(TaskExecutors.IO)
   public StreamsListRead listStreams(final StreamsListRequestBody streamsListRequestBody) {
-    final StreamsListReadStreams survivors_stream = new StreamsListReadStreams();
-    survivors_stream.setName("survivors");
-    survivors_stream.setUrl("https://the-last-of-us.com/v1/survivors");
-    final StreamsListReadStreams locations_stream = new StreamsListReadStreams();
-    locations_stream.setName("locations");
-    locations_stream.setUrl("https://the-last-of-us.com/v1/locations");
-
-    final StreamsListRead streamsResponse = new StreamsListRead();
-    streamsResponse.setStreams(List.of(survivors_stream, locations_stream));
-    return streamsResponse;
+    return streamsHandler.listStreams(streamsListRequestBody);
   }
 
   @Override
@@ -80,9 +73,9 @@ public class ConnectorBuilderController implements V1Api {
     final HashMap<String, String> recordTwo = new HashMap<>();
     recordTwo.put("name", "Ellie Williams");
 
-    final StreamReadPages pages = new StreamReadPages();
+    final StreamReadSlicesInnerPagesInner pages = new StreamReadSlicesInnerPagesInner();
     pages.setRecords(List.of(recordOne, recordTwo));
-    final StreamReadSlices slices = new StreamReadSlices();
+    final StreamReadSlicesInner slices = new StreamReadSlicesInner();
     slices.setPages(List.of(pages));
     final StreamRead readResponse = new StreamRead();
     readResponse.setSlices(List.of(slices));

@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.Geography;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
@@ -31,6 +32,7 @@ import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -148,6 +150,21 @@ public class WorkspacesHandler {
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
     final List<WorkspaceRead> reads = configRepository.listStandardWorkspaces(false).stream()
+        .map(WorkspacesHandler::buildWorkspaceRead)
+        .collect(Collectors.toList());
+    return new WorkspaceReadList().workspaces(reads);
+  }
+
+  public WorkspaceReadList listWorkspacesPaginated(ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws IOException {
+    final List<StandardWorkspace> standardWorkspaces = configRepository.listStandardWorkspacesPaginated(new ResourcesQueryPaginated(
+        listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+        listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+        listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+        listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+
+    final List<WorkspaceRead> reads = standardWorkspaces
+        .stream()
         .map(WorkspacesHandler::buildWorkspaceRead)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);

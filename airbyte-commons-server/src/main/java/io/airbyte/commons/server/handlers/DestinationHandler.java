@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
 import io.airbyte.api.model.generated.DestinationUpdate;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
@@ -27,6 +28,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
@@ -37,6 +39,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -226,9 +229,28 @@ public class DestinationHandler {
   public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
+    final List<DestinationRead> destinationReads = new ArrayList<>();
+    final List<DestinationConnection> destinationConnections =
+        configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId());
+    for (final DestinationConnection destinationConnection : destinationConnections) {
+      destinationReads.add(buildDestinationRead(destinationConnection));
+    }
+
+    return new DestinationReadList().destinations(destinationReads);
+  }
+
+  public DestinationReadList listDestinationsForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+
     final List<DestinationRead> reads = Lists.newArrayList();
-    for (final DestinationConnection dci : configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId())) {
-      reads.add(buildDestinationRead(dci));
+    List<DestinationConnection> destinationConnections = configRepository.listWorkspacesDestinationConnections(
+        new ResourcesQueryPaginated(
+            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+    for (final DestinationConnection destinationConnection : destinationConnections) {
+      reads.add(buildDestinationRead(destinationConnection));
     }
     return new DestinationReadList().destinations(reads);
   }
