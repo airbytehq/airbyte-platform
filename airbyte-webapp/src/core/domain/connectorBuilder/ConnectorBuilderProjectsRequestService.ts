@@ -6,6 +6,7 @@ import {
   updateConnectorBuilderProject,
   publishConnectorBuilderProject,
   listDeclarativeManifests,
+  updateDeclarativeManifestVersion,
   createDeclarativeSourceDefinitionManifest,
 } from "core/request/AirbyteClient";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
@@ -35,6 +36,10 @@ export class ConnectorBuilderProjectsRequestService extends AirbyteRequestServic
 
   public createBuilderProject(workspaceId: string, name: string, draftManifest?: ConnectorManifest) {
     return createConnectorBuilderProject({ workspaceId, builderProject: { name, draftManifest } }, this.requestOptions);
+  }
+
+  public changeVersion(workspaceId: string, sourceDefinitionId: string, version: number) {
+    return updateDeclarativeManifestVersion({ sourceDefinitionId, version, workspaceId }, this.requestOptions);
   }
 
   public deleteBuilderProject(workspaceId: string, builderProjectId: string) {
@@ -73,7 +78,8 @@ export class ConnectorBuilderProjectsRequestService extends AirbyteRequestServic
     projectId: string,
     name: string,
     description: string,
-    manifest: ConnectorManifest
+    manifest: ConnectorManifest,
+    version: number
   ) {
     return publishConnectorBuilderProject(
       {
@@ -86,7 +92,7 @@ export class ConnectorBuilderProjectsRequestService extends AirbyteRequestServic
             documentationUrl: manifest.spec?.documentation_url,
             connectionSpecification: manifest.spec?.connection_specification,
           },
-          version: 1,
+          version,
         },
         name,
       },

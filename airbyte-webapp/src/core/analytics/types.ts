@@ -62,6 +62,10 @@ export const enum Action {
   UI_COMPATIBLE_YAML_IMPORTED = "UiCompatibleYamlImported",
   INVALID_YAML_UPLOADED = "InvalidYamlUploaded",
   START_FROM_SCRATCH = "StartFromScratch",
+  CHANGE_PROJECT_VERSION = "ChangeProjectVersion",
+  PUBLISH_PROJECT = "PublishProject",
+  RELEASE_NEW_PROJECT_VERSION = "ReleaseNewProjectVersion",
+  CONNECTOR_BUILDER_DELETE = "ConnectorBuilderDelete",
 }
 
 export type EventParams = Record<string, unknown>;

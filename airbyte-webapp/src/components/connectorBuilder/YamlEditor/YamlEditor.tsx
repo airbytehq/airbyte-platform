@@ -13,7 +13,6 @@ import { Action, Namespace } from "core/analytics";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { NameInput } from "./NameInput";
@@ -33,7 +32,6 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
   const { setValues } = useFormikContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const publishWorkflowEnabled = useExperiment("connectorBuilder.publishWorkflow", false);
   const yamlEditorRef = useRef<editor.IStandaloneCodeEditor>();
   const {
     yamlManifest,
@@ -143,7 +141,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
         <FlexItem grow>
           <FlexContainer justifyContent="flex-end">
             <DownloadYamlButton yaml={yamlValue} yamlIsValid={yamlIsValid} />
-            {publishWorkflowEnabled && <PublishButton />}
+            <PublishButton />
           </FlexContainer>
         </FlexItem>
       </FlexContainer>

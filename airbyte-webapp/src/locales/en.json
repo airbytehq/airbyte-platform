@@ -346,6 +346,9 @@
   "sources.message": "Message",
   "sources.additionalFailureInfo": "Additional Failure Information",
   "sources.lastAttempt": "Last attempt:",
+  "sources.createError": "Error creating source: {message}",
+  "sources.updateError": "Error updating source: {message}",
+  "sources.deleteError": "Error deleting source: {message}",
 
   "destination.destinationSettings": "Destination Settings",
   "destinations.newDestination": "New destination",
@@ -357,6 +360,9 @@
   "destinations.newDestinationTitle": "New destination",
   "destinations.destinationSetUp": "Set up the destination",
   "destinations.frequentlyUsed": "Most frequently used destinations",
+  "destinations.createError": "Error creating destination: {message}",
+  "destinations.updateError": "Error updating destination: {message}",
+  "destinations.deleteError": "Error deleting destination: {message}",
 
   "connection.stream.syncMode": "{syncMode} - {destinationSyncMode}",
 
@@ -824,7 +830,7 @@
   "connectorBuilder.builderPrompt.adjective": "low-code",
   "connectorBuilder.builderPrompt.noun": "connector builder",
   "connectorBuilder.listPage.name": "Name",
-  "connectorBuilder.listPage.version": "Version",
+  "connectorBuilder.listPage.version": "Active version",
   "connectorBuilder.listPage.heading": "{count} custom {count, plural, one {connector} other {connectors}}",
   "connectorBuilder.listPage.newConnector": "New custom connector",
   "connectorBuilder.listPage.draftTooltip": "A project in draft state can't be used in connections. Publish a first version to run syncs.",
@@ -849,6 +855,10 @@
   "connectorBuilder.backButtonLabel": "Back",
   "connectorBuilder.cdkVersion": "CDK version: {version}",
   "connectorBuilder.draft": "Draft",
+  "connectorBuilder.changeVersionModal.title": "Change active version for {name}",
+  "connectorBuilder.changeVersionModal.activeVersion": "used",
+  "connectorBuilder.changeVersion.success": "Successfully changed active version for {name} from {oldVersion} to {newVersion}",
+  "connectorBuilder.changeVersion.error": "Failed to change active version for {name}: {reason}",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

@@ -1,9 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
+  DeclarativeManifestVersionRead,
   ConnectorBuilderProjectRead,
   SourceDefinitionIdBody,
 } from "core/request/AirbyteClient";
@@ -73,7 +74,9 @@ export const useListVersions = (project?: BuilderProject) => {
     if (!project?.sourceDefinitionId) {
       return [];
     }
-    return (await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)).manifestVersions;
+    return (
+      await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)
+    ).manifestVersions.sort((v1, v2) => v2.version - v1.version);
   });
 };
 
@@ -85,7 +88,9 @@ export const useListVersionsSuspense = (project?: BuilderProject) => {
     if (!project?.sourceDefinitionId) {
       return [];
     }
-    return (await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)).manifestVersions;
+    return (
+      await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)
+    ).manifestVersions.sort((v1, v2) => v2.version - v1.version);
   });
 };
 
@@ -201,6 +206,35 @@ export interface BuilderProjectPublishBody {
   manifest: DeclarativeComponentSchema;
 }
 
+function updateProjectQueryCache(
+  queryClient: QueryClient,
+  projectId: string,
+  sourceDefinitionId: string,
+  version: number
+) {
+  if (!queryClient.getQueryData(connectorBuilderProjectsKeys.detail(projectId))) {
+    return;
+  }
+  queryClient.setQueryData(
+    connectorBuilderProjectsKeys.detail(projectId),
+    (project: ConnectorBuilderProjectRead | undefined) => {
+      if (!project) {
+        throw new Error("invariant: current project not in cache");
+      }
+      return {
+        ...project,
+        builderProject: {
+          ...project.builderProject,
+          sourceDefinitionId,
+          activeDeclarativeManifestVersion: version,
+        },
+      };
+    }
+  );
+}
+
+const FIRST_VERSION = 1;
+
 export const usePublishProject = () => {
   const service = useConnectorBuilderProjectsService();
   const queryClient = useQueryClient();
@@ -208,25 +242,11 @@ export const usePublishProject = () => {
 
   return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
     ({ name, projectId, description, manifest }) =>
-      service.publishBuilderProject(workspaceId, projectId, name, description, manifest),
+      service.publishBuilderProject(workspaceId, projectId, name, description, manifest, FIRST_VERSION),
     {
       onSuccess(data, context) {
         queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
-        queryClient.setQueryData(
-          connectorBuilderProjectsKeys.detail(context.projectId),
-          (project: ConnectorBuilderProjectRead | undefined) => {
-            if (!project) {
-              throw new Error("invariant: current project not in cache");
-            }
-            return {
-              ...project,
-              builderProject: {
-                ...project.builderProject,
-                sourceDefinitionId: data.sourceDefinitionId,
-              },
-            };
-          }
-        );
+        updateProjectQueryCache(queryClient, context.projectId, data.sourceDefinitionId, FIRST_VERSION);
       },
     }
   );
@@ -252,21 +272,55 @@ export const useReleaseNewVersion = () => {
     {
       onSuccess(_data, context) {
         queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        if (context.useAsActiveVersion) {
+          updateProjectQueryCache(queryClient, context.projectId, context.sourceDefinitionId, context.version);
+        }
+      },
+    }
+  );
+};
+
+export interface ChangeVersionContext {
+  sourceDefinitionId: string;
+  builderProjectId: string;
+  version: number;
+}
+
+export const useChangeVersion = () => {
+  const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<void, Error, ChangeVersionContext>(
+    async (context) => {
+      return service.changeVersion(workspaceId, context.sourceDefinitionId, context.version);
+    },
+    {
+      onSuccess: (_data, { sourceDefinitionId, version: newVersion, builderProjectId }) => {
+        updateProjectQueryCache(queryClient, builderProjectId, sourceDefinitionId, newVersion);
         queryClient.setQueryData(
-          connectorBuilderProjectsKeys.detail(context.projectId),
-          (project: ConnectorBuilderProjectRead | undefined) => {
-            if (!project) {
-              throw new Error("invariant: current project not in cache");
+          connectorBuilderProjectsKeys.versions(builderProjectId),
+          (versions: DeclarativeManifestVersionRead[] | undefined) => {
+            if (!versions) {
+              return [];
             }
-            return {
-              ...project,
-              builderProject: {
-                ...project.builderProject,
-                activeDeclarativeManifestVersion: context.useAsActiveVersion
-                  ? context.version
-                  : project.builderProject.activeDeclarativeManifestVersion,
-              },
-            };
+            return versions.map((version) =>
+              version.version === newVersion ? { ...version, isActive: true } : { ...version, isActive: false }
+            );
+          }
+        );
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.list(workspaceId),
+          (list: BuilderProject[] | undefined) => {
+            if (!list) {
+              return [];
+            }
+            return list.map((project) => {
+              if (project.sourceDefinitionId === sourceDefinitionId) {
+                return { ...project, version: newVersion };
+              }
+              return project;
+            });
           }
         );
       },

@@ -8,7 +8,9 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { ToastType } from "components/ui/Toast";
 
+import { Action, Namespace } from "core/analytics";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
+import { useAnalyticsService } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   useListVersionsSuspense,
@@ -24,6 +26,7 @@ import styles from "./PublishModal.module.scss";
 const NOTIFICATION_ID = "connectorBuilder.publish";
 
 export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const analyticsService = useAnalyticsService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { projectId, lastValidJsonManifest, currentProject } = useConnectorBuilderFormState();
   const versions = useListVersionsSuspense(currentProject);
@@ -71,12 +74,21 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               useAsActiveVersion: values.useVersion,
               version: values.version,
             });
+            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.RELEASE_NEW_PROJECT_VERSION, {
+              actionDescription: "User released a new version of a Connector Builder project",
+              projectVersion: values.version,
+              projectId: currentProject.id,
+            });
           } else {
             await sendPublishRequest({
               manifest,
               name: values.name,
               description: values.description,
               projectId,
+            });
+            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.PUBLISH_PROJECT, {
+              actionDescription: "User published a Connector Builder project",
+              projectId: currentProject.id,
             });
           }
 
