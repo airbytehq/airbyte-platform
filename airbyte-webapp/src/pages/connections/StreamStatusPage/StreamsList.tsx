@@ -1,10 +1,10 @@
 import { createColumnHelper } from "@tanstack/react-table";
+import classNames from "classnames";
 import dayjs from "dayjs";
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import {
   AirbyteStreamWithStatusAndConfiguration,
   FakeStreamConfigWithStatus,
@@ -32,11 +32,19 @@ import { StreamStatusHeader } from "./StreamStatusHeader";
 const NextSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined }> = ({ config }) => {
   const { connection } = useConnectionEditService();
 
+  if (connection.status === ConnectionStatus.inactive || !config || !config.selected) {
+    return null;
+  }
+
+  if (config.isResetting) {
+    return <FormattedMessage id="connection.resetInProgress" />;
+  }
+
+  if (config.isSyncing) {
+    return <FormattedMessage id="connection.syncInProgress" />;
+  }
+
   if (
-    connection.status !== ConnectionStatus.inactive &&
-    config &&
-    config.selected &&
-    !config.isSyncing &&
     !["cron", "manual"].includes(config.scheduleType ?? "") &&
     config.scheduleData?.basicSchedule &&
     config.latestAttemptCreatedAt
@@ -56,6 +64,7 @@ const NextSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined }> = (
 
     return <FormattedMessage id={id} values={{ sync: nextSync.fromNow() }} />;
   }
+
   return null;
 };
 
@@ -88,7 +97,6 @@ export const StreamsList = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
 
   const { streams, filteredStreams } = useStreamsListContext();
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning } = useConnectionSyncContext();
 
   const columnHelper = useMemo(() => createColumnHelper<AirbyteStreamWithStatusAndConfiguration>(), []);
   const getStreamStatus = useGetStreamStatus();
@@ -101,7 +109,7 @@ export const StreamsList = () => {
         cell: (props) => (
           <StreamStatusIndicator
             status={getStreamStatus(props.cell.getValue())}
-            loading={syncStarting || jobSyncRunning || resetStarting || jobResetRunning}
+            loading={props.cell.getValue()?.isSyncing || props.cell.getValue()?.isResetting}
           />
         ),
       }),
@@ -130,16 +138,7 @@ export const StreamsList = () => {
         cell: (props) => <StreamActionsMenu stream={props.row.original.stream} />,
       }),
     ],
-    [
-      columnHelper,
-      getStreamStatus,
-      jobResetRunning,
-      jobSyncRunning,
-      resetStarting,
-      setShowRelativeTime,
-      showRelativeTime,
-      syncStarting,
-    ]
+    [columnHelper, getStreamStatus, setShowRelativeTime, showRelativeTime]
   );
 
   return (
@@ -149,7 +148,15 @@ export const StreamsList = () => {
         <ErrorCallout />
         <div className={styles.tableContainer}>
           <StreamSearchFiltering className={styles.search} />
-          <Table columns={columns} data={filteredStreams} variant="light" className={styles.table} />
+          <Table
+            columns={columns}
+            data={filteredStreams}
+            variant="light"
+            className={styles.table}
+            getRowClassName={(data) =>
+              classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
+            }
+          />
         </div>
       </FlexContainer>
     </Card>

@@ -1,11 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { ConnectionStream, JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { JobRead, ConnectionStream, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
 import { useCancelJob } from "services/job/JobService";
 
-const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
+interface ConnectionSyncContext {
+  syncConnection: () => Promise<void>;
+  syncStarting: boolean;
+  jobSyncRunning: boolean;
+  cancelJob: () => Promise<void>;
+  cancelStarting: boolean;
+  resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
+  resetStarting: boolean;
+  jobResetRunning: boolean;
+  activeJob?: JobRead;
+}
+
+const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);
 
@@ -65,10 +77,10 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
   };
 };
 
-const ConnectionSyncContext = createContext<ReturnType<typeof useConnectionSyncContextInit> | null>(null);
+const connectionSyncContext = createContext<ConnectionSyncContext | null>(null);
 
 export const useConnectionSyncContext = () => {
-  const context = useContext(ConnectionSyncContext);
+  const context = useContext(connectionSyncContext);
   if (context === null) {
     throw new Error("useConnectionSyncContext must be used within a ConnectionSyncContextProvider");
   }
@@ -78,7 +90,7 @@ export const useConnectionSyncContext = () => {
 export const ConnectionSyncContextProvider: React.FC<{
   jobs: JobWithAttemptsRead[];
 }> = ({ jobs, children }) => {
-  const connectionSyncContext = useConnectionSyncContextInit(jobs);
+  const context = useConnectionSyncContextInit(jobs);
 
-  return <ConnectionSyncContext.Provider value={connectionSyncContext}>{children}</ConnectionSyncContext.Provider>;
+  return <connectionSyncContext.Provider value={context}>{children}</connectionSyncContext.Provider>;
 };

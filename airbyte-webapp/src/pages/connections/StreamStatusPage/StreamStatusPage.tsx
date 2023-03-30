@@ -17,10 +17,10 @@ export const StreamStatusPage = () => {
     },
   });
   return (
-    <StreamsListContextProvider jobs={jobs}>
-      <ConnectionSyncContextProvider jobs={jobs}>
+    <ConnectionSyncContextProvider jobs={jobs}>
+      <StreamsListContextProvider jobs={jobs}>
         <StreamsList />
-      </ConnectionSyncContextProvider>
-    </StreamsListContextProvider>
+      </StreamsListContextProvider>
+    </ConnectionSyncContextProvider>
   );
 };
