@@ -4006,6 +4006,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     SchemaChange:
       enum:
         - no_change

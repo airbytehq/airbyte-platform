@@ -68,6 +68,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -626,12 +627,19 @@ public class ConnectionsHandler {
       throws IOException {
 
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
-    for (final StandardSync standardSync : configRepository.listWorkspaceStandardSyncsPaginated(
+
+    Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = configRepository.listWorkspaceStandardSyncsPaginated(
         listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
         listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
         PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
-        PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()))) {
-      connectionReads.add(ApiPojoConverters.internalToConnectionRead(standardSync));
+        PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()));
+    for (final Entry<UUID, List<StandardSync>> entry : workspaceIdToStandardSyncsMap.entrySet()) {
+      UUID workspaceId = entry.getKey();
+      for (StandardSync standardSync : entry.getValue()) {
+        ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+        connectionRead.setWorkspaceId(workspaceId);
+        connectionReads.add(connectionRead);
+      }
     }
     return new ConnectionReadList().connections(connectionReads);
   }

@@ -1253,11 +1253,11 @@ public class ConfigRepository {
   /**
    * List connections. Paginated.
    */
-  public List<StandardSync> listWorkspaceStandardSyncsPaginated(
-                                                                final List<UUID> workspaceIds,
-                                                                final boolean includeDeleted,
-                                                                final int pageSize,
-                                                                final int rowOffset)
+  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(
+                                                                           final List<UUID> workspaceIds,
+                                                                           final boolean includeDeleted,
+                                                                           final int pageSize,
+                                                                           final int rowOffset)
       throws IOException {
     return listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
         workspaceIds,
@@ -1272,15 +1272,17 @@ public class ConfigRepository {
    * List connections for workspace. Paginated.
    *
    * @param standardSyncsQueryPaginated query
-   * @return list of connections
+   * @return Map of workspace ID -> list of connections
    * @throws IOException if there is an issue while interacting with db.
    */
-  public List<StandardSync> listWorkspaceStandardSyncsPaginated(final StandardSyncsQueryPaginated standardSyncsQueryPaginated) throws IOException {
+  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(final StandardSyncsQueryPaginated standardSyncsQueryPaginated)
+      throws IOException {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
         // SELECT connection.* plus the connection's associated operationIds as a concatenated list
         .select(
             CONNECTION.asterisk(),
-            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD))
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            ACTOR.WORKSPACE_ID)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -1296,13 +1298,13 @@ public class ConfigRepository {
                 : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId))
             .and(standardSyncsQueryPaginated.includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID))
+        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID))
         .limit(standardSyncsQueryPaginated.pageSize())
         .offset(standardSyncsQueryPaginated.rowOffset())
         .fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
-    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+    return getWorkspaceIdToStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
   /**
@@ -1355,6 +1357,31 @@ public class ConfigRepository {
     }
 
     return standardSyncs;
+  }
+
+  @SuppressWarnings("LineLength")
+  private Map<UUID, List<StandardSync>> getWorkspaceIdToStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,
+                                                                                final List<NotificationConfigurationRecord> allNeededNotificationConfigurations) {
+    final Map<UUID, List<StandardSync>> workspaceIdToStandardSync = new HashMap<>();
+
+    for (final Record record : connectionAndOperationIdsResult) {
+      final String operationIdsFromRecord = record.get(OPERATION_IDS_AGG_FIELD, String.class);
+
+      // can be null when connection has no connectionOperations
+      final List<UUID> operationIds = operationIdsFromRecord == null
+          ? Collections.emptyList()
+          : Arrays.stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER)).map(UUID::fromString).toList();
+
+      final UUID connectionId = record.get(CONNECTION.ID);
+      final List<NotificationConfigurationRecord> notificationConfigurationsForConnection = allNeededNotificationConfigurations.stream()
+          .filter(notificationConfiguration -> notificationConfiguration.getConnectionId().equals(connectionId))
+          .toList();
+      workspaceIdToStandardSync.computeIfAbsent(
+          record.get(ACTOR.WORKSPACE_ID), v -> new ArrayList<>())
+          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection));
+    }
+
+    return workspaceIdToStandardSync;
   }
 
   private Stream<StandardSyncOperation> listStandardSyncOperationQuery(final Optional<UUID> configId) throws IOException {
