@@ -5,7 +5,6 @@ import { HealthService } from "core/health/HealthService";
 import { useGetService } from "core/servicesProvider";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
 
-import { ToastType } from "../../../components/ui/Toast";
 import { Notification } from "../Notification";
 
 const HEALTH_NOTIFICATION_ID = "health.error";
@@ -22,7 +21,7 @@ function useApiHealthPoll(): void {
     const errorNotification: Notification = {
       id: HEALTH_NOTIFICATION_ID,
       text: formatMessage({ id: "notifications.error.health" }),
-      type: ToastType.ERROR,
+      type: "error",
     };
 
     const interval = setInterval(async () => {

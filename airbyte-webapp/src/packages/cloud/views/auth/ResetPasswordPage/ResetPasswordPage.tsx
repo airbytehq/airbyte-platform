@@ -8,7 +8,6 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
-import { ToastType } from "components/ui/Toast";
 
 import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
@@ -47,7 +46,7 @@ export const ResetPasswordPage: React.FC = () => {
             registerNotification({
               id: "resetPassword.emailSent",
               text: formatMessage({ id: "login.resetPassword.emailSent" }),
-              type: ToastType.SUCCESS,
+              type: "success",
             });
           } catch (err) {
             err.message.includes("user-not-found")

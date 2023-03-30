@@ -14,7 +14,6 @@ import { Spinner } from "components/ui/Spinner";
 import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
-import { ToastType } from "components/ui/Toast";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace } from "core/analytics";
@@ -30,7 +29,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import styles from "./ConnectorBuilderProjectTable.module.scss";
-import { DefaultLogoCatalog } from "./DefaultLogoCatalog";
+import { BuilderLogo } from "../connectorBuilder/BuilderLogo";
 
 const columnHelper = createColumnHelper<BuilderProject>();
 
@@ -75,7 +74,7 @@ const VersionChangeModal: React.FC<{
             }}
           />
         ),
-        type: ToastType.SUCCESS,
+        type: "success",
       });
       onClose();
     } catch (e) {
@@ -90,7 +89,7 @@ const VersionChangeModal: React.FC<{
             }}
           />
         ),
-        type: ToastType.ERROR,
+        type: "success",
       });
     }
   }
@@ -211,7 +210,7 @@ export const ConnectorBuilderProjectTable = ({
         cell: (props) => (
           <FlexContainer alignItems="center">
             {/* TODO: replace with custom logos once available */}
-            <DefaultLogoCatalog />
+            <BuilderLogo />
             <Text>{props.cell.getValue()}</Text>
           </FlexContainer>
         ),
@@ -272,7 +271,7 @@ export const ConnectorBuilderProjectTable = ({
                                   }}
                                 />
                               ),
-                              type: ToastType.ERROR,
+                              type: "error",
                             });
                           });
                       },

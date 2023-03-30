@@ -80,20 +80,6 @@ export const useListVersions = (project?: BuilderProject) => {
   });
 };
 
-export const useListVersionsSuspense = (project?: BuilderProject) => {
-  const service = useConnectorBuilderProjectsService();
-  const workspaceId = useCurrentWorkspaceId();
-
-  return useSuspenseQuery(connectorBuilderProjectsKeys.versions(project?.id), async () => {
-    if (!project?.sourceDefinitionId) {
-      return [];
-    }
-    return (
-      await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)
-    ).manifestVersions.sort((v1, v2) => v2.version - v1.version);
-  });
-};
-
 export type CreateProjectContext =
   | { name: string; manifest?: DeclarativeComponentSchema }
   | { name: string; forkProjectId: string; version?: "draft" | number };

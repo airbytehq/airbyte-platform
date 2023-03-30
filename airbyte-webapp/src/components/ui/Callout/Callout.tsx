@@ -9,6 +9,7 @@ interface CalloutProps {
   variant?: CalloutVariant;
 }
 
+/** @deprecated Use the Message component instead */
 export const Callout: React.FC<React.PropsWithChildren<CalloutProps>> = ({
   children,
   className,

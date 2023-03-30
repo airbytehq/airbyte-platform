@@ -1,7 +1,5 @@
 import { useIntl } from "react-intl";
 
-import { ToastType } from "components/ui/Toast";
-
 import { useStripeCheckout } from "core/api/cloud";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
@@ -23,7 +21,7 @@ export const useShowEnrollmentModal = () => {
       registerNotification({
         id: "fcp/verify-email",
         text: formatMessage({ id: "freeConnectorProgram.enrollmentModal.validationEmailConfirmation" }),
-        type: ToastType.INFO,
+        type: "info",
       });
     });
 

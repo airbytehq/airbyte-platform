@@ -14,7 +14,6 @@ import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
-import { ToastType } from "components/ui/Toast";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useNotificationConfigTest } from "core/api";
@@ -64,7 +63,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
           registerNotification({
             id: "settings.webhook.test.passed",
             text: formatMessage({ id: "settings.webhook.test.passed" }),
-            type: ToastType.SUCCESS,
+            type: "success",
           });
           break;
         }
@@ -72,7 +71,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
           registerNotification({
             id: "settings.webhook.test.failed",
             text: formatMessage({ id: "settings.webhook.test.failed" }),
-            type: ToastType.ERROR,
+            type: "error",
           });
           break;
         }
@@ -91,7 +90,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
             registerNotification({
               id: "settings.webhook.save.failed",
               text: formatMessage({ id: "settings.webhook.save.failed" }),
-              type: ToastType.ERROR,
+              type: "error",
             });
             break;
           }

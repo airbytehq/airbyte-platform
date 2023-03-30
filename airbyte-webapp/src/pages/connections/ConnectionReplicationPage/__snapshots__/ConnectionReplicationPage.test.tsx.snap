@@ -1111,12 +1111,11 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
             <div
               class="<removed-for-snapshot-test>"
             >
-              <p
+              <span
                 class="<removed-for-snapshot-test>"
-                data-type="text"
               >
                 Sorry. Something went wrong... 
-              </p>
+              </span>
             </div>
           </div>
         </div>

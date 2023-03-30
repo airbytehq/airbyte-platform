@@ -5,7 +5,7 @@ import { useEffectOnce } from "react-use";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { Action, Namespace } from "core/analytics";
@@ -268,13 +268,16 @@ const InputModal = ({
             )}
           </>
         ) : (
-          <Callout className={styles.calloutContainer}>
-            {isInferredInputOverride ? (
-              <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
-            ) : (
-              <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
-            )}
-          </Callout>
+          <Message
+            type="info"
+            text={
+              isInferredInputOverride ? (
+                <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
+              ) : (
+                <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
+              )
+            }
+          />
         )}
       </ModalBody>
       <ModalFooter>

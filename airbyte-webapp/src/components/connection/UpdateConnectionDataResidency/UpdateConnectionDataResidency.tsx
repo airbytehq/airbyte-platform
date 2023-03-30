@@ -5,7 +5,6 @@ import { DataGeographyDropdown } from "components/common/DataGeographyDropdown";
 import { ControlLabels } from "components/LabeledControl";
 import { Card } from "components/ui/Card";
 import { Spinner } from "components/ui/Spinner";
-import { ToastType } from "components/ui/Toast";
 import { TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { Geography } from "core/request/AirbyteClient";
@@ -35,7 +34,7 @@ export const UpdateConnectionDataResidency: React.FC = () => {
       registerNotification({
         id: "connection.geographyUpdateError",
         text: formatMessage({ id: "connection.geographyUpdateError" }),
-        type: ToastType.ERROR,
+        type: "error",
       });
     }
     setSelectedValue(undefined);

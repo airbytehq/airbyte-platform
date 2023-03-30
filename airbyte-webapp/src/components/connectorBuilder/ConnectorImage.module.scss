@@ -4,7 +4,11 @@
 .connectorImg {
   @include mixins.shadow;
 
-  width: 90px;
   border-radius: variables.$border-radius-2xl;
   padding: variables.$spacing-xl;
+
+  svg {
+    width: 90px;
+    height: auto;
+  }
 }

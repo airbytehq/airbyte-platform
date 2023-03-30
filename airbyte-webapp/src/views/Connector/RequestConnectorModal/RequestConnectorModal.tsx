@@ -8,7 +8,6 @@ import { Button } from "components/ui/Button";
 import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
-import { ToastType } from "components/ui/Toast";
 
 import { useNotificationService } from "hooks/services/Notification";
 import useRequestConnector from "hooks/services/useRequestConnector";
@@ -53,7 +52,7 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
     notificationService.registerNotification({
       id: "connector.requestConnector.success",
       text: formatMessage({ id: "connector.request.success" }),
-      type: ToastType.SUCCESS,
+      type: "success",
     });
     onClose();
   };
