@@ -1,6 +1,5 @@
 import React, { Suspense, useMemo } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { useEffectOnce } from "react-use";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
@@ -13,7 +12,6 @@ import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { useCurrentWorkspace, WorkspaceServiceProvider } from "services/workspaces/WorkspacesService";
-import { setSegmentAnonymousId, useGetSegmentAnonymousId } from "utils/crossDomainUtils";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -119,13 +117,7 @@ const CloudMainViewRoutes = () => {
 export const Routing: React.FC = () => {
   const { user, inited, providers, hasCorporateEmail } = useAuthService();
 
-  const { search } = useLocation();
-
   useBuildUpdateCheck();
-
-  useEffectOnce(() => {
-    setSegmentAnonymousId(search);
-  });
 
   const analyticsContext = useMemo(
     () =>
@@ -142,7 +134,6 @@ export const Routing: React.FC = () => {
     [hasCorporateEmail, providers, user]
   );
 
-  useGetSegmentAnonymousId();
   useAnalyticsRegisterValues(analyticsContext);
   useAnalyticsIdentifyUser(user?.userId, userTraits);
 

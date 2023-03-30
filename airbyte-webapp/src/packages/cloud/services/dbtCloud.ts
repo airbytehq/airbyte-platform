@@ -19,6 +19,7 @@ import {
   WebhookConfigRead,
   WorkspaceRead,
 } from "core/request/AirbyteClient";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useWebConnectionService } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import {
@@ -86,6 +87,7 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
   const connectionService = useWebConnectionService();
+  const { setConnection } = useConnectionEditService();
 
   const hasDbtIntegration = !isEmpty(workspace.webhookConfigs?.filter(isDbtWebhookConfig));
   const webhookConfigId = workspace.webhookConfigs?.find((config) => isDbtWebhookConfig(config))?.id;
@@ -96,8 +98,8 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const otherOperations = [...(connection.operations?.filter((operation) => !isDbtCloudJob(operation)) || [])];
 
   const { mutateAsync, isLoading } = useMutation({
-    mutationFn: (jobs: DbtCloudJob[]) => {
-      return connectionService.update({
+    mutationFn: async (jobs: DbtCloudJob[]) => {
+      const updatedConnection: WebBackendConnectionRead = await connectionService.update({
         connectionId: connection.connectionId,
         operations: [
           ...otherOperations,
@@ -120,6 +122,10 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
           })),
         ],
       });
+      // ensure that unrelated connection-editing UI (e.g. other tabs of the connection
+      // page) isn't left with a stale reference
+      setConnection(updatedConnection);
+      return updatedConnection;
     },
   });
 

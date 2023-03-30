@@ -9,6 +9,7 @@ import { SyncSchema } from "core/domain/catalog";
 import {
   isDbtTransformation,
   isNormalizationTransformation,
+  isWebhookTransformation,
   NormalizationType,
 } from "core/domain/connection/operation";
 import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
@@ -254,30 +255,34 @@ export function mapFormPropsToOperation(
 ): OperationCreate[] {
   const newOperations: OperationCreate[] = [];
 
-  if (values.normalization) {
-    if (values.normalization !== NormalizationType.raw) {
-      const normalizationOperation = initialOperations.find(isNormalizationTransformation);
+  if (values.normalization && values.normalization !== NormalizationType.raw) {
+    const normalizationOperation = initialOperations.find(isNormalizationTransformation);
 
-      if (normalizationOperation) {
-        newOperations.push(normalizationOperation);
-      } else {
-        newOperations.push({
-          name: "Normalization",
-          workspaceId,
-          operatorConfiguration: {
-            operatorType: OperatorType.normalization,
-            normalization: {
-              option: values.normalization,
-            },
+    if (normalizationOperation) {
+      newOperations.push(normalizationOperation);
+    } else {
+      newOperations.push({
+        name: "Normalization",
+        workspaceId,
+        operatorConfiguration: {
+          operatorType: OperatorType.normalization,
+          normalization: {
+            option: values.normalization,
           },
-        });
-      }
+        },
+      });
     }
   }
 
   if (values.transformations) {
     newOperations.push(...values.transformations);
   }
+
+  // webhook operations (e.g. dbt Cloud jobs in the Airbyte Cloud integration) are managed
+  // by separate sub-forms; they should not be ignored (which would cause accidental
+  // deletions), but managing them should not be combined with this (already-confusing)
+  // codepath, either.
+  newOperations.push(...initialOperations.filter(isWebhookTransformation));
 
   return newOperations;
 }
