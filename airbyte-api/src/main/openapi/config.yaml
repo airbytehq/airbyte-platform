@@ -4623,6 +4623,9 @@ components:
         stateMessagesEmitted:
           type: integer
           format: int64
+        bytesCommitted:
+          type: integer
+          format: int64
         recordsCommitted:
           type: integer
           format: int64

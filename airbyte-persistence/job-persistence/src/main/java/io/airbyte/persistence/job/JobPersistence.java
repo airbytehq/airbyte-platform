@@ -185,6 +185,7 @@ public interface JobPersistence {
                   Long recordsEmitted,
                   Long bytesEmitted,
                   Long recordsCommitted,
+                  Long bytesCommitted,
                   List<StreamSyncStats> streamStats)
       throws IOException;
 

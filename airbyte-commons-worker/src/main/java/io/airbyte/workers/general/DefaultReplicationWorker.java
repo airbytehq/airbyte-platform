@@ -518,6 +518,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     final List<StreamSyncStats> streamSyncStats = SyncStatsBuilder.getPerStreamStats(messageTracker.getSyncStatsTracker(),
         hasReplicationCompleted);
 
+    if (!hasReplicationCompleted && messageTracker.getSyncStatsTracker().getUnreliableStateTimingMetrics()) {
+      LOGGER.warn("Could not reliably determine committed record counts, committed record stats will be set to null");
+    }
+
     final ReplicationAttemptSummary summary = new ReplicationAttemptSummary()
         .withStatus(outputStatus)
         // TODO records and bytes synced should no longer be used as we are consuming total stats, we should

@@ -552,6 +552,7 @@ class DefaultReplicationWorkerTest {
                 .withMeanSecondsBeforeSourceStateMessageEmitted(4L)
                 .withMaxSecondsBetweenStateMessageEmittedandCommitted(6L)
                 .withMeanSecondsBetweenStateMessageEmittedandCommitted(3L)
+                .withBytesCommitted(100L)
                 .withRecordsCommitted(12L)) // since success, should use emitted count
             .withStreamStats(Collections.singletonList(
                 new StreamSyncStats()
@@ -560,6 +561,7 @@ class DefaultReplicationWorkerTest {
                     .withStats(new SyncStats()
                         .withBytesEmitted(100L)
                         .withRecordsEmitted(12L)
+                        .withBytesCommitted(100L)
                         .withRecordsCommitted(12L) // since success, should use emitted count
                         .withSourceStateMessagesEmitted(null)
                         .withDestinationStateMessagesEmitted(null)
@@ -618,6 +620,7 @@ class DefaultReplicationWorkerTest {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
     when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
     when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
+    when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(Optional.of(12L));
     when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(Optional.of(6L));
     when(syncStatsTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
     when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(2L);
@@ -627,6 +630,8 @@ class DefaultReplicationWorkerTest {
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 12L));
     when(syncStatsTracker.getStreamToCommittedRecords())
         .thenReturn(Optional.of(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 6L)));
+    when(syncStatsTracker.getStreamToCommittedBytes())
+        .thenReturn(Optional.of(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 13L)));
     when(syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage()).thenReturn(10L);
     when(syncStatsTracker.getMeanSecondsToReceiveSourceStateMessage()).thenReturn(8L);
     when(syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(12L));
@@ -644,6 +649,7 @@ class DefaultReplicationWorkerTest {
         .withMeanSecondsBeforeSourceStateMessageEmitted(8L)
         .withMaxSecondsBetweenStateMessageEmittedandCommitted(12L)
         .withMeanSecondsBetweenStateMessageEmittedandCommitted(11L)
+        .withBytesCommitted(12L)
         .withRecordsCommitted(6L);
     final List<StreamSyncStats> expectedStreamStats = Collections.singletonList(
         new StreamSyncStats()
@@ -652,6 +658,7 @@ class DefaultReplicationWorkerTest {
             .withStats(new SyncStats()
                 .withBytesEmitted(100L)
                 .withRecordsEmitted(12L)
+                .withBytesCommitted(13L)
                 .withRecordsCommitted(6L)
                 .withSourceStateMessagesEmitted(null)
                 .withDestinationStateMessagesEmitted(null)));

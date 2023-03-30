@@ -466,13 +466,18 @@ public class SyncPersistenceImpl implements SyncPersistence {
         .recordsEmitted(syncStats.getRecordsEmitted())
         .estimatedBytes(syncStats.getEstimatedBytes())
         .estimatedRecords(syncStats.getEstimatedRecords())
-        // TODO add support for bytesCommitted
+        .bytesCommitted(syncStats.getBytesCommitted())
         .recordsCommitted(syncStats.getRecordsCommitted());
   }
 
   // The methods below are from the wrapping of SyncStatsTracker interface. The interface should be
   // rewritten to return the SyncStats objects
   // directly rather explicitly exposing each field.
+
+  @Override
+  public Optional<Map<AirbyteStreamNameNamespacePair, Long>> getStreamToCommittedBytes() {
+    return syncStatsTracker.getStreamToCommittedBytes();
+  }
 
   @Override
   public Optional<Map<AirbyteStreamNameNamespacePair, Long>> getStreamToCommittedRecords() {
@@ -517,6 +522,11 @@ public class SyncPersistenceImpl implements SyncPersistence {
   @Override
   public long getTotalBytesEstimated() {
     return syncStatsTracker.getTotalBytesEstimated();
+  }
+
+  @Override
+  public Optional<Long> getTotalBytesCommitted() {
+    return syncStatsTracker.getTotalBytesCommitted();
   }
 
   @Override

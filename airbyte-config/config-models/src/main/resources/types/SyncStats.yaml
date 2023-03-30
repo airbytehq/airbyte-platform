@@ -9,6 +9,8 @@ required:
   - bytesEmitted
 additionalProperties: true
 properties:
+  bytesCommitted:
+    type: integer
   bytesEmitted:
     type: integer
   destinationStateMessagesEmitted:
