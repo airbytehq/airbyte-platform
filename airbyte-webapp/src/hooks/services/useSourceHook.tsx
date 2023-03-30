@@ -12,6 +12,7 @@ import { isDefined } from "utils/common";
 
 import { useAnalyticsService } from "./Analytics";
 import { useRemoveConnectionsFromList } from "./useConnectionHook";
+import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
 import { SourceRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
 import { useSuspenseQuery } from "../../services/connector/useSuspenseQuery";
@@ -76,6 +77,7 @@ const useCreateSource = () => {
   const service = useSourceService();
   const queryClient = useQueryClient();
   const workspace = useCurrentWorkspace();
+  const onError = useRequestErrorHandler("sources.createError");
 
   return useMutation(
     async (createSourcePayload: { values: ValuesProps; sourceConnector: ConnectorProps }) => {
@@ -100,6 +102,7 @@ const useCreateSource = () => {
           sources: [data, ...(lst?.sources ?? [])],
         }));
       },
+      onError,
     }
   );
 };
@@ -109,6 +112,7 @@ const useDeleteSource = () => {
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
   const removeConnectionsFromList = useRemoveConnectionsFromList();
+  const onError = useRequestErrorHandler("sources.deleteError");
 
   return useMutation(
     (payload: { source: SourceRead; connectionsWithSource: WebBackendConnectionListItem[] }) =>
@@ -133,6 +137,7 @@ const useDeleteSource = () => {
         const connectionIds = ctx.connectionsWithSource.map((item) => item.connectionId);
         removeConnectionsFromList(connectionIds);
       },
+      onError,
     }
   );
 };
@@ -140,6 +145,7 @@ const useDeleteSource = () => {
 const useUpdateSource = () => {
   const service = useSourceService();
   const queryClient = useQueryClient();
+  const onError = useRequestErrorHandler("sources.updateError");
 
   return useMutation(
     (updateSourcePayload: { values: ValuesProps; sourceId: string }) => {
@@ -153,6 +159,7 @@ const useUpdateSource = () => {
       onSuccess: (data) => {
         queryClient.setQueryData(sourcesKeys.detail(data.sourceId), data);
       },
+      onError,
     }
   );
 };

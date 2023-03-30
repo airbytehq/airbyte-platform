@@ -346,6 +346,9 @@
   "sources.message": "Message",
   "sources.additionalFailureInfo": "Additional Failure Information",
   "sources.lastAttempt": "Last attempt:",
+  "sources.createError": "Error creating source: {message}",
+  "sources.updateError": "Error updating source: {message}",
+  "sources.deleteError": "Error deleting source: {message}",
 
   "destination.destinationSettings": "Destination Settings",
   "destinations.newDestination": "New destination",
@@ -357,6 +360,9 @@
   "destinations.newDestinationTitle": "New destination",
   "destinations.destinationSetUp": "Set up the destination",
   "destinations.frequentlyUsed": "Most frequently used destinations",
+  "destinations.createError": "Error creating destination: {message}",
+  "destinations.updateError": "Error updating destination: {message}",
+  "destinations.deleteError": "Error deleting destination: {message}",
 
   "connection.stream.syncMode": "{syncMode} - {destinationSyncMode}",
 
