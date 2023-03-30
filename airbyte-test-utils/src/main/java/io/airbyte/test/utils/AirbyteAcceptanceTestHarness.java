@@ -681,12 +681,16 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public OperationRead createOperation() throws ApiException {
+    return createOperation(defaultWorkspaceId);
+  }
+
+  public OperationRead createOperation(UUID workspaceId) throws ApiException {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));
 
     final OperationCreate operationCreate = new OperationCreate()
-        .workspaceId(defaultWorkspaceId)
+        .workspaceId(workspaceId)
         .name("AccTestDestination-" + UUID.randomUUID()).operatorConfiguration(normalizationConfig);
 
     final OperationRead operation = AirbyteApiClient.retryWithJitter(() -> apiClient.getOperationApi().createOperation(operationCreate),
