@@ -93,6 +93,8 @@
   "form.loadingConfiguration": "Loading required configuration parameters for {connector}",
   "form.tooLong": "Taking too long? See <lnk>here</lnk> for support",
   "form.pattern.error": "The value must match the pattern {pattern}",
+  "form.noLocalhost": "localhost is not supported in Airbyte Cloud",
+  "form.setupTunnel": "By using localhost, you need to <b>set up an SSH tunnel</b>. <a>Read more</a>",
   "form.schemaFailed": "Failed to fetch schema. Please try again",
   "form.tryAgain": "Try again",
   "form.noNeed": "No need!",
