@@ -1,8 +1,8 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    id "org.openapi.generator" version "5.3.1" // todo: can we upgrade this to a later version?
     id 'application'
+    alias(libs.plugins.openapi.generator)
 }
 
 dependencies {
@@ -69,6 +69,11 @@ task generateOpenApiServer(type: GenerateTask) {
     apiPackage = "io.airbyte.connector_builder.api.generated"
     invokerPackage = "io.airbyte.connector_builder.api.invoker.generated"
     modelPackage = "io.airbyte.connector_builder.api.model.generated"
+
+    schemaMappings = [
+            'ConnectorConfig'  : 'com.fasterxml.jackson.databind.JsonNode',
+            'ConnectorManifest': 'com.fasterxml.jackson.databind.JsonNode',
+    ]
 
     // Our spec does not have nullable, but if it changes, this would be a gotcha that we would want to avoid
     configOptions = [

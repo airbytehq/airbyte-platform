@@ -4,8 +4,8 @@
 
 package io.airbyte.connector_builder.handlers;
 
-import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
-import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
+import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
+import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequester;
@@ -16,33 +16,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Handle /manifest/resolve requests.
+ * Handle /streams requests.
  */
 @Singleton
-public class ResolveManifestHandler {
+public class StreamsHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ResolveManifestHandler.class);
 
   private final AirbyteCdkRequester requester;
 
   @Inject
-  public ResolveManifestHandler(
-                                final AirbyteCdkRequester requester) {
+  public StreamsHandler(final AirbyteCdkRequester requester) {
     this.requester = requester;
   }
 
   /**
-   * Use the requester to send the resolve_manifest request to the CDK.
+   * Handle list_streams.
    */
-  public ResolveManifest resolveManifest(
-                                         final ResolveManifestRequestBody resolveManifestRequestBody)
+  public StreamsListRead listStreams(final StreamsListRequestBody streamsListRequestBody)
       throws AirbyteCdkInvalidInputException, ConnectorBuilderException {
     try {
-      LOGGER.debug("Handling resolve_manifest request.");
-      return this.requester.resolveManifest(resolveManifestRequestBody.getManifest());
+      LOGGER.info("Handling list_streams request.");
+      return this.requester.listStreams(streamsListRequestBody.getManifest(), streamsListRequestBody.getConfig());
     } catch (final IOException exc) {
       LOGGER.error("Error handling list_streams request.", exc);
-      throw new ConnectorBuilderException("Error handling resolve_manifest request.", exc);
+      throw new ConnectorBuilderException("Error handling list_streams request.", exc);
     }
   }
 

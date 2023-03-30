@@ -7,7 +7,7 @@ package io.airbyte.connector_builder.command_runner;
 import java.io.IOException;
 
 /**
- * Abstract class for wrapping a process launched for CDK requests.
+ * Interface for wrapping a process launched for CDK requests.
  */
 public interface AirbyteCdkProcess extends AutoCloseable {
 
