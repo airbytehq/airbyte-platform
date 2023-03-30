@@ -434,6 +434,10 @@ class SyncPersistenceImplTest {
     verify(syncStatsTracker).updateSourceStatesStats(new AirbyteStateMessage());
     clearInvocations();
 
+    syncPersistence.getStreamToCommittedBytes();
+    verify(syncStatsTracker).getStreamToCommittedBytes();
+    clearInvocations(syncStatsTracker);
+
     syncPersistence.getStreamToCommittedRecords();
     verify(syncStatsTracker).getStreamToCommittedRecords();
     clearInvocations(syncStatsTracker);
@@ -468,6 +472,10 @@ class SyncPersistenceImplTest {
 
     syncPersistence.getTotalBytesEstimated();
     verify(syncStatsTracker).getTotalBytesEstimated();
+    clearInvocations(syncStatsTracker);
+
+    syncPersistence.getTotalBytesCommitted();
+    verify(syncStatsTracker).getTotalBytesCommitted();
     clearInvocations(syncStatsTracker);
 
     syncPersistence.getTotalRecordsCommitted();

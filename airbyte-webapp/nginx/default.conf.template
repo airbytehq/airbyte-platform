@@ -11,29 +11,25 @@ server {
     listen  [::]:80;
     server_name  localhost;
 
-    #charset koi8-r;
-    #access_log  /var/log/nginx/host.access.log  main;
-
     add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src self blob:;";
 
     location / {
         root   /usr/share/nginx/html;
         try_files $uri $uri/ /index.html;
 
+        # (Developer Note): Please only add new properties to this, if they really need to be configurable
+        #                   by a user at runtime i.e. without rebuilding the docker images. General webapp config
+        #                   belongs in an environment file.
         sub_filter </head>
-                '</head><script language="javascript"\>
+                '<script data-script="config-overwrites">
                 window.TRACKING_STRATEGY = "$TRACKING_STRATEGY";
                 window.AIRBYTE_VERSION = "$AIRBYTE_VERSION";
                 window.API_URL = "$API_URL";
                 window.CONNECTOR_BUILDER_API_URL = "$CONNECTOR_BUILDER_API_URL";
-                </script>';
+                </script></head>';
         sub_filter_once on;
     }
 
-    #error_page  404              /404.html;
-
-    # redirect server error pages to the static page /50x.html
-    #
     error_page   500 502 503 504  /50x.html;
     location = /50x.html {
         root   /usr/share/nginx/html;

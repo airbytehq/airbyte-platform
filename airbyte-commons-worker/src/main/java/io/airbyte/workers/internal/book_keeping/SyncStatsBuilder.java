@@ -6,7 +6,10 @@ package io.airbyte.workers.internal.book_keeping;
 
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
+import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,17 +32,22 @@ public class SyncStatsBuilder {
           .withDestinationStateMessagesEmitted(null);
 
       if (hasReplicationCompleted) {
+        syncStats.setBytesCommitted(syncStatsTracker.getStreamToEmittedBytes().get(stream));
         syncStats.setRecordsCommitted(syncStatsTracker.getStreamToEmittedRecords().get(stream));
-      } else if (syncStatsTracker.getStreamToCommittedRecords().isPresent()) {
-        syncStats.setRecordsCommitted(syncStatsTracker.getStreamToCommittedRecords().get().get(stream));
       } else {
-        syncStats.setRecordsCommitted(null);
+        syncStats.setBytesCommitted(readValueIfPresent(syncStatsTracker.getStreamToCommittedBytes(), stream));
+        syncStats.setRecordsCommitted(readValueIfPresent(syncStatsTracker.getStreamToCommittedRecords(), stream));
       }
       return new StreamSyncStats()
           .withStreamName(stream.getName())
           .withStreamNamespace(stream.getNamespace())
           .withStats(syncStats);
     }).collect(Collectors.toList());
+  }
+
+  private static Long readValueIfPresent(final Optional<Map<AirbyteStreamNameNamespacePair, Long>> optMap,
+                                         final AirbyteStreamNameNamespacePair stream) {
+    return optMap.isPresent() ? optMap.get().get(stream) : null;
   }
 
   /**
@@ -57,12 +65,11 @@ public class SyncStatsBuilder {
         .withMeanSecondsBetweenStateMessageEmittedandCommitted(syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted().orElse(null));
 
     if (hasReplicationCompleted) {
+      totalSyncStats.setBytesCommitted(totalSyncStats.getBytesEmitted());
       totalSyncStats.setRecordsCommitted(totalSyncStats.getRecordsEmitted());
-    } else if (syncStatsTracker.getTotalRecordsCommitted().isPresent()) {
-      totalSyncStats.setRecordsCommitted(syncStatsTracker.getTotalRecordsCommitted().get());
     } else {
-      log.warn("Could not reliably determine committed record counts, committed record stats will be set to null");
-      totalSyncStats.setRecordsCommitted(null);
+      totalSyncStats.setBytesCommitted(syncStatsTracker.getTotalBytesCommitted().orElse(null));
+      totalSyncStats.setRecordsCommitted(syncStatsTracker.getTotalRecordsCommitted().orElse(null));
     }
     return totalSyncStats;
   }

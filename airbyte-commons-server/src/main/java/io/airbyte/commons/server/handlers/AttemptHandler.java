@@ -54,13 +54,16 @@ public class AttemptHandler {
               .withStats(new SyncStats()
                   .withBytesEmitted(s.getStats().getBytesEmitted())
                   .withRecordsEmitted(s.getStats().getRecordsEmitted())
+                  .withBytesCommitted(s.getStats().getBytesCommitted())
                   .withRecordsCommitted(s.getStats().getRecordsCommitted())
                   .withEstimatedBytes(s.getStats().getEstimatedBytes())
                   .withEstimatedRecords(s.getStats().getEstimatedRecords())))
           .collect(Collectors.toList());
 
       jobPersistence.writeStats(requestBody.getJobId(), requestBody.getAttemptNumber(),
-          stats.getEstimatedRecords(), stats.getEstimatedBytes(), stats.getRecordsEmitted(), stats.getBytesEmitted(), stats.getRecordsCommitted(),
+          stats.getEstimatedRecords(), stats.getEstimatedBytes(),
+          stats.getRecordsEmitted(), stats.getBytesEmitted(),
+          stats.getRecordsCommitted(), stats.getBytesCommitted(),
           streamStats);
 
     } catch (final IOException ioe) {
