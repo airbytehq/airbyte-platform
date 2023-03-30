@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 
-import { ToastType } from "components/ui/Toast";
-
 import { useConfig } from "config";
 import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
 import { DestinationAuthService } from "core/domain/connector/DestinationAuthService";
@@ -128,7 +126,7 @@ export function useConnectorAuth(): {
             notificationService.registerNotification({
               id: "oauthConnector.credentialsMissing",
               text: formatMessage({ id: "connector.oauthCredentialsMissing" }),
-              type: ToastType.ERROR,
+              type: "error",
             });
           }
         }
@@ -198,7 +196,7 @@ export function useRunOauthFlow({
         registerNotification({
           id: OAUTH_ERROR_ID,
           text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: e.message }} />,
-          type: ToastType.ERROR,
+          type: "error",
         });
         return false;
       }

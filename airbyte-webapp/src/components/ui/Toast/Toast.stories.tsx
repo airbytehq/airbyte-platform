@@ -1,6 +1,6 @@
 import { ComponentStory, ComponentMeta } from "@storybook/react";
 
-import { Toast, ToastType } from "./Toast";
+import { Toast } from "./Toast";
 
 export default {
   title: "UI/Toast",
@@ -58,19 +58,19 @@ export const WarningToast = Template.bind({});
 WarningToast.args = {
   text: "This is a card with a close button",
   onClose: () => console.log("Closed!"),
-  type: ToastType.WARNING,
+  type: "warning",
 };
 
 export const ErrorToast = Template.bind({});
 ErrorToast.args = {
   text: "This is a card with a close button",
   onClose: () => console.log("Closed!"),
-  type: ToastType.ERROR,
+  type: "error",
 };
 
 export const SuccessToast = Template.bind({});
 SuccessToast.args = {
   text: "This is a card with a close button",
   onClose: () => console.log("Closed!"),
-  type: ToastType.SUCCESS,
+  type: "success",
 };

@@ -7,7 +7,6 @@ import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
-import { ToastType } from "components/ui/Toast";
 
 import { Action, Namespace } from "core/analytics";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
@@ -124,14 +123,14 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                 values={{ name: values.name, version: values.version }}
               />
             ),
-            type: ToastType.SUCCESS,
+            type: "success",
           });
           onClose();
         } catch (e) {
           registerNotification({
             id: NOTIFICATION_ID,
             text: <FormattedMessage id="form.error" values={{ message: e.message }} />,
-            type: ToastType.ERROR,
+            type: "error",
           });
         }
       }}

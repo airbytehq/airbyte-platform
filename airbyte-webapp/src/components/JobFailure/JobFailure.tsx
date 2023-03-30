@@ -6,7 +6,7 @@ import { useToggle } from "react-use";
 
 import Logs from "components/Logs";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Message, MessageType } from "components/ui/Message";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { JobConfigType, SynchronousJobRead } from "core/request/AirbyteClient";
@@ -96,13 +96,13 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
   const [isStacktraceExpanded, toggleStacktrace] = useToggle(false);
   const [isLogsExpanded, toggleLogs] = useToggle(false);
   if (!job) {
-    return <Message text={fallbackMessage || <FormattedMessage id="form.someError" />} type={MessageType.ERROR} />;
+    return <Message text={fallbackMessage || <FormattedMessage id="form.someError" />} type="error" />;
   }
 
   const failureReason = job.failureReason;
   return (
     <Message
-      type={MessageType.ERROR}
+      type="error"
       text={<FormattedMessage id={getTitlePhraseIdForJobConfigType(job.configType)} />}
       secondaryText={failureReason?.externalMessage || fallbackMessage}
     >

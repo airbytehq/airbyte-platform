@@ -4,8 +4,6 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAsync } from "react-use";
 import { match } from "ts-pattern";
 
-import { ToastType } from "components/ui/Toast";
-
 import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useQuery } from "hooks/useQuery";
@@ -43,7 +41,7 @@ export const VerifyEmailAction: React.FC = () => {
       registerNotification({
         id: "auth/email-verified",
         text: formatMessage({ id: "verifyEmail.notification" }),
-        type: ToastType.SUCCESS,
+        type: "success",
       });
       // Navigate the user to the homepage
       navigate("/");

@@ -1,8 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useIntl } from "react-intl";
 
-import { ToastType } from "components/ui/Toast";
-
 import { useNotificationService } from "./Notification";
 
 const NOTIFICATION_ID = "unexpected-request-error";
@@ -23,7 +21,7 @@ export function useRequestErrorHandler(messageId: string) {
       }
       registerNotification({
         id: NOTIFICATION_ID,
-        type: ToastType.ERROR,
+        type: "error",
         text: formatMessage({ id: messageId }, values),
       });
     },

@@ -1,6 +1,6 @@
 import { ComponentStory, ComponentMeta } from "@storybook/react";
 
-import { Message, MessageType } from "./Message";
+import { Message } from "./Message";
 
 export default {
   title: "UI/Message",
@@ -54,23 +54,31 @@ WithActionAndCloseButton.args = {
   onClose: () => console.log("Closed!"),
 };
 
-export const WarningToast = Template.bind({});
-WarningToast.args = {
+export const WarningMessage = Template.bind({});
+WarningMessage.args = {
   text: "This is a card with a close button",
   onClose: () => console.log("Closed!"),
-  type: MessageType.WARNING,
+  type: "warning",
 };
 
-export const ErrorToast = Template.bind({});
-ErrorToast.args = {
+export const ErrorMessage = Template.bind({});
+ErrorMessage.args = {
   text: "This is a card with a close button",
   onClose: () => console.log("Closed!"),
-  type: MessageType.ERROR,
+  type: "error",
 };
 
-export const SuccessToast = Template.bind({});
-SuccessToast.args = {
+export const SuccessMessage = Template.bind({});
+SuccessMessage.args = {
   text: "This is a card with a close button",
   onClose: () => console.log("Closed!"),
-  type: MessageType.SUCCESS,
+  type: "success",
+};
+
+export const WithSecondaryText = Template.bind({});
+WithSecondaryText.args = {
+  text: "This is a card with a close button",
+  secondaryText: "This is a secondary text",
+  onClose: () => console.log("Closed!"),
+  type: "info",
 };

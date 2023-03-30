@@ -18,6 +18,7 @@ $toast-bottom-margin: 27px;
 }
 
 .toastContainer {
+  box-shadow: variables.$box-shadow-raised;
   max-width: variables.$width-max-notification;
   position: fixed;
   bottom: $toast-bottom-margin;
