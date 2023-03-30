@@ -247,7 +247,8 @@ class GenerateInputActivityTest {
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
         .withState(STATE)
         .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
-        .withWorkspaceId(jobResetConfig.getWorkspaceId());
+        .withWorkspaceId(jobResetConfig.getWorkspaceId())
+        .withCommitStateAsap(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
