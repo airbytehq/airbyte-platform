@@ -29,7 +29,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import styles from "./ConnectorBuilderProjectTable.module.scss";
-import { DefaultLogoCatalog } from "./DefaultLogoCatalog";
+import { BuilderLogo } from "../connectorBuilder/BuilderLogo";
 
 const columnHelper = createColumnHelper<BuilderProject>();
 
@@ -210,7 +210,7 @@ export const ConnectorBuilderProjectTable = ({
         cell: (props) => (
           <FlexContainer alignItems="center">
             {/* TODO: replace with custom logos once available */}
-            <DefaultLogoCatalog />
+            <BuilderLogo />
             <Text>{props.cell.getValue()}</Text>
           </FlexContainer>
         ),
