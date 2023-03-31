@@ -1,5 +1,5 @@
 import { Formik } from "formik";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 
@@ -68,18 +68,12 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     [clearFormChange, formId, castValues, onSubmit]
   );
 
-  const isInitialValid = useMemo(
-    () => Boolean(validationSchema.isValidSync(initialValues)),
-    [initialValues, validationSchema]
-  );
-
   return (
     <Formik
       validateOnBlur
       validateOnChange
       validateOnMount
       initialValues={initialValues}
-      isInitialValid={isInitialValid}
       validationSchema={validationSchema}
       onSubmit={onFormSubmit}
       enableReinitialize
