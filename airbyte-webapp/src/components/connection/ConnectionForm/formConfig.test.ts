@@ -8,11 +8,11 @@ import {
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper as wrapper } from "test-utils/testutils";
 
-import { frequencyConfig } from "config/frequencyConfig";
 import { NormalizationType } from "core/domain/connection";
 import { ConnectionScheduleTimeUnit, OperationRead } from "core/request/AirbyteClient";
 
 import { mapFormPropsToOperation, useFrequencyDropdownData, useInitialValues } from "./formConfig";
+import { frequencyConfig } from "./frequencyConfig";
 
 jest.mock("services/workspaces/WorkspacesService", () => ({
   useCurrentWorkspace: () => mockWorkspace,

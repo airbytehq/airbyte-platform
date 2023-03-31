@@ -4,7 +4,6 @@ import * as yup from "yup";
 
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 
-import { frequencyConfig } from "config/frequencyConfig";
 import { SyncSchema } from "core/domain/catalog";
 import {
   isDbtTransformation,
@@ -37,6 +36,7 @@ import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "utils/cron";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
+import { frequencyConfig } from "./frequencyConfig";
 
 export interface FormikConnectionFormValues {
   name?: string;
