@@ -37,12 +37,12 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
 
   @Creator
   public DefaultDefinitionVersionOverrideProvider() {
-    this(DefaultDefinitionVersionOverrideProvider.class);
+    this(DefaultDefinitionVersionOverrideProvider.class, "version_overrides.yml");
     LOGGER.info("Initialized default definition version overrides");
   }
 
-  public DefaultDefinitionVersionOverrideProvider(final Class<?> resourceClass) {
-    this.overrideMap = getLocalOverrides(resourceClass);
+  public DefaultDefinitionVersionOverrideProvider(final Class<?> resourceClass, final String resourceName) {
+    this.overrideMap = getLocalOverrides(resourceClass, resourceName);
   }
 
   @VisibleForTesting
@@ -50,9 +50,9 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
     this.overrideMap = overrideMap;
   }
 
-  private Map<UUID, ActorDefinitionVersionOverride> getLocalOverrides(final Class<?> resourceClass) {
+  private Map<UUID, ActorDefinitionVersionOverride> getLocalOverrides(final Class<?> resourceClass, final String resourceName) {
     try {
-      final String overridesStr = MoreResources.readResource(resourceClass, "version_overrides.yml");
+      final String overridesStr = MoreResources.readResource(resourceClass, resourceName);
       final JsonNode overridesList = Yamls.deserialize(overridesStr);
       return MoreIterators.toList(overridesList.elements()).stream().collect(Collectors.toMap(
           json -> UUID.fromString(json.get("actorDefinitionId").asText()),
