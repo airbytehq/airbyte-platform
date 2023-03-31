@@ -6,6 +6,7 @@ import { Heading } from "components/ui/Heading";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
 
+import { useTrackSelectConnector } from "core/analytics/useTrackSelectConnector";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useModalService } from "hooks/services/Modal";
@@ -33,6 +34,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { email } = useCurrentWorkspace();
   const { openModal, closeModal } = useModalService();
   const [searchTerm, setSearchTerm] = useState("");
+  const trackSelectConnector = useTrackSelectConnector(connectorType);
 
   const filteredDefinitions = useMemo(
     () =>
@@ -44,8 +46,10 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
 
   const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
     if (isSourceDefinition(definition)) {
+      trackSelectConnector(definition.sourceDefinitionId, definition.name);
       onSelectConnectorDefinition(definition.sourceDefinitionId);
     } else {
+      trackSelectConnector(definition.destinationDefinitionId, definition.name);
       onSelectConnectorDefinition(definition.destinationDefinitionId);
     }
   };
