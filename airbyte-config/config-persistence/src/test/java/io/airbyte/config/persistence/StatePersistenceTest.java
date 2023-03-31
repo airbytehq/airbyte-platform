@@ -61,7 +61,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         database,
         new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
         new StandardSyncPersistence(database),
-        MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
 
     final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
     final StandardSourceDefinition sourceDefinition = MockData.publicSourceDefinition();

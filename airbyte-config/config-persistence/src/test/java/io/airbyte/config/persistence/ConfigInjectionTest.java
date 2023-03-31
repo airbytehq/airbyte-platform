@@ -38,7 +38,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void beforeEach() throws Exception {
     truncateAllTables();
-    configRepository = new ConfigRepository(database, MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
     configInjector = new ConfigInjector(configRepository);
     exampleConfig = Jsons.jsonNode(Map.of(SAMPLE_CONFIG_KEY, 123));
   }
