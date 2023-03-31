@@ -19,7 +19,7 @@ ENV CDK_ENTRYPOINT ${PYENV_ROOT}/versions/${PYTHON_VERSION}/lib/python3.9/site-p
 ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
 RUN ${PIP} install airbyte-cdk==${CDK_VERSION}
 
-ARG VERSION=0.42.0
+ARG VERSION=0.42.1
 
 ENV APPLICATION airbyte-connector-atelier-server
 ENV VERSION ${VERSION}
@@ -32,5 +32,5 @@ ADD bin/${APPLICATION}-${VERSION}.tar /app
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
 
-LABEL io.airbyte.version=0.42.0
+LABEL io.airbyte.version=0.42.1
 LABEL io.airbyte.name=airbyte/connector-atelier-server
