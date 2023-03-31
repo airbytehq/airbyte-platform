@@ -25,11 +25,13 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     cancelStarting,
     cancelJob,
     syncConnection,
+    connectionDeprecated,
     resetStreams,
     resetStarting,
     jobSyncRunning,
     jobResetRunning,
   } = useConnectionSyncContext();
+
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const resetWithModal = useCallback(() => {
@@ -55,7 +57,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant="secondary"
             className={buttonClassName}
             isLoading={resetStarting}
-            disabled={syncStarting || resetStarting}
+            disabled={syncStarting || resetStarting || connectionDeprecated}
           >
             <FormattedMessage id="connection.resetData" />
           </Button>
@@ -67,7 +69,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant={variant}
             className={buttonClassName}
             isLoading={syncStarting}
-            disabled={syncStarting || resetStarting}
+            disabled={syncStarting || resetStarting || connectionDeprecated}
           >
             {buttonText}
           </Button>
@@ -76,7 +78,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {(jobSyncRunning || jobResetRunning) && (
         <Button
           onClick={cancelJob}
-          disabled={cancelStarting || syncStarting || resetStarting}
+          disabled={syncStarting || resetStarting || connectionDeprecated}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}
