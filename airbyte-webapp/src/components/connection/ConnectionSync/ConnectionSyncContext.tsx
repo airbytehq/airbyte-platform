@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { JobRead, ConnectionStream, JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { JobRead, ConnectionStatus, ConnectionStream, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
 import { useCancelJob } from "services/job/JobService";
 
 interface ConnectionSyncContext {
   syncConnection: () => Promise<void>;
+  connectionDeprecated: boolean;
   syncStarting: boolean;
   jobSyncRunning: boolean;
   cancelJob: () => Promise<void>;
@@ -20,6 +21,7 @@ interface ConnectionSyncContext {
 const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);
+  const connectionDeprecated = connection.status === ConnectionStatus.deprecated;
 
   useEffect(() => {
     if (activeJob?.updatedAt && jobs?.[0]?.job?.updatedAt && activeJob.updatedAt <= jobs[0].job.updatedAt) {
@@ -66,6 +68,7 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSy
 
   return {
     syncConnection,
+    connectionDeprecated,
     syncStarting,
     jobSyncRunning,
     cancelJob,

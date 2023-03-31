@@ -34,7 +34,11 @@ export default defineConfig(({ mode }) => {
       react(),
       buildInfo(),
       viteTsconfigPaths(),
-      svgrPlugin(),
+      svgrPlugin({
+        svgrOptions: {
+          titleProp: true,
+        },
+      }),
       checker({
         // Enable checks while building the app (not just in dev mode)
         enableBuild: true,
