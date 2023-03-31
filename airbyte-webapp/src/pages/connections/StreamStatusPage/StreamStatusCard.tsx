@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { AirbyteStreamWithStatusAndConfiguration } from "components/connection/StreamStatus/getStreamsWithStatus";
 import {
   filterEmptyStreamStatuses,
   StreamStatusType,
@@ -13,9 +13,24 @@ import { Text } from "components/ui/Text";
 import { useStreamsListContext } from "./StreamsListContext";
 import styles from "./StreamStatusCard.module.scss";
 
+const SyncingStreams: React.FC<{ streams: AirbyteStreamWithStatusAndConfiguration[] }> = ({ streams }) => {
+  const streamsSyncing = streams
+    .map((stream) => stream.config?.isSyncing || stream.config?.isResetting)
+    .filter(Boolean);
+  if (!streamsSyncing.length) {
+    return null;
+  }
+
+  return (
+    <FlexContainer alignItems="center" gap="sm">
+      <StreamStatusLoadingSpinner className={styles.syncingSpinner} />
+      <div>{streamsSyncing.length}</div>
+    </FlexContainer>
+  );
+};
+
 export const StreamStatusCard: React.FC = () => {
   const { streams } = useStreamsListContext();
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning } = useConnectionSyncContext();
 
   const streamsByStatus = filterEmptyStreamStatuses(useSortStreams(streams));
 
@@ -28,11 +43,7 @@ export const StreamStatusCard: React.FC = () => {
             {streams.length}
           </Text>
           <FormattedMessage id={`connection.stream.status.${status}`} />
-          {(syncStarting || jobSyncRunning || resetStarting || jobResetRunning) && (
-            <FlexContainer alignItems="center" gap="none">
-              <StreamStatusLoadingSpinner className={styles.syncingSpinner} />
-            </FlexContainer>
-          )}
+          <SyncingStreams streams={streams} />
         </FlexContainer>
       ))}
     </FlexContainer>

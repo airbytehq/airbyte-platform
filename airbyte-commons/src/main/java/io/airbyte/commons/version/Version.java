@@ -147,11 +147,11 @@ public class Version {
       return false;
     }
     final int majorDiff = compareVersion(major, another.major);
-    if (majorDiff > 0) {
+    if (majorDiff != 0) {
       return false;
     }
     final int minorDiff = compareVersion(minor, another.minor);
-    if (minorDiff > 0) {
+    if (minorDiff != 0) {
       return false;
     }
     return compareVersion(patch, another.patch) > 0;

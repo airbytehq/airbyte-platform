@@ -5,11 +5,13 @@ import { PropsWithChildren } from "react";
 import styles from "./Table.module.scss";
 import { ColumnMeta } from "./types";
 
+// We can leave type any here since useReactTable options.columns itself is waiting for Array<ColumnDef<T, any>>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TableColumns<T> = Array<ColumnDef<T, any>>;
+
 export interface TableProps<T> {
   className?: string;
-  // We can leave type any here since useReactTable options.columns itself is waiting for Array<ColumnDef<T, any>>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  columns: Array<ColumnDef<T, any>>;
+  columns: TableColumns<T>;
   /**
    * If the table data is sorted outside this component you can pass the id of the column by which its sorted
    * to apply the correct sorting style to that column.
@@ -20,6 +22,7 @@ export interface TableProps<T> {
   onClickRow?: (data: T) => void;
   testId?: string;
   columnVisibility?: VisibilityState;
+  getRowClassName?: (data: T) => string | undefined;
 }
 
 export const Table = <T,>({
@@ -31,6 +34,7 @@ export const Table = <T,>({
   onClickRow,
   columnVisibility,
   sortedByColumn,
+  getRowClassName,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
@@ -38,7 +42,7 @@ export const Table = <T,>({
     initialState: {
       columnVisibility,
     },
-    getCoreRowModel: getCoreRowModel(),
+    getCoreRowModel: getCoreRowModel<T>(),
   });
 
   return (
@@ -80,9 +84,13 @@ export const Table = <T,>({
         {table.getRowModel().rows.map((row) => {
           return (
             <tr
-              className={classNames(styles.tr, {
-                [styles["tr--clickable"]]: !!onClickRow,
-              })}
+              className={classNames(
+                styles.tr,
+                {
+                  [styles["tr--clickable"]]: !!onClickRow,
+                },
+                getRowClassName?.(row.original)
+              )}
               key={`table-row-${row.id}`}
               data-testid={`table-row-${row.id}`}
               onClick={() => onClickRow?.(row.original)}

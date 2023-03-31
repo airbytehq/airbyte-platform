@@ -116,6 +116,8 @@ class AirbyteVersionTest {
     assertFalse(new AirbyteVersion(VERSION_678).checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion(VERSION_678)));
     assertFalse(new AirbyteVersion("6.9.8").checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion("6.8.9")));
     assertFalse(new AirbyteVersion("7.7.8").checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion("6.7.11")));
+    assertFalse(new AirbyteVersion("6.6.9").checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion(VERSION_678)));
+    assertFalse(new AirbyteVersion("6.7.11").checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion("7.7.8")));
     assertTrue(new AirbyteVersion("6.7.9").checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion(VERSION_678)));
   }
 

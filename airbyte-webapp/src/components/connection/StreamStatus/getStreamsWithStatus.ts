@@ -11,6 +11,7 @@ import {
   JobWithAttemptsRead,
   AttemptRead,
   JobRead,
+  JobConfigType,
 } from "core/request/AirbyteClient";
 
 export interface FakeStreamConfigWithStatus extends AirbyteStreamConfiguration {
@@ -21,6 +22,7 @@ export interface FakeStreamConfigWithStatus extends AirbyteStreamConfiguration {
   scheduleType?: ConnectionScheduleType;
   scheduleData?: ConnectionScheduleData;
   isSyncing: boolean;
+  isResetting?: boolean;
 }
 
 export interface AirbyteStreamWithStatusAndConfiguration extends AirbyteStreamAndConfiguration {
@@ -38,6 +40,7 @@ interface StreamStats {
   attemptStatus?: AttemptStatus;
   jobStatus?: JobStatus;
   lastSuccessfulSync?: number;
+  jobConfigType?: JobConfigType;
 }
 
 const getStreamKey = (name: string, namespace = "") => `${namespace}-${name}`;
@@ -49,6 +52,7 @@ const addStatToStream = (
   attempt?: AttemptRead
 ) => {
   streamStats[key] ??= {};
+
   if (attempt && !streamStats[key].attemptStatus) {
     streamStats[key].attemptStatus ??= attempt.status;
 
@@ -60,7 +64,9 @@ const addStatToStream = (
     }
   }
 
+  streamStats[key].jobConfigType ??= job.configType;
   streamStats[key].jobStatus ??= job.status;
+
   if ((streamStats[key].createdAt ?? 0) < job.createdAt) {
     streamStats[key].createdAt = job.createdAt;
   }
@@ -77,38 +83,52 @@ export const useStreamsWithStatus = (
   connection: WebBackendConnectionRead,
   jobs: JobWithAttemptsRead[]
 ): AirbyteStreamWithStatusAndConfiguration[] => {
-  const streamStats: Record<string, StreamStats> = jobs.reduce((streamStats, jobAttempt) => {
-    if (!jobAttempt || !jobAttempt.job) {
-      return streamStats;
-    }
-    const { job, attempts } = jobAttempt;
-    attempts?.forEach((attempt) => {
-      attempt.streamStats
-        // reverse so we get the latest
-        ?.reverse()
-        .forEach((streamStat) =>
-          addStatToStream(getStreamKey(streamStat.streamName, streamStat.streamNamespace), streamStats, job, attempt)
+  const streamStats: Record<string, StreamStats> = useMemo(
+    () =>
+      jobs.reduce((streamStats, jobAttempt) => {
+        if (!jobAttempt || !jobAttempt.job) {
+          return streamStats;
+        }
+        const { job, attempts } = jobAttempt;
+        attempts?.forEach((attempt) => {
+          attempt.streamStats
+            // reverse so we get the latest
+            ?.reverse()
+            .forEach((streamStat) =>
+              addStatToStream(
+                getStreamKey(streamStat.streamName, streamStat.streamNamespace),
+                streamStats,
+                job,
+                attempt
+              )
+            );
+        });
+        // This is populated on syncs
+        job.enabledStreams?.forEach(({ name, namespace }) =>
+          addStatToStream(getStreamKey(name, namespace), streamStats, job)
         );
-    });
-    // This is populated on syncs
-    job.enabledStreams?.forEach(({ name, namespace }) =>
-      addStatToStream(getStreamKey(name, namespace), streamStats, job)
-    );
 
-    // This is populated for resets
-    job.resetConfig?.streamsToReset?.forEach(({ name, namespace }) =>
-      addStatToStream(getStreamKey(name, namespace), streamStats, job)
-    );
-    return streamStats;
-  }, {} as Record<string, StreamStats>);
+        // This is populated for resets
+        job.resetConfig?.streamsToReset?.forEach(({ name, namespace }) =>
+          addStatToStream(getStreamKey(name, namespace), streamStats, job)
+        );
+        return streamStats;
+      }, {} as Record<string, StreamStats>),
+    [jobs]
+  );
 
   const streamsWithStatus = useMemo(
     () =>
       connection.syncCatalog.streams
         .map<AirbyteStreamWithStatusAndConfiguration | null>(({ stream, config }) => {
           if (stream && config) {
-            const { lastSuccessfulSync, createdAt, attemptStatus, jobStatus } =
+            const { lastSuccessfulSync, createdAt, attemptStatus, jobStatus, jobConfigType } =
               streamStats[getStreamKey(stream.name, stream.namespace)] ?? {};
+            const isSyncing =
+              jobConfigType === JobConfigType.sync &&
+              (attemptStatus === AttemptStatus.running || jobStatus === JobStatus.running);
+            const isResetting = jobStatus === JobStatus.running && jobConfigType === JobConfigType.reset_connection;
+
             const fakeStream: AirbyteStreamWithStatusAndConfiguration = {
               stream,
               config: {
@@ -119,7 +139,8 @@ export const useStreamsWithStatus = (
                 latestAttemptCreatedAt: createdAt,
                 scheduleType: connection.scheduleType,
                 scheduleData: connection.scheduleData,
-                isSyncing: attemptStatus === AttemptStatus.running || jobStatus === JobStatus.running,
+                isSyncing,
+                isResetting,
               },
             };
             return fakeStream;
