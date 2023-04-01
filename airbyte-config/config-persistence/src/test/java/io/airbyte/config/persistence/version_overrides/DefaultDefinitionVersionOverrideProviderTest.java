@@ -47,7 +47,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
 
   @BeforeEach
   void setup() {
-    overrideProvider = new DefaultDefinitionVersionOverrideProvider(DefaultDefinitionVersionOverrideProviderTest.class);
+    overrideProvider = new DefaultDefinitionVersionOverrideProvider(DefaultDefinitionVersionOverrideProviderTest.class, "version_overrides_test.yml");
   }
 
   @Test
