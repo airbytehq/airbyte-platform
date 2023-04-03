@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
@@ -16,7 +16,7 @@ import { useExperiment } from "hooks/services/Experiment";
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
 import styles from "./StreamsConfigTableRow.module.scss";
 import { StreamsConfigTableRowStatus } from "./StreamsConfigTableRowStatus";
-import { useScrollIntoViewStream } from "./useScrollIntoViewStream";
+import { useRedirectedReplicationStream } from "./useRedirectedReplicationStream";
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
 import { CellText } from "../CellText";
 import { IndexerType, StreamPathSelect } from "../StreamPathSelect";
@@ -79,15 +79,42 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
 
   const { streamHeaderContentStyle, pillButtonVariant } = useStreamsConfigTableRowProps(stream);
 
-  const streamNameRef = useRef<HTMLParagraphElement>(null);
-  const namespaceRef = useRef<HTMLParagraphElement>(null);
-  const { isVisible } = useScrollIntoViewStream(stream, namespaceRef, streamNameRef);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [highlighted, setHighlighted] = useState(false);
+  const { doesStreamExist, redirectionAction } = useRedirectedReplicationStream(stream);
+
+  useEffect(() => {
+    let highlightTimeout: number;
+    let openTimeout: number;
+
+    // Scroll to the stream and highlight it
+    if (doesStreamExist && (redirectionAction === "showInReplicationTable" || redirectionAction === "openDetails")) {
+      rowRef.current?.scrollIntoView({ block: "center" });
+      setHighlighted(true);
+      highlightTimeout = window.setTimeout(() => {
+        setHighlighted(false);
+      }, 1500);
+    }
+
+    // Open the stream details
+    if (doesStreamExist && redirectionAction === "openDetails") {
+      openTimeout = window.setTimeout(() => {
+        rowRef.current?.click();
+      }, 750);
+    }
+
+    return () => {
+      window.clearTimeout(highlightTimeout);
+      window.clearTimeout(openTimeout);
+    };
+  }, [stream, rowRef, redirectionAction, doesStreamExist]);
 
   return (
     <Row
       onClick={onRowClick}
-      className={classNames(streamHeaderContentStyle, { [styles.highlight]: isVisible })}
+      className={classNames(streamHeaderContentStyle, { [styles.highlighted]: highlighted })}
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
+      ref={rowRef}
     >
       <CellText size="fixed" className={styles.streamRowCheckboxCell}>
         {!disabled && (
@@ -116,12 +143,12 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
         </CellText>
       )}
       <CellText withTooltip data-testid="source-namespace-cell">
-        <Text size="md" className={styles.cellText} ref={namespaceRef}>
+        <Text size="md" className={styles.cellText}>
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
         </Text>
       </CellText>
       <CellText withTooltip data-testid="source-stream-name-cell">
-        <Text size="md" className={styles.cellText} ref={streamNameRef}>
+        <Text size="md" className={styles.cellText}>
           {stream.stream?.name}
         </Text>
       </CellText>

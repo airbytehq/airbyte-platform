@@ -11,16 +11,19 @@
 }
 
 @keyframes highlight {
-  0% {
-    box-shadow: 0 0 0 0 transparent;
-  }
-
+  0%,
   50% {
     box-shadow: 0 0 47px -5px colors.$blue-200;
+    z-index: 1;
+  }
+
+  99% {
+    z-index: 1;
   }
 
   100% {
     box-shadow: 0 0 0 0 transparent;
+    z-index: 0;
   }
 }
 
@@ -28,8 +31,7 @@
   @include header-background(colors.$white, colors.$grey-30);
 
   border-bottom: 1px solid colors.$grey-50;
-  padding: 0;
-  padding-right: variables.$spacing-xl;
+  padding: 0 variables.$spacing-xl 0 0;
   margin-bottom: 1px;
   gap: variables.$spacing-sm;
   min-height: 50px;
@@ -53,9 +55,8 @@
     background-color: colors.$grey-50;
   }
 
-  &.highlight {
-    animation: highlight 2s ease-in-out;
-    z-index: 1;
+  &.highlighted {
+    animation: highlight 2s ease-out;
   }
 }
 %streamRowCheckboxCell,
