@@ -29,25 +29,18 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation;
 import io.airbyte.commons.temporal.scheduling.DiscoverCatalogWorkflow;
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow;
-import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
-import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
-import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflow.v1.WorkflowExecutionInfo;
@@ -115,7 +108,6 @@ public class TemporalClientTest {
   private ConnectionManagerUtils connectionManagerUtils;
   private NotificationUtils notificationUtils;
   private StreamResetRecordsHelper streamResetRecordsHelper;
-  private FeatureFlagClient featureFlagClient;
   private Path workspaceRoot;
 
   @BeforeEach
@@ -133,10 +125,9 @@ public class TemporalClientTest {
     connectionManagerUtils = spy(new ConnectionManagerUtils());
     notificationUtils = spy(new NotificationUtils());
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
-    featureFlagClient = new TestClient();
     temporalClient =
         spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils, notificationUtils,
-            streamResetRecordsHelper, featureFlagClient));
+            streamResetRecordsHelper));
   }
 
   @Nested
@@ -152,7 +143,7 @@ public class TemporalClientTest {
 
       temporalClient = spy(
           new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils, mNotificationUtils,
-              streamResetRecordsHelper, featureFlagClient));
+              streamResetRecordsHelper));
     }
 
     @Test
@@ -279,40 +270,6 @@ public class TemporalClientTest {
           TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.DISCOVER_SCHEMA));
     }
 
-    @Test
-    void testSubmitSync() {
-      final SyncWorkflow discoverCatalogWorkflow = mock(SyncWorkflow.class);
-      when(workflowClient.newWorkflowStub(SyncWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.SYNC)))
-          .thenReturn(discoverCatalogWorkflow);
-      final JobSyncConfig syncConfig = new JobSyncConfig()
-          .withSourceDockerImage(IMAGE_NAME1)
-          .withDestinationDockerImage(IMAGE_NAME2)
-          .withOperationSequence(List.of())
-          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog())
-          .withWorkspaceId(WORKSPACE_ID);
-      final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
-          .withSourceConfiguration(Jsons.emptyObject())
-          .withDestinationConfiguration(Jsons.emptyObject());
-      final StandardSyncInput input = new StandardSyncInput()
-          .withNamespaceDefinition(syncConfig.getNamespaceDefinition())
-          .withNamespaceFormat(syncConfig.getNamespaceFormat())
-          .withPrefix(syncConfig.getPrefix())
-          .withSourceConfiguration(attemptSyncConfig.getSourceConfiguration())
-          .withDestinationConfiguration(attemptSyncConfig.getDestinationConfiguration())
-          .withOperationSequence(syncConfig.getOperationSequence())
-          .withCatalog(syncConfig.getConfiguredAirbyteCatalog())
-          .withState(attemptSyncConfig.getState());
-
-      final IntegrationLauncherConfig destinationLauncherConfig = new IntegrationLauncherConfig()
-          .withJobId(String.valueOf(JOB_ID))
-          .withAttemptId((long) ATTEMPT_ID)
-          .withDockerImage(IMAGE_NAME2);
-
-      temporalClient.submitSync(JOB_ID, ATTEMPT_ID, syncConfig, attemptSyncConfig, CONNECTION_ID);
-      discoverCatalogWorkflow.run(JOB_RUN_CONFIG, LAUNCHER_CONFIG, destinationLauncherConfig, input, CONNECTION_ID);
-      verify(workflowClient).newWorkflowStub(SyncWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.SYNC));
-    }
-
   }
 
   @Nested
@@ -347,29 +304,8 @@ public class TemporalClientTest {
   class ForceCancelConnection {
 
     @Test
-    @SuppressWarnings(UNCHECKED)
-    @DisplayName("Test delete connection method when workflow is in a running state.")
-    void testforceCancelConnection() {
-      final ConnectionManagerWorkflow mConnectionManagerWorkflow = mock(ConnectionManagerWorkflow.class);
-      final WorkflowState mWorkflowState = mock(WorkflowState.class);
-      when(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState);
-      when(mWorkflowState.isDeleted()).thenReturn(false);
-
-      doReturn(true).when(temporalClient).isWorkflowReachable(any(UUID.class));
-      when(workflowClient.newWorkflowStub(any(Class.class), anyString())).thenReturn(mConnectionManagerWorkflow);
-
-      final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig()
-          .withSourceConfiguration(Jsons.emptyObject())
-          .withDestinationConfiguration(Jsons.emptyObject());
-
-      final JobSyncConfig syncConfig = new JobSyncConfig()
-          .withSourceDockerImage(IMAGE_NAME1)
-          .withDestinationDockerImage(IMAGE_NAME2)
-          .withOperationSequence(List.of())
-          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog())
-          .withWorkspaceId(WORKSPACE_ID);
-
-      temporalClient.submitSync(JOB_ID, ATTEMPT_ID, syncConfig, attemptSyncConfig, CONNECTION_ID);
+    @DisplayName("Forcing a workflow deletion delegates to the connection manager.")
+    void testForceCancelConnection() {
       temporalClient.forceDeleteWorkflow(CONNECTION_ID);
 
       verify(connectionManagerUtils).deleteWorkflowIfItExist(workflowClient, CONNECTION_ID);

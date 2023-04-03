@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -49,8 +50,6 @@ import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.run.TemporalWorkerRunFactory;
-import io.airbyte.workers.run.WorkerRun;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput;
@@ -89,7 +88,7 @@ class JobCreationAndStatusUpdateActivityTest {
   private JobPersistence mJobPersistence;
 
   @Mock
-  private TemporalWorkerRunFactory mTemporalWorkerRunFactory;
+  private Path mPath;
 
   @Mock
   private WorkerEnvironment mWorkerEnvironment;
@@ -280,23 +279,20 @@ class JobCreationAndStatusUpdateActivityTest {
     @DisplayName("Test attempt creation")
     void createAttemptNumber() throws IOException {
       final Job mJob = Mockito.mock(Job.class);
+      Mockito.when(mJob.getAttemptsCount())
+          .thenReturn(ATTEMPT_NUMBER);
 
       Mockito.when(mJobPersistence.getJob(JOB_ID))
           .thenReturn(mJob);
 
-      final WorkerRun mWorkerRun = Mockito.mock(WorkerRun.class);
-
-      Mockito.when(mTemporalWorkerRunFactory.create(mJob))
-          .thenReturn(mWorkerRun);
-
-      final Path mPath = Mockito.mock(Path.class);
       final Path path = Path.of("test");
       Mockito.when(mPath.resolve(Mockito.anyString()))
           .thenReturn(path);
-      Mockito.when(mWorkerRun.getJobRoot())
-          .thenReturn(mPath);
 
-      Mockito.when(mJobPersistence.createAttempt(JOB_ID, path))
+      final Path expectedRoot = TemporalUtils.getJobRoot(mPath, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
+      final Path expectedLogPath = expectedRoot.resolve(LogClientSingleton.LOG_FILENAME);
+
+      Mockito.when(mJobPersistence.createAttempt(JOB_ID, expectedLogPath))
           .thenReturn(ATTEMPT_NUMBER_1);
 
       final LogClientSingleton mLogClientSingleton = Mockito.mock(LogClientSingleton.class);
@@ -307,7 +303,7 @@ class JobCreationAndStatusUpdateActivityTest {
         final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(
             JOB_ID));
 
-        verify(mLogClientSingleton).setJobMdc(mWorkerEnvironment, mLogConfigs, mPath);
+        verify(mLogClientSingleton).setJobMdc(mWorkerEnvironment, mLogConfigs, expectedRoot);
         Assertions.assertThat(output.getAttemptNumber()).isEqualTo(ATTEMPT_NUMBER_1);
       }
     }
