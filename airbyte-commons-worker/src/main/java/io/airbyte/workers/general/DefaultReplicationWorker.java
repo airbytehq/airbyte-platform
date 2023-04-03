@@ -540,7 +540,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     final List<FailureReason> failures = getFailureReasons(replicationRunnableFailureRef, destinationRunnableFailureRef,
         output);
 
-    prepStateForLaterSaving(syncInput, output);
+    if (!shouldCommitStateAsap(syncInput)) {
+      prepStateForLaterSaving(syncInput, output);
+    }
 
     final ObjectMapper mapper = new ObjectMapper();
     LOGGER.info("sync summary: {}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(summary));

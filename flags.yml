@@ -3,8 +3,6 @@ flags:
     serve: false
   - name: heartbeat.failSync
     serve: true
-  - name: platform.commitStatesAsap
-    serve: true
   - name: platform.commitStatsAsap
     serve: false
   - name: heartbeat.enabled

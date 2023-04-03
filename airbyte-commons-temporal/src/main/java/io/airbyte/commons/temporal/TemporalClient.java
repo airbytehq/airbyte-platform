@@ -27,7 +27,6 @@ import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.featureflag.CommitStatesAsap;
 import io.airbyte.featureflag.CommitStatsAsap;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -491,7 +490,7 @@ public class TemporalClient {
         .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
         .withConnectionId(connectionId)
         .withWorkspaceId(config.getWorkspaceId())
-        .withCommitStateAsap(featureFlagClient.boolVariation(CommitStatesAsap.INSTANCE, featureFlagContext))
+        .withCommitStateAsap(true)
         .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, featureFlagContext));
 
     return execute(jobRunConfig,

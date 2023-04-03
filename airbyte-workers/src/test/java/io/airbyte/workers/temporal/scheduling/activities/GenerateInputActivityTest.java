@@ -38,7 +38,6 @@ import io.airbyte.config.State;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.CommitStatesAsap;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.JobPersistence;
@@ -60,8 +59,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -131,10 +128,8 @@ class GenerateInputActivityTest {
     when(configRepository.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  void testGetSyncWorkflowInput(boolean commitStateAsap) throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
-    featureFlagMap.put(CommitStatesAsap.INSTANCE.getKey(), commitStateAsap);
+  @Test
+  void testGetSyncWorkflowInput() throws JsonValidationException, ConfigNotFoundException, IOException, ApiException {
     final SyncInput syncInput = new SyncInput(ATTEMPT_ID, JOB_ID);
 
     final UUID sourceDefinitionId = UUID.randomUUID();
@@ -177,7 +172,7 @@ class GenerateInputActivityTest {
         .withState(STATE)
         .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
         .withWorkspaceId(jobSyncConfig.getWorkspaceId())
-        .withCommitStateAsap(commitStateAsap);
+        .withCommitStateAsap(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))

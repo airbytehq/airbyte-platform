@@ -24,8 +24,6 @@ object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
 
 object PerfBackgroundJsonValidation : Temporary<Boolean>(key = "performance.backgroundJsonSchemaValidation", default = false)
 
-object CommitStatesAsap : Temporary<Boolean>(key = "platform.commitStatesAsap", default = true)
-
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = false)
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
