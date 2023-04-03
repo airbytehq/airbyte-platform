@@ -54,6 +54,7 @@ import io.airbyte.db.instance.test.TestDatabaseProviders;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
 import io.airbyte.persistence.job.models.Attempt;
+import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -2273,6 +2274,30 @@ class DefaultJobPersistenceTest {
       assertEquals(2, allJobs.size());
       assertEquals(JobStatus.INCOMPLETE, allJobs.get(0).getStatus());
       assertEquals(JobStatus.FAILED, allJobs.get(1).getStatus());
+    }
+
+    @Test
+    @DisplayName("Should be able to get attempt normalization status")
+    void testGetAttemptNormalizationStatusesForJob() throws IOException {
+      final Supplier<Instant> timeSupplier = incrementingSecondSupplier(NOW);
+      jobPersistence = new DefaultJobPersistence(jobDatabase, timeSupplier, DEFAULT_MINIMUM_AGE_IN_DAYS, DEFAULT_EXCESSIVE_NUMBER_OF_JOBS,
+          DEFAULT_MINIMUM_RECENCY_COUNT);
+
+      // Create and fail initial job
+      final long syncJobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
+      final int syncJobAttemptNumber1 = jobPersistence.createAttempt(syncJobId1, LOG_PATH);
+      jobPersistence.writeStats(syncJobId1, syncJobAttemptNumber1, 10L, 100L, 5L, 50L, null, null, List.of());
+      jobPersistence.failAttempt(syncJobId1, syncJobAttemptNumber1);
+
+      final int syncJobAttemptNumber2 = jobPersistence.createAttempt(syncJobId1, LOG_PATH);
+      jobPersistence.writeStats(syncJobId1, syncJobAttemptNumber2, 10L, 100L, 10L, 100L, 10L, 100L, List.of());
+      jobPersistence.succeedAttempt(syncJobId1, syncJobAttemptNumber2);
+
+      // Check to see current status of all jobs from beginning of time, expecting all jobs in createAt
+      // descending order (most recent first)
+      final List<AttemptNormalizationStatus> allAttempts =
+          jobPersistence.getAttemptNormalizationStatusesForJob(syncJobId1);
+      assertEquals(2, allAttempts.size());
     }
 
   }
