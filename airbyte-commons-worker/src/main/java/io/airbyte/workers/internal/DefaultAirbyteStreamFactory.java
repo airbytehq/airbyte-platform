@@ -6,7 +6,6 @@ package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
@@ -42,7 +41,6 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAirbyteStreamFactory.class);
   private static final double MAX_SIZE_RATIO = 0.8;
 
-  private final boolean shouldPerformNewJsonDeser;
   private final MdcScope.Builder containerLogMdcBuilder;
   private final AirbyteProtocolPredicate protocolValidator;
   protected final Logger logger;
@@ -50,11 +48,11 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
   private final Optional<Class<? extends RuntimeException>> exceptionClass;
 
   public DefaultAirbyteStreamFactory() {
-    this(MdcScope.DEFAULT_BUILDER, true);
+    this(MdcScope.DEFAULT_BUILDER);
   }
 
-  public DefaultAirbyteStreamFactory(final MdcScope.Builder containerLogMdcBuilder, final boolean shouldPerformNewJsonDeser) {
-    this(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, Optional.empty(), shouldPerformNewJsonDeser);
+  public DefaultAirbyteStreamFactory(final MdcScope.Builder containerLogMdcBuilder) {
+    this(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, Optional.empty());
   }
 
   /**
@@ -65,14 +63,12 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
   DefaultAirbyteStreamFactory(final AirbyteProtocolPredicate protocolPredicate,
                               final Logger logger,
                               final MdcScope.Builder containerLogMdcBuilder,
-                              final Optional<Class<? extends RuntimeException>> messageSizeExceptionClass,
-                              final boolean shouldPerformNewJsonDeser) {
+                              final Optional<Class<? extends RuntimeException>> messageSizeExceptionClass) {
     protocolValidator = protocolPredicate;
     this.logger = logger;
     this.containerLogMdcBuilder = containerLogMdcBuilder;
     this.exceptionClass = messageSizeExceptionClass;
     this.maxMemory = Runtime.getRuntime().maxMemory();
-    this.shouldPerformNewJsonDeser = shouldPerformNewJsonDeser;
   }
 
   @VisibleForTesting
@@ -80,14 +76,12 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
                               final Logger logger,
                               final MdcScope.Builder containerLogMdcBuilder,
                               final Optional<Class<? extends RuntimeException>> messageSizeExceptionClass,
-                              final long maxMemory,
-                              final boolean shouldPerformNewJsonDeser) {
+                              final long maxMemory) {
     protocolValidator = protocolPredicate;
     this.logger = logger;
     this.containerLogMdcBuilder = containerLogMdcBuilder;
     this.exceptionClass = messageSizeExceptionClass;
     this.maxMemory = maxMemory;
-    this.shouldPerformNewJsonDeser = shouldPerformNewJsonDeser;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -119,18 +113,7 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
         .filter(this::filterLog);
   }
 
-  /**
-   * Temporary feature flag container to test rolling out more efficient ser/deser operations.
-   */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
-    // this should switch on a feature flag that rolls out according to workspace.
-    if (shouldPerformNewJsonDeser) {
-      return toAirbyteMessageNew(line);
-    }
-    return parseJson(line).filter(this::validate).flatMap(this::toAirbyteMessageLegacy);
-  }
-
-  protected Stream<AirbyteMessage> toAirbyteMessageNew(final String line) {
     Optional<AirbyteMessage> m = Jsons.tryDeserialize(line, AirbyteMessage.class);
 
     if (m.isPresent()) {
@@ -138,35 +121,6 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
     }
     if (m.isEmpty()) {
       logger.error("Deserialization failed: {}", Jsons.serialize(line));
-    }
-    return m.stream();
-  }
-
-  protected Stream<JsonNode> parseJson(final String line) {
-    final Optional<JsonNode> jsonLine = Jsons.tryDeserialize(line);
-    if (jsonLine.isEmpty()) {
-      // we log as info all the lines that are not valid json
-      // some sources actually log their process on stdout, we
-      // want to make sure this info is available in the logs.
-      try (final var mdcScope = containerLogMdcBuilder.build()) {
-        logger.info(line);
-      }
-    }
-    return jsonLine.stream();
-  }
-
-  protected boolean validate(final JsonNode json) {
-    final boolean res = protocolValidator.test(json);
-    if (!res) {
-      logger.error("Validation failed: {}", Jsons.serialize(json));
-    }
-    return res;
-  }
-
-  protected Stream<AirbyteMessage> toAirbyteMessageLegacy(final JsonNode json) {
-    final Optional<AirbyteMessage> m = Jsons.tryObject(json, AirbyteMessage.class);
-    if (m.isEmpty()) {
-      logger.error("Deserialization failed: {}", Jsons.serialize(json));
     }
     return m.stream();
   }

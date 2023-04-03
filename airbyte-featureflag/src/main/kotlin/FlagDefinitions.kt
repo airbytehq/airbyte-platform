@@ -37,8 +37,6 @@ object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.v
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
-object PerformNewJsonDeser : Temporary<Boolean>(key = "perform-new-json-deser", default = false)
-
 object HeartbeatMaxSecondsBetweenMessages : Temporary<String>(key = "heartbeat-max-seconds-between-messages", default = "10800")
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.

@@ -11,7 +11,5 @@ flags:
     serve: true
   - name: connectors.versionOverridesEnabled
     serve: true
-  - name: perform-new-json-deser
-    serve: false
   - name: heartbeat-max-seconds-between-messages
     serve: "10800"
