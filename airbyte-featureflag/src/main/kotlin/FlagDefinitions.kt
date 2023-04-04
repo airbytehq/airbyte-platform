@@ -35,7 +35,13 @@ object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.v
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
-object HeartbeatMaxSecondsBetweenMessages : Temporary<String>(key = "heartbeat-max-seconds-between-messages", default = "10800")
+/**
+ * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
+ * The goal is to allow more room for OSS deployment that airbyte can not monitor.
+ */
+object HeartbeatMaxSecondsBetweenMessages : Permanent<String>(key = "heartbeat-max-seconds-between-messages", default = "10800")
+
+object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.failSync", default = true)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -57,6 +63,3 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
     }
   }
 }
-
-object ShouldFailSyncIfHeartbeatFailure : Temporary<Boolean>(key = "heartbeat.failSync", default = false)
-object ShouldStartHeartbeatMonitoring : Temporary<Boolean>(key = "heartbeat.enabled", default = false)
