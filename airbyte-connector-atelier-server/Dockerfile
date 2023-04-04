@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.1
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
 FROM ${JDK_IMAGE} AS connector-atelier-server
 
 RUN yum update -y && \
