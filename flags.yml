@@ -4,7 +4,7 @@ flags:
   - name: heartbeat.failSync
     serve: true
   - name: platform.commitStatsAsap
-    serve: false
+    serve: true
   - name: connectors.versionOverridesEnabled
     serve: true
   - name: heartbeat-max-seconds-between-messages
