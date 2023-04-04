@@ -9,12 +9,14 @@ import static io.opentelemetry.api.common.AttributeKey.stringKey;
 import static io.opentelemetry.semconv.resource.attributes.ResourceAttributes.SERVICE_NAME;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.opencensus.metrics.DoubleGauge;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.api.metrics.ObservableDoubleGauge;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
@@ -27,6 +29,10 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Implementation of the {@link MetricClient} that sends the provided metric data to an
  * OpenTelemetry compliant metrics store.
@@ -38,6 +44,9 @@ public class OpenTelemetryMetricClient implements MetricClient {
 
   private Meter meter;
   private SdkMeterProvider meterProvider;
+
+  private final Map<String, ObservableDoubleGauge> gauges = new HashMap<>();
+  private final Map<String,Map<Attributes,Double>> gaugeValues = Collections.synchronizedMap(new HashMap<>());
 
   @Override
   public void count(final MetricsRegistry metric, final long val, final MetricAttribute... attributes) {
@@ -52,9 +61,24 @@ public class OpenTelemetryMetricClient implements MetricClient {
 
   @Override
   public void gauge(final MetricsRegistry metric, final double val, final MetricAttribute... attributes) {
-    final AttributesBuilder attributesBuilder = buildAttributes(attributes);
-    meter.gaugeBuilder(metric.getMetricName()).setDescription(metric.getMetricDescription())
-        .buildWithCallback(measurement -> measurement.record(val, attributesBuilder.build()));
+    final Attributes attr = buildAttributes(attributes).build();
+    final String name = metric.getMetricName();
+    synchronized(gauges) {
+      if (!gauges.containsKey(name)) {
+        var valueMap = Collections.synchronizedMap(new HashMap<Attributes, Double>());
+        valueMap.put(attr, val);
+        gaugeValues.put(name, valueMap);
+        var gauge = meter.gaugeBuilder(name).setDescription(metric.getMetricDescription()).buildWithCallback(measurement -> {
+          for (Map.Entry<Attributes, Double> entry : valueMap.entrySet()) {
+            measurement.record(entry.getValue(), entry.getKey());
+          }
+        });
+        gauges.put(name,gauge);
+      } else {
+        var valueMap =  gaugeValues.get(name);
+        valueMap.put(attr,val);
+      }
+    }
   }
 
   @Override
@@ -114,6 +138,17 @@ public class OpenTelemetryMetricClient implements MetricClient {
   @Override
   public void shutdown() {
     resetForTest();
+    closeGauges();
+  }
+
+  private void closeGauges() {
+    synchronized (gauges) {
+      for (Map.Entry<String, ObservableDoubleGauge> entry : gauges.entrySet()) {
+        entry.getValue().close();
+      }
+      gauges.clear();
+      gaugeValues.clear();
+    }
   }
 
   private AttributesBuilder buildAttributes(final MetricAttribute... attributes) {
