@@ -69,6 +69,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant={variant}
             className={buttonClassName}
             isLoading={syncStarting}
+            data-testid="manual-sync-button"
             disabled={syncStarting || resetStarting || connectionDeprecated}
           >
             {buttonText}

@@ -150,6 +150,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
               stream_name: streams[testStreamIndex]?.name,
             });
           }}
+          data-testid="accept-schema"
         >
           <FormattedMessage id="connectorBuilder.useSchemaButton" />
         </Button>
