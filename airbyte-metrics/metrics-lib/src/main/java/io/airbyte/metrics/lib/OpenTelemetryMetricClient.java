@@ -9,7 +9,6 @@ import static io.opentelemetry.api.common.AttributeKey.stringKey;
 import static io.opentelemetry.semconv.resource.attributes.ResourceAttributes.SERVICE_NAME;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.opencensus.metrics.DoubleGauge;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -61,24 +60,40 @@ public class OpenTelemetryMetricClient implements MetricClient {
 
   @Override
   public void gauge(final MetricsRegistry metric, final double val, final MetricAttribute... attributes) {
+    /*
+      The Gauge builder in the OpenTelemetry Java SDK can only collect gauge values asynchronously via a callback.
+
+      This implementation uses the sync map to ensure gauges are defined only once.
+      It creates a synchronized map which can be updated by subsequent calls without redefining the gauge.
+
+      This sort-of a hack: OpenTelemetry expects you to define your gauge up from and provide
+      a callback that the SDK will call periodically. However, this API does not conform to the MetricClient.
+      Without some refactoring of the client interface, this adapter is necessary.
+    */
     final Attributes attr = buildAttributes(attributes).build();
     final String name = metric.getMetricName();
-    synchronized(gauges) {
+    synchronized(gauges) { // sync so we don't create the same gauge concurrently
       if (!gauges.containsKey(name)) {
+        // create an in-memory sync map for reading the latest value given the attribute set
         var valueMap = Collections.synchronizedMap(new HashMap<Attributes, Double>());
-        valueMap.put(attr, val);
-        gaugeValues.put(name, valueMap);
+        gaugeValues.put(name, valueMap); // Register this in-memory map with this gauge
+        valueMap.put(attr, val); // Must insert the initial value so the callback will see it on its first poll
+
+        // Build the gauge with a callback that reads from the sync map to get the current values for each attribute set
+        // The OpenTelemetry SDK will call this periodically to read the current values.
         var gauge = meter.gaugeBuilder(name).setDescription(metric.getMetricDescription()).buildWithCallback(measurement -> {
           for (Map.Entry<Attributes, Double> entry : valueMap.entrySet()) {
             measurement.record(entry.getValue(), entry.getKey());
           }
         });
         gauges.put(name,gauge);
-      } else {
-        var valueMap =  gaugeValues.get(name);
-        valueMap.put(attr,val);
+        return;
       }
     }
+    // This is outside the sync block since we don't need to create a new gauge/gaugeValues map
+    // and at this point they are both guaranteed to exist.
+    var valueMap = gaugeValues.get(name);
+    valueMap.put(attr,val);
   }
 
   @Override
