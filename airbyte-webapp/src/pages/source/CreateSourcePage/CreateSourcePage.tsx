@@ -10,11 +10,11 @@ import { Box } from "components/ui/Box";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
 import { SourceForm } from "./SourceForm";
@@ -26,7 +26,7 @@ export const CreateSourcePage: React.FC = () => {
   const newConnectorGridExperiment = useExperiment("connector.form.useSelectConnectorGrid", false);
 
   const { clearAllFormChanges } = useFormChangeTrackerService();
-  const { sourceDefinitions } = useSourceDefinitionList();
+  const sourceDefinitions = useAvailableSourceDefinitions();
   const { mutateAsync: createSource } = useCreateSource();
 
   const onSubmitSourceStep = async (values: {

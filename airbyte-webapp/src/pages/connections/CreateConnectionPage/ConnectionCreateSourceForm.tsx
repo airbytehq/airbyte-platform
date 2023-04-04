@@ -2,10 +2,10 @@ import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm } from "pages/source/CreateSourcePage/SourceForm";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 interface ConnectionCreateSourceFormProps {
@@ -16,7 +16,7 @@ export const ConnectionCreateSourceForm: React.FC<ConnectionCreateSourceFormProp
   const location = useLocation();
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
-  const { sourceDefinitions } = useSourceDefinitionList();
+  const sourceDefinitions = useAvailableSourceDefinitions();
   const { mutateAsync: createSource } = useCreateSource();
 
   const onSubmitSourceStep = async (values: {

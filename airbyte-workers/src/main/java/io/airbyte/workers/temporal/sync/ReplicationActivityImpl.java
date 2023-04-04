@@ -44,7 +44,6 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.PerformNewJsonDeser;
 import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -352,14 +351,12 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           featureFlags);
 
       final UUID workspaceId = syncInput.getWorkspaceId();
-      final boolean shouldPerformNewJsonDeser = featureFlagClient.boolVariation(PerformNewJsonDeser.INSTANCE, new Workspace(workspaceId));
       // reset jobs use an empty source to induce resetting all data in destination.
       final AirbyteSource airbyteSource = isResetJob(sourceLauncherConfig.getDockerImage())
           ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
           : new DefaultAirbyteSource(sourceLauncher,
               new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, sourceLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class),
-                  shouldPerformNewJsonDeser),
+                  Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class)),
               heartbeatMonitor,
               migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
               featureFlags);
@@ -393,7 +390,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           new DefaultAirbyteDestination(destinationLauncher,
               new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog()),
-                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, Optional.of(DestinationException.class), shouldPerformNewJsonDeser),
+                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, Optional.of(DestinationException.class)),
               new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),

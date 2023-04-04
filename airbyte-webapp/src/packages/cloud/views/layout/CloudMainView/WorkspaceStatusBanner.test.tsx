@@ -1,9 +1,9 @@
 import { render } from "@testing-library/react";
 import { Suspense } from "react";
 import { TestWrapper } from "test-utils";
+import { mockExperiments } from "test-utils/mockExperiments";
 
 import { I18nProvider } from "core/i18n";
-import * as experimentModule from "hooks/services/Experiment";
 import { CreditStatus, WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 
@@ -15,8 +15,6 @@ jest.mock("services/workspaces/WorkspacesService", () => ({
     workspace: { workspaceId: "123" },
   }),
 }));
-
-jest.mock("hooks/services/Experiment");
 
 jest.mock("packages/cloud/services/workspaces/CloudWorkspacesService");
 const mockUseGetCloudWorkspace = useGetCloudWorkspace as unknown as jest.Mock<Partial<typeof useGetCloudWorkspace>>;
@@ -44,13 +42,10 @@ const workspaceBannerWithFlagDefault = (
 describe("WorkspaceCreditsBanner", () => {
   // create a date that is 1 day in the future
   const oneDayFromNow = Date.now() + 60_000 * 60 * 24;
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
 
   describe("With flag on", () => {
-    beforeEach(() => {
-      jest.spyOn(experimentModule, "useExperiment").mockImplementation(() => true);
+    beforeAll(() => {
+      mockExperiments({ "billing.newTrialPolicy": true });
     });
     it("should render credits problem banner for credits problem pre-trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
@@ -130,8 +125,8 @@ describe("WorkspaceCreditsBanner", () => {
   });
 
   describe("With flag off", () => {
-    beforeEach(() => {
-      jest.spyOn(experimentModule, "useExperiment").mockImplementation(() => false);
+    beforeAll(() => {
+      mockExperiments({ "billing.newTrialPolicy": false });
     });
     it("should render credits problem banner for credits problem during trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {

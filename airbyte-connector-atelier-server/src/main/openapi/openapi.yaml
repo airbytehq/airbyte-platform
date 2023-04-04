@@ -133,7 +133,7 @@ components:
                       $ref: "#/components/schemas/HttpRequest"
                     response:
                       $ref: "#/components/schemas/HttpResponse"
-              sliceDescriptor:
+              slice_descriptor:
                 type: object
                 description: "An object describing the current slice. This can be omitted if a stream slicer is not configured."
                 properties:

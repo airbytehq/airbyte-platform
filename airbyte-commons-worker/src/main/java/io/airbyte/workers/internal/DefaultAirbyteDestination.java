@@ -66,7 +66,7 @@ public class DefaultAirbyteDestination implements AirbyteDestination {
 
   @VisibleForTesting
   public DefaultAirbyteDestination(final IntegrationLauncher integrationLauncher) {
-    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER, true), new DefaultAirbyteMessageBufferedWriterFactory(),
+    this(integrationLauncher, new DefaultAirbyteStreamFactory(CONTAINER_LOG_MDC_BUILDER), new DefaultAirbyteMessageBufferedWriterFactory(),
         new DefaultProtocolSerializer());
 
   }

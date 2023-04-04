@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
@@ -42,180 +41,90 @@ class DefaultAirbyteStreamFactoryTest {
   private AirbyteProtocolPredicate protocolPredicate;
   private Logger logger;
 
-  @Nested
-  class ToAirbyteMessageLegacyTest {
-
-    @BeforeEach
-    void setup() {
-      protocolPredicate = mock(AirbyteProtocolPredicate.class);
-      when(protocolPredicate.test(any())).thenReturn(true);
-      logger = mock(Logger.class);
-    }
-
-    @Test
-    void testValid() {
-      final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record1), false);
-      final Stream<AirbyteMessage> expectedStream = Stream.of(record1);
-
-      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
-      verifyNoInteractions(logger);
-    }
-
-    @Test
-    void testLoggingLine() {
-      final String invalidRecord = "invalid line";
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord, false);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).info(anyString());
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testLoggingLevel() {
-      final AirbyteMessage logMessage = AirbyteMessageUtils.createLogMessage(AirbyteLogMessage.Level.WARN, "warning");
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(logMessage), false);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).warn("warning");
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testFailValidation() {
-      final String invalidRecord = "{ \"fish\": \"tuna\"}";
-
-      when(protocolPredicate.test(Jsons.deserialize(invalidRecord))).thenReturn(false);
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord, false);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testFailDeserialization() {
-      final String invalidRecord = "{ \"type\": \"abc\"}";
-
-      when(protocolPredicate.test(Jsons.deserialize(invalidRecord))).thenReturn(true);
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord, false);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testFailsSize() {
-      final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
-
-      final InputStream inputStream = new ByteArrayInputStream(record1.toString().getBytes(StandardCharsets.UTF_8));
-      final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-
-      final Stream<AirbyteMessage> messageStream =
-          new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1L, false)
-              .create(bufferedReader);
-
-      assertThrows(RuntimeException.class, () -> messageStream.toList());
-    }
-
+  @BeforeEach
+  void setup() {
+    protocolPredicate = mock(AirbyteProtocolPredicate.class);
+    when(protocolPredicate.test(any())).thenReturn(true);
+    logger = mock(Logger.class);
   }
 
-  @Nested
-  class ToAirbyteMessageNewTest {
+  @Test
+  void testValid() {
+    final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
 
-    @BeforeEach
-    void setup() {
-      protocolPredicate = mock(AirbyteProtocolPredicate.class);
-      when(protocolPredicate.test(any())).thenReturn(true);
-      logger = mock(Logger.class);
-    }
+    final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record1));
+    final Stream<AirbyteMessage> expectedStream = Stream.of(record1);
 
-    @Test
-    void testValid() {
-      final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record1), true);
-      final Stream<AirbyteMessage> expectedStream = Stream.of(record1);
-
-      assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
-      verifyNoInteractions(logger);
-    }
-
-    @Test
-    void testLoggingLine() {
-      final String invalidRecord = "invalid line";
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord, true);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error("Deserialization failed: {}", "\"invalid line\"");
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testLoggingLevel() {
-      final AirbyteMessage logMessage = AirbyteMessageUtils.createLogMessage(AirbyteLogMessage.Level.WARN, "warning");
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(logMessage), true);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).warn("warning");
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testFailValidation() {
-      final String invalidRecord = "{ \"fish\": \"tuna\"}";
-
-      when(protocolPredicate.test(Jsons.deserialize(invalidRecord))).thenReturn(false);
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord, true);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testFailDeserialization() {
-      final String invalidRecord = "{ \"type\": \"abc\"}";
-
-      when(protocolPredicate.test(Jsons.deserialize(invalidRecord))).thenReturn(true);
-
-      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord, true);
-
-      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
-      verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void testFailsSize() {
-      final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
-
-      final InputStream inputStream = new ByteArrayInputStream(record1.toString().getBytes(StandardCharsets.UTF_8));
-      final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-
-      final Stream<AirbyteMessage> messageStream =
-          new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1L, true)
-              .create(bufferedReader);
-
-      assertThrows(RuntimeException.class, () -> messageStream.toList());
-    }
-
+    assertEquals(expectedStream.collect(Collectors.toList()), messageStream.collect(Collectors.toList()));
+    verifyNoInteractions(logger);
   }
 
-  private Stream<AirbyteMessage> stringToMessageStream(final String inputString, final boolean shouldPerformNewJsonDeser) {
+  @Test
+  void testLoggingLine() {
+    final String invalidRecord = "invalid line";
+
+    final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
+
+    assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
+    verify(logger).error("Deserialization failed: {}", "\"invalid line\"");
+    verifyNoMoreInteractions(logger);
+  }
+
+  @Test
+  void testLoggingLevel() {
+    final AirbyteMessage logMessage = AirbyteMessageUtils.createLogMessage(AirbyteLogMessage.Level.WARN, "warning");
+
+    final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(logMessage));
+
+    assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
+    verify(logger).warn("warning");
+    verifyNoMoreInteractions(logger);
+  }
+
+  @Test
+  void testFailValidation() {
+    final String invalidRecord = "{ \"fish\": \"tuna\"}";
+
+    when(protocolPredicate.test(Jsons.deserialize(invalidRecord))).thenReturn(false);
+
+    final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
+
+    assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
+    verify(logger).error(anyString(), anyString());
+    verifyNoMoreInteractions(logger);
+  }
+
+  @Test
+  void testFailDeserialization() {
+    final String invalidRecord = "{ \"type\": \"abc\"}";
+
+    when(protocolPredicate.test(Jsons.deserialize(invalidRecord))).thenReturn(true);
+
+    final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
+
+    assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
+    verify(logger).error(anyString(), anyString());
+    verifyNoMoreInteractions(logger);
+  }
+
+  @Test
+  void testFailsSize() {
+    final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
+
+    final InputStream inputStream = new ByteArrayInputStream(record1.toString().getBytes(StandardCharsets.UTF_8));
+    final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+
+    final Stream<AirbyteMessage> messageStream =
+        new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1L)
+            .create(bufferedReader);
+
+    assertThrows(RuntimeException.class, () -> messageStream.toList());
+  }
+
+  private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
     final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
     final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-    return new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.empty(), shouldPerformNewJsonDeser)
+    return new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.empty())
         .create(bufferedReader);
   }
 

@@ -24,7 +24,7 @@ class StreamReadSlicesInner(BaseModel):
     """
 
     pages: List[StreamReadSlicesInnerPagesInner] = Field(alias="pages")
-    slice_descriptor: Optional[StreamReadSlicesInnerSliceDescriptor] = Field(alias="sliceDescriptor", default=None)
+    slice_descriptor: Optional[StreamReadSlicesInnerSliceDescriptor] = Field(alias="slice_descriptor", default=None)
     state: Optional[Dict[str, Any]] = Field(alias="state", default=None)
 
 StreamReadSlicesInner.update_forward_refs()

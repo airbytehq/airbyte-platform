@@ -34,6 +34,11 @@ configurations {
     automaticMigrationAcceptanceTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
+configurations.all {
+    // Temporary hack to avoid dependency conflicts
+    exclude group: 'io.micronaut.email'
+}
+
 dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-container-orchestrator')
@@ -45,7 +50,10 @@ dependencies {
     acceptanceTestsImplementation project(':airbyte-commons')
     acceptanceTestsImplementation project(':airbyte-commons-temporal')
     acceptanceTestsImplementation project(':airbyte-config:config-models')
-    acceptanceTestsImplementation project(':airbyte-config:config-persistence')
+    acceptanceTestsImplementation(project(':airbyte-config:config-persistence')) {
+        // Incompatibility with some test acceptance test.
+        exclude group: 'org.bouncycastle'
+    }
     acceptanceTestsImplementation project(':airbyte-db:db-lib')
     acceptanceTestsImplementation project(':airbyte-tests')
     acceptanceTestsImplementation project(':airbyte-test-utils')

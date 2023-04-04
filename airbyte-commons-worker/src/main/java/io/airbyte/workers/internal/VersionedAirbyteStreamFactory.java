@@ -58,10 +58,8 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
-                                       final boolean shouldPerformNewJsonDeser) {
-    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, MdcScope.DEFAULT_BUILDER, exceptionClass,
-        shouldPerformNewJsonDeser);
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
+    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, MdcScope.DEFAULT_BUILDER, exceptionClass);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -69,10 +67,9 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
                                        final MdcScope.Builder containerLogMdcBuilder,
-                                       final Optional<Class<? extends RuntimeException>> exceptionClass,
-                                       final boolean shouldPerformNewJsonDeser) {
+                                       final Optional<Class<? extends RuntimeException>> exceptionClass) {
     // TODO AirbyteProtocolPredicate needs to be updated to be protocol version aware
-    super(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, exceptionClass, shouldPerformNewJsonDeser);
+    super(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, exceptionClass);
     Preconditions.checkNotNull(protocolVersion);
     this.serDeProvider = serDeProvider;
     this.migratorFactory = migratorFactory;
