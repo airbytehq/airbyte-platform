@@ -16,6 +16,7 @@ interface CollapsibleProps {
   showErrorIndicator?: boolean;
   type?: "footer" | "inline" | "section";
   hideWhenEmpty?: boolean;
+  "data-testid"?: string;
 }
 
 export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = ({
@@ -25,6 +26,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   type = "inline",
   hideWhenEmpty = false,
   children,
+  "data-testid": dataTestId,
 }) => {
   const childrenCount = React.Children.count(children);
 
@@ -37,7 +39,10 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
           className={classNames(className, styles.container, { [styles.footer]: type === "footer" })}
           gap="xl"
         >
-          <Disclosure.Button className={classNames(styles.button, { [styles.buttonSection]: type === "section" })}>
+          <Disclosure.Button
+            data-testid={dataTestId}
+            className={classNames(styles.button, { [styles.buttonSection]: type === "section" })}
+          >
             <FlexContainer
               alignItems="center"
               gap="sm"
