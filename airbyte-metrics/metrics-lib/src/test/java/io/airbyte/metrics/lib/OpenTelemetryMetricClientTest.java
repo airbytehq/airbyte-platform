@@ -81,9 +81,9 @@ class OpenTelemetryMetricClientTest {
   @Test
   @DisplayName("Should send out gauge metric with correct metric name, description and value")
   void testGaugeSuccess() throws Exception {
-      openTelemetryMetricClient.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 3);
-      openTelemetryMetricClient.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 2);
-      openTelemetryMetricClient.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 1);
+    openTelemetryMetricClient.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 3);
+    openTelemetryMetricClient.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 2);
+    openTelemetryMetricClient.gauge(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS, 1);
 
     metricProvider.forceFlush();
     final List<MetricData> metricDataList = metricExporter.getFinishedMetricItems();

@@ -45,7 +45,7 @@ public class OpenTelemetryMetricClient implements MetricClient {
   private SdkMeterProvider meterProvider;
 
   private final Map<String, ObservableDoubleGauge> gauges = new HashMap<>();
-  private final Map<String,Map<Attributes,Double>> gaugeValues = Collections.synchronizedMap(new HashMap<>());
+  private final Map<String, Map<Attributes, Double>> gaugeValues = Collections.synchronizedMap(new HashMap<>());
 
   @Override
   public void count(final MetricsRegistry metric, final long val, final MetricAttribute... attributes) {
@@ -72,7 +72,7 @@ public class OpenTelemetryMetricClient implements MetricClient {
     */
     final Attributes attr = buildAttributes(attributes).build();
     final String name = metric.getMetricName();
-    synchronized(gauges) { // sync so we don't create the same gauge concurrently
+    synchronized (gauges) { // sync so we don't create the same gauge concurrently
       if (!gauges.containsKey(name)) {
         // create an in-memory sync map for reading the latest value given the attribute set
         var valueMap = Collections.synchronizedMap(new HashMap<Attributes, Double>());
@@ -86,14 +86,14 @@ public class OpenTelemetryMetricClient implements MetricClient {
             measurement.record(entry.getValue(), entry.getKey());
           }
         });
-        gauges.put(name,gauge);
+        gauges.put(name, gauge);
         return;
       }
     }
     // This is outside the sync block since we don't need to create a new gauge/gaugeValues map
     // and at this point they are both guaranteed to exist.
     var valueMap = gaugeValues.get(name);
-    valueMap.put(attr,val);
+    valueMap.put(attr, val);
   }
 
   @Override
@@ -107,7 +107,7 @@ public class OpenTelemetryMetricClient implements MetricClient {
    * Initialize client.
    *
    * @param metricEmittingApp means of understanding where metrics are being emitted from
-   * @param otelEndpoint where metrics will be sent to
+   * @param otelEndpoint      where metrics will be sent to
    */
   public void initialize(final MetricEmittingApp metricEmittingApp, final String otelEndpoint) {
     final Resource resource = Resource.getDefault().toBuilder().put(SERVICE_NAME, metricEmittingApp.getApplicationName()).build();
@@ -126,10 +126,10 @@ public class OpenTelemetryMetricClient implements MetricClient {
 
   @VisibleForTesting
   void initialize(
-                  final MetricEmittingApp metricEmittingApp,
-                  final MetricExporter metricExporter,
-                  final SdkTracerProvider sdkTracerProvider,
-                  final Resource resource) {
+      final MetricEmittingApp metricEmittingApp,
+      final MetricExporter metricExporter,
+      final SdkTracerProvider sdkTracerProvider,
+      final Resource resource) {
     meterProvider = SdkMeterProvider.builder()
         .registerMetricReader(PeriodicMetricReader.builder(metricExporter).build())
         .setResource(resource)
