@@ -37,7 +37,12 @@ export const DocumentationPanel: React.FC = () => {
   const config = useConfig();
   const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
 
-  const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false);
+  const sourceType =
+    selectedConnectorDefinition &&
+    "sourceType" in selectedConnectorDefinition &&
+    selectedConnectorDefinition.sourceType;
+
+  const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false) && sourceType === "api";
   const [isSchemaRequested, setIsSchemaRequested] = useState(false);
   const [isERDRequested, setIsERDRequested] = useState(false);
 

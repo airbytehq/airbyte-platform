@@ -7,7 +7,7 @@ import { useCancelJob } from "services/job/JobService";
 
 interface ConnectionSyncContext {
   syncConnection: () => Promise<void>;
-  connectionDeprecated: boolean;
+  connectionEnabled: boolean;
   syncStarting: boolean;
   jobSyncRunning: boolean;
   cancelJob: () => Promise<void>;
@@ -21,7 +21,7 @@ interface ConnectionSyncContext {
 const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);
-  const connectionDeprecated = connection.status === ConnectionStatus.deprecated;
+  const connectionEnabled = connection.status === ConnectionStatus.active;
 
   useEffect(() => {
     if (activeJob?.updatedAt && jobs?.[0]?.job?.updatedAt && activeJob.updatedAt <= jobs[0].job.updatedAt) {
@@ -68,7 +68,7 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSy
 
   return {
     syncConnection,
-    connectionDeprecated,
+    connectionEnabled,
     syncStarting,
     jobSyncRunning,
     cancelJob,

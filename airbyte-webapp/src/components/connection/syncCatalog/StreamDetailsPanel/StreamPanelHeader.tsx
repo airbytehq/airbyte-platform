@@ -1,9 +1,9 @@
 import React, { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { CrossIcon } from "components/icons/CrossIcon";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
@@ -85,7 +85,7 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
           variant="clear"
           onClick={onClose}
           className={styles.crossIcon}
-          icon={<CrossIcon />}
+          icon={<Icon type="cross" />}
           data-testid="stream-details-close-button"
         />
       </FlexContainer>
