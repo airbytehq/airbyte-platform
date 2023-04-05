@@ -25,7 +25,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     cancelStarting,
     cancelJob,
     syncConnection,
-    connectionDeprecated,
+    connectionEnabled,
     resetStreams,
     resetStarting,
     jobSyncRunning,
@@ -57,7 +57,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant="secondary"
             className={buttonClassName}
             isLoading={resetStarting}
-            disabled={syncStarting || resetStarting || connectionDeprecated}
+            disabled={syncStarting || resetStarting || !connectionEnabled}
           >
             <FormattedMessage id="connection.resetData" />
           </Button>
@@ -70,7 +70,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             className={buttonClassName}
             isLoading={syncStarting}
             data-testid="manual-sync-button"
-            disabled={syncStarting || resetStarting || connectionDeprecated}
+            disabled={syncStarting || resetStarting || !connectionEnabled}
           >
             {buttonText}
           </Button>
@@ -79,7 +79,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {(jobSyncRunning || jobResetRunning) && (
         <Button
           onClick={cancelJob}
-          disabled={syncStarting || resetStarting || connectionDeprecated}
+          disabled={syncStarting || resetStarting || !connectionEnabled}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}
