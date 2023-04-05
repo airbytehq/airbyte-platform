@@ -15,7 +15,6 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
-import { ToastType } from "components/ui/Toast";
 
 import { Action, Namespace } from "core/analytics";
 import { ConnectorManifest } from "core/request/ConnectorManifest";
@@ -79,7 +78,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
                     }}
                   />
                 ),
-                type: ToastType.ERROR,
+                type: "error",
               });
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.INVALID_YAML_UPLOADED, {
                 actionDescription: "A file with invalid YAML syntax was uploaded to the Connector Builder create page",

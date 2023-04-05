@@ -6,6 +6,7 @@ const BASE_DOCS_LINK = "https://docs.airbyte.com";
 
 export const links = {
   dbtCommandsReference: "https://docs.getdbt.com/reference/dbt-commands",
+  dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
   technicalSupport: `${BASE_DOCS_LINK}/troubleshooting/on-deploying`,
   termsLink: "https://airbyte.com/terms",
@@ -36,6 +37,8 @@ export const links = {
   connectionDataResidency:
     "https://docs.airbyte.com/cloud/managing-airbyte-cloud/#choose-the-data-residency-for-a-connection",
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
+  upcomingFeaturesPage: "https://embedded.airbyte.com/upcoming-releases",
+  stripeCustomerPortal: "https://billing.stripe.com/p/login/5kAbJs2Gy83H2YwdQQ",
 } as const;
 
 export type OutboundLinks = typeof links;

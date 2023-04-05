@@ -224,12 +224,12 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(workspaceId), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
     setupOAuthParamMocks(oauthParameters);
     final JsonNode actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
     final ObjectNode expectedConfig = ((ObjectNode) Jsons.clone(config));
@@ -241,12 +241,12 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(workspaceId), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
     setupOAuthParamMocks(oauthParameters);
     final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
     assertEquals(config, actualConfig);
@@ -336,7 +336,7 @@ class OAuthConfigSupplierTest {
 
   private void setupStandardDefinitionMock(final AdvancedAuth advancedAuth) throws JsonValidationException, ConfigNotFoundException, IOException {
     when(configRepository.getStandardSourceDefinition(any())).thenReturn(testSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), any())).thenReturn(testSourceVersion
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(testSourceVersion
         .withSpec(new ConnectorSpecification().withAdvancedAuth(advancedAuth)));
   }
 

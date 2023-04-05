@@ -154,14 +154,22 @@ public class JobTracker {
    * @param sourceDefinitionId source definition id
    * @param workspaceId workspace id
    * @param jobState job state
+   * @param jobOutput job output, if available
    */
-  public void trackDiscover(final UUID jobId, final UUID sourceDefinitionId, final UUID workspaceId, final JobState jobState) {
+  public void trackDiscover(final UUID jobId,
+                            final UUID sourceDefinitionId,
+                            final UUID workspaceId,
+                            final JobState jobState,
+                            final @Nullable ConnectorJobOutput jobOutput) {
+    final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
+
     Exceptions.swallow(() -> {
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.DISCOVER_SCHEMA);
+      final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(jobMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 

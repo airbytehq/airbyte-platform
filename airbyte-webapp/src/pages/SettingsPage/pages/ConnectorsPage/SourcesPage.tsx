@@ -2,10 +2,11 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
+import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useSourceList } from "hooks/services/useSourceHook";
-import { useSourceDefinitionList, useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
+import { useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
 import ConnectorsView, { ConnectorsViewProps } from "./components/ConnectorsView";
@@ -19,7 +20,7 @@ const SourcesPage: React.FC = () => {
 
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
-  const { sourceDefinitions } = useSourceDefinitionList();
+  const sourceDefinitions = useAvailableSourceDefinitions();
 
   const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
 

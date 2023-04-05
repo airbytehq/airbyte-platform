@@ -1,12 +1,8 @@
-import { faClose } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocalStorage } from "react-use";
 
-import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
@@ -149,22 +145,13 @@ export const StreamTester: React.FC<{
         </div>
       )}
       {!isFetching && streamReadData && streamReadData.test_read_limit_reached && showLimitWarning && (
-        <Callout>
-          <FlexItem grow>
-            <FlexContainer alignItems="center">
-              <FlexItem grow>
-                <FormattedMessage id="connectorBuilder.streamTestLimitReached" />
-              </FlexItem>
-              <Button
-                onClick={() => {
-                  setShowLimitWarning(false);
-                }}
-                variant="clear"
-                icon={<FontAwesomeIcon icon={faClose} />}
-              />
-            </FlexContainer>
-          </FlexItem>
-        </Callout>
+        <Message
+          type="warning"
+          text={<FormattedMessage id="connectorBuilder.streamTestLimitReached" />}
+          onClose={() => {
+            setShowLimitWarning(false);
+          }}
+        />
       )}
       {!isFetching && (streamReadData !== undefined || errorMessage !== undefined) && (
         <ResizablePanels

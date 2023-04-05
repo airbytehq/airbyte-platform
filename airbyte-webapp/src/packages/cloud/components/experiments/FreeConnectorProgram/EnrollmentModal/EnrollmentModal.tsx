@@ -10,7 +10,7 @@ import { Heading } from "components/ui/Heading";
 import { ModalFooter } from "components/ui/Modal/ModalFooter";
 import { Text } from "components/ui/Text";
 
-import { StripeCheckoutSessionCreate, StripeCheckoutSessionRead } from "packages/cloud/lib/domain/stripe";
+import { StripeCheckoutSessionCreate, StripeCheckoutSessionRead } from "core/api/types/CloudApi";
 
 import { ReactComponent as CardSVG } from "./cards.svg";
 import { ReactComponent as ConnectorGridSvg } from "./connectorGrid.svg";

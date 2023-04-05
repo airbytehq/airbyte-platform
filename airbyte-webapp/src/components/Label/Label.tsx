@@ -44,12 +44,12 @@ const MessageText = styled.span<Pick<IProps, "error" | "success">>`
 
 const Label: React.FC<React.PropsWithChildren<IProps>> = (props) => (
   <Content className={props.className} onClick={props.onClick} htmlFor={props.htmlFor}>
-    <FlexContainer gap="sm">
+    <FlexContainer gap="sm" direction={props.children && props.nextLine ? "column" : "row"}>
       {props.children}
       <FlexItem grow>
         {props.message && (
           <span>
-            {props.children ? props.nextLine ? <br /> : " - " : null}
+            {props.children && !props.nextLine ? " - " : null}
             <MessageText error={props.error}>{props.message}</MessageText>
           </span>
         )}

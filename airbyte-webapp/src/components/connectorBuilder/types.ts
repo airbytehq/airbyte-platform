@@ -3,7 +3,8 @@ import merge from "lodash/merge";
 import semver from "semver";
 import * as yup from "yup";
 
-import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { CDK_VERSION } from "./cdk";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   Spec,
@@ -35,9 +36,7 @@ import {
   PageIncrementType,
   BearerAuthenticatorType,
   BasicHttpAuthenticatorType,
-} from "core/request/ConnectorManifest";
-
-import { CDK_VERSION } from "./cdk";
+} from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
 

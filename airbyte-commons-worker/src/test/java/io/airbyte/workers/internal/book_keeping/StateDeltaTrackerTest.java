@@ -33,25 +33,25 @@ class StateDeltaTrackerTest {
   private static final long STATE_3_STREAM_3_COUNT = 33L;
   private static final long STATE_3_STREAM_4_COUNT = 34L;
 
-  // enough capacity for above 3 states, which are each 24 bytes (8 byte hash + two 10 byte stream
+  // enough capacity for above 3 states, which are each 40 bytes (8 byte hash + two 18 byte stream
   // counts
-  private static final long INITIAL_DELTA_MEMORY_CAPACITY = 72L;
+  private static final long INITIAL_DELTA_MEMORY_CAPACITY = 3 * 40L;
 
   private StateDeltaTracker stateDeltaTracker;
 
   @BeforeEach
   void setup() throws Exception {
-    final Map<Short, Long> state1Counts = new HashMap<>();
-    state1Counts.put(STREAM_INDEX_1, STATE_1_STREAM_1_COUNT);
-    state1Counts.put(STREAM_INDEX_2, STATE_1_STREAM_2_COUNT);
+    final Map<Short, StatsCounters> state1Counts = new HashMap<>();
+    state1Counts.put(STREAM_INDEX_1, new StatsCounters(STATE_1_STREAM_1_COUNT * 10, STATE_1_STREAM_1_COUNT));
+    state1Counts.put(STREAM_INDEX_2, new StatsCounters(STATE_1_STREAM_2_COUNT * 10, STATE_1_STREAM_2_COUNT));
 
-    final Map<Short, Long> state2Counts = new HashMap<>();
-    state2Counts.put(STREAM_INDEX_1, STATE_2_STREAM_1_COUNT);
-    state2Counts.put(STREAM_INDEX_3, STATE_2_STREAM_3_COUNT);
+    final Map<Short, StatsCounters> state2Counts = new HashMap<>();
+    state2Counts.put(STREAM_INDEX_1, new StatsCounters(STATE_2_STREAM_1_COUNT * 10, STATE_2_STREAM_1_COUNT));
+    state2Counts.put(STREAM_INDEX_3, new StatsCounters(STATE_2_STREAM_3_COUNT * 10, STATE_2_STREAM_3_COUNT));
 
-    final Map<Short, Long> state3Counts = new HashMap<>();
-    state3Counts.put(STREAM_INDEX_3, STATE_3_STREAM_3_COUNT);
-    state3Counts.put(STREAM_INDEX_4, STATE_3_STREAM_4_COUNT);
+    final Map<Short, StatsCounters> state3Counts = new HashMap<>();
+    state3Counts.put(STREAM_INDEX_3, new StatsCounters(STATE_3_STREAM_3_COUNT * 10, STATE_3_STREAM_3_COUNT));
+    state3Counts.put(STREAM_INDEX_4, new StatsCounters(STATE_3_STREAM_4_COUNT * 10, STATE_3_STREAM_4_COUNT));
 
     stateDeltaTracker = new StateDeltaTracker(INITIAL_DELTA_MEMORY_CAPACITY);
     stateDeltaTracker.addState(STATE_1_HASH, state1Counts);
@@ -61,7 +61,8 @@ class StateDeltaTrackerTest {
 
   @Test
   void testAddState_throwsExceptionWhenCapacityExceeded() {
-    Assertions.assertThrows(StateDeltaTrackerException.class, () -> stateDeltaTracker.addState(4, Collections.singletonMap((short) 444, 44L)));
+    Assertions.assertThrows(StateDeltaTrackerException.class,
+        () -> stateDeltaTracker.addState(4, Collections.singletonMap((short) 444, new StatsCounters(440L, 44L))));
     Assertions.assertTrue(stateDeltaTracker.capacityExceeded);
   }
 
@@ -87,31 +88,34 @@ class StateDeltaTrackerTest {
   @Test
   void testGetCommittedRecordsByStream() throws Exception {
     // before anything is committed, returned map should be empty and deltas should contain three states
-    final Map<Short, Long> expected = new HashMap<>();
-    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedRecords());
+    final Map<Short, StatsCounters> expected = new HashMap<>();
+    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedStats());
     Assertions.assertEquals(3, stateDeltaTracker.stateDeltas.size());
 
     stateDeltaTracker.commitStateHash(STATE_1_HASH);
-    expected.put(STREAM_INDEX_1, STATE_1_STREAM_1_COUNT);
-    expected.put(STREAM_INDEX_2, STATE_1_STREAM_2_COUNT);
-    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedRecords());
+    expected.put(STREAM_INDEX_1, new StatsCounters(STATE_1_STREAM_1_COUNT * 10, STATE_1_STREAM_1_COUNT));
+    expected.put(STREAM_INDEX_2, new StatsCounters(STATE_1_STREAM_2_COUNT * 10, STATE_1_STREAM_2_COUNT));
+    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedStats());
     Assertions.assertEquals(2, stateDeltaTracker.stateDeltas.size());
     expected.clear();
 
     stateDeltaTracker.commitStateHash(STATE_2_HASH);
-    expected.put(STREAM_INDEX_1, STATE_1_STREAM_1_COUNT + STATE_2_STREAM_1_COUNT);
-    expected.put(STREAM_INDEX_2, STATE_1_STREAM_2_COUNT);
-    expected.put(STREAM_INDEX_3, STATE_2_STREAM_3_COUNT);
-    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedRecords());
+    expected.put(STREAM_INDEX_1, new StatsCounters((STATE_1_STREAM_1_COUNT + STATE_2_STREAM_1_COUNT) * 10,
+        STATE_1_STREAM_1_COUNT + STATE_2_STREAM_1_COUNT));
+    expected.put(STREAM_INDEX_2, new StatsCounters(STATE_1_STREAM_2_COUNT * 10, STATE_1_STREAM_2_COUNT));
+    expected.put(STREAM_INDEX_3, new StatsCounters(STATE_2_STREAM_3_COUNT * 10, STATE_2_STREAM_3_COUNT));
+    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedStats());
     Assertions.assertEquals(1, stateDeltaTracker.stateDeltas.size());
     expected.clear();
 
     stateDeltaTracker.commitStateHash(STATE_3_HASH);
-    expected.put(STREAM_INDEX_1, STATE_1_STREAM_1_COUNT + STATE_2_STREAM_1_COUNT);
-    expected.put(STREAM_INDEX_2, STATE_1_STREAM_2_COUNT);
-    expected.put(STREAM_INDEX_3, STATE_2_STREAM_3_COUNT + STATE_3_STREAM_3_COUNT);
-    expected.put(STREAM_INDEX_4, STATE_3_STREAM_4_COUNT);
-    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedRecords());
+    expected.put(STREAM_INDEX_1,
+        new StatsCounters((STATE_1_STREAM_1_COUNT + STATE_2_STREAM_1_COUNT) * 10, STATE_1_STREAM_1_COUNT + STATE_2_STREAM_1_COUNT));
+    expected.put(STREAM_INDEX_2, new StatsCounters(STATE_1_STREAM_2_COUNT * 10, STATE_1_STREAM_2_COUNT));
+    expected.put(STREAM_INDEX_3,
+        new StatsCounters((STATE_2_STREAM_3_COUNT + STATE_3_STREAM_3_COUNT) * 10, STATE_2_STREAM_3_COUNT + STATE_3_STREAM_3_COUNT));
+    expected.put(STREAM_INDEX_4, new StatsCounters(STATE_3_STREAM_4_COUNT * 10, STATE_3_STREAM_4_COUNT));
+    Assertions.assertEquals(expected, stateDeltaTracker.getStreamToCommittedStats());
 
     // since all states are committed, capacity should be freed and the delta queue should be empty
     Assertions.assertEquals(INITIAL_DELTA_MEMORY_CAPACITY, stateDeltaTracker.remainingCapacity);

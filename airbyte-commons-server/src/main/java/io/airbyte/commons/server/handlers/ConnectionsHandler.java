@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.ConnectionSearch;
 import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSearch;
+import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.StreamDescriptor;
@@ -33,6 +34,7 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
 import io.airbyte.commons.server.handlers.helpers.DestinationMatcher;
+import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
@@ -66,6 +68,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -272,6 +275,7 @@ public class ConnectionsHandler {
     metadata.put("connector_source_definition_id", sourceDefinition.getSourceDefinitionId());
     metadata.put("connector_destination", destinationDefinition.getName());
     metadata.put("connector_destination_definition_id", destinationDefinition.getDestinationDefinitionId());
+    metadata.put("connection_id", standardSync.getConnectionId());
 
     final String frequencyString;
     if (standardSync.getScheduleType() != null) {
@@ -618,6 +622,28 @@ public class ConnectionsHandler {
         throw new RuntimeException("Unexpected schedule type");
       }
     }
+  }
+
+  public ConnectionReadList listConnectionsForWorkspaces(ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
+      throws IOException {
+
+    final List<ConnectionRead> connectionReads = Lists.newArrayList();
+
+    Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = configRepository.listWorkspaceStandardSyncsPaginated(
+        listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
+        listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
+        PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
+        PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()));
+
+    for (final Entry<UUID, List<StandardSync>> entry : workspaceIdToStandardSyncsMap.entrySet()) {
+      UUID workspaceId = entry.getKey();
+      for (StandardSync standardSync : entry.getValue()) {
+        ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+        connectionRead.setWorkspaceId(workspaceId);
+        connectionReads.add(connectionRead);
+      }
+    }
+    return new ConnectionReadList().connections(connectionReads);
   }
 
 }

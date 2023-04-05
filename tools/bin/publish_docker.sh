@@ -8,6 +8,7 @@ projectDir=(
   "container-orchestrator"
   "cron"
   "connector-builder-server"
+  "connector-atelier-server"
   "db/db-lib"
   "metrics/reporter"
   "proxy"

@@ -53,6 +53,13 @@ sealed interface FeatureFlagClient {
    * Returns the [flag] default value if no calculated value exists.
    */
   fun stringVariation(flag: Flag<String>, context: Context): String
+
+  /**
+   * Calculates the string value of the [flag] for the given [context].
+   *
+   * Returns the [flag] default value if no calculated value exists.
+   */
+  fun intVariation(flag: Flag<Int>, context: Context): Int
 }
 
 /** Config key used to determine which [FeatureFlagClient] to expose. */
@@ -115,6 +122,10 @@ class ConfigFileClient(@Property(name = CONFIG_FF_PATH) config: Path?) : Feature
     return flags[flag.key]?.serve?.let { it as? String } ?: flag.default
   }
 
+  override fun intVariation(flag: Flag<Int>, context: Context): Int {
+    return flags[flag.key]?.serve?.let { it as? Int } ?: flag.default
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(ConfigFileClient::class.java)
   }
@@ -140,6 +151,10 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
 
   override fun stringVariation(flag: Flag<String>, context: Context): String {
     return client.stringVariation(flag.key, context.toLDContext(), flag.default)
+  }
+
+  override fun intVariation(flag: Flag<Int>, context: Context): Int {
+    return client.intVariation(flag.key, context.toLDContext(), flag.default)
   }
 }
 
@@ -171,6 +186,10 @@ class TestClient @JvmOverloads constructor(val values: Map<String, Any> = mapOf(
 
   override fun stringVariation(flag: Flag<String>, context: Context): String {
     return values[flag.key]?.let { it as? String } ?: flag.default
+  }
+
+  override fun intVariation(flag: Flag<Int>, context: Context): Int {
+    return values[flag.key]?.let { it as? Int } ?: flag.default
   }
 }
 

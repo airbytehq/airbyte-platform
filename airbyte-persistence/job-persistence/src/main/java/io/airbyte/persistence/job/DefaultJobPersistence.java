@@ -23,7 +23,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.UnmodifiableIterator;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -36,7 +35,6 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
-import io.airbyte.config.JobOutput.OutputType;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
@@ -401,10 +399,12 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public void writeStats(final long jobId,
                          final int attemptNumber,
-                         final long estimatedRecords,
-                         final long estimatedBytes,
-                         final long recordsEmitted,
-                         final long bytesEmitted,
+                         final Long estimatedRecords,
+                         final Long estimatedBytes,
+                         final Long recordsEmitted,
+                         final Long bytesEmitted,
+                         final Long recordsCommitted,
+                         final Long bytesCommitted,
                          final List<StreamSyncStats> streamStats)
       throws IOException {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
@@ -415,7 +415,9 @@ public class DefaultJobPersistence implements JobPersistence {
           .withEstimatedRecords(estimatedRecords)
           .withEstimatedBytes(estimatedBytes)
           .withRecordsEmitted(recordsEmitted)
-          .withBytesEmitted(bytesEmitted);
+          .withBytesEmitted(bytesEmitted)
+          .withRecordsCommitted(recordsCommitted)
+          .withBytesCommitted(bytesCommitted);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
       saveToStreamStatsTable(now, streamStats, attemptId, ctx);
@@ -437,6 +439,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .set(SYNC_STATS.ESTIMATED_RECORDS, syncStats.getEstimatedRecords())
           .set(SYNC_STATS.ESTIMATED_BYTES, syncStats.getEstimatedBytes())
           .set(SYNC_STATS.RECORDS_COMMITTED, syncStats.getRecordsCommitted())
+          .set(SYNC_STATS.BYTES_COMMITTED, syncStats.getBytesCommitted())
           .set(SYNC_STATS.SOURCE_STATE_MESSAGES_EMITTED, syncStats.getSourceStateMessagesEmitted())
           .set(SYNC_STATS.DESTINATION_STATE_MESSAGES_EMITTED, syncStats.getDestinationStateMessagesEmitted())
           .set(SYNC_STATS.MAX_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED, syncStats.getMaxSecondsBeforeSourceStateMessageEmitted())
@@ -458,6 +461,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .set(SYNC_STATS.ESTIMATED_RECORDS, syncStats.getEstimatedRecords())
         .set(SYNC_STATS.ESTIMATED_BYTES, syncStats.getEstimatedBytes())
         .set(SYNC_STATS.RECORDS_COMMITTED, syncStats.getRecordsCommitted())
+        .set(SYNC_STATS.BYTES_COMMITTED, syncStats.getBytesCommitted())
         .set(SYNC_STATS.SOURCE_STATE_MESSAGES_EMITTED, syncStats.getSourceStateMessagesEmitted())
         .set(SYNC_STATS.DESTINATION_STATE_MESSAGES_EMITTED, syncStats.getDestinationStateMessagesEmitted())
         .set(SYNC_STATS.MAX_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED, syncStats.getMaxSecondsBeforeSourceStateMessageEmitted())
@@ -486,6 +490,8 @@ public class DefaultJobPersistence implements JobPersistence {
                 .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
                 .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
                 .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
+                .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
+                .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
                 .where(STREAM_STATS.ATTEMPT_ID.eq(attemptId))
                 .execute();
             return;
@@ -502,6 +508,8 @@ public class DefaultJobPersistence implements JobPersistence {
               .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
               .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
               .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
+              .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
+              .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
               .execute();
         });
   }
@@ -565,7 +573,8 @@ public class DefaultJobPersistence implements JobPersistence {
     final var attemptStats = new HashMap<JobAttemptPair, AttemptStats>();
     final var syncResults = ctx.fetch(
         "SELECT atmpt.attempt_number, atmpt.job_id,"
-            + "stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted, stats.records_committed "
+            + "stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted, "
+            + "stats.bytes_committed, stats.records_committed "
             + "FROM sync_stats stats "
             + "INNER JOIN attempts atmpt ON stats.attempt_id = atmpt.id "
             + "WHERE job_id IN ( " + jobIdsStr + ");");
@@ -574,9 +583,10 @@ public class DefaultJobPersistence implements JobPersistence {
       final var syncStats = new SyncStats()
           .withBytesEmitted(r.get(SYNC_STATS.BYTES_EMITTED))
           .withRecordsEmitted(r.get(SYNC_STATS.RECORDS_EMITTED))
-          .withRecordsCommitted(r.get(SYNC_STATS.RECORDS_COMMITTED))
           .withEstimatedRecords(r.get(SYNC_STATS.ESTIMATED_RECORDS))
-          .withEstimatedBytes(r.get(SYNC_STATS.ESTIMATED_BYTES));
+          .withEstimatedBytes(r.get(SYNC_STATS.ESTIMATED_BYTES))
+          .withBytesCommitted(r.get(SYNC_STATS.BYTES_COMMITTED))
+          .withRecordsCommitted(r.get(SYNC_STATS.RECORDS_COMMITTED));
       attemptStats.put(key, new AttemptStats(syncStats, Lists.newArrayList()));
     });
     return attemptStats;
@@ -590,7 +600,8 @@ public class DefaultJobPersistence implements JobPersistence {
   private static void hydrateStreamStats(final String jobIdsStr, final DSLContext ctx, final Map<JobAttemptPair, AttemptStats> attemptStats) {
     final var streamResults = ctx.fetch(
         "SELECT atmpt.attempt_number, atmpt.job_id, "
-            + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted "
+            + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
+            + "stats.bytes_committed, stats.records_committed "
             + "FROM stream_stats stats "
             + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
             + "WHERE attempt_id IN "
@@ -604,7 +615,9 @@ public class DefaultJobPersistence implements JobPersistence {
               .withBytesEmitted(r.get(STREAM_STATS.BYTES_EMITTED))
               .withRecordsEmitted(r.get(STREAM_STATS.RECORDS_EMITTED))
               .withEstimatedRecords(r.get(STREAM_STATS.ESTIMATED_RECORDS))
-              .withEstimatedBytes(r.get(STREAM_STATS.ESTIMATED_BYTES)));
+              .withEstimatedBytes(r.get(STREAM_STATS.ESTIMATED_BYTES))
+              .withBytesCommitted(r.get(STREAM_STATS.BYTES_COMMITTED))
+              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)));
 
       final var key = new JobAttemptPair(r.get(ATTEMPTS.JOB_ID), r.get(ATTEMPTS.ATTEMPT_NUMBER));
       if (!attemptStats.containsKey(key)) {
@@ -644,6 +657,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .withEstimatedBytes(record.get(SYNC_STATS.ESTIMATED_BYTES)).withEstimatedRecords(record.get(SYNC_STATS.ESTIMATED_RECORDS))
         .withSourceStateMessagesEmitted(record.get(SYNC_STATS.SOURCE_STATE_MESSAGES_EMITTED))
         .withDestinationStateMessagesEmitted(record.get(SYNC_STATS.DESTINATION_STATE_MESSAGES_EMITTED))
+        .withBytesCommitted(record.get(SYNC_STATS.BYTES_COMMITTED))
         .withRecordsCommitted(record.get(SYNC_STATS.RECORDS_COMMITTED))
         .withMeanSecondsBeforeSourceStateMessageEmitted(record.get(SYNC_STATS.MEAN_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED))
         .withMaxSecondsBeforeSourceStateMessageEmitted(record.get(SYNC_STATS.MAX_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED))
@@ -655,7 +669,8 @@ public class DefaultJobPersistence implements JobPersistence {
     return record -> {
       final var stats = new SyncStats()
           .withEstimatedRecords(record.get(STREAM_STATS.ESTIMATED_RECORDS)).withEstimatedBytes(record.get(STREAM_STATS.ESTIMATED_BYTES))
-          .withRecordsEmitted(record.get(STREAM_STATS.RECORDS_EMITTED)).withBytesEmitted(record.get(STREAM_STATS.BYTES_EMITTED));
+          .withRecordsEmitted(record.get(STREAM_STATS.RECORDS_EMITTED)).withBytesEmitted(record.get(STREAM_STATS.BYTES_EMITTED))
+          .withRecordsCommitted(record.get(STREAM_STATS.RECORDS_COMMITTED)).withBytesCommitted(record.get(STREAM_STATS.BYTES_COMMITTED));
       return new StreamSyncStats()
           .withStreamName(record.get(STREAM_STATS.STREAM_NAME)).withStreamNamespace(record.get(STREAM_STATS.STREAM_NAMESPACE))
           .withStats(stats);
@@ -940,7 +955,7 @@ public class DefaultJobPersistence implements JobPersistence {
             .leftJoin(NORMALIZATION_SUMMARIES).on(NORMALIZATION_SUMMARIES.ATTEMPT_ID.eq(ATTEMPTS.ID))
             .where(ATTEMPTS.JOB_ID.eq(jobId))
             .fetch(record -> new AttemptNormalizationStatus(record.get(ATTEMPTS.ATTEMPT_NUMBER),
-                Optional.of(record.get(SYNC_STATS.RECORDS_COMMITTED)), record.get(NORMALIZATION_SUMMARIES.FAILURES) != null)));
+                Optional.ofNullable(record.get(SYNC_STATS.RECORDS_COMMITTED)), record.get(NORMALIZATION_SUMMARIES.FAILURES) != null)));
   }
 
   // Retrieves only Job information from the record, without any attempt info
@@ -957,18 +972,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static JobConfig parseJobConfigFromString(final String jobConfigString) {
-    final JobConfig jobConfig = Jsons.deserialize(jobConfigString, JobConfig.class);
-    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
-    if (jobConfig.getConfigType() == ConfigType.SYNC && jobConfig.getSync() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getSync().getConfiguredAirbyteCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getSync().getConfiguredAirbyteCatalog());
-    } else if (jobConfig.getConfigType() == ConfigType.RESET_CONNECTION && jobConfig.getResetConnection() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobConfig.getResetConnection().getConfiguredAirbyteCatalog());
-    }
-    return jobConfig;
+    return Jsons.deserialize(jobConfigString, JobConfig.class);
   }
 
   private static Attempt getAttemptFromRecord(final Record record) {
@@ -992,18 +996,7 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   private static JobOutput parseJobOutputFromString(final String jobOutputString) {
-    final JobOutput jobOutput = Jsons.deserialize(jobOutputString, JobOutput.class);
-    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
-    if (jobOutput.getOutputType() == OutputType.DISCOVER_CATALOG && jobOutput.getDiscoverCatalog() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getDiscoverCatalog().getCatalog());
-    } else if (jobOutput.getOutputType() == OutputType.SYNC && jobOutput.getSync() != null) {
-      // TODO feature flag this for data types rollout
-      // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(jobOutput.getSync().getOutputCatalog());
-      CatalogMigrationV1Helper.downgradeSchemaIfNeeded(jobOutput.getSync().getOutputCatalog());
-    }
-    return jobOutput;
+    return Jsons.deserialize(jobOutputString, JobOutput.class);
   }
 
   private static List<AttemptWithJobInfo> getAttemptsWithJobsFromResult(final Result<Record> result) {

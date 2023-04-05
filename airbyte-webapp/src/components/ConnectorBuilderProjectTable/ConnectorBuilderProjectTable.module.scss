@@ -9,14 +9,36 @@
 }
 
 .draft {
-  color: colors.$grey-400;
-}
-
-.nameCell {
-  // FIXME temporary solution to align with other connectors, should be removed after connectors page revamp
-  padding-left: 25px;
+  color: colors.$grey-800;
 }
 
 .versionCell {
   padding-left: variables.$spacing-sm;
+}
+
+.versionItem {
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-md;
+  border: none;
+  background: none;
+  display: block;
+  text-align: left;
+
+  &:hover {
+    cursor: pointer;
+    background: colors.$grey-50;
+  }
+
+  &--active:hover {
+    cursor: initial;
+    background: none;
+  }
+}
+
+.activeVersion {
+  background: colors.$grey-50;
+  color: colors.$dark-blue;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-sm;
+  text-transform: uppercase;
 }

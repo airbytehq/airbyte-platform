@@ -30,8 +30,6 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.PerfBackgroundJsonValidation;
-import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -55,6 +53,8 @@ import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.book_keeping.MessageTracker;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncher;
 import io.airbyte.workers.process.KubePodProcess;
@@ -201,8 +201,17 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
       final boolean fieldSelectionEnabled = workspaceId != null
           && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
               || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
-      final boolean heartbeatTimeoutEnabled = workspaceId != null
-          && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
+
+      // TODO clean up the feature flag init once commitStates and commitStats have been rolled out
+      final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
+      final SyncPersistence syncPersistence = commitStatesAsap
+          ? syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
+              sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog())
+          : null;
+      final boolean commitStatsAsap = DefaultReplicationWorker.shouldCommitStatsAsap(syncInput);
+      final MessageTracker messageTracker =
+          commitStatsAsap ? new AirbyteMessageTracker(syncPersistence, featureFlags) : new AirbyteMessageTracker(featureFlags);
+
       final var replicationWorker = new DefaultReplicationWorker(
           jobRunConfig.getJobId(),
           Math.toIntExact(jobRunConfig.getAttemptId()),
@@ -214,14 +223,12 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
               new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
                   Optional.of(syncInput.getCatalog())),
               migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
-          new AirbyteMessageTracker(featureFlags),
-          syncPersistenceFactory,
-          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput),
-              featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(syncInput.getWorkspaceId()))),
+          messageTracker,
+          syncPersistence,
+          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
           metricReporter,
           new ConnectorConfigUpdater(sourceApi, destinationApi),
           fieldSelectionEnabled,
-          heartbeatTimeoutEnabled,
           heartbeatTimeoutChaperone);
 
       log.info("Running replication worker...");

@@ -51,6 +51,10 @@ class ConfigFileClientTest {
     // not defined in flags.yml
     val testStringDne = Temporary(key = "test-string-dne", default = "returned")
 
+    val testIntExample = Temporary(key = "test-int", default = 1)
+    // not defined in flags.yml
+    val testIntDne = Temporary(key = "test-int-dne", default = 2)
+
     val ctx = Workspace(workspaceId)
 
     with(client) {
@@ -60,6 +64,8 @@ class ConfigFileClientTest {
       assertFalse { boolVariation(testBoolDne, ctx) }
       assertEquals("example", stringVariation(testStringExample, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
+      assertEquals(1234, intVariation(testIntExample, ctx))
+      assertEquals(testIntDne.default, intVariation(testIntDne, ctx))
     }
   }
 
@@ -69,12 +75,14 @@ class ConfigFileClientTest {
     val defaultFalse = Temporary(key = "default-false", default = false)
     val defaultTrue = Temporary(key = "default-true", default = true)
     val defaultResponse = Temporary(key = "default-string", default = "response")
+    val defaultInt = Temporary(key = "default-int", default = 4321)
 
     val ctx = Workspace(workspaceId)
     with(client) {
       assertTrue { boolVariation(defaultTrue, ctx) }
       assertFalse { boolVariation(defaultFalse, ctx) }
       assertEquals(defaultResponse.default, stringVariation(defaultResponse, ctx))
+      assertEquals(defaultInt.default, intVariation(defaultInt, ctx))
     }
   }
 
@@ -84,12 +92,14 @@ class ConfigFileClientTest {
     val defaultFalse = Temporary(key = "default-false", default = false)
     val defaultTrue = Temporary(key = "default-true", default = true)
     val defaultResponse = Temporary(key = "default-string", default = "response")
+    val defaultInt = Temporary(key = "default-int", default = 5678)
 
     val ctx = Workspace(workspaceId)
     with(client) {
       assertTrue { boolVariation(defaultTrue, ctx) }
       assertFalse { boolVariation(defaultFalse, ctx) }
       assertEquals(defaultResponse.default, stringVariation(defaultResponse, ctx))
+      assertEquals(defaultInt.default, intVariation(defaultInt, ctx))
     }
   }
 
@@ -99,12 +109,14 @@ class ConfigFileClientTest {
     val defaultFalse = Temporary(key = "default-false", default = false)
     val defaultTrue = Temporary(key = "default-true", default = true)
     val defaultResponse = Temporary(key = "default-string", default = "response")
+    val defaultInt = Temporary(key = "default-int", default = 31254)
 
     val ctx = Workspace(workspaceId)
     with(client) {
       assertTrue { boolVariation(defaultTrue, ctx) }
       assertFalse { boolVariation(defaultFalse, ctx) }
       assertEquals(defaultResponse.default, stringVariation(defaultResponse, ctx))
+      assertEquals(defaultInt.default, intVariation(defaultInt, ctx))
     }
   }
 
@@ -192,10 +204,12 @@ class LaunchDarklyClientTest {
     val testFalse = Temporary(key = "test-false", default = true)
     val testBoolDne = Temporary(key = "test-bool-dne", default = false)
 
+
     val ctx = Workspace(workspaceId)
 
     val ldClient: LDClient = mockk()
     val flag = slot<String>()
+
 
     every {
       ldClient.boolVariation(capture(flag), any<LDContext>(), any())
@@ -219,6 +233,19 @@ class LaunchDarklyClientTest {
       }
     }
 
+    val testInt = Temporary(key = "test-int", default = 1234)
+    val testIntDne = Temporary(key = "test-int-dne", default = 4321)
+    val intFlagValue = 32
+    every {
+      ldClient.intVariation(capture(flag), any<LDContext>(), any())
+    } answers {
+      when (flag.captured) {
+        testInt.key -> intFlagValue
+        testIntDne.key -> testIntDne.default
+        else -> throw IllegalArgumentException("${flag.captured} was unexpected")
+      }
+    }
+
     val client: FeatureFlagClient = LaunchDarklyClient(ldClient)
     with(client) {
       assertTrue { boolVariation(testTrue, ctx) }
@@ -226,6 +253,9 @@ class LaunchDarklyClientTest {
       assertFalse { boolVariation(testBoolDne, ctx) }
       assertEquals("pretend override", stringVariation(testStringExample, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
+      assertEquals(intFlagValue, intVariation(testInt, ctx))
+      assertEquals(testIntDne.default, intVariation(testIntDne, ctx))
+
     }
 
     verify {
@@ -234,6 +264,8 @@ class LaunchDarklyClientTest {
       ldClient.boolVariation(testBoolDne.key, any<LDContext>(), testBoolDne.default)
       ldClient.stringVariation(testStringExample.key, any<LDContext>(), testStringExample.default)
       ldClient.stringVariation(testStringDne.key, any<LDContext>(), testStringDne.default)
+      ldClient.intVariation(testInt.key, any<LDContext>(), testInt.default)
+      ldClient.intVariation(testIntDne.key, any<LDContext>(), testIntDne.default)
     }
   }
 
@@ -286,10 +318,13 @@ class TestClientTest {
     val testBoolDne = Temporary(key = "test-bool-dne", default = false)
     val testStringExample = Pair(Temporary(key = "test-string", default = "example"), "non-default")
     val testStringDne = Temporary(key = "test-string-dne", default = "default")
+    val nonDefaultIntValue = 4321
+    val testInt = Pair(Temporary(key = "test-int", default = 1234), nonDefaultIntValue)
+    val testIntDne = Temporary(key = "test-int-dne", default = 5678)
 
     val ctx = Workspace(workspaceId)
     // map of flag.key to value that should be returned
-    val values: MutableMap<String, Any> = mutableMapOf(testTrue, testFalse, testStringExample)
+    val values: MutableMap<String, Any> = mutableMapOf(testTrue, testFalse, testStringExample, testInt)
       .mapKeys { it.key.key }
       .toMutableMap()
 
@@ -300,12 +335,16 @@ class TestClientTest {
       assertFalse { boolVariation(testBoolDne, ctx) }
       assertEquals("non-default", stringVariation(testStringExample.first, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
+      assertEquals(nonDefaultIntValue, intVariation(testInt.first, ctx))
+      assertEquals(testIntDne.default, intVariation(testIntDne, ctx))
     }
 
+    val anotherNonDefaultIntValue = 87654
     // modify the value, ensure the client reports the new modified value
     values[testTrue.first.key] = false
     values[testFalse.first.key] = true
     values[testStringExample.first.key] = "a different value"
+    values[testInt.first.key] = anotherNonDefaultIntValue
 
     with(client) {
       assertFalse { boolVariation(testTrue.first, ctx) }
@@ -313,6 +352,8 @@ class TestClientTest {
       assertFalse("undefined flags should always return false") { boolVariation(testBoolDne, ctx) }
       assertEquals("a different value", stringVariation(testStringExample.first, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
+      assertEquals(anotherNonDefaultIntValue, intVariation(testInt.first, ctx))
+      assertEquals(testIntDne.default, intVariation(testIntDne, ctx))
     }
   }
 

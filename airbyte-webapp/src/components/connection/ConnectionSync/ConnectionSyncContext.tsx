@@ -1,13 +1,27 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { JobRead, ConnectionStatus, ConnectionStream, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useResetConnection, useSyncConnection } from "hooks/services/useConnectionHook";
+import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
 import { useCancelJob } from "services/job/JobService";
 
-const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
+interface ConnectionSyncContext {
+  syncConnection: () => Promise<void>;
+  connectionDeprecated: boolean;
+  syncStarting: boolean;
+  jobSyncRunning: boolean;
+  cancelJob: () => Promise<void>;
+  cancelStarting: boolean;
+  resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
+  resetStarting: boolean;
+  jobResetRunning: boolean;
+  activeJob?: JobRead;
+}
+
+const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);
+  const connectionDeprecated = connection.status === ConnectionStatus.deprecated;
 
   useEffect(() => {
     if (activeJob?.updatedAt && jobs?.[0]?.job?.updatedAt && activeJob.updatedAt <= jobs[0].job.updatedAt) {
@@ -29,9 +43,19 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
   }, [jobs, doCancelJob]);
 
   const { mutateAsync: doResetConnection, isLoading: resetStarting } = useResetConnection();
-  const resetConnection = useCallback(async () => {
-    setActiveJob((await doResetConnection(connection.connectionId)).job);
-  }, [connection.connectionId, doResetConnection]);
+  const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const resetStreams = useCallback(
+    async (streams?: ConnectionStream[]) => {
+      if (streams) {
+        // Reset a set of streams.
+        setActiveJob((await resetStream(streams)).job);
+      } else {
+        // Reset all selected streams
+        setActiveJob((await doResetConnection(connection.connectionId)).job);
+      }
+    },
+    [connection.connectionId, doResetConnection, resetStream]
+  );
 
   const jobSyncRunning = useMemo(
     () => activeJob?.status === "running" && activeJob.configType === "sync",
@@ -44,21 +68,22 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]) => {
 
   return {
     syncConnection,
+    connectionDeprecated,
     syncStarting,
     jobSyncRunning,
     cancelJob,
     cancelStarting,
-    resetConnection,
+    resetStreams,
     resetStarting,
     jobResetRunning,
     activeJob,
   };
 };
 
-const ConnectionSyncContext = createContext<ReturnType<typeof useConnectionSyncContextInit> | null>(null);
+const connectionSyncContext = createContext<ConnectionSyncContext | null>(null);
 
 export const useConnectionSyncContext = () => {
-  const context = useContext(ConnectionSyncContext);
+  const context = useContext(connectionSyncContext);
   if (context === null) {
     throw new Error("useConnectionSyncContext must be used within a ConnectionSyncContextProvider");
   }
@@ -68,7 +93,7 @@ export const useConnectionSyncContext = () => {
 export const ConnectionSyncContextProvider: React.FC<{
   jobs: JobWithAttemptsRead[];
 }> = ({ jobs, children }) => {
-  const connectionSyncContext = useConnectionSyncContextInit(jobs);
+  const context = useConnectionSyncContextInit(jobs);
 
-  return <ConnectionSyncContext.Provider value={connectionSyncContext}>{children}</ConnectionSyncContext.Provider>;
+  return <connectionSyncContext.Provider value={context}>{children}</connectionSyncContext.Provider>;
 };

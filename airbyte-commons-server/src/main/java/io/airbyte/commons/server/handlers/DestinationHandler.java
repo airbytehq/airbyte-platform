@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
 import io.airbyte.api.model.generated.DestinationUpdate;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
@@ -27,6 +28,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
@@ -37,6 +39,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -148,7 +151,8 @@ public class DestinationHandler {
     }
 
     final var fullConfig = secretsRepositoryReader.getDestinationConnectionWithSecrets(destination.getDestinationId()).getConfiguration();
-    final ConnectorSpecification spec = getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getDestinationId());
+    final ConnectorSpecification spec =
+        getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
 
     // persist
     persistDestinationConnection(
@@ -168,7 +172,8 @@ public class DestinationHandler {
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
     final ConnectorSpecification spec =
-        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getDestinationId());
+        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
+            updatedDestination.getDestinationId());
 
     // validate configuration
     validateDestination(spec, updatedDestination.getConfiguration());
@@ -224,9 +229,28 @@ public class DestinationHandler {
   public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
+    final List<DestinationRead> destinationReads = new ArrayList<>();
+    final List<DestinationConnection> destinationConnections =
+        configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId());
+    for (final DestinationConnection destinationConnection : destinationConnections) {
+      destinationReads.add(buildDestinationRead(destinationConnection));
+    }
+
+    return new DestinationReadList().destinations(destinationReads);
+  }
+
+  public DestinationReadList listDestinationsForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+
     final List<DestinationRead> reads = Lists.newArrayList();
-    for (final DestinationConnection dci : configRepository.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId())) {
-      reads.add(buildDestinationRead(dci));
+    List<DestinationConnection> destinationConnections = configRepository.listWorkspacesDestinationConnections(
+        new ResourcesQueryPaginated(
+            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+    for (final DestinationConnection destinationConnection : destinationConnections) {
+      reads.add(buildDestinationRead(destinationConnection));
     }
     return new DestinationReadList().destinations(reads);
   }
@@ -263,18 +287,18 @@ public class DestinationHandler {
     validator.ensure(spec.getConnectionSpecification(), configuration);
   }
 
-  public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID destinationId)
+  public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID workspaceId, final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationId);
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
     return destinationVersion.getSpec();
   }
 
   public ConnectorSpecification getSpecForWorkspaceId(final UUID destinationDefinitionId, final UUID workspaceId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destinationDefinition, workspaceId);
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
     return destinationVersion.getSpec();
   }
 
@@ -305,7 +329,8 @@ public class DestinationHandler {
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final ConnectorSpecification spec =
-        getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getDestinationId());
+        getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
+            destinationConnection.getDestinationId());
     return buildDestinationRead(destinationConnection, spec);
   }
 

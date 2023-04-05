@@ -32,6 +32,7 @@ helm upgrade --install --debug --namespace $NAMESPACE \\
  ab charts/airbyte
 kubectl apply -f tools/bin/gke-kube-helm-acceptance-test/postgres-source.yaml --namespace=$NAMESPACE
 kubectl apply -f tools/bin/gke-kube-helm-acceptance-test/postgres-destination.yaml --namespace=$NAMESPACE
+kubectl apply -f tools/bin/gke-kube-helm-acceptance-test/echo-server.yaml --namespace=$NAMESPACE
 
 sleep 180s
 
@@ -68,8 +69,9 @@ kubectl port-forward svc/postgres-source-svc 2000:5432 --namespace=$NAMESPACE &
 
 kubectl port-forward svc/postgres-destination-svc 4000:5432 --namespace=$NAMESPACE &
 
+kubectl port-forward svc/echo-server-svc 6000:8080 --namespace=$NAMESPACE &
+
 sleep 10s
 
 echo "Running e2e tests via gradle..."
 KUBE=true IS_GKE=true USE_EXTERNAL_DEPLOYMENT=true ./gradlew :airbyte-tests:acceptanceTests --scan -i
-

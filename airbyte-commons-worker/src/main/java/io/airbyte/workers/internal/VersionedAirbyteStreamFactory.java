@@ -171,7 +171,15 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
     this.protocolVersion = protocolVersion;
   }
 
-  @Override
+  /**
+   * This was initially implemented as an override on the
+   * {@link DefaultAirbyteStreamFactory#toAirbyteMessage(String)}. However, rollout of the type system
+   * was deprioritized. In the mean time, the performance work uncovered some low-hanging fruit in the
+   * deserialization process that changes the signature of the toAirbyteMessage method.
+   * <p>
+   * This is left here for posterity when the types work is picked up. It is not currently used. This
+   * means message unwrapping is still done by DefaultAirbyteStreamFactory.
+   */
   protected Stream<AirbyteMessage> toAirbyteMessage(final JsonNode json) {
     try {
       final AirbyteMessage message = migrator.upgrade(deserializer.deserialize(json), configuredAirbyteCatalog);

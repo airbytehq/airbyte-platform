@@ -17,7 +17,12 @@
     border-color: colors.$red-100;
   }
 
-  &:not(.disabled, .focused):hover {
+  &.disabled,
+  &.readOnly {
+    cursor: not-allowed;
+  }
+
+  &:not(.disabled, .readOnly, .focused):hover {
     border-color: colors.$grey-100;
 
     &.light {
@@ -59,7 +64,7 @@
   }
 
   &.disabled,
-  &:read-only {
+  &.readOnly {
     pointer-events: none;
     color: colors.$grey-400;
   }

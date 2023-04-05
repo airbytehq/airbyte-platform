@@ -9,10 +9,9 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
-import { useAvailableConnectorDefinitions } from "hooks/domain/connector/useAvailableConnectorDefinitions";
+import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
+import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useExperiment } from "hooks/services/Experiment";
-import { useConnectorSpecifications } from "services/connector/ConnectorDefinitions";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { ConnectorIds } from "utils/connectors";
 import { getIcon } from "utils/imageUtils";
 import { links } from "utils/links";
@@ -52,28 +51,25 @@ const roundConnectorCount = (connectors: Record<string, SourceDefinitionRead | D
  * them to a map by id, to access them faster.
  */
 export const useConnectorSpecificationMap = (): ConnectorSpecificationMap => {
-  const workspace = useCurrentWorkspace();
-  const { sourceDefinitions: sources, destinationDefinitions: destinations } = useConnectorSpecifications();
-
-  const filteredSources = useAvailableConnectorDefinitions(sources, workspace);
-  const filteredDestinations = useAvailableConnectorDefinitions(destinations, workspace);
+  const sourceDefinitionsList = useAvailableSourceDefinitions();
+  const destinationDefinitionsList = useAvailableDestinationDefinitions();
 
   const sourceDefinitions = useMemo(
     () =>
-      filteredSources.reduce<Record<string, SourceDefinitionRead>>((map, def) => {
+      sourceDefinitionsList.reduce<Record<string, SourceDefinitionRead>>((map, def) => {
         map[def.sourceDefinitionId] = def;
         return map;
       }, {}),
-    [filteredSources]
+    [sourceDefinitionsList]
   );
 
   const destinationDefinitions = useMemo(
     () =>
-      filteredDestinations.reduce<Record<string, DestinationDefinitionRead>>((map, def) => {
+      destinationDefinitionsList.reduce<Record<string, DestinationDefinitionRead>>((map, def) => {
         map[def.destinationDefinitionId] = def;
         return map;
       }, {}),
-    [filteredDestinations]
+    [destinationDefinitionsList]
   );
 
   return { sourceDefinitions, destinationDefinitions };

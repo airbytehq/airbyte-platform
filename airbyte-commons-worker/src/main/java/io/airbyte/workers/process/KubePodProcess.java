@@ -13,6 +13,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.workers.helper.ConnectorDatadogSupportHelper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -45,6 +46,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +118,7 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
+  private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
 
   private static final String PIPES_DIR = "/pipes";
   private static final String STDIN_PIPE_FILE = PIPES_DIR + "/stdin";
@@ -144,6 +147,7 @@ public class KubePodProcess implements KubePod {
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 
+  private static final ConnectorDatadogSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorDatadogSupportHelper();
   private final KubernetesClient fabricClient;
   private final Pod podDefinition;
 
@@ -232,6 +236,11 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
+    if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null && isSupportDatadog(image)) {
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addDatadogVars(envVars);
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
+    }
+
     final ContainerBuilder containerBuilder = new ContainerBuilder()
         .withName(MAIN_CONTAINER_NAME)
         .withPorts(containerPorts)
@@ -247,6 +256,11 @@ public class KubePodProcess implements KubePod {
       containerBuilder.withResources(resourceRequirementsBuilder.build());
     }
     return containerBuilder.build();
+  }
+
+  private static boolean isSupportDatadog(final String image) {
+    return Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(","))
+        .anyMatch(connectorNameAndVersion -> CONNECTOR_DATADOG_SUPPORT_HELPER.connectorVersionCompare(connectorNameAndVersion, image));
   }
 
   /**

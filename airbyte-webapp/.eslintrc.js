@@ -122,6 +122,28 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   overrides: [
     {
+      // Forbid importing anything from within `core/api/`, except the explicit files that are meant to be accessed outside this folder.
+      files: ["src/**/*"],
+      excludedFiles: ["src/core/api/**"],
+      rules: {
+        "import/no-restricted-paths": [
+          "error",
+          {
+            basePath: path.resolve(__dirname, "./src"),
+            zones: [
+              {
+                target: ".",
+                from: "./core/api",
+                except: ["index.ts", "cloud.ts", "types/", "errors/index.ts"],
+                message:
+                  "Only import from `core/api`, `core/api/cloud`, `core/api/errors`, or `core/api/types/*`. See also `core/api/README.md`.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       files: ["scripts/**/*", "packages/**/*"],
       rules: {
         "@typescript-eslint/no-var-requires": "off",

@@ -1,3 +1,5 @@
+import toLower from "lodash/toLower";
+
 import { FormBaseItem, FormBlock } from "core/form/types";
 import { AdvancedAuth, SourceAuthSpecification } from "core/request/AirbyteClient";
 import { naturalComparator } from "utils/objects";
@@ -103,4 +105,12 @@ export function getPatternDescriptor(formItem: FormBaseItem): string | undefined
     return "YYYY-MM-DDTHH:mm:ss.SSSZ";
   }
   return undefined;
+}
+
+export function isLocalhost(value: string | undefined) {
+  if (value === undefined) {
+    return false;
+  }
+  const normalized = toLower(value.trim());
+  return normalized === "localhost" || /127\.\d+\.\d+\.\d+/.test(normalized);
 }

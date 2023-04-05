@@ -454,7 +454,7 @@ class CdcAcceptanceTests {
   }
 
   private List<DestinationCdcRecordMatcher> getCdcRecordMatchersFromSource(final Database source, final String tableName) throws SQLException {
-    final List<JsonNode> sourceRecords = testHarness.retrieveSourceRecords(source, tableName);
+    final List<JsonNode> sourceRecords = testHarness.retrieveRecordsFromDatabase(source, tableName);
     return new ArrayList<>(sourceRecords
         .stream()
         .map(sourceRecord -> new DestinationCdcRecordMatcher(sourceRecord, Instant.EPOCH, Optional.empty()))

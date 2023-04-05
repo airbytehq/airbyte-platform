@@ -48,7 +48,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void beforeEach() throws Exception {
     truncateAllTables();
-    configRepository = new ConfigRepository(database, MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   @Test
@@ -247,7 +247,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition().withSourceDefinitionId(sourceDefinitionId), workspaceId);
   }
 
-  JsonNode createSpec(JsonNode connectionSpecification) {
+  JsonNode createSpec(final JsonNode connectionSpecification) {
     return new ObjectMapper().createObjectNode().set("connectionSpecification", connectionSpecification);
   }
 

@@ -8,6 +8,7 @@ import { useParams } from "react-router-dom";
 import { useDebounce, useEffectOnce } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
+import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderFormValues,
   convertToManifest,
@@ -15,7 +16,6 @@ import {
   DEFAULT_JSON_MANIFEST_VALUES,
   EditorView,
 } from "components/connectorBuilder/types";
-import { convertToBuilderFormValuesSync } from "components/connectorBuilder/useManifestToBuilderForm";
 
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
@@ -31,7 +31,12 @@ import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
-import { BuilderProjectWithManifest, useProject, useUpdateProject } from "./ConnectorBuilderProjectsService";
+import {
+  BuilderProject,
+  BuilderProjectWithManifest,
+  useProject,
+  useUpdateProject,
+} from "./ConnectorBuilderProjectsService";
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -50,6 +55,7 @@ interface FormStateContext {
   savingState: SavingState;
   blockedOnInvalidState: boolean;
   projectId: string;
+  currentProject: BuilderProject;
   setBuilderFormValues: (values: BuilderFormValues, isInvalid: boolean) => void;
   setJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
@@ -83,6 +89,19 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
   const { builderProject, failedInitialFormValueConversion, initialFormValues, updateProject, updateError } =
     useInitializedBuilderProject(projectId);
+
+  const currentProject: BuilderProject = useMemo(
+    () => ({
+      name: builderProject.builderProject.name,
+      version: builderProject.builderProject.activeDeclarativeManifestVersion
+        ? builderProject.builderProject.activeDeclarativeManifestVersion
+        : "draft",
+      id: builderProject.builderProject.builderProjectId,
+      hasDraft: builderProject.builderProject.hasDraft,
+      sourceDefinitionId: builderProject.builderProject.sourceDefinitionId,
+    }),
+    [builderProject.builderProject]
+  );
 
   const [jsonManifest, setJsonManifest] = useState<DeclarativeComponentSchema>(
     (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) || DEFAULT_JSON_MANIFEST_VALUES
@@ -216,6 +235,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     savingState,
     blockedOnInvalidState,
     projectId,
+    currentProject,
     setBuilderFormValues,
     setJsonManifest,
     setYamlIsValid,

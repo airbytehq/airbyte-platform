@@ -6,9 +6,11 @@ import selectEvent from "react-select-event";
 
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { ConnectorDefinition } from "core/domain/connector";
+import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
+import { SourceAuthService } from "core/domain/connector/SourceAuthService";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
+import { FeatureItem } from "hooks/services/Feature";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";
@@ -19,6 +21,18 @@ jest.mock("components/ui/Markdown", () => ({ children }: React.PropsWithChildren
 
 jest.mock("../../../hooks/services/useDestinationHook", () => ({
   useDestinationList: () => ({ destinations: [] }),
+}));
+
+jest.mock("../../../core/domain/connector/SourceAuthService", () => ({
+  SourceAuthService: class SourceAuthService {
+    public static mockedPayload: Record<string, unknown> = {};
+    getConsentUrl() {
+      return { consentUrl: "http://example.org" };
+    }
+    completeOauth() {
+      return Promise.resolve(SourceAuthService.mockedPayload);
+    }
+  },
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
@@ -41,14 +55,16 @@ jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
 
 jest.setTimeout(20000);
 
+const nextTick = () => new Promise((r) => setTimeout(r, 0));
+
 const connectorDefinition = {
   sourceDefinitionId: "1",
   documentationUrl: "",
 } as ConnectorDefinition;
 
-const useAddPriceListItem = (container: HTMLElement) => {
+const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
   const priceList = getByTestId(container, "connectionConfiguration.priceList");
-  let index = 0;
+  let index = initialIndex;
 
   return async (name: string, price: string) => {
     const addButton = getByTestId(priceList, "addItemButton");
@@ -72,8 +88,42 @@ const useAddPriceListItem = (container: HTMLElement) => {
   };
 };
 
+function getOAuthButton(container: HTMLElement) {
+  return container.querySelector("[data-testid='oauth-button']");
+}
+
+function getSubmitButton(container: HTMLElement) {
+  return container.querySelector("[type='submit']");
+}
+
+function getInputByName(container: HTMLElement, name: string) {
+  return container.querySelector(`input[name='${name}']`);
+}
+
+async function executeOAuthFlow(container: HTMLElement) {
+  const oAuthButton = getOAuthButton(container);
+  await waitFor(() => userEvent.click(oAuthButton!));
+  // wait for the mocked consent url call to finish
+  await waitFor(nextTick);
+  // mock the message coming from the separate oauth window
+  window.postMessage(
+    {
+      airbyte_type: "airbyte_oauth_callback",
+    },
+    "http://localhost"
+  );
+  // mock the complete oauth request
+  await waitFor(nextTick);
+}
+
+async function submitForm(container: HTMLElement) {
+  const submit = getSubmitButton(container);
+  await waitFor(() => userEvent.click(submit!));
+}
+
 const schema: AirbyteJSONSchema = {
   type: "object",
+  required: ["host", "port", "password", "credentials", "message", "priceList", "emails", "workTime"],
   properties: {
     host: {
       type: "string",
@@ -96,6 +146,7 @@ const schema: AirbyteJSONSchema = {
       oneOf: [
         {
           title: "api key",
+          required: ["api_key"],
           properties: {
             api_key: {
               type: "string",
@@ -109,6 +160,7 @@ const schema: AirbyteJSONSchema = {
         },
         {
           title: "oauth",
+          required: ["redirect_uri"],
           properties: {
             redirect_uri: {
               type: "string",
@@ -162,7 +214,6 @@ const schema: AirbyteJSONSchema = {
 };
 
 jest.mock("hooks/services/AppMonitoringService");
-jest.mock("hooks/services/Analytics");
 
 jest.mock("hooks/services/useWorkspace", () => ({
   useCurrentWorkspace: () => ({
@@ -172,52 +223,113 @@ jest.mock("hooks/services/useWorkspace", () => ({
   }),
 }));
 
-describe("Service Form", () => {
+jest.mock("hooks/services/Experiment/ExperimentService", () => ({
+  useExperiment: (id: string) => {
+    if (id === "connector.form.simplifyConfiguration") {
+      return true;
+    }
+    return undefined;
+  },
+  ExperimentProvider: ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>,
+}));
+
+describe("Connector form", () => {
+  let result: ConnectorFormValues | undefined;
+
+  async function renderForm({
+    disableOAuth,
+    formValuesOverride,
+    propertiesOverride,
+    specificationOverride,
+  }: {
+    disableOAuth?: boolean;
+    formValuesOverride?: Record<string, unknown>;
+    specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+    propertiesOverride?: Record<string, AirbyteJSONSchema>;
+  } = {}) {
+    const renderResult = await render(
+      <ConnectorForm
+        formType="source"
+        formValues={{ name: "test-name", connectionConfiguration: { ...formValuesOverride } }}
+        onSubmit={async (values) => {
+          result = values;
+        }}
+        isEditMode={Boolean(formValuesOverride)}
+        renderFooter={() => <button type="submit">Submit</button>}
+        selectedConnectorDefinition={connectorDefinition}
+        selectedConnectorDefinitionSpecification={
+          // @ts-expect-error Partial objects for testing
+          {
+            sourceDefinitionId: "test-service-type",
+            documentationUrl: "",
+            connectionSpecification: {
+              ...schema,
+              properties: {
+                ...schema.properties,
+                ...propertiesOverride,
+              },
+            },
+            ...specificationOverride,
+          } as DestinationDefinitionSpecificationRead
+        }
+      />,
+      undefined,
+      disableOAuth ? undefined : [FeatureItem.AllowOAuthConnector]
+    );
+    return renderResult.container;
+  }
+
+  beforeEach(async () => {
+    result = undefined;
+  });
+
+  beforeAll(() => {
+    // mock window.open because jsdom is not doing that
+    window.open = jest.fn();
+    // Rewrite message event because jsdom is not setting the origin
+    window.addEventListener("message", (event: MessageEvent) => {
+      if (event.origin === "") {
+        event.stopImmediatePropagation();
+        const eventWithOrigin: MessageEvent = new MessageEvent("message", {
+          data: event.data,
+          origin: "http://localhost",
+        });
+        window.dispatchEvent(eventWithOrigin);
+      }
+    });
+    // IntersectionObserver isn't available in test environment but is used by headless-ui dialog
+    // used for this component
+    useMockIntersectionObserver();
+  });
+
   describe("should display json schema specs", () => {
     let container: HTMLElement;
     beforeEach(async () => {
-      const handleSubmit = jest.fn();
-      const renderResult = await render(
-        <ConnectorForm
-          formType="source"
-          onSubmit={handleSubmit}
-          selectedConnectorDefinition={connectorDefinition}
-          renderFooter={() => <button type="submit">Submit</button>}
-          selectedConnectorDefinitionSpecification={
-            // @ts-expect-error Partial objects for testing
-            {
-              connectionSpecification: schema,
-              sourceDefinitionId: "1",
-              documentationUrl: "",
-            } as DestinationDefinitionSpecificationRead
-          }
-        />
-      );
-      container = renderResult.container;
+      container = await renderForm();
     });
 
     it("should display general components: submit button, name and serviceType fields", () => {
-      const name = container.querySelector("input[name='name']");
-      const submit = container.querySelector("button[type='submit']");
+      const name = getInputByName(container, "name");
+      const submit = getSubmitButton(container);
 
       expect(name).toBeInTheDocument();
       expect(submit).toBeInTheDocument();
     });
 
     it("should display text input field", () => {
-      const host = container.querySelector("input[name='connectionConfiguration.host']");
+      const host = getInputByName(container, "connectionConfiguration.host");
       expect(host).toBeInTheDocument();
       expect(host?.getAttribute("type")).toEqual("text");
     });
 
     it("should display number input field", () => {
-      const port = container.querySelector("input[name='connectionConfiguration.port']");
+      const port = getInputByName(container, "connectionConfiguration.port");
       expect(port).toBeInTheDocument();
       expect(port?.getAttribute("type")).toEqual("number");
     });
 
     it("should display secret input field", () => {
-      const password = container.querySelector("input[name='connectionConfiguration.password']");
+      const password = getInputByName(container, "connectionConfiguration.password");
       expect(password).toBeInTheDocument();
       expect(password?.getAttribute("type")).toEqual("password");
     });
@@ -229,14 +341,14 @@ describe("Service Form", () => {
 
     it("should display oneOf field", () => {
       const credentials = container.querySelector("div[data-testid='connectionConfiguration.credentials']");
-      const apiKey = container.querySelector("input[name='connectionConfiguration.credentials.api_key']");
+      const apiKey = getInputByName(container, "connectionConfiguration.credentials.api_key");
       expect(credentials).toBeInTheDocument();
       expect(credentials?.getAttribute("role")).toEqual("combobox");
       expect(apiKey).toBeInTheDocument();
     });
 
     it("should display array of simple entity field", () => {
-      const emails = container.querySelector("input[name='connectionConfiguration.emails']");
+      const emails = getInputByName(container, "connectionConfiguration.emails");
       expect(emails).toBeInTheDocument();
     });
 
@@ -254,145 +366,811 @@ describe("Service Form", () => {
   });
 
   describe("filling service form", () => {
-    let result: ConnectorFormValues;
-    let container: HTMLElement;
-    beforeEach(async () => {
-      const renderResult = await render(
-        <ConnectorForm
-          formType="source"
-          formValues={{ name: "test-name" }}
-          onSubmit={async (values) => {
-            result = values;
-          }}
-          renderFooter={() => <button type="submit">Submit</button>}
-          selectedConnectorDefinition={connectorDefinition}
-          selectedConnectorDefinitionSpecification={
-            // @ts-expect-error Partial objects for testing
-            {
-              connectionSpecification: schema,
-              sourceDefinitionId: "test-service-type",
-              documentationUrl: "",
-            } as DestinationDefinitionSpecificationRead
-          }
-        />
-      );
-      container = renderResult.container;
-    });
+    const filledForm: Record<string, unknown> = {
+      credentials: { api_key: "test-api-key", type: "api" },
+      emails: ["test@test.com"],
+      host: "test-host",
+      message: "test-message",
+      password: "test-password",
+      port: 123,
+      priceList: [{ name: "test-price-list-name", price: 1 }],
+      workTime: ["day"],
+    };
 
-    it("should fill all fields by right values", async () => {
-      const name = container.querySelector("input[name='name']");
-      const host = container.querySelector("input[name='connectionConfiguration.host']");
-      const port = container.querySelector("input[name='connectionConfiguration.port']");
-      const password = container.querySelector("input[name='connectionConfiguration.password']");
-      const message = container.querySelector("textarea[name='connectionConfiguration.message']");
-      const apiKey = container.querySelector("input[name='connectionConfiguration.credentials.api_key']");
-      const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
-      const emails = screen.getByTestId("tag-input").querySelector("input");
+    it("should render optional field hidden, but allow to open and edit", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm },
+        propertiesOverride: {
+          additional_separate_group: { type: "string", group: "abc" },
+          additional_same_group: { type: "string" },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
 
-      userEvent.type(name!, "{selectall}{del}name");
-      userEvent.type(host!, "test-host");
-      userEvent.type(port!, "123");
-      userEvent.type(password!, "test-password");
-      userEvent.type(message!, "test-message");
-      userEvent.type(apiKey!, "test-api-key");
-      userEvent.type(emails!, "test@test.com{enter}");
-      userEvent.type(workTime!.querySelector("input")!, "day{enter}");
+      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(0)!));
 
-      const addPriceListItem = useAddPriceListItem(container);
-      await addPriceListItem("test-price-list-name", "1");
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).toBeVisible();
 
-      const submit = container.querySelector("button[type='submit']");
-      await waitFor(() => userEvent.click(submit!));
+      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(1)!));
+
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).toBeVisible();
+
+      const input1 = getInputByName(container, "connectionConfiguration.additional_same_group");
+      const input2 = getInputByName(container, "connectionConfiguration.additional_separate_group");
+      userEvent.type(input1!, "input1");
+      userEvent.type(input2!, "input2");
+
+      await submitForm(container);
 
       expect(result).toEqual({
-        name: "name",
+        name: "test-name",
         connectionConfiguration: {
-          credentials: { api_key: "test-api-key", type: "api" },
-          emails: ["test@test.com"],
-          host: "test-host",
-          message: "test-message",
-          password: "test-password",
-          port: 123,
-          priceList: [{ name: "test-price-list-name", price: 1 }],
-          workTime: ["day"],
+          ...filledForm,
+          additional_same_group: "input1",
+          additional_separate_group: "input2",
         },
       });
     });
 
+    it("should always render always_show optional field, but not require it", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm },
+        propertiesOverride: {
+          optional_always_show: { type: "string", always_show: true },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.optional_always_show")).toBeVisible();
+
+      await submitForm(container);
+
+      expect(result).toEqual({
+        name: "test-name",
+        connectionConfiguration: {
+          ...filledForm,
+        },
+      });
+
+      userEvent.type(getInputByName(container, "connectionConfiguration.optional_always_show")!, "input1");
+
+      await submitForm(container);
+
+      expect(result).toEqual({
+        name: "test-name",
+        connectionConfiguration: {
+          ...filledForm,
+          optional_always_show: "input1",
+        },
+      });
+    });
+
+    it("should load existing values in collapsed fields", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, additional_same_group: "input1", additional_separate_group: "input2" },
+        propertiesOverride: {
+          additional_separate_group: { type: "string", group: "abc" },
+          additional_same_group: { type: "string" },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")?.getAttribute("value")).toEqual(
+        "input1"
+      );
+      expect(
+        getInputByName(container, "connectionConfiguration.additional_separate_group")?.getAttribute("value")
+      ).toEqual("input2");
+    });
+
+    it("should allow nested one ofs", async () => {
+      const container = await renderForm({
+        formValuesOverride: {
+          ...filledForm,
+        },
+        propertiesOverride: {
+          condition: {
+            type: "object",
+            oneOf: [
+              {
+                title: "option1",
+                required: ["api_key"],
+                properties: {
+                  api_key: {
+                    type: "string",
+                  },
+                  type: {
+                    type: "string",
+                    const: "api",
+                    default: "api",
+                  },
+                },
+              },
+              {
+                title: "option2",
+                required: ["redirect_uri"],
+                properties: {
+                  nestedcondition: {
+                    type: "object",
+                    oneOf: [
+                      {
+                        title: "nestoption1",
+                        required: ["api_key"],
+                        properties: {
+                          api_key: {
+                            type: "string",
+                          },
+                          type: {
+                            type: "string",
+                            const: "api",
+                            default: "api",
+                          },
+                        },
+                      },
+                      {
+                        title: "nestedoption2",
+                        required: ["doublenestedinput"],
+                        properties: {
+                          doublenestedinput: {
+                            type: "string",
+                          },
+                          type: {
+                            type: "string",
+                            const: "second",
+                            default: "second",
+                          },
+                        },
+                      },
+                    ],
+                  },
+                  type: {
+                    type: "string",
+                    const: "oauth",
+                    default: "oauth",
+                  },
+                },
+              },
+            ],
+          },
+        },
+      });
+
+      const selectContainer = getByTestId(container, "connectionConfiguration.condition");
+      await selectEvent.select(selectContainer, "option2", {
+        container: document.body,
+      });
+
+      const selectContainer2 = getByTestId(container, "connectionConfiguration.condition.nestedcondition");
+      await selectEvent.select(selectContainer2, "nestedoption2", {
+        container: document.body,
+      });
+
+      const uri = container.querySelector(
+        "input[name='connectionConfiguration.condition.nestedcondition.doublenestedinput']"
+      );
+      userEvent.type(uri!, "doublenestedvalue");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        condition: { nestedcondition: { doublenestedinput: "doublenestedvalue", type: "second" }, type: "oauth" },
+      });
+    });
+
+    it("should not submit with failed validation", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, additional_same_group: "inp" },
+        propertiesOverride: {
+          additional_same_group: { type: "string", pattern: "input" },
+        },
+      });
+
+      await submitForm(container);
+
+      // can't submit, no result
+      expect(result).toBeFalsy();
+
+      expect(screen.getByText("The value must match the pattern input")).toBeInTheDocument();
+
+      const input = getInputByName(container, "connectionConfiguration.additional_same_group");
+      userEvent.type(input!, "ut");
+
+      await waitFor(() => userEvent.click(getSubmitButton(container)!));
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        additional_same_group: "input",
+      });
+    });
+
+    it("should cast existing data, throwing away unknown properties and cast existing ones", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, port: "123", unknown_field: { abc: "def" } },
+      });
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual(filledForm);
+    });
+
+    it("should fill password", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm, password: undefined } });
+      const password = getInputByName(container, "connectionConfiguration.password");
+      userEvent.type(password!, "testword");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        password: "testword",
+      });
+    });
+
+    it("should change password", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm, password: "*****" } });
+      await waitFor(() => userEvent.click(screen.getByTestId("edit-secret")!));
+      const password = getInputByName(container, "connectionConfiguration.password");
+      userEvent.type(password!, "testword");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        password: "testword",
+      });
+    });
+
     it("should fill right values in array of simple entity field", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm, emails: [] } });
       const emails = screen.getByTestId("tag-input").querySelector("input");
       userEvent.type(emails!, "test1@test.com{enter}test2@test.com{enter}test3@test.com{enter}");
 
-      const submit = container.querySelector("button[type='submit']");
-      await waitFor(() => userEvent.click(submit!));
+      await submitForm(container);
 
-      // @ts-expect-error typed unknown, okay in test file
-      expect(result.connectionConfiguration.emails).toEqual(["test1@test.com", "test2@test.com", "test3@test.com"]);
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        emails: ["test1@test.com", "test2@test.com", "test3@test.com"],
+      });
+    });
+
+    it("should extend right values in array of simple entity field", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm } });
+      const emails = screen.getByTestId("tag-input").querySelector("input");
+      userEvent.type(emails!, "another@test.com{enter}");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        emails: ["test@test.com", "another@test.com"],
+      });
     });
 
     it("should fill right values in array with items list field", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm, workTime: undefined } });
       const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
       userEvent.type(workTime!.querySelector("input")!, "day{enter}abc{enter}ni{enter}");
 
-      const submit = container.querySelector("button[type='submit']");
-      await waitFor(() => userEvent.click(submit!));
+      await submitForm(container);
 
-      // @ts-expect-error typed unknown, okay in test file
-      expect(result.connectionConfiguration.workTime).toEqual(["day", "night"]);
+      expect(result?.connectionConfiguration).toEqual({ ...filledForm, workTime: ["day", "night"] });
+    });
+
+    it("should add values in array with items list field", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm } });
+      const workTime = container.querySelector("div[name='connectionConfiguration.workTime']");
+      userEvent.type(workTime!.querySelector("input")!, "ni{enter}");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({ ...filledForm, workTime: ["day", "night"] });
     });
 
     it("change oneOf field value", async () => {
-      const apiKey = container.querySelector("input[name='connectionConfiguration.credentials.api_key']");
+      const container = await renderForm({ formValuesOverride: { ...filledForm, credentials: { type: "api" } } });
+      const apiKey = getInputByName(container, "connectionConfiguration.credentials.api_key");
       expect(apiKey).toBeInTheDocument();
 
       const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
 
-      await selectEvent.select(selectContainer, "oauth", {
-        container: document.body,
-      });
+      await waitFor(() =>
+        selectEvent.select(selectContainer, "oauth", {
+          container: document.body,
+        })
+      );
 
-      const uri = container.querySelector("input[name='connectionConfiguration.credentials.redirect_uri']");
+      const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       expect(uri).toBeInTheDocument();
+
+      userEvent.type(uri!, "def");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        credentials: { type: "oauth", redirect_uri: "def" },
+      });
     });
 
     it("should fill right values oneOf field", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm, credentials: { type: "api" } } });
       const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
 
-      await selectEvent.select(selectContainer, "oauth", {
-        container: document.body,
-      });
+      await waitFor(() =>
+        selectEvent.select(selectContainer, "oauth", {
+          container: document.body,
+        })
+      );
 
-      const uri = container.querySelector("input[name='connectionConfiguration.credentials.redirect_uri']");
+      const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       userEvent.type(uri!, "test-uri");
 
-      const submit = container.querySelector("button[type='submit']");
-      await waitFor(() => userEvent.click(submit!));
+      await submitForm(container);
 
-      expect(result.connectionConfiguration).toEqual({
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
         credentials: { redirect_uri: "test-uri", type: "oauth" },
       });
     });
 
+    it("should change value in existing oneOf", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, credentials: { type: "oauth", redirect_uri: "abc" } },
+      });
+
+      const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
+      userEvent.type(uri!, "def");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        credentials: { redirect_uri: "abcdef", type: "oauth" },
+      });
+    });
+
     it("should fill right values in array of objects field", async () => {
-      // IntersectionObserver isn't available in test environment but is used by headless-ui dialog
-      // used for this component
-      useMockIntersectionObserver();
+      const container = await renderForm({ formValuesOverride: { ...filledForm, priceList: undefined } });
 
       const addPriceListItem = useAddPriceListItem(container);
       await addPriceListItem("test-1", "1");
       await addPriceListItem("test-2", "2");
 
-      const submit = container.querySelector("button[type='submit']");
-      await waitFor(() => userEvent.click(submit!));
+      await submitForm(container);
 
-      const { connectionConfiguration } = result as {
-        connectionConfiguration: { priceList: Array<{ name: string; price: number }> };
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        priceList: [
+          { name: "test-1", price: 1 },
+          { name: "test-2", price: 2 },
+        ],
+      });
+    });
+
+    it("should extend values in array of objects field", async () => {
+      const container = await renderForm({ formValuesOverride: { ...filledForm } });
+      const addPriceListItem = useAddPriceListItem(container, 1);
+      await addPriceListItem("test-2", "2");
+
+      await submitForm(container);
+
+      expect(result?.connectionConfiguration).toEqual({
+        ...filledForm,
+        priceList: [
+          { name: "test-price-list-name", price: 1 },
+          { name: "test-2", price: 2 },
+        ],
+      });
+    });
+  });
+
+  describe("oauth flow", () => {
+    describe("new oauth flow", () => {
+      const oauthSchema = {
+        ...schema,
+        properties: {
+          start_date: {
+            type: "string",
+          },
+          credentials: {
+            type: "object",
+            group: "auth",
+            oneOf: [
+              {
+                type: "object",
+                title: "OAuth",
+                required: ["access_token"],
+                properties: {
+                  access_token: {
+                    type: "string",
+                    title: "Access Token",
+                    description: "OAuth access token",
+                    airbyte_secret: true,
+                  },
+                  option_title: {
+                    type: "string",
+                    const: "OAuth Credentials",
+                    order: 0,
+                  },
+                },
+              },
+              {
+                type: "object",
+                title: "Personal Access Token",
+                required: ["personal_access_token"],
+                properties: {
+                  option_title: {
+                    type: "string",
+                    const: "PAT Credentials",
+                    order: 0,
+                  },
+                  personal_access_token: {
+                    type: "string",
+                    airbyte_secret: true,
+                  },
+                },
+              },
+            ],
+            title: "Authentication",
+            description: "Choose how to authenticate to GitHub",
+          },
+        },
       };
+      async function renderNewOAuthForm(
+        props: {
+          disableOAuth?: boolean;
+          formValuesOverride?: Record<string, unknown>;
+          specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+        } = {}
+      ) {
+        return renderForm({
+          ...props,
+          specificationOverride: {
+            connectionSpecification: oauthSchema,
+            advancedAuth: {
+              authFlowType: "oauth2.0",
+              predicateKey: ["credentials", "option_title"],
+              predicateValue: "OAuth Credentials",
+              oauthConfigSpecification: {
+                completeOAuthOutputSpecification: {
+                  type: "object",
+                  properties: {
+                    access_token: {
+                      type: "string",
+                      path_in_connector_config: ["credentials", "access_token"],
+                    },
+                  },
+                  additionalProperties: false,
+                },
+                completeOAuthServerInputSpecification: {
+                  type: "object",
+                  properties: {
+                    client_id: {
+                      type: "string",
+                    },
+                    client_secret: {
+                      type: "string",
+                    },
+                  },
+                  additionalProperties: false,
+                },
+                completeOAuthServerOutputSpecification: {
+                  type: "object",
+                  properties: {
+                    client_id: {
+                      type: "string",
+                      path_in_connector_config: ["credentials", "client_id"],
+                    },
+                    client_secret: {
+                      type: "string",
+                      path_in_connector_config: ["credentials", "client_secret"],
+                    },
+                  },
+                  additionalProperties: false,
+                },
+              },
+            },
+            ...props.specificationOverride,
+          },
+        });
+      }
+      it("should render regular inputs for auth fields", async () => {
+        const container = await renderNewOAuthForm({ disableOAuth: true });
+        expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).toBeInTheDocument();
+        expect(getOAuthButton(container)).not.toBeInTheDocument();
+      });
 
-      expect(connectionConfiguration.priceList).toEqual([
-        { name: "test-1", price: 1 },
-        { name: "test-2", price: 2 },
-      ]);
+      it("should render the oauth button", async () => {
+        const container = await renderNewOAuthForm();
+        expect(getOAuthButton(container)).toBeInTheDocument();
+        expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).not.toBeInTheDocument();
+      });
+
+      it("should insert values correctly and submit them", async () => {
+        const container = await renderNewOAuthForm();
+        (SourceAuthService as unknown as { mockedPayload: Record<string, unknown> }).mockedPayload = {
+          request_succeeded: true,
+          auth_payload: {
+            access_token: "mytoken",
+          },
+        };
+
+        await executeOAuthFlow(container);
+
+        const submit = getSubmitButton(container);
+        await waitFor(() => userEvent.click(submit!));
+
+        expect(result?.connectionConfiguration).toEqual({
+          credentials: { access_token: "mytoken", option_title: "OAuth Credentials" },
+        });
+      });
+
+      it("should render reauthenticate message if there are form values already", async () => {
+        const container = await renderNewOAuthForm({
+          formValuesOverride: {
+            credentials: { option_title: "OAuth Credentials", access_token: "xyz" },
+          },
+        });
+        expect(getOAuthButton(container)).toBeInTheDocument();
+        expect(getOAuthButton(container)?.textContent).toEqual("Re-authenticate");
+      });
+
+      it("should hide the oauth button when switching auth strategy", async () => {
+        const container = await renderNewOAuthForm();
+        const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
+
+        await waitFor(() =>
+          selectEvent.select(selectContainer, "Personal Access Token", {
+            container: document.body,
+          })
+        );
+        expect(getOAuthButton(container)).not.toBeInTheDocument();
+        expect(
+          getInputByName(container, "connectionConfiguration.credentials.personal_access_token")
+        ).toBeInTheDocument();
+      });
+
+      it("should render the oauth button on the top level", async () => {
+        const container = await renderNewOAuthForm({
+          specificationOverride: {
+            connectionSpecification: {
+              ...schema,
+              properties: {
+                ...schema.properties,
+                access_token: {
+                  type: "string",
+                  airbyte_secret: true,
+                },
+              },
+              row_batch_size: {
+                type: "integer",
+                default: 200,
+              },
+            },
+            advancedAuth: {
+              authFlowType: "oauth2.0",
+              oauthConfigSpecification: {
+                completeOAuthOutputSpecification: {
+                  type: "object",
+                  properties: {
+                    access_token: {
+                      type: "string",
+                      path_in_connector_config: ["access_token"],
+                    },
+                  },
+                  additionalProperties: false,
+                },
+                completeOAuthServerInputSpecification: {
+                  type: "object",
+                  properties: {
+                    client_id: {
+                      type: "string",
+                    },
+                    client_secret: {
+                      type: "string",
+                    },
+                  },
+                  additionalProperties: false,
+                },
+                completeOAuthServerOutputSpecification: {
+                  type: "object",
+                  properties: {
+                    client_id: {
+                      type: "string",
+                      path_in_connector_config: ["client_id"],
+                    },
+                    client_secret: {
+                      type: "string",
+                      path_in_connector_config: ["client_secret"],
+                    },
+                  },
+                  additionalProperties: false,
+                },
+              },
+            },
+          },
+        });
+        expect(getOAuthButton(container)).toBeInTheDocument();
+      });
+    });
+
+    describe("legacy oauth flow", () => {
+      const oauthSchema = {
+        ...schema,
+        properties: {
+          credentials: {
+            type: "object",
+            oneOf: [
+              {
+                type: "object",
+                title: "oauth",
+                required: ["auth_type", "client_id", "client_secret", "refresh_token"],
+                properties: {
+                  auth_type: {
+                    type: "string",
+                    const: "Client",
+                  },
+                  client_id: {
+                    type: "string",
+                    airbyte_secret: true,
+                  },
+                  client_secret: {
+                    type: "string",
+                    airbyte_secret: true,
+                  },
+                  refresh_token: {
+                    type: "string",
+                    airbyte_secret: true,
+                  },
+                },
+              },
+              {
+                type: "object",
+                title: "service",
+                required: ["auth_type", "service_account_info"],
+                properties: {
+                  auth_type: {
+                    type: "string",
+                    const: "Service",
+                  },
+                  service_account_info: {
+                    type: "string",
+                    airbyte_secret: true,
+                  },
+                },
+              },
+            ],
+          },
+          row_batch_size: {
+            type: "integer",
+            default: 200,
+          },
+        },
+      };
+      async function renderLegacyOAuthForm(
+        props: {
+          disableOAuth?: boolean;
+          formValuesOverride?: Record<string, unknown>;
+          specificationOverride?: Partial<ConnectorDefinitionSpecification>;
+        } = {}
+      ) {
+        return renderForm({
+          ...props,
+          specificationOverride: {
+            connectionSpecification: oauthSchema,
+            authSpecification: {
+              auth_type: "oauth2.0",
+              oauth2Specification: {
+                rootObject: ["credentials", "0"],
+                oauthFlowInitParameters: [["client_id"], ["client_secret"]],
+                oauthFlowOutputParameters: [["refresh_token"]],
+              },
+            },
+            ...props.specificationOverride,
+          },
+        });
+      }
+      it("should render regular inputs for auth fields", async () => {
+        const container = await renderLegacyOAuthForm({ disableOAuth: true });
+        expect(getInputByName(container, "connectionConfiguration.credentials.client_id")).toBeInTheDocument();
+        expect(getInputByName(container, "connectionConfiguration.credentials.client_secret")).toBeInTheDocument();
+        expect(getInputByName(container, "connectionConfiguration.credentials.refresh_token")).toBeInTheDocument();
+        expect(getOAuthButton(container)).not.toBeInTheDocument();
+      });
+
+      it("should render the oauth button", async () => {
+        const container = await renderLegacyOAuthForm();
+        expect(getOAuthButton(container)).toBeInTheDocument();
+        expect(getInputByName(container, "connectionConfiguration.credentials.client_id")).not.toBeInTheDocument();
+        expect(getInputByName(container, "connectionConfiguration.credentials.client_secret")).not.toBeInTheDocument();
+        expect(getInputByName(container, "connectionConfiguration.credentials.refresh_token")).not.toBeInTheDocument();
+      });
+
+      it("should render reauthenticate message if there are form values already", async () => {
+        const container = await renderLegacyOAuthForm({
+          formValuesOverride: {
+            credentials: { auth_type: "Client", client_secret: "abc", client_id: "def", refresh_token: "xyz" },
+          },
+        });
+        expect(getOAuthButton(container)?.textContent).toEqual("Re-authenticate");
+      });
+
+      it("should hide the oauth button when switching auth strategy", async () => {
+        const container = await renderLegacyOAuthForm();
+        const selectContainer = getByTestId(container, "connectionConfiguration.credentials");
+
+        await waitFor(() =>
+          selectEvent.select(selectContainer, "service", {
+            container: document.body,
+          })
+        );
+        expect(getOAuthButton(container)).not.toBeInTheDocument();
+        expect(
+          getInputByName(container, "connectionConfiguration.credentials.service_account_info")
+        ).toBeInTheDocument();
+      });
+
+      it("should insert values correctly and submit them", async () => {
+        const container = await renderLegacyOAuthForm();
+        (SourceAuthService as unknown as { mockedPayload: Record<string, unknown> }).mockedPayload = {
+          request_succeeded: true,
+          auth_payload: {
+            credentials: {
+              client_secret: "mysecret",
+              client_id: "myid",
+              refresh_token: "mytoken",
+            },
+          },
+        };
+
+        await executeOAuthFlow(container);
+        const submit = getSubmitButton(container);
+        await waitFor(() => userEvent.click(submit!));
+
+        expect(result?.connectionConfiguration).toEqual({
+          credentials: {
+            auth_type: "Client",
+            client_id: "myid",
+            client_secret: "mysecret",
+            refresh_token: "mytoken",
+          },
+          row_batch_size: 200,
+        });
+      });
+
+      it("should render the oauth button on the top level", async () => {
+        const container = await renderLegacyOAuthForm({
+          specificationOverride: {
+            connectionSpecification: {
+              ...schema,
+              properties: {
+                ...schema.properties,
+                oauth_secret: {
+                  type: "string",
+                  airbyte_secret: true,
+                },
+                access_token: {
+                  type: "string",
+                  airbyte_secret: true,
+                },
+              },
+              row_batch_size: {
+                type: "integer",
+                default: 200,
+              },
+            },
+            authSpecification: {
+              auth_type: "oauth2.0",
+              oauth2Specification: {
+                rootObject: [],
+                oauthFlowInitParameters: [["oauth_secret"]],
+                oauthFlowOutputParameters: [["access_token"]],
+              },
+            },
+          },
+        });
+        expect(getOAuthButton(container)).toBeInTheDocument();
+      });
     });
   });
 });
