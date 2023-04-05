@@ -66,8 +66,8 @@ public class OpenTelemetryMetricClient implements MetricClient {
       This implementation uses the sync map to ensure gauges are defined only once.
       It creates a synchronized map which can be updated by subsequent calls without redefining the gauge.
 
-      This sort-of a hack: OpenTelemetry expects you to define your gauge up from and provide
-      a callback that the SDK will call periodically. However, this API does not conform to the MetricClient.
+      This sort-of a hack: OpenTelemetry expects you to define your gauge up-front and provide
+      a callback that the SDK will call periodically. However, this API does not conform to the MetricClient interface.
       Without some refactoring of the client interface, this adapter is necessary.
     */
     final Attributes attr = buildAttributes(attributes).build();
