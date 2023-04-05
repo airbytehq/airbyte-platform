@@ -103,7 +103,7 @@ public class OAuthHandler {
         sourceOauthConsentRequest.getWorkspaceId(), sourceOauthConsentRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
     final ConnectorSpecification spec = sourceVersion.getSpec();
-    final Map<String, Object> metadata = generateSourceMetadata(sourceOauthConsentRequest.getSourceDefinitionId());
+    final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final OAuthConsentRead result;
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
@@ -152,7 +152,7 @@ public class OAuthHandler {
         destinationOauthConsentRequest.getWorkspaceId(), destinationOauthConsentRequest.getDestinationId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
     final ConnectorSpecification spec = destinationVersion.getSpec();
-    final Map<String, Object> metadata = generateDestinationMetadata(destinationOauthConsentRequest.getDestinationDefinitionId());
+    final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final OAuthConsentRead result;
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
@@ -213,7 +213,7 @@ public class OAuthHandler {
         completeSourceOauthRequest.getWorkspaceId(), completeSourceOauthRequest.getSourceId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
     final ConnectorSpecification spec = sourceVersion.getSpec();
-    final Map<String, Object> metadata = generateSourceMetadata(completeSourceOauthRequest.getSourceDefinitionId());
+    final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final Map<String, Object> result;
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
@@ -265,7 +265,7 @@ public class OAuthHandler {
         completeDestinationOAuthRequest.getWorkspaceId(), completeDestinationOAuthRequest.getDestinationId());
     final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(destinationVersion.getDockerRepository());
     final ConnectorSpecification spec = destinationVersion.getSpec();
-    final Map<String, Object> metadata = generateDestinationMetadata(completeDestinationOAuthRequest.getDestinationDefinitionId());
+    final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final Map<String, Object> result;
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
@@ -341,19 +341,7 @@ public class OAuthHandler {
     return getOauthFromDBIfNeeded(oAuthInputConfigurationFromDB, oAuthInputConfiguration);
   }
 
-  private Map<String, Object> generateSourceMetadata(final UUID sourceDefinitionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
-    return TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition);
-  }
-
-  private Map<String, Object> generateDestinationMetadata(final UUID destinationDefinitionId)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-    final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    return TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition);
-  }
-
-  CompleteOAuthResponse mapToCompleteOAuthResponse(Map<String, Object> input) {
+  CompleteOAuthResponse mapToCompleteOAuthResponse(final Map<String, Object> input) {
     final CompleteOAuthResponse response = new CompleteOAuthResponse();
     response.setAuthPayload(new HashMap<>());
 

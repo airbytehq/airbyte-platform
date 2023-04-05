@@ -65,6 +65,7 @@ class DefaultSynchronousSchedulerClientTest {
   private static final String DOCKER_IMAGE_TAG = "baz/qux";
   private static final Version PROTOCOL_VERSION = new Version("0.2.3");
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID ACTOR_ID = UUID.randomUUID();
   private static final UUID UUID1 = UUID.randomUUID();
   private static final UUID UUID2 = UUID.randomUUID();
   private static final String UNCHECKED = "unchecked";
@@ -135,7 +136,7 @@ class DefaultSynchronousSchedulerClientTest {
 
       final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
       final SynchronousResponse<UUID> response = schedulerClient
-          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID);
+          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
 
       assertNotNull(response);
       assertEquals(discoveredCatalogId, response.getOutput());
@@ -145,8 +146,9 @@ class DefaultSynchronousSchedulerClientTest {
       assertTrue(response.getMetadata().isSucceeded());
       assertEquals(LOG_PATH, response.getMetadata().getLogPath());
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED), eq(null));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.SUCCEEDED), eq(jobOutput));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.SUCCEEDED),
+          eq(jobOutput));
       verifyNoInteractions(jobErrorReporter);
     }
 
@@ -162,7 +164,7 @@ class DefaultSynchronousSchedulerClientTest {
 
       final ConnectorJobReportingContext jobContext = new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE);
       final SynchronousResponse<UUID> response = schedulerClient
-          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID);
+          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
 
       assertNotNull(response);
       assertNull(response.getOutput());
@@ -172,8 +174,9 @@ class DefaultSynchronousSchedulerClientTest {
       assertFalse(response.getMetadata().isSucceeded());
       assertEquals(LOG_PATH, response.getMetadata().getLogPath());
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED), eq(null));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.FAILED), eq(failedJobOutput));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.FAILED),
+          eq(failedJobOutput));
     }
 
     @SuppressWarnings(UNCHECKED)
@@ -187,10 +190,10 @@ class DefaultSynchronousSchedulerClientTest {
       assertThrows(
           RuntimeException.class,
           () -> schedulerClient.execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function,
-              mapperFunction, WORKSPACE_ID));
+              mapperFunction, WORKSPACE_ID, ACTOR_ID));
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.STARTED), eq(null));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(JobState.FAILED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.FAILED), eq(null));
       verifyNoInteractions(jobErrorReporter);
     }
 

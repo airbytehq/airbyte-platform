@@ -1,7 +1,7 @@
 ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
 FROM ${JDK_IMAGE} AS metrics-reporter
 
-ARG VERSION=0.42.1
+ARG VERSION=0.43.0
 
 ENV APPLICATION airbyte-metrics-reporter
 ENV VERSION ${VERSION}
