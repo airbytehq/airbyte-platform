@@ -28,6 +28,13 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
+      - name: Debug print vars
+        shell: bash
+        run: |
+          echo ${{ github }}
+          echo ${{ github.repository }}
+          echo ${{ github.head_ref }}
+        
       - name: Create a snapshot of an OSS PR to Cloud
         if: needs.check.outputs.branch_up_to_date == 'true'
         uses: peter-evans/slash-command-dispatch@v3
