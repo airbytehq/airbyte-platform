@@ -13,6 +13,7 @@ import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.SecretPersistenceType;
 import io.airbyte.config.Configs.TrackingStrategy;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.metrics.lib.MetricClient;
@@ -102,12 +103,14 @@ public class ApplicationBeanFactory {
                                  final ConfigRepository configRepository,
                                  final TrackingClient trackingClient,
                                  final WebUrlHelper webUrlHelper,
-                                 final WorkspaceHelper workspaceHelper) {
+                                 final WorkspaceHelper workspaceHelper,
+                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     return new JobNotifier(
         webUrlHelper,
         configRepository,
         workspaceHelper,
-        trackingClient);
+        trackingClient,
+        actorDefinitionVersionHelper);
   }
 
   @Singleton
@@ -115,8 +118,9 @@ public class ApplicationBeanFactory {
   public JobTracker jobTracker(
                                final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
-                               final TrackingClient trackingClient) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient);
+                               final TrackingClient trackingClient,
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
   }
 
   @Singleton

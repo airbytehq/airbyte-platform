@@ -64,10 +64,9 @@ class OAuthConfigSupplierTest {
     sourceDefinitionId = UUID.randomUUID();
     testSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(sourceDefinitionId)
-        .withName("test")
-        .withDockerRepository("test/test")
-        .withDockerImageTag("dev");
+        .withName("test");
     testSourceVersion = new ActorDefinitionVersion()
+        .withDockerRepository("test/test")
         .withDockerImageTag("dev")
         .withSpec(null);
 

@@ -9,11 +9,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.map.MoreMaps;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.notification.NotificationClient;
 import io.airbyte.persistence.job.models.Job;
@@ -47,15 +50,18 @@ public class JobNotifier {
   private final TrackingClient trackingClient;
   private final WebUrlHelper webUrlHelper;
   private final WorkspaceHelper workspaceHelper;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public JobNotifier(final WebUrlHelper webUrlHelper,
                      final ConfigRepository configRepository,
                      final WorkspaceHelper workspaceHelper,
-                     final TrackingClient trackingClient) {
+                     final TrackingClient trackingClient,
+                     final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.webUrlHelper = webUrlHelper;
     this.workspaceHelper = workspaceHelper;
     this.configRepository = configRepository;
     this.trackingClient = trackingClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   private void notifyJob(final String reason, final String action, final Job job) {
@@ -76,16 +82,22 @@ public class JobNotifier {
                          final List<Notification> notifications) {
     final UUID connectionId = UUID.fromString(job.getScope());
     try {
+      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
       final String sourceConnector = sourceDefinition.getName();
       final String destinationConnector = destinationDefinition.getName();
       final String failReason = Strings.isNullOrEmpty(reason) ? "" : String.format(", as the %s", reason);
       final String jobDescription = getJobDescription(job, failReason);
       final String logUrl = webUrlHelper.getConnectionUrl(workspaceId, connectionId);
       final Map<String, Object> jobMetadata = TrackingMetadata.generateJobAttemptMetadata(job);
-      final Map<String, Object> sourceMetadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition);
-      final Map<String, Object> destinationMetadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition);
+      final Map<String, Object> sourceMetadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
+      final Map<String, Object> destinationMetadata =
+          TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
       for (final Notification notification : notifications) {
         final NotificationClient notificationClient = getNotificationClient(notification);
         try {
