@@ -47,10 +47,6 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
   private final long maxMemory;
   private final Optional<Class<? extends RuntimeException>> exceptionClass;
 
-  public DefaultAirbyteStreamFactory() {
-    this(MdcScope.DEFAULT_BUILDER);
-  }
-
   public DefaultAirbyteStreamFactory(final MdcScope.Builder containerLogMdcBuilder) {
     this(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, Optional.empty());
   }

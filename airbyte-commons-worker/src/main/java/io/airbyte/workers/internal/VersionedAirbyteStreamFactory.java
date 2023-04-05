@@ -7,19 +7,28 @@ package io.airbyte.workers.internal;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.MdcScope;
+import io.airbyte.commons.protocol.AirbyteMessageMigrator;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteMessageVersionedMigrator;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
+import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
 import io.airbyte.commons.protocol.serde.AirbyteMessageDeserializer;
+import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer;
+import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
+import io.airbyte.commons.protocol.serde.AirbyteMessageV1Deserializer;
+import io.airbyte.commons.protocol.serde.AirbyteMessageV1Serializer;
+import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -53,6 +62,35 @@ public class VersionedAirbyteStreamFactory<T> extends DefaultAirbyteStreamFactor
   private Version protocolVersion;
 
   private boolean shouldDetectVersion = false;
+
+  /**
+   * In some cases, we know the stream will never emit messages that need to be migrated. This is
+   * particularly true for tests. This is a convenience method for those cases.
+   *
+   * @return a VersionedAirbyteStreamFactory that does not perform any migration.
+   */
+  @VisibleForTesting
+  public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory() {
+    AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
+        List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
+        List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
+    provider.initialize();
+
+    AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(List.of());
+    airbyteMessageMigrator.initialize();
+    ConfiguredAirbyteCatalogMigrator configuredAirbyteCatalogMigrator = new ConfiguredAirbyteCatalogMigrator(List.of());
+    configuredAirbyteCatalogMigrator.initialize();
+    AirbyteProtocolVersionedMigratorFactory fac =
+        new AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator);
+
+    return new VersionedAirbyteStreamFactory(provider, fac, Optional.empty());
+  }
+
+  public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
+                                       final AirbyteProtocolVersionedMigratorFactory migratorFactory,
+                                       final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog) {
+    this(serDeProvider, migratorFactory, AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION, configuredAirbyteCatalog, Optional.empty());
+  }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,

@@ -26,6 +26,7 @@ import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamsHandler;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
 import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
+import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -65,7 +66,7 @@ class ConnectorBuilderControllerIntegrationTest {
   void setup() {
     this.healthHandler = mock(HealthHandler.class);
     this.writer = new MockAirbyteFileWriterImpl();
-    this.streamFactory = new DefaultAirbyteStreamFactory();
+    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
   }
 
   @BeforeAll

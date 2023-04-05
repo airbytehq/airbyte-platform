@@ -9,7 +9,7 @@ import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.command_runner.SynchronousPythonCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.AirbyteFileWriterImpl;
-import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
+import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.micronaut.context.annotation.Factory;
 import jakarta.inject.Singleton;
 
@@ -42,7 +42,8 @@ public class ApplicationBeanFactory {
   public SynchronousCdkCommandRunner synchronousPythonCdkCommandRunner() {
     return new SynchronousPythonCdkCommandRunner(
         new AirbyteFileWriterImpl(),
-        new DefaultAirbyteStreamFactory(),
+        // This should eventually be constructed via DI.
+        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(),
         this.getPython(),
         this.getCdkEntrypoint());
   }
