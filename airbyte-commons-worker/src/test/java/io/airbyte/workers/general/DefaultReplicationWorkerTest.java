@@ -384,7 +384,7 @@ class DefaultReplicationWorkerTest {
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
     recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
         sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
-    final ReplicationWorker worker = getDefaultReplicationWorker(true, false);
+    final ReplicationWorker worker = getDefaultReplicationWorker(true);
 
     worker.run(syncInput, jobRoot);
 
@@ -709,7 +709,7 @@ class DefaultReplicationWorkerTest {
       return Optional.of(RECORD_MESSAGE1);
     });
 
-    final ReplicationWorker worker = getDefaultReplicationWorker(false, true);
+    final ReplicationWorker worker = getDefaultReplicationWorker(false);
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
 
@@ -736,10 +736,10 @@ class DefaultReplicationWorkerTest {
   }
 
   ReplicationWorker getDefaultReplicationWorker() {
-    return getDefaultReplicationWorker(false, false);
+    return getDefaultReplicationWorker(false);
   }
 
-  private ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled, final boolean heartbeatTimeoutEnabled) {
+  private ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -752,7 +752,6 @@ class DefaultReplicationWorkerTest {
         workerMetricReporter,
         connectorConfigUpdater,
         fieldSelectionEnabled,
-        heartbeatTimeoutEnabled,
         heartbeatTimeoutChaperone);
   }
 

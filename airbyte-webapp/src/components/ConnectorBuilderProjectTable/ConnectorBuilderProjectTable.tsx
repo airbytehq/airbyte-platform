@@ -106,7 +106,7 @@ const VersionChangeModal: React.FC<{
             <Spinner size="md" />
           </FlexContainer>
         ) : (
-          <FlexContainer direction="column">
+          <FlexContainer direction="column" data-testid="versions-list">
             {(versions || []).map((version, index) => (
               <button
                 key={index}
@@ -166,6 +166,7 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
         }}
         icon={<FontAwesomeIcon icon={faCaretDown} />}
         iconPosition="right"
+        data-testid={`version-changer-${project.name}`}
       >
         <Text className={styles.versionCell}>v{project.version}</Text>
       </Button>
@@ -231,6 +232,7 @@ export const ConnectorBuilderProjectTable = ({
           <FlexContainer justifyContent="flex-end" gap="sm">
             <Button
               variant="clear"
+              data-testid={`edit-project-button-${props.row.original.name}`}
               icon={<FontAwesomeIcon icon={faPenToSquare} />}
               onClick={() => {
                 const editPath = getEditPath(props.row.original.id);

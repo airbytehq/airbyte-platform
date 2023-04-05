@@ -1,11 +1,33 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id "java-library"
+    alias(libs.plugins.kotlin)
 }
 
 dependencies {
+    implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-json-validation')
+    implementation libs.bundles.micronaut.email
+    implementation libs.okhttp
+
+    testImplementation(libs.mockk)
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+
+tasks.getByName('compileKotlin') {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+tasks.getByName('compileTestKotlin') {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+

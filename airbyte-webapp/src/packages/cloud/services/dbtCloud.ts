@@ -9,6 +9,7 @@
 // - custom domains aren't yet supported
 
 import isEmpty from "lodash/isEmpty";
+import { useIntl } from "react-intl";
 import { useMutation, useQuery } from "react-query";
 
 import {
@@ -20,6 +21,7 @@ import {
   WorkspaceRead,
 } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useNotificationService } from "hooks/services/Notification";
 import { useWebConnectionService } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import {
@@ -88,6 +90,8 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const { workspaceId } = workspace;
   const connectionService = useWebConnectionService();
   const { setConnection } = useConnectionEditService();
+  const notificationService = useNotificationService();
+  const { formatMessage } = useIntl();
 
   const hasDbtIntegration = !isEmpty(workspace.webhookConfigs?.filter(isDbtWebhookConfig));
   const webhookConfigId = workspace.webhookConfigs?.find((config) => isDbtWebhookConfig(config))?.id;
@@ -98,8 +102,8 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const otherOperations = [...(connection.operations?.filter((operation) => !isDbtCloudJob(operation)) || [])];
 
   const { mutateAsync, isLoading } = useMutation({
-    mutationFn: async (jobs: DbtCloudJob[]) => {
-      const updatedConnection: WebBackendConnectionRead = await connectionService.update({
+    mutationFn: (jobs: DbtCloudJob[]) =>
+      connectionService.update({
         connectionId: connection.connectionId,
         operations: [
           ...otherOperations,
@@ -121,11 +125,20 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
             },
           })),
         ],
-      });
-      // ensure that unrelated connection-editing UI (e.g. other tabs of the connection
+      }),
+    onSuccess(updatedConnection) {
+      // Error banners should disappear after a successful retry
+      notificationService.unregisterNotificationById("connection.dbtCloudJobs.error");
+      // Ensure that unrelated connection-editing UI (e.g. other tabs of the connection
       // page) isn't left with a stale reference
       setConnection(updatedConnection);
-      return updatedConnection;
+    },
+    onError() {
+      notificationService.registerNotification({
+        id: "connection.dbtCloudJobs.error",
+        text: formatMessage({ id: "connection.dbtCloudJobs.genericError" }),
+        type: "error",
+      });
     },
   });
 

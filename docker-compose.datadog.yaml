@@ -58,6 +58,7 @@ services:
     environment:
       <<: *datadogged-environment
       DD_SERVICE: airbyte-worker
+      CONNECTOR_DATADOG_SUPPORT_NAMES: postgres-source
   server:
     <<: *datadogged-volumes
     environment:

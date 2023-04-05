@@ -82,7 +82,7 @@ export const AuthButton: React.FC<{
   );
   return (
     <div className={styles.authSectionRow}>
-      <Component isLoading={loading} type="button" onClick={run}>
+      <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
         {buttonLabel}
       </Component>
       {done && hasRun && (

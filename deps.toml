@@ -2,7 +2,7 @@
 airbyte-protocol = "1.0.0"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
-datadog-version = "1.11.0"
+datadog-version = "1.11.2"
 docker-java = "3.2.8"
 fasterxml_version = "2.14.2"
 flyway = "7.14.0"
@@ -19,6 +19,7 @@ log4j = "2.17.2"
 lombok = "1.18.24"
 micronaut = "3.8.8"
 micronaut-data = "3.9.7"
+micronaut-email = "1.5.0"
 micronaut-jaxrs = "3.4.0"
 micronaut-jdbc = "4.7.2"
 micronaut-micrometer = "4.8.1"
@@ -101,6 +102,7 @@ mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 mockk = { module = "io.mockk:mockk", version = "1.13.3" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
 otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.14.0" }
 otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.14.0" }
@@ -133,6 +135,8 @@ micronaut-bom = { module = "io.micronaut:micronaut-bom", version.ref = "micronau
 micronaut-cache-caffeine = { module = "io.micronaut.cache:micronaut-cache-caffeine", version = "3.5.0" }
 micronaut-data-processor = { module = "io.micronaut.data:micronaut-data-processor", version.ref = "micronaut-data" }
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
+micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
+micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
 micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "5.4.1" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut" }
@@ -163,6 +167,7 @@ log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-security", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
 micronaut-annotation = ["jakarta-inject", "micronaut-inject-java"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor"]
+micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
@@ -176,3 +181,4 @@ micronaut-minimal-application = { id = "io.micronaut.minimal.application", versi
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "8.1" }
 openapi-generator = { id = "org.openapi.generator", version = "6.2.1" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version = "1.8.10" }

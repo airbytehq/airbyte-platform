@@ -56,6 +56,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
         }
       }}
       disabled={buttonDisabled}
+      data-testid="publish-button"
       icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
     >
       <FormattedMessage

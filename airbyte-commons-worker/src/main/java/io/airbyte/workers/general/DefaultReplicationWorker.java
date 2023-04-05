@@ -108,7 +108,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final WorkerMetricReporter metricReporter;
   private final ConnectorConfigUpdater connectorConfigUpdater;
   private final boolean fieldSelectionEnabled;
-  private final boolean heartbeatEnabled;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
 
   public DefaultReplicationWorker(final String jobId,
@@ -122,7 +121,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final WorkerMetricReporter metricReporter,
                                   final ConnectorConfigUpdater connectorConfigUpdater,
                                   final boolean fieldSelectionEnabled,
-                                  final boolean heartbeatEnabled,
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone) {
     this.jobId = jobId;
     this.attempt = attempt;
@@ -136,7 +134,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.metricReporter = metricReporter;
     this.connectorConfigUpdater = connectorConfigUpdater;
     this.fieldSelectionEnabled = fieldSelectionEnabled;
-    this.heartbeatEnabled = heartbeatEnabled;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
 
     this.cancelled = new AtomicBoolean(false);
@@ -256,10 +253,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           });
 
       try {
-        if (heartbeatEnabled) {
-          srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
-        }
-      } catch (HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
+        srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
+      } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
         ApmTraceUtils.addExceptionToTrace(ex);
         replicationRunnableFailureRef.set(getFailureReason(ex, Long.parseLong(jobId), attempt));
       }
