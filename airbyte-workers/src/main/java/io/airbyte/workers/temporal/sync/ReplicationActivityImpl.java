@@ -44,7 +44,6 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -250,7 +249,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   () -> {
                     try {
                       heartbeatTimeoutChaperone.close();
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                       throw new RuntimeException(e);
                     }
                   });
@@ -370,8 +369,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
       final boolean fieldSelectionEnabled = workspaceId != null
           && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
               || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
-      final boolean heartbeatTimeoutEnabled = workspaceId != null
-          && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
 
       final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
       final SyncPersistence syncPersistence = commitStatesAsap
@@ -400,7 +397,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
           metricReporter,
           new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi()),
           fieldSelectionEnabled,
-          heartbeatTimeoutEnabled,
           heartbeatTimeoutChaperone);
     };
   }
@@ -430,9 +426,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   }
 
   @VisibleForTesting
-  static ContainerOrchestratorConfig injectContainerOrchestratorImage(FeatureFlagClient client,
-                                                                      ContainerOrchestratorConfig containerOrchestratorConfig,
-                                                                      UUID connectionId) {
+  static ContainerOrchestratorConfig injectContainerOrchestratorImage(final FeatureFlagClient client,
+                                                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
+                                                                      final UUID connectionId) {
     // This is messy because the ContainerOrchestratorConfig is immutable, so we have to create an
     // entirely new object.
     ContainerOrchestratorConfig config = containerOrchestratorConfig;

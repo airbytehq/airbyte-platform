@@ -30,7 +30,6 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -202,8 +201,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
       final boolean fieldSelectionEnabled = workspaceId != null
           && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
               || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
-      final boolean heartbeatTimeoutEnabled = workspaceId != null
-          && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
 
       // TODO clean up the feature flag init once commitStates and commitStats have been rolled out
       final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
@@ -232,7 +229,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
           metricReporter,
           new ConnectorConfigUpdater(sourceApi, destinationApi),
           fieldSelectionEnabled,
-          heartbeatTimeoutEnabled,
           heartbeatTimeoutChaperone);
 
       log.info("Running replication worker...");

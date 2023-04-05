@@ -1,0 +1,50 @@
+import { Canvas, Controls, Meta, Story } from "@storybook/addon-docs";
+import * as IconStories from "./Icon.stories.tsx";
+import { Icon } from "./Icon";
+
+<Meta of={IconStories} />
+
+# Icon
+
+<Icon type="moon" color="success" size="lg" />
+<Icon type="moon" color="success" size="lg" withBackground />
+
+```typescript
+<Icon type="moon" color="success" size="lg" />
+
+<Icon type="moon" color="success" size="lg" withBackground />
+```
+
+<div style={{ display: 'flex', columnGap: 50, flexFlow: 'row wrap' }}>
+  <div>
+    ## Sizes
+|                                  | size         |
+| -------------------------------- | ------------ |
+| <Icon type="pencil" size="xs" /> | xs           |
+| <Icon type="pencil" size="sm" /> | sm           |
+| <Icon type="pencil" size="md" /> | md (default) |
+| <Icon type="pencil" size="lg" /> | lg           |
+| <Icon type="pencil" size="xl" /> | xl           |
+
+  </div>
+
+  <div>
+    ## Colors
+|                                         | color                 |
+| --------------------------------------- | --------------------- |
+| <Icon type="pencil" />                  | `undefined` (default) |
+| <Icon type="pencil" color="primary" />  | primary               |
+| <Icon type="pencil" color="disabled" /> | disabled              |
+| <Icon type="pencil" color="action" />   | action                |
+| <Icon type="pencil" color="success" />  | success               |
+| <Icon type="pencil" color="error" />    | error                 |
+| <Icon type="pencil" color="warning" />  | warning               |
+
+  </div>
+</div>
+
+## 🛝 Playground
+
+<Canvas of={IconStories.Primary} />
+
+<Controls of={IconStories.Primary} />

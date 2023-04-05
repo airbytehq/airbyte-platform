@@ -128,7 +128,6 @@ public class ReplicationWorkerPerformanceTest {
         metricReporter,
         connectorConfigUpdater,
         false,
-        false,
         heartbeatTimeoutChaperone);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {

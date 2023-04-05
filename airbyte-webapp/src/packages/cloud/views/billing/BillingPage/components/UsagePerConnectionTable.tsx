@@ -13,6 +13,7 @@ import { Link } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
 import { useQuery } from "hooks/useQuery";
@@ -98,13 +99,20 @@ export const UsagePerConnectionTable: React.FC = () => {
           <Link
             to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${props.row.original.connection.connectionId}`}
           >
-            <Text
-              size="sm"
-              color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
-              className={classNames(styles.cellText)}
-            >
-              {props.cell.getValue()}
-            </Text>
+            <FlexContainer alignItems="center" gap="xs">
+              <Text
+                size="sm"
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+                className={classNames(styles.cellText)}
+              >
+                {props.cell.getValue()}
+                {props.row.original.connection.status === ConnectionStatus.deprecated && (
+                  <InfoTooltip>
+                    <FormattedMessage id="credits.deleted" />
+                  </InfoTooltip>
+                )}
+              </Text>
+            </FlexContainer>
           </Link>
         ),
       }),

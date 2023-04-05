@@ -150,6 +150,7 @@
   "credits.billedCost": "Billed",
   "credits.totalUsage": "Total credits usage",
   "credits.stripePortalLink": "Invoice history",
+  "credits.deleted": "This connection has been deleted",
 
   "credits.loadingCreditsUsage": "Loading credits usage …",
   "credits.totalCreditsUsage": "Total credits usage",

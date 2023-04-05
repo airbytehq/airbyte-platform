@@ -172,7 +172,8 @@ class GenerateInputActivityTest {
         .withState(STATE)
         .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
         .withWorkspaceId(jobSyncConfig.getWorkspaceId())
-        .withCommitStateAsap(true);
+        .withCommitStateAsap(true)
+        .withCommitStatsAsap(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -243,7 +244,8 @@ class GenerateInputActivityTest {
         .withState(STATE)
         .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
         .withWorkspaceId(jobResetConfig.getWorkspaceId())
-        .withCommitStateAsap(true);
+        .withCommitStateAsap(true)
+        .withCommitStatsAsap(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
