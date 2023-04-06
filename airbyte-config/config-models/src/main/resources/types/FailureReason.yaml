@@ -5,7 +5,7 @@ title: FailureSummary
 type: object
 required:
   - timestamp
-additionalProperties: false
+additionalProperties: true
 properties:
   failureOrigin:
     description: Indicates where the error originated. If not set, the origin of error is not well known.

@@ -8,7 +8,7 @@ required:
   - actorDefinitionId
   - jsonToInject
   - injectionPath
-additionalProperties: false
+additionalProperties: true
 properties:
   injectionPath:
     description: Name of the property of the root object of the configuration to inject into. Does not support deep paths via dot notation.

@@ -4,7 +4,7 @@
 title: JobResetConnectionConfig
 description: job reset connection config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - configuredAirbyteCatalog
   - destinationDockerImage
