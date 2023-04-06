@@ -98,6 +98,7 @@ Helm chart to deploy airbyte
 | minio.auth.rootPassword | string | `"minio123"` |  |
 | minio.auth.rootUser | string | `"minio"` |  |
 | minio.enabled | bool | `true` |  |
+| minio.storage.volumeClaimValue | string | `500Mi` |  |
 | nameOverride | string | `""` |  |
 | pod-sweeper.affinity | object | `{}` |  |
 | pod-sweeper.containerSecurityContext | object | `{}` |  |
