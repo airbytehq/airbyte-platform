@@ -20,9 +20,11 @@ import { useQuery } from "hooks/useQuery";
 import { RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
+import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
+import { useCreditsContext } from "./CreditsUsageContext";
+import { FormattedCredits } from "./FormattedCredits";
 import styles from "./UsagePerConnectionTable.module.scss";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
-import { ConnectionFreeAndPaidUsage, useCreditsUsage } from "./useCreditsUsage";
 import { BillingPageQueryParams } from "../BillingPage";
 
 export const UsagePerConnectionTable: React.FC = () => {
@@ -32,7 +34,7 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const { freeAndPaidUsageByConnection, formatCredits } = useCreditsUsage();
+  const { freeAndPaidUsageByConnection } = useCreditsContext();
   const sortBy = query.sortBy || "connectionName";
   const sortOrder = query.order || SortOrderEnum.ASC;
 
@@ -133,7 +135,13 @@ export const UsagePerConnectionTable: React.FC = () => {
           <Link
             to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${props.row.original.connection.sourceId}`}
           >
-            <FlexContainer direction="row" alignItems="center">
+            <FlexContainer
+              direction="row"
+              alignItems="center"
+              className={classNames({
+                [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
+              })}
+            >
               <ConnectorIcon icon={props.row.original.connection.sourceIcon} />
               <Text
                 size="sm"
@@ -151,7 +159,7 @@ export const UsagePerConnectionTable: React.FC = () => {
         cell: (props) => (
           <div
             className={classNames({
-              [styles.disabled]: props.row.original.connection.status === ConnectionStatus.deprecated,
+              [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
             })}
           >
             <ArrowRightIcon />
@@ -179,7 +187,13 @@ export const UsagePerConnectionTable: React.FC = () => {
           <Link
             to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${props.row.original.connection.destinationId}`}
           >
-            <FlexContainer direction="row" alignItems="center">
+            <FlexContainer
+              direction="row"
+              alignItems="center"
+              className={classNames({
+                [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
+              })}
+            >
               <ConnectorIcon icon={props.row.original.connection.destinationIcon} />
               <Text
                 size="sm"
@@ -233,31 +247,34 @@ export const UsagePerConnectionTable: React.FC = () => {
           responsive: true,
         },
         cell: (props) => (
-          <FlexContainer alignItems="center">
+          <FlexContainer
+            alignItems="center"
+            className={classNames({
+              [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
+            })}
+          >
             <UsagePerDayGraph chartData={props.row.original.usage} minimized />
             <FlexContainer direction="column" gap="none">
               {props.row.original.totalFreeUsage > 0 && (
-                <Text
-                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
-                  className={classNames(styles.usageValue, styles["usageValue--green"])}
+                <FormattedCredits
+                  credits={props.row.original.totalFreeUsage}
+                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "green"}
                   size="sm"
-                >
-                  {formatCredits(props.row.original.totalFreeUsage)}
-                </Text>
+                />
               )}
-              <Text
-                className={styles.usageValue}
-                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
-                size="sm"
-              >
-                {formatCredits(props.row.original.totalBilledCost)}
-              </Text>
+              {props.row.original.totalBilledCost > 0 && (
+                <FormattedCredits
+                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+                  credits={props.row.original.totalBilledCost}
+                  size="sm"
+                />
+              )}
             </FlexContainer>
           </FlexContainer>
         ),
       }),
     ];
-  }, [columnHelper, formatCredits, onSortClick, sortBy, sortOrder, workspaceId]);
+  }, [columnHelper, onSortClick, sortBy, sortOrder, workspaceId]);
 
   return (
     <div className={styles.content}>

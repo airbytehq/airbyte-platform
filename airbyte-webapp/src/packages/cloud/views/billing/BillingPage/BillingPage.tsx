@@ -18,6 +18,7 @@ import { links } from "utils/links";
 
 import styles from "./BillingPage.module.scss";
 import CreditsUsage from "./components/CreditsUsage";
+import { CreditsUsageContextProvider } from "./components/CreditsUsageContext";
 import { EmailVerificationHint } from "./components/EmailVerificationHint";
 import RemainingCredits from "./components/RemainingCredits";
 import { ReactComponent as FilesIcon } from "./filesIcon.svg";
@@ -66,7 +67,9 @@ export const BillingPage: React.FC = () => {
             </div>
           }
         >
-          <CreditsUsage />
+          <CreditsUsageContextProvider>
+            <CreditsUsage />
+          </CreditsUsageContextProvider>
         </React.Suspense>
       </div>
     </MainPageWithScroll>
