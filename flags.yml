@@ -9,3 +9,5 @@ flags:
     serve: true
   - name: heartbeat-max-seconds-between-messages
     serve: "10800"
+  - name: SOME.BOGUS.FLAG
+    server: "TESTING"
