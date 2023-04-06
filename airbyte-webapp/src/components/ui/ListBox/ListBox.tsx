@@ -22,6 +22,7 @@ export interface Option<T> {
   label: React.ReactNode;
   value: T;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 interface ListBoxProps<T> {
@@ -60,12 +61,13 @@ export const ListBox = <T,>({
         </Listbox.Button>
         {/* wrap in div to make `position: absolute` on Listbox.Options result in correct vertical positioning */}
         <div className={styles.optionsContainer}>
-          <Listbox.Options className={classNames(styles.optionsMenu)}>
-            {options.map(({ label, value, icon }, index) => (
+          <Listbox.Options className={styles.optionsMenu}>
+            {options.map(({ label, value, icon, disabled }, index) => (
               <Listbox.Option
                 key={typeof label === "string" ? label : index}
                 value={value}
-                className={classNames(styles.option, optionClassName)}
+                disabled={disabled}
+                className={classNames(styles.option, optionClassName, { [styles.disabled]: disabled })}
               >
                 {({ active, selected }) => (
                   <div

@@ -76,8 +76,14 @@ interface TestStateContext {
   isFetchingStreamList: boolean;
 }
 
+interface FormManagementStateContext {
+  isTestInputOpen: boolean;
+  setTestInputOpen: (open: boolean) => void;
+}
+
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
 export const ConnectorBuilderTestStateContext = React.createContext<TestStateContext | null>(null);
+export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { projectId } = useParams<{
@@ -479,4 +485,35 @@ export const useSelectedPageAndSlice = () => {
   const selectedPage = streamToSelectedPage[selectedStreamName] ?? 0;
 
   return { selectedSlice, selectedPage, setSelectedSlice, setSelectedPage };
+};
+
+export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
+  children,
+}) => {
+  const [isTestInputOpen, setTestInputOpen] = useState(false);
+
+  const ctx = useMemo(
+    () => ({
+      isTestInputOpen,
+      setTestInputOpen,
+    }),
+    [isTestInputOpen]
+  );
+
+  return (
+    <ConnectorBuilderFormManagementStateContext.Provider value={ctx}>
+      {children}
+    </ConnectorBuilderFormManagementStateContext.Provider>
+  );
+};
+
+export const useConnectorBuilderFormManagementState = (): FormManagementStateContext => {
+  const connectorBuilderState = useContext(ConnectorBuilderFormManagementStateContext);
+  if (!connectorBuilderState) {
+    throw new Error(
+      "useConnectorBuilderFormManagementState must be used within a ConnectorBuilderFormManagementStateProvider."
+    );
+  }
+
+  return connectorBuilderState;
 };

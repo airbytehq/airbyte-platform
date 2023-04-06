@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { ValidationError } from "yup";
 
@@ -13,6 +13,7 @@ import { Spec } from "core/request/ConnectorManifest";
 import {
   useConnectorBuilderTestState,
   useConnectorBuilderFormState,
+  useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { ConfigMenu } from "./ConfigMenu";
@@ -40,7 +41,7 @@ function useTestInputJsonErrors(testInputJson: StreamReadRequestBodyConfig, spec
 }
 
 export const StreamTestingPanel: React.FC<unknown> = () => {
-  const [isTestInputOpen, setTestInputOpen] = useState(false);
+  const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
   const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
   const { testInputJson } = useConnectorBuilderTestState();
 

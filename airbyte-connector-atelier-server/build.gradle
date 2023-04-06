@@ -20,6 +20,8 @@ dependencies {
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
 
+    implementation project(':airbyte-commons')
+
     // OpenAPI code generation dependencies
     implementation group: 'io.swagger', name: 'swagger-annotations', version: '1.6.2'
 

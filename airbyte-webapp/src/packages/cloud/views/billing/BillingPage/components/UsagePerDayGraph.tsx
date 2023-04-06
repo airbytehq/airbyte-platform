@@ -20,6 +20,7 @@ import { Text } from "components/ui/Text";
 import { useFreeConnectorProgram } from "packages/cloud/components/experiments/FreeConnectorProgram";
 import { ConsumptionPerConnectionPerTimeframe } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 
+import { FormattedCredits } from "./FormattedCredits";
 import styles from "./UsagePerDayGraph.module.scss";
 
 interface UsagePerDayGraphProps {
@@ -32,7 +33,6 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
   } = useFreeConnectorProgram();
   const isEnrolledInFreeConnectorProgram = freeConnectorEnrollment?.isEnrolled;
   const { formatMessage } = useIntl();
-  const { formatNumber } = useIntl();
   const chartLinesColor = styles.grey100;
   const chartTicksColor = styles.grey;
   const chartHoverFill = styles.grey100;
@@ -105,10 +105,7 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
                 // require the first element to be of the same type as value, which isn't what the formatter
                 // is supposed to do: https://github.com/recharts/recharts/issues/3008
 
-                const formattedNumber =
-                  value < 0.005 && value > 0
-                    ? "<0.01"
-                    : formatNumber(value, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+                const formattedNumber = <FormattedCredits credits={value} size="md" />;
 
                 return [
                   formattedNumber,

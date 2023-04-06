@@ -18,6 +18,7 @@ import {
   ConnectorBuilderTestStateProvider,
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
+  ConnectorBuilderFormManagementStateProvider,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
@@ -66,14 +67,16 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
 });
 
 export const ConnectorBuilderEditPage: React.FC = () => (
-  <ConnectorBuilderLocalStorageProvider>
-    <ConnectorBuilderFormStateProvider>
-      <ConnectorBuilderTestStateProvider>
-        <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-        <ConnectorBuilderEditPageInner />
-      </ConnectorBuilderTestStateProvider>
-    </ConnectorBuilderFormStateProvider>
-  </ConnectorBuilderLocalStorageProvider>
+  <ConnectorBuilderFormManagementStateProvider>
+    <ConnectorBuilderLocalStorageProvider>
+      <ConnectorBuilderFormStateProvider>
+        <ConnectorBuilderTestStateProvider>
+          <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+          <ConnectorBuilderEditPageInner />
+        </ConnectorBuilderTestStateProvider>
+      </ConnectorBuilderFormStateProvider>
+    </ConnectorBuilderLocalStorageProvider>
+  </ConnectorBuilderFormManagementStateProvider>
 );
 
 const Panels = React.memo(
