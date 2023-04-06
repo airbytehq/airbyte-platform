@@ -17,8 +17,13 @@ ENV VERSION ${VERSION}
 
 WORKDIR /app
 
+COPY WellKnownTypes.json /app
+
 # Move worker app
 ADD bin/${APPLICATION}-${VERSION}.tar /app
+
+# Grab well-known types file
+COPY WellKnownTypes.json /app
 
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]

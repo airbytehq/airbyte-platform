@@ -190,8 +190,16 @@ allprojects {
     apply plugin: 'com.bmuschko.docker-remote-api'
 
     if (!tasks.findByName('copyDocker')) {
-        task copyDocker(type: Sync) {
+        task copyDocker(type: Copy) {
             from "${project.projectDir}/Dockerfile"
+            into "build/docker/"
+        }
+    }
+
+    // This is a hack to support users who haven't refreshed their schema since the data types rollout
+    if (!tasks.findByName('copyWellKnownTypes')) {
+        task copyWellKnownTypes(type: Copy) {
+            from "${project.projectDir}/src/resources/WellKnownTypes.json"
             into "build/docker/"
         }
     }
@@ -229,6 +237,7 @@ subprojects { subproj ->
         // It is not necessarily used for all subprojects. Non-TAR producing projects can ignore this.
         tasks.register("copyGeneratedTar", Copy) {
             dependsOn copyDocker
+            dependsOn copyWellKnownTypes
             dependsOn distTar
             from('build/distributions') {
                 // Assume that tars are named <parent-project-name>-<child-project-name>-*.tar.
