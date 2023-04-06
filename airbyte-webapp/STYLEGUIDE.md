@@ -18,7 +18,9 @@ This serves as a living document regarding conventions we have agreed upon as a 
   - .filter(([k, v]) => isDefined(v.default) ❌
 
 ## Spacing and Layout
+
 The following recommendations are all in service to two broader principles:
+
 - compoonents should be reusable in as many different contexts as possible without changing their "internal" CSS
 - the impact on layout and spacing of adding any component to an existing page should be predictable
 
@@ -26,6 +28,7 @@ If naively following the recommendations ever undermines those principles, by al
 make an exception; but this should only happen rarely, if ever.
 
 ### container elements are responsible for the spacing of their contents, or: a component's responsibility ends at its border
+
 This keeps context-specific spacing definitions as local as possible, and promotes reusing
 elements in new contexts without the need to override or add special cases to pre-existing
 style rules.
@@ -34,6 +37,7 @@ style rules.
 - for inner gaps, prefer flexbox gaps to `margin` rules on child elements
 
 ### if you must use margins for spacing between content components, prefer `margin-top` to `margin-bottom`
+
 Sometimes it's impractical to rewrite a whole pre-existing page layout just to make a
 drive-by change or addition. In these cases, prefer `margin-top` for spacing: it's a
 better fit for the cascading nature of web content and styling.
@@ -44,6 +48,73 @@ there's nothing following elements can do about it. Preceding elements, however,
 escape hatch to select and style an immediately following element. This is, emphatically,
 a hack, and should not be used anywhere it can be avoided; but flexibility via a hack is
 preferable to no flexibility at all.
+
+### Naming conventions
+
+A single `.module.scss` file should correspond to a single `.tsx` component file. Within the `.module.scss` file, styles should follow a [BEM](https://getbem.com/introduction/) naming scheme:
+
+```scss
+// MyComponent.module.scss
+@use "scss/colors";
+@use "scss/variables";
+
+// block
+.myComponent {
+  background-color: colors.$blue-400;
+  // modifier
+  &--highlighted {
+    border: variables.$border-thick solid colors.$green-400;
+  }
+  // element
+  &__element {
+    background-color: colors.$grey-300;
+    // modifier
+    &--error {
+      color: colors.$red;
+    }
+  }
+}
+```
+
+This helps us keep structure in the source files. This is how these styles can be referenced in React components:
+
+```jsx
+import styles from "./MyComponent.module.scss";
+import classNames from "classnames";
+const MyComponent = ({ isHighlighted, hasError }) => {
+  return (
+    <div className={classNames(styles.myComponent, { [styles["myComponent--highlighted"]]: isHighlighted })}>
+      <p>
+        Hello, world!
+      </p>
+      {hasError && <span className={classNames(styles.myComponent__element, [styles['myComponent__element--error']: hasError])}>Uh oh, error!</span>}
+    </div>
+  );
+};
+```
+
+Alternatively, the `classNames()` call can be extracted, which keeps the JSX cleaner:
+
+```jsx
+import styles from "./MyComponent.module.scss";
+import classNames from "classnames";
+const MyComponent = ({ isHighlighted, hasError }) => {
+  const componentClasses = classNames(styles.myComponent, {
+    [styles["myComponent--highlighted"]]: isHighlighted,
+  });
+
+  const elementClasses = classNames(styles.myComponent__element, {
+    [styles["myComponent__element--error"]]: hasError,
+  });
+
+  return (
+    <div className={componentClasses}>
+      <p>Hello, world!</p>
+      {hasError && <span className={elementClasses}>Uh oh, error!</span>}
+    </div>
+  );
+};
+```
 
 ## Exporting
 
