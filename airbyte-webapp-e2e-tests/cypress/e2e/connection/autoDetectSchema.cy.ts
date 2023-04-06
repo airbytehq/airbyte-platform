@@ -16,7 +16,6 @@ import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } 
 import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import { alterTable, createUsersTableQuery, dropUsersTableQuery } from "commands/db/queries";
-import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as connectionListPage from "pages/connection/connectionListPageObject";
 import * as catalogDiffModal from "pages/connection/catalogDiffModalPageObject";
@@ -30,7 +29,6 @@ describe("Connection - Auto-detect schema changes", () => {
   let connection: Connection;
 
   beforeEach(() => {
-    initialSetupCompleted();
     runDbQuery(dropUsersTableQuery);
     runDbQuery(createUsersTableQuery);
 

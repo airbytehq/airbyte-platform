@@ -29,7 +29,6 @@ import {
   getCreateUsersTableQuery,
   getDropUsersTableQuery,
 } from "commands/db/queries";
-import { initialSetupCompleted } from "commands/workspaces";
 import { RouteHandler } from "cypress/types/net-stubbing";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
@@ -114,8 +113,6 @@ describe("Connection - sync modes", () => {
       createAccountsTableQuery,
       createUserCarsTableQuery
     );
-
-    initialSetupCompleted();
 
     requestWorkspaceId().then(() => {
       const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Sync Mode Test Source"));
