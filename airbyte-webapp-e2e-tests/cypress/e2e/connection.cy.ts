@@ -2,7 +2,6 @@ import { appendRandomString, deleteEntity, submitButtonClick } from "commands/co
 import { createTestConnection } from "commands/connection";
 import { deleteDestination } from "commands/destination";
 import { deleteSource } from "commands/source";
-import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionForm from "pages/connection/connectionFormPageObject";
 import { goToSourcePage, openSourceOverview } from "pages/sourcePage";
 import * as connectionSettings from "pages/connection/connectionSettingsPageObject";
@@ -31,8 +30,6 @@ describe("Connection - creation, updating connection replication settings, delet
   });
 
   beforeEach(() => {
-    initialSetupCompleted();
-
     interceptGetConnectionRequest();
     interceptUpdateConnectionRequest();
   });
@@ -353,7 +350,6 @@ describe("Connection - creation, updating connection replication settings, delet
 
 describe("Connection - stream details", () => {
   beforeEach(() => {
-    initialSetupCompleted();
     cleanDBSource();
     populateDBSource();
   });
@@ -390,7 +386,6 @@ describe("Connection - stream details", () => {
 
 describe("Connection sync modes", () => {
   beforeEach(() => {
-    initialSetupCompleted();
     populateDBSource();
 
     interceptUpdateConnectionRequest();
@@ -524,7 +519,6 @@ describe("Connection sync modes", () => {
 
 describe("Connection - detect source schema changes in source", () => {
   beforeEach(() => {
-    initialSetupCompleted();
     populateDBSource();
 
     interceptUpdateConnectionRequest();

@@ -22,7 +22,6 @@ import {
   getCreateUsersTableQuery,
   getDropUsersTableQuery,
 } from "commands/db/queries";
-import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import { streamDetails } from "pages/connection/StreamDetailsPageObject";
 import { StreamRowPageObject } from "pages/connection/StreamRowPageObject";
@@ -42,8 +41,6 @@ describe("Connection - Stream details", () => {
     dropTables();
 
     runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
-
-    initialSetupCompleted();
 
     requestWorkspaceId().then(() => {
       const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Sync Mode Test Source"));
