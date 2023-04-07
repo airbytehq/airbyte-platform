@@ -8,11 +8,15 @@ configurations.all {
 }
 
 dependencies {
+    annotationProcessor libs.bundles.micronaut.annotation.processor
+    api libs.bundles.micronaut.annotation
+
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-db:jooq')
+    implementation project(':airbyte-featureflag')
     implementation project(':airbyte-json-validation')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-metrics:metrics-lib')
@@ -25,6 +29,7 @@ dependencies {
     testImplementation 'org.hamcrest:hamcrest-all:1.3'
     testImplementation libs.platform.testcontainers.postgresql
     testImplementation libs.flyway.core
+    testImplementation libs.mockito.inline
     testImplementation project(':airbyte-test-utils')
     testImplementation "org.testcontainers:vault:1.17.2"
     integrationTestJavaImplementation project(':airbyte-config:config-persistence')

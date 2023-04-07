@@ -15,6 +15,9 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
 public class MetricTags {
 
   public static final String ATTEMPT_QUEUE = "attempt_queue";
+  public static final String AUTHENTICATION_RESPONSE = "authentication_response";
+  public static final String AUTHENTICATION_RESPONSE_FAILURE_REASON = "authentication_response_failure_reason";
+  public static final String AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY = "request_uri";
   public static final String CONNECTION_ID = "connection_id";
   public static final String FAILURE_ORIGIN = "failure_origin";
   public static final String FAILURE_TYPE = "failure_type";
@@ -33,6 +36,8 @@ public class MetricTags {
   public static final String MIN_CONNECTOR_RELEASE_STATE = "min_connector_release_stage";
   public static final String ATTEMPT_OUTCOME = "attempt_outcome"; // succeeded|failed
   public static final String ATTEMPT_NUMBER = "attempt_number"; // 0|1|2|3
+  public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
+  public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
 
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.getLiteral() : UNKNOWN;

@@ -11,7 +11,7 @@
 .tooltip {
   @include mixins.shadow;
 
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
   line-height: initial;
   padding: variables.$spacing-md;
   border-radius: variables.$border-radius-sm;

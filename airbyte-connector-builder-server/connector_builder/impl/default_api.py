@@ -4,7 +4,6 @@
 
 import json
 import logging
-import traceback
 from json import JSONDecodeError
 from typing import Any, Dict, Iterable, Iterator, Optional, Union
 from urllib.parse import parse_qs, urljoin, urlparse
@@ -12,9 +11,12 @@ from urllib.parse import parse_qs, urljoin, urlparse
 from airbyte_cdk.models import AirbyteLogMessage, AirbyteMessage, Type
 from airbyte_cdk.sources.declarative.manifest_declarative_source import ManifestDeclarativeSource
 from airbyte_cdk.utils.schema_inferrer import SchemaInferrer
+from airbyte_protocol.models import Level
+
 from connector_builder.generated.apis.default_api_interface import DefaultApi
 from connector_builder.generated.models.http_request import HttpRequest
 from connector_builder.generated.models.http_response import HttpResponse
+from connector_builder.generated.models.log_message import LogMessage
 from connector_builder.generated.models.resolve_manifest import ResolveManifest
 from connector_builder.generated.models.resolve_manifest_request_body import ResolveManifestRequestBody
 from connector_builder.generated.models.stream_read import StreamRead
@@ -25,6 +27,7 @@ from connector_builder.generated.models.streams_list_read import StreamsListRead
 from connector_builder.generated.models.streams_list_read_streams import StreamsListReadStreams
 from connector_builder.generated.models.streams_list_request_body import StreamsListRequestBody
 from connector_builder.impl.adapter import CdkAdapter, CdkAdapterFactory
+from connector_builder.impl.error_formatter import ErrorFormatter
 from fastapi import Body, HTTPException
 from jsonschema import ValidationError
 
@@ -118,9 +121,9 @@ spec:
                 )
         except Exception as error:
             self.logger.error(
-                f"Could not list streams with with error: {error.args[0]} - {DefaultApiImpl._get_stacktrace_as_string(error)}"
+                f"Could not list streams with error: {error.args[0]} - {ErrorFormatter.get_stacktrace_as_string(error)}"
             )
-            raise HTTPException(status_code=400, detail=f"Could not list streams with with error: {error.args[0]}")
+            raise HTTPException(status_code=400, detail=f"Could not list streams with error: {error.args[0]}")
         return StreamsListRead(streams=stream_list_read)
 
     async def read_stream(self, stream_read_request_body: StreamReadRequestBody = Body(None, description="")) -> StreamRead:
@@ -148,15 +151,15 @@ spec:
                 record_limit,
             ):
                 if isinstance(message_group, AirbyteLogMessage):
-                    log_messages.append({"message": message_group.message})
+                    log_messages.append(LogMessage(**{"message": message_group.message, "level": message_group.level.value}))
                 else:
                     slices.append(message_group)
         except Exception as error:
             # TODO: We're temporarily using FastAPI's default exception model. Ideally we should use exceptions defined in the OpenAPI spec
-            self.logger.error(f"Could not perform read with with error: {error.args[0]} - {self._get_stacktrace_as_string(error)}")
+            self.logger.error(f"Could not perform read with error: {error.args[0]} - {ErrorFormatter.get_stacktrace_as_string(error)}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Could not perform read with with error: {error.args[0]}",
+                detail=f"Could not perform read with error: {error.args[0]}",
             )
 
         return StreamRead(
@@ -186,7 +189,7 @@ spec:
         try:
             return ResolveManifest(manifest=ManifestDeclarativeSource(resolve_manifest_request_body.manifest).resolved_manifest)
         except Exception as error:
-            self.logger.error(f"Could not resolve manifest with error: {error.args[0]} - {self._get_stacktrace_as_string(error)}")
+            self.logger.error(f"Could not resolve manifest with error: {error.args[0]} - {ErrorFormatter.get_stacktrace_as_string(error)}")
             raise HTTPException(
                 status_code=400,
                 detail=f"Could not resolve manifest with error: {error.args[0]}",
@@ -216,6 +219,7 @@ spec:
         current_slice_pages = []
         current_page_request: Optional[HttpRequest] = None
         current_page_response: Optional[HttpResponse] = None
+        had_error = False
 
         while records_count < limit and (message := next(messages, None)):
             if self._need_to_close_page(at_least_one_page_in_group, message):
@@ -234,17 +238,24 @@ spec:
             elif message.type == Type.LOG and message.log.message.startswith("response:"):
                 current_page_response = self._create_response_from_log_message(message.log)
             elif message.type == Type.LOG:
+                if message.log.level == Level.ERROR:
+                    had_error = True
                 yield message.log
             elif message.type == Type.RECORD:
                 current_page_records.append(message.record.data)
                 records_count += 1
                 schema_inferrer.accumulate(message.record)
         else:
-            self._close_page(current_page_request, current_page_response, current_slice_pages, current_page_records)
+            self._close_page(
+                current_page_request,
+                current_page_response,
+                current_slice_pages,
+                current_page_records,
+                validate_page_complete=not had_error)
             yield StreamReadSlices(pages=current_slice_pages)
 
     @staticmethod
-    def _need_to_close_page(at_least_one_page_in_group, message):
+    def _need_to_close_page(at_least_one_page_in_group, message) -> bool:
         return (
             at_least_one_page_in_group
             and message.type == Type.LOG
@@ -252,8 +263,16 @@ spec:
         )
 
     @staticmethod
-    def _close_page(current_page_request, current_page_response, current_slice_pages, current_page_records):
-        if not current_page_request or not current_page_response:
+    def _close_page(
+            current_page_request, current_page_response, current_slice_pages, current_page_records, validate_page_complete=True
+    ) -> None:
+        """
+        Close a page when parsing message groups
+
+        @param validate_page_complete: in some cases, we expect the CDK to not return a response. As of today, this will only happen before
+        an uncaught exception and therefore, the assumption is that `validate_page_complete=True` only on the last page that is being closed
+        """
+        if validate_page_complete and (not current_page_request or not current_page_response):
             raise ValueError("Every message grouping should have at least one request and response")
 
         current_slice_pages.append(
@@ -300,12 +319,8 @@ spec:
             return self.adapter_factory.create(manifest)
         except ValidationError as error:
             # TODO: We're temporarily using FastAPI's default exception model. Ideally we should use exceptions defined in the OpenAPI spec
-            self.logger.error(f"Invalid connector manifest with error: {error.message} - {DefaultApiImpl._get_stacktrace_as_string(error)}")
+            self.logger.error(f"Invalid connector manifest with error: {error.message} - {ErrorFormatter.get_stacktrace_as_string(error)}")
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid connector manifest with error: {error.message}",
             )
-
-    @staticmethod
-    def _get_stacktrace_as_string(error) -> str:
-        return "".join(traceback.TracebackException.from_exception(error).format())

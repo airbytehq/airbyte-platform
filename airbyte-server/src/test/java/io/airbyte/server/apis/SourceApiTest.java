@@ -83,7 +83,7 @@ class SourceApiTest extends BaseControllerTest {
 
   @Test
   void testCreateSource() throws JsonValidationException, ConfigNotFoundException, IOException {
-    Mockito.when(sourceHandler.createSource(Mockito.any()))
+    Mockito.when(sourceHandler.createSourceWithOptionalSecret(Mockito.any()))
         .thenReturn(new SourceRead())
         .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/sources/create";

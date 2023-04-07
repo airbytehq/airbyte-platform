@@ -12,24 +12,9 @@ import {
 
 /**
  * Wrapper for DB Query Cypress task
- * @param queryString
+ * @param queryStrings
  */
-export const runDbQuery = <T>(queryString: string) => cy.task<T>("dbQuery", { query: queryString });
-
-interface TableExistsResponse {
-  exists: boolean;
-}
-/**
- * Function for composing the query for checking the existence of a table
- * @param tableName
- * @return string
- */
-const composeIsTableExistQuery = (tableName: string) =>
-  `SELECT EXISTS (SELECT FROM pg_tables
-		WHERE
-        schemaname = 'public' AND
-        tablename  = '${tableName}'
-      )`;
+export const runDbQuery = <T>(...queryStrings: string[]) => cy.task<T>("dbQuery", { query: queryStrings.join("; ") });
 
 export const populateDBSource = () => {
   cleanDBSource();

@@ -59,7 +59,7 @@ export const JobItem: React.FC<JobItemProps> = ({ job }) => {
           <Suspense
             fallback={
               <div className={styles.logsLoadingContainer}>
-                <Spinner small />
+                <Spinner size="sm" />
               </div>
             }
           >

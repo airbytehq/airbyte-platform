@@ -34,7 +34,7 @@ export const useBuilderErrors = () => {
         }
       }
 
-      if (errorKeys.includes("streams")) {
+      if (errorKeys.includes("streams") && typeof errorsToCheck.streams === "object") {
         const errorStreamNums = Object.keys(errorsToCheck.streams ?? {}).filter((errorKey) =>
           Boolean(errorsToCheck.streams?.[Number(errorKey)])
         );
@@ -75,7 +75,7 @@ export const useBuilderErrors = () => {
   );
 
   const validateAndTouch = useCallback(
-    (callback: () => void, limitToViews?: BuilderView[]) => {
+    (callback?: () => void, limitToViews?: BuilderView[]) => {
       validateForm().then((errors) => {
         for (const path of Object.keys(flatten(errors))) {
           setFieldTouched(path);
@@ -93,7 +93,7 @@ export const useBuilderErrors = () => {
             setSelectedView(invalidBuilderViews[0]);
           }
         } else {
-          callback();
+          callback?.();
         }
       });
     },

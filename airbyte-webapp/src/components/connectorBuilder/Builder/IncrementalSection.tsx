@@ -93,7 +93,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         tooltip="Time interval (ISO 8601 duration) for which to break up stream into slices, e.g. P1D for daily slices"
       />
       <ToggleGroupField<RequestOption>
-        label="Start time request option"
+        label="Inject start time into outgoing HTTP request"
         tooltip="Optionally configures how the start datetime will be sent in requests to the source API"
         fieldPath={streamFieldPath("incrementalSync.start_time_option")}
         initialValues={{
@@ -109,7 +109,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         />
       </ToggleGroupField>
       <ToggleGroupField<RequestOption>
-        label="End time request option"
+        label="Inject end time into outgoing HTTP request"
         tooltip="Optionally configures how the end datetime will be sent in requests to the source API"
         fieldPath={streamFieldPath("incrementalSync.end_time_option")}
         initialValues={{

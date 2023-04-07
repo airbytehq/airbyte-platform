@@ -9,9 +9,9 @@
 // - custom domains aren't yet supported
 
 import isEmpty from "lodash/isEmpty";
+import { useIntl } from "react-intl";
 import { useMutation, useQuery } from "react-query";
 
-import { MissingConfigError, useConfig } from "config";
 import {
   OperatorType,
   WebBackendConnectionRead,
@@ -20,6 +20,8 @@ import {
   WebhookConfigRead,
   WorkspaceRead,
 } from "core/request/AirbyteClient";
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useNotificationService } from "hooks/services/Notification";
 import { useWebConnectionService } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import {
@@ -87,6 +89,9 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
   const connectionService = useWebConnectionService();
+  const { setConnection } = useConnectionEditService();
+  const notificationService = useNotificationService();
+  const { formatMessage } = useIntl();
 
   const hasDbtIntegration = !isEmpty(workspace.webhookConfigs?.filter(isDbtWebhookConfig));
   const webhookConfigId = workspace.webhookConfigs?.find((config) => isDbtWebhookConfig(config))?.id;
@@ -97,8 +102,8 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const otherOperations = [...(connection.operations?.filter((operation) => !isDbtCloudJob(operation)) || [])];
 
   const { mutateAsync, isLoading } = useMutation({
-    mutationFn: (jobs: DbtCloudJob[]) => {
-      return connectionService.update({
+    mutationFn: (jobs: DbtCloudJob[]) =>
+      connectionService.update({
         connectionId: connection.connectionId,
         operations: [
           ...otherOperations,
@@ -120,6 +125,19 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
             },
           })),
         ],
+      }),
+    onSuccess(updatedConnection) {
+      // Error banners should disappear after a successful retry
+      notificationService.unregisterNotificationById("connection.dbtCloudJobs.error");
+      // Ensure that unrelated connection-editing UI (e.g. other tabs of the connection
+      // page) isn't left with a stale reference
+      setConnection(updatedConnection);
+    },
+    onError() {
+      notificationService.registerNotification({
+        id: "connection.dbtCloudJobs.error",
+        text: formatMessage({ id: "connection.dbtCloudJobs.genericError" }),
+        type: "error",
       });
     },
   });
@@ -133,14 +151,8 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
 };
 
 export const useAvailableDbtJobs = () => {
-  const { cloudApiUrl } = useConfig();
-  if (!cloudApiUrl) {
-    throw new MissingConfigError("Missing required configuration cloudApiUrl");
-  }
-
-  const config = { apiUrl: cloudApiUrl };
   const middlewares = useDefaultRequestMiddlewares();
-  const requestOptions = { config, middlewares };
+  const requestOptions = { middlewares };
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
   const dbtConfigId = workspace.webhookConfigs?.find((config) => config.name?.includes("dbt"))?.id;

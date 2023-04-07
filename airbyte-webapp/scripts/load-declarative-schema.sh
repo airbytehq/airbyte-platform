@@ -4,13 +4,15 @@
 set -e
 mkdir -p build
 
-DEFAULT_CDK_VERSION=`cat ../airbyte-connector-builder-server/CDK_VERSION`
+DEFAULT_CDK_VERSION=`cat ../airbyte-connector-builder-resources/CDK_VERSION`
 
 if [ -z "$CDK_VERSION" ]
 then
     CDK_VERSION=$DEFAULT_CDK_VERSION
 fi
 
+# Export as Typescript module so the version is available in the webapp during compile time and run time.
+printf "// generated, do not change manually\nexport const CDK_VERSION = \"$CDK_VERSION\";\n" > src/components/connectorBuilder/cdk.ts
 
 if [ -z "$CDK_MANIFEST_PATH" ]
 then

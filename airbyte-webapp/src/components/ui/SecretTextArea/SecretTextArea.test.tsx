@@ -1,5 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { act } from "react-dom/test-utils";
+
 import { render } from "test-utils/testutils";
 
 import { SecretTextArea } from "./SecretTextArea";

@@ -6,6 +6,8 @@ import { isDefined } from "utils/common";
 
 import { FormBuildError } from "./FormBuildError";
 
+export const FORM_PATTERN_ERROR = "form.pattern.error";
+
 /**
  * Returns yup.schema for validation
  *
@@ -126,7 +128,7 @@ export const buildYupFormForJsonSchema = (
         .trim();
 
       if (jsonSchema?.pattern !== undefined) {
-        schema = schema.matches(new RegExp(jsonSchema.pattern), "form.pattern.error");
+        schema = schema.matches(new RegExp(jsonSchema.pattern), FORM_PATTERN_ERROR);
       }
 
       break;

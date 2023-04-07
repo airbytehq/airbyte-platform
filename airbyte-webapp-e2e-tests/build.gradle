@@ -8,6 +8,7 @@ def nodeVersion = new File("${projectDir}/.nvmrc").text.trim();
 node {
     download = true
     version = nodeVersion
+    distBaseUrl = "https://nodejs-mirror.airbyte.com/dist"
 }
 
 task e2etest(type: NpmTask) {

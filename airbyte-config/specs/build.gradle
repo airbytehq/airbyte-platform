@@ -13,6 +13,12 @@ dependencies {
 }
 
 task downloadCombinedConnectorCatalog(type: JavaExec, dependsOn: compileJava) {
+    /**
+     * run this once a day. if you want to force this task to run do so with --rerun
+     * e.g. ./gradlew :airbyte-config:specs:downloadCombinedConnectorCatalog --info --rerun
+     */
+    inputs.property("todaysDate", new Date().clearTime() )
+    outputs.upToDateWhen { true }
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.airbyte.config.specs.CombinedConnectorCatalogDownloader'
     args project(":airbyte-config:init").projectDir

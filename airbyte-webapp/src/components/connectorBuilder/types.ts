@@ -3,7 +3,8 @@ import merge from "lodash/merge";
 import semver from "semver";
 import * as yup from "yup";
 
-import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { CDK_VERSION } from "./cdk";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   Spec,
@@ -35,7 +36,7 @@ import {
   PageIncrementType,
   BearerAuthenticatorType,
   BasicHttpAuthenticatorType,
-} from "core/request/ConnectorManifest";
+} from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
 
@@ -104,19 +105,18 @@ export interface BuilderStream {
   unsupportedFields?: Record<string, unknown>;
 }
 
-// 0.28.0 is the version where breaking changes got introduced - older states can't be supported
-export const OLDEST_SUPPORTED_CDK_VERSION = "0.28.0";
-
-// TODO pull in centralized CDK version configuration to ensure it's consistent across all components
-export const CDK_VERSION = "0.28.0";
+// 0.29.0 is the version where breaking changes got introduced - older states can't be supported
+export const OLDEST_SUPPORTED_CDK_VERSION = "0.29.0";
 
 export function versionSupported(version: string) {
   return semver.satisfies(version, `>= ${OLDEST_SUPPORTED_CDK_VERSION} <=${CDK_VERSION}`);
 }
 
+export const DEFAULT_CONNECTOR_NAME = "Untitled";
+
 export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
-    connectorName: "Untitled",
+    connectorName: DEFAULT_CONNECTOR_NAME,
     urlBase: "",
     authenticator: { type: "NoAuth" },
   },
@@ -188,10 +188,11 @@ export const authTypeToKeyToInferredInput: Record<string, Record<string, Builder
     },
     password: {
       key: "password",
-      required: true,
+      required: false,
       definition: {
         type: "string",
         title: "Password",
+        always_show: true,
         airbyte_secret: true,
       },
     },
@@ -360,123 +361,126 @@ export const builderFormValidationSchema = yup.object().shape({
       }),
     }),
   }),
-  streams: yup.array().of(
-    yup.object().shape({
-      name: yup.string().required("form.empty.error"),
-      urlPath: yup.string().required("form.empty.error"),
-      fieldPointer: yup.array().of(yup.string()),
-      primaryKey: yup.array().of(yup.string()),
-      httpMethod: yup.mixed().oneOf(["GET", "POST"]),
-      requestOptions: yup.object().shape({
-        requestParameters: yup.array().of(yup.array().of(yup.string())),
-        requestHeaders: yup.array().of(yup.array().of(yup.string())),
-        requestBody: yup.array().of(yup.array().of(yup.string())),
-      }),
-      schema: yup.string().test({
-        test: (val: string | undefined) => {
-          if (!val) {
-            return true;
-          }
-          try {
-            JSON.parse(val);
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        message: "connectorBuilder.invalidSchema",
-      }),
-      paginator: yup
-        .object()
-        .shape({
-          pageSizeOption: nonPathRequestOptionSchema,
-          pageTokenOption: yup.object().shape({
-            inject_into: yup.mixed().oneOf(injectIntoValues),
-            field_name: yup.mixed().when("inject_into", {
-              is: "path",
-              then: (schema) => schema.strip(),
-              otherwise: yup.string().required("form.empty.error"),
-            }),
-          }),
-          strategy: yup
-            .object({
-              page_size: yup.mixed().when("type", {
-                is: (val: string) => ([OFFSET_INCREMENT, PAGE_INCREMENT] as string[]).includes(val),
-                then: yup.number().required("form.empty.error"),
-                otherwise: yup.number(),
+  streams: yup
+    .array()
+    .min(1)
+    .of(
+      yup.object().shape({
+        name: yup.string().required("form.empty.error"),
+        urlPath: yup.string().required("form.empty.error"),
+        fieldPointer: yup.array().of(yup.string()),
+        primaryKey: yup.array().of(yup.string()),
+        httpMethod: yup.mixed().oneOf(["GET", "POST"]),
+        requestOptions: yup.object().shape({
+          requestParameters: yup.array().of(yup.array().of(yup.string())),
+          requestHeaders: yup.array().of(yup.array().of(yup.string())),
+          requestBody: yup.array().of(yup.array().of(yup.string())),
+        }),
+        schema: yup.string().test({
+          test: (val: string | undefined) => {
+            if (!val) {
+              return true;
+            }
+            try {
+              JSON.parse(val);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          message: "connectorBuilder.invalidSchema",
+        }),
+        paginator: yup
+          .object()
+          .shape({
+            pageSizeOption: nonPathRequestOptionSchema,
+            pageTokenOption: yup.object().shape({
+              inject_into: yup.mixed().oneOf(injectIntoValues),
+              field_name: yup.mixed().when("inject_into", {
+                is: "path",
+                then: (schema) => schema.strip(),
+                otherwise: yup.string().required("form.empty.error"),
               }),
-              cursor_value: yup.mixed().when("type", {
-                is: CURSOR_PAGINATION,
+            }),
+            strategy: yup
+              .object({
+                page_size: yup.mixed().when("type", {
+                  is: (val: string) => ([OFFSET_INCREMENT, PAGE_INCREMENT] as string[]).includes(val),
+                  then: yup.number().required("form.empty.error"),
+                  otherwise: yup.number(),
+                }),
+                cursor_value: yup.mixed().when("type", {
+                  is: CURSOR_PAGINATION,
+                  then: yup.string().required("form.empty.error"),
+                  otherwise: (schema) => schema.strip(),
+                }),
+                stop_condition: yup.mixed().when("type", {
+                  is: CURSOR_PAGINATION,
+                  then: yup.string(),
+                  otherwise: (schema) => schema.strip(),
+                }),
+                start_from_page: yup.mixed().when("type", {
+                  is: PAGE_INCREMENT,
+                  then: yup.string(),
+                  otherwise: (schema) => schema.strip(),
+                }),
+              })
+              .notRequired()
+              .default(undefined),
+          })
+          .notRequired()
+          .default(undefined),
+        partitionRouter: yup
+          .array(
+            yup.object().shape({
+              cursor_field: yup.mixed().when("type", {
+                is: (val: string) => val === LIST_PARTITION_ROUTER,
                 then: yup.string().required("form.empty.error"),
                 otherwise: (schema) => schema.strip(),
               }),
-              stop_condition: yup.mixed().when("type", {
-                is: CURSOR_PAGINATION,
-                then: yup.string(),
+              values: yup.mixed().when("type", {
+                is: LIST_PARTITION_ROUTER,
+                then: yup.array().of(yup.string()),
                 otherwise: (schema) => schema.strip(),
               }),
-              start_from_page: yup.mixed().when("type", {
-                is: PAGE_INCREMENT,
-                then: yup.string(),
+              request_option: nonPathRequestOptionSchema,
+              parent_key: yup.mixed().when("type", {
+                is: SUBSTREAM_PARTITION_ROUTER,
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+              parentStreamReference: yup.mixed().when("type", {
+                is: SUBSTREAM_PARTITION_ROUTER,
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+              partition_field: yup.mixed().when("type", {
+                is: SUBSTREAM_PARTITION_ROUTER,
+                then: yup.string().required("form.empty.error"),
                 otherwise: (schema) => schema.strip(),
               }),
             })
-            .notRequired()
-            .default(undefined),
-        })
-        .notRequired()
-        .default(undefined),
-      partitionRouter: yup
-        .array(
-          yup.object().shape({
-            cursor_field: yup.mixed().when("type", {
-              is: (val: string) => val === LIST_PARTITION_ROUTER,
-              then: yup.string().required("form.empty.error"),
-              otherwise: (schema) => schema.strip(),
-            }),
-            values: yup.mixed().when("type", {
-              is: LIST_PARTITION_ROUTER,
-              then: yup.array().of(yup.string()),
-              otherwise: (schema) => schema.strip(),
-            }),
+          )
+          .notRequired()
+          .default(undefined),
+        incrementalSync: yup
+          .object()
+          .shape({
             request_option: nonPathRequestOptionSchema,
-            parent_key: yup.mixed().when("type", {
-              is: SUBSTREAM_PARTITION_ROUTER,
-              then: yup.string().required("form.empty.error"),
-              otherwise: (schema) => schema.strip(),
-            }),
-            parentStreamReference: yup.mixed().when("type", {
-              is: SUBSTREAM_PARTITION_ROUTER,
-              then: yup.string().required("form.empty.error"),
-              otherwise: (schema) => schema.strip(),
-            }),
-            partition_field: yup.mixed().when("type", {
-              is: SUBSTREAM_PARTITION_ROUTER,
-              then: yup.string().required("form.empty.error"),
-              otherwise: (schema) => schema.strip(),
-            }),
+            start_datetime: yup.string().required("form.empty.error"),
+            end_datetime: yup.string().required("form.empty.error"),
+            step: yup.string().required("form.empty.error"),
+            datetime_format: yup.string().required("form.empty.error"),
+            start_time_option: nonPathRequestOptionSchema,
+            end_time_option: nonPathRequestOptionSchema,
+            stream_state_field_start: yup.string(),
+            stream_state_field_end: yup.string(),
+            lookback_window: yup.string(),
           })
-        )
-        .notRequired()
-        .default(undefined),
-      incrementalSync: yup
-        .object()
-        .shape({
-          request_option: nonPathRequestOptionSchema,
-          start_datetime: yup.string().required("form.empty.error"),
-          end_datetime: yup.string().required("form.empty.error"),
-          step: yup.string().required("form.empty.error"),
-          datetime_format: yup.string().required("form.empty.error"),
-          start_time_option: nonPathRequestOptionSchema,
-          end_time_option: nonPathRequestOptionSchema,
-          stream_state_field_start: yup.string(),
-          stream_state_field_end: yup.string(),
-          lookback_window: yup.string(),
-        })
-        .notRequired()
-        .default(undefined),
-    })
-  ),
+          .notRequired()
+          .default(undefined),
+      })
+    ),
 });
 
 function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["global"]): HttpRequesterAuthenticator {
@@ -589,8 +593,8 @@ function builderStreamToDeclarativeSteam(
       type: "SimpleRetriever",
       requester: {
         type: "HttpRequester",
-        url_base: values.global?.urlBase.trim(),
-        path: stream.urlPath.trim(),
+        url_base: values.global?.urlBase?.trim(),
+        path: stream.urlPath?.trim(),
         http_method: stream.httpMethod,
         request_parameters: Object.fromEntries(stream.requestOptions.requestParameters),
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),

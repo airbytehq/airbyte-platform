@@ -1,4 +1,5 @@
 import { renderHook } from "@testing-library/react-hooks";
+
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
@@ -7,11 +8,11 @@ import {
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper as wrapper } from "test-utils/testutils";
 
-import { frequencyConfig } from "config/frequencyConfig";
 import { NormalizationType } from "core/domain/connection";
 import { ConnectionScheduleTimeUnit, OperationRead } from "core/request/AirbyteClient";
 
 import { mapFormPropsToOperation, useFrequencyDropdownData, useInitialValues } from "./formConfig";
+import { frequencyConfig } from "./frequencyConfig";
 
 jest.mock("services/workspaces/WorkspacesService", () => ({
   useCurrentWorkspace: () => mockWorkspace,
@@ -59,17 +60,25 @@ describe("#mapFormPropsToOperation", () => {
       operatorType: "normalization",
     },
   };
+  const dbtCloudJob: OperationRead = {
+    workspaceId,
+    operationId: "testDbtCloudJob",
+    name: "testDbtCloudJob",
+    operatorConfiguration: {
+      operatorType: "webhook",
+    },
+  };
 
   it("should add any included transformations", () => {
     expect(
       mapFormPropsToOperation(
         {
-          transformations: [normalization],
+          transformations: [normalization, dbtCloudJob],
         },
         undefined,
         "asdf"
       )
-    ).toEqual([normalization]);
+    ).toEqual([normalization, dbtCloudJob]);
   });
 
   it("should add a basic normalization if normalization is set to basic", () => {
@@ -108,7 +117,7 @@ describe("#mapFormPropsToOperation", () => {
     ).toEqual([normalization]);
   });
 
-  it("should not include any provided initial operations and not include the basic normalization operation when normalization type is raw", () => {
+  it("should only include webhook operations from initial operations and not include the basic normalization operation when normalization type is raw", () => {
     expect(
       mapFormPropsToOperation(
         {
@@ -118,6 +127,16 @@ describe("#mapFormPropsToOperation", () => {
         workspaceId
       )
     ).toEqual([]);
+
+    expect(
+      mapFormPropsToOperation(
+        {
+          normalization: NormalizationType.raw,
+        },
+        [normalization, dbtCloudJob],
+        workspaceId
+      )
+    ).toEqual([dbtCloudJob]);
   });
 
   it("should include provided transformations when normalization type is raw, but not any provided normalizations", () => {

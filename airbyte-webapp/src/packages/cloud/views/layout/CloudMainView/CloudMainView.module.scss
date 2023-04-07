@@ -4,8 +4,6 @@
 $sidebar-workspace-font-size: 9px;
 $sidebar-workspace-font-weight: 400;
 
-$banner-height: 30px;
-
 .mainContainer {
   overflow: hidden;
   display: flex;
@@ -22,14 +20,6 @@ $banner-height: 30px;
     .dataBlock {
       width: 100%;
       height: 100%;
-    }
-
-    &.alertBanner {
-      margin-top: $banner-height;
-
-      .dataBlock {
-        height: calc(100% - #{$banner-height});
-      }
     }
 
     &.speedyConnectionBanner {
@@ -51,7 +41,6 @@ $banner-height: 30px;
   border: variables.$border-thin solid colors.$grey-100;
   border-radius: variables.$border-radius-lg;
   background-color: rgba(255, 255, 255, 20%);
-  margin-top: variables.$spacing-md;
   padding: 0 variables.$spacing-md;
   font-size: $sidebar-workspace-font-size;
   font-weight: $sidebar-workspace-font-weight;

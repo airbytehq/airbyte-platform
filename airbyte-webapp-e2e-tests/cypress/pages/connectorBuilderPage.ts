@@ -5,11 +5,14 @@ const addStreamButton = "button[data-testid='add-stream']";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
 const toggleInput = "input[data-testid='toggle']";
 const streamNameInput = "input[name='streamName']";
-const streamUrlPath = "input[name='urlPath']";
+const streamUrlPathFromModal = "input[name='urlPath']";
+const streamUrlPathFromForm = "input[name='streams[0].urlPath']";
 const recordSelectorInput = "[data-testid='tag-input'] input";
 const authType = "[data-testid='global.authenticator']";
 const testInputsButton = "[data-testid='test-inputs']";
 const limitInput = "[name='streams[0].paginator.strategy.page_size']";
+const injectLimitInto = "[data-testid$='paginator.pageSizeOption.inject_into']";
+const injectLimitFieldName = "[name='streams[0].paginator.pageSizeOption.field_name']";
 const injectOffsetInto = "[data-testid$='paginator.pageTokenOption.inject_into']";
 const injectOffsetFieldName = "[name='streams[0].paginator.pageTokenOption.field_name']";
 const testPageItem = "[data-testid='test-pages'] li";
@@ -18,8 +21,18 @@ const testStreamButton = "button[data-testid='read-stream']";
 const schemaDiff = 'pre[class*="SchemaDiffView"]';
 const sliceDropdown = '[data-testid="tag-select-slice"]';
 
-export const goToConnectorBuilderPage = () => {
+export const goToConnectorBuilderCreatePage = () => {
+  cy.visit("/connector-builder/create");
+  cy.wait(3000);
+};
+
+export const goToConnectorBuilderProjectsPage = () => {
   cy.visit("/connector-builder");
+  cy.wait(3000);
+};
+
+export const editProjectBuilder = (name: string) => {
+  cy.get(`button[data-testid='edit-project-button-${name}']`).click();
   cy.wait(3000);
 };
 
@@ -47,6 +60,11 @@ const selectFromDropdown = (selector: string, value: string) => {
 
 export const selectAuthMethod = (value: string) => {
   selectFromDropdown(authType, value);
+};
+
+export const selectActiveVersion = (name: string, version: number) => {
+  cy.get(`[data-testid='version-changer-${name}']`).click();
+  cy.get("[data-testid='versions-list'] > button").contains(`v${version}`).click();
 };
 
 export const goToView = (view: string) => {
@@ -77,10 +95,18 @@ export const disablePagination = () => {
   getPaginationCheckbox().uncheck({ force: true });
 };
 
-export const configureOffsetPagination = (limit: string, into: string, fieldName: string) => {
+export const configureLimitOffsetPagination = (
+  limit: string,
+  limitInto: string,
+  limitFieldName: string,
+  offsetInto: string,
+  offsetFieldName: string
+) => {
   cy.get(limitInput).type(limit, { force: true });
-  selectFromDropdown(injectOffsetInto, into);
-  cy.get(injectOffsetFieldName).type(fieldName, { force: true });
+  selectFromDropdown(injectLimitInto, limitInto);
+  cy.get(injectLimitFieldName).type(limitFieldName);
+  selectFromDropdown(injectOffsetInto, offsetInto);
+  cy.get(injectOffsetFieldName).type(offsetFieldName, { force: true });
 };
 
 const getStreamSlicerCheckbox = () => {
@@ -128,7 +154,11 @@ export const enterStreamName = (streamName: string) => {
 };
 
 export const enterUrlPathFromForm = (urlPath: string) => {
-  cy.get(streamUrlPath).type(urlPath, { force: true });
+  cy.get(streamUrlPathFromModal).type(urlPath, { force: true });
+};
+
+export const getUrlPathInput = () => {
+  return cy.get(streamUrlPathFromForm);
 };
 
 export const enterUrlPath = (urlPath: string) => {

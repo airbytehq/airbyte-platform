@@ -11,6 +11,7 @@ from airbyte_cdk.sources.declarative.parsers.model_to_component_factory import M
 from airbyte_cdk.sources.declarative.yaml_declarative_source import ManifestDeclarativeSource
 from airbyte_cdk.sources.streams.http import HttpStream
 from connector_builder.impl.adapter import CdkAdapter, CdkAdapterFactory
+from connector_builder.impl.error_formatter import ErrorFormatter
 
 
 class LowCodeSourceAdapter(CdkAdapter):
@@ -61,7 +62,8 @@ class LowCodeSourceAdapter(CdkAdapter):
         try:
             yield from generator
         except Exception as e:
-            yield AirbyteMessage(type=MessageType.LOG, log=AirbyteLogMessage(level=Level.ERROR, message=str(e)))
+            error_message = f"{e.args[0] if len(e.args) > 0 else str(e)} - {ErrorFormatter.get_stacktrace_as_string(e)}"
+            yield AirbyteMessage(type=MessageType.LOG, log=AirbyteLogMessage(level=Level.ERROR, message=error_message))
             return
 
 

@@ -1,13 +1,6 @@
-import { useMutation } from "react-query";
-
 import { Action, Namespace } from "core/analytics";
-import { NotificationService } from "core/domain/notification/NotificationService";
 import { useAnalyticsService } from "hooks/services/Analytics";
-import { useInitService } from "services/useInitService";
 import { useCurrentWorkspace, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
-
-import { useConfig } from "../../config";
-import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 
 export interface WebhookPayload {
   webhook?: string;
@@ -15,14 +8,7 @@ export interface WebhookPayload {
   sendOnFailure?: boolean;
 }
 
-function useGetNotificationService() {
-  const config = useConfig();
-  const middlewares = useDefaultRequestMiddlewares();
-  return useInitService(() => new NotificationService(config.apiUrl, middlewares), [config.apiUrl, middlewares]);
-}
-
 const useWorkspace = () => {
-  const notificationService = useGetNotificationService();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const workspace = useCurrentWorkspace();
 
@@ -86,22 +72,10 @@ const useWorkspace = () => {
       ],
     });
 
-  const tryWebhookUrl = useMutation((data: WebhookPayload) =>
-    notificationService.try({
-      notificationType: "slack",
-      sendOnSuccess: !!data.sendOnSuccess,
-      sendOnFailure: !!data.sendOnFailure,
-      slackConfiguration: {
-        webhook: data.webhook ?? "",
-      },
-    })
-  );
-
   return {
     setInitialSetupConfig,
     updatePreferences,
     updateWebhook,
-    testWebhook: tryWebhookUrl.mutateAsync,
   };
 };
 

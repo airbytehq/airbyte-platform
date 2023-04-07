@@ -1,7 +1,7 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:1.0
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
 FROM ${JDK_IMAGE}
 
-ARG VERSION=0.41.0
+ARG VERSION=0.43.1
 
 ENV APPLICATION airbyte-bootloader
 ENV VERSION ${VERSION}

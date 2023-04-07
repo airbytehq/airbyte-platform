@@ -18,7 +18,7 @@
 .selectedOption {
   margin-top: variables.$spacing-lg;
   background: none;
-  font-size: 12px;
+  font-size: variables.$font-size-sm;
   color: colors.$blue-500;
 
   &:hover {

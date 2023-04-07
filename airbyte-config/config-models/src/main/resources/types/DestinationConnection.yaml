@@ -11,7 +11,7 @@ required:
   - destinationId
   - configuration
   - tombstone
-additionalProperties: false
+additionalProperties: true
 properties:
   name:
     type: string

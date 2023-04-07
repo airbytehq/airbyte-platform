@@ -53,6 +53,7 @@ airbyte:
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
+    datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   container:
     orchestrator:
       enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}
@@ -160,7 +161,6 @@ airbyte:
           memory:
             limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
     normalization:
       main:
         container:
@@ -237,7 +237,9 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: true
+    enabled: false
+    jdbc:
+      enabled: false
     sensitive: false
   info:
     enabled: true

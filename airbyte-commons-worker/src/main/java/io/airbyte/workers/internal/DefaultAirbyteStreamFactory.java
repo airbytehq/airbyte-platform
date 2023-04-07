@@ -6,7 +6,6 @@ package io.airbyte.workers.internal;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
@@ -47,10 +46,6 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
   protected final Logger logger;
   private final long maxMemory;
   private final Optional<Class<? extends RuntimeException>> exceptionClass;
-
-  public DefaultAirbyteStreamFactory() {
-    this(MdcScope.DEFAULT_BUILDER);
-  }
 
   public DefaultAirbyteStreamFactory(final MdcScope.Builder containerLogMdcBuilder) {
     this(new AirbyteProtocolPredicate(), LOGGER, containerLogMdcBuilder, Optional.empty());
@@ -110,37 +105,18 @@ public class DefaultAirbyteStreamFactory implements AirbyteStreamFactory {
             }
           }
         })
-        .flatMap(this::parseJson)
-        .filter(this::validate)
         .flatMap(this::toAirbyteMessage)
         .filter(this::filterLog);
   }
 
-  protected Stream<JsonNode> parseJson(final String line) {
-    final Optional<JsonNode> jsonLine = Jsons.tryDeserialize(line);
-    if (jsonLine.isEmpty()) {
-      // we log as info all the lines that are not valid json
-      // some sources actually log their process on stdout, we
-      // want to make sure this info is available in the logs.
-      try (final var mdcScope = containerLogMdcBuilder.build()) {
-        logger.info(line);
-      }
-    }
-    return jsonLine.stream();
-  }
+  protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
+    Optional<AirbyteMessage> m = Jsons.tryDeserialize(line, AirbyteMessage.class);
 
-  protected boolean validate(final JsonNode json) {
-    final boolean res = protocolValidator.test(json);
-    if (!res) {
-      logger.error("Validation failed: {}", Jsons.serialize(json));
+    if (m.isPresent()) {
+      m = BasicAirbyteMessageValidator.validate(m.get());
     }
-    return res;
-  }
-
-  protected Stream<AirbyteMessage> toAirbyteMessage(final JsonNode json) {
-    final Optional<AirbyteMessage> m = Jsons.tryObject(json, AirbyteMessage.class);
     if (m.isEmpty()) {
-      logger.error("Deserialization failed: {}", Jsons.serialize(json));
+      logger.error("Deserialization failed: {}", Jsons.serialize(line));
     }
     return m.stream();
   }

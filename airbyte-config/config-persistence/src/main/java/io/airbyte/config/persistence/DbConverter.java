@@ -4,13 +4,16 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTIVE_DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
@@ -20,9 +23,11 @@ import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorBuilderProject;
+import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
@@ -45,6 +50,8 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -69,7 +76,19 @@ public class DbConverter {
    * @param connectionOperationId connection operation id.
    * @return connection (a.k.a. StandardSync)
    */
-  public static StandardSync buildStandardSync(final Record record, final List<UUID> connectionOperationId) {
+  public static StandardSync buildStandardSync(final Record record,
+                                               final List<UUID> connectionOperationId,
+                                               final List<NotificationConfigurationRecord> notificationConfigurations) {
+    final boolean isWebhookNotificationEnabled = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration
+            .getNotificationType() == NotificationType.webhook && notificationConfiguration.getEnabled())
+        .findAny().isPresent();
+
+    final boolean isEmailNotificationEnabled = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration
+            .getNotificationType() == NotificationType.email && notificationConfiguration.getEnabled())
+        .findAny().isPresent();
+
     return new StandardSync()
         .withConnectionId(record.get(CONNECTION.ID))
         .withNamespaceDefinition(
@@ -101,7 +120,8 @@ public class DbConverter {
         .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withNonBreakingChangesPreference(
             Enums.toEnum(record.get(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, String.class), NonBreakingChangesPreference.class).orElseThrow())
-        .withNotifySchemaChanges(record.get(CONNECTION.NOTIFY_SCHEMA_CHANGES));
+        .withNotifySchemaChanges(isWebhookNotificationEnabled)
+        .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
@@ -384,7 +404,45 @@ public class DbConverter {
         .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
         .withHasDraft((Boolean) record.get("hasDraft"))
         .withTombstone(record.get(CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
-        .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID));
+        .withActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID))
+        .withActiveDeclarativeManifestVersion(record.get(ACTIVE_DECLARATIVE_MANIFEST.VERSION));
+  }
+
+  /**
+   * Builder declarative manifest from db record.
+   *
+   * @param record db record
+   * @return declarative manifest
+   */
+  public static DeclarativeManifest buildDeclarativeManifest(final Record record) {
+    return buildDeclarativeManifestWithoutManifestAndSpec(record).withManifest(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.MANIFEST).data()))
+        .withSpec(Jsons.deserialize(record.get(DECLARATIVE_MANIFEST.SPEC).data()));
+  }
+
+  /**
+   * Builder declarative manifest without manifest from db record.
+   *
+   * @param record db record
+   * @return declarative manifest
+   */
+  public static DeclarativeManifest buildDeclarativeManifestWithoutManifestAndSpec(final Record record) {
+    return new DeclarativeManifest()
+        .withActorDefinitionId(record.get(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
+        .withDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
+        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION));
+  }
+
+  /**
+   * Actor definition config injection from db record.
+   *
+   * @param record db record
+   * @return actor definition config injection
+   */
+  public static ActorDefinitionConfigInjection buildActorDefinitionConfigInjection(final Record record) {
+    return new ActorDefinitionConfigInjection()
+        .withActorDefinitionId(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID))
+        .withInjectionPath(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH))
+        .withJsonToInject(Jsons.deserialize(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT).data()));
   }
 
 }

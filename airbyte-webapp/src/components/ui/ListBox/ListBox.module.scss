@@ -1,5 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/z-indices";
 
 .button {
   width: 100%;
@@ -11,8 +12,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: variables.$font-size-lg;
+  line-height: 1.4;
   min-height: 36px;
 
   &:hover {
@@ -35,7 +36,7 @@
   right: 0;
   left: 0;
   width: 100%;
-  z-index: 1;
+  z-index: z-indices.$listBox;
 }
 
 .caret {
@@ -49,7 +50,8 @@
 .icon {
   padding-right: variables.$spacing-md;
 
-  & svg {
+  & svg,
+  & img {
     max-width: 18px;
     max-height: 18px;
   }
@@ -75,4 +77,8 @@
 
 .selected {
   background-color: colors.$blue-50;
+}
+
+.disabled {
+  color: colors.$grey-300;
 }

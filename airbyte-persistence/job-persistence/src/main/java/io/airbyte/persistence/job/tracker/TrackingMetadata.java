@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobOutput;
@@ -95,15 +96,12 @@ public class TrackingMetadata {
    * @param destinationDefinition destination definition
    * @return metadata / stats as a string-to-object map.
    */
-  public static Map<String, Object> generateDestinationDefinitionMetadata(final StandardDestinationDefinition destinationDefinition) {
+  public static Map<String, Object> generateDestinationDefinitionMetadata(final StandardDestinationDefinition destinationDefinition,
+                                                                          final ActorDefinitionVersion destinationVersion) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connector_destination", destinationDefinition.getName());
     metadata.put("connector_destination_definition_id", destinationDefinition.getDestinationDefinitionId());
-    metadata.put("connector_destination_docker_repository", destinationDefinition.getDockerRepository());
-    final String imageTag = destinationDefinition.getDockerImageTag();
-    if (!Strings.isEmpty(imageTag)) {
-      metadata.put("connector_destination_version", imageTag);
-    }
+    metadata.putAll(generateActorDefinitionVersionMetadata("connector_destination_", destinationVersion));
     return metadata.build();
   }
 
@@ -114,16 +112,24 @@ public class TrackingMetadata {
    * @param sourceDefinition source definition
    * @return metadata / stats as a string-to-object map.
    */
-  public static Map<String, Object> generateSourceDefinitionMetadata(final StandardSourceDefinition sourceDefinition) {
+  public static Map<String, Object> generateSourceDefinitionMetadata(final StandardSourceDefinition sourceDefinition,
+                                                                     final ActorDefinitionVersion sourceVersion) {
     final Builder<String, Object> metadata = ImmutableMap.builder();
     metadata.put("connector_source", sourceDefinition.getName());
     metadata.put("connector_source_definition_id", sourceDefinition.getSourceDefinitionId());
-    metadata.put("connector_source_docker_repository", sourceDefinition.getDockerRepository());
-    final String imageTag = sourceDefinition.getDockerImageTag();
+    metadata.putAll(generateActorDefinitionVersionMetadata("connector_source_", sourceVersion));
+    return metadata.build();
+  }
+
+  private static Map<String, Object> generateActorDefinitionVersionMetadata(final String metaPrefix, final ActorDefinitionVersion sourceVersion) {
+    final Builder<String, Object> metadata = ImmutableMap.builder();
+    metadata.put(metaPrefix + "docker_repository", sourceVersion.getDockerRepository());
+    final String imageTag = sourceVersion.getDockerImageTag();
     if (!Strings.isEmpty(imageTag)) {
-      metadata.put("connector_source_version", imageTag);
+      metadata.put(metaPrefix + "version", imageTag);
     }
     return metadata.build();
+
   }
 
   /**
@@ -239,7 +245,13 @@ public class TrackingMetadata {
         .toList());
   }
 
-  private static JsonNode failureReasonAsJson(final FailureReason failureReason) {
+  /**
+   * Map a FailureReason to a string-to-object map, so it can be attached to telemetry calls.
+   *
+   * @param failureReason failure reason
+   * @return failure reason as a string-to-object map.
+   */
+  public static JsonNode failureReasonAsJson(final FailureReason failureReason) {
     // we want the json to always include failureOrigin and failureType, even when they are null
     final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", failureReason.getFailureOrigin());

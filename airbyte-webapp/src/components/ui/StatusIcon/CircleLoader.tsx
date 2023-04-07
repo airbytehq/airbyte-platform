@@ -5,7 +5,7 @@ interface CircleLoaderProps {
 }
 
 export const CircleLoader = ({ title }: CircleLoaderProps): JSX.Element => (
-  <svg className={styles.spinner} role="img" viewBox="0 0 16 16" width="18" height="18" data-icon="circle-loader">
+  <svg className={styles.spinner} role="img" viewBox="0 0 16 16" width="40" height="40" data-icon="circle-loader">
     <defs>
       <linearGradient
         id="circleLoaderGradient"

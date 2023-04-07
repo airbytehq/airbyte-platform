@@ -1,0 +1,8 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.tooltipTrigger {
+  color: colors.$blue-500;
+  margin-right: variables.$spacing-md;
+  height: 0.8em;
+}

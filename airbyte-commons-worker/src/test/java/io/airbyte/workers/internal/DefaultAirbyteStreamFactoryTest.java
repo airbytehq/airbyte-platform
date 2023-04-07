@@ -29,10 +29,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class DefaultAirbyteStreamFactoryTest {
 
   private static final String STREAM_NAME = "user_preferences";
@@ -66,7 +66,7 @@ class DefaultAirbyteStreamFactoryTest {
     final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
     assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-    verify(logger).info(anyString());
+    verify(logger).error("Deserialization failed: {}", "\"invalid line\"");
     verifyNoMoreInteractions(logger);
   }
 
@@ -115,30 +115,17 @@ class DefaultAirbyteStreamFactoryTest {
     final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
 
     final Stream<AirbyteMessage> messageStream =
-        new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1L).create(bufferedReader);
+        new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.of(RuntimeException.class), 1L)
+            .create(bufferedReader);
 
     assertThrows(RuntimeException.class, () -> messageStream.toList());
-  }
-
-  @Test
-  @Disabled
-  void testMissingNewLineBetweenValidRecords() {
-    final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
-    final AirbyteMessage record2 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "yellow");
-
-    final String inputString = Jsons.serialize(record1) + Jsons.serialize(record2);
-
-    final Stream<AirbyteMessage> messageStream = stringToMessageStream(inputString);
-
-    assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-    verify(logger).error(anyString(), anyString());
-    verifyNoMoreInteractions(logger);
   }
 
   private Stream<AirbyteMessage> stringToMessageStream(final String inputString) {
     final InputStream inputStream = new ByteArrayInputStream(inputString.getBytes(StandardCharsets.UTF_8));
     final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-    return new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.empty()).create(bufferedReader);
+    return new DefaultAirbyteStreamFactory(protocolPredicate, logger, new Builder(), Optional.empty())
+        .create(bufferedReader);
   }
 
 }

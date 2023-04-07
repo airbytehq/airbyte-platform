@@ -19,7 +19,6 @@ import {
   SourceDefinitionSpecificationRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useGetDestinationDefinitionSpecification } from "services/connector/DestinationDefinitionSpecificationService";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
@@ -94,15 +93,17 @@ const useConnectionForm = ({
   } = connection;
 
   const sourceDefinition = useSourceDefinition(sourceDefinitionId);
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(sourceDefinitionId, connection.sourceId);
   const destDefinition = useDestinationDefinition(destinationDefinitionId);
-  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(destinationDefinitionId);
+  const destDefinitionSpecification = useGetDestinationDefinitionSpecification(
+    destinationDefinitionId,
+    connection.destinationId
+  );
 
   const initialValues = useInitialValues(connection, destDefinition, destDefinitionSpecification, mode !== "create");
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
   const formId = useUniqueFormId();
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
 
   const getErrorMessage = useCallback<ConnectionFormHook["getErrorMessage"]>(
     (formValid, connectionDirty, errors) => {
@@ -111,7 +112,7 @@ const useConnectionForm = ({
       }
 
       // There is a case when some fields could be dropped in the database. We need to validate the form without property dirty
-      const hasValidationError = !formValid && (isNewTableDesignEnabled || connectionDirty);
+      const hasValidationError = !formValid && connectionDirty;
 
       if (hasValidationError) {
         // No streams are selected, but make sure to ignore case when stream pk or cursor is missing
@@ -124,7 +125,7 @@ const useConnectionForm = ({
 
       return null;
     },
-    [formatMessage, isNewTableDesignEnabled, submitError]
+    [formatMessage, submitError]
   );
 
   return {

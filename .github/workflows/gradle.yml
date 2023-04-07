@@ -162,15 +162,6 @@ jobs:
           org.gradle.workers.max=8
           org.gradle.vfs.watch=false
           EOF
-      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
-      #       since docs are not pulled when running gradle locally.
-      - name: Copy docs from connectors repository
-        run: |
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
-          mkdir -p ./docs
-          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
-          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
-          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
 
       - name: Build :airbyte-webapp
         uses: Wandalen/wretry.action@master
@@ -290,16 +281,6 @@ jobs:
           org.gradle.workers.max=8
           org.gradle.vfs.watch=false
           EOF
-
-      # TODO: Once we pull these from the metadata service, remove this step. Also we can't build the webapp locally
-      #       since docs are not pulled when running gradle locally.
-      - name: Copy docs from connectors repository
-        run: |
-          git clone --depth 1 https://.:${{ secrets.GITHUB_TOKEN }}@github.com/airbytehq/airbyte /tmp/airbyte_repo
-          mkdir -p ./docs
-          cp -R /tmp/airbyte_repo/docs/integrations ./docs/integrations
-          cp -R /tmp/airbyte_repo/docs/.gitbook ./docs/.gitbook
-          [ -f "./docs/integrations/sources/google-ads.md" ] || { ls -Rlha ./docs; echo "::error ::Failed to copy docs from airbyte repository"; exit 21; }
 
       - name: Build Platform Docker Images
         run: ./gradlew --no-daemon assemble --scan
@@ -543,7 +524,7 @@ jobs:
           # Specify top-level and second-level modules. Note there cannot be a space between the comma.
           path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
-          fail-on-error: 'false'
+          fail-on-error: "false"
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
@@ -624,7 +605,7 @@ jobs:
   helm-acceptance-test:
     name: "Platform: Acceptance Tests (Helm)"
     # In case of self-hosted EC2 errors, removed the `needs` line and switch back to running on ubuntu-latest.
-    needs: [ start-helm-acceptance-test-runner ] # required to start the main job when the runner is ready
+    needs: [start-helm-acceptance-test-runner] # required to start the main job when the runner is ready
     runs-on: ${{ needs.start-helm-acceptance-test-runner.outputs.label }} # run the job on the newly created runner
     # this is the label of the runner
     timeout-minutes: 90
@@ -760,7 +741,7 @@ jobs:
           name: Platform Helm E2E Test Report
           path: "./*/build/test-results/*/*.xml"
           reporter: java-junit
-          fail-on-error: 'false'
+          fail-on-error: "false"
 
       - uses: actions/upload-artifact@v2
         if: failure()
@@ -857,7 +838,7 @@ jobs:
       - platform-build
       # Todo: Kyryl turn this on.
       # - helm-acceptance-test
-    if: success()
+    if: ${{ success() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Get Previous Workflow Status
         uses: Mercymeilya/last-workflow-status@v0.3

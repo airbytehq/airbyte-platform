@@ -13,6 +13,7 @@ import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
 import io.airbyte.db.factory.DatabaseCheckFactory;
 import io.airbyte.db.instance.DatabaseConstants;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
 import io.airbyte.persistence.job.JobPersistence;
 import io.micronaut.context.annotation.Factory;
@@ -21,7 +22,6 @@ import io.micronaut.context.annotation.Value;
 import io.micronaut.flyway.FlywayConfigurationProperties;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import java.io.IOException;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
@@ -42,14 +42,14 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("configDatabase")
-  public Database configDatabase(@Named("config") final DSLContext dslContext) throws IOException {
+  public Database configDatabase(@Named("config") final DSLContext dslContext) {
     return new Database(dslContext);
   }
 
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   @Named("jobsDatabase")
-  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) throws IOException {
+  public Database jobsDatabase(@Named("jobs") final DSLContext dslContext) {
     return new Database(dslContext);
   }
 
@@ -88,8 +88,8 @@ public class DatabaseBeanFactory {
   @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public ConfigRepository configRepository(@Named("configDatabase") final Database configDatabase,
-                                           @Value("${airbyte.worker.max-seconds-between-messages}") final long maxSecondsBetweenMessages) {
-    return new ConfigRepository(configDatabase, maxSecondsBetweenMessages);
+                                           final FeatureFlagClient featureFlagClient) {
+    return new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
   }
 
   @Singleton

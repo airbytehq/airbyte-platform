@@ -4,9 +4,6 @@ import { useQuery } from "react-query";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ToastType } from "components/ui/Toast";
-
-import { MissingConfigError, useConfig } from "config";
 import { pollUntil } from "core/request/pollUntil";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -20,13 +17,8 @@ export const STRIPE_SUCCESS_QUERY = "fcpEnrollmentSuccess";
 
 export const useFreeConnectorProgram = () => {
   const workspaceId = useCurrentWorkspaceId();
-  const { cloudApiUrl } = useConfig();
-  if (!cloudApiUrl) {
-    throw new MissingConfigError("Missing required configuration cloudApiUrl");
-  }
-  const config = { apiUrl: cloudApiUrl };
   const middlewares = useDefaultRequestMiddlewares();
-  const requestOptions = { config, middlewares };
+  const requestOptions = { middlewares };
   const freeConnectorProgramEnabled = useExperiment("workspace.freeConnectorsProgram.visible", false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [userDidEnroll, setUserDidEnroll] = useState(false);
@@ -52,14 +44,14 @@ export const useFreeConnectorProgram = () => {
           registerNotification({
             id: "fcp/enrollment-success",
             text: formatMessage({ id: "freeConnectorProgram.enroll.success" }),
-            type: ToastType.SUCCESS,
+            type: "success",
           });
         } else {
           trackError(new Error("Unable to confirm Free Connector Program enrollment before timeout"), { workspaceId });
           registerNotification({
             id: "fcp/enrollment-failure",
             text: formatMessage({ id: "freeConnectorProgram.enroll.failure" }),
-            type: ToastType.ERROR,
+            type: "error",
           });
         }
       });
@@ -68,8 +60,8 @@ export const useFreeConnectorProgram = () => {
 
   const enrollmentStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
     webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions).then(
-      ({ hasEligibleConnector, hasPaymentAccountSaved }) => {
-        const userIsEligibleToEnroll = !hasPaymentAccountSaved && hasEligibleConnector;
+      ({ hasPaymentAccountSaved }) => {
+        const userIsEligibleToEnroll = !hasPaymentAccountSaved;
 
         return {
           showEnrollmentUi: freeConnectorProgramEnabled && userIsEligibleToEnroll,

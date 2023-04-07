@@ -222,7 +222,7 @@ const StreamTab = ({
     className={classNames(styles.tab, { [styles.selectedTab]: selected })}
     onClick={onSelect}
   >
-    {label}
+    <Text>{label}</Text>
     {showErrorIndicator && <Indicator />}
     {showSchemaConflictIndicator && <SchemaConflictIndicator />}
   </button>
@@ -230,7 +230,8 @@ const StreamTab = ({
 
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string) => string }) => {
   const analyticsService = useAnalyticsService();
-  const [field, meta, helpers] = useField<string | undefined>(streamFieldPath("schema"));
+  const schemaFieldPath = streamFieldPath("schema");
+  const [field, meta, helpers] = useField<string | undefined>(schemaFieldPath);
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestState();
 
   const showImportButton = !field.value && streamRead.data?.inferred_schema;
@@ -255,6 +256,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string
       )}
       <div className={styles.editorContainer}>
         <CodeEditor
+          key={schemaFieldPath}
           value={field.value || ""}
           language="json"
           theme="airbyte-light"

@@ -15,6 +15,7 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.TrackingStrategy;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
 import io.airbyte.persistence.job.JobPersistence;
@@ -69,8 +70,9 @@ public class ApplicationBeanFactory {
   public JobTracker jobTracker(
                                final ConfigRepository configRepository,
                                final JobPersistence jobPersistence,
-                               final TrackingClient trackingClient) {
-    return new JobTracker(configRepository, jobPersistence, trackingClient);
+                               final TrackingClient trackingClient,
+                               final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    return new JobTracker(configRepository, jobPersistence, trackingClient, actorDefinitionVersionHelper);
   }
 
   @Singleton
@@ -110,6 +112,7 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
+  @Named("oauthHttpClient")
   public HttpClient httpClient() {
     return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
   }

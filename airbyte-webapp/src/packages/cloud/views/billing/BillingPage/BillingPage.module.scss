@@ -1,0 +1,27 @@
+@use "scss/variables";
+@forward "src/components/ui/Button/Button.module.scss";
+
+.content {
+  height: 100%;
+}
+
+.emailVerificationHint {
+  margin-bottom: variables.$spacing-md;
+}
+
+.creditUsageLoading {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  justify-content: center;
+  align-items: center;
+  margin: variables.$spacing-2xl auto;
+}
+
+.stripePortalLink {
+  text-decoration: none;
+}
+
+.filesIcon {
+  max-height: 100%;
+}

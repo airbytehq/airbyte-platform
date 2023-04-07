@@ -42,8 +42,11 @@ import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteLogMessage.Level;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
@@ -57,9 +60,14 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.HeartbeatMonitor;
+import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
+import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
+import io.airbyte.workers.internal.exception.DestinationException;
+import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.airbyte.workers.test_utils.TestConfigHelpers;
 import java.io.IOException;
@@ -71,6 +79,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -79,6 +89,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -113,11 +124,13 @@ class DefaultReplicationWorkerTest {
   private WorkerSourceConfig sourceConfig;
   private WorkerDestinationConfig destinationConfig;
   private AirbyteMessageTracker messageTracker;
-  private SyncPersistenceFactory syncPersistenceFactory;
+  private SyncStatsTracker syncStatsTracker;
+  private SyncPersistence syncPersistence;
   private RecordSchemaValidator recordSchemaValidator;
   private MetricClient metricClient;
   private WorkerMetricReporter workerMetricReporter;
   private ConnectorConfigUpdater connectorConfigUpdater;
+  private HeartbeatTimeoutChaperone heartbeatTimeoutChaperone;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -136,12 +149,18 @@ class DefaultReplicationWorkerTest {
     mapper = mock(NamespacingMapper.class);
     destination = mock(AirbyteDestination.class);
     messageTracker = mock(AirbyteMessageTracker.class);
-    syncPersistenceFactory = mock(SyncPersistenceFactory.class);
+    syncStatsTracker = mock(SyncStatsTracker.class);
+    syncPersistence = mock(SyncPersistence.class);
     recordSchemaValidator = mock(RecordSchemaValidator.class);
     connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     metricClient = MetricClientFactory.getMetricClient();
     workerMetricReporter = new WorkerMetricReporter(metricClient, "docker_image:v1.0.0");
 
+    final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
+    heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, metricClient);
+
+    when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     when(source.isFinished()).thenReturn(false, false, false, true);
     when(destination.isFinished()).thenReturn(false, false, false, true);
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.empty(), Optional.of(RECORD_MESSAGE2));
@@ -170,10 +189,14 @@ class DefaultReplicationWorkerTest {
     verify(destination).accept(RECORD_MESSAGE2);
     verify(source, atLeastOnce()).close();
     verify(destination).close();
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE1.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()));
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()));
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE1.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()),
+        new ConcurrentHashMap<>());
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE2.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
+        new ConcurrentHashMap<>());
   }
 
   @Test
@@ -189,12 +212,18 @@ class DefaultReplicationWorkerTest {
     verify(destination).accept(RECORD_MESSAGE1);
     verify(destination).accept(RECORD_MESSAGE2);
     verify(destination).accept(RECORD_MESSAGE3);
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE1.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()));
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE2.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()));
-    verify(recordSchemaValidator).validateSchema(RECORD_MESSAGE3.getRecord(),
-        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE3.getRecord()));
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE1.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord()),
+        new ConcurrentHashMap<>());
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE2.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
+        new ConcurrentHashMap<>());
+    verify(recordSchemaValidator).validateSchema(
+        RECORD_MESSAGE3.getRecord(),
+        AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE3.getRecord()),
+        new ConcurrentHashMap<>());
     verify(source).close();
     verify(destination).close();
   }
@@ -353,9 +382,8 @@ class DefaultReplicationWorkerTest {
     // Use a real schema validator to make sure validation doesn't affect this.
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
-    recordSchemaValidator = new RecordSchemaValidator(new TestClient(), syncInput.getWorkspaceId(),
-        Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
-            sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
+    recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
     final ReplicationWorker worker = getDefaultReplicationWorker(true);
 
     worker.run(syncInput, jobRoot);
@@ -376,9 +404,8 @@ class DefaultReplicationWorkerTest {
     // Use a real schema validator to make sure validation doesn't affect this.
     final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
     final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
-    recordSchemaValidator = new RecordSchemaValidator(new TestClient(), syncInput.getWorkspaceId(),
-        Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
-            sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
+    recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()));
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
     worker.run(syncInput, jobRoot);
@@ -495,17 +522,18 @@ class DefaultReplicationWorkerTest {
   void testPopulatesOutputOnSuccess() throws WorkerException {
     final JsonNode expectedState = Jsons.jsonNode(ImmutableMap.of("updated_at", 10L));
     when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(expectedState)));
-    when(messageTracker.getTotalRecordsEmitted()).thenReturn(12L);
-    when(messageTracker.getTotalBytesEmitted()).thenReturn(100L);
-    when(messageTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
-    when(messageTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(1L);
-    when(messageTracker.getStreamToEmittedBytes()).thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 100L));
-    when(messageTracker.getStreamToEmittedRecords())
+    when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
+    when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
+    when(syncStatsTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
+    when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(1L);
+    when(syncStatsTracker.getStreamToEmittedBytes())
+        .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 100L));
+    when(syncStatsTracker.getStreamToEmittedRecords())
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 12L));
-    when(messageTracker.getMaxSecondsToReceiveSourceStateMessage()).thenReturn(5L);
-    when(messageTracker.getMeanSecondsToReceiveSourceStateMessage()).thenReturn(4L);
-    when(messageTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(6L));
-    when(messageTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(3L));
+    when(syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage()).thenReturn(5L);
+    when(syncStatsTracker.getMeanSecondsToReceiveSourceStateMessage()).thenReturn(4L);
+    when(syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(6L));
+    when(syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(3L));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -524,6 +552,7 @@ class DefaultReplicationWorkerTest {
                 .withMeanSecondsBeforeSourceStateMessageEmitted(4L)
                 .withMaxSecondsBetweenStateMessageEmittedandCommitted(6L)
                 .withMeanSecondsBetweenStateMessageEmittedandCommitted(3L)
+                .withBytesCommitted(100L)
                 .withRecordsCommitted(12L)) // since success, should use emitted count
             .withStreamStats(Collections.singletonList(
                 new StreamSyncStats()
@@ -532,6 +561,7 @@ class DefaultReplicationWorkerTest {
                     .withStats(new SyncStats()
                         .withBytesEmitted(100L)
                         .withRecordsEmitted(12L)
+                        .withBytesCommitted(100L)
                         .withRecordsCommitted(12L) // since success, should use emitted count
                         .withSourceStateMessagesEmitted(null)
                         .withDestinationStateMessagesEmitted(null)
@@ -588,20 +618,24 @@ class DefaultReplicationWorkerTest {
   @Test
   void testPopulatesStatsOnFailureIfAvailable() throws Exception {
     doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
-    when(messageTracker.getTotalRecordsEmitted()).thenReturn(12L);
-    when(messageTracker.getTotalBytesEmitted()).thenReturn(100L);
-    when(messageTracker.getTotalRecordsCommitted()).thenReturn(Optional.of(6L));
-    when(messageTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
-    when(messageTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(2L);
-    when(messageTracker.getStreamToEmittedBytes()).thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 100L));
-    when(messageTracker.getStreamToEmittedRecords())
+    when(syncStatsTracker.getTotalRecordsEmitted()).thenReturn(12L);
+    when(syncStatsTracker.getTotalBytesEmitted()).thenReturn(100L);
+    when(syncStatsTracker.getTotalBytesCommitted()).thenReturn(Optional.of(12L));
+    when(syncStatsTracker.getTotalRecordsCommitted()).thenReturn(Optional.of(6L));
+    when(syncStatsTracker.getTotalSourceStateMessagesEmitted()).thenReturn(3L);
+    when(syncStatsTracker.getTotalDestinationStateMessagesEmitted()).thenReturn(2L);
+    when(syncStatsTracker.getStreamToEmittedBytes())
+        .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 100L));
+    when(syncStatsTracker.getStreamToEmittedRecords())
         .thenReturn(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 12L));
-    when(messageTracker.getStreamToCommittedRecords())
+    when(syncStatsTracker.getStreamToCommittedRecords())
         .thenReturn(Optional.of(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 6L)));
-    when(messageTracker.getMaxSecondsToReceiveSourceStateMessage()).thenReturn(10L);
-    when(messageTracker.getMeanSecondsToReceiveSourceStateMessage()).thenReturn(8L);
-    when(messageTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(12L));
-    when(messageTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(11L));
+    when(syncStatsTracker.getStreamToCommittedBytes())
+        .thenReturn(Optional.of(Collections.singletonMap(new AirbyteStreamNameNamespacePair(STREAM1, NAMESPACE), 13L)));
+    when(syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage()).thenReturn(10L);
+    when(syncStatsTracker.getMeanSecondsToReceiveSourceStateMessage()).thenReturn(8L);
+    when(syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(12L));
+    when(syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted()).thenReturn(Optional.of(11L));
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
@@ -615,6 +649,7 @@ class DefaultReplicationWorkerTest {
         .withMeanSecondsBeforeSourceStateMessageEmitted(8L)
         .withMaxSecondsBetweenStateMessageEmittedandCommitted(12L)
         .withMeanSecondsBetweenStateMessageEmittedandCommitted(11L)
+        .withBytesCommitted(12L)
         .withRecordsCommitted(6L);
     final List<StreamSyncStats> expectedStreamStats = Collections.singletonList(
         new StreamSyncStats()
@@ -623,6 +658,7 @@ class DefaultReplicationWorkerTest {
             .withStats(new SyncStats()
                 .withBytesEmitted(100L)
                 .withRecordsEmitted(12L)
+                .withBytesCommitted(13L)
                 .withRecordsCommitted(6L)
                 .withSourceStateMessagesEmitted(null)
                 .withDestinationStateMessagesEmitted(null)));
@@ -651,17 +687,59 @@ class DefaultReplicationWorkerTest {
 
   @Test
   void testDoesNotPopulateOnIrrecoverableFailure() {
-    doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(messageTracker).getTotalRecordsEmitted();
+    doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(syncStatsTracker).getTotalRecordsEmitted();
 
     final ReplicationWorker worker = getDefaultReplicationWorker();
     assertThrows(WorkerException.class, () -> worker.run(syncInput, jobRoot));
   }
 
-  DefaultReplicationWorker getDefaultReplicationWorker() {
+  @Test
+  void testSourceFailingTimeout() throws Exception {
+    final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
+    when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
+    final UUID connectionId = UUID.randomUUID();
+    final MetricClient mMetricClient = mock(MetricClient.class);
+    heartbeatTimeoutChaperone =
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
+            connectionId, mMetricClient);
+    source = mock(AirbyteSource.class);
+    when(source.isFinished()).thenReturn(false);
+    when(source.attemptRead()).thenAnswer((Answer<Optional<AirbyteMessage>>) invocation -> {
+      sleep(100);
+      return Optional.of(RECORD_MESSAGE1);
+    });
+
+    final ReplicationWorker worker = getDefaultReplicationWorker(false);
+
+    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
+
+    verify(mMetricClient).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    assertEquals(1, actual.getFailures().size());
+    assertEquals(FailureOrigin.SOURCE, actual.getFailures().get(0).getFailureOrigin());
+    assertEquals(FailureReason.FailureType.HEARTBEAT_TIMEOUT, actual.getFailures().get(0).getFailureType());
+  }
+
+  @Test
+  void testGetFailureReason() {
+    final long jobId = 1;
+    final int attempt = 1;
+    FailureReason failureReason = DefaultReplicationWorker.getFailureReason(new SourceException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
+    failureReason = DefaultReplicationWorker.getFailureReason(new DestinationException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
+    failureReason = DefaultReplicationWorker.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
+    assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
+    failureReason = DefaultReplicationWorker.getFailureReason(new RuntimeException(), jobId, attempt);
+    assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
+  }
+
+  ReplicationWorker getDefaultReplicationWorker() {
     return getDefaultReplicationWorker(false);
   }
 
-  DefaultReplicationWorker getDefaultReplicationWorker(boolean fieldSelectionEnabled) {
+  private ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -669,10 +747,12 @@ class DefaultReplicationWorkerTest {
         mapper,
         destination,
         messageTracker,
-        syncPersistenceFactory,
+        syncPersistence,
         recordSchemaValidator,
         workerMetricReporter,
-        connectorConfigUpdater, fieldSelectionEnabled);
+        connectorConfigUpdater,
+        fieldSelectionEnabled,
+        heartbeatTimeoutChaperone);
   }
 
 }

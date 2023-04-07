@@ -28,7 +28,7 @@ MAX_PAGES_PER_SLICE = 4
 MAX_SLICES = 3
 
 MANIFEST = {
-    "version": "0.1.0",
+    "version": "0.29.0",
     "type": "DeclarativeSource",
     "definitions": {
         "selector": {"extractor": {"field_path": ["items"], "type": "DpathExtractor"}, "type": "RecordSelector"},
@@ -119,7 +119,7 @@ def test_list_streams():
 
 def test_list_streams_with_interpolated_urls():
     manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "type": "DeclarativeSource",
         "streams": [
             {
@@ -152,7 +152,7 @@ def test_list_streams_with_interpolated_urls():
 
 def test_list_streams_with_unresolved_interpolation():
     manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "type": "DeclarativeSource",
         "streams": [
             {
@@ -279,9 +279,9 @@ def test_read_stream_with_logs():
         ),
     ]
     expected_logs = [
-        {"message": "log message before the request"},
-        {"message": "log message during the page"},
-        {"message": "log message after the response"},
+        {"message": "log message before the request", "level": "INFO"},
+        {"message": "log message during the page", "level": "INFO"},
+        {"message": "log message after the response", "level": "INFO"},
     ]
 
     mock_source_adapter_cls = make_mock_adapter_factory(
@@ -485,7 +485,7 @@ def test_read_stream_no_records():
 
 def test_invalid_manifest():
     invalid_manifest = {
-        "version": "0.1.0",
+        "version": "0.29.0",
         "definitions": {
             "selector": {"extractor": {"field_path": ["items"]}},
             "requester": {"http_method": "GET"},
@@ -539,14 +539,15 @@ def test_read_stream_invalid_group_format():
 
 
 def test_read_stream_returns_error_if_stream_does_not_exist():
-    expected_status_code = 400
-
     api = DefaultApiImpl(LowCodeSourceAdapterFactory(MAX_PAGES_PER_SLICE, MAX_SLICES), MAX_PAGES_PER_SLICE, MAX_SLICES)
     loop = asyncio.get_event_loop()
-    with pytest.raises(HTTPException) as actual_exception:
-        loop.run_until_complete(api.read_stream(StreamReadRequestBody(manifest=MANIFEST, config={}, stream="not_in_manifest")))
+    actual_response = loop.run_until_complete(
+        api.read_stream(StreamReadRequestBody(manifest=MANIFEST, config={}, stream="not_in_manifest"))
+    )
 
-    assert actual_exception.value.status_code == expected_status_code
+    assert 1 == len(actual_response.logs)
+    assert "Traceback" in actual_response.logs[0].message
+    assert "ERROR" in actual_response.logs[0].level
 
 
 @pytest.mark.parametrize(
@@ -737,7 +738,7 @@ def test_resolve_manifest():
     _stream_options = {"name": _stream_name, "primary_key": _stream_primary_key, "url_base": _stream_url_base}
 
     manifest = {
-        "version": "version",
+        "version": "0.30.0",
         "definitions": {
             "schema_loader": {"name": "{{ options.stream_name }}", "file_path": "./source_sendgrid/schemas/{{ options.name }}.yaml"},
             "retriever": {
@@ -769,7 +770,7 @@ def test_resolve_manifest():
 
     expected_resolved_manifest = {
         "type": "DeclarativeSource",
-        "version": "version",
+        "version": "0.30.0",
         "definitions": {
             "schema_loader": {"name": "{{ options.stream_name }}", "file_path": "./source_sendgrid/schemas/{{ options.name }}.yaml"},
             "retriever": {

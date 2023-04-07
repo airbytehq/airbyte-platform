@@ -3,7 +3,8 @@ export enum CloudRoutes {
   AuthFlow = "/auth_flow",
 
   Metrics = "metrics",
-  Credits = "credits",
+  Billing = "billing",
+  UpcomingFeatures = "upcoming-features",
 
   // Auth routes
   Signup = "/signup",

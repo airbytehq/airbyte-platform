@@ -1,0 +1,9 @@
+flags:
+  - name: test-true
+    serve: true
+  - name: test-false
+    serve: false
+  - name: test-string
+    serve: "example"
+  - name: test-int
+    serve: 1234

@@ -4,7 +4,7 @@
 title: NormalizationInput
 description: job normalization config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - destinationConfiguration
   - catalog
@@ -17,6 +17,10 @@ properties:
     description: the configured airbyte catalog. this version of the catalog represents the schema of the data in json blobs in the raw tables.
     type: object
     existingJavaType: io.airbyte.protocol.models.ConfiguredAirbyteCatalog
+  connectionId:
+    description: The id of the connection associated with the normalization
+    type: string
+    format: uuid
   resourceRequirements:
     type: object
     description: optional resource requirements to run sync workers

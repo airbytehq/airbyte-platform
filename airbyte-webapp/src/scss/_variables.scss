@@ -1,3 +1,5 @@
+$page-width: 1200px;
+
 $transition: 0.3s;
 $transition-out: $transition ease-out;
 
@@ -28,11 +30,13 @@ $spacing-lg: 15px;
 $spacing-xl: 20px;
 $spacing-2xl: 40px;
 $spacing-page-bottom-cloud: 88px;
+$spacing-intercom: 88px;
 
 $width-size-menu: 93px;
 $min-width-main-page-content: 1280px - $width-size-menu;
 $width-wide-menu: 200px;
 $width-max-notification: 600px;
+$width-connection-header: 680px;
 
 $width-modal-sm: 492px;
 $width-modal-md: 585px;
@@ -44,3 +48,7 @@ $height-soft-edge: 15px;
 $button-height-xs: 32px;
 $button-height-sm: 36px;
 $button-height-lg: 44px;
+
+$font-size-sm: var(--font-size-sm);
+$font-size-md: var(--font-size-md);
+$font-size-lg: var(--font-size-lg);

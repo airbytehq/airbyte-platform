@@ -19,9 +19,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.DestinationConnection;
@@ -35,6 +37,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.helpers.LogConfigs;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
@@ -59,10 +62,9 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.JobStatus;
 import io.airbyte.workers.helper.FailureHelper;
-import io.airbyte.workers.run.TemporalWorkerRunFactory;
-import io.airbyte.workers.run.WorkerRun;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.util.CollectionUtils;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -89,9 +91,16 @@ import lombok.extern.slf4j.Slf4j;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndStatusUpdateActivity {
 
+  private static final int MAX_ATTEMPTS = 3;
+  private static final Map<ReleaseStage, Integer> RELEASE_STAGE_ORDER = Map.of(
+      ReleaseStage.custom, 1,
+      ReleaseStage.alpha, 2,
+      ReleaseStage.beta, 3,
+      ReleaseStage.generally_available, 4);
+  private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
   private final SyncJobFactory jobFactory;
   private final JobPersistence jobPersistence;
-  private final TemporalWorkerRunFactory temporalWorkerRunFactory;
+  private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
   private final JobNotifier jobNotifier;
@@ -101,10 +110,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   private final StreamResetPersistence streamResetPersistence;
   private final JobErrorReporter jobErrorReporter;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   public JobCreationAndStatusUpdateActivityImpl(final SyncJobFactory jobFactory,
                                                 final JobPersistence jobPersistence,
-                                                final TemporalWorkerRunFactory temporalWorkerRunFactory,
+                                                @Named("workspaceRoot") final Path workspaceRoot,
                                                 final WorkerEnvironment workerEnvironment,
                                                 final LogConfigs logConfigs,
                                                 final JobNotifier jobNotifier,
@@ -113,10 +123,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
                                                 final JobCreator jobCreator,
                                                 final StreamResetPersistence streamResetPersistence,
                                                 final JobErrorReporter jobErrorReporter,
-                                                final OAuthConfigSupplier oAuthConfigSupplier) {
+                                                final OAuthConfigSupplier oAuthConfigSupplier,
+                                                final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.jobFactory = jobFactory;
     this.jobPersistence = jobPersistence;
-    this.temporalWorkerRunFactory = temporalWorkerRunFactory;
+    this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.jobNotifier = jobNotifier;
@@ -126,6 +137,31 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     this.streamResetPersistence = streamResetPersistence;
     this.jobErrorReporter = jobErrorReporter;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+  }
+
+  @VisibleForTesting
+  static List<ReleaseStage> orderByReleaseStageAsc(final List<ReleaseStage> releaseStages) {
+    // Using collector to get a mutable list
+    return releaseStages.stream()
+        .filter(stage -> stage != null)
+        .sorted(RELEASE_STAGE_COMPARATOR)
+        .toList();
+  }
+
+  /**
+   * Extract the attempt number from an attempt. If the number is anonymous (not 0,1,2,3) for some
+   * reason return null. We don't want to accidentally have high cardinality here because of a bug.
+   *
+   * @param attemptNumber - attemptNumber to parse
+   * @return extract attempt number or null
+   */
+  private static String parseAttemptNumberOrNull(final int attemptNumber) {
+    if (attemptNumber > MAX_ATTEMPTS) {
+      return null;
+    } else {
+      return Integer.toString(attemptNumber);
+    }
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -149,13 +185,16 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
         final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
             destination.getDestinationDefinitionId(),
+            destination.getDestinationId(),
             destination.getWorkspaceId(),
             destination.getConfiguration());
         destination.setConfiguration(destinationConfiguration);
 
         final StandardDestinationDefinition destinationDef =
             configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
-        final String destinationImageName = destinationDef.getDockerRepository() + ":" + destinationDef.getDockerImageTag();
+        final ActorDefinitionVersion destinationVersion =
+            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
+        final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
         final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
         for (final var operationId : standardSync.getOperationIds()) {
@@ -208,13 +247,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId));
       final Job job = jobPersistence.getJob(jobId);
 
-      final WorkerRun workerRun = temporalWorkerRunFactory.create(job);
-      final Path logFilePath = workerRun.getJobRoot().resolve(LogClientSingleton.LOG_FILENAME);
+      final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
+      final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
       final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
       emitJobIdToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, jobId);
       emitAttemptCreatedEvent(job, persistedAttemptNumber);
 
-      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, workerRun.getJobRoot());
+      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, jobRoot);
       return new AttemptNumberCreationOutput(persistedAttemptNumber);
     } catch (final IOException e) {
       throw new RetryableException(e);
@@ -429,36 +468,15 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
   }
 
-  private static final int MAX_ATTEMPTS = 3;
-  private static final Map<ReleaseStage, Integer> RELEASE_STAGE_ORDER = Map.of(
-      ReleaseStage.custom, 1,
-      ReleaseStage.alpha, 2,
-      ReleaseStage.beta, 3,
-      ReleaseStage.generally_available, 4);
-  private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
-
-  @VisibleForTesting
-  static List<ReleaseStage> orderByReleaseStageAsc(final List<ReleaseStage> releaseStages) {
-    // Using collector to get a mutable list
-    return releaseStages.stream()
-        .filter(stage -> stage != null)
-        .sorted(RELEASE_STAGE_COMPARATOR)
-        .toList();
-  }
-
-  /**
-   * Extract the attempt number from an attempt. If the number is anonymous (not 0,1,2,3) for some
-   * reason return null. We don't want to accidentally have high cardinality here because of a bug.
-   *
-   * @param attemptNumber - attemptNumber to parse
-   * @return extract attempt number or null
-   */
-  private static String parseAttemptNumberOrNull(final int attemptNumber) {
-    if (attemptNumber > MAX_ATTEMPTS) {
-      return null;
-    } else {
-      return Integer.toString(attemptNumber);
+  private String parseIsJobRunningOnCustomConnectorForMetrics(Job job) {
+    if (job.getConfig() == null || job.getConfig().getSync() == null) {
+      return "null";
     }
+    if (job.getConfig().getSync().getIsSourceCustomConnector() == null
+        || job.getConfig().getSync().getIsDestinationCustomConnector() == null) {
+      return "null";
+    }
+    return String.valueOf(job.getConfig().getSync().getIsSourceCustomConnector() || job.getConfig().getSync().getIsDestinationCustomConnector());
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric, final Job job, final int attemptNumber) throws IOException {
@@ -479,7 +497,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         new MetricAttribute(MetricTags.GEOGRAPHY, geography == null ? null : geography.toString()),
         new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parseAttemptNumberOrNull(attemptNumber)),
         new MetricAttribute(MetricTags.MIN_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 0))),
-        new MetricAttribute(MetricTags.MAX_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 1))));
+        new MetricAttribute(MetricTags.MAX_CONNECTOR_RELEASE_STATE, MetricTags.getReleaseStage(getOrNull(releaseStagesOrdered, 1))),
+        new MetricAttribute(MetricTags.IS_CUSTOM_CONNECTOR_SYNC, parseIsJobRunningOnCustomConnectorForMetrics(job)));
 
     final MetricAttribute[] allMetricAttributes = Stream.concat(baseMetricAttributes.stream(), additionalAttributes.stream())
         .toList()

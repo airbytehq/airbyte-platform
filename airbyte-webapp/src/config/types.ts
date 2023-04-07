@@ -14,6 +14,7 @@ declare global {
     REACT_APP_INTEGRATION_DOCS_URLS?: string;
     SEGMENT_TOKEN?: string;
     LAUNCHDARKLY_KEY?: string;
+    FATHOM_SITE_ID?: string;
     // Cloud specific properties
     FIREBASE_API_KEY?: string;
     FIREBASE_AUTH_DOMAIN?: string;
@@ -25,6 +26,7 @@ declare global {
 
 export interface AirbyteWebappConfig {
   segment: { token?: string; enabled: boolean };
+  fathomSiteId?: string;
   apiUrl: string;
   connectorBuilderApiUrl: string;
   version: string;
@@ -48,5 +50,4 @@ export interface AirbyteWebappConfig {
     service?: string;
     tag?: string;
   };
-  webappTag?: string;
 }

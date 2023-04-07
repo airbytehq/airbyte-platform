@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
+import Logs from "components/Logs";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 import { Text } from "components/ui/Text";
@@ -11,7 +12,6 @@ import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/Air
 import { useGetDebugInfoJob } from "services/job/JobService";
 
 import styles from "./JobLogs.module.scss";
-import Logs from "./Logs";
 import { LogsDetails } from "./LogsDetails";
 import Tabs, { TabsData } from "./Tabs";
 import { parseAttemptLink } from "../attemptLinkUtils";

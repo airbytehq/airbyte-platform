@@ -1,0 +1,6 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  padding: variables.$spacing-lg variables.$spacing-2xl;
+}

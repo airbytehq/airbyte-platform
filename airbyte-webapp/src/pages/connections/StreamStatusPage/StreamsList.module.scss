@@ -1,0 +1,52 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.clickableHeader {
+  background-color: inherit;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: inherit;
+  font-weight: inherit;
+  text-transform: inherit;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.body {
+  padding: variables.$spacing-md 0;
+}
+
+.tableContainer > *,
+.body > *:not(.tableContainer) {
+  padding: 0 variables.$spacing-xl;
+}
+
+.tableContainer {
+  .search {
+    top: 0;
+    position: sticky;
+    padding-top: variables.$spacing-lg;
+    padding-bottom: variables.$spacing-lg;
+    background: colors.$white;
+    z-index: z-indices.$mainPageWithScrollEdge;
+  }
+
+  .table {
+    background: colors.$white;
+    padding-top: 0;
+
+    thead {
+      top: (variables.$spacing-lg * 2 + 34px); // search padding top + bottom + height
+    }
+  }
+
+  .syncing {
+    background: none;
+    @include mixins.striped-background(colors.$dark-blue-30, 30px);
+  }
+}

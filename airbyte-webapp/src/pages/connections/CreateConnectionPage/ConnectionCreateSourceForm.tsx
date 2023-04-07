@@ -2,9 +2,10 @@ import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
+import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm } from "pages/source/CreateSourcePage/SourceForm";
-import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 interface ConnectionCreateSourceFormProps {
@@ -14,7 +15,8 @@ interface ConnectionCreateSourceFormProps {
 export const ConnectionCreateSourceForm: React.FC<ConnectionCreateSourceFormProps> = ({ afterSubmit }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { sourceDefinitions } = useSourceDefinitionList();
+  const { clearAllFormChanges } = useFormChangeTrackerService();
+  const sourceDefinitions = useAvailableSourceDefinitions();
   const { mutateAsync: createSource } = useCreateSource();
 
   const onSubmitSourceStep = async (values: {
@@ -28,18 +30,18 @@ export const ConnectionCreateSourceForm: React.FC<ConnectionCreateSourceFormProp
       throw new Error("No Connector Found");
     }
     const result = await createSource({ values, sourceConnector });
-    setTimeout(() => {
-      navigate(
-        {},
-        {
-          state: {
-            ...(location.state as Record<string, unknown>),
-            sourceId: result.sourceId,
-          },
-        }
-      );
-      afterSubmit();
-    }, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    clearAllFormChanges();
+    navigate(
+      {},
+      {
+        state: {
+          ...(location.state as Record<string, unknown>),
+          sourceId: result.sourceId,
+        },
+      }
+    );
+    afterSubmit();
   };
 
   const { setDocumentationPanelOpen } = useDocumentationPanelContext();

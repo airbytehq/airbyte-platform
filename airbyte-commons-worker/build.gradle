@@ -2,6 +2,11 @@ plugins {
     id "java-library"
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.platform.testcontainers.postgresql
+    }
+}
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
@@ -9,7 +14,7 @@ dependencies {
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
 
-    implementation libs.kubernetes.client
+    implementation libs.bundles.kubernetes.client
     implementation 'com.auth0:java-jwt:3.19.2'
     implementation libs.guava
     implementation(libs.temporal.sdk) {
@@ -47,6 +52,10 @@ dependencies {
     testImplementation libs.docker.java
     testImplementation libs.docker.java.transport.httpclient5
     testImplementation libs.reactor.test
+}
+
+test {
+  maxHeapSize = '2g'
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

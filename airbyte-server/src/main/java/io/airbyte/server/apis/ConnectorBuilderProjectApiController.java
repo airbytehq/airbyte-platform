@@ -11,15 +11,19 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Status;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 
@@ -40,6 +44,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.CREATED)
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectIdWithWorkspaceId createConnectorBuilderProject(
                                                                                 final ConnectorBuilderProjectWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.createConnectorBuilderProject(project));
@@ -50,6 +55,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public void deleteConnectorBuilderProject(final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProjectIdWithWorkspaceId) {
     ApiHelper.execute(() -> {
       connectorBuilderProjectsHandler.deleteConnectorBuilderProject(connectorBuilderProjectIdWithWorkspaceId);
@@ -62,6 +68,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.OK)
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectRead getConnectorBuilderProject(
                                                                 final ConnectorBuilderProjectIdWithWorkspaceId project) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(project));
@@ -72,8 +79,18 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.OK)
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectorBuilderProjectReadList listConnectorBuilderProjects(final WorkspaceIdRequestBody workspaceIdRequestBody) {
     return ApiHelper.execute(() -> connectorBuilderProjectsHandler.listConnectorBuilderProjects(workspaceIdRequestBody));
+  }
+
+  @Override
+  @Post(uri = "/publish")
+  @Status(HttpStatus.OK)
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  public SourceDefinitionIdBody publishConnectorBuilderProject(final ConnectorBuilderPublishRequestBody connectorBuilderPublishRequestBody) {
+    return ApiHelper.execute(() -> connectorBuilderProjectsHandler.publishConnectorBuilderProject(connectorBuilderPublishRequestBody));
   }
 
   @Override
@@ -81,6 +98,7 @@ public class ConnectorBuilderProjectApiController implements ConnectorBuilderPro
   @Status(HttpStatus.NO_CONTENT)
   @Secured({EDITOR})
   @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   public void updateConnectorBuilderProject(final ExistingConnectorBuilderProjectWithWorkspaceId existingConnectorBuilderProjectWithWorkspaceId) {
     ApiHelper.execute(() -> {
       connectorBuilderProjectsHandler.updateConnectorBuilderProject(existingConnectorBuilderProjectWithWorkspaceId);

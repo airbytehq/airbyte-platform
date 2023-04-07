@@ -4,11 +4,13 @@
 
 package io.airbyte.workers.internal.sync_persistence;
 
+import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.micronaut.context.ApplicationContext;
 import jakarta.inject.Singleton;
+import java.util.UUID;
 
 /**
- * A Factory for SyncPersistence
+ * A Factory for SyncPersistence.
  * <p>
  * Because we currently have two execution path with two different lifecycles, one being the
  * duration of a sync, the other duration of a worker. We introduce a Factory to keep an explicit
@@ -26,8 +28,16 @@ public class SyncPersistenceFactory {
     this.applicationContext = applicationContext;
   }
 
-  public SyncPersistence get() {
-    return applicationContext.getBean(SyncPersistence.class);
+  /**
+   * Get an instance of SyncPersistence.
+   */
+  public SyncPersistence get(final UUID connectionId,
+                             final Long jobId,
+                             final Integer attemptNumber,
+                             final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
+    final SyncPersistence syncPersistence = applicationContext.getBean(SyncPersistence.class);
+    syncPersistence.setConnectionContext(connectionId, jobId, attemptNumber, configuredAirbyteCatalog);
+    return syncPersistence;
   }
 
 }

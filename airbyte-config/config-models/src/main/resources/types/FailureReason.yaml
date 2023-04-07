@@ -5,7 +5,7 @@ title: FailureSummary
 type: object
 required:
   - timestamp
-additionalProperties: false
+additionalProperties: true
 properties:
   failureOrigin:
     description: Indicates where the error originated. If not set, the origin of error is not well known.
@@ -27,6 +27,7 @@ properties:
       - system_error
       - manual_cancellation
       - refresh_schema
+      - heartbeat_timeout
   internalMessage:
     description: Human readable failure description for consumption by technical system operators, like Airbyte engineers or OSS users.
     type: string

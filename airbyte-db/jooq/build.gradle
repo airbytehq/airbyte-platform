@@ -1,8 +1,13 @@
 plugins {
-    id 'java'
+    id 'java-library'
     alias(libs.plugins.nu.studer.jooq)
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.platform.testcontainers.postgresql
+    }
+}
 dependencies {
     implementation libs.jooq.meta
     implementation libs.jooq
@@ -13,6 +18,7 @@ dependencies {
     // jOOQ code generation
     implementation libs.jooq.codegen
     implementation libs.platform.testcontainers.postgresql
+
     // These are required because gradle might be using lower version of Jna from other
     // library transitive dependency. Can be removed if we can figure out which library is the cause.
     // Refer: https://github.com/testcontainers/testcontainers-java/issues/3834#issuecomment-825409079
@@ -25,7 +31,7 @@ dependencies {
 }
 
 jooq {
-    version = '3.13.4'
+    version = libs.versions.jooq
     edition = nu.studer.gradle.jooq.JooqEdition.OSS
 
     configurations {
@@ -67,9 +73,9 @@ jooq {
     }
 }
 
-sourceSets.main.java.srcDirs (
-    tasks.named('generateConfigsDatabaseJooq').flatMap { it.outputDir },
-    tasks.named('generateJobsDatabaseJooq').flatMap { it.outputDir }
+sourceSets.main.java.srcDirs(
+        tasks.named('generateConfigsDatabaseJooq').flatMap { it.outputDir },
+        tasks.named('generateJobsDatabaseJooq').flatMap { it.outputDir }
 )
 
 sourceSets {

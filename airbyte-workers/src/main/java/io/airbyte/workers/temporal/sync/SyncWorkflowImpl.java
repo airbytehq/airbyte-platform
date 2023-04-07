@@ -47,13 +47,18 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
   private static final String VERSION_LABEL = "sync-workflow";
-  private static final int CURRENT_VERSION = 2;
+  private static final int CURRENT_VERSION = 3;
   private static final String NORMALIZATION_SUMMARY_CHECK_TAG = "normalization_summary_check";
   private static final int NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION = 1;
   private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
   private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
   private static final int USE_MINIMAL_NORM_INPUT_VERSION = 1;
+  private static final String DEPRECATE_PERSIST_STATE_ACTIVITY = "deprecate_persist_state_activity";
+  private static final int DEPRECATE_PERSIST_STATE_ACTIVITY_VERSION = 1;
+
+  private static final String USE_NORMALIZATION_WITH_CONNECTION = "use_normalization_with_connection";
+  private static final int USE_NORMALIZATION_WITH_CONNECTION_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private ReplicationActivity replicationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -92,6 +97,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         Workflow.getVersion(AUTO_DETECT_SCHEMA_TAG, Workflow.DEFAULT_VERSION,
             AUTO_DETECT_SCHEMA_VERSION);
 
+    final int deprecatePersistActivityVersion =
+        Workflow.getVersion(DEPRECATE_PERSIST_STATE_ACTIVITY, Workflow.DEFAULT_VERSION, DEPRECATE_PERSIST_STATE_ACTIVITY_VERSION);
+
     if (autoDetectSchemaVersion >= AUTO_DETECT_SCHEMA_VERSION) {
       final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
 
@@ -117,11 +125,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     StandardSyncOutput syncOutput =
         replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
 
-    if (version > Workflow.DEFAULT_VERSION) {
+    if (version > Workflow.DEFAULT_VERSION && deprecatePersistActivityVersion < DEPRECATE_PERSIST_STATE_ACTIVITY_VERSION) {
       // the state is persisted immediately after the replication succeeded, because the
       // state is a checkpoint of the raw data that has been copied to the destination;
       // normalization & dbt does not depend on it
       final ConfiguredAirbyteCatalog configuredCatalog = syncInput.getCatalog();
+      // TODO We are no longer using this, to ensure better migration behavior when we delete this code,
+      // we should fail hard to ensure older syncs are retried instead of failing to persist states.
       persistActivity.persist(connectionId, syncOutput, configuredCatalog);
     }
 
@@ -153,6 +163,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
         } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
           final OperatorDbtInput operatorDbtInput = new OperatorDbtInput()
+              .withConnectionId(syncInput.getConnectionId())
               .withDestinationConfiguration(syncInput.getDestinationConfiguration())
               .withOperatorDbt(standardSyncOperation.getOperatorDbt());
 
@@ -195,9 +206,18 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
     } else {
-      return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
-          syncOutput.getOutputCatalog(),
-          syncInput.getWorkspaceId());
+      int withConnectionVersion =
+          Workflow.getVersion(USE_NORMALIZATION_WITH_CONNECTION, Workflow.DEFAULT_VERSION, USE_NORMALIZATION_WITH_CONNECTION_VERSION);
+      if (withConnectionVersion == Workflow.DEFAULT_VERSION) {
+        return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),
+            syncOutput.getOutputCatalog(),
+            syncInput.getWorkspaceId());
+      } else {
+        return normalizationActivity.generateNormalizationInputWithMinimumPayloadWithConnectionId(syncInput.getDestinationConfiguration(),
+            syncOutput.getOutputCatalog(),
+            syncInput.getWorkspaceId(),
+            syncInput.getConnectionId());
+      }
     }
   }
 

@@ -50,11 +50,15 @@ export const AuthButton: React.FC<{
   selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
+
   const { hiddenAuthFieldErrors } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("form.empty.error");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { loading, done, run, hasRun } = useFormikOauthAdapter(selectedConnectorDefinitionSpecification);
+  const { loading, done, run, hasRun } = useFormikOauthAdapter(
+    selectedConnectorDefinitionSpecification,
+    selectedConnectorDefinition
+  );
 
   if (!selectedConnectorDefinition) {
     console.error("Entered non-auth flow while no supported connector is selected");
@@ -78,7 +82,7 @@ export const AuthButton: React.FC<{
   );
   return (
     <div className={styles.authSectionRow}>
-      <Component isLoading={loading} type="button" onClick={run}>
+      <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
         {buttonLabel}
       </Component>
       {done && hasRun && (

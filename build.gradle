@@ -190,8 +190,16 @@ allprojects {
     apply plugin: 'com.bmuschko.docker-remote-api'
 
     if (!tasks.findByName('copyDocker')) {
-        task copyDocker(type: Sync) {
+        task copyDocker(type: Copy) {
             from "${project.projectDir}/Dockerfile"
+            into "build/docker/"
+        }
+    }
+
+    // This is a hack to support users who haven't refreshed their schema since the data types rollout
+    if (!tasks.findByName('copyWellKnownTypes')) {
+        task copyWellKnownTypes(type: Copy) {
+            from "${project.projectDir}/src/resources/WellKnownTypes.json"
             into "build/docker/"
         }
     }
@@ -225,12 +233,11 @@ subprojects { subproj ->
     // 2) A buildDockerImage task to build the docker image.
     // 3) Make the docker image task depend on the default assemble task.
     if (subproj.hasProperty('dockerImageName')) {
-        project.logger.lifecycle("configuring docker task for $subproj.name")
-
         // Although this task is defined for every subproject with the dockerImageName property,
         // It is not necessarily used for all subprojects. Non-TAR producing projects can ignore this.
         tasks.register("copyGeneratedTar", Copy) {
             dependsOn copyDocker
+            dependsOn copyWellKnownTypes
             dependsOn distTar
             from('build/distributions') {
                 // Assume that tars are named <parent-project-name>-<child-project-name>-*.tar.
@@ -253,7 +260,7 @@ subprojects { subproj ->
             def nginxImage = System.getenv('NGINX_IMAGE') ?: isArm64 ? 'arm64v8/nginx:alpine' : 'amd64/nginx:alpine'
 
             // Used by the platform -- Must be an Amazon Corretto-based image for build to work without modification to Dockerfile instructions
-            def openjdkImage = System.getenv('JDK_IMAGE') ?: "airbyte/airbyte-base-java-image:1.0"
+            def openjdkImage = System.getenv('JDK_IMAGE') ?: 'airbyte/airbyte-base-java-image:2.0.2'
 
             platform = buildPlatform
             images.add("airbyte/$subproj.dockerImageName:$rootProject.ext.image_tag")

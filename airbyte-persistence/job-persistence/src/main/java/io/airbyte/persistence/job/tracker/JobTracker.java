@@ -16,7 +16,10 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConnectorJobOutput;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -25,6 +28,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobPersistence;
@@ -71,20 +75,26 @@ public class JobTracker {
   private final JobPersistence jobPersistence;
   private final WorkspaceHelper workspaceHelper;
   private final TrackingClient trackingClient;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
-  public JobTracker(final ConfigRepository configRepository, final JobPersistence jobPersistence, final TrackingClient trackingClient) {
-    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient);
+  public JobTracker(final ConfigRepository configRepository,
+                    final JobPersistence jobPersistence,
+                    final TrackingClient trackingClient,
+                    final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+    this(configRepository, jobPersistence, new WorkspaceHelper(configRepository, jobPersistence), trackingClient, actorDefinitionVersionHelper);
   }
 
   @VisibleForTesting
   JobTracker(final ConfigRepository configRepository,
              final JobPersistence jobPersistence,
              final WorkspaceHelper workspaceHelper,
-             final TrackingClient trackingClient) {
+             final TrackingClient trackingClient,
+             final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.jobPersistence = jobPersistence;
     this.workspaceHelper = workspaceHelper;
     this.trackingClient = trackingClient;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   /**
@@ -94,20 +104,26 @@ public class JobTracker {
    * @param sourceDefinitionId source definition id
    * @param workspaceId workspace id
    * @param jobState job state
-   * @param output output
+   * @param jobOutput job output, if available
    */
-  public void trackCheckConnectionSource(final UUID jobId,
-                                         final UUID sourceDefinitionId,
-                                         final UUID workspaceId,
-                                         final JobState jobState,
-                                         final StandardCheckConnectionOutput output) {
+  public <T> void trackCheckConnectionSource(final UUID jobId,
+                                             final UUID sourceDefinitionId,
+                                             final UUID workspaceId,
+                                             final UUID actorId,
+                                             final JobState jobState,
+                                             final @Nullable ConnectorJobOutput jobOutput) {
+
+    final StandardCheckConnectionOutput responseOutput = jobOutput != null ? jobOutput.getCheckConnection() : null;
+    final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
+
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(output);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_SOURCE);
-      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId);
+      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(checkConnMetadata, jobMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 
@@ -118,20 +134,26 @@ public class JobTracker {
    * @param destinationDefinitionId defintion definition id
    * @param workspaceId workspace id
    * @param jobState job state
-   * @param output output
+   * @param jobOutput job output, if available
    */
-  public void trackCheckConnectionDestination(final UUID jobId,
-                                              final UUID destinationDefinitionId,
-                                              final UUID workspaceId,
-                                              final JobState jobState,
-                                              final StandardCheckConnectionOutput output) {
+  public <T> void trackCheckConnectionDestination(final UUID jobId,
+                                                  final UUID destinationDefinitionId,
+                                                  final UUID workspaceId,
+                                                  final UUID actorId,
+                                                  final JobState jobState,
+                                                  final @Nullable ConnectorJobOutput jobOutput) {
+
+    final StandardCheckConnectionOutput responseOutput = jobOutput != null ? jobOutput.getCheckConnection() : null;
+    final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
+
     Exceptions.swallow(() -> {
-      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(output);
+      final Map<String, Object> checkConnMetadata = generateCheckConnectionMetadata(responseOutput);
+      final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.CHECK_CONNECTION_DESTINATION);
-      final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId);
+      final Map<String, Object> destinationDefinitionMetadata = generateDestinationDefinitionMetadata(destinationDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(checkConnMetadata, jobMetadata, destinationDefinitionMetadata, stateMetadata));
+      track(workspaceId, MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, destinationDefinitionMetadata, stateMetadata));
     });
   }
 
@@ -142,14 +164,23 @@ public class JobTracker {
    * @param sourceDefinitionId source definition id
    * @param workspaceId workspace id
    * @param jobState job state
+   * @param jobOutput job output, if available
    */
-  public void trackDiscover(final UUID jobId, final UUID sourceDefinitionId, final UUID workspaceId, final JobState jobState) {
+  public void trackDiscover(final UUID jobId,
+                            final UUID sourceDefinitionId,
+                            final UUID workspaceId,
+                            final UUID actorId,
+                            final JobState jobState,
+                            final @Nullable ConnectorJobOutput jobOutput) {
+    final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
+
     Exceptions.swallow(() -> {
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.DISCOVER_SCHEMA);
-      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId);
+      final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
+      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, MoreMaps.merge(jobMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
     });
   }
 
@@ -169,22 +200,27 @@ public class JobTracker {
       final Optional<AttemptSyncConfig> attemptSyncConfig = lastAttempt.flatMap(Attempt::getSyncConfig);
 
       final UUID connectionId = UUID.fromString(job.getScope());
+      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);
+      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
       final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount());
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
-      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition);
-      final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition);
-      final Map<String, Object> syncMetadata = generateSyncMetadata(connectionId);
+      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
+      final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
+      final Map<String, Object> syncMetadata = generateSyncMetadata(standardSync);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> syncConfigMetadata = generateSyncConfigMetadata(
           job.getConfig(),
           attemptSyncConfig.orElse(null),
-          sourceDefinition.getSpec().getConnectionSpecification(),
-          destinationDefinition.getSpec().getConnectionSpecification());
+          sourceVersion.getSpec().getConnectionSpecification(),
+          destinationVersion.getSpec().getConnectionSpecification());
 
-      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);
       track(workspaceId,
           MoreMaps.merge(
               jobMetadata,
@@ -212,19 +248,23 @@ public class JobTracker {
                                           final JobState jobState,
                                           final Exception e) {
     Exceptions.swallow(() -> {
+      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);
+      final StandardSync standardSync = configRepository.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromConnection(connectionId);
       final StandardDestinationDefinition destinationDefinition = configRepository.getDestinationDefinitionFromConnection(connectionId);
+      final ActorDefinitionVersion sourceVersion =
+          actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, standardSync.getSourceId());
+      final ActorDefinitionVersion destinationVersion =
+          actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.getDestinationId());
 
       final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), null, attempts);
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
-      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition);
-      final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition);
-      final Map<String, Object> syncMetadata = generateSyncMetadata(connectionId);
+      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
+      final Map<String, Object> destinationDefMetadata = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
+      final Map<String, Object> syncMetadata = generateSyncMetadata(standardSync);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
       final Map<String, Object> generalMetadata = Map.of("connection_id", connectionId, "internal_error_cause", e.getMessage(),
           "internal_error_type", e.getClass().getName());
-
-      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);
 
       track(workspaceId,
           MoreMaps.merge(
@@ -367,9 +407,9 @@ public class JobTracker {
     }
   }
 
-  private Map<String, Object> generateSyncMetadata(final UUID connectionId) throws ConfigNotFoundException, IOException, JsonValidationException {
+  private Map<String, Object> generateSyncMetadata(final StandardSync standardSync)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     final Map<String, Object> operationUsage = new HashMap<>();
-    final StandardSync standardSync = configRepository.getStandardSync(connectionId);
     for (final UUID operationId : standardSync.getOperationIds()) {
       final StandardSyncOperation operation = configRepository.getStandardSyncOperation(operationId);
       if (operation != null) {
@@ -404,38 +444,55 @@ public class JobTracker {
    * job with a failed check. Because of this, tracking just the job attempt status does not capture
    * the whole picture. The `check_connection_outcome` field tracks this.
    */
-  private Map<String, Object> generateCheckConnectionMetadata(final StandardCheckConnectionOutput output) {
+  private Map<String, Object> generateCheckConnectionMetadata(final @Nullable StandardCheckConnectionOutput output) {
     if (output == null) {
       return Map.of();
     }
-    return Map.of("check_connection_outcome", output.getStatus().toString());
+
+    final Map<String, Object> metadata = new HashMap<>();
+    if (output.getMessage() != null) {
+      metadata.put("check_connection_message", output.getMessage());
+    }
+    metadata.put("check_connection_outcome", output.getStatus().toString());
+    return Collections.unmodifiableMap(metadata);
   }
 
-  private Map<String, Object> generateDestinationDefinitionMetadata(final UUID destinationDefinitionId)
+  private Map<String, Object> generateFailureReasonMetadata(final @Nullable FailureReason failureReason) {
+    if (failureReason == null) {
+      return Map.of();
+    }
+    return Map.of("failure_reason", TrackingMetadata.failureReasonAsJson(failureReason).toString());
+  }
+
+  private Map<String, Object> generateDestinationDefinitionMetadata(final UUID destinationDefinitionId, final UUID workspaceId, final UUID actorId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
-    return generateDestinationDefinitionMetadata(destinationDefinition);
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, actorId);
+    return generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
   }
 
-  private Map<String, Object> generateDestinationDefinitionMetadata(final StandardDestinationDefinition destinationDefinition) {
-    return TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition);
+  private Map<String, Object> generateDestinationDefinitionMetadata(final StandardDestinationDefinition destinationDefinition,
+                                                                    final ActorDefinitionVersion destinationVersion) {
+    return TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
   }
 
-  private Map<String, Object> generateSourceDefinitionMetadata(final UUID sourceDefinitionId)
+  private Map<String, Object> generateSourceDefinitionMetadata(final UUID sourceDefinitionId, final UUID workspaceId, final UUID actorId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
-    return generateSourceDefinitionMetadata(sourceDefinition);
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, actorId);
+    return generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
   }
 
-  private Map<String, Object> generateSourceDefinitionMetadata(final StandardSourceDefinition sourceDefinition) {
-    return TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition);
+  private Map<String, Object> generateSourceDefinitionMetadata(final StandardSourceDefinition sourceDefinition,
+                                                               final ActorDefinitionVersion sourceVersion) {
+    return TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
   }
 
   private Map<String, Object> generateJobMetadata(final String jobId, final ConfigType configType) {
     return generateJobMetadata(jobId, configType, 0);
   }
 
-  private Map<String, Object> generateJobMetadata(final String jobId, final ConfigType configType, final int attempt) {
+  private Map<String, Object> generateJobMetadata(final String jobId, final @Nullable ConfigType configType, final int attempt) {
     final Map<String, Object> metadata = new HashMap<>();
     if (configType != null) {
       metadata.put("job_type", configType);
@@ -455,7 +512,7 @@ public class JobTracker {
     }
   }
 
-  private void track(final UUID workspaceId, final Map<String, Object> metadata)
+  private void track(final @Nullable UUID workspaceId, final Map<String, Object> metadata)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     // unfortunate but in the case of jobs that cannot be linked to a workspace there not a sensible way
     // track it.

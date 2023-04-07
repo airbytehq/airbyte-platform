@@ -8,6 +8,9 @@
 .formContent {
   max-height: 60vh;
   overflow: auto;
+  padding: variables.$spacing-xl;
+  background-color: colors.$grey-50;
+  border-radius: variables.$border-radius-md;
 }
 
 .inputFormModalFooter {
@@ -21,17 +24,6 @@
   // need to overwrite the margin of the button wrapper used within create controls
   // TODO refactor so this isn't necessary
   margin-top: variables.$spacing-lg !important;
-}
-
-.warningBox {
-  margin-bottom: variables.$spacing-lg;
-  background-color: colors.$blue-50;
-}
-
-.warningBoxContainer {
-  display: flex;
-  gap: variables.$spacing-md;
-  align-items: center;
 }
 
 .inputsErrorBadge {

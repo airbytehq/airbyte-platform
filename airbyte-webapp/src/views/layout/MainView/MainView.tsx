@@ -26,7 +26,7 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { version } = useConfig();
 
   return (
-    <FlexContainer className={styles.mainViewContainer}>
+    <FlexContainer className={styles.mainViewContainer} gap="none">
       <SideBar>
         <AirbyteHomeLink />
         <MenuContent>

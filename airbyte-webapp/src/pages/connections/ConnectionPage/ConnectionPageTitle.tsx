@@ -1,13 +1,11 @@
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ConnectionInfoCard } from "components/connection/ConnectionInfoCard";
 import { ConnectionName } from "components/connection/ConnectionName";
-import { Callout } from "components/ui/Callout";
 import { FlexContainer } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { StepsMenu } from "components/ui/StepsMenu";
 import { Text } from "components/ui/Text";
 
@@ -19,8 +17,8 @@ import { useFeature, FeatureItem } from "hooks/services/Feature";
 import styles from "./ConnectionPageTitle.module.scss";
 import { ConnectionRoutePaths } from "../types";
 
-const InlineEnrollmentCallout = React.lazy(
-  () => import("packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout")
+const LargeEnrollmentCallout = React.lazy(
+  () => import("packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout")
 );
 
 export const ConnectionPageTitle: React.FC = () => {
@@ -80,19 +78,20 @@ export const ConnectionPageTitle: React.FC = () => {
   return (
     <div className={styles.container}>
       {connection.status === ConnectionStatus.deprecated && (
-        <Callout className={styles.connectionDeleted}>
-          <FontAwesomeIcon icon={faTrash} size="lg" />
-          <FormattedMessage id="connection.connectionDeletedView" />
-        </Callout>
+        <Message
+          className={styles.connectionDeleted}
+          type="warning"
+          text={<FormattedMessage id="connection.connectionDeletedView" />}
+        />
       )}
-      <Text as="div" centered bold className={styles.connectionTitle}>
+      <Text as="div" align="center" bold className={styles.connectionTitle}>
         <FormattedMessage id="connection.title" />
       </Text>
       <ConnectionName />
       <div className={styles.statusContainer}>
         <FlexContainer direction="column" gap="none">
           <ConnectionInfoCard />
-          {fcpEnabled && <InlineEnrollmentCallout />}
+          {fcpEnabled && <LargeEnrollmentCallout />}
         </FlexContainer>
       </div>
       <StepsMenu lightMode data={steps} onSelect={onSelectStep} activeStep={currentStep} disabled={schemaRefreshing} />

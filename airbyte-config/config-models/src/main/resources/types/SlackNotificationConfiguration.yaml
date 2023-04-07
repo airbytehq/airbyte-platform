@@ -6,7 +6,7 @@ description: Slack Notification Settings
 type: object
 required:
   - webhook
-additionalProperties: false
+additionalProperties: true
 properties:
   webhook:
     type: string

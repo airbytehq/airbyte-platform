@@ -33,6 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final String DOCKER_IMAGE_TAG = "0.0.1";
 
   private ConfigRepository configRepository;
 
@@ -44,7 +45,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         database,
         new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
         mock(StandardSyncPersistence.class),
-        MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES));
+        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
   }
 
   @Test
@@ -263,6 +264,28 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(allDestinationDefinitions, returnedDestDefsWithTombstone);
   }
 
+  @Test
+  void testUpdateImageTag() throws JsonValidationException, IOException, ConfigNotFoundException {
+    final String targetImageTag = "7.6.5";
+
+    final StandardSourceDefinition sourceDef1 = createBaseSourceDef();
+    final StandardSourceDefinition sourceDef2 = createBaseSourceDef();
+    sourceDef2.setDockerImageTag(targetImageTag);
+    final StandardSourceDefinition sourceDef3 = createBaseSourceDef();
+
+    configRepository.writeStandardSourceDefinition(sourceDef1);
+    configRepository.writeStandardSourceDefinition(sourceDef2);
+    configRepository.writeStandardSourceDefinition(sourceDef3);
+
+    final int updatedDefinitions = configRepository
+        .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
+
+    assertEquals(1, updatedDefinitions);
+    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId()).getDockerImageTag());
+    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId()).getDockerImageTag());
+    assertEquals(DOCKER_IMAGE_TAG, configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId()).getDockerImageTag());
+  }
+
   @SuppressWarnings("SameParameterValue")
   private static SourceConnection createSource(final UUID sourceDefId, final UUID workspaceId) {
     return new SourceConnection()
@@ -287,7 +310,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     return new StandardSourceDefinition()
         .withName("source-def-" + id)
         .withDockerRepository("source-image-" + id)
-        .withDockerImageTag("0.0.1")
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSourceDefinitionId(id)
         .withProtocolVersion("0.2.0")
         .withTombstone(false)
@@ -300,7 +323,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     return new StandardSourceDefinition()
         .withName("source-def-" + id)
         .withDockerRepository("source-image-" + id)
-        .withDockerImageTag("0.0.1")
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSourceDefinitionId(id)
         .withProtocolVersion("0.2.0")
         .withTombstone(false);
@@ -312,7 +335,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     return new StandardDestinationDefinition()
         .withName("source-def-" + id)
         .withDockerRepository("source-image-" + id)
-        .withDockerImageTag("0.0.1")
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withDestinationDefinitionId(id)
         .withProtocolVersion("0.2.0")
         .withTombstone(false);
