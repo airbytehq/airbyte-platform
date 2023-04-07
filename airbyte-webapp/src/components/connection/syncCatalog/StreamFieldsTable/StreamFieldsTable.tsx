@@ -123,13 +123,15 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         header: () => (
           <FlexContainer alignItems="center">
             {isColumnSelectionEnabled && (
-              <Switch
-                size="xs"
-                indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length}
-                checked={!config?.fieldSelectionEnabled}
-                onChange={toggleAllFieldsSelected}
-                disabled={mode === "readonly"}
-              />
+              <FlexContainer className={styles.columnSelectionSwitchContainer}>
+                <Switch
+                  size="xs"
+                  indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length}
+                  checked={!config?.fieldSelectionEnabled}
+                  onChange={toggleAllFieldsSelected}
+                  disabled={mode === "readonly"}
+                />
+              </FlexContainer>
             )}
             <FormattedMessage id="form.field.name" />
           </FlexContainer>
@@ -148,6 +150,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
                   checkIsChildFieldPrimaryKey={checkIsChildFieldPrimaryKey}
                   syncMode={config?.syncMode}
                   destinationSyncMode={config?.destinationSyncMode}
+                  className={styles.columnSelectionSwitchContainer}
                 />
               )}
               <Text size="sm" data-testid="stream-source-field-name">
