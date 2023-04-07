@@ -81,7 +81,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--right"])} />
       {filteredDefinitions.length === 0 && (
         <div className={styles.selectConnector__noMatches}>
-          <Text centered>
+          <Text align="center">
             <FormattedMessage id="connector.noSearchResults" />
           </Text>
         </div>

@@ -221,7 +221,7 @@ const Tile: React.FC<TileProps> = ({ image, title, description, buttonText, butt
             <FormattedMessage id={title} />
           </Heading>
           <FlexContainer direction="column" justifyContent="center" className={styles.tileDescription}>
-            <Text centered>
+            <Text align="center">
               <FormattedMessage id={description} />
             </Text>
           </FlexContainer>

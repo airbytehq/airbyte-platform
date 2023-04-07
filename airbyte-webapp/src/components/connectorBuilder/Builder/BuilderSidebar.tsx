@@ -168,7 +168,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         <DownloadYamlButton yamlIsValid yaml={yamlManifest} />
         <PublishButton />
       </FlexContainer>
-      <Text size="sm" color="grey" centered>
+      <Text size="sm" color="grey" align="center">
         <FormattedMessage
           id="connectorBuilder.cdkVersion"
           values={{

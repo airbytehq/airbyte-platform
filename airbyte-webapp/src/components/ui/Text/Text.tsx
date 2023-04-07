@@ -12,7 +12,6 @@ type TextAlignment = "left" | "center" | "right";
 
 type TextProps = HTMLAttributes<TextHTMLElement> & {
   className?: string;
-  centered?: boolean;
   as?: TextElementType;
   size?: TextSize;
   color?: TextColor;
@@ -47,14 +46,12 @@ const textAlignments: Record<TextAlignment, string> = {
 const getTextClassNames = ({
   size,
   color,
-  centered,
   bold,
   inverseColor,
   gradient,
   align,
-}: Required<Pick<TextProps, "size" | "color" | "centered" | "bold" | "inverseColor" | "gradient" | "align">>) =>
+}: Required<Pick<TextProps, "size" | "color" | "bold" | "inverseColor" | "gradient" | "align">>) =>
   classNames(styles.text, sizes[size], colors[color], textAlignments[align], {
-    [styles.centered]: centered,
     [styles.bold]: bold,
     [styles.inverse]: inverseColor,
     [styles.gradient]: gradient,
@@ -66,7 +63,6 @@ export const Text = React.memo(
       {
         as = "p",
         bold = false,
-        centered = false,
         children,
         className: classNameProp,
         size = "md",
@@ -79,7 +75,7 @@ export const Text = React.memo(
       ref
     ) => {
       const className = classNames(
-        getTextClassNames({ centered, size, color, bold, inverseColor, gradient, align }),
+        getTextClassNames({ size, color, bold, inverseColor, gradient, align }),
         classNameProp
       );
 
