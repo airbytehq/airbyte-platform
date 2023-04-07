@@ -53,13 +53,25 @@
   color: colors.$grey-300;
 }
 
-.centered {
-  text-align: center;
+.green {
+  color: colors.$green;
 }
 
 .bold,
 .text > strong {
   font-weight: 600;
+}
+
+.left {
+  text-align: left;
+}
+
+.right {
+  text-align: right;
+}
+
+.center {
+  text-align: center;
 }
 
 .gradient {

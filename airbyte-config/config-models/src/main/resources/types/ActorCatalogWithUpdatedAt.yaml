@@ -3,7 +3,7 @@
 title: ActorCatalogWithUpdatedAt
 description: Catalog of an actor with its most recent ActorCatalogFetchEvent created_at timestamp.
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - id
   - catalog

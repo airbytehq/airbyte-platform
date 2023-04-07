@@ -25,7 +25,24 @@ micronaut:
 
 airbyte:
   # connector-builder-server: uncomment when there are connector server specific environment variables we need to specify
+  acceptance:
+    test:
+      enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  control:
+    plane:
+      auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  data:
+    plane:
+      service-account:
+        credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+        email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  internal:
+    api:
+      auth-header:
+        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
+        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
+      host: ${INTERNAL_API_HOST}
   local:
     docker-mount: ${LOCAL_DOCKER_MOUNT:}
     root: ${LOCAL_ROOT}

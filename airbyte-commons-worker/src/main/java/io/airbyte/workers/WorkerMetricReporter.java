@@ -29,9 +29,18 @@ public class WorkerMetricReporter {
     this.metricClient = metricClient;
   }
 
-  public void trackSchemaValidationError(final AirbyteStreamNameNamespacePair stream) {
-    metricClient.count(OssMetricsRegistry.NUM_SOURCE_STREAMS_WITH_RECORD_SCHEMA_VALIDATION_ERRORS, 1, new MetricAttribute("docker_repo", dockerRepo),
-        new MetricAttribute("docker_version", dockerVersion), new MetricAttribute("stream", stream.toString()));
+  /**
+   * Given a AirbyteStreamNameNamespacePair and a String Set of validationErrors, produce a DataDog
+   * count + a metric for each error.
+   */
+  public void trackSchemaValidationErrors(final AirbyteStreamNameNamespacePair stream, final Set<String> validationErrors) {
+    final List<MetricAttribute> attributes = new ArrayList<>();
+    attributes.addAll(validationErrors.stream().map(f -> new MetricAttribute("validation_error", f)).collect(Collectors.toList()));
+    attributes.add(new MetricAttribute("docker_repo", dockerRepo));
+    attributes.add(new MetricAttribute("docker_version", dockerVersion));
+    attributes.add(new MetricAttribute("stream", stream.toString()));
+    final MetricAttribute[] attributesArray = attributes.toArray(new MetricAttribute[0]);
+    metricClient.count(OssMetricsRegistry.NUM_DISTINCT_SCHEMA_VALIDATION_ERRORS_IN_STREAMS, validationErrors.size(), attributesArray);
   }
 
   /**
@@ -45,7 +54,7 @@ public class WorkerMetricReporter {
     attributes.add(new MetricAttribute("docker_version", dockerVersion));
     attributes.add(new MetricAttribute("stream", stream.toString()));
     final MetricAttribute[] attributesArr = attributes.toArray(new MetricAttribute[0]);
-    metricClient.count(OssMetricsRegistry.NUM_SOURCE_STREAMS_WITH_UNEXPECTED_RECORD_FIELDS, unexpectedFieldNames.size(), attributesArr);
+    metricClient.count(OssMetricsRegistry.NUM_UNEXPECTED_FIELDS_IN_STREAMS, unexpectedFieldNames.size(), attributesArr);
   }
 
   public void trackStateMetricTrackerError() {

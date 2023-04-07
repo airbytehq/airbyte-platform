@@ -94,17 +94,17 @@ export const StreamTester: React.FC<{
   return (
     <div className={styles.container}>
       {currentStream && (
-        <Text className={styles.url} centered size="lg">
+        <Text size="lg" align="center" className={styles.url}>
           {currentStream.url}
         </Text>
       )}
       {!currentStream && isFetchingStreamList && (
-        <Text size="lg" centered>
+        <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
         </Text>
       )}
       {!currentStream && streamListErrorMessage && (
-        <Text size="lg" centered>
+        <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.streamListUrlError" />
         </Text>
       )}

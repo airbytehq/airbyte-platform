@@ -10,12 +10,15 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DOCKER_I
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.temporal.TemporalUtils;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -71,6 +74,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final ResourceRequirements normalizationResourceRequirements;
   private final AirbyteApiClient airbyteApiClient;
 
+  private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
+
   public NormalizationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                    @Named("defaultWorkerConfigs") final WorkerConfigs workerConfigs,
                                    @Named("defaultProcessFactory") final ProcessFactory processFactory,
@@ -111,6 +116,24 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     return temporalUtils.withBackgroundHeartbeat(() -> {
       final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
       final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
+
+      // Check the version of normalization
+      // We require at least version 0.3.0 to support data types v1. Using an older version would lead to
+      // all columns being typed as JSONB. If normalization is using an older version, fallback to using
+      // v0 data types.
+      if (!normalizationSupportsV1DataTypes(destinationLauncherConfig)) {
+        log.info("Using protocol v0");
+        CatalogMigrationV1Helper.downgradeSchemaIfNeeded(fullInput.getCatalog());
+      } else {
+
+        // This should only be useful for syncs that started before the release that contained v1 migration.
+        // However, we lack the effective way to detect those syncs so this code should remain until we
+        // phase v0 out.
+        // Performance impact should be low considering the nature of the check compared to the time to run
+        // normalization.
+        log.info("Using protocol v1");
+        CatalogMigrationV1Helper.upgradeSchemaIfNeeded(fullInput.getCatalog());
+      }
 
       final Supplier<NormalizationInput> inputSupplier = () -> {
         airbyteConfigValidator.ensureAsRuntime(ConfigSchema.NORMALIZATION_INPUT, Jsons.jsonNode(fullInput));
@@ -187,6 +210,22 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         .withCatalog(airbyteCatalog)
         .withResourceRequirements(normalizationResourceRequirements)
         .withWorkspaceId(workspaceId);
+  }
+
+  @VisibleForTesting
+  static boolean normalizationSupportsV1DataTypes(final IntegrationLauncherConfig destinationLauncherConfig) {
+    try {
+      final Version normalizationVersion = new Version(getNormalizationImageTag(destinationLauncherConfig));
+      return V1_NORMALIZATION_MINOR_VERSION.equals(normalizationVersion.getMinorVersion());
+    } catch (final IllegalArgumentException e) {
+      // IllegalArgument here means that the version isn't in a semver format.
+      // The current behavior is to assume it supports v0 data types for dev purposes.
+      return false;
+    }
+  }
+
+  private static String getNormalizationImageTag(final IntegrationLauncherConfig destinationLauncherConfig) {
+    return destinationLauncherConfig.getNormalizationDockerImage().split(":", 2)[1];
   }
 
   @SuppressWarnings("LineLength")

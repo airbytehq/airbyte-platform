@@ -26,7 +26,7 @@ export const InputsView: React.FC = () => {
 
   return (
     <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.inputsTitle" })}>
-      <Text centered className={styles.inputsDescription}>
+      <Text align="center" className={styles.inputsDescription}>
         <FormattedMessage id="connectorBuilder.inputsDescription" />
       </Text>
       {(values.inputs.length > 0 || inferredInputs.length > 0) && (

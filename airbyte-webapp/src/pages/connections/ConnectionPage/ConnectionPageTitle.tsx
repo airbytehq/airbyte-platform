@@ -84,7 +84,7 @@ export const ConnectionPageTitle: React.FC = () => {
           text={<FormattedMessage id="connection.connectionDeletedView" />}
         />
       )}
-      <Text as="div" centered bold className={styles.connectionTitle}>
+      <Text as="div" align="center" bold className={styles.connectionTitle}>
         <FormattedMessage id="connection.title" />
       </Text>
       <ConnectionName />

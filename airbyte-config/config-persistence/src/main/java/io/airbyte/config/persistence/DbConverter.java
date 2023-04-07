@@ -19,6 +19,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SER
 
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
@@ -124,7 +125,12 @@ public class DbConverter {
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
-    return Jsons.deserialize(configuredAirbyteCatalogString, ConfiguredAirbyteCatalog.class);
+    final ConfiguredAirbyteCatalog configuredAirbyteCatalog = Jsons.deserialize(configuredAirbyteCatalogString, ConfiguredAirbyteCatalog.class);
+    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
+    // TODO feature flag this for data types rollout
+    // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(configuredAirbyteCatalog);
+    CatalogMigrationV1Helper.downgradeSchemaIfNeeded(configuredAirbyteCatalog);
+    return configuredAirbyteCatalog;
   }
 
   /**
@@ -335,7 +341,12 @@ public class DbConverter {
    * @return airbyte catalog
    */
   public static AirbyteCatalog parseAirbyteCatalog(final String airbyteCatalogString) {
-    return Jsons.deserialize(airbyteCatalogString, AirbyteCatalog.class);
+    final AirbyteCatalog airbyteCatalog = Jsons.deserialize(airbyteCatalogString, AirbyteCatalog.class);
+    // On-the-fly migration of persisted data types related objects (protocol v0->v1)
+    // TODO feature flag this for data types rollout
+    // CatalogMigrationV1Helper.upgradeSchemaIfNeeded(airbyteCatalog);
+    CatalogMigrationV1Helper.downgradeSchemaIfNeeded(airbyteCatalog);
+    return airbyteCatalog;
   }
 
   /**
