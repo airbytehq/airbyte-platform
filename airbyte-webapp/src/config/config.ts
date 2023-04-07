@@ -8,7 +8,7 @@ export const config: AirbyteWebappConfig = {
   fathomSiteId: window.FATHOM_SITE_ID ?? process.env.REACT_APP_FATHOM_SITE_ID,
   apiUrl: window.API_URL ?? process.env.REACT_APP_API_URL ?? "/api",
   cloudApiUrl: window.CLOUD_API_URL ?? process.env.REACT_APP_CLOUD_API_URL,
-  connectorBuilderApiUrl: process.env.REACT_APP_API_URL ?? "/connector-builder-api",
+  connectorBuilderApiUrl: process.env.REACT_APP_CONNECTOR_BUILDER_API_URL ?? "/connector-builder-api",
   version: window.AIRBYTE_VERSION ?? "dev",
   integrationUrl: process.env.REACT_APP_INTEGRATION_DOCS_URLS ?? "/docs",
   oauthRedirectUrl: `${window.location.protocol}//${window.location.host}`,
