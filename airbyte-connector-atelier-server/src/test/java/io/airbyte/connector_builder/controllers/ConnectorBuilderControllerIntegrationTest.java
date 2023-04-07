@@ -25,7 +25,7 @@ import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamsHandler;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
-import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
+import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -60,7 +60,7 @@ class ConnectorBuilderControllerIntegrationTest {
   static String traceManifestResolve;
   static JsonNode validManifest;
   private MockAirbyteFileWriterImpl writer;
-  private DefaultAirbyteStreamFactory streamFactory;
+  private AirbyteStreamFactory streamFactory;
 
   @BeforeEach
   void setup() {

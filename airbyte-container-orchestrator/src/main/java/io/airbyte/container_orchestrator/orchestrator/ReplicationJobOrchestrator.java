@@ -45,7 +45,6 @@ import io.airbyte.workers.general.DefaultReplicationWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
-import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
@@ -245,9 +244,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
                                                 final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
                                                 final MdcScope.Builder mdcScope) {
     return protocolVersion != null
-        ? new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.of(configuredAirbyteCatalog), mdcScope,
-            Optional.of(RuntimeException.class))
-        : new DefaultAirbyteStreamFactory(mdcScope);
+        ? new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.of(configuredAirbyteCatalog), log, mdcScope,
+            Optional.of(RuntimeException.class), Runtime.getRuntime().maxMemory())
+        : VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
   }
 
 }
