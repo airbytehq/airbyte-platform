@@ -35,7 +35,7 @@ public class WorkerMetricReporter {
    */
   public void trackSchemaValidationErrors(final AirbyteStreamNameNamespacePair stream, final Set<String> validationErrors) {
     final List<MetricAttribute> attributes = new ArrayList<>();
-    attributes.addAll(validationErrors.stream().map(f -> new MetricAttribute("validation_error", f)).collect(Collectors.toList()));
+    attributes.addAll(validationErrors.stream().map(f -> new MetricAttribute("validation_error", f.replace(",", ""))).collect(Collectors.toList()));
     attributes.add(new MetricAttribute("docker_repo", dockerRepo));
     attributes.add(new MetricAttribute("docker_version", dockerVersion));
     attributes.add(new MetricAttribute("stream", stream.toString()));
