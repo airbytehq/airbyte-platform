@@ -85,6 +85,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -195,7 +196,7 @@ class SchedulerHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @BeforeEach
-  void setup() {
+  void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
     completedJob = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
@@ -211,6 +212,7 @@ class SchedulerHandlerTest {
 
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     configRepository = mock(ConfigRepository.class);
+    when(configRepository.getStandardSync(any())).thenReturn(new StandardSync().withStatus(StandardSync.Status.ACTIVE));
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     jobPersistence = mock(JobPersistence.class);
     eventRunner = mock(EventRunner.class);
@@ -1500,6 +1502,20 @@ class SchedulerHandlerTest {
     assertThrows(ValueConflictKnownException.class,
         () -> schedulerHandler.syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)));
 
+  }
+
+  @Test
+  void disabledSyncThrows() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID connectionId = UUID.randomUUID();
+    when(configRepository.getStandardSync(connectionId)).thenReturn(new StandardSync().withStatus(StandardSync.Status.INACTIVE));
+    assertThrows(IllegalStateException.class, () -> schedulerHandler.syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)));
+  }
+
+  @Test
+  void deprecatedSyncThrows() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID connectionId = UUID.randomUUID();
+    when(configRepository.getStandardSync(connectionId)).thenReturn(new StandardSync().withStatus(StandardSync.Status.DEPRECATED));
+    assertThrows(IllegalStateException.class, () -> schedulerHandler.syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)));
   }
 
   @Test
