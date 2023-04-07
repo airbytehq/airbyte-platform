@@ -1,4 +1,3 @@
-import { initialSetupCompleted } from "commands/workspaces";
 import {
   getPostgresCreateDestinationBody,
   getPostgresCreateSourceBody,
@@ -47,8 +46,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   before(() => {
     dropTables();
     runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
-
-    initialSetupCompleted();
 
     requestWorkspaceId().then(() => {
       const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Stream table Source"));

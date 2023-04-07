@@ -107,3 +107,7 @@ $arrow-cell-fixed-width: 40px;
     color: colors.$grey-200;
   }
 }
+
+.columnSelectionSwitchContainer {
+  width: variables.$spacing-lg + variables.$spacing-xs;
+}

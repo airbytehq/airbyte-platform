@@ -438,7 +438,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         if (!validationErrors.isEmpty()) {
           validationErrors.forEach((stream, errorPair) -> {
             LOGGER.warn("Schema validation errors found for stream {}. Error messages: {}", stream, errorPair.getLeft());
-            metricReporter.trackSchemaValidationError(stream);
+            metricReporter.trackSchemaValidationErrors(stream, errorPair.getLeft());
           });
         }
         unexpectedFields.forEach((stream, unexpectedFieldNames) -> {

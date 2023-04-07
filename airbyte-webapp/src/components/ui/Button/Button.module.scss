@@ -244,4 +244,13 @@
       }
     }
   }
+
+  &.link {
+    font: inherit;
+    padding: 0;
+    background: none;
+    background-color: transparent;
+    border: none;
+    text-decoration: underline;
+  }
 }

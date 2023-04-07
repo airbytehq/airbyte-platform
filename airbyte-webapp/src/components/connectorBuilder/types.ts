@@ -188,10 +188,11 @@ export const authTypeToKeyToInferredInput: Record<string, Record<string, Builder
     },
     password: {
       key: "password",
-      required: true,
+      required: false,
       definition: {
         type: "string",
         title: "Password",
+        always_show: true,
         airbyte_secret: true,
       },
     },

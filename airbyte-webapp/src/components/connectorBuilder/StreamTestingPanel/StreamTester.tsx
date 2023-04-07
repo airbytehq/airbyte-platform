@@ -17,6 +17,7 @@ import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
+import { useTestWarnings } from "./useTestWarnings";
 
 export const StreamTester: React.FC<{
   hasTestInputJsonErrors: boolean;
@@ -87,6 +88,8 @@ export const StreamTester: React.FC<{
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
 
+  const testDataWarnings = useTestWarnings();
+
   const currentStream = streams[testStreamIndex] as StreamsListReadStreamsItem | undefined;
   return (
     <div className={styles.container}>
@@ -153,6 +156,7 @@ export const StreamTester: React.FC<{
           }}
         />
       )}
+      {!isFetching && testDataWarnings.map((warning, index) => <Message type="warning" text={warning} key={index} />)}
       {!isFetching && (streamReadData !== undefined || errorMessage !== undefined) && (
         <ResizablePanels
           className={styles.resizablePanelsContainer}

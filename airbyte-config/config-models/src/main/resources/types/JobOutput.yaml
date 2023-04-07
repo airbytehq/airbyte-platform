@@ -4,7 +4,7 @@
 title: JobOutput
 description: job output
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - outputType
 properties:

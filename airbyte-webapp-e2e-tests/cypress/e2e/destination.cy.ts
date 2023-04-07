@@ -1,12 +1,7 @@
 import { appendRandomString } from "commands/common";
 import { createLocalJsonDestination, deleteDestination, updateDestination } from "commands/destination";
-import { initialSetupCompleted } from "commands/workspaces";
 
 describe("Destination main actions", () => {
-  beforeEach(() => {
-    initialSetupCompleted();
-  });
-
   it("Create new destination", () => {
     createLocalJsonDestination("Test destination cypress", "/local");
 

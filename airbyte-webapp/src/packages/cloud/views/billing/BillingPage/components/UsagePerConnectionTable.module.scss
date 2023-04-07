@@ -13,15 +13,7 @@
   }
 }
 
-.usageValue {
-  text-align: right;
-
-  &--green {
-    color: colors.$green;
-  }
-}
-
-.disabled {
+.deleted {
   color: colors.$grey-300;
 }
 

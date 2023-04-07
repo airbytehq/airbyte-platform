@@ -4,6 +4,8 @@
 
 package io.airbyte.connector_builder.controllers;
 
+import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
+
 import io.airbyte.connector_builder.api.generated.V1Api;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
@@ -24,6 +26,8 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
+import io.micronaut.security.annotation.Secured;
+import io.micronaut.security.rules.SecurityRule;
 import java.util.HashMap;
 import java.util.List;
 
@@ -50,6 +54,7 @@ public class ConnectorBuilderController implements V1Api {
   @Override
   @Get(uri = "/health",
        produces = MediaType.APPLICATION_JSON)
+  @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(TaskExecutors.IO)
   public HealthCheckRead getHealthCheck() {
     return healthHandler.getHealthCheck();
@@ -58,6 +63,7 @@ public class ConnectorBuilderController implements V1Api {
   @Override
   @Post(uri = "/streams/list",
         produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
   public StreamsListRead listStreams(final StreamsListRequestBody streamsListRequestBody) {
     return streamsHandler.listStreams(streamsListRequestBody);
@@ -66,6 +72,7 @@ public class ConnectorBuilderController implements V1Api {
   @Override
   @Post(uri = "/stream/read",
         produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
   public StreamRead readStream(final StreamReadRequestBody streamReadRequestBody) {
     final HashMap<String, String> recordOne = new HashMap<>();
@@ -85,6 +92,7 @@ public class ConnectorBuilderController implements V1Api {
   @Override
   @Post(uri = "/manifest/resolve",
         produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
   public ResolveManifest resolveManifest(final ResolveManifestRequestBody resolveManifestRequestBody) {
     return resolveManifestHandler.resolveManifest(resolveManifestRequestBody);
