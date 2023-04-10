@@ -14,7 +14,6 @@ import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.features.FeatureFlagHelper;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.MdcScope;
@@ -26,26 +25,20 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerMetricReporter;
-import io.airbyte.workers.WorkerUtils;
-import io.airbyte.workers.general.DefaultReplicationWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
@@ -60,7 +53,6 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,6 +165,13 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
                 migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
                 featureFlags);
 
+    final var airbyteDestination = new DefaultAirbyteDestination(destinationLauncher,
+        getStreamFactory(destinationLauncherConfig.getProtocolVersion(), syncInput.getCatalog(),
+            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),
+        new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
+            Optional.of(syncInput.getCatalog())),
+        migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion()));
+
     MetricClientFactory.initialize(MetricEmittingApps.WORKER);
     final var metricClient = MetricClientFactory.getMetricClient();
     final var metricReporter = new WorkerMetricReporter(metricClient,
@@ -182,36 +181,15 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
         featureFlagClient, syncInput)) {
 
       log.info("Setting up replication worker...");
-      final UUID workspaceId = syncInput.getWorkspaceId();
-      // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
-      // environment-variable flags say so (deprecated).
-      // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
-      final boolean fieldSelectionEnabled = workspaceId != null
-          && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
-              || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
 
       final SyncPersistence syncPersistence =
           OrchestratorFactoryHelpers.createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
       final MessageTracker messageTracker = OrchestratorFactoryHelpers.createMessageTracker(syncPersistence, featureFlags, syncInput);
+      final ConnectorConfigUpdater connectorConfigUpdater = OrchestratorFactoryHelpers.createConnectorConfigUpdater(sourceApi, destinationApi);
 
-      final var replicationWorker = new DefaultReplicationWorker(
-          jobRunConfig.getJobId(),
-          Math.toIntExact(jobRunConfig.getAttemptId()),
-          airbyteSource,
-          new NamespacingMapper(syncInput.getNamespaceDefinition(), syncInput.getNamespaceFormat(), syncInput.getPrefix()),
-          new DefaultAirbyteDestination(destinationLauncher,
-              getStreamFactory(destinationLauncherConfig.getProtocolVersion(), syncInput.getCatalog(),
-                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),
-              new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog())),
-              migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
-          messageTracker,
-          syncPersistence,
-          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
-          metricReporter,
-          new ConnectorConfigUpdater(sourceApi, destinationApi),
-          fieldSelectionEnabled,
-          heartbeatTimeoutChaperone);
+      final var replicationWorker = OrchestratorFactoryHelpers.createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
+          syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
+          syncInput);
 
       log.info("Running replication worker...");
       final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
