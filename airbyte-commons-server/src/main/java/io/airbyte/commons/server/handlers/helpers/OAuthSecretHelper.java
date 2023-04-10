@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +71,86 @@ public class OAuthSecretHelper {
       throw new JsonValidationException(
           String.format("Error parsing advancedAuth - see [%s]", connectorSpecification.getDocumentationUrl()));
     }
+  }
+
+  /**
+   * Get OAuth secret paths but only for the completeOauthServerOutput portion of the connector
+   * specification.
+   *
+   * @param connectorSpecification connector specification from source/destination version
+   * @return Map of property: path in connector config.
+   * @throws JsonValidationException if we don't have an oauth config specification to parse.
+   */
+  public static Map<String, List<String>> getCompleteOauthServerOutputPaths(final ConnectorSpecification connectorSpecification)
+      throws JsonValidationException {
+    if (OAuthConfigSupplier.hasOAuthConfigSpecification(connectorSpecification)) {
+      final JsonNode completeOAuthServerOutputSpecification =
+          connectorSpecification.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerOutputSpecification();
+
+      // Merge all the mappings into one map
+      return new HashMap<>(OAuthPathExtractor.extractOauthConfigurationPaths(completeOAuthServerOutputSpecification));
+    } else {
+      throw new JsonValidationException(
+          String.format("Error parsing advancedAuth - see [%s]", connectorSpecification.getDocumentationUrl()));
+    }
+  }
+
+  /**
+   * Traverses advancedAuth structure to validate the input oauth param configuration. As it
+   * traverses, it builds up a connector specification that we can pass into statefulSplitSecrets to
+   * get back an oauth param configuration that has had its secrets stripped out and replaced
+   * appropriately. I could have split these into separate functions, but they would have just done
+   * the same loop. For advanced auth sources/destinations, we don't actually mark the secrets in the
+   * connector configuration For this to work with statefulSplitSecrets we need to spoof the
+   * connection configuration so that the oauth params are "secrets" and so that the connection
+   * configuration can be fed into statefulSplitSecrets and return us a properly sanitized oauth param
+   * config.
+   *
+   * @param connectorSpecification connector specification
+   * @param oauthParamConfiguration the passed in oauth param configuration
+   * @return a connector specification that has each path from CompleteOauthServerOutputPaths set to
+   *         have airbyte_secret: true
+   * @throws JsonValidationException If there is no valid OauthConfig Specification.
+   */
+  @VisibleForTesting
+  public static ConnectorSpecification validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(final ConnectorSpecification connectorSpecification,
+                                                                                               final JsonNode oauthParamConfiguration)
+      throws JsonValidationException {
+    if (OAuthConfigSupplier.hasOAuthConfigSpecification(connectorSpecification)) {
+      JsonNode newConnectorSpecificationNode = Jsons.emptyObject();
+      Map<String, Boolean> airbyteSecret = Map.of("airbyte_secret", true);
+      final Map<String, List<String>> oauthPaths = OAuthSecretHelper.getCompleteOauthServerOutputPaths(connectorSpecification);
+      for (Entry<String, List<String>> entry : oauthPaths.entrySet()) {
+        final List<String> jsonPathList = entry.getValue();
+        if (Jsons.navigateTo(oauthParamConfiguration, jsonPathList) == null) {
+          throw new BadObjectSchemaKnownException(String.format("Missing OAuth param for key at %s", jsonPathList));
+        }
+        Jsons.setNestedValue(newConnectorSpecificationNode, alternatingList("properties", jsonPathList), Jsons.jsonNode(airbyteSecret));
+      }
+
+      return new ConnectorSpecification().withConnectionSpecification(newConnectorSpecificationNode);
+    }
+
+    throw new BadObjectSchemaKnownException("No valid OAuth config specification");
+  }
+
+  /**
+   * Create a list with alternating elements of property, list[n]. Used to spoof a connector
+   * specification for splitting out secrets.
+   *
+   * @param property property to put in front of each list element
+   * @param list list to insert elements into
+   * @return new list with alternating elements
+   */
+  private static List<String> alternatingList(final String property,
+                                              final List<String> list) {
+    List<String> result = new ArrayList<String>(list.size() * 2);
+
+    for (String item : list) {
+      result.add(property);
+      result.add(item);
+    }
+    return result;
   }
 
 }

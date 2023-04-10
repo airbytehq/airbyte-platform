@@ -5347,6 +5347,29 @@ components:
         params:
           type: object
           additionalProperties: true
+    WorkspaceOverrideOauthParamsRequestBody:
+      type: object
+      required:
+        - definitionId
+        - params
+        - workspaceId
+        - actorType
+      properties:
+        definitionId:
+          type: string
+          format: uuid
+        params:
+          type: object
+          additionalProperties: true
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+    ActorType:
+      enum:
+        - source
+        - destination
+      type: string
     # Web Backend
     WebBackendCheckUpdatesRead:
       type: object
