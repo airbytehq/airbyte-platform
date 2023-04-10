@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
@@ -23,6 +24,7 @@ import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
@@ -424,8 +426,9 @@ public class SourceHandler {
   @VisibleForTesting
   JsonNode hydrateOAuthResponseSecret(final String secretId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
-    return secretsRepositoryReader.fetchSecret(secretCoordinate);
-
+    JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
+    CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
+    return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }
 
 }
