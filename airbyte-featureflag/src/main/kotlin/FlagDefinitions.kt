@@ -29,11 +29,14 @@ object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", de
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
+
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
+
+object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
