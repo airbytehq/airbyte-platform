@@ -60,7 +60,10 @@ public class OrchestratorFactoryHelpers {
                                                         final SourceDefinitionApi sourceDefinitionApi,
                                                         final StandardSyncInput syncInput)
       throws ApiException {
-    final UUID sourceDefinitionId = sourceApi.getSource(new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId();
+    final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
+        () -> sourceApi.getSource(
+            new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
+        "get the source for heartbeat");
 
     final long maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
         .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
