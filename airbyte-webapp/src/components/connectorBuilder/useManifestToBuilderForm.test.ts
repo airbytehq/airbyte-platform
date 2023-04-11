@@ -371,12 +371,6 @@ describe("Conversion successfully results in", () => {
       ...baseManifest,
       streams: [
         merge({}, stream1, {
-          transformations: [
-            {
-              type: "AddFields",
-              fields: ["id"],
-            },
-          ],
           retriever: {
             requester: {
               error_handler: {
@@ -396,7 +390,6 @@ describe("Conversion successfully results in", () => {
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].unsupportedFields).toEqual({
-      transformations: manifest.streams[0].transformations,
       retriever: {
         requester: {
           error_handler: manifest.streams[0].retriever.requester.error_handler,

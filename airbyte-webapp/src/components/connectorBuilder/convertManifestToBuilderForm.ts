@@ -7,6 +7,7 @@ import {
   BuilderFormValues,
   BuilderPaginator,
   BuilderStream,
+  BuilderTransformation,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
   isInterpolatedConfigKey,
@@ -20,6 +21,7 @@ import {
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
   DeclarativeStreamSchemaLoader,
+  DeclarativeStreamTransformationsItem,
   DpathExtractor,
   HttpRequester,
   HttpRequesterAuthenticator,
@@ -119,8 +121,8 @@ const manifestStreamToBuilder = (
     incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
     partitionRouter: manifestPartitionRouterToBuilder(retriever.partition_router, serializedStreamToIndex, stream.name),
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
+    transformations: manifestTransformationsToBuilder(stream.name, stream.transformations),
     unsupportedFields: {
-      transformations: stream.transformations,
       retriever: {
         requester: {
           error_handler: stream.retriever.requester.error_handler,
@@ -207,6 +209,39 @@ function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): Builder
   } else {
     return [manifestStream.primary_key];
   }
+}
+
+function manifestTransformationsToBuilder(
+  name: string | undefined,
+  transformations: DeclarativeStreamTransformationsItem[] | undefined
+): BuilderTransformation[] | undefined {
+  if (!transformations) {
+    return undefined;
+  }
+  const builderTransformations: BuilderTransformation[] = [];
+
+  transformations.forEach((transformation) => {
+    if (transformation.type === "CustomTransformation") {
+      throw new ManifestCompatibilityError(name, "custom transformation used");
+    }
+    if (transformation.type === "AddFields") {
+      builderTransformations.push(
+        ...(transformation.fields as Array<{ value: string; path: string[] }>).map((field) => ({
+          type: "add" as const,
+          value: field.value,
+          path: field.path,
+        }))
+      );
+    }
+    if (transformation.type === "RemoveFields") {
+      builderTransformations.push(...transformation.field_pointers.map((path) => ({ type: "remove" as const, path })));
+    }
+  });
+
+  if (builderTransformations.length === 0) {
+    return undefined;
+  }
+  return builderTransformations;
 }
 
 function manifestIncrementalSyncToBuilder(

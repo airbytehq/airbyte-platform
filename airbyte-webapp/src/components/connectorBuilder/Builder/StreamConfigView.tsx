@@ -32,6 +32,7 @@ import { KeyValueListField } from "./KeyValueListField";
 import { PaginationSection } from "./PaginationSection";
 import { PartitionSection } from "./PartitionSection";
 import styles from "./StreamConfigView.module.scss";
+import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import { BuilderStream } from "../types";
 import { formatJson } from "../utils";
@@ -96,6 +97,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <BuilderCard>
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestParameters")}
