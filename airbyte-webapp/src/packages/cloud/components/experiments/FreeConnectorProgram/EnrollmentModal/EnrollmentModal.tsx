@@ -1,12 +1,10 @@
-import { faWarning } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
 import { ModalFooter } from "components/ui/Modal/ModalFooter";
 import { Text } from "components/ui/Text";
 
@@ -69,21 +67,23 @@ export const EnrollmentModalContent: React.FC<EnrollmentModalContentProps> = ({
 
   const EnrollmentEmailVerificationWarning = () => {
     const WarningContent = () => (
-      <Callout>
-        <FontAwesomeIcon icon={faWarning} />
-        <Text>
-          <FormattedMessage
-            id="freeConnectorProgram.enrollmentModal.unvalidatedEmailWarning"
-            values={{
-              resendEmail: (content: React.ReactNode) => (
-                <button className={styles.resendEmailLink} onClick={sendEmailVerification}>
-                  {content}
-                </button>
-              ),
-            }}
-          />
-        </Text>
-      </Callout>
+      <Message
+        type="warning"
+        text={
+          <Text>
+            <FormattedMessage
+              id="freeConnectorProgram.enrollmentModal.unvalidatedEmailWarning"
+              values={{
+                resendEmail: (content: React.ReactNode) => (
+                  <button className={styles.resendEmailLink} onClick={sendEmailVerification}>
+                    {content}
+                  </button>
+                ),
+              }}
+            />
+          </Text>
+        }
+      />
     );
 
     return <>{!emailVerified && <WarningContent />}</>;
