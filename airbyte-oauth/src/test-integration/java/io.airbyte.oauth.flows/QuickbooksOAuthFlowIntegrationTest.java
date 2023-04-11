@@ -85,6 +85,8 @@ public class QuickbooksOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest
     assertTrue(credentials.get("access_token").toString().length() > 0);
     assertTrue(credentials.containsKey("token_expiry_date"));
     assertTrue(credentials.get("token_expiry_date").toString().length() > 0);
+    assertTrue(credentials.containsKey("realm_id"));
+    assertTrue(credentials.get("realm_id").toString().length() > 0);
   }
 
 }

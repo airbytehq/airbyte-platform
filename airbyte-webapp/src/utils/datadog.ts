@@ -4,7 +4,7 @@ import { config } from "config";
 
 export const loadDatadog = (): void => {
   const {
-    webappTag,
+    version,
     datadog: { applicationId, clientToken, site, service },
   } = config;
 
@@ -17,7 +17,7 @@ export const loadDatadog = (): void => {
     clientToken,
     site,
     service,
-    version: webappTag,
+    version,
     sampleRate: 100,
     sessionReplaySampleRate: 0,
     trackInteractions: false,

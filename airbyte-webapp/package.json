@@ -12,6 +12,8 @@
     "start": "vite",
     "prestart:cloud": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "start:cloud": "AB_ENV=${AB_ENV-frontend-dev} NODE_OPTIONS='-r ./scripts/environment.js' vite",
+    "prestart:cloud-preview": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client && AB_ENV=${AB_ENV-frontend-dev} NODE_OPTIONS='-r ./scripts/environment.js' vite build",
+    "start:cloud-preview": "vite preview --port 3001",
     "prebuild": "pnpm run generate-client",
     "build": ". ./scripts/calculate-source-hash.sh && vite build",
     "postbuild": "./scripts/download-docs.sh",

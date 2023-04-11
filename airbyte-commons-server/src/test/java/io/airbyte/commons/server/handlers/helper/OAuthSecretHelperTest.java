@@ -4,13 +4,16 @@
 
 package io.airbyte.commons.server.handlers.helper;
 
+import static io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_FIELD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.config.StandardSourceDefinition;
@@ -18,6 +21,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -34,6 +38,8 @@ class OAuthSecretHelperTest {
   public static final String EXAMPLE_BAD_REFRESH_TOKEN = "not-refreshing";
   public static final String EXAMPLE_BAD_CLIENT_ID = "efgh5678";
   public static final String EXAMPLE_BAD_CLIENT_SECRET = "boom";
+  private static final String PROPERTIES = "properties";
+  private static final String CREDENTIALS = "credentials";
 
   @Test
   void testGetOAuthConfigPaths() throws IOException, JsonValidationException {
@@ -82,7 +88,7 @@ class OAuthSecretHelperTest {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
     StandardSourceDefinition sourceDefinition = new StandardSourceDefinition().withSpec(connectorSpecification);
     ObjectNode connectionConfiguration = JsonNodeFactory.instance.objectNode();
-    JsonNode hydratedSecret = Jsons.jsonNode(Map.of("credentials", Map.of(
+    JsonNode hydratedSecret = Jsons.jsonNode(Map.of(CREDENTIALS, Map.of(
         REFRESH_TOKEN, EXAMPLE_REFRESH_TOKEN,
         CLIENT_ID, EXAMPLE_CLIENT_ID,
         CLIENT_SECRET, EXAMPLE_CLIENT_SECRET)));
@@ -97,12 +103,51 @@ class OAuthSecretHelperTest {
     credentials.set(REFRESH_TOKEN, TextNode.valueOf(EXAMPLE_BAD_REFRESH_TOKEN));
     credentials.set(CLIENT_ID, TextNode.valueOf(EXAMPLE_BAD_CLIENT_ID));
     credentials.set(CLIENT_SECRET, TextNode.valueOf(EXAMPLE_BAD_CLIENT_SECRET));
-    connectionConfiguration.set("credentials", credentials);
+    connectionConfiguration.set(CREDENTIALS, credentials);
 
     JsonNode replacementConnectionConfiguration =
         OAuthSecretHelper.setSecretsInConnectionConfiguration(sourceDefinition.getSpec(), hydratedSecret, connectionConfiguration);
 
     assertEquals(replacementConnectionConfiguration, hydratedSecret);
+  }
+
+  @Test
+  void testValidateOauthParamConfigAndReturnAdvancedAuthSecretSpec() throws IOException, JsonValidationException {
+    ConnectorSpecification emptyConnectorSpecification = new ConnectorSpecification();
+    assertThrows(BadObjectSchemaKnownException.class,
+        () -> OAuthSecretHelper.validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification,
+            Jsons.jsonNode(Collections.emptyMap())));
+
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateNestedAdvancedAuthConnectorSpecification();
+    JsonNode invalidOAuthParamConfig = Jsons.jsonNode(Map.of(
+        CLIENT_ID, EXAMPLE_CLIENT_ID,
+        CLIENT_SECRET, EXAMPLE_CLIENT_SECRET));
+
+    assertThrows(BadObjectSchemaKnownException.class,
+        () -> OAuthSecretHelper.validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification, invalidOAuthParamConfig));
+
+    JsonNode oneInvalidKeyOAuthParams = Jsons.jsonNode(Map.of(CREDENTIALS, Map.of(
+        CLIENT_ID, EXAMPLE_CLIENT_ID)));
+
+    assertThrows(BadObjectSchemaKnownException.class,
+        () -> OAuthSecretHelper.validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification, oneInvalidKeyOAuthParams));
+
+    JsonNode oauthParamConfig = Jsons.jsonNode(Map.of(CREDENTIALS, Map.of(
+        CLIENT_ID, EXAMPLE_CLIENT_ID,
+        CLIENT_SECRET, EXAMPLE_CLIENT_SECRET)));
+
+    final ConnectorSpecification newConnectorSpecification =
+        OAuthSecretHelper.validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(connectorSpecification, oauthParamConfig);
+
+    JsonNode expected = Jsons.jsonNode(Map.of(
+        PROPERTIES, Map.of(CREDENTIALS,
+            Map.of(PROPERTIES, Map.of(CLIENT_ID, airbyteSecretJson(), CLIENT_SECRET, airbyteSecretJson())))));
+
+    assertEquals(newConnectorSpecification.getConnectionSpecification(), expected);
+  }
+
+  private static JsonNode airbyteSecretJson() {
+    return Jsons.jsonNode(Map.of(AIRBYTE_SECRET_FIELD, true));
   }
 
 }

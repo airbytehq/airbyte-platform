@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper.validateOauthParamConfigAndReturnAdvancedAuthSecretSpec;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DEFINITION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DEFINITION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
@@ -14,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody;
 import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
@@ -25,6 +27,7 @@ import io.airbyte.api.model.generated.SourceOauthConsentRequest;
 import io.airbyte.commons.constants.AirbyteSecretConstants;
 import io.airbyte.commons.json.JsonPaths;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.handlers.helpers.OAuthPathExtractor;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
@@ -441,6 +444,104 @@ public class OAuthHandler {
   private SecretCoordinate generateOAuthSecretCoordinate(final UUID workspaceId) {
     final String coordinateBase = SecretsHelpers.getCoordinatorBase("airbyte_oauth_workspace_", workspaceId, UUID::randomUUID);
     return new SecretCoordinate(coordinateBase, 1);
+  }
+
+  /**
+   * Sets workspace level overrides for OAuth parameters.
+   *
+   * @param requestBody request body
+   */
+  public void setWorkspaceOverrideOAuthParams(WorkspaceOverrideOauthParamsRequestBody requestBody)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    switch (requestBody.getActorType()) {
+      case SOURCE -> setSourceWorkspaceOverrideOauthParams(requestBody);
+      case DESTINATION -> setDestinationWorkspaceOverrideOauthParams(requestBody);
+      default -> throw new BadObjectSchemaKnownException("actorType must be one of ['source', 'destination']");
+    }
+  }
+
+  public void setSourceWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID definitionId = requestBody.getDefinitionId();
+    final StandardSourceDefinition standardSourceDefinition =
+        configRepository.getStandardSourceDefinition(definitionId);
+
+    final UUID workspaceId = requestBody.getWorkspaceId();
+    final ActorDefinitionVersion actorDefinitionVersion =
+        actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId);
+
+    final ConnectorSpecification connectorSpecification = actorDefinitionVersion.getSpec();
+
+    final JsonNode oauthParamConfiguration = Jsons.jsonNode(requestBody.getParams());
+
+    JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
+
+    final SourceOAuthParameter param = configRepository
+        .getSourceOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
+        .orElseGet(() -> new SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()))
+        .withConfiguration(sanitizedOauthConfiguration)
+        .withSourceDefinitionId(definitionId)
+        .withWorkspaceId(workspaceId);
+
+    configRepository.writeSourceOAuthParam(param);
+  }
+
+  public void setDestinationWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID workspaceId = requestBody.getWorkspaceId();
+    final UUID definitionId = requestBody.getDefinitionId();
+    final StandardDestinationDefinition destinationDefinition =
+        configRepository.getStandardDestinationDefinition(definitionId);
+    final ActorDefinitionVersion actorDefinitionVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
+
+    final ConnectorSpecification connectorSpecification = actorDefinitionVersion.getSpec();
+
+    final JsonNode oauthParamConfiguration = Jsons.jsonNode(requestBody.getParams());
+
+    JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
+
+    final DestinationOAuthParameter param = configRepository
+        .getDestinationOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
+        .orElseGet(() -> new DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()))
+        .withConfiguration(sanitizedOauthConfiguration)
+        .withDestinationDefinitionId(definitionId)
+        .withWorkspaceId(workspaceId);
+
+    configRepository.writeDestinationOAuthParam(param);
+  }
+
+  /**
+   * Method to handle sanitizing OAuth param configuration. Secrets are split out and stored in the
+   * secrets manager and a new ready-for-storage version of the oauth param config JSON will be
+   * returned.
+   *
+   * @param workspaceId the current workspace ID
+   * @param connectorSpecification the connector specification of the source/destination in question
+   * @param oauthParamConfiguration the oauth param configuration passed in by the user.
+   * @return new oauth param configuration to be stored to the db.
+   * @throws JsonValidationException if oauth param configuration doesn't pass spec validation
+   */
+  private JsonNode sanitizeOauthConfiguration(final UUID workspaceId,
+                                              final ConnectorSpecification connectorSpecification,
+                                              final JsonNode oauthParamConfiguration)
+      throws JsonValidationException {
+
+    if (OAuthConfigSupplier.hasOAuthConfigSpecification(connectorSpecification)) {
+      // Advanced auth handling
+      final ConnectorSpecification advancedAuthSpecification =
+          validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(connectorSpecification, oauthParamConfiguration);
+      LOGGER.debug("AdvancedAuthSpecification: {}", advancedAuthSpecification);
+      return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, advancedAuthSpecification);
+    } else {
+      // This works because:
+      // 1. In non advanced_auth specs, the connector configuration matches the oauth param configuration,
+      // the two are just merged together
+      // 2. For these non advanced_auth specs, the actual variables are present and tagged as secrets so
+      // statefulSplitSecrets can find and
+      // store them in our secrets manager and replace the values appropriately.
+      return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification);
+    }
   }
 
 }

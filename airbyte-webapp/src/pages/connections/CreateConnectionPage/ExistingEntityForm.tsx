@@ -108,7 +108,7 @@ const ExistingEntityForm: React.FC<IProps> = ({ type, onSubmit }) => {
           )}
         </Formik>
       </Card>
-      <Text centered size="lg">
+      <Text align="center" size="lg">
         <FormattedMessage id="onboarding.or" />
       </Text>
     </>

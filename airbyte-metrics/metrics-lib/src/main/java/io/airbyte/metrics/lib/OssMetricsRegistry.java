@@ -130,6 +130,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "source_hearbeat_failure",
       "Fail a replication because the source missed an heartbeat",
       MetricTags.CONNECTION_ID),
+  SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
+      "source_time_since_last_heartbeat_millis",
+      "Time since last heartbeat (message from a source) for a connection.",
+      MetricTags.CONNECTION_ID),
   STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
       "state_timestamp_metric_tracker_error",
       "number of syncs where the state timestamp metric tracker ran out of memory or "

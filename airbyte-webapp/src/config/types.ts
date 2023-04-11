@@ -50,5 +50,4 @@ export interface AirbyteWebappConfig {
     service?: string;
     tag?: string;
   };
-  webappTag?: string;
 }

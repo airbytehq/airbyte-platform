@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Contains most of the core logic surrounding secret coordinate extraction and insertion.
@@ -45,6 +46,7 @@ import javax.annotation.Nullable;
  * {@link SecretPersistence}.
  */
 @SuppressWarnings("PMD.AvoidThrowingRawExceptionTypes")
+@Slf4j
 public class SecretsHelpers {
 
   public static final String COORDINATE_FIELD = "_secret";
@@ -250,6 +252,7 @@ public class SecretsHelpers {
     final var secretMap = new HashMap<SecretCoordinate, String>();
 
     final List<String> paths = getSortedSecretPaths(spec);
+    log.debug("SortedSecretPaths: {}", paths);
 
     for (final String path : paths) {
       fullConfigCopy = JsonPaths.replaceAt(fullConfigCopy, path, (json, pathOfNode) -> {
