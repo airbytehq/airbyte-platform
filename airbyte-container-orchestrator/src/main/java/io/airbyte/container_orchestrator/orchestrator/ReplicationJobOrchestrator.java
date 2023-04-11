@@ -16,11 +16,9 @@ import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.TemporalUtils;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
@@ -30,22 +28,14 @@ import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerMetricReporter;
-import io.airbyte.workers.internal.AirbyteStreamFactory;
-import io.airbyte.workers.internal.DefaultAirbyteDestination;
-import io.airbyte.workers.internal.DefaultAirbyteSource;
-import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
-import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.orchestrator.OrchestratorFactoryHelpers;
-import io.airbyte.workers.process.AirbyteIntegrationLauncher;
+import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.airbyte.workers.process.KubePodProcess;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
@@ -62,12 +52,10 @@ import org.slf4j.LoggerFactory;
 public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncInput> {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private final ProcessFactory processFactory;
   private final Configs configs;
   private final FeatureFlags featureFlags;
   private final FeatureFlagClient featureFlagClient;
-  private final AirbyteMessageSerDeProvider serDeProvider;
-  private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
+  private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
   private final JobRunConfig jobRunConfig;
   private final SourceApi sourceApi;
   private final DestinationApi destinationApi;
@@ -86,11 +74,9 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
                                     final SourceDefinitionApi sourceDefinitionApi,
                                     final SyncPersistenceFactory syncPersistenceFactory) {
     this.configs = configs;
-    this.processFactory = processFactory;
     this.featureFlags = featureFlags;
     this.featureFlagClient = featureFlagClient;
-    this.serDeProvider = serDeProvider;
-    this.migratorFactory = migratorFactory;
+    this.airbyteIntegrationLauncherFactory = new AirbyteIntegrationLauncherFactory(processFactory, serDeProvider, migratorFactory, featureFlags);
     this.jobRunConfig = jobRunConfig;
     this.sourceApi = sourceApi;
     this.destinationApi = destinationApi;
@@ -127,50 +113,15 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
 
-    // At this moment, if either source or destination is from custom connector image, we will put all
-    // jobs into isolated pool to run.
-    final boolean useIsolatedPool = sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector();
-    log.info("Setting up source launcher...");
-    final var sourceLauncher = new AirbyteIntegrationLauncher(
-        sourceLauncherConfig.getJobId(),
-        Math.toIntExact(sourceLauncherConfig.getAttemptId()),
-        sourceLauncherConfig.getDockerImage(),
-        processFactory,
-        syncInput.getSourceResourceRequirements(),
-        sourceLauncherConfig.getAllowedHosts(),
-        useIsolatedPool,
-        featureFlags);
-
-    log.info("Setting up destination launcher...");
-    final var destinationLauncher = new AirbyteIntegrationLauncher(
-        destinationLauncherConfig.getJobId(),
-        Math.toIntExact(destinationLauncherConfig.getAttemptId()),
-        destinationLauncherConfig.getDockerImage(),
-        processFactory,
-        syncInput.getDestinationResourceRequirements(),
-        destinationLauncherConfig.getAllowedHosts(),
-        useIsolatedPool,
-        featureFlags);
-
-    log.info("Setting up source...");
-
     final HeartbeatMonitor heartbeatMonitor = OrchestratorFactoryHelpers.createHeartbeatMonitor(sourceApi, sourceDefinitionApi, syncInput);
 
-    final var airbyteSource =
-        WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB.equals(sourceLauncherConfig.getDockerImage()) ? new EmptyAirbyteSource(
-            featureFlags.useStreamCapableState())
-            : new DefaultAirbyteSource(sourceLauncher,
-                getStreamFactory(sourceLauncherConfig.getProtocolVersion(), syncInput.getCatalog(), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
-                heartbeatMonitor,
-                migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
-                featureFlags);
+    log.info("Setting up source...");
+    final var airbyteSource = airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
+        syncInput.getCatalog(), heartbeatMonitor);
 
-    final var airbyteDestination = new DefaultAirbyteDestination(destinationLauncher,
-        getStreamFactory(destinationLauncherConfig.getProtocolVersion(), syncInput.getCatalog(),
-            DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER),
-        new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-            Optional.of(syncInput.getCatalog())),
-        migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion()));
+    log.info("Setting up destination...");
+    final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
+        syncInput.getDestinationResourceRequirements(), syncInput.getCatalog());
 
     MetricClientFactory.initialize(MetricEmittingApps.WORKER);
     final var metricClient = MetricClientFactory.getMetricClient();
@@ -199,15 +150,6 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
       log.info("Returning output...");
       return Optional.of(Jsons.serialize(replicationOutput));
     }
-  }
-
-  private AirbyteStreamFactory getStreamFactory(final Version protocolVersion,
-                                                final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
-                                                final MdcScope.Builder mdcScope) {
-    return protocolVersion != null
-        ? new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, protocolVersion, Optional.of(configuredAirbyteCatalog), log, mdcScope,
-            Optional.of(RuntimeException.class), Runtime.getRuntime().maxMemory())
-        : VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
   }
 
 }
