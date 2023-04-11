@@ -6,12 +6,12 @@ package io.airbyte.commons.protocol.serde;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.airbyte.commons.json.Jsons;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AirbyteMessageV0SerDeTest {
@@ -29,9 +29,9 @@ class AirbyteMessageV0SerDeTest {
                 .withDocumentationUrl(new URI("file:///tmp/doc")));
 
     final String serializedMessage = ser.serialize(message);
-    final AirbyteMessage deserializedMessage = deser.deserialize(Jsons.deserialize(serializedMessage));
+    final Optional<AirbyteMessage> deserializedMessage = deser.deserialize(serializedMessage);
 
-    assertEquals(message, deserializedMessage);
+    assertEquals(message, deserializedMessage.get());
   }
 
 }
