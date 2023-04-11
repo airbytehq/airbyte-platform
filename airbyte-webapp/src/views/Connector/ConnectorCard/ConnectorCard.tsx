@@ -139,7 +139,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       trackTestConnectorSuccess(selectedConnectorDefinition);
       return response;
     } catch (e) {
-      trackTestConnectorFailure(selectedConnectorDefinition, e.message);
+      trackTestConnectorFailure(selectedConnectorDefinition, LogsRequestError.extractJobInfo(e), e.message);
       throw e;
     }
   };
