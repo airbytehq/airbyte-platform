@@ -4,13 +4,11 @@ import jakarta.inject.Singleton
 import java.util.*
 
 enum class NotificationType {
-    webhook, email
+    webhook
 }
 
 @Singleton
-class NotificationHandler(private val maybeSendGridEmailConfigFetchers: Optional<SendGridEmailConfigFetcher>,
-                          private val maybeWebhookConfigFetcher: Optional<WebhookConfigFetcher>,
-                          private val maybeSendGridEmailNotificationSender: Optional<SendGridEmailNotificationSender>,
+class NotificationHandler(private val maybeWebhookConfigFetcher: Optional<WebhookConfigFetcher>,
                           private val maybeWebhookNotificationSender: Optional<WebhookNotificationSender>) {
 
     /**
@@ -23,13 +21,6 @@ class NotificationHandler(private val maybeSendGridEmailConfigFetchers: Optional
                     val config: WebhookConfig? = maybeWebhookConfigFetcher.get().fetchConfig(connectionId)
                     if (config != null) {
                         maybeWebhookNotificationSender.get().sendNotification(config, title, message)
-                    }
-                }
-
-                if (maybeSendGridEmailConfigFetchers.isPresent && maybeSendGridEmailNotificationSender.isPresent && notificationType == NotificationType.email) {
-                    val config: SendGridEmailConfig? = maybeSendGridEmailConfigFetchers.get().fetchConfig(connectionId)
-                    if (config != null) {
-                        maybeSendGridEmailNotificationSender.get().sendNotification(config, title, message)
                     }
                 }
             }
