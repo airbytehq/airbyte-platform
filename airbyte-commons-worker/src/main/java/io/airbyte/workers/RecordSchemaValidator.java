@@ -10,9 +10,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.validation.json.JsonSchemaValidator;
-import io.airbyte.validation.json.JsonValidationException;
-import io.airbyte.workers.exception.RecordSchemaValidationException;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,44 +63,25 @@ public class RecordSchemaValidator {
                              final AirbyteStreamNameNamespacePair airbyteStream,
                              final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
     validationExecutor.execute(() -> {
-      try {
-        doValidateSchema(message, airbyteStream);
-      } catch (final RecordSchemaValidationException e) {
-        handleException(e, airbyteStream, validationErrors);
+      Set<String> errorMessages = validator.validateInitializedSchema(airbyteStream.toString(), message.getData());
+      if (!errorMessages.isEmpty()) {
+        updateValidationErrors(errorMessages, airbyteStream, validationErrors);
       }
     });
   }
 
-  private void handleException(final RecordSchemaValidationException e,
-                               final AirbyteStreamNameNamespacePair airbyteStream,
-                               final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+  private void updateValidationErrors(final Set<String> errorMessages,
+                                      final AirbyteStreamNameNamespacePair airbyteStream,
+                                      final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
     validationErrors.compute(airbyteStream, (k, v) -> {
       if (v == null) {
-        return new ImmutablePair<>(e.errorMessages, 1);
+        return new ImmutablePair<>(errorMessages, 1);
       } else {
-        final var updatedErrorMessages = Stream.concat(v.getLeft().stream(), e.errorMessages.stream()).collect(Collectors.toSet());
+        final var updatedErrorMessages = Stream.concat(v.getLeft().stream(), errorMessages.stream()).collect(Collectors.toSet());
         final var updatedCount = v.getRight() + 1;
         return new ImmutablePair<>(updatedErrorMessages, updatedCount);
       }
     });
-  }
-
-  /**
-   * Validates the schema.
-   *
-   * @throws RecordSchemaValidationException If schema is invalid.
-   */
-  private void doValidateSchema(final AirbyteRecordMessage message, final AirbyteStreamNameNamespacePair airbyteStream) {
-    final JsonNode messageData = message.getData();
-    final JsonNode matchingSchema = streams.get(airbyteStream);
-
-    try {
-      validator.ensureInitializedSchema(airbyteStream.toString(), messageData);
-    } catch (final JsonValidationException e) {
-      final Set<String> validationMessagesToDisplay = new HashSet<>(validator.getValidationMessages(matchingSchema, messageData));
-      throw new RecordSchemaValidationException(validationMessagesToDisplay,
-          String.format("Record schema validation failed for %s", airbyteStream), e);
-    }
   }
 
 }

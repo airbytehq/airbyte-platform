@@ -39,7 +39,7 @@ class RecordSchemaValidatorTest {
   }
 
   @Test
-  void testValidateValidSchemaWithBackgroundValidation() {
+  void testValidateValidSchema() {
     final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
     recordSchemaValidator.validateSchema(VALID_RECORD.getRecord(), AirbyteStreamNameNamespacePair.fromRecordMessage(VALID_RECORD.getRecord()),
         validationErrors);
@@ -48,7 +48,7 @@ class RecordSchemaValidatorTest {
   }
 
   @Test
-  void testValidateInvalidSchemaWithBackgroundValidation() throws InterruptedException {
+  void testValidateInvalidSchema() throws InterruptedException {
     final var executorService = Executors.newFixedThreadPool(1);
     final var recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput), executorService);
 
