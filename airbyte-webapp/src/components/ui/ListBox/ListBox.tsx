@@ -1,18 +1,32 @@
 import { Listbox } from "@headlessui/react";
 import classNames from "classnames";
 import React from "react";
+import { useIntl } from "react-intl";
+
+import { Text } from "components/ui/Text";
 
 import { ReactComponent as CaretDownIcon } from "./CaretDownIcon.svg";
 import styles from "./ListBox.module.scss";
 
 export interface ListBoxControlButtonProps<T> {
-  selectedOption: Option<T>;
+  selectedOption?: Option<T>;
 }
 
 const DefaultControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T>) => {
+  const { formatMessage } = useIntl();
+
   return (
     <>
-      {selectedOption.label}
+      {selectedOption ? (
+        <Text as="span" size="lg">
+          {selectedOption.label}
+        </Text>
+      ) : (
+        <Text as="span" size="lg" color="grey">
+          {formatMessage({ id: "form.selectValue" })}
+        </Text>
+      )}
+
       <CaretDownIcon className={styles.caret} />
     </>
   );
@@ -25,16 +39,17 @@ export interface Option<T> {
   disabled?: boolean;
 }
 
-interface ListBoxProps<T> {
+export interface ListBoxProps<T> {
   className?: string;
   optionClassName?: string;
   selectedOptionClassName?: string;
   options: Array<Option<T>>;
-  selectedValue: T;
+  selectedValue?: T;
   onSelect: (selectedValue: T) => void;
   buttonClassName?: string;
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
   "data-testid"?: string;
+  hasError?: boolean;
 }
 
 export const ListBox = <T,>({
@@ -47,16 +62,19 @@ export const ListBox = <T,>({
   optionClassName,
   selectedOptionClassName,
   "data-testid": testId,
+  hasError,
 }: ListBoxProps<T>) => {
-  const selectedOption = options.find((option) => option.value === selectedValue) ?? {
-    label: String(selectedValue),
-    value: selectedValue,
+  const selectedOption = options.find((option) => option.value === selectedValue);
+
+  const onOnSelect = (value: T) => {
+    console.log("onOnSelect", value);
+    onSelect(value);
   };
 
   return (
     <div className={className} data-testid={testId}>
-      <Listbox value={selectedValue} onChange={onSelect}>
-        <Listbox.Button className={classNames(buttonClassName, styles.button)}>
+      <Listbox value={selectedValue} onChange={onOnSelect}>
+        <Listbox.Button className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}>
           <ControlButton selectedOption={selectedOption} />
         </Listbox.Button>
         {/* wrap in div to make `position: absolute` on Listbox.Options result in correct vertical positioning */}
