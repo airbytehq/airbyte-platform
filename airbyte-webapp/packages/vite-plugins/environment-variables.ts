@@ -35,20 +35,15 @@ export function environmentVariables(): Plugin {
         cloudEnvVariables = loadEnv(mode, envDirPath, ["REACT_APP_"]);
       }
 
-      // Load variables from all .env files
-      process.env = {
-        ...process.env,
-        ...loadEnv(mode, ROOT_PATH, ""),
-      };
-
       // Environment variables that should be available in the frontend
       const frontendEnvVariables = loadEnv(mode, ROOT_PATH, ["REACT_APP_"]);
 
+      // Mirrors the backend version which is set during deployment in .github/actions/deploy/action.yaml
+      const version = JSON.stringify(`${process.env.VERSION}${process.env.WEBAPP_BUILD_CLOUD_ENV ? "-cloud" : ""}`);
+
       // Create an object of defines that will shim all required process.env variables.
       const processEnv = {
-        "process.env.REACT_APP_VERSION": JSON.stringify(
-          `${process.env.VERSION}${process.env.WEBAPP_BUILD_CLOUD_ENV ? "-cloud" : ""}`
-        ),
+        "process.env.REACT_APP_VERSION": version,
         "process.env.NODE_ENV": JSON.stringify(mode),
         ...Object.fromEntries([
           // Any cloud .env files should overwrite OSS .env files
@@ -62,6 +57,8 @@ export function environmentVariables(): Plugin {
       return {
         define: {
           ...processEnv,
+          // This lets us set the verison in a meta tag in index.html
+          "import.meta.env.VERSION": version,
         },
       };
     },

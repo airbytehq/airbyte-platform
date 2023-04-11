@@ -22,9 +22,11 @@ interface StreamSelectorProps {
 const ControlButton: React.FC<ListBoxControlButtonProps<string>> = ({ selectedOption }) => {
   return (
     <>
-      <Heading className={styles.label} as="h1" size="sm">
-        {selectedOption.label}
-      </Heading>
+      {selectedOption && (
+        <Heading className={styles.label} as="h1" size="sm">
+          {selectedOption.label}
+        </Heading>
+      )}
       <CaretDownIcon className={styles.arrow} />
     </>
   );

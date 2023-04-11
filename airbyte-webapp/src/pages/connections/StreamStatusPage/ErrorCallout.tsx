@@ -1,12 +1,9 @@
 import { useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
-import { CalloutVariant } from "components/ui/Callout/Callout";
 import { FlexContainer } from "components/ui/Flex";
-import { Text } from "components/ui/Text";
+import { Message } from "components/ui/Message";
 
 import { JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -42,7 +39,7 @@ export const ErrorCallout = () => {
     errorMessage: string;
     errorAction: () => void;
     buttonMessage: string;
-    variant: CalloutVariant;
+    variant: "error" | "info";
   } | null>(() => {
     const { jobId, attemptId, errorMessage } = getLatestErrorMessage(jobs?.[0]);
     // If we have an error message and a non-breaking schema change, show the error message
@@ -50,7 +47,7 @@ export const ErrorCallout = () => {
       return {
         errorMessage,
         errorAction: () => navigate(`../${ConnectionRoutePaths.JobHistory}#${jobId}::${attemptId}`),
-        buttonMessage: "connection.stream.status.seeLogs",
+        buttonMessage: formatMessage({ id: "connection.stream.status.seeLogs" }),
         variant: "error",
       };
     }
@@ -63,8 +60,8 @@ export const ErrorCallout = () => {
         }),
         errorAction: () =>
           navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
-        buttonMessage: "connection.schemaChange.reviewAction",
-        variant: "actionRequired",
+        buttonMessage: formatMessage({ id: "connection.schemaChange.reviewAction" }),
+        variant: "info",
       };
     }
 
@@ -73,13 +70,14 @@ export const ErrorCallout = () => {
 
   if (calloutDetails) {
     return (
-      <FlexContainer className={styles.callout}>
-        <Callout variant={calloutDetails.variant} className={styles.error}>
-          <Text className={styles.message}>{calloutDetails.errorMessage}</Text>
-          <Button variant="dark" data-testid="calloutErrorButton" onClick={calloutDetails.errorAction}>
-            <FormattedMessage id={calloutDetails.buttonMessage} />
-          </Button>
-        </Callout>
+      <FlexContainer>
+        <Message
+          text={calloutDetails.errorMessage}
+          actionBtnText={calloutDetails.buttonMessage}
+          type={calloutDetails.variant}
+          onAction={calloutDetails.errorAction}
+          className={styles.error}
+        />
       </FlexContainer>
     );
   }

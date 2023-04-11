@@ -33,6 +33,7 @@
   "form.email.placeholder": "you@company.com",
   "form.email.error": "Enter a valid email",
   "form.empty.error": "Required",
+  "form.selectValue": "Select a value",
   "form.selectConnector": "Type to search for a connector",
   "form.searchName": "search by name...",
   "form.noResult": "No result",
