@@ -35,6 +35,8 @@ export const mockWorkspaceUsageConnection: ConsumptionPerConnectionPerTimeframe[
   connectionScheduleType: "manual",
   connectionScheduleTimeUnit: null,
   connectionScheduleUnits: null,
+  destinationReleaseStage: "alpha",
+  sourceReleaseStage: "alpha",
 };
 
 export const secondMockWorkspaceConnection: ConsumptionPerConnectionPerTimeframe["connection"] = {

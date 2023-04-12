@@ -2,10 +2,9 @@ import { Dispatch, SetStateAction, createContext, useContext, useMemo, useState 
 
 import { Option } from "components/ui/ListBox";
 
-import { DestinationId, SourceId } from "core/request/AirbyteClient";
+import { DestinationId, ReleaseStage, SourceId } from "core/request/AirbyteClient";
 import { useGetCloudWorkspaceUsage } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import { getIcon } from "utils/imageUtils";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {
@@ -14,11 +13,13 @@ import {
   calculateFreeAndPaidUsageByConnection,
   calculateFreeAndPaidUsageByTimeframe,
 } from "./calculateUsageDataObjects";
+import { ConnectorOptionLabel } from "./ConnectorOptionLabel";
 
 export interface AvailableSource {
   id: string;
   icon: string;
   name: string;
+  releaseStage: ReleaseStage;
   connectedDestinations: string[];
 }
 
@@ -26,6 +27,7 @@ export interface AvailableDestination {
   id: string;
   icon: string;
   name: string;
+  releaseStage: ReleaseStage;
   connectedSources: string[];
 }
 
@@ -81,9 +83,8 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
   const sourceOptions = useMemo(() => {
     return availableSourcesAndDestinations.sources.map((source) => {
       return {
-        label: source.name,
+        label: <ConnectorOptionLabel connector={source} />,
         value: source.id,
-        icon: getIcon(source.icon),
         disabled: !selectedDestination ? false : !source.connectedDestinations.includes(selectedDestination),
       };
     });
@@ -92,9 +93,8 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
   const destinationOptions = useMemo(() => {
     return availableSourcesAndDestinations.destinations.map((destination) => {
       return {
-        label: destination.name,
+        label: <ConnectorOptionLabel connector={destination} />,
         value: destination.id,
-        icon: getIcon(destination.icon),
         disabled: !selectedSource ? false : !destination.connectedSources.includes(selectedSource),
       };
     });

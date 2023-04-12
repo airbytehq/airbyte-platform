@@ -1,4 +1,9 @@
-import { ConnectionStatus, ConnectionScheduleType, ConnectionScheduleTimeUnit } from "core/request/AirbyteClient";
+import {
+  ConnectionStatus,
+  ConnectionScheduleType,
+  ConnectionScheduleTimeUnit,
+  ReleaseStage,
+} from "core/request/AirbyteClient";
 
 export enum CreditStatus {
   "POSITIVE" = "positive",
@@ -57,11 +62,13 @@ export interface ConsumptionPerConnectionPerTimeframe {
     destinationDefinitionName: string;
     destinationIcon: string;
     destinationId: string;
+    destinationReleaseStage: ReleaseStage;
     sourceConnectionName: string;
     sourceDefinitionId: string;
     sourceDefinitionName: string;
     sourceIcon: string;
     sourceId: string;
+    sourceReleaseStage: ReleaseStage;
     connectionScheduleType: ConnectionScheduleType | null;
     connectionScheduleTimeUnit: ConnectionScheduleTimeUnit | null;
     connectionScheduleUnits: number | null;

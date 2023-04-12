@@ -13,6 +13,7 @@ export const calculateAvailableSourcesAndDestinations = (
           name: currentConsumptionItem.connection.sourceConnectionName,
           id: currentConsumptionItem.connection.sourceId,
           icon: currentConsumptionItem.connection.sourceIcon,
+          releaseStage: currentConsumptionItem.connection.sourceReleaseStage,
           connectedDestinations: [currentConsumptionItem.connection.destinationId],
         };
       } else {
@@ -32,6 +33,7 @@ export const calculateAvailableSourcesAndDestinations = (
           name: currentConsumptionItem.connection.destinationConnectionName,
           id: currentConsumptionItem.connection.destinationId,
           icon: currentConsumptionItem.connection.destinationIcon,
+          releaseStage: currentConsumptionItem.connection.destinationReleaseStage,
           connectedSources: [currentConsumptionItem.connection.sourceId],
         };
       } else {
