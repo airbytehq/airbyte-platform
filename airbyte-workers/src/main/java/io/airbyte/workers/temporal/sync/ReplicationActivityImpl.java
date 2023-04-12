@@ -214,14 +214,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   airbyteApiClient,
                   airbyteVersion,
                   () -> context,
-                  Optional.ofNullable(taskQueue),
-                  () -> {
-                    try {
-                      heartbeatTimeoutChaperone.close();
-                    } catch (final Exception e) {
-                      throw new RuntimeException(e);
-                    }
-                  });
+                  Optional.ofNullable(taskQueue));
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
           final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);

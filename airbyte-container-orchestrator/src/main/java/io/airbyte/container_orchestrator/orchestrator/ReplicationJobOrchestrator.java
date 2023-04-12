@@ -128,28 +128,27 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
     final var metricReporter = new WorkerMetricReporter(metricClient,
         sourceLauncherConfig.getDockerImage());
 
-    try (final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = OrchestratorFactoryHelpers.createHeartbeatTimeoutChaperone(heartbeatMonitor,
-        featureFlagClient, syncInput)) {
+    final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = OrchestratorFactoryHelpers.createHeartbeatTimeoutChaperone(heartbeatMonitor,
+        featureFlagClient, syncInput);
 
-      log.info("Setting up replication worker...");
+    log.info("Setting up replication worker...");
 
-      final SyncPersistence syncPersistence =
-          OrchestratorFactoryHelpers.createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
-      final MessageTracker messageTracker = OrchestratorFactoryHelpers.createMessageTracker(syncPersistence, featureFlags, syncInput);
-      final ConnectorConfigUpdater connectorConfigUpdater = OrchestratorFactoryHelpers.createConnectorConfigUpdater(sourceApi, destinationApi);
+    final SyncPersistence syncPersistence =
+        OrchestratorFactoryHelpers.createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
+    final MessageTracker messageTracker = OrchestratorFactoryHelpers.createMessageTracker(syncPersistence, featureFlags, syncInput);
+    final ConnectorConfigUpdater connectorConfigUpdater = OrchestratorFactoryHelpers.createConnectorConfigUpdater(sourceApi, destinationApi);
 
-      final var replicationWorker = OrchestratorFactoryHelpers.createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
-          syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
-          syncInput);
+    final var replicationWorker = OrchestratorFactoryHelpers.createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
+        syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
+        syncInput);
 
-      log.info("Running replication worker...");
-      final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
-          jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
-      final ReplicationOutput replicationOutput = replicationWorker.run(syncInput, jobRoot);
+    log.info("Running replication worker...");
+    final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
+        jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
+    final ReplicationOutput replicationOutput = replicationWorker.run(syncInput, jobRoot);
 
-      log.info("Returning output...");
-      return Optional.of(Jsons.serialize(replicationOutput));
-    }
+    log.info("Returning output...");
+    return Optional.of(Jsons.serialize(replicationOutput));
   }
 
 }
