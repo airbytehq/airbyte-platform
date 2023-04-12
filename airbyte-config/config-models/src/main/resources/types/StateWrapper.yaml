@@ -4,7 +4,7 @@
 title: StateWrapper
 description: Wrapper around the different type of States
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - stateType
 properties:

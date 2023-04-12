@@ -1,0 +1,14 @@
+@use "scss/variables";
+@use "scss/mixins";
+
+.connectorImg {
+  @include mixins.shadow;
+
+  border-radius: variables.$border-radius-2xl;
+  padding: variables.$spacing-xl;
+
+  svg {
+    width: 90px;
+    height: auto;
+  }
+}

@@ -79,6 +79,7 @@ export const DestinationStreamPrefixName = () => {
               variant="secondary"
               disabled={mode === "readonly"}
               onClick={openDestinationStreamNamesModal}
+              data-testid="destination-stream-prefix-edit-button"
             >
               <FormattedMessage id="form.edit" />
             </Button>

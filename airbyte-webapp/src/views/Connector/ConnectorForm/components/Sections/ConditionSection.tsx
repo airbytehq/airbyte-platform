@@ -14,6 +14,7 @@ import { GroupLabel } from "./GroupLabel";
 import { SectionContainer } from "./SectionContainer";
 import { ConnectorFormValues } from "../../types";
 import { setDefaultValues } from "../../useBuildForm";
+import { useSshSslImprovements } from "../../useSshSslImprovements";
 
 interface ConditionSectionProps {
   formField: FormConditionItem;
@@ -26,12 +27,16 @@ interface ConditionSectionProps {
  */
 export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, path, disabled }) => {
   const { values, setValues } = useFormikContext<ConnectorFormValues>();
-
   const [, meta] = useField(path);
+
+  const { filterConditions, filterSelectionConstValues } = useSshSslImprovements(path);
+
+  const conditions = filterConditions(formField.conditions);
+  const selectionConstValues = filterSelectionConstValues(formField.selectionConstValues);
 
   // the value at selectionPath determines which condition is selected
   const currentSelectionValue = get(values, formField.selectionPath);
-  let currentlySelectedCondition: number | undefined = formField.selectionConstValues.indexOf(currentSelectionValue);
+  let currentlySelectedCondition: number | undefined = selectionConstValues.indexOf(currentSelectionValue);
   if (currentlySelectedCondition === -1) {
     // there should always be a matching condition, but in some edge cases
     // (e.g. breaking changes in specs) it's possible to have no matching value.
@@ -40,24 +45,24 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
 
   const onOptionChange = useCallback(
     (selectedItem: DropDownOptionDataItem) => {
-      const newSelectedFormBlock = formField.conditions[selectedItem.value];
+      const newSelectedFormBlock = conditions[selectedItem.value];
 
       const conditionValues = clone(get(values, path) || {});
-      conditionValues[formField.selectionKey] = formField.selectionConstValues[selectedItem.value];
+      conditionValues[formField.selectionKey] = selectionConstValues[selectedItem.value];
       setDefaultValues(newSelectedFormBlock, conditionValues, { respectExistingValues: true });
 
       setValues(setIn(values, path, conditionValues));
     },
-    [formField.conditions, formField.selectionKey, formField.selectionConstValues, values, path, setValues]
+    [conditions, formField.selectionKey, selectionConstValues, values, path, setValues]
   );
 
   const options = useMemo(
     () =>
-      formField.conditions.map((condition, index) => ({
+      conditions.map((condition, index) => ({
         label: condition.title,
         value: index,
       })),
-    [formField.conditions]
+    [conditions]
   );
 
   return (
@@ -79,12 +84,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       >
         {/* currentlySelectedCondition is only falsy if a malformed config is loaded which doesn't have a valid value for the const selection key. In this case, render the selection group as empty. */}
         {typeof currentlySelectedCondition !== "undefined" && (
-          <FormSection
-            blocks={formField.conditions[currentlySelectedCondition]}
-            path={path}
-            disabled={disabled}
-            skipAppend
-          />
+          <FormSection blocks={conditions[currentlySelectedCondition]} path={path} disabled={disabled} skipAppend />
         )}
       </GroupControls>
     </SectionContainer>

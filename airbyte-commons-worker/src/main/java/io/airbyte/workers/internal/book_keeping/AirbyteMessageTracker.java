@@ -53,7 +53,11 @@ public class AirbyteMessageTracker implements MessageTracker {
   }
 
   public AirbyteMessageTracker(final FeatureFlags featureFlags) {
-    this(new DefaultStateAggregator(featureFlags.useStreamCapableState()), new DefaultSyncStatsTracker(), featureFlags);
+    this(new DefaultSyncStatsTracker(), featureFlags);
+  }
+
+  public AirbyteMessageTracker(final SyncStatsTracker syncStatsTracker, final FeatureFlags featureFlags) {
+    this(new DefaultStateAggregator(featureFlags.useStreamCapableState()), syncStatsTracker, featureFlags);
   }
 
   protected AirbyteMessageTracker(final StateAggregator stateAggregator, final SyncStatsTracker syncStatsTracker, final FeatureFlags featureFlags) {

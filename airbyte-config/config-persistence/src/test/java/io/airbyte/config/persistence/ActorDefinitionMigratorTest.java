@@ -78,7 +78,7 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
     truncateAllTables();
 
     migrator = new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database));
-    configRepository = new ConfigRepository(database, migrator, null, MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+    configRepository = new ConfigRepository(database, migrator, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   private void writeSource(final StandardSourceDefinition source) throws Exception {

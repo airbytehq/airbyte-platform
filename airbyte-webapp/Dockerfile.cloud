@@ -1,0 +1,5 @@
+ARG NGINX_IMAGE=nginx:alpine
+FROM ${NGINX_IMAGE}
+
+COPY build/app /usr/share/nginx/html
+COPY nginx/cloud.conf.template /etc/nginx/templates/default.conf.template

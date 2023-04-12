@@ -1,5 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/z-indices";
 
 .button {
   width: 100%;
@@ -7,6 +8,7 @@
   border: 1px solid colors.$grey-50;
   background-color: colors.$grey-50;
   border-radius: variables.$border-radius-xs;
+  padding: 7px 8px;
   text-align: left;
   display: flex;
   justify-content: space-between;
@@ -17,6 +19,14 @@
 
   &:hover {
     border-color: colors.$grey-100;
+  }
+
+  &--error {
+    border-color: colors.$red-100;
+
+    &:hover {
+      border-color: colors.$red;
+    }
   }
 }
 
@@ -35,7 +45,7 @@
   right: 0;
   left: 0;
   width: 100%;
-  z-index: 1;
+  z-index: z-indices.$listBox;
 }
 
 .caret {
@@ -49,7 +59,8 @@
 .icon {
   padding-right: variables.$spacing-md;
 
-  & svg {
+  & svg,
+  & img {
     max-width: 18px;
     max-height: 18px;
   }
@@ -75,4 +86,8 @@
 
 .selected {
   background-color: colors.$blue-50;
+}
+
+.disabled {
+  color: colors.$grey-300;
 }

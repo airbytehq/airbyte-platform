@@ -26,7 +26,7 @@ function object(
 
 function item(
   name: string,
-  { required, order, group }: { required?: boolean; order?: number; group?: string } = {
+  { required, order, group, hidden }: { required?: boolean; order?: number; group?: string; hidden?: boolean } = {
     required: false,
     order: undefined,
     group: undefined,
@@ -39,6 +39,7 @@ function item(
     order,
     group,
     path: name,
+    airbyte_hidden: hidden,
     type: "string",
   };
 }
@@ -133,6 +134,12 @@ describe("useGroupsAndSections", () => {
         section([item("b", { group: "b", order: 0 }), item("a", { group: "b", order: 1 })], "collapsed-group"),
       ]),
     ]);
+  });
+
+  it("should not create a group if the fields in this group are hidden", () => {
+    expect(generate([item("x", { required: true, group: "a" }), item("hidden", { group: "b", hidden: true })])).toEqual(
+      [sectionGroup([section([item("x", { required: true, group: "a" })])])]
+    );
   });
 
   it("should group nested objects as a whole and ignore group tags set on nested fields", () => {

@@ -180,10 +180,12 @@ public interface JobPersistence {
 
   void writeStats(long jobId,
                   int attemptNumber,
-                  long estimatedRecords,
-                  long estimatedBytes,
-                  long recordsEmitted,
-                  long bytesEmitted,
+                  Long estimatedRecords,
+                  Long estimatedBytes,
+                  Long recordsEmitted,
+                  Long bytesEmitted,
+                  Long recordsCommitted,
+                  Long bytesCommitted,
                   List<StreamSyncStats> streamStats)
       throws IOException;
 

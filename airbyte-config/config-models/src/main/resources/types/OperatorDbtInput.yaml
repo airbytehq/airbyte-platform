@@ -4,7 +4,7 @@
 title: Operator Dbt Input
 description: Input configuration for DBT Transformation operator
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - destinationConfiguration
   - operatorDbt

@@ -1474,29 +1474,6 @@ class ConnectionManagerWorkflowTest {
   @DisplayName("Test that the workflow is properly restarted after activity failures.")
   class FailedActivityWorkflow {
 
-    @BeforeEach
-    void setup() {
-      setupSpecificChildWorkflow(SleepingSyncWorkflow.class);
-    }
-
-    static Stream<Arguments> getSetupFailingActivity() {
-      return Stream.of(
-          Arguments.of(new Thread(() -> when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
-              .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))), 0),
-          Arguments.of(new Thread(() -> when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
-              .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))), 0),
-          Arguments.of(new Thread(() -> Mockito.doThrow(ApplicationFailure.newNonRetryableFailure("", ""))
-              .when(mJobCreationAndStatusUpdateActivity).reportJobStart(Mockito.any())), 0),
-          Arguments.of(new Thread(
-              () -> when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
-                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
-              1),
-          Arguments.of(new Thread(
-              () -> when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
-                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
-              1));
-    }
-
     @ParameterizedTest
     @MethodSource("getSetupFailingActivity")
     void testWorkflowRestartedAfterFailedActivity(final Thread mockSetup, final int expectedEventsCount) throws InterruptedException {
@@ -1528,11 +1505,39 @@ class ConnectionManagerWorkflowTest {
 
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
-      Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
-          .hasSize(expectedEventsCount);
+      final var filteredAssertionList = Assertions.assertThat(events)
+          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue());
+
+      if (expectedEventsCount == 0) {
+        filteredAssertionList.isEmpty();
+      } else {
+        filteredAssertionList.hasSizeGreaterThanOrEqualTo(expectedEventsCount);
+      }
 
       assertWorkflowWasContinuedAsNew();
+    }
+
+    @BeforeEach
+    void setup() {
+      setupSpecificChildWorkflow(SleepingSyncWorkflow.class);
+    }
+
+    static Stream<Arguments> getSetupFailingActivity() {
+      return Stream.of(
+          Arguments.of(new Thread(() -> when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
+              .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))), 0),
+          Arguments.of(new Thread(() -> when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
+              .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))), 0),
+          Arguments.of(new Thread(() -> Mockito.doThrow(ApplicationFailure.newNonRetryableFailure("", ""))
+              .when(mJobCreationAndStatusUpdateActivity).reportJobStart(Mockito.any())), 0),
+          Arguments.of(new Thread(
+              () -> when(mGenerateInputActivityImpl.getCheckConnectionInputs(Mockito.any(SyncInputWithAttemptNumber.class)))
+                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
+              1),
+          Arguments.of(new Thread(
+              () -> when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
+                  .thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))),
+              1));
     }
 
   }

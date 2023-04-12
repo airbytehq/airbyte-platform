@@ -31,6 +31,13 @@ export const requestWorkspaceId = () =>
     }
   );
 
+export const completeInitialSetup = () =>
+  apiRequest("POST", "/workspaces/update", {
+    workspaceId: getWorkspaceId(),
+    initialSetupComplete: true,
+    displaySetupWizard: true,
+  });
+
 export const requestConnectionsList = () =>
   apiRequest<ConnectionsList>("POST", "/connections/list", { workspaceId: getWorkspaceId() });
 

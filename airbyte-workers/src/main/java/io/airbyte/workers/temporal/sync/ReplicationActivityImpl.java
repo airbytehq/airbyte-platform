@@ -18,10 +18,7 @@ import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
-import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.features.FeatureFlagHelper;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
@@ -43,10 +40,6 @@ import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionEnabled;
-import io.airbyte.featureflag.PerfBackgroundJsonValidation;
-import io.airbyte.featureflag.ShouldStartHeartbeatMonitoring;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
@@ -56,28 +49,19 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
-import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerMetricReporter;
-import io.airbyte.workers.WorkerUtils;
-import io.airbyte.workers.general.DefaultReplicationWorker;
+import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
-import io.airbyte.workers.internal.DefaultAirbyteDestination;
-import io.airbyte.workers.internal.DefaultAirbyteSource;
-import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.NamespacingMapper;
-import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
-import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
-import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.exception.DestinationException;
-import io.airbyte.workers.internal.exception.SourceException;
+import io.airbyte.workers.internal.book_keeping.MessageTracker;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
-import io.airbyte.workers.process.AirbyteIntegrationLauncher;
-import io.airbyte.workers.process.IntegrationLauncher;
+import io.airbyte.workers.orchestrator.OrchestratorFactoryHelpers;
+import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -87,7 +71,6 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -119,8 +102,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
-  private final AirbyteMessageSerDeProvider serDeProvider;
-  private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
+  private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
   private final WorkerConfigs workerConfigs;
   private final SyncPersistenceFactory syncPersistenceFactory;
 
@@ -153,8 +135,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
-    this.serDeProvider = serDeProvider;
-    this.migratorFactory = migratorFactory;
+    this.airbyteIntegrationLauncherFactory = new AirbyteIntegrationLauncherFactory(processFactory, serDeProvider, migratorFactory, featureFlags);
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
     this.syncPersistenceFactory = syncPersistenceFactory;
@@ -200,22 +181,10 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory;
 
-          final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
-              () -> airbyteApiClient.getSourceApi().getSource(new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
-              "get source");
-
-          final long maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> airbyteApiClient.getSourceDefinitionApi()
-              .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))
-              .getMaxSecondsBetweenMessages(), "get source definition");
-
-          final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
-
-          final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
-              HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
-              featureFlagClient,
-              syncInput.getWorkspaceId(),
-              syncInput.getConnectionId(),
-              MetricClientFactory.getMetricClient());
+          final HeartbeatMonitor heartbeatMonitor = OrchestratorFactoryHelpers.createHeartbeatMonitor(airbyteApiClient.getSourceApi(),
+              airbyteApiClient.getSourceDefinitionApi(), syncInput);
+          final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = OrchestratorFactoryHelpers.createHeartbeatTimeoutChaperone(heartbeatMonitor,
+              featureFlagClient, syncInput);
 
           if (containerOrchestratorConfig.isPresent()) {
             workerFactory = getContainerLauncherWorkerFactory(
@@ -249,7 +218,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                   () -> {
                     try {
                       heartbeatTimeoutChaperone.close();
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                       throw new RuntimeException(e);
                     }
                   });
@@ -330,68 +299,23 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                                                                                           final HeartbeatMonitor heartbeatMonitor,
                                                                                                           final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone) {
     return () -> {
-      final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
-          sourceLauncherConfig.getJobId(),
-          Math.toIntExact(sourceLauncherConfig.getAttemptId()),
-          sourceLauncherConfig.getDockerImage(),
-          processFactory,
-          syncInput.getSourceResourceRequirements(),
-          sourceLauncherConfig.getAllowedHosts(),
-          sourceLauncherConfig.getIsCustomConnector(),
-          featureFlags);
-      final IntegrationLauncher destinationLauncher = new AirbyteIntegrationLauncher(
-          destinationLauncherConfig.getJobId(),
-          Math.toIntExact(destinationLauncherConfig.getAttemptId()),
-          destinationLauncherConfig.getDockerImage(),
-          processFactory,
-          syncInput.getDestinationResourceRequirements(),
-          destinationLauncherConfig.getAllowedHosts(),
-          destinationLauncherConfig.getIsCustomConnector(),
-          featureFlags);
+      final AirbyteSource airbyteSource = airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
+          syncInput.getSourceResourceRequirements(), syncInput.getCatalog(), heartbeatMonitor);
+      final AirbyteDestination airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
+          syncInput.getDestinationResourceRequirements(), syncInput.getCatalog());
 
-      // reset jobs use an empty source to induce resetting all data in destination.
-      final AirbyteSource airbyteSource = isResetJob(sourceLauncherConfig.getDockerImage())
-          ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
-          : new DefaultAirbyteSource(sourceLauncher,
-              new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, sourceLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class)),
-              heartbeatMonitor,
-              migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
-              featureFlags);
       MetricClientFactory.initialize(MetricEmittingApps.WORKER);
       final MetricClient metricClient = MetricClientFactory.getMetricClient();
       final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
-      final UUID workspaceId = syncInput.getWorkspaceId();
-      // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
-      // environment-variable flags say so (deprecated).
-      // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
-      final boolean fieldSelectionEnabled = workspaceId != null
-          && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
-              || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
-      final boolean heartbeatTimeoutEnabled = workspaceId != null
-          && featureFlagClient.enabled(ShouldStartHeartbeatMonitoring.INSTANCE, new Workspace(workspaceId));
-      return new DefaultReplicationWorker(
-          jobRunConfig.getJobId(),
-          Math.toIntExact(jobRunConfig.getAttemptId()),
-          airbyteSource,
-          new NamespacingMapper(syncInput.getNamespaceDefinition(), syncInput.getNamespaceFormat(), syncInput.getPrefix()),
-          new DefaultAirbyteDestination(destinationLauncher,
-              new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog()),
-                  DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, Optional.of(DestinationException.class)),
-              new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog())),
-              migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion())),
-          new AirbyteMessageTracker(featureFlags),
-          syncPersistenceFactory,
-          new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput),
-              featureFlagClient.enabled(PerfBackgroundJsonValidation.INSTANCE, new Workspace(syncInput.getWorkspaceId()))),
-          metricReporter,
-          new ConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi()),
-          fieldSelectionEnabled,
-          heartbeatTimeoutEnabled,
-          heartbeatTimeoutChaperone);
+      final SyncPersistence syncPersistence =
+          OrchestratorFactoryHelpers.createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
+      final MessageTracker messageTracker = OrchestratorFactoryHelpers.createMessageTracker(syncPersistence, featureFlags, syncInput);
+      final ConnectorConfigUpdater connectorConfigUpdater =
+          OrchestratorFactoryHelpers.createConnectorConfigUpdater(airbyteApiClient.getSourceApi(), airbyteApiClient.getDestinationApi());
+
+      return OrchestratorFactoryHelpers.createReplicationWorker(airbyteSource, airbyteDestination, messageTracker, syncPersistence, metricReporter,
+          heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig, syncInput);
     };
   }
 
@@ -420,9 +344,9 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   }
 
   @VisibleForTesting
-  static ContainerOrchestratorConfig injectContainerOrchestratorImage(FeatureFlagClient client,
-                                                                      ContainerOrchestratorConfig containerOrchestratorConfig,
-                                                                      UUID connectionId) {
+  static ContainerOrchestratorConfig injectContainerOrchestratorImage(final FeatureFlagClient client,
+                                                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
+                                                                      final UUID connectionId) {
     // This is messy because the ContainerOrchestratorConfig is immutable, so we have to create an
     // entirely new object.
     ContainerOrchestratorConfig config = containerOrchestratorConfig;

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { FormattedMessage } from "react-intl";
 
+import { Message } from "components/ui/Message";
 import { Spinner } from "components/ui/Spinner";
 
 import {
@@ -21,7 +23,6 @@ import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { useTestConnector } from "./useTestConnector";
 import { useDocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
 import { ConnectorDefinitionTypeControl } from "../ConnectorForm/components/Controls/ConnectorServiceTypeControl";
-import { FetchingConnectorError } from "../ConnectorForm/components/TestingConnectionError";
 
 // TODO: need to clean up the ConnectorCard and ConnectorForm props,
 // since some of props are used in both components, and some of them used just as a prop-drill
@@ -138,7 +139,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       trackTestConnectorSuccess(selectedConnectorDefinition);
       return response;
     } catch (e) {
-      trackTestConnectorFailure(selectedConnectorDefinition, e.message);
+      trackTestConnectorFailure(selectedConnectorDefinition, LogsRequestError.extractJobInfo(e), e.message);
       throw e;
     }
   };
@@ -215,7 +216,13 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               </div>
             </div>
           )}
-          {fetchingConnectorError && <FetchingConnectorError />}
+          {fetchingConnectorError && (
+            <Message
+              type="error"
+              text={<FormattedMessage id="form.failedFetchingConnector" />}
+              secondaryText={<FormattedMessage id="form.tryAgain" />}
+            />
+          )}
         </>
       }
       // Causes the whole ConnectorForm to be unmounted and a new instance mounted whenever the connector type changes.

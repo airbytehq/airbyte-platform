@@ -1,6 +1,7 @@
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useListJobs } from "services/job/JobService";
 
 import { StreamsList } from "./StreamsList";
@@ -12,14 +13,14 @@ export const StreamStatusPage = () => {
     configId: connection.connectionId,
     configTypes: ["sync", "reset_connection"],
     pagination: {
-      pageSize: 10,
+      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10),
     },
   });
   return (
-    <StreamsListContextProvider jobs={jobs}>
-      <ConnectionSyncContextProvider jobs={jobs}>
+    <ConnectionSyncContextProvider jobs={jobs}>
+      <StreamsListContextProvider jobs={jobs}>
         <StreamsList />
-      </ConnectionSyncContextProvider>
-    </StreamsListContextProvider>
+      </StreamsListContextProvider>
+    </ConnectionSyncContextProvider>
   );
 };

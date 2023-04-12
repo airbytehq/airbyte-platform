@@ -81,6 +81,12 @@ public class QuickbooksOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest
     credentials = Collections.unmodifiableMap((Map<String, Object>) params.get("credentials"));
     assertTrue(credentials.containsKey("refresh_token"));
     assertTrue(credentials.get("refresh_token").toString().length() > 0);
+    assertTrue(credentials.containsKey("access_token"));
+    assertTrue(credentials.get("access_token").toString().length() > 0);
+    assertTrue(credentials.containsKey("token_expiry_date"));
+    assertTrue(credentials.get("token_expiry_date").toString().length() > 0);
+    assertTrue(credentials.containsKey("realm_id"));
+    assertTrue(credentials.get("realm_id").toString().length() > 0);
   }
 
 }

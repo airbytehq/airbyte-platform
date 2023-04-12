@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useIntl } from "react-intl";
 
 import { Notification, useNotificationService } from "./services/Notification";
-import { ToastType } from "../components/ui/Toast";
 
 const useLoadingState = (): {
   isLoading: boolean;
@@ -17,7 +16,7 @@ const useLoadingState = (): {
   const errorNotification: Notification = {
     id: "notifications.error.somethingWentWrong",
     text: formatMessage({ id: `notifications.error.somethingWentWrong` }),
-    type: ToastType.ERROR,
+    type: "error",
   };
 
   const startAction = async ({ action, feedbackAction }: { action: () => void; feedbackAction?: () => void }) => {

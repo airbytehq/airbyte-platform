@@ -31,7 +31,8 @@ public class DeclarativeSourceManifestInjector {
     ((ObjectNode) spec.path("connectionSpecification").path("properties"))
         .putObject(INJECTED_DECLARATIVE_MANIFEST)
         .put("type", "object")
-        .put("additionalProperties", true);
+        .put("additionalProperties", true)
+        .put("airbyte_hidden", true);
   }
 
   /**
@@ -52,7 +53,7 @@ public class DeclarativeSourceManifestInjector {
    *
    * @param declarativeManifestSpec to be adapted to a ConnectorSpecification
    */
-  public ConnectorSpecification createDeclarativeManifestConnectorSpecification(JsonNode declarativeManifestSpec) {
+  public ConnectorSpecification createDeclarativeManifestConnectorSpecification(final JsonNode declarativeManifestSpec) {
     return new ConnectorSpecification()
         .withSupportsDBT(false)
         .withSupportsNormalization(false)

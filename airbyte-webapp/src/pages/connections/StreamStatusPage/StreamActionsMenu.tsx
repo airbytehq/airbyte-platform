@@ -9,8 +9,6 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
 import { AirbyteStream } from "core/request/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useResetConnectionStream } from "hooks/services/useConnectionHook";
 
 import { ConnectionRoutePaths } from "../types";
 
@@ -22,9 +20,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
 
-  const { connection } = useConnectionEditService();
-  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning } = useConnectionSyncContext();
-  const { mutateAsync: resetStream } = useResetConnectionStream(connection.connectionId);
+  const { syncStarting, jobSyncRunning, resetStarting, jobResetRunning, resetStreams } = useConnectionSyncContext();
 
   const options: DropdownMenuOptionType[] = [
     {
@@ -38,18 +34,19 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
     },
     {
       displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
+      value: "openDetails",
     },
   ];
 
-  const onOptionClick = async (option: DropdownMenuOptionType) => {
-    if (option.value === "showInReplicationTable") {
+  const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
+    if (value === "showInReplicationTable" || value === "openDetails") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
-        state: { namespace: stream?.namespace, streamName: stream?.name },
+        state: { namespace: stream?.namespace, streamName: stream?.name, action: value },
       });
     }
 
-    if (option.value === "resetThisStream" && stream) {
-      await resetStream([{ streamNamespace: stream?.namespace || "", streamName: stream?.name }]);
+    if (value === "resetThisStream" && stream) {
+      await resetStreams([{ streamNamespace: stream?.namespace ?? "", streamName: stream?.name }]);
     }
   };
 

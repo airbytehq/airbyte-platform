@@ -1,0 +1,6 @@
+@use "scss/colors";
+
+.box {
+  background: bisque;
+  border: 1px dashed colors.$grey-800;
+}

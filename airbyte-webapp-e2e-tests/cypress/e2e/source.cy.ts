@@ -1,14 +1,11 @@
 import { appendRandomString, submitButtonClick } from "commands/common";
 import { createPostgresSource, deleteSource, updateSource } from "commands/source";
-import { initialSetupCompleted } from "commands/workspaces";
 import { goToSourcePage, openNewSourceForm } from "pages/sourcePage";
 import { openHomepage } from "pages/sidebar";
 import { selectServiceType } from "pages/createConnectorPage";
 import { fillPokeAPIForm } from "commands/connector";
 
 describe("Source main actions", () => {
-  beforeEach(() => initialSetupCompleted());
-
   it("Create new source", () => {
     cy.intercept("/api/v1/sources/create").as("createSource");
     createPostgresSource("Test source cypress");
@@ -39,8 +36,6 @@ describe("Source main actions", () => {
 });
 
 describe("Unsaved changes modal", () => {
-  beforeEach(() => initialSetupCompleted());
-
   it("Check leaving Source page without any changes", () => {
     goToSourcePage();
     openNewSourceForm();

@@ -43,7 +43,7 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigRepository;
-import io.airbyte.featureflag.CommitStatesAsap;
+import io.airbyte.featureflag.CommitStatsAsap;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -375,7 +375,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withDestinationResourceRequirements(config.getDestinationResourceRequirements())
           .withConnectionId(standardSync.getConnectionId())
           .withWorkspaceId(config.getWorkspaceId())
-          .withCommitStateAsap(featureFlagClient.enabled(CommitStatesAsap.INSTANCE, new Multi(featureFlagContext)));
+          .withCommitStateAsap(true)
+          .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, new Multi(featureFlagContext)));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
 

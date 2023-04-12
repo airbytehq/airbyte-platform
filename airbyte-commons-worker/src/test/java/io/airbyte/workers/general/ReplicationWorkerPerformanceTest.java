@@ -7,11 +7,8 @@ package io.airbyte.workers.general;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageMigrator;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
@@ -32,14 +29,13 @@ import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -80,21 +76,17 @@ public class ReplicationWorkerPerformanceTest {
     final var featureFlags = new EnvVariableFeatureFlags();
     final var perDestination = new EmptyAirbyteDestination();
     final var messageTracker = new AirbyteMessageTracker(featureFlags);
-    final var syncPersistenceFactory = Mockito.mock(SyncPersistenceFactory.class);
+    final var syncPersistence = Mockito.mock(SyncPersistence.class);
     final var connectorConfigUpdater = Mockito.mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
     final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
     final var validator = new RecordSchemaValidator(Map.of(
         new AirbyteStreamNameNamespacePair("s1", null),
-        CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))), true);
+        CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
 
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
     // LimitedThinRecordSourceProcess());
     final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new LimitedFatRecordSourceProcess());
-    final var serDeProvider = new AirbyteMessageSerDeProvider(
-        List.of(new AirbyteMessageV0Deserializer()),
-        List.of(new AirbyteMessageV0Serializer()));
-    serDeProvider.initialize();
 
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
@@ -102,9 +94,7 @@ public class ReplicationWorkerPerformanceTest {
     catalogMigrator.initialize();
     final var migratorFactory = new AirbyteProtocolVersionedMigratorFactory(msgMigrator, catalogMigrator);
 
-    final var versionFac =
-        new VersionedAirbyteStreamFactory(serDeProvider, migratorFactory, new Version("0.2.0"), Optional.empty(),
-            Optional.of(RuntimeException.class));
+    final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     final var versionedAbSource =
         new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
@@ -123,11 +113,10 @@ public class ReplicationWorkerPerformanceTest {
         dstNamespaceMapper,
         perDestination,
         messageTracker,
-        syncPersistenceFactory,
+        syncPersistence,
         validator,
         metricReporter,
         connectorConfigUpdater,
-        false,
         false,
         heartbeatTimeoutChaperone);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();

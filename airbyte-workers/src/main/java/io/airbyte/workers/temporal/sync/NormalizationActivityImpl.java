@@ -13,8 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.commons.features.FeatureFlagHelper;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.migrations.v1.CatalogMigrationV1Helper;
@@ -31,9 +29,6 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.StrictComparisonNormalizationEnabled;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -73,18 +68,13 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
-  private final FeatureFlags featureFlags;
-  private final FeatureFlagClient featureFlagClient;
   private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
   private final ResourceRequirements normalizationResourceRequirements;
   private final AirbyteApiClient airbyteApiClient;
 
-  // This constant is not currently in use. We'll need to bump it when we try releasing v1 again.
-  private static final Version MINIMAL_VERSION_FOR_DATATYPES_V1 = new Version("0.3.0");
   private static final String V1_NORMALIZATION_MINOR_VERSION = "3";
-  private static final String NON_STRICT_COMPARISON_IMAGE_TAG = "0.2.25";
 
   public NormalizationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                    @Named("defaultWorkerConfigs") final WorkerConfigs workerConfigs,
@@ -94,8 +84,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
                                    final WorkerEnvironment workerEnvironment,
                                    final LogConfigs logConfigs,
                                    @Value("${airbyte.version}") final String airbyteVersion,
-                                   final FeatureFlags featureFlags,
-                                   final FeatureFlagClient featureFlagClient,
                                    @Value("${micronaut.server.port}") final Integer serverPort,
                                    final AirbyteConfigValidator airbyteConfigValidator,
                                    final TemporalUtils temporalUtils,
@@ -109,8 +97,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
-    this.featureFlags = featureFlags;
-    this.featureFlagClient = featureFlagClient;
     this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
@@ -130,12 +116,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
     return temporalUtils.withBackgroundHeartbeat(() -> {
       final var fullDestinationConfig = secretsHydrator.hydrate(input.getDestinationConfiguration());
       final var fullInput = Jsons.clone(input).withDestinationConfiguration(fullDestinationConfig);
-
-      if (FeatureFlagHelper.isStrictComparisonNormalizationEnabledForWorkspace(featureFlags, input.getWorkspaceId())
-          || featureFlagClient.enabled(StrictComparisonNormalizationEnabled.INSTANCE, new Workspace(input.getWorkspaceId()))) {
-        log.info("Using strict comparison normalization");
-        replaceNormalizationImageTag(destinationLauncherConfig, featureFlags.strictComparisonNormalizationTag());
-      }
 
       // Check the version of normalization
       // We require at least version 0.3.0 to support data types v1. Using an older version would lead to
@@ -185,10 +165,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
         () -> context);
   }
 
-  @SuppressWarnings("InvalidJavadocPosition")
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Override
-  @Deprecated(forRemoval = true)
   /**
    * This activity is deprecated. It is using a big payload which is not needed, it has been replace
    * by generateNormalizationInputWithMinimumPayload
@@ -197,6 +173,10 @@ public class NormalizationActivityImpl implements NormalizationActivity {
    * @param syncOutput sync output
    * @return normalization output
    */
+  @SuppressWarnings("InvalidJavadocPosition")
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  @Deprecated(forRemoval = true)
   public NormalizationInput generateNormalizationInput(final StandardSyncInput syncInput, final StandardSyncOutput syncOutput) {
     return new NormalizationInput()
         .withConnectionId(syncInput.getConnectionId())
@@ -246,13 +226,6 @@ public class NormalizationActivityImpl implements NormalizationActivity {
 
   private static String getNormalizationImageTag(final IntegrationLauncherConfig destinationLauncherConfig) {
     return destinationLauncherConfig.getNormalizationDockerImage().split(":", 2)[1];
-  }
-
-  @VisibleForTesting
-  static void replaceNormalizationImageTag(final IntegrationLauncherConfig destinationLauncherConfig, final String newTag) {
-    final String[] imageComponents = destinationLauncherConfig.getNormalizationDockerImage().split(":", 2);
-    imageComponents[1] = newTag;
-    destinationLauncherConfig.setNormalizationDockerImage(String.join(":", imageComponents));
   }
 
   @SuppressWarnings("LineLength")

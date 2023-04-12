@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.version.Version;
@@ -61,10 +62,9 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.JobStatus;
 import io.airbyte.workers.helper.FailureHelper;
-import io.airbyte.workers.run.TemporalWorkerRunFactory;
-import io.airbyte.workers.run.WorkerRun;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.util.CollectionUtils;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -100,7 +100,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   private static final Comparator<ReleaseStage> RELEASE_STAGE_COMPARATOR = Comparator.comparingInt(RELEASE_STAGE_ORDER::get);
   private final SyncJobFactory jobFactory;
   private final JobPersistence jobPersistence;
-  private final TemporalWorkerRunFactory temporalWorkerRunFactory;
+  private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
   private final JobNotifier jobNotifier;
@@ -114,7 +114,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
 
   public JobCreationAndStatusUpdateActivityImpl(final SyncJobFactory jobFactory,
                                                 final JobPersistence jobPersistence,
-                                                final TemporalWorkerRunFactory temporalWorkerRunFactory,
+                                                @Named("workspaceRoot") final Path workspaceRoot,
                                                 final WorkerEnvironment workerEnvironment,
                                                 final LogConfigs logConfigs,
                                                 final JobNotifier jobNotifier,
@@ -127,7 +127,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
                                                 final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.jobFactory = jobFactory;
     this.jobPersistence = jobPersistence;
-    this.temporalWorkerRunFactory = temporalWorkerRunFactory;
+    this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.jobNotifier = jobNotifier;
@@ -193,7 +193,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         final StandardDestinationDefinition destinationDef =
             configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
         final ActorDefinitionVersion destinationVersion =
-            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getDestinationId());
+            actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
         final String destinationImageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
 
         final List<StandardSyncOperation> standardSyncOperations = Lists.newArrayList();
@@ -247,13 +247,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId));
       final Job job = jobPersistence.getJob(jobId);
 
-      final WorkerRun workerRun = temporalWorkerRunFactory.create(job);
-      final Path logFilePath = workerRun.getJobRoot().resolve(LogClientSingleton.LOG_FILENAME);
+      final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
+      final Path logFilePath = jobRoot.resolve(LogClientSingleton.LOG_FILENAME);
       final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
       emitJobIdToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, jobId);
       emitAttemptCreatedEvent(job, persistedAttemptNumber);
 
-      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, workerRun.getJobRoot());
+      LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, jobRoot);
       return new AttemptNumberCreationOutput(persistedAttemptNumber);
     } catch (final IOException e) {
       throw new RetryableException(e);

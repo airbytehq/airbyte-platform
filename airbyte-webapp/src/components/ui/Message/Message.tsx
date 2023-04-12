@@ -7,14 +7,9 @@ import { CrossIcon } from "components/icons/CrossIcon";
 import { Text } from "components/ui/Text";
 
 import styles from "./Message.module.scss";
-import { Button } from "../Button";
+import { Button, ButtonProps } from "../Button";
 
-export const enum MessageType {
-  WARNING = "warning",
-  SUCCESS = "success",
-  ERROR = "error",
-  INFO = "info",
-}
+export type MessageType = "warning" | "success" | "error" | "info";
 
 export interface MessageProps {
   className?: string;
@@ -23,29 +18,31 @@ export interface MessageProps {
   secondaryText?: string | React.ReactNode;
   type?: MessageType;
   onAction?: () => void;
-  actionBtnText?: string;
+  actionBtnText?: string | React.ReactNode;
+  actionBtnProps?: Omit<ButtonProps, "variant" | "size">;
   onClose?: () => void;
   "data-testid"?: string;
 }
 
 const ICON_MAPPING = {
-  [MessageType.WARNING]: faExclamation,
-  [MessageType.ERROR]: faTimes,
-  [MessageType.SUCCESS]: faCheck,
-  [MessageType.INFO]: faExclamation,
+  warning: faExclamation,
+  error: faTimes,
+  success: faCheck,
+  info: faExclamation,
 };
 
 const STYLES_BY_TYPE: Readonly<Record<MessageType, string>> = {
-  [MessageType.WARNING]: styles.warning,
-  [MessageType.ERROR]: styles.error,
-  [MessageType.SUCCESS]: styles.success,
-  [MessageType.INFO]: styles.info,
+  warning: styles.warning,
+  error: styles.error,
+  success: styles.success,
+  info: styles.info,
 };
 
 export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
-  type = MessageType.INFO,
+  type = "info",
   onAction,
   actionBtnText,
+  actionBtnProps,
   onClose,
   text,
   secondaryText,
@@ -65,11 +62,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         <FontAwesomeIcon icon={ICON_MAPPING[type]} className={styles.messageIcon} />
       </div>
       <div className={styles.textContainer}>
-        {text && (
-          <Text size="lg" className={styles.text}>
-            {text}
-          </Text>
-        )}
+        {text && <span className={styles.text}>{text}</span>}
         {secondaryText && (
           <Text size="md" className={styles.secondaryText}>
             {secondaryText}
@@ -77,12 +70,12 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         )}
       </div>
       {onAction && (
-        <Button variant="dark" onClick={onAction}>
+        <Button {...actionBtnProps} variant="dark" onClick={onAction}>
           {actionBtnText}
         </Button>
       )}
       {onClose && (
-        <Button variant="clear" className={styles.closeButton} onClick={onClose} size="sm" icon={<CrossIcon />} />
+        <Button variant="clear" className={styles.closeButton} onClick={onClose} size="xs" icon={<CrossIcon />} />
       )}
     </div>
   );

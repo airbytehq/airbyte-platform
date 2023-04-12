@@ -6,8 +6,10 @@ import { H5 } from "components/base/Titles";
 
 import styles from "./WorkspaceItem.module.scss";
 
-const WorkspaceItem: React.FC<React.PropsWithChildren<{ onClick: (id: string) => void; id: string }>> = (props) => (
-  <button className={styles.button} onClick={() => props.onClick(props.id)}>
+const WorkspaceItem: React.FC<
+  React.PropsWithChildren<{ onClick: (id: string) => void; id: string; ["data-testid"]: string }>
+> = (props) => (
+  <button className={styles.button} onClick={() => props.onClick(props.id)} data-testid={props["data-testid"]}>
     <H5 bold>{props.children}</H5>
     <FontAwesomeIcon className={styles.iconColor} icon={faChevronRight} />
   </button>

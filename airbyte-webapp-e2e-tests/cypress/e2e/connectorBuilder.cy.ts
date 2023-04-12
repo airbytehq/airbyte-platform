@@ -1,5 +1,15 @@
-import { goToConnectorBuilderCreatePage, startFromScratch, enterUrlPath, testStream } from "pages/connectorBuilderPage";
 import {
+  editProjectBuilder,
+  enterUrlPath,
+  goToConnectorBuilderCreatePage,
+  goToConnectorBuilderProjectsPage,
+  goToView,
+  selectActiveVersion,
+  startFromScratch,
+  testStream,
+} from "pages/connectorBuilderPage";
+import {
+  acceptSchema,
   acceptSchemaWithMismatch,
   assertMaxNumberOfPages,
   assertMaxNumberOfSlices,
@@ -11,27 +21,32 @@ import {
   assertSchema,
   assertSchemaMismatch,
   assertSource404Error,
+  assertUrlPath,
   cleanUp,
   configureAuth,
   configureGlobals,
   configurePagination,
   configureStream,
   configureStreamSlicer,
+  publishProject,
 } from "commands/connectorBuilder";
 
-import { initialSetupCompleted } from "commands/workspaces";
+import { createTestConnection, startManualSync } from "commands/connection";
+import * as connectionSettings from "pages/connection/connectionSettingsPageObject";
+import { goToSourcePage, openSourceOverview } from "pages/sourcePage";
+import { appendRandomString } from "commands/common";
 
 describe("Connector builder", { testIsolation: false }, () => {
+  const connectorName = appendRandomString("dummy_api");
   before(() => {
     // Updated for cypress 12 because connector builder uses local storage
     // docs.cypress.io/guides/references/migration-guide#Simulating-Pre-Test-Isolation-Behavior
     cy.clearLocalStorage();
     cy.clearCookies();
 
-    initialSetupCompleted();
     goToConnectorBuilderCreatePage();
     startFromScratch();
-    configureGlobals();
+    configureGlobals(connectorName);
     configureStream();
   });
 
@@ -113,4 +128,48 @@ describe("Connector builder", { testIsolation: false }, () => {
 
     assertMaxNumberOfSlicesAndPages();
   });
+
+  it("Sync published version", () => {
+    publishProject();
+
+    const sourceName = connectorName;
+    const destinationName = appendRandomString("builder dest");
+    createTestConnection(sourceName, destinationName);
+    startManualSync();
+
+    cy.get("span").contains("2 committed records", { timeout: 60000 }).should("exist");
+
+    // release new connector version
+    goToConnectorBuilderProjectsPage();
+    editProjectBuilder(connectorName);
+    configurePagination();
+    publishProject();
+    sync(sourceName, destinationName);
+
+    cy.get("span").contains("4 committed records", { timeout: 60000 }).should("exist");
+
+    goToConnectorBuilderProjectsPage();
+    selectActiveVersion(connectorName, 1);
+    sync(sourceName, destinationName);
+
+    cy.get('span:contains("2 committed records")', { timeout: 60000 }).should("have.length", 2);
+
+    goToConnectorBuilderProjectsPage();
+    editProjectBuilder(connectorName);
+  });
+
+  // This test assumes the test before is configuring path items/
+  it("Validate going back to a previously created connector", () => {
+    goToConnectorBuilderProjectsPage();
+    editProjectBuilder(connectorName);
+    goToView("0");
+    assertUrlPath("items/{{ stream_slice.item_id }}");
+  });
 });
+
+const sync = (sourceName: string, destinationName: string) => {
+  goToSourcePage();
+  openSourceOverview(sourceName);
+  connectionSettings.openConnectionOverviewByDestinationName(destinationName);
+  startManualSync();
+};

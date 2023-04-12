@@ -518,6 +518,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_definition_specifications/get_for_source:
+    post:
+      tags:
+        - source_definition_specification
+      summary: Get specification for a source.
+      operationId: getSpecificationForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceDefinitionSpecificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/declarative_source_definitions/create_manifest:
     post:
       tags:
@@ -1178,6 +1201,29 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DestinationDefinitionIdWithWorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDefinitionSpecificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destination_definition_specifications/get_for_destination:
+    post:
+      tags:
+        - destination_definition_specification
+      summary: Get specification for a destination
+      operationId: getSpecificationForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
         required: true
       responses:
         "200":
@@ -2544,6 +2590,38 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    ListConnectionsForWorkspacesRequestBody:
+      type: object
+      required:
+        - workspaceIds
+        - userId
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        userId:
+          type: string
+          format: uuid
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        includeDeleted:
+          type: boolean
+          default: false
+    ListResourcesForWorkspacesRequestBody:
+      type: object
+      required:
+        - workspaceIds
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+        includeDeleted:
+          type: boolean
+          default: false
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     WorkspaceReadList:
       type: object
       required:
@@ -2967,7 +3045,7 @@ components:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         sourceDefinitionId:
-          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+          $ref: "#/components/schemas/SourceDefinitionId"
     DeclarativeManifestsReadList:
       type: object
       required:
@@ -3942,6 +4020,8 @@ components:
           type: boolean
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     SchemaChange:
       enum:
         - no_change
@@ -4557,6 +4637,9 @@ components:
           type: integer
           format: int64
         stateMessagesEmitted:
+          type: integer
+          format: int64
+        bytesCommitted:
           type: integer
           format: int64
         recordsCommitted:
@@ -5264,6 +5347,29 @@ components:
         params:
           type: object
           additionalProperties: true
+    WorkspaceOverrideOauthParamsRequestBody:
+      type: object
+      required:
+        - definitionId
+        - params
+        - workspaceId
+        - actorType
+      properties:
+        definitionId:
+          type: string
+          format: uuid
+        params:
+          type: object
+          additionalProperties: true
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+    ActorType:
+      enum:
+        - source
+        - destination
+      type: string
     # Web Backend
     WebBackendCheckUpdatesRead:
       type: object

@@ -1,6 +1,6 @@
 import { deleteEntity, openSettingForm, submitButtonClick, updateField } from "./common";
 import { goToSourcePage, openNewSourceForm } from "pages/sourcePage";
-import { fillPostgresForm, fillPokeAPIForm } from "./connector";
+import { fillDummyApiForm, fillPostgresForm, fillPokeAPIForm } from "./connector";
 
 export const createPostgresSource = (
   name: string,
@@ -30,6 +30,19 @@ export const createPokeApiSource = (name: string, pokeName: string) => {
   goToSourcePage();
   openNewSourceForm();
   fillPokeAPIForm(name, pokeName);
+  submitButtonClick();
+
+  cy.wait("@checkSourceUpdateConnection");
+  cy.wait("@createSource");
+};
+
+export const createDummyApiSource = (name: string) => {
+  cy.intercept("/api/v1/scheduler/sources/check_connection").as("checkSourceUpdateConnection");
+  cy.intercept("/api/v1/sources/create").as("createSource");
+
+  goToSourcePage();
+  openNewSourceForm();
+  fillDummyApiForm(name, "theauthkey");
   submitButtonClick();
 
   cy.wait("@checkSourceUpdateConnection");

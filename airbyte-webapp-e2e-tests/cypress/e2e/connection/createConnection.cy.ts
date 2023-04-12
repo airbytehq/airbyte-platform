@@ -1,4 +1,3 @@
-import { initialSetupCompleted } from "commands/workspaces";
 import {
   getPostgresCreateDestinationBody,
   getPostgresCreateSourceBody,
@@ -31,15 +30,11 @@ import {
   createDummyTablesQuery,
   dropDummyTablesQuery,
 } from "commands/db/queries";
-import { NewStreamsTablePageObject } from "pages/connection/streamsTablePageObject/NewStreamsTablePageObject";
-import streamsTablePageObject from "pages/connection/streamsTablePageObject";
-import { StreamRowPageObject } from "pages/connection/streamsTablePageObject/StreamRowPageObject";
-import streamDetails from "pages/connection/streamDetailsPageObject";
+import { streamsTable } from "pages/connection/StreamsTablePageObject";
+import { StreamRowPageObject } from "pages/connection/StreamRowPageObject";
+import { streamDetails } from "pages/connection/StreamDetailsPageObject";
 
-// TODO: Enable this test when the new stream table will be turned on
-describe.skip("Connection - Create new connection", { testIsolation: false }, () => {
-  const streamsTable = new NewStreamsTablePageObject();
-
+describe("Connection - Create new connection", { testIsolation: false }, () => {
   let source: Source;
   let destination: Destination;
   let connectionId: string;
@@ -51,8 +46,6 @@ describe.skip("Connection - Create new connection", { testIsolation: false }, ()
   before(() => {
     dropTables();
     runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
-
-    initialSetupCompleted();
 
     requestWorkspaceId().then(() => {
       const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Stream table Source"));
@@ -157,7 +150,7 @@ describe.skip("Connection - Create new connection", { testIsolation: false }, ()
 
     it("should have checked sync switch by default ", () => {
       // filter table to have only one stream
-      streamsTablePageObject.searchStream("users");
+      streamsTable.searchStream("users");
       newConnectionPage.checkAmountOfStreamTableRows(1);
 
       usersStreamRow.isStreamSyncEnabled(true);

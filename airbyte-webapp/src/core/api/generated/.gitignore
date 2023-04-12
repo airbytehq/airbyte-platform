@@ -1,0 +1,5 @@
+# Ignore all Orval generated files in this folder
+*.ts
+
+# Check in the files for now whose OpenAPI spec isn't available in OSS yet.
+!CloudApi*

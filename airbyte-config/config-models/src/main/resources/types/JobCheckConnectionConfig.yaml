@@ -4,7 +4,7 @@
 title: JobCheckConnectionConfig
 description: job check connection config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - connectionConfiguration
   - dockerImage

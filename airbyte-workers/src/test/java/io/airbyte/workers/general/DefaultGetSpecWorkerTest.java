@@ -26,6 +26,7 @@ import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.io.ByteArrayInputStream;
@@ -42,7 +43,6 @@ class DefaultGetSpecWorkerTest {
   private static final String ERROR_MESSAGE = "some error from the connector";
 
   private DefaultGetSpecWorker worker;
-  private IntegrationLauncher integrationLauncher;
   private Process process;
   private Path jobRoot;
   private JobGetSpecConfig config;
@@ -51,12 +51,14 @@ class DefaultGetSpecWorkerTest {
   void setup() throws IOException, WorkerException {
     jobRoot = Files.createTempDirectory(Files.createDirectories(TEST_ROOT), "");
     config = new JobGetSpecConfig().withDockerImage(DUMMY_IMAGE_NAME);
-    integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
+
     process = mock(Process.class);
     when(process.getErrorStream()).thenReturn(new ByteArrayInputStream(new byte[0]));
+
+    IntegrationLauncher integrationLauncher = mock(IntegrationLauncher.class, RETURNS_DEEP_STUBS);
     when(integrationLauncher.spec(jobRoot)).thenReturn(process);
 
-    worker = new DefaultGetSpecWorker(integrationLauncher);
+    worker = new DefaultGetSpecWorker(integrationLauncher, VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory());
   }
 
   @Test

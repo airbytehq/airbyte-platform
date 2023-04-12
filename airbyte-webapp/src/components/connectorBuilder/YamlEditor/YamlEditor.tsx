@@ -20,6 +20,7 @@ import styles from "./YamlEditor.module.scss";
 import { SavingIndicator } from "../Builder/SavingIndicator";
 import { UiYamlToggleButton } from "../Builder/UiYamlToggleButton";
 import { DownloadYamlButton } from "../DownloadYamlButton";
+import { PublishButton } from "../PublishButton";
 import { convertToManifest } from "../types";
 import { useManifestToBuilderForm } from "../useManifestToBuilderForm";
 
@@ -140,6 +141,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
         <FlexItem grow>
           <FlexContainer justifyContent="flex-end">
             <DownloadYamlButton yaml={yamlValue} yamlIsValid={yamlIsValid} />
+            <PublishButton />
           </FlexContainer>
         </FlexItem>
       </FlexContainer>

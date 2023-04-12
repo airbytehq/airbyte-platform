@@ -68,9 +68,14 @@ class DefaultSyncJobFactoryTest {
         .withDestinationId(destinationId)
         .withOperationIds(List.of(operationId));
 
-    final SourceConnection sourceConnection = new SourceConnection().withSourceDefinitionId(sourceDefinitionId).withConfiguration(sourceConfig);
-    final DestinationConnection destinationConnection =
-        new DestinationConnection().withDestinationDefinitionId(destinationDefinitionId).withConfiguration(destinationConfig);
+    final SourceConnection sourceConnection = new SourceConnection()
+        .withWorkspaceId(workspaceId)
+        .withSourceDefinitionId(sourceDefinitionId)
+        .withConfiguration(sourceConfig);
+    final DestinationConnection destinationConnection = new DestinationConnection()
+        .withWorkspaceId(workspaceId)
+        .withDestinationDefinitionId(destinationDefinitionId)
+        .withConfiguration(destinationConfig);
 
     final String srcDockerRepo = "srcrepo";
     final String srcDockerTag = "tag";
@@ -88,11 +93,12 @@ class DefaultSyncJobFactoryTest {
         new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId)
             .withProtocolVersion(dstProtocolVersion.serialize());
 
-    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceId))
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId))
         .thenReturn(new ActorDefinitionVersion().withDockerRepository(srcDockerRepo).withDockerImageTag(srcDockerTag));
-    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationId))
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId))
         .thenReturn(new ActorDefinitionVersion().withDockerRepository(dstDockerRepo).withDockerImageTag(dstDockerTag));
 
+    when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
     when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);
     when(configRepository.getSourceConnection(sourceId)).thenReturn(sourceConnection);
     when(configRepository.getDestinationConnection(destinationId)).thenReturn(destinationConnection);
@@ -133,8 +139,8 @@ class DefaultSyncJobFactoryTest {
     assertEquals(configAfterInjection, sourceConnection.getConfiguration());
     verify(configInjector).injectConfig(sourceConfig, sourceDefinitionId);
     verify(configInjector).injectConfig(destinationConfig, destinationDefinitionId);
-    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceId);
-    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationId);
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, workspaceId, sourceId);
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId);
   }
 
 }

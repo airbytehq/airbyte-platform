@@ -31,7 +31,6 @@ import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
-import io.airbyte.workers.internal.DefaultAirbyteStreamFactory;
 import io.airbyte.workers.process.IntegrationLauncher;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -65,12 +64,6 @@ public class DefaultDiscoverCatalogWorker implements DiscoverCatalogWorker {
     this.integrationLauncher = integrationLauncher;
     this.streamFactory = streamFactory;
     this.connectorConfigUpdater = connectorConfigUpdater;
-  }
-
-  public DefaultDiscoverCatalogWorker(final AirbyteApiClient airbyteApiClient,
-                                      final IntegrationLauncher integrationLauncher,
-                                      final ConnectorConfigUpdater connectorConfigUpdater) {
-    this(airbyteApiClient, integrationLauncher, connectorConfigUpdater, new DefaultAirbyteStreamFactory());
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)

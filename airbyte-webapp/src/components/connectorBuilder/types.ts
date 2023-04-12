@@ -3,7 +3,8 @@ import merge from "lodash/merge";
 import semver from "semver";
 import * as yup from "yup";
 
-import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { CDK_VERSION } from "./cdk";
+import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
   Spec,
@@ -35,9 +36,8 @@ import {
   PageIncrementType,
   BearerAuthenticatorType,
   BasicHttpAuthenticatorType,
-} from "core/request/ConnectorManifest";
-
-import { CDK_VERSION } from "./cdk";
+  DeclarativeStreamTransformationsItem,
+} from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
 
@@ -87,6 +87,17 @@ export interface BuilderSubstreamPartitionRouter {
   request_option?: RequestOption;
 }
 
+export type BuilderTransformation =
+  | {
+      type: "add";
+      path: string[];
+      value: string;
+    }
+  | {
+      type: "remove";
+      path: string[];
+    };
+
 export interface BuilderStream {
   id: string;
   name: string;
@@ -100,6 +111,7 @@ export interface BuilderStream {
     requestBody: Array<[string, string]>;
   };
   paginator?: BuilderPaginator;
+  transformations?: BuilderTransformation[];
   incrementalSync?: DatetimeBasedCursor;
   partitionRouter?: Array<ListPartitionRouter | BuilderSubstreamPartitionRouter>;
   schema?: string;
@@ -189,10 +201,11 @@ export const authTypeToKeyToInferredInput: Record<string, Record<string, Builder
     },
     password: {
       key: "password",
-      required: true,
+      required: false,
       definition: {
         type: "string",
         title: "Password",
+        always_show: true,
         airbyte_secret: true,
       },
     },
@@ -463,6 +476,19 @@ export const builderFormValidationSchema = yup.object().shape({
           )
           .notRequired()
           .default(undefined),
+        transformations: yup
+          .array(
+            yup.object().shape({
+              path: yup.array(yup.string()).min(1, "form.empty.error"),
+              value: yup.mixed().when("type", {
+                is: (val: string) => val === "add",
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+            })
+          )
+          .notRequired()
+          .default(undefined),
         incrementalSync: yup
           .object()
           .shape({
@@ -566,6 +592,34 @@ function builderStreamPartitionRouterToManifest(
   });
 }
 
+function builderTransformationsToManifest(
+  transformations: BuilderTransformation[] | undefined
+): DeclarativeStreamTransformationsItem[] | undefined {
+  if (!transformations) {
+    return undefined;
+  }
+  if (transformations.length === 0) {
+    return undefined;
+  }
+  return transformations.map((transformation) => {
+    if (transformation.type === "add") {
+      return {
+        type: "AddFields",
+        fields: [
+          {
+            path: transformation.path,
+            value: transformation.value,
+          },
+        ],
+      };
+    }
+    return {
+      type: "RemoveFields",
+      field_pointers: [transformation.path],
+    };
+  });
+}
+
 const EMPTY_SCHEMA = { type: "InlineSchemaLoader", schema: {} } as const;
 
 function parseSchemaString(schema?: string): DeclarativeStreamSchemaLoader {
@@ -614,6 +668,7 @@ function builderStreamToDeclarativeSteam(
         stream.id,
       ]),
     },
+    transformations: builderTransformationsToManifest(stream.transformations),
     incremental_sync: stream.incrementalSync,
   };
 

@@ -1,0 +1,41 @@
+@use "scss/variables";
+@use "scss/colors";
+
+$iconHeight: 38px;
+
+.button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: variables.$spacing-lg;
+  color: colors.$grey-500;
+  border: variables.$border-thin solid colors.$grey-100;
+  box-shadow: none;
+  background-color: colors.$grey-30;
+  border-radius: variables.$border-radius-md;
+  transition: color variables.$transition, border-color variables.$transition;
+
+  &:only-child {
+    grid-column: 2 / 3;
+  }
+
+  &__text {
+    transition: color variables.$transition;
+    color: colors.$grey-500;
+  }
+
+  &:hover,
+  &:focus-visible {
+    cursor: pointer;
+    border-color: colors.$blue;
+    color: colors.$blue;
+
+    .button__text {
+      color: colors.$blue;
+    }
+  }
+
+  svg {
+    min-height: $iconHeight;
+  }
+}

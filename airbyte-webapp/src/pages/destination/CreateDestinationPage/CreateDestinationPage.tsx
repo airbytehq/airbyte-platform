@@ -7,17 +7,17 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { FormPageContent } from "components/ConnectorBlocks";
 import { DestinationForm } from "components/destination/DestinationForm";
 import { SelectConnector } from "components/source/SelectConnector";
+import { Box } from "components/ui/Box";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
-import styles from "./CreateDestinationPage.module.scss";
 export const CreateDestinationPage: React.FC = () => {
   const [selectedDestinationDefinitionId, setSelectedDestinationDefinitionId] = useState("");
   useTrackPage(PageTrackingCodes.DESTINATION_NEW);
@@ -25,7 +25,7 @@ export const CreateDestinationPage: React.FC = () => {
 
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
-  const { destinationDefinitions } = useDestinationDefinitionList();
+  const destinationDefinitions = useAvailableDestinationDefinitions();
   const { mutateAsync: createDestination } = useCreateDestination();
 
   const onSubmitDestinationForm = async (values: {
@@ -62,13 +62,14 @@ export const CreateDestinationPage: React.FC = () => {
     <>
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
       {!selectedDestinationDefinitionId && (
-        <div className={styles.selectDestinationWrapper}>
+        <Box pb="2xl">
           <SelectConnector
+            connectorType="destination"
             connectorDefinitions={destinationDefinitions}
             headingKey="destinations.selectDestinationTitle"
             onSelectConnectorDefinition={(id) => setSelectedDestinationDefinitionId(id)}
           />
-        </div>
+        </Box>
       )}
 
       {selectedDestinationDefinitionId && (

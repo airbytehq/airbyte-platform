@@ -52,6 +52,7 @@ airbyte:
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
+    datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   container:
     orchestrator:
       enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}
@@ -88,10 +89,6 @@ airbyte:
     jobs:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
       minimum-migration-version: ${JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
-  feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:config}
-    path: ${FEATURE_FLAG_PATH:/flags}
-    api-key: ${LAUNCHDARKLY_KEY:}
   internal:
     api:
       auth-header:
@@ -163,7 +160,6 @@ airbyte:
           memory:
             limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
     normalization:
       main:
         container:

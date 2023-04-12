@@ -6,7 +6,7 @@ description: Settings for a DBT operator
 type: object
 required:
   - gitRepoUrl
-additionalProperties: false
+additionalProperties: true
 properties:
   gitRepoUrl:
     type: string

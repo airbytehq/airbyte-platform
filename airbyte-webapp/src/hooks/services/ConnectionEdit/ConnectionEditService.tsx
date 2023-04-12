@@ -26,6 +26,7 @@ export interface ConnectionCatalog {
 
 interface ConnectionEditHook {
   connection: WebBackendConnectionRead;
+  setConnection: (connection: WebBackendConnectionRead) => void;
   connectionUpdating: boolean;
   schemaError?: Error;
   schemaRefreshing: boolean;
@@ -110,6 +111,9 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
 
   return {
     connection,
+    // only use `setConnection` directly if you have a good reason: it is handled for you
+    // by `updateConnection`, `refreshSchema`, et al.
+    setConnection,
     connectionUpdating,
     schemaError,
     schemaRefreshing,

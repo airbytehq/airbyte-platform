@@ -1,10 +1,12 @@
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Card } from "components/ui/Card";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
+import { Text } from "components/ui/Text";
 
 import { FormBlock, GroupDetails } from "core/form/types";
 
@@ -14,8 +16,10 @@ import { ConditionSection } from "./ConditionSection";
 import styles from "./FormSection.module.scss";
 import { PropertySection } from "./PropertySection";
 import { SectionContainer } from "./SectionContainer";
+import { SshSslSwitcher } from "./SslSshSwitcher";
 import { DisplayType, useGroupsAndSections } from "./useGroupsAndSections";
 import { useAuthentication } from "../../useAuthentication";
+import { useSshSslImprovements } from "../../useSshSslImprovements";
 
 interface FormNodeProps {
   formField: FormBlock;
@@ -54,6 +58,8 @@ interface FormSectionProps {
   disabled?: boolean;
 }
 
+const sshTunnelDocId = "connect-via-ssh-tunnel";
+
 export const FormSection: React.FC<FormSectionProps> = ({
   blocks = [],
   groupStructure = [],
@@ -64,6 +70,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
   headerBlock,
 }) => {
   const { shouldShowAuthButton } = useAuthentication();
+  const { showSshSslImprovements, dbHostIsLocalhost } = useSshSslImprovements();
 
   const groups = useGroupsAndSections(blocks, groupStructure, Boolean(rootLevel));
   const groupElements = groups.map((sectionGroup, index) => {
@@ -127,6 +134,28 @@ export const FormSection: React.FC<FormSectionProps> = ({
               {sectionGroup.title}
             </Heading>
           )}
+          {showSshSslImprovements && sectionGroup.title === "Security" && dbHostIsLocalhost && (
+            <Message
+              text={
+                <Text size="md">
+                  <FormattedMessage
+                    id="form.setupTunnel"
+                    values={{
+                      a: (node: React.ReactNode) => (
+                        <a
+                          href={`#${sshTunnelDocId}`}
+                          onClick={() => document.getElementById(sshTunnelDocId)?.scrollIntoView()}
+                        >
+                          {node}
+                        </a>
+                      ),
+                    }}
+                  />
+                </Text>
+              }
+            />
+          )}
+          {showSshSslImprovements && sectionGroup.title === "Security" && <SshSslSwitcher />}
           <FlexItem>{sectionElements}</FlexItem>
         </FlexContainer>
       </Card>
@@ -162,6 +191,7 @@ const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({ displa
   return (
     <Collapsible
       label={label || formatMessage({ id: "form.optionalFields" })}
+      data-testid="optional-fields"
       showErrorIndicator={hasError}
       type={displayType === "collapsed-footer" ? "footer" : displayType === "collapsed-group" ? "section" : undefined}
       hideWhenEmpty

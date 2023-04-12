@@ -1,5 +1,6 @@
-@use "scss/variables";
 @use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
 @use "scss/z-indices";
 
 .clickableHeader {
@@ -42,5 +43,10 @@
     thead {
       top: (variables.$spacing-lg * 2 + 34px); // search padding top + bottom + height
     }
+  }
+
+  .syncing {
+    background: none;
+    @include mixins.striped-background(colors.$dark-blue-30, 30px);
   }
 }

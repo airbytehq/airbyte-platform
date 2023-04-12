@@ -1,3 +1,5 @@
+import { requestWorkspaceId, completeInitialSetup } from "commands/api";
+
 Cypress.on("window:load", (window) => {
   // Hide the react-query devtool button during tests, to it never accidentally overlaps some button
   // that cypress needs to click
@@ -7,4 +9,8 @@ Cypress.on("window:load", (window) => {
     #react-query-devtool-btn { display: none !important; }
   `;
   window.document.head.appendChild(style);
+});
+
+before(() => {
+  requestWorkspaceId().then(completeInitialSetup);
 });

@@ -22,11 +22,19 @@ export class AnalyticsService {
 
   alias = (newId: string): void => this.getSegmentAnalytics()?.alias?.(newId);
 
-  page = (name: string): void => this.getSegmentAnalytics()?.page?.(name, { ...this.context });
+  page = (name: string): void => {
+    if (process.env.NODE_ENV === "development") {
+      console.debug(`%c[Analytics.Page] ${name}`, "color: teal");
+    }
+    this.getSegmentAnalytics()?.page?.(name, { ...this.context });
+  };
 
   reset = (): void => this.getSegmentAnalytics()?.reset?.();
 
   track = (namespace: Namespace, action: Action, params: EventParams & { actionDescription?: string }) => {
+    if (process.env.NODE_ENV === "development") {
+      console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params);
+    }
     this.getSegmentAnalytics()?.track(`Airbyte.UI.${namespace}.${action}`, {
       ...params,
       ...this.context,
@@ -36,6 +44,9 @@ export class AnalyticsService {
   };
 
   identify = (userId: string, traits: Record<string, unknown> = {}): void => {
+    if (process.env.NODE_ENV === "development") {
+      console.debug(`%c[Analytics.Identify] ${userId}`, "color: teal", traits);
+    }
     this.getSegmentAnalytics()?.identify?.(userId, traits);
   };
 

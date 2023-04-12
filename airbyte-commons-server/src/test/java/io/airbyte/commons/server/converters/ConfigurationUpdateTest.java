@@ -39,6 +39,7 @@ class ConfigurationUpdateTest {
   private static final String IMAGE_TAG = "bar";
   private static final UUID UUID1 = UUID.randomUUID();
   private static final UUID UUID2 = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final JsonNode SPEC = CatalogHelpers.fieldsToJsonSchema(
       Field.of(JdbcUtils.USERNAME_KEY, JsonSchemaType.STRING),
       Field.of(JdbcUtils.PASSWORD_KEY, JsonSchemaType.STRING));
@@ -59,10 +60,12 @@ class ConfigurationUpdateTest {
   private static final SourceConnection ORIGINAL_SOURCE_CONNECTION = new SourceConnection()
       .withSourceId(UUID1)
       .withSourceDefinitionId(UUID2)
+      .withWorkspaceId(WORKSPACE_ID)
       .withConfiguration(ORIGINAL_CONFIGURATION);
   private static final SourceConnection NEW_SOURCE_CONNECTION = new SourceConnection()
       .withSourceId(UUID1)
       .withSourceDefinitionId(UUID2)
+      .withWorkspaceId(WORKSPACE_ID)
       .withConfiguration(NEW_CONFIGURATION);
   private static final StandardDestinationDefinition DESTINATION_DEFINITION = new StandardDestinationDefinition()
       .withDockerRepository(IMAGE_REPOSITORY)
@@ -71,10 +74,12 @@ class ConfigurationUpdateTest {
   private static final DestinationConnection ORIGINAL_DESTINATION_CONNECTION = new DestinationConnection()
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)
+      .withWorkspaceId(WORKSPACE_ID)
       .withConfiguration(ORIGINAL_CONFIGURATION);
   private static final DestinationConnection NEW_DESTINATION_CONNECTION = new DestinationConnection()
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)
+      .withWorkspaceId(WORKSPACE_ID)
       .withConfiguration(NEW_CONFIGURATION);
 
   private ConfigRepository configRepository;
@@ -97,26 +102,26 @@ class ConfigurationUpdateTest {
   void testSourceUpdate() throws JsonValidationException, IOException, ConfigNotFoundException {
     when(secretsRepositoryReader.getSourceConnectionWithSecrets(UUID1)).thenReturn(ORIGINAL_SOURCE_CONNECTION);
     when(configRepository.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
-    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, UUID1)).thenReturn(DEFINITION_VERSION);
+    when(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1)).thenReturn(DEFINITION_VERSION);
     when(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION);
 
     final SourceConnection actual = configurationUpdate.source(UUID1, ORIGINAL_SOURCE_CONNECTION.getName(), NEW_CONFIGURATION);
 
     assertEquals(NEW_SOURCE_CONNECTION, actual);
-    Mockito.verify(actorDefinitionVersionHelper).getSourceVersion(SOURCE_DEFINITION, UUID1);
+    Mockito.verify(actorDefinitionVersionHelper).getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1);
   }
 
   @Test
   void testDestinationUpdate() throws JsonValidationException, IOException, ConfigNotFoundException {
     when(secretsRepositoryReader.getDestinationConnectionWithSecrets(UUID1)).thenReturn(ORIGINAL_DESTINATION_CONNECTION);
     when(configRepository.getStandardDestinationDefinition(UUID2)).thenReturn(DESTINATION_DEFINITION);
-    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, UUID1)).thenReturn(DEFINITION_VERSION);
+    when(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1)).thenReturn(DEFINITION_VERSION);
     when(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION);
 
     final DestinationConnection actual = configurationUpdate.destination(UUID1, ORIGINAL_DESTINATION_CONNECTION.getName(), NEW_CONFIGURATION);
 
     assertEquals(NEW_DESTINATION_CONNECTION, actual);
-    Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, UUID1);
+    Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1);
   }
 
 }

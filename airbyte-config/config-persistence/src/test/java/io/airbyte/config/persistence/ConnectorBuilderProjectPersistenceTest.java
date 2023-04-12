@@ -58,7 +58,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   @BeforeEach
   void beforeEach() throws Exception {
     truncateAllTables();
-    configRepository = new ConfigRepository(database, MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   @Test
@@ -251,7 +251,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
           .withDescription("description for anyDeclarativeManifest")
           .withManifest(new ObjectMapper().readTree("{}"))
           .withSpec(new ObjectMapper().readTree("{}"));
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }

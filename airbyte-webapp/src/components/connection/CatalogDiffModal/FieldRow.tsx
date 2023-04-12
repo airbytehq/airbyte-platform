@@ -1,9 +1,11 @@
-import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faMinus, faPlus, faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
+import { FormattedMessage } from "react-intl";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { ModificationIcon } from "components/icons/ModificationIcon";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { FieldTransform } from "core/request/AirbyteClient";
 
@@ -57,8 +59,23 @@ export const FieldRow: React.FC<FieldRowProps> = ({ transform }) => {
             </div>
           )}
         </div>
-        <div title={fieldName} className={styles.fieldName}>
-          {fieldName}
+        <div title={fieldName} className={styles.field}>
+          <div className={styles.fieldName}>{fieldName}</div>
+          {transform.breaking && (
+            <div className={styles.breakingSchemaChange}>
+              <Tooltip
+                placement="left"
+                control={
+                  <FontAwesomeIcon
+                    icon={faExclamationCircle}
+                    className={classnames(styles.icon, styles.breakingChange)}
+                  />
+                }
+              >
+                <FormattedMessage id="connection.schemaChange.breaking" />
+              </Tooltip>
+            </div>
+          )}
         </div>
       </td>
       {hasTypeChange && (

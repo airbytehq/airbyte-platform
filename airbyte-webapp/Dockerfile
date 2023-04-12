@@ -1,5 +1,5 @@
 ARG NGINX_IMAGE=nginx:alpine
-FROM ${NGINX_IMAGE} as webapp
+FROM ${NGINX_IMAGE}
 
 EXPOSE 80
 

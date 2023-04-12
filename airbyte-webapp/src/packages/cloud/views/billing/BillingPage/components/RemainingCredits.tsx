@@ -9,10 +9,10 @@ import styled from "styled-components";
 import { Button } from "components/ui/Button";
 
 import { Action, Namespace } from "core/analytics";
+import { useStripeCheckout } from "core/api/cloud";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { CloudWorkspace } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import { useStripeCheckout } from "packages/cloud/services/stripe/StripeService";
 import {
   useGetCloudWorkspace,
   useInvalidateCloudWorkspace,
@@ -120,19 +120,11 @@ const RemainingCredits: React.FC<Props> = ({ selfServiceCheckoutEnabled }) => {
 
   return (
     <>
-      <LowCreditBalanceHint>
-        <Button
-          disabled={!selfServiceCheckoutEnabled}
-          type="button"
-          size="xs"
-          variant="dark"
-          onClick={startStripeCheckout}
-          isLoading={isLoading || isWaitingForCredits}
-          icon={<FontAwesomeIcon icon={faPlus} />}
-        >
-          <FormattedMessage id="credits.buyCredits" />
-        </Button>
-      </LowCreditBalanceHint>
+      <LowCreditBalanceHint
+        disableCheckout={!selfServiceCheckoutEnabled}
+        onBuy={startStripeCheckout}
+        isLoading={isLoading || isWaitingForCredits}
+      />
       <Block>
         <CreditView>
           <FormattedMessage id="credits.remainingCredits" />

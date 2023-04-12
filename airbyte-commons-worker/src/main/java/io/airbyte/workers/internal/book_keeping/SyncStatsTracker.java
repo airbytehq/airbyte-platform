@@ -42,6 +42,14 @@ public interface SyncStatsTracker {
   void updateDestinationStateStats(final AirbyteStateMessage stateMessage);
 
   /**
+   * Get the per-stream committed bytes count.
+   *
+   * @return returns a map of committed bytes count by stream name. If committed bytes counts cannot
+   *         be computed, empty.
+   */
+  Optional<Map<AirbyteStreamNameNamespacePair, Long>> getStreamToCommittedBytes();
+
+  /**
    * Get the per-stream committed record count.
    *
    * @return returns a map of committed record count by stream name. If committed record counts cannot
@@ -110,6 +118,14 @@ public interface SyncStatsTracker {
    * @return returns the total count of estimated bytes across all streams.
    */
   long getTotalBytesEstimated();
+
+  /**
+   * Get the overall committed bytes count.
+   *
+   * @return returns the total count of committed bytes across all streams. If total committed bytes
+   *         count cannot be computed, empty.
+   */
+  Optional<Long> getTotalBytesCommitted();
 
   /**
    * Get the overall committed record count.

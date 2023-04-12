@@ -14,7 +14,7 @@ import {
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
-import { TestWrapper } from "test-utils/testutils";
+import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { WebBackendConnectionUpdate } from "core/request/AirbyteClient";
 import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -56,8 +56,10 @@ describe("ConnectionReplicationPage", () => {
       </TestWrapper>
     </Suspense>
   );
+
   const render = async () => {
     let renderResult: ReturnType<typeof tlr>;
+
     await act(async () => {
       renderResult = tlr(
         <Wrapper>
@@ -82,6 +84,11 @@ describe("ConnectionReplicationPage", () => {
         } as any)
     );
   };
+
+  beforeEach(() => {
+    useMockIntersectionObserver();
+  });
+
   it("should render", async () => {
     setupSpies();
 
@@ -121,6 +128,8 @@ describe("ConnectionReplicationPage", () => {
       setupSpies();
       const renderResult = await render();
 
+      userEvent.click(renderResult.getByTestId("configuration-section-expand-arrow"));
+
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
       const cronExpressionInput = renderResult.getByTestId("cronExpression");
@@ -137,6 +146,8 @@ describe("ConnectionReplicationPage", () => {
       setupSpies();
 
       const renderResult = await render();
+
+      userEvent.click(renderResult.getByTestId("configuration-section-expand-arrow"));
 
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
@@ -161,6 +172,8 @@ describe("ConnectionReplicationPage", () => {
           </ConnectionEditServiceProvider>
         </TestWrapper>
       );
+
+      userEvent.click(container.getByTestId("configuration-section-expand-arrow"));
 
       await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
 

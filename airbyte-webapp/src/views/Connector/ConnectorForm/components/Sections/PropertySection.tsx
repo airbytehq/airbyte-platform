@@ -13,7 +13,8 @@ import { FormBaseItem } from "core/form/types";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./PropertySection.module.scss";
-import { getPatternDescriptor } from "../../utils";
+import { useSshSslImprovements } from "../../useSshSslImprovements";
+import { getPatternDescriptor, isLocalhost } from "../../utils";
 import { Control } from "../Property/Control";
 import { PropertyError } from "../Property/PropertyError";
 import { PropertyLabel } from "../Property/PropertyLabel";
@@ -82,7 +83,15 @@ const FormatBlock = ({ property, fieldMeta }: { property: FormBaseItem; fieldMet
 
 export const PropertySection: React.FC<PropertySectionProps> = ({ property, path, disabled }) => {
   const propertyPath = path ?? property.path;
-  const formikBag = useField(propertyPath);
+  const { showSshSslImprovements } = useSshSslImprovements();
+  const fieldConfig = {
+    name: propertyPath,
+    validate:
+      showSshSslImprovements && propertyPath === "connectionConfiguration.tunnel_method.tunnel_host"
+        ? (value: string | undefined) => (isLocalhost(value) ? "form.noLocalhost" : undefined)
+        : undefined,
+  };
+  const formikBag = useField(fieldConfig);
   const [field, meta] = formikBag;
 
   const labelText = property.title || property.fieldKey;

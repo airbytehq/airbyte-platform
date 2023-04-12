@@ -229,9 +229,6 @@ public class EnvConfigs implements Configs {
   private static final String APPLY_FIELD_SELECTION = "APPLY_FIELD_SELECTION";
   private static final String FIELD_SELECTION_WORKSPACES = "FIELD_SELECTION_WORKSPACES";
 
-  private static final String STRICT_COMPARISON_NORMALIZATION_WORKSPACES = "STRICT_COMPARISON_NORMALIZATION_WORKSPACES";
-  private static final String STRICT_COMPARISON_NORMALIZATION_TAG = "STRICT_COMPARISON_NORMALIZATION_TAG";
-
   public static final Map<String, Function<EnvConfigs, String>> JOB_SHARED_ENVS = Map.of(
       AIRBYTE_VERSION, (instance) -> instance.getAirbyteVersion().serialize(),
       AIRBYTE_ROLE, EnvConfigs::getAirbyteRole,
@@ -250,6 +247,9 @@ public class EnvConfigs implements Configs {
   private final Supplier<Set<String>> getAllEnvKeys;
   private final LogConfigs logConfigs;
   private final CloudStorageConfigs stateStorageCloudConfigs;
+
+  public static final String CDK_PYTHON = "CDK_PYTHON";
+  public static final String CDK_ENTRYPOINT = "CDK_ENTRYPOINT";
 
   /**
    * Constructs {@link EnvConfigs} from actual environment variables.
@@ -1165,18 +1165,18 @@ public class EnvConfigs implements Configs {
   }
 
   @Override
-  public String getStrictComparisonNormalizationWorkspaces() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_WORKSPACES, "");
-  }
-
-  @Override
-  public String getStrictComparisonNormalizationTag() {
-    return getEnvOrDefault(STRICT_COMPARISON_NORMALIZATION_TAG, "strict_comparison2");
-  }
-
-  @Override
   public int getActivityNumberOfAttempt() {
     return Integer.parseInt(getEnvOrDefault(ACTIVITY_MAX_ATTEMPT, "5"));
+  }
+
+  @Override
+  public String getCdkPython() {
+    return getEnv(CDK_PYTHON);
+  }
+
+  @Override
+  public String getCdkEntrypoint() {
+    return getEnv(CDK_ENTRYPOINT);
   }
 
   // Helpers

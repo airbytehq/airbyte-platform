@@ -86,16 +86,26 @@ public class MoreOAuthParameters {
   private static ObjectNode flattenOAuthConfig(final ObjectNode flatConfig, final ObjectNode configToFlatten) {
     final List<String> keysToFlatten = new ArrayList<>();
     for (final String key : Jsons.keys(configToFlatten)) {
-      if (configToFlatten.get(key).getNodeType() == OBJECT) {
+      JsonNode currentNodeValue = configToFlatten.get(key);
+      if (isSecretNode(currentNodeValue) && !flatConfig.has(key)) {
+        // _secret keys are objects but we want to preserve them.
+        flatConfig.set(key, currentNodeValue);
+      } else if (currentNodeValue.getNodeType() == OBJECT) {
         keysToFlatten.add(key);
       } else if (!flatConfig.has(key)) {
-        flatConfig.set(key, configToFlatten.get(key));
+        flatConfig.set(key, currentNodeValue);
       } else {
+        LOGGER.debug("configToFlatten: {}", configToFlatten);
         throw new IllegalStateException(String.format("OAuth Config's key '%s' already exists", key));
       }
     }
     keysToFlatten.forEach(key -> flattenOAuthConfig(flatConfig, (ObjectNode) configToFlatten.get(key)));
     return flatConfig;
+  }
+
+  private static boolean isSecretNode(JsonNode node) {
+    JsonNode secretNode = node.get("_secret");
+    return secretNode != null;
   }
 
   /**

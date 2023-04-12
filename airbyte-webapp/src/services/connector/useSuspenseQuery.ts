@@ -1,23 +1,5 @@
-import { QueryFunction, QueryKey, useQuery, UseQueryOptions } from "react-query";
-
-interface Disabled {
-  enabled: false;
-}
-
-export function useSuspenseQuery<
-  TQueryFnData = unknown,
-  TError = unknown,
-  TData = TQueryFnData,
-  TQueryKey extends QueryKey = QueryKey
->(
-  queryKey: TQueryKey,
-  queryFn: QueryFunction<TQueryFnData, TQueryKey>,
-  options: Readonly<
-    Omit<UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, "queryKey" | "queryFn" | "suspense">
-  > = {}
-) {
-  return useQuery<TQueryFnData, TError, TData, TQueryKey>(queryKey, queryFn, {
-    ...options,
-    suspense: true,
-  }).data as typeof options extends Disabled ? TData | undefined : TData;
-}
+/**
+ * This is a temporary re-export of that file, while the query infrastructure is migrated.
+ * @deprecated if you need to use this, import it from `core/api` instead.
+ */
+export { useSuspenseQuery } from "core/api";

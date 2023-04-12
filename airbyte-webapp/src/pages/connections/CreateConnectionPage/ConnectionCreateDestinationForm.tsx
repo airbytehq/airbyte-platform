@@ -5,9 +5,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { DestinationForm } from "components/destination/DestinationForm";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
-import { useDestinationDefinitionList } from "services/connector/DestinationDefinitionService";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
 interface ConnectionCreateDestinationFormProps {
@@ -19,7 +19,7 @@ export const ConnectionCreateDestinationForm: React.FC<ConnectionCreateDestinati
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const location = useLocation();
 
-  const { destinationDefinitions } = useDestinationDefinitionList();
+  const destinationDefinitions = useAvailableDestinationDefinitions();
   const { mutateAsync: createDestination } = useCreateDestination();
 
   const onSubmitDestinationForm = async (values: {

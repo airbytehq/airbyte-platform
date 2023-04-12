@@ -43,7 +43,7 @@ public class DefaultSyncStatsTracker implements SyncStatsTracker {
   private Long totalBytesEstimatedSync;
   private Optional<Boolean> hasStreamEstimates;
 
-  private final Map<Short, Long> streamToRunningCount;
+  private final Map<Short, StatsCounters> streamToRunningCount;
   private final HashFunction hashFunction;
   private final StateDeltaTracker stateDeltaTracker;
   private final StateMetricsTracker stateMetricsTracker;
@@ -93,14 +93,19 @@ public class DefaultSyncStatsTracker implements SyncStatsTracker {
     final var nameNamespace = AirbyteStreamNameNamespacePair.fromRecordMessage(recordMessage);
     final short streamIndex = getStreamIndex(nameNamespace);
 
-    final long currentRunningCount = streamToRunningCount.getOrDefault(streamIndex, 0L);
-    streamToRunningCount.put(streamIndex, currentRunningCount + 1);
+    StatsCounters currentRunningCount = streamToRunningCount.get(streamIndex);
+    if (currentRunningCount == null) {
+      currentRunningCount = new StatsCounters();
+      streamToRunningCount.put(streamIndex, currentRunningCount);
+    }
+    currentRunningCount.recordCount++;
 
     final var currStats = nameNamespacePairToStreamStats.getOrDefault(nameNamespace, new StreamStats());
     currStats.emittedRecords++;
 
     final int estimatedNumBytes = Jsons.getEstimatedByteSize(recordMessage.getData());
     currStats.emittedBytes += estimatedNumBytes;
+    currentRunningCount.bytesCount += estimatedNumBytes;
 
     nameNamespacePairToStreamStats.put(nameNamespace, currStats);
   }
@@ -298,14 +303,42 @@ public class DefaultSyncStatsTracker implements SyncStatsTracker {
    * because committed record counts cannot be reliably computed.
    */
   @Override
+  public Optional<Map<AirbyteStreamNameNamespacePair, Long>> getStreamToCommittedBytes() {
+    if (unreliableCommittedCounts) {
+      return Optional.empty();
+    }
+    final Map<Short, StatsCounters> streamIndexToCommittedStats = stateDeltaTracker.getStreamToCommittedStats();
+    return Optional.of(
+        streamIndexToCommittedStats.entrySet().stream().collect(
+            Collectors.toMap(entry -> nameNamespacePairToIndex.inverse().get(entry.getKey()), e -> e.getValue().bytesCount)));
+  }
+
+  /**
+   * Fetch committed stream index to record count from the {@link StateDeltaTracker}. Then, swap out
+   * stream indices for stream names. If the delta tracker has exceeded its capacity, return empty
+   * because committed record counts cannot be reliably computed.
+   */
+  @Override
   public Optional<Map<AirbyteStreamNameNamespacePair, Long>> getStreamToCommittedRecords() {
     if (unreliableCommittedCounts) {
       return Optional.empty();
     }
-    final Map<Short, Long> streamIndexToCommittedRecordCount = stateDeltaTracker.getStreamToCommittedRecords();
+    final Map<Short, StatsCounters> streamIndexToCommittedStats = stateDeltaTracker.getStreamToCommittedStats();
     return Optional.of(
-        streamIndexToCommittedRecordCount.entrySet().stream().collect(
-            Collectors.toMap(entry -> nameNamespacePairToIndex.inverse().get(entry.getKey()), Entry::getValue)));
+        streamIndexToCommittedStats.entrySet().stream().collect(
+            Collectors.toMap(entry -> nameNamespacePairToIndex.inverse().get(entry.getKey()), e -> e.getValue().recordCount)));
+  }
+
+  /**
+   * Compute sum of committed bytes counts across all streams. If the delta tracker has exceeded its
+   * capacity, return empty because committed bytes counts cannot be reliably computed.
+   */
+  @Override
+  public Optional<Long> getTotalBytesCommitted() {
+    if (unreliableCommittedCounts) {
+      return Optional.empty();
+    }
+    return Optional.of(stateDeltaTracker.getStreamToCommittedStats().values().stream().map(StatsCounters::getBytesCount).reduce(0L, Long::sum));
   }
 
   /**
@@ -317,7 +350,7 @@ public class DefaultSyncStatsTracker implements SyncStatsTracker {
     if (unreliableCommittedCounts) {
       return Optional.empty();
     }
-    return Optional.of(stateDeltaTracker.getStreamToCommittedRecords().values().stream().reduce(0L, Long::sum));
+    return Optional.of(stateDeltaTracker.getStreamToCommittedStats().values().stream().map(StatsCounters::getRecordCount).reduce(0L, Long::sum));
   }
 
   @Override

@@ -327,7 +327,7 @@ public abstract class BaseOAuth2Flow extends BaseOAuthFlow {
     }
   }
 
-  private boolean containsIgnoredOAuthError(final Map<String, Object> queryParams) {
+  protected boolean containsIgnoredOAuthError(final Map<String, Object> queryParams) {
     final String oauthError = extractErrorParameter(queryParams);
     return oauthError != null && ignoredOauthErrors.contains(oauthError);
   }

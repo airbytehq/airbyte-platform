@@ -13,6 +13,7 @@ def pnpmVer = new groovy.json.JsonSlurper().parse(new File("${projectDir}/packag
 // might affect them (i.e. if any of those files change we want to rerun most tasks)
 def commonConfigs = [
     '.env',
+    '.env.production',
     'package.json',
     'pnpm-lock.yaml',
     'tsconfig.json',
@@ -60,8 +61,11 @@ def publicDir = fileTree('public').matching {
 task pnpmBuild(type: PnpmTask) {
     dependsOn pnpmInstall
 
+    environment = ["VERSION": rootProject.ext.version]
+
     args = ['build']
 
+    inputs.property "cloudEnv", System.env.WEBAPP_BUILD_CLOUD_ENV ?: ""
     inputs.files commonConfigs
     inputs.files nodeModules
     inputs.files publicDir
@@ -157,4 +161,9 @@ build.dependsOn buildStorybook
 
 tasks.named("buildDockerImage") {
     dependsOn copyDocker, copyNginx, copyBuildOutput
+}
+
+// Include some cloud-specific tasks only in the airbyte-platform-internal environment
+if (file("${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle").exists()) {
+   apply from: "${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle"
 }

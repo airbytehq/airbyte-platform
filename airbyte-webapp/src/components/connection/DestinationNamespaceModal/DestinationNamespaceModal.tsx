@@ -77,6 +77,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
                     }
                     value={NamespaceDefinitionType.destination}
                     checked={field.value === NamespaceDefinitionType.destination}
+                    data-testid="namespace-definition-destination-radio"
                   />
                 )}
               </Field>
@@ -93,6 +94,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
                     }
                     value={NamespaceDefinitionType.source}
                     checked={field.value === NamespaceDefinitionType.source}
+                    data-testid="namespace-definition-source-radio"
                   />
                 )}
               </Field>
@@ -109,6 +111,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
                     }
                     value={NamespaceDefinitionType.customformat}
                     checked={field.value === NamespaceDefinitionType.customformat}
+                    data-testid="namespace-definition-custom-format-radio"
                   />
                 )}
               </Field>
@@ -122,6 +125,7 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
                         id: "connectionForm.modal.destinationNamespace.input.placeholder",
                       })}
                       error={!!meta.error && meta.touched}
+                      data-testid="namespace-definition-custom-format-input"
                     />
                   )}
                 </Field>
@@ -152,10 +156,15 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button type="button" variant="secondary" onClick={onCloseModal}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCloseModal}
+              data-testid="namespace-definition-cancel-button"
+            >
               <FormattedMessage id="form.cancel" />
             </Button>
-            <Button type="submit" disabled={!dirty || !isValid}>
+            <Button type="submit" disabled={!dirty || !isValid} data-testid="namespace-definition-apply-button">
               <FormattedMessage id="form.apply" />
             </Button>
           </ModalFooter>

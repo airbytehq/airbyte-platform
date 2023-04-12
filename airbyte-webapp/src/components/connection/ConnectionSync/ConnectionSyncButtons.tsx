@@ -25,11 +25,13 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
     cancelStarting,
     cancelJob,
     syncConnection,
-    resetConnection,
+    connectionEnabled,
+    resetStreams,
     resetStarting,
     jobSyncRunning,
     jobResetRunning,
   } = useConnectionSyncContext();
+
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const resetWithModal = useCallback(() => {
@@ -40,11 +42,11 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       cancelButtonText: "form.noNeed",
       onSubmit: async () => {
         closeConfirmationModal();
-        await resetConnection();
+        await resetStreams();
       },
       submitButtonDataId: "reset",
     });
-  }, [closeConfirmationModal, openConfirmationModal, resetConnection]);
+  }, [closeConfirmationModal, openConfirmationModal, resetStreams]);
 
   return (
     <div className={styles.buttons}>
@@ -55,7 +57,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant="secondary"
             className={buttonClassName}
             isLoading={resetStarting}
-            disabled={syncStarting || resetStarting}
+            disabled={syncStarting || resetStarting || !connectionEnabled}
           >
             <FormattedMessage id="connection.resetData" />
           </Button>
@@ -67,7 +69,8 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant={variant}
             className={buttonClassName}
             isLoading={syncStarting}
-            disabled={syncStarting || resetStarting}
+            data-testid="manual-sync-button"
+            disabled={syncStarting || resetStarting || !connectionEnabled}
           >
             {buttonText}
           </Button>
@@ -76,7 +79,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {(jobSyncRunning || jobResetRunning) && (
         <Button
           onClick={cancelJob}
-          disabled={cancelStarting || syncStarting || resetStarting}
+          disabled={syncStarting || resetStarting || !connectionEnabled}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}

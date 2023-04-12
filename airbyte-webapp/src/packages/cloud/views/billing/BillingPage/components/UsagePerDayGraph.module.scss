@@ -1,15 +1,13 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.empty {
-  height: 100%;
-  padding-bottom: variables.$spacing-xl;
-}
-
 .container {
   width: 100%;
-  height: 260px;
-  padding: 0 variables.$spacing-2xl variables.$spacing-xl 0;
+
+  &--full {
+    height: 260px;
+    padding: variables.$spacing-md;
+  }
 }
 
 :export {
@@ -17,5 +15,5 @@
   green: colors.$green;
   grey: colors.$grey-500;
   grey100: colors.$grey-100;
-  darkBlue: colors.$dark-blue-900;
+  darkBlue: colors.$dark-blue;
 }

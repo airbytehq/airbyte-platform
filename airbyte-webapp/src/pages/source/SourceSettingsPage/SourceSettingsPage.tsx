@@ -29,7 +29,7 @@ export const SourceSettingsPage: React.FC = () => {
     };
   }, [setDocumentationPanelOpen]);
 
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId, source.sourceId);
 
   const reloadSource = useInvalidateSource(source.sourceId);
 
