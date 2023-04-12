@@ -1,23 +1,14 @@
 package io.airbyte.notification
 
-import com.sendgrid.Request
-import com.sendgrid.Response
 import io.micronaut.context.annotation.Requires
-import io.micronaut.email.Email
-import io.micronaut.email.EmailException
-import io.micronaut.email.EmailSender
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.net.http.HttpClient
-import java.net.http.HttpResponse
 
 interface NotificationSender<T> {
     fun sendNotification(config: T, subject: String, message: String)
