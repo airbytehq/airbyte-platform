@@ -129,6 +129,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       }}
     >
       <BuilderList
+        addButtonLabel={formatMessage({ id: "connectorBuilder.addNewPartitionRouter" })}
         basePath={streamFieldPath("partitionRouter")}
         emptyItem={{
           type: LIST_PARTITION_ROUTER,

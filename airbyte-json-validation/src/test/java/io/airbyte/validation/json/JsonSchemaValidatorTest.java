@@ -146,7 +146,7 @@ class JsonSchemaValidatorTest {
     final var validator = new JsonSchemaValidator();
 
     assertThrows(NullPointerException.class, () -> validator.testInitializedSchema("uninitialised", Jsons.deserialize("{}")));
-    assertThrows(NullPointerException.class, () -> validator.ensureInitializedSchema("uninitialised", Jsons.deserialize("{}")));
+    assertThrows(NullPointerException.class, () -> validator.validateInitializedSchema("uninitialised", Jsons.deserialize("{}")));
   }
 
   @Test
@@ -158,11 +158,13 @@ class JsonSchemaValidatorTest {
     validator.initializeSchemaValidator(schemaName, VALID_SCHEMA);
 
     assertTrue(validator.testInitializedSchema(schemaName, goodJson));
-    assertDoesNotThrow(() -> validator.ensureInitializedSchema(schemaName, goodJson));
+    assertDoesNotThrow(() -> validator.validateInitializedSchema(schemaName, goodJson));
 
     final JsonNode badJson = Jsons.deserialize("{\"host\":1}");
     assertFalse(validator.testInitializedSchema(schemaName, badJson));
-    assertThrows(JsonValidationException.class, () -> validator.ensureInitializedSchema(schemaName, badJson));
+
+    Set<String> errorMessages = validator.validateInitializedSchema(schemaName, badJson);
+    assert !errorMessages.isEmpty();
   }
 
 }

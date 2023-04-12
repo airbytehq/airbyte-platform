@@ -60,6 +60,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(VersionedAirbyteStreamFactory.class);
   private static final double MAX_SIZE_RATIO = 0.8;
+  private static final long DEFAULT_MEMORY_LIMIT = Runtime.getRuntime().maxMemory();
+  private static final MdcScope.Builder DEFAULT_MDC_SCOPE = MdcScope.DEFAULT_BUILDER;
+
+  private static final Logger DEFAULT_LOGGER = LOGGER;
   private static final Version fallbackVersion = new Version("0.2.0");
 
   // Buffer size to use when detecting the protocol version.
@@ -80,8 +84,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private final AirbyteMessageSerDeProvider serDeProvider;
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog;
-  private AirbyteMessageDeserializer<T> deserializer;
-  private AirbyteMessageVersionedMigrator<T> migrator;
+  private AirbyteMessageDeserializer<AirbyteMessage> deserializer;
+  private AirbyteMessageVersionedMigrator<AirbyteMessage> migrator;
   private Version protocolVersion;
 
   private boolean shouldDetectVersion = false;
@@ -98,7 +102,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   }
 
   /**
-   * Similar to the above method, but allows for more testing related variables to be passed in.
+   * Same as above with additional config for testing.
+   *
+   * @return a VersionedAirbyteStreamFactory that does not perform any migration.
    */
   @VisibleForTesting
   public static VersionedAirbyteStreamFactory noMigrationVersionedAirbyteStreamFactory(Logger logger,
@@ -125,8 +131,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
+                                       final MdcScope.Builder containerLogMdcBuilder,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass) {
-    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, LOGGER, MdcScope.DEFAULT_BUILDER, exceptionClass,
+    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, LOGGER, containerLogMdcBuilder, exceptionClass,
         Runtime.getRuntime().maxMemory());
   }
 
@@ -134,10 +141,9 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                        final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                        final Version protocolVersion,
                                        final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog,
-                                       final MdcScope.Builder containerLogMdcBuilder,
                                        final Optional<Class<? extends RuntimeException>> exceptionClass) {
-    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, LOGGER, containerLogMdcBuilder, exceptionClass,
-        Runtime.getRuntime().maxMemory());
+    this(serDeProvider, migratorFactory, protocolVersion, configuredAirbyteCatalog, DEFAULT_LOGGER, DEFAULT_MDC_SCOPE, exceptionClass,
+        DEFAULT_MEMORY_LIMIT);
   }
 
   public VersionedAirbyteStreamFactory(final AirbyteMessageSerDeProvider serDeProvider,
@@ -170,6 +176,17 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public Stream<AirbyteMessage> create(final BufferedReader bufferedReader) {
+    detectAndInitialiseMigrators(bufferedReader);
+    final boolean needMigration = !protocolVersion.getMajorVersion().equals(migratorFactory.getMostRecentVersion().getMajorVersion());
+    logger.info(
+        "Reading messages from protocol version {}{}",
+        protocolVersion.serialize(),
+        needMigration ? ", messages will be upgraded to protocol version " + migratorFactory.getMostRecentVersion().serialize() : "");
+
+    return addLineReadLogic(bufferedReader);
+  }
+
+  private void detectAndInitialiseMigrators(BufferedReader bufferedReader) {
     if (shouldDetectVersion) {
       final Optional<Version> versionMaybe;
       try {
@@ -186,21 +203,10 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
         initializeForProtocolVersion(fallbackVersion);
       }
     }
-
-    final boolean needMigration = !protocolVersion.getMajorVersion().equals(migratorFactory.getMostRecentVersion().getMajorVersion());
-    logger.info(
-        "Reading messages from protocol version {}{}",
-        protocolVersion.serialize(),
-        needMigration ? ", messages will be upgraded to protocol version " + migratorFactory.getMostRecentVersion().serialize() : "");
-    return addLineReadLogic(bufferedReader);
   }
 
-  /**
-   * Temporarily ported over from the {@link DefaultAirbyteStreamFactory} whole as we work on
-   * refactoring the code.
-   */
   @Trace(operationName = WORKER_OPERATION_NAME)
-  public Stream<AirbyteMessage> addLineReadLogic(final BufferedReader bufferedReader) {
+  private Stream<AirbyteMessage> addLineReadLogic(final BufferedReader bufferedReader) {
     final var metricClient = MetricClientFactory.getMetricClient();
     return bufferedReader
         .lines()
@@ -283,7 +289,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   }
 
   protected final void initializeForProtocolVersion(final Version protocolVersion) {
-    this.deserializer = (AirbyteMessageDeserializer<T>) serDeProvider.getDeserializer(protocolVersion).orElseThrow();
+    this.deserializer = (AirbyteMessageDeserializer<AirbyteMessage>) serDeProvider.getDeserializer(protocolVersion).orElseThrow();
     this.migrator = migratorFactory.getAirbyteMessageMigrator(protocolVersion);
     this.protocolVersion = protocolVersion;
   }
@@ -327,33 +333,40 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     return String.format("%.1f %cB", bytes / 1000.0, ci.current());
   }
 
+  /**
+   * For every incoming message,
+   * <p>
+   * 1. deserialize the incoming JSON string to {@link AirbyteMessage}.
+   * <p>
+   * 2. validate the message.
+   * <p>
+   * 3. upgrade the message to the platform version, if needed.
+   */
   protected Stream<AirbyteMessage> toAirbyteMessage(final String line) {
-    Optional<AirbyteMessage> m = Jsons.tryDeserialize(line, AirbyteMessage.class);
+    // put back the deserializer.
+    Optional<AirbyteMessage> m = deserializer.deserialize(line);
 
     if (m.isPresent()) {
       m = BasicAirbyteMessageValidator.validate(m.get());
+
+      if (m.isEmpty()) {
+        logger.error("Validation failed: {}", Jsons.serialize(line));
+        return m.stream();
+      }
+
+      return upgradeMessage(m.get());
     }
-    if (m.isEmpty()) {
-      logger.error("Deserialization failed: {}", Jsons.serialize(line));
-    }
+
+    logger.error("Deserialization failed: {}", Jsons.serialize(line));
     return m.stream();
   }
 
-  /**
-   * This was initially implemented as an override on the
-   * {@link DefaultAirbyteStreamFactory#toAirbyteMessage(String)}. However, rollout of the type system
-   * was deprioritized. In the mean time, the performance work uncovered some low-hanging fruit in the
-   * deserialization process that changes the signature of the toAirbyteMessage method.
-   * <p>
-   * This is left here for posterity when the types work is picked up. It is not currently used. This
-   * means message unwrapping is still done by DefaultAirbyteStreamFactory.
-   */
-  protected Stream<AirbyteMessage> toAirbyteMessage(final JsonNode json) {
+  protected Stream<AirbyteMessage> upgradeMessage(final AirbyteMessage msg) {
     try {
-      final AirbyteMessage message = migrator.upgrade(deserializer.deserialize(json), configuredAirbyteCatalog);
+      final AirbyteMessage message = migrator.upgrade(msg, configuredAirbyteCatalog);
       return Stream.of(message);
     } catch (final RuntimeException e) {
-      logger.warn("Failed to upgrade a message from version {}: {}", protocolVersion, Jsons.serialize(json), e);
+      logger.warn("Failed to upgrade a message from version {}: {}", protocolVersion, Jsons.serialize(msg), e);
       return Stream.empty();
     }
   }

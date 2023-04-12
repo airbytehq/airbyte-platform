@@ -55,21 +55,13 @@ import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
-import io.airbyte.workers.internal.DefaultAirbyteDestination;
-import io.airbyte.workers.internal.DefaultAirbyteSource;
-import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
-import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.exception.DestinationException;
-import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.orchestrator.OrchestratorFactoryHelpers;
-import io.airbyte.workers.process.AirbyteIntegrationLauncher;
-import io.airbyte.workers.process.IntegrationLauncher;
+import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
@@ -110,8 +102,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
-  private final AirbyteMessageSerDeProvider serDeProvider;
-  private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
+  private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
   private final WorkerConfigs workerConfigs;
   private final SyncPersistenceFactory syncPersistenceFactory;
 
@@ -144,8 +135,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
-    this.serDeProvider = serDeProvider;
-    this.migratorFactory = migratorFactory;
+    this.airbyteIntegrationLauncherFactory = new AirbyteIntegrationLauncherFactory(processFactory, serDeProvider, migratorFactory, featureFlags);
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
     this.syncPersistenceFactory = syncPersistenceFactory;
@@ -309,45 +299,14 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                                                                                           final HeartbeatMonitor heartbeatMonitor,
                                                                                                           final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone) {
     return () -> {
-      final IntegrationLauncher sourceLauncher = new AirbyteIntegrationLauncher(
-          sourceLauncherConfig.getJobId(),
-          Math.toIntExact(sourceLauncherConfig.getAttemptId()),
-          sourceLauncherConfig.getDockerImage(),
-          processFactory,
-          syncInput.getSourceResourceRequirements(),
-          sourceLauncherConfig.getAllowedHosts(),
-          sourceLauncherConfig.getIsCustomConnector(),
-          featureFlags);
-      final IntegrationLauncher destinationLauncher = new AirbyteIntegrationLauncher(
-          destinationLauncherConfig.getJobId(),
-          Math.toIntExact(destinationLauncherConfig.getAttemptId()),
-          destinationLauncherConfig.getDockerImage(),
-          processFactory,
-          syncInput.getDestinationResourceRequirements(),
-          destinationLauncherConfig.getAllowedHosts(),
-          destinationLauncherConfig.getIsCustomConnector(),
-          featureFlags);
+      final AirbyteSource airbyteSource = airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
+          syncInput.getSourceResourceRequirements(), syncInput.getCatalog(), heartbeatMonitor);
+      final AirbyteDestination airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
+          syncInput.getDestinationResourceRequirements(), syncInput.getCatalog());
 
-      // reset jobs use an empty source to induce resetting all data in destination.
-      final AirbyteSource airbyteSource = isResetJob(sourceLauncherConfig.getDockerImage())
-          ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
-          : new DefaultAirbyteSource(sourceLauncher,
-              new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, sourceLauncherConfig.getProtocolVersion(),
-                  Optional.of(syncInput.getCatalog()), DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER, Optional.of(SourceException.class)),
-              heartbeatMonitor,
-              migratorFactory.getProtocolSerializer(sourceLauncherConfig.getProtocolVersion()),
-              featureFlags);
       MetricClientFactory.initialize(MetricEmittingApps.WORKER);
       final MetricClient metricClient = MetricClientFactory.getMetricClient();
       final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
-
-      final AirbyteDestination airbyteDestination = new DefaultAirbyteDestination(destinationLauncher,
-          new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-              Optional.of(syncInput.getCatalog()),
-              DefaultAirbyteDestination.CONTAINER_LOG_MDC_BUILDER, Optional.of(DestinationException.class)),
-          new VersionedAirbyteMessageBufferedWriterFactory(serDeProvider, migratorFactory, destinationLauncherConfig.getProtocolVersion(),
-              Optional.of(syncInput.getCatalog())),
-          migratorFactory.getProtocolSerializer(destinationLauncherConfig.getProtocolVersion()));
 
       final SyncPersistence syncPersistence =
           OrchestratorFactoryHelpers.createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);

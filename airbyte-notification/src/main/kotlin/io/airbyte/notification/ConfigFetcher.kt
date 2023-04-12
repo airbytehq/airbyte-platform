@@ -31,18 +31,3 @@ class WebhookConfigFetcher(private val workspaceApiClient: WorkspaceApi) : Confi
 
     override fun notificationType(): NotificationType = NotificationType.webhook
 }
-
-@Singleton
-@Requires(property = "airbyte.notification.webhook.url")
-data class SendGridEmailConfig(val from: String, val to: String)
-
-@Singleton
-@Requires(property = "airbyte.notification.sengrid.apikey")
-class SendGridEmailConfigFetcher(@Value("airbyte.notification.sengrid.senderEmail") private val senderEmail: String,
-                                 @Value("airbyte.notification.sengrid.recipientEmail") private val recipientEmail: String,
-        ): ConfigFetcher<SendGridEmailConfig> {
-
-    override fun fetchConfig(connectionId: UUID): SendGridEmailConfig? = SendGridEmailConfig(senderEmail, recipientEmail)
-
-    override fun notificationType(): NotificationType = NotificationType.email
-}

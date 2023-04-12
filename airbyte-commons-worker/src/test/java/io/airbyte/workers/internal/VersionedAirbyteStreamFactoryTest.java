@@ -49,8 +49,6 @@ class VersionedAirbyteStreamFactoryTest {
   AirbyteMessageSerDeProvider serDeProvider;
   AirbyteProtocolVersionedMigratorFactory migratorFactory;
 
-  private static final Version defaultVersion = new Version("0.2.0");
-
   @Nested
   @DisplayName("Test Correct AirbyteMessage Parsing Behavior")
   class ParseMessages {
@@ -96,8 +94,8 @@ class VersionedAirbyteStreamFactoryTest {
     }
 
     @Test
-    void testFailValidation() {
-      final String invalidRecord = "{ \"fish\": \"tuna\"}";
+    void testFailDeserializationObvious() {
+      final String invalidRecord = "{ \"type\": \"abc\"}";
 
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
@@ -106,8 +104,18 @@ class VersionedAirbyteStreamFactoryTest {
     }
 
     @Test
-    void testFailDeserialization() {
-      final String invalidRecord = "{ \"type\": \"abc\"}";
+    void testFailDeserializationSubtle() {
+      final String invalidRecord = "{\"type\": \"record\", \"record\": {}}";
+
+      final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
+
+      assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
+      verify(logger).error(anyString(), anyString());
+    }
+
+    @Test
+    void testFailValidation() {
+      final String invalidRecord = "{ \"fish\": \"tuna\"}";
 
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
@@ -149,6 +157,7 @@ class VersionedAirbyteStreamFactoryTest {
           List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
           List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer())));
       serDeProvider.initialize();
+
       final AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(
           // TODO once data types v1 is re-enabled, this test should contain the migration
           List.of(/* new AirbyteMessageMigrationV1() */));
@@ -169,7 +178,6 @@ class VersionedAirbyteStreamFactoryTest {
       final BufferedReader bufferedReader = new BufferedReader(new StringReader(""));
       streamFactory.create(bufferedReader);
 
-      verify(serDeProvider).getDeserializer(initialVersion);
       verify(migratorFactory).getAirbyteMessageMigrator(initialVersion);
     }
 
@@ -185,8 +193,6 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> stream = streamFactory.create(bufferedReader);
 
       long messageCount = stream.toList().size();
-      verify(serDeProvider).getDeserializer(initialVersion);
-      verify(serDeProvider).getDeserializer(new Version("0.5.9"));
       assertEquals(1, messageCount);
     }
 
@@ -202,8 +208,6 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> stream = streamFactory.create(bufferedReader);
 
       final long messageCount = stream.toList().size();
-      verify(serDeProvider).getDeserializer(initialVersion);
-      verify(serDeProvider).getDeserializer(defaultVersion);
       assertEquals(1, messageCount);
     }
 
@@ -219,8 +223,6 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> stream = streamFactory.create(bufferedReader);
 
       final long messageCount = stream.toList().size();
-      verify(serDeProvider).getDeserializer(initialVersion);
-      verify(serDeProvider).getDeserializer(defaultVersion);
       assertEquals(2, messageCount);
     }
 

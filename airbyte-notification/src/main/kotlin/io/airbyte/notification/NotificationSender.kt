@@ -60,26 +60,3 @@ class WebhookNotificationSender(@Named("webhookHttpClient") private val okHttpCl
     }
 
 }
-
-@Singleton
-@Requires(property = "airbyte.notification.sendgrid.apikey")
-class SendGridEmailNotificationSender(private val sendGridEmailSender: EmailSender<Request, Response>) : NotificationSender<SendGridEmailConfig> {
-
-    override fun sendNotification(config: SendGridEmailConfig, subject: String, message: String) {
-        try {
-            sendGridEmailSender
-                    .send(Email.builder()
-                            .from(config.from)
-                            .to(config.to)
-                            .subject(subject)
-                            .body(message)
-                    )
-        } catch (e: EmailException) {
-            throw IOException("Failed to deliver send grid notification to: (${config.to}) with message $message", e)
-        }
-    }
-
-    override fun notificationType(): NotificationType {
-        return NotificationType.email
-    }
-}
