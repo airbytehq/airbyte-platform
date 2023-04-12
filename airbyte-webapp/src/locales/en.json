@@ -864,6 +864,7 @@
   "connectorBuilder.changeVersionModal.activeVersion": "used",
   "connectorBuilder.changeVersion.success": "Successfully changed active version for {name} from {oldVersion} to {newVersion}",
   "connectorBuilder.changeVersion.error": "Failed to change active version for {name}: {reason}",
+  "connectorBuilder.advancedFields": "Advanced",
   "connectorBuilder.copyFromTransformationTitle": "Import transformations from...",
   "connectorBuilder.copyToTransformationTitle": "Copy transformations to...",
   "connectorBuilder.addNewTransformation": "New transformation",
