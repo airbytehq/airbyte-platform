@@ -15,7 +15,7 @@ import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
 const CreditsUsage: React.FC = () => {
-  const { freeAndPaidUsageByTimeframe } = useCreditsContext();
+  const { freeAndPaidUsageByTimeChunk } = useCreditsContext();
   const isBillingInsightsEnabled = useExperiment("billing.billingInsights", false);
 
   return (
@@ -25,7 +25,7 @@ const CreditsUsage: React.FC = () => {
           <CreditsUsageFilters />
         </Box>
       )}
-      {freeAndPaidUsageByTimeframe.length > 0 ? (
+      {freeAndPaidUsageByTimeChunk.length > 0 ? (
         <>
           <Box pt="xl">
             <Box pl="lg">
@@ -33,7 +33,7 @@ const CreditsUsage: React.FC = () => {
                 <FormattedMessage id="credits.totalCreditsUsage" />
               </Heading>
             </Box>
-            <UsagePerDayGraph chartData={freeAndPaidUsageByTimeframe} />
+            <UsagePerDayGraph chartData={freeAndPaidUsageByTimeChunk} />
           </Box>
           <Box pt="xl">
             <Box pl="lg">

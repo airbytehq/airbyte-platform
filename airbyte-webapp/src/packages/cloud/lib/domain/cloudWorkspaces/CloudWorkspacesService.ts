@@ -1,6 +1,6 @@
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 
-import { CloudWorkspace, CloudWorkspaceUsage } from "./types";
+import { CloudWorkspace, CloudWorkspaceUsage, ConsumptionTimeWindow } from "./types";
 
 export class CloudWorkspacesService extends AirbyteRequestService {
   get url(): string {
@@ -19,9 +19,10 @@ export class CloudWorkspacesService extends AirbyteRequestService {
     });
   }
 
-  public async getUsage(workspaceId: string): Promise<CloudWorkspaceUsage> {
+  public async getUsage(workspaceId: string, timeWindow?: ConsumptionTimeWindow): Promise<CloudWorkspaceUsage> {
     const usage = await this.fetch<CloudWorkspaceUsage>(`${this.url}/get_usage`, {
       workspaceId,
+      timeWindow,
     });
 
     return usage;

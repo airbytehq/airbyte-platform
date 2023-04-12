@@ -1,10 +1,8 @@
-import { ConsumptionPerConnectionPerTimeframe } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { ConsumptionRead } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 
 import { AvailableDestination, AvailableSource } from "./CreditsUsageContext";
 
-export const calculateAvailableSourcesAndDestinations = (
-  rawConsumptionData: ConsumptionPerConnectionPerTimeframe[]
-) => {
+export const calculateAvailableSourcesAndDestinations = (rawConsumptionData: ConsumptionRead[]) => {
   const sourceAndDestinationMaps = rawConsumptionData.reduce(
     (allSourcesAndDestinations, currentConsumptionItem) => {
       // create set of sources, including merging a set of the destinations each is connected to
