@@ -18,7 +18,7 @@ export const openSourceOverview = (sourceName: string) => {
   clickOnCellInTable(sourcesTable, sourceNameColumn, sourceName);
 };
 
-export const openNewSourceForm = () => {
+export const openNewSourcePage = () => {
   cy.wait("@getSourcesList").then(({ response }) => {
     if (response?.body.sources.length) {
       cy.get(newSource).click();

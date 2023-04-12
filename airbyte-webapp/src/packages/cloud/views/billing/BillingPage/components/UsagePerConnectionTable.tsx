@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
+import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 import { Table } from "components/ui/Table";
@@ -150,6 +151,7 @@ export const UsagePerConnectionTable: React.FC = () => {
               >
                 {props.cell.getValue()}
               </Text>
+              <ReleaseStageBadge stage={props.row.original.connection.sourceReleaseStage} />
             </FlexContainer>
           </Link>
         ),
@@ -201,6 +203,7 @@ export const UsagePerConnectionTable: React.FC = () => {
               >
                 {props.cell.getValue()}
               </Text>
+              <ReleaseStageBadge stage={props.row.original.connection.destinationReleaseStage} />
             </FlexContainer>
           </Link>
         ),

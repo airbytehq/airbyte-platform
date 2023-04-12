@@ -12,7 +12,6 @@ import { PageHeader } from "components/ui/PageHeader";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
@@ -23,7 +22,6 @@ export const CreateSourcePage: React.FC = () => {
   const [selectedSourceDefinitionId, setSelectedSourceDefinitionId] = useState("");
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
-  const newConnectorGridExperiment = useExperiment("connector.form.useSelectConnectorGrid", false);
 
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const sourceDefinitions = useAvailableSourceDefinitions();
@@ -44,21 +42,6 @@ export const CreateSourcePage: React.FC = () => {
     clearAllFormChanges();
     navigate(`../${result.sourceId}`);
   };
-
-  if (!newConnectorGridExperiment) {
-    return (
-      <>
-        <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />{" "}
-        <ConnectorDocumentationWrapper>
-          <PageHeader title={null} middleTitleBlock={<FormattedMessage id="sources.newSourceTitle" />} />
-          <FormPageContent>
-            <SourceForm onSubmit={onSubmitSourceStep} sourceDefinitions={sourceDefinitions} />
-            <CloudInviteUsersHint connectorType="source" />
-          </FormPageContent>
-        </ConnectorDocumentationWrapper>
-      </>
-    );
-  }
 
   return (
     <>

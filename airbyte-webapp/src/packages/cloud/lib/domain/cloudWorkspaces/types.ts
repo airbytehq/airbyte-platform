@@ -1,4 +1,9 @@
-import { ConnectionStatus, ConnectionScheduleType, ConnectionScheduleTimeUnit } from "core/request/AirbyteClient";
+import {
+  ConnectionStatus,
+  ConnectionScheduleType,
+  ConnectionScheduleTimeUnit,
+  ReleaseStage,
+} from "core/request/AirbyteClient";
 
 export enum CreditStatus {
   "POSITIVE" = "positive",
@@ -14,6 +19,12 @@ export enum WorkspaceTrialStatus {
   "CREDIT_PURCHASED" = "credit_purchased",
 }
 
+export enum ConsumptionTimeWindow {
+  lastMonth = "lastMonth",
+  lastSixMonths = "lastSixMonths",
+  lastYear = "lastYear",
+}
+
 export interface CloudWorkspace {
   name: string;
   workspaceId: string;
@@ -25,26 +36,9 @@ export interface CloudWorkspace {
   trialExpiryTimestamp?: number | null;
 }
 
-export interface CreditConsumptionByConnector {
-  connectionId: string;
-  connectionName: string;
-  status: ConnectionStatus;
-  creditsConsumed: number;
-  destinationConnectionName: string;
-  destinationDefinitionId: string;
-  destinationDefinitionName: string;
-  destinationId: string;
-  sourceConnectionName: string;
-  sourceDefinitionId: string;
-  sourceDefinitionName: string;
-  sourceId: string;
-  connectionScheduleType: ConnectionScheduleType | null;
-  connectionScheduleTimeUnit: ConnectionScheduleTimeUnit | null;
-  connectionScheduleUnits: number | null;
-}
-
-export interface ConsumptionPerConnectionPerTimeframe {
-  timeframe: string;
+export interface ConsumptionRead {
+  startTime: string;
+  endTime: string;
   billedCost: number;
   freeUsage: number;
   connection: {
@@ -57,11 +51,13 @@ export interface ConsumptionPerConnectionPerTimeframe {
     destinationDefinitionName: string;
     destinationIcon: string;
     destinationId: string;
+    destinationReleaseStage: ReleaseStage;
     sourceConnectionName: string;
     sourceDefinitionId: string;
     sourceDefinitionName: string;
     sourceIcon: string;
     sourceId: string;
+    sourceReleaseStage: ReleaseStage;
     connectionScheduleType: ConnectionScheduleType | null;
     connectionScheduleTimeUnit: ConnectionScheduleTimeUnit | null;
     connectionScheduleUnits: number | null;
@@ -70,10 +66,6 @@ export interface ConsumptionPerConnectionPerTimeframe {
 
 export interface CloudWorkspaceUsage {
   workspaceId: string;
-  creditConsumptionByConnector: CreditConsumptionByConnector[];
-  creditConsumptionByDay: Array<{
-    date: [number, number, number];
-    creditsConsumed: number;
-  }>;
-  consumptionPerConnectionPerTimeframe: ConsumptionPerConnectionPerTimeframe[];
+  timeWindow: ConsumptionTimeWindow;
+  consumptionPerConnectionPerTimeframe: ConsumptionRead[];
 }

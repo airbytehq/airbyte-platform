@@ -15,7 +15,9 @@ server {
 
     location / {
         root   /usr/share/nginx/html;
-        try_files $uri $uri/ /index.html;
+        location ~ ^/(?!(assets/.*)) {
+            try_files $uri $uri/ /index.html;
+        }
 
         # (Developer Note): Please only add new properties to this, if they really need to be configurable
         #                   by a user at runtime i.e. without rebuilding the docker images. General webapp config

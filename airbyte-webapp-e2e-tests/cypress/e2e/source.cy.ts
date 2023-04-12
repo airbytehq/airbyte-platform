@@ -1,6 +1,6 @@
 import { appendRandomString, submitButtonClick } from "commands/common";
 import { createPostgresSource, deleteSource, updateSource } from "commands/source";
-import { goToSourcePage, openNewSourceForm } from "pages/sourcePage";
+import { goToSourcePage, openNewSourcePage } from "pages/sourcePage";
 import { openHomepage } from "pages/sidebar";
 import { selectServiceType } from "pages/createConnectorPage";
 import { fillPokeAPIForm } from "commands/connector";
@@ -38,7 +38,7 @@ describe("Source main actions", () => {
 describe("Unsaved changes modal", () => {
   it("Check leaving Source page without any changes", () => {
     goToSourcePage();
-    openNewSourceForm();
+    openNewSourcePage();
 
     openHomepage();
 
@@ -48,7 +48,7 @@ describe("Unsaved changes modal", () => {
 
   it("Check leaving Source page without any changes after selection type", () => {
     goToSourcePage();
-    openNewSourceForm();
+    openNewSourcePage();
     selectServiceType("PokeAPI");
 
     openHomepage();
@@ -59,7 +59,7 @@ describe("Unsaved changes modal", () => {
 
   it("Check leaving Source page without any changes", () => {
     goToSourcePage();
-    openNewSourceForm();
+    openNewSourcePage();
     fillPokeAPIForm("testName", "ditto");
 
     openHomepage();
@@ -75,7 +75,7 @@ describe("Unsaved changes modal", () => {
     cy.intercept("/api/v1/scheduler/sources/check_connection").as("checkSourceUpdateConnection");
 
     goToSourcePage();
-    openNewSourceForm();
+    openNewSourcePage();
     fillPokeAPIForm("testName", "name");
     submitButtonClick();
 

@@ -1,10 +1,10 @@
-import { mockConsumptionData } from "test-utils/mock-data/mockWorkspace";
+import { mockConsumptionSixMonths } from "test-utils/mock-data/mockBillingData";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 
 describe("calculateAvailableSourcesAndDestinations", () => {
   it("calculates a complete set of available sources and destinations", () => {
-    const result = calculateAvailableSourcesAndDestinations(mockConsumptionData);
+    const result = calculateAvailableSourcesAndDestinations(mockConsumptionSixMonths);
     expect(result.destinations).toHaveLength(2);
     expect(result.sources).toHaveLength(3);
 
