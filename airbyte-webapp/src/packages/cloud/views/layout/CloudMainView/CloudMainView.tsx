@@ -7,10 +7,12 @@ import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
+import { WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
 import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
@@ -39,12 +41,16 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
   const isAllowUpdateConnectorsEnabled = useFeature(FeatureItem.AllowUpdateConnectors);
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
+  const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
 
   // exp-speedy-connection
   const { isExperimentVariant } = useExperimentSpeedyConnection();
 
   const { hasCorporateEmail } = useAuthService();
-  const isTrial = Boolean(cloudWorkspace.trialExpiryTimestamp);
+  const isTrial = isNewTrialPolicy
+    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.IN_TRIAL ||
+      cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.PRE_TRIAL
+    : Boolean(cloudWorkspace.trialExpiryTimestamp);
   const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
 
   return (
