@@ -236,7 +236,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string
   const [field, meta, helpers] = useField<string | undefined>(schemaFieldPath);
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestState();
 
-  const showImportButton = !field.value && streamRead.data?.inferred_schema;
+  const showImportButton = (!field.value || field.value === "{}") && streamRead.data?.inferred_schema;
 
   return (
     <>
