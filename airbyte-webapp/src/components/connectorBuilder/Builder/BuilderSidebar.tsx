@@ -127,7 +127,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         </ViewSelectButton>
       </FlexContainer>
 
-      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamList}>
+      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamListContainer}>
         <div className={styles.streamsHeader}>
           <Text className={styles.streamsHeading} size="xs" bold>
             <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams.length }} />
@@ -139,30 +139,32 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           />
         </div>
 
-        {values.streams.map(({ name, id }, num) => (
-          <ViewSelectButton
-            key={num}
-            data-testid={`navbutton-${String(num)}`}
-            selected={selectedView === num}
-            showErrorIndicator={hasErrors(true, [num])}
-            onClick={() => {
-              handleViewSelect(num);
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
-                actionDescription: "Stream view selected",
-                stream_id: id,
-                stream_name: name,
-              });
-            }}
-          >
-            {name && name.trim() ? (
-              <Text className={styles.streamViewText}>{name}</Text>
-            ) : (
-              <Text className={styles.emptyStreamViewText}>
-                <FormattedMessage id="connectorBuilder.emptyName" />
-              </Text>
-            )}
-          </ViewSelectButton>
-        ))}
+        <div className={styles.streamList}>
+          {values.streams.map(({ name, id }, num) => (
+            <ViewSelectButton
+              key={num}
+              data-testid={`navbutton-${String(num)}`}
+              selected={selectedView === num}
+              showErrorIndicator={hasErrors(true, [num])}
+              onClick={() => {
+                handleViewSelect(num);
+                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
+                  actionDescription: "Stream view selected",
+                  stream_id: id,
+                  stream_name: name,
+                });
+              }}
+            >
+              {name && name.trim() ? (
+                <Text className={styles.streamViewText}>{name}</Text>
+              ) : (
+                <Text className={styles.emptyStreamViewText}>
+                  <FormattedMessage id="connectorBuilder.emptyName" />
+                </Text>
+              )}
+            </ViewSelectButton>
+          ))}
+        </div>
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="md">
         <DownloadYamlButton yamlIsValid yaml={yamlManifest} />

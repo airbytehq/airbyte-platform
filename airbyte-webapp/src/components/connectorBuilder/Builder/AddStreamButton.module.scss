@@ -9,6 +9,10 @@ $buttonWidth: 26px;
   gap: variables.$spacing-xl;
 }
 
+.buttonContainer {
+  position: relative;
+}
+
 .addButton {
   width: $buttonWidth;
   height: $buttonWidth !important;
@@ -17,4 +21,51 @@ $buttonWidth: 26px;
   align-items: center;
   justify-content: center;
   padding: 9px !important;
+  z-index: 3;
+  position: relative;
+}
+
+$animation-length: 3s;
+$animation-size: -20px;
+
+.buttonContainer--pulse::before {
+  content: "";
+  position: absolute;
+  top: $animation-size;
+  left: $animation-size;
+  right: $animation-size;
+  bottom: $animation-size;
+  background-color: colors.$blue-300;
+  border-radius: 50%;
+  z-index: 2;
+  animation: pulsate $animation-length infinite;
+}
+
+.buttonContainer--pulse::after {
+  content: "";
+  position: absolute;
+  top: $animation-size;
+  left: $animation-size;
+  right: $animation-size;
+  bottom: $animation-size;
+  background-color: colors.$blue-300;
+  border-radius: 50%;
+  z-index: 1;
+  animation: pulsate $animation-length infinite calc($animation-length/2);
+}
+
+@keyframes pulsate {
+  0% {
+    transform: scale(0.1);
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
 }
