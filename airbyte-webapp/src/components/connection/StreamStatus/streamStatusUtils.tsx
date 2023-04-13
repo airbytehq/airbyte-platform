@@ -1,8 +1,6 @@
 import dayjs from "dayjs";
 import { useCallback } from "react";
 
-import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { AirbyteStreamWithStatusAndConfiguration, FakeStreamConfigWithStatus } from "./getStreamsWithStatus";
@@ -49,10 +47,12 @@ const streamHasError = (streamConfig: FakeStreamConfigWithStatus) =>
 
 // Status calculation logic comes from this ticket: https://github.com/airbytehq/airbyte/issues/23912
 export const useGetStreamStatus = () => {
-  const { connection } = useConnectionEditService();
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
-  const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+
+  // Disabling the schema changes as it's the only actionable error and is per-connection, not stream
+  // const { connection } = useConnectionEditService();
+  // const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   return useCallback<(streamConfig?: FakeStreamConfigWithStatus) => StreamStatusType>(
     (streamConfig) => {
@@ -66,16 +66,16 @@ export const useGetStreamStatus = () => {
 
       // The `error` value is based on the `connection.streamCentricUI.error` experiment
       if (
-        !hasBreakingSchemaChange &&
+        // !hasBreakingSchemaChange &&
         streamHasError(streamConfig) &&
         (isUnscheduledStream(streamConfig) || isStreamLate(streamConfig, errorMultiplier))
       ) {
         return StreamStatusType.Error;
       }
 
-      if (hasSchemaChanges) {
-        return StreamStatusType.ActionRequired;
-      }
+      // if (hasSchemaChanges) {
+      //   return StreamStatusType.ActionRequired;
+      // }
 
       // The `late` value is based on the `connection.streamCentricUI.late` experiment
       if (isStreamLate(streamConfig, lateMultiplier)) {
@@ -84,7 +84,7 @@ export const useGetStreamStatus = () => {
 
       return StreamStatusType.UpToDate;
     },
-    [errorMultiplier, hasBreakingSchemaChange, hasSchemaChanges, lateMultiplier]
+    [errorMultiplier, lateMultiplier]
   );
 };
 

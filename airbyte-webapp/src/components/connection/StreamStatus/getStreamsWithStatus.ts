@@ -23,6 +23,8 @@ export interface FakeStreamConfigWithStatus extends AirbyteStreamConfiguration {
   scheduleData?: ConnectionScheduleData;
   isSyncing: boolean;
   isResetting?: boolean;
+  jobId?: number;
+  attemptId?: number;
 }
 
 export interface AirbyteStreamWithStatusAndConfiguration extends AirbyteStreamAndConfiguration {
@@ -41,6 +43,8 @@ interface StreamStats {
   jobStatus?: JobStatus;
   lastSuccessfulSync?: number;
   jobConfigType?: JobConfigType;
+  jobId?: number;
+  attemptId?: number;
 }
 
 const getStreamKey = (name: string, namespace = "") => `${namespace}-${name}`;
@@ -55,6 +59,8 @@ const addStatToStream = (
 
   if (attempt && !streamStats[key].attemptStatus) {
     streamStats[key].attemptStatus ??= attempt.status;
+    streamStats[key].jobId ??= job.id;
+    streamStats[key].attemptId ??= attempt.id;
 
     if ((streamStats[key].createdAt ?? 0) < attempt.createdAt) {
       streamStats[key].createdAt = attempt.createdAt;
@@ -66,6 +72,8 @@ const addStatToStream = (
 
   streamStats[key].jobConfigType ??= job.configType;
   streamStats[key].jobStatus ??= job.status;
+  streamStats[key].jobId ??= job.id;
+  streamStats[key].attemptId ??= 0;
 
   if ((streamStats[key].createdAt ?? 0) < job.createdAt) {
     streamStats[key].createdAt = job.createdAt;
@@ -122,7 +130,7 @@ export const useStreamsWithStatus = (
       connection.syncCatalog.streams
         .map<AirbyteStreamWithStatusAndConfiguration | null>(({ stream, config }) => {
           if (stream && config) {
-            const { lastSuccessfulSync, createdAt, attemptStatus, jobStatus, jobConfigType } =
+            const { lastSuccessfulSync, createdAt, attemptStatus, jobStatus, jobConfigType, jobId, attemptId } =
               streamStats[getStreamKey(stream.name, stream.namespace)] ?? {};
             const isSyncing =
               jobConfigType === JobConfigType.sync &&
@@ -135,6 +143,8 @@ export const useStreamsWithStatus = (
                 ...config,
                 jobStatus,
                 lastSuccessfulSync,
+                jobId,
+                attemptId,
                 latestAttemptStatus: attemptStatus,
                 latestAttemptCreatedAt: createdAt,
                 scheduleType: connection.scheduleType,
