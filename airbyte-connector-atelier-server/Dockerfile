@@ -6,8 +6,8 @@ RUN yum update -y && \
     yum install -y openssl-devel bzip2-devel libffi-devel zlib-devel sqlite-devel xz-devel
 
 # Set up CDK requirements
-ARG PYTHON_VERSION ${PYTHON_VERSION}
-ARG CDK_VERSION ${CDK_VERSION}
+ARG PYTHON_VERSION=3.9.11
+ARG CDK_VERSION=0.34.1
 # Set up python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT /root/.pyenv
