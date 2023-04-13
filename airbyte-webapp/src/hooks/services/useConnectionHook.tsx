@@ -8,7 +8,7 @@ import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
 import { ConnectionService } from "core/domain/connection/ConnectionService";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
+import { useCurrentWorkspaceId, useInvalidateWorkspaceStateQuery } from "services/workspaces/WorkspacesService";
 
 import { useAnalyticsService } from "./Analytics";
 import { useAppMonitoringService } from "./AppMonitoringService";
@@ -140,6 +140,7 @@ const useCreateConnection = () => {
   const service = useWebConnectionService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
+  const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
 
   return useMutation(
     async ({
@@ -181,6 +182,7 @@ const useCreateConnection = () => {
         queryClient.setQueryData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
           connections: [data, ...(lst?.connections ?? [])],
         }));
+        invalidateWorkspaceSummary();
       },
     }
   );

@@ -127,6 +127,30 @@ export function versionSupported(version: string) {
 
 export const DEFAULT_CONNECTOR_NAME = "Untitled";
 
+export const LARGE_DURATION_OPTIONS = [
+  { value: "PT1H", description: "1 hour" },
+  { value: "P1D", description: "1 day" },
+  { value: "P1W", description: "1 week" },
+  { value: "P1M", description: "1 month" },
+  { value: "P1Y", description: "1 year" },
+];
+
+export const SMALL_DURATION_OPTIONS = [
+  { value: "PT0.000001S", description: "1 microsecond" },
+  { value: "PT0.001S", description: "1 millisecond" },
+  { value: "PT1S", description: "1 second" },
+  { value: "PT1M", description: "1 minute" },
+  { value: "PT1H", description: "1 hour" },
+  { value: "PT1D", description: "1 day" },
+];
+
+export const DATETIME_FORMAT_OPTIONS = [
+  { value: "%Y-%m-%d" },
+  { value: "%Y-%m-%d %H:%M:%S" },
+  { value: "%Y-%m-%d %H:%M:%S.%f+00:00" },
+  { value: "%Y-%m-%dT%H:%M:%S.%f%z" },
+];
+
 export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
     connectorName: DEFAULT_CONNECTOR_NAME,
@@ -492,7 +516,8 @@ export const builderFormValidationSchema = yup.object().shape({
         incrementalSync: yup
           .object()
           .shape({
-            request_option: nonPathRequestOptionSchema,
+            cursor_field: yup.string().required("form.empty.error"),
+            cursor_granularity: yup.string().required("form.empty.error"),
             start_datetime: yup.string().required("form.empty.error"),
             end_datetime: yup.string().required("form.empty.error"),
             step: yup.string().required("form.empty.error"),

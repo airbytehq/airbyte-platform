@@ -4,17 +4,25 @@ import { useIntl } from "react-intl";
 import { ControlLabels } from "components/LabeledControl";
 
 import { DatetimeBasedCursor, RequestOption } from "core/request/ConnectorManifest";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOptional } from "./BuilderOptional";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { ToggleGroupField } from "./ToggleGroupField";
+import { DATETIME_FORMAT_OPTIONS, LARGE_DURATION_OPTIONS, SMALL_DURATION_OPTIONS } from "../types";
 
 interface IncrementalSectionProps {
   streamFieldPath: (fieldPath: string) => string;
   currentStreamIndex: number;
 }
+
+const iso8601DurationAnchor = (
+  <a href={links.iso8601Duration} target="_blank" rel="noreferrer">
+    ISO 8601 duration
+  </a>
+);
 
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
@@ -27,9 +35,19 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
         start_datetime: "",
         end_datetime: "{{ now_utc() }}",
-        step: "",
+        step: "P1M",
         cursor_field: "",
         cursor_granularity: "",
+        start_time_option: {
+          inject_into: "request_parameter",
+          field_name: "",
+          type: "RequestOption",
+        },
+        end_time_option: {
+          inject_into: "request_parameter",
+          field_name: "",
+          type: "RequestOption",
+        },
       });
     } else {
       helpers.setValue(undefined);
@@ -63,16 +81,24 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         tooltip="Field on record to use as the cursor"
       />
       <BuilderFieldWithInputs
-        type="string"
+        type="combobox"
         path={streamFieldPath("incrementalSync.datetime_format")}
         label="Datetime format"
         tooltip="Specify the format of the start and end time, e.g. %Y-%m-%d"
+        options={DATETIME_FORMAT_OPTIONS}
       />
       <BuilderFieldWithInputs
-        type="string"
+        type="combobox"
         path={streamFieldPath("incrementalSync.cursor_granularity")}
         label="Cursor granularity"
-        tooltip="Smallest increment the datetime format has (ISO 8601 duration) that will be used to ensure that the start of a slice does not overlap with the end of the previous one, e.g. for %Y-%m-%d the granularity should be P1D, for %Y-%m-%dT%H:%M:%SZ the granularity should be PT1S"
+        tooltip={
+          <>
+            Smallest increment the datetime format has ({iso8601DurationAnchor}) that will be used to ensure that the
+            start of a slice does not overlap with the end of the previous one, e.g. for %Y-%m-%d the granularity should
+            be P1D, for %Y-%m-%dT%H:%M:%SZ the granularity should be PT1S
+          </>
+        }
+        options={SMALL_DURATION_OPTIONS}
       />
       <BuilderFieldWithInputs
         type="string"
@@ -85,12 +111,6 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         path={streamFieldPath("incrementalSync.end_datetime")}
         label="End datetime"
         tooltip="End time to end slicing"
-      />
-      <BuilderFieldWithInputs
-        type="string"
-        path={streamFieldPath("incrementalSync.step")}
-        label="Step"
-        tooltip="Time interval (ISO 8601 duration) for which to break up stream into slices, e.g. P1D for daily slices"
       />
       <ToggleGroupField<RequestOption>
         label="Inject start time into outgoing HTTP request"
@@ -124,13 +144,30 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           excludePathInjection
         />
       </ToggleGroupField>
-      <BuilderOptional>
+      <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
         <BuilderFieldWithInputs
-          type="string"
+          type="combobox"
+          path={streamFieldPath("incrementalSync.step")}
+          label="Step"
+          tooltip={
+            <>
+              Time interval ({iso8601DurationAnchor}) for which to break up stream into slices, e.g. P1D for daily
+              slices
+            </>
+          }
+          options={LARGE_DURATION_OPTIONS}
+        />
+        <BuilderFieldWithInputs
+          type="combobox"
           path={streamFieldPath("incrementalSync.lookback_window")}
           label="Lookback window"
-          tooltip="Time interval (ISO 8601 duration) before the start_datetime to read data for, e.g. P1M for looking back one month"
-          optional
+          tooltip={
+            <>
+              Time interval ({iso8601DurationAnchor}) before the start_datetime to read data for, e.g. P1M for looking
+              back one month
+            </>
+          }
+          options={LARGE_DURATION_OPTIONS}
         />
         <BuilderFieldWithInputs
           type="string"

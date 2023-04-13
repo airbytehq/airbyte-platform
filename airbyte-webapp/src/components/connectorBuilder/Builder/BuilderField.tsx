@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
+import { ComboBox, Option } from "components/ui/ComboBox";
 import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { TagInput } from "components/ui/TagInput";
@@ -53,6 +54,7 @@ export type BuilderFieldProps = BaseFieldProps &
     | { type: "array"; onChange?: (newValue: string[]) => void }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
+    | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
   );
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
@@ -167,6 +169,24 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           setValue={setValue}
           error={hasError}
           data-testid={path}
+        />
+      )}
+      {props.type === "combobox" && (
+        <ComboBox
+          options={props.options}
+          value={field.value as string}
+          onChange={setValue}
+          error={hasError}
+          adornment={adornment}
+          data-testid={path}
+          fieldInputProps={field}
+          onBlur={(e) => {
+            if (e.relatedTarget?.id.includes("headlessui-combobox-option")) {
+              return;
+            }
+            field.onBlur(e);
+          }}
+          filterOptions={false}
         />
       )}
       {hasError && (

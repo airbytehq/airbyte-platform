@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.33.1
+airbyte-cdk==0.34.1
     # via connector-builder-server (setup.py)
 airbyte-protocol-models==1.0.0
     # via airbyte-cdk

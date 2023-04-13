@@ -37,7 +37,7 @@
 .optionsMenu {
   background-color: colors.$white;
   border-radius: variables.$border-radius-lg;
-  box-shadow: 0 7px 15px -5px colors.$grey;
+  box-shadow: variables.$box-shadow-raised;
   padding: variables.$spacing-md;
   margin-top: 0;
   margin-bottom: 0;
@@ -45,6 +45,9 @@
   right: 0;
   left: 0;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-sm;
   z-index: z-indices.$listBox;
 }
 
@@ -56,32 +59,24 @@
   list-style-type: none;
 }
 
-.icon {
-  padding-right: variables.$spacing-md;
+.optionValue {
+  padding: variables.$spacing-md;
+  border-radius: variables.$border-radius-md;
+  cursor: pointer;
+}
 
-  & svg,
-  & img {
-    max-width: 18px;
-    max-height: 18px;
-  }
+.icon {
+  max-width: 18px;
+  max-height: 18px;
 }
 
 .label {
-  padding: variables.$spacing-lg 0;
-}
-
-.optionValue {
-  padding: 0 variables.$spacing-md;
-  border-radius: variables.$border-radius-md;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+  color: inherit;
+  font-size: variables.$font-size-lg;
 }
 
 .active {
   background-color: colors.$grey-50;
-  height: 100%;
-  width: 100%;
 }
 
 .selected {
