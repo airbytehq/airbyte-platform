@@ -6,6 +6,7 @@ import * as yup from "yup";
 import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
 
 import { CDK_VERSION } from "./cdk";
+import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
@@ -181,12 +182,27 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   version: CDK_VERSION,
 };
 
+export const DEFAULT_SCHEMA = formatJson(
+  {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    properties: {},
+    additionalProperties: true,
+  },
+  true
+);
+
+export const isEmptyOrDefault = (schema?: string) => {
+  return !schema || schema === DEFAULT_SCHEMA;
+};
+
 export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   name: "",
   urlPath: "",
   fieldPointer: [],
   primaryKey: [],
   httpMethod: "GET",
+  schema: DEFAULT_SCHEMA,
   requestOptions: {
     requestParameters: [],
     requestHeaders: [],

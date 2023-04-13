@@ -35,7 +35,7 @@ import { PartitionSection } from "./PartitionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BuilderStream } from "../types";
+import { BuilderStream, isEmptyOrDefault } from "../types";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
@@ -238,7 +238,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string
   const [field, meta, helpers] = useField<string | undefined>(schemaFieldPath);
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestState();
 
-  const showImportButton = (!field.value || field.value === "{}") && streamRead.data?.inferred_schema;
+  const showImportButton = isEmptyOrDefault(field.value) && streamRead.data?.inferred_schema;
 
   return (
     <>
