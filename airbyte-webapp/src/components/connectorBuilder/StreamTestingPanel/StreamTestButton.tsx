@@ -51,7 +51,8 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((editorView === "ui" && hasErrors(false)) || hasTestInputJsonErrors) {
+  // ignore untouched errors to animate users to click the read button so they get scrolled to the first error
+  if ((editorView === "ui" && hasErrors(true)) || hasTestInputJsonErrors) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasStreamListErrors) {

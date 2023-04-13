@@ -35,7 +35,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlPublish" />;
   }
 
-  if (editorView === "ui" && hasErrors(true)) {
+  if (editorView === "ui" && hasErrors(false)) {
     showWarningIcon = true;
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsPublish" />;
