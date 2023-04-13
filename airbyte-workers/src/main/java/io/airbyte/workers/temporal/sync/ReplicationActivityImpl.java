@@ -14,7 +14,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_RECORDS_
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.REPLICATION_STATUS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
-import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
@@ -30,14 +29,11 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -49,11 +45,12 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
-import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
+import io.airbyte.workers.orchestrator.InMemoryOrchestratorHandleFactory;
+import io.airbyte.workers.orchestrator.KubeOrchestratorHandleFactory;
+import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import io.airbyte.workers.process.ProcessFactory;
-import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
@@ -64,7 +61,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -171,20 +167,13 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory;
 
-          if (containerOrchestratorConfig.isPresent()) {
-            workerFactory = getContainerLauncherWorkerFactory(
-                containerOrchestratorConfig.get(),
-                sourceLauncherConfig,
-                destinationLauncherConfig,
-                jobRunConfig,
-                syncInput.getResourceRequirements(),
-                () -> context,
-                workerConfigs,
-                syncInput.getConnectionId());
-          } else {
-            workerFactory =
-                getLegacyWorkerFactory(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, syncPersistenceFactory);
-          }
+          final OrchestratorHandleFactory orchestratorHandleFactory = containerOrchestratorConfig.isPresent()
+              ? new KubeOrchestratorHandleFactory(containerOrchestratorConfig.get(),
+                  workerConfigs, featureFlagClient, temporalUtils, serverPort)
+              : new InMemoryOrchestratorHandleFactory(airbyteIntegrationLauncherFactory, airbyteApiClient.getSourceApi(),
+                  airbyteApiClient.getSourceDefinitionApi(), airbyteApiClient.getDestinationApi(), syncPersistenceFactory, featureFlagClient,
+                  featureFlags);
+          workerFactory = orchestratorHandleFactory.create(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, () -> context);
 
           final TemporalAttemptExecution<StandardSyncInput, ReplicationOutput> temporalAttempt =
               new TemporalAttemptExecution<>(
@@ -264,79 +253,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     if (!tags.isEmpty()) {
       ApmTraceUtils.addTagsToTrace(tags);
     }
-  }
-
-  @SuppressWarnings("LineLength")
-  private CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> getLegacyWorkerFactory(
-                                                                                                          final IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                                          final IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                                          final JobRunConfig jobRunConfig,
-                                                                                                          final StandardSyncInput syncInput,
-                                                                                                          final SyncPersistenceFactory syncPersistenceFactory) {
-    return () -> {
-      final ReplicationWorkerFactory replicationWorkerFactory = new ReplicationWorkerFactory(
-          airbyteIntegrationLauncherFactory,
-          airbyteApiClient.getSourceApi(),
-          airbyteApiClient.getSourceDefinitionApi(),
-          airbyteApiClient.getDestinationApi(),
-          syncPersistenceFactory,
-          featureFlagClient,
-          featureFlags);
-
-      return replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig);
-    };
-  }
-
-  @SuppressWarnings("LineLength")
-  private CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> getContainerLauncherWorkerFactory(
-                                                                                                                     final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                                                                                                     final IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                                                     final IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                                                     final JobRunConfig jobRunConfig,
-                                                                                                                     final ResourceRequirements resourceRequirements,
-                                                                                                                     final Supplier<ActivityExecutionContext> activityContext,
-                                                                                                                     final WorkerConfigs workerConfigs,
-                                                                                                                     final UUID connectionId) {
-    final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorImage(featureFlagClient, containerOrchestratorConfig, connectionId);
-    return () -> new ReplicationLauncherWorker(
-        connectionId,
-        finalConfig,
-        sourceLauncherConfig,
-        destinationLauncherConfig,
-        jobRunConfig,
-        resourceRequirements,
-        activityContext,
-        serverPort,
-        temporalUtils,
-        workerConfigs);
-  }
-
-  @VisibleForTesting
-  static ContainerOrchestratorConfig injectContainerOrchestratorImage(final FeatureFlagClient client,
-                                                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                                                      final UUID connectionId) {
-    // This is messy because the ContainerOrchestratorConfig is immutable, so we have to create an
-    // entirely new object.
-    ContainerOrchestratorConfig config = containerOrchestratorConfig;
-    final String injectedOrchestratorImage =
-        client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(connectionId));
-
-    if (!injectedOrchestratorImage.isEmpty()) {
-      config = new ContainerOrchestratorConfig(
-          containerOrchestratorConfig.namespace(),
-          containerOrchestratorConfig.documentStoreClient(),
-          containerOrchestratorConfig.environmentVariables(),
-          containerOrchestratorConfig.kubernetesClient(),
-          containerOrchestratorConfig.secretName(),
-          containerOrchestratorConfig.secretMountPath(),
-          containerOrchestratorConfig.dataPlaneCredsSecretName(),
-          containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
-          injectedOrchestratorImage,
-          containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
-          containerOrchestratorConfig.googleApplicationCredentials(),
-          containerOrchestratorConfig.workerEnvironment());
-    }
-    return config;
   }
 
   private boolean isResetJob(final String dockerImage) {
