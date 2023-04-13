@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 /**
  * Factory for building KubeOrchestrator handles.
  * <p>
- * When running in Kubenetes, the ReplicationWorker is hosted in a standalone pod which is the
+ * When running in Kubernetes, the ReplicationWorker is hosted in a standalone pod which is the
  * container-orchestrator. This factory creates the handle that spins up this pod and reads the
  * result from the processing.
  */
