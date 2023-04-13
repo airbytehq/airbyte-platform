@@ -328,6 +328,8 @@ function manifestAuthenticatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "authenticator has no type");
   } else if (manifestAuthenticator.type === "CustomAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a CustomAuthenticator");
+  } else if (manifestAuthenticator.type === "SingleUseRefreshTokenOAuthAuthenticator") {
+    throw new ManifestCompatibilityError(streamName, "uses a SingleUseRefreshTokenOAuthAuthenticator");
   } else if (manifestAuthenticator.type === "OAuthAuthenticator") {
     if (
       Object.values(manifestAuthenticator.refresh_request_body ?? {}).filter((value) => typeof value !== "string")
