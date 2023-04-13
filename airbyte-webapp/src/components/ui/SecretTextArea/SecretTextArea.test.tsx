@@ -8,6 +8,20 @@ import { SecretTextArea } from "./SecretTextArea";
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const emptyFn = () => {};
 
+jest.mock("../../../views/Connector/ConnectorForm/useSshSslImprovements", () => {
+  const useSshSslImprovements = () => ({
+    showSshSslImprovements: false,
+    dbHostIsLocalhost: false,
+    filterConditions: emptyFn,
+    filterSelectionConstValues: emptyFn,
+    uploadComponent: emptyFn,
+  });
+
+  return {
+    useSshSslImprovements,
+  };
+});
+
 describe("SecretTextArea", () => {
   it("renders textarea when there is no initial value", async () => {
     const { queryByTestId, container } = await render(<SecretTextArea />);

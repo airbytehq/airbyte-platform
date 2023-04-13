@@ -1,0 +1,28 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  height: fit-content;
+}
+
+.button {
+  border: 1px dashed colors.$grey-400;
+  color: colors.$grey-400;
+  border-radius: variables.$border-radius-md;
+  width: 100%;
+  padding: variables.$spacing-md;
+  background: none;
+  cursor: pointer;
+  transition: 0.2s ease-in;
+  white-space: nowrap;
+
+  &:hover,
+  &.draggingOver {
+    color: colors.$grey-600;
+    border-color: colors.$grey-600;
+  }
+}
+
+.buttonText {
+  color: inherit !important;
+}
