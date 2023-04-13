@@ -21,6 +21,7 @@ import {
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
   DeclarativeStreamSchemaLoader,
+  DefaultErrorHandler,
   DeclarativeStreamTransformationsItem,
   DpathExtractor,
   HttpRequester,
@@ -121,12 +122,10 @@ const manifestStreamToBuilder = (
     incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
     partitionRouter: manifestPartitionRouterToBuilder(retriever.partition_router, serializedStreamToIndex, stream.name),
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
+    errorHandler: manifestErrorHandlerToBuilder(stream.name, requester),
     transformations: manifestTransformationsToBuilder(stream.name, stream.transformations),
     unsupportedFields: {
       retriever: {
-        requester: {
-          error_handler: stream.retriever.requester.error_handler,
-        },
         record_selector: {
           record_filter: stream.retriever.record_selector.record_filter,
         },
@@ -189,6 +188,50 @@ function manifestPartitionRouterToBuilder(
   }
 
   throw new ManifestCompatibilityError(streamName, "partition_router type is unsupported");
+}
+
+function manifestErrorHandlerToBuilder(
+  streamName: string | undefined,
+  requester: HttpRequester
+): BuilderStream["errorHandler"] {
+  if (!requester.error_handler) {
+    return undefined;
+  }
+  const handlers =
+    requester.error_handler.type === "CompositeErrorHandler"
+      ? requester.error_handler.error_handlers
+      : [requester.error_handler];
+  if (handlers.some((handler) => handler.type === "CustomErrorHandler")) {
+    throw new ManifestCompatibilityError(streamName, "custom error handler used");
+  }
+  if (handlers.some((handler) => handler.type === "CompositeErrorHandler")) {
+    throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
+  }
+  const defaultHandlers = handlers as DefaultErrorHandler[];
+  return defaultHandlers.map((handler) => {
+    if (handler.backoff_strategies && handler.backoff_strategies.length > 1) {
+      throw new ManifestCompatibilityError(streamName, "more than one backoff strategy");
+    }
+    const backoffStrategy = handler.backoff_strategies?.[0];
+    if (backoffStrategy?.type === "CustomBackoffStrategy") {
+      throw new ManifestCompatibilityError(streamName, "custom backoff strategy");
+    }
+    if (handler.response_filters && handler.response_filters.length > 1) {
+      throw new ManifestCompatibilityError(streamName, "more than one response filter per handler");
+    }
+    const responseHandler = handler.response_filters?.[0];
+    return {
+      ...handler,
+      response_filters: undefined,
+      response_filter: responseHandler
+        ? { ...responseHandler, http_codes: responseHandler.http_codes?.map((code) => String(code)) }
+        : undefined,
+      backoff_strategies: undefined,
+      backoff_strategy: backoffStrategy,
+    };
+  });
+
+  return handlers as DefaultErrorHandler[];
 }
 
 function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): BuilderStream["primaryKey"] {

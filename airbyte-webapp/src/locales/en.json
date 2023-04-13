@@ -812,6 +812,8 @@
   "connectorBuilder.copyFromPartitionRouterTitle": "Import partitioning settings from...",
   "connectorBuilder.copyToIncrementalTitle": "Copy incremental sync settings to...",
   "connectorBuilder.copyFromIncrementalTitle": "Import incremental sync settings from...",
+  "connectorBuilder.copyToErrorHandlerTitle": "Copy error handling settings to...",
+  "connectorBuilder.copyFromErrorHandlerTitle": "Import error handling settings from...",
   "connectorBuilder.inputsButton": "Inputs",
   "connectorBuilder.interUserInputValue": "Insert a user input value",
   "connectorBuilder.yamlUpload.error": "The YAML you provided is invalid: {reason} (line {line})",

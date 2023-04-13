@@ -47,7 +47,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
         initialValues={initialFormValues.current}
         validateOnBlur
         validateOnChange={false}
-        validateOnMount={false}
+        validateOnMount
         onSubmit={noop}
         validationSchema={builderFormValidationSchema}
       >
