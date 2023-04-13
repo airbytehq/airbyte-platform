@@ -1,3 +1,5 @@
+import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
+
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
 import { useCurrentWorkspace, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
@@ -14,12 +16,7 @@ const useWorkspace = () => {
 
   const analyticsService = useAnalyticsService();
 
-  const setInitialSetupConfig = async (data: {
-    email: string;
-    anonymousDataCollection: boolean;
-    news: boolean;
-    securityUpdates: boolean;
-  }) => {
+  const setInitialSetupConfig = async ({ securityCheck, ...data }: SetupFormValues) => {
     const result = await updateWorkspace({
       workspaceId: workspace.workspaceId,
       initialSetupComplete: true,
@@ -33,6 +30,7 @@ const useWorkspace = () => {
       anonymized: data.anonymousDataCollection,
       subscribed_newsletter: data.news,
       subscribed_security: data.securityUpdates,
+      security_check_result: securityCheck,
     });
 
     return result;

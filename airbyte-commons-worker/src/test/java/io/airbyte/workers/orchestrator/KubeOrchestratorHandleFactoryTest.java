@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.sync;
+package io.airbyte.workers.orchestrator;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
@@ -18,8 +18,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@SuppressWarnings("MissingJavadocType")
-public class SyncFeatureFlagsTest {
+class KubeOrchestratorHandleFactoryTest {
 
   @Nested
   class ContainerImageInjection {
@@ -39,7 +38,7 @@ public class SyncFeatureFlagsTest {
               "path", "dataplane secrets", "dataplane path",
               "image 0", "pull policy", "gcp creds", null);
 
-      var actual = ReplicationActivityImpl.injectContainerOrchestratorImage(client, config, correctUuid);
+      var actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorImage(client, config, correctUuid);
 
       assertEquals(expImage, actual.containerOrchestratorImage());
       // Spot check non image fields to make sure they remain the same.
@@ -57,7 +56,7 @@ public class SyncFeatureFlagsTest {
               "path", "dataplane secrets", "dataplane path",
               "image 0", "pull policy", "gcp creds", null);
 
-      var actual = ReplicationActivityImpl.injectContainerOrchestratorImage(client, config, badUuid);
+      var actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorImage(client, config, badUuid);
 
       assertEquals(config, actual);
     }

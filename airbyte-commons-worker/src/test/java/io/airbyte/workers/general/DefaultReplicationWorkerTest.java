@@ -709,7 +709,7 @@ class DefaultReplicationWorkerTest {
       return Optional.of(RECORD_MESSAGE1);
     });
 
-    final ReplicationWorker worker = getDefaultReplicationWorker(false);
+    final ReplicationWorker worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
 
@@ -752,7 +752,8 @@ class DefaultReplicationWorkerTest {
         workerMetricReporter,
         connectorConfigUpdater,
         fieldSelectionEnabled,
-        heartbeatTimeoutChaperone);
+        heartbeatTimeoutChaperone,
+        false);
   }
 
 }

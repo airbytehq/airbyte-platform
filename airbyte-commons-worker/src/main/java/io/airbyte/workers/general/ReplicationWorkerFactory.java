@@ -17,6 +17,7 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
+import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -185,8 +186,10 @@ public class ReplicationWorkerFactory {
     final boolean fieldSelectionEnabled = workspaceId != null
         && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
             || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
+    final boolean removeValidationLimit =
+        workspaceId != null && featureFlagClient.boolVariation(RemoveValidationLimit.INSTANCE, new Workspace(workspaceId));
 
-    final var replicationWorker = new DefaultReplicationWorker(
+    return new DefaultReplicationWorker(
         jobRunConfig.getJobId(),
         Math.toIntExact(jobRunConfig.getAttemptId()),
         source,
@@ -198,8 +201,8 @@ public class ReplicationWorkerFactory {
         metricReporter,
         connectorConfigUpdater,
         fieldSelectionEnabled,
-        heartbeatTimeoutChaperone);
-    return replicationWorker;
+        heartbeatTimeoutChaperone,
+        removeValidationLimit);
   }
 
   /**

@@ -10,6 +10,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.validation.json.JsonSchemaValidator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,6 +67,22 @@ public class RecordSchemaValidator {
       Set<String> errorMessages = validator.validateInitializedSchema(airbyteStream.toString(), message.getData());
       if (!errorMessages.isEmpty()) {
         updateValidationErrors(errorMessages, airbyteStream, validationErrors);
+      }
+    });
+  }
+
+  /**
+   * Takes an AirbyteRecordMessage and uses the JsonSchemaValidator to validate that its data conforms
+   * to the stream's schema. If it does not, an error is added to the validationErrors map.
+   */
+  public void validateSchemaWithoutCounting(
+                                            final AirbyteRecordMessage message,
+                                            final AirbyteStreamNameNamespacePair airbyteStream,
+                                            final ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> validationErrors) {
+    validationExecutor.execute(() -> {
+      final Set<String> errorMessages = validator.validateInitializedSchema(airbyteStream.toString(), message.getData());
+      if (!errorMessages.isEmpty()) {
+        validationErrors.computeIfAbsent(airbyteStream, k -> new HashSet<>()).addAll(errorMessages);
       }
     });
   }

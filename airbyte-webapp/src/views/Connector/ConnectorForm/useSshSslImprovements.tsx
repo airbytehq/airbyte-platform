@@ -3,6 +3,8 @@ import { JSONSchema7Type } from "json-schema";
 import get from "lodash/get";
 import { useEffect } from "react";
 
+import { FileUpload } from "components/ui/FileUpload/FileUpload";
+
 import { FormGroupItem } from "core/form/types";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectorIds } from "utils/connectors";
@@ -13,6 +15,12 @@ import { isLocalhost } from "./utils";
 
 const tunnelModePath = "connectionConfiguration.tunnel_method.tunnel_method";
 const sslModePath = "connectionConfiguration.ssl_mode.mode";
+const fileUploadPaths = [
+  "connectionConfiguration.ssl_mode.ca_certificate",
+  "connectionConfiguration.ssl_mode.client_certificate",
+  "connectionConfiguration.ssl_mode.client_key",
+  "connectionConfiguration.tunnel_method.ssh_key",
+];
 
 export const useSshSslImprovements = (path?: string) => {
   const showSshSslExperiment = useExperiment("connector.form.sshSslImprovements", false);
@@ -88,5 +96,7 @@ export const useSshSslImprovements = (path?: string) => {
         }
         return true;
       }),
+    uploadComponent: (onUpload: (value: string) => void) =>
+      showSshSslImprovements && path && fileUploadPaths.includes(path) ? <FileUpload onUpload={onUpload} /> : undefined,
   };
 };

@@ -24,7 +24,7 @@ export const GlobalConfigView: React.FC = () => {
         <BuilderField
           type="string"
           path="global.urlBase"
-          label="API URL"
+          label="API Base URL"
           tooltip={
             <TextWithHTML text="Base URL of the source API.<br><br>Do not put sensitive information (e.g. API tokens) into this field - use the Authentication component for this." />
           }

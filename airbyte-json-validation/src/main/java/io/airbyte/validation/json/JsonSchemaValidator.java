@@ -71,7 +71,7 @@ public class JsonSchemaValidator {
   /**
    * Create and cache a schema validator for a particular schema. This validator is used when
    * {@link #testInitializedSchema(String, JsonNode)} and
-   * {@link #validateInitializedSchema(String, JsonNode)} (String, JsonNode)} is called.
+   * {@link #validateInitializedSchema(String, JsonNode)} is called.
    */
   public void initializeSchemaValidator(final String schemaName, final JsonNode schemaJson) {
     schemaToValidators.put(schemaName, getSchemaValidator(schemaJson));
