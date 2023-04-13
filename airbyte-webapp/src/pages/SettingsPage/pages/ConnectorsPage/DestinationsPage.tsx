@@ -57,7 +57,7 @@ const DestinationsPage: React.FC = () => {
       }
     });
 
-    return Array.from(destinationDefinitionMap.values());
+    return Array.from(destinationDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [destinations, destinationDefinitions]);
 
   return (

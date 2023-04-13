@@ -22,6 +22,7 @@ export interface MessageProps {
   actionBtnProps?: Omit<ButtonProps, "variant" | "size">;
   onClose?: () => void;
   "data-testid"?: string;
+  hideIcon?: boolean;
 }
 
 const ICON_MAPPING = {
@@ -46,6 +47,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   onClose,
   text,
   secondaryText,
+  hideIcon = false,
   "data-testid": testId,
   className,
   childrenClassName,
@@ -58,9 +60,11 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
       })}
       data-testid={testId}
     >
-      <div className={classNames(styles.iconContainer)}>
-        <FontAwesomeIcon icon={ICON_MAPPING[type]} className={styles.messageIcon} />
-      </div>
+      {!hideIcon && (
+        <div className={classNames(styles.iconContainer)}>
+          <FontAwesomeIcon icon={ICON_MAPPING[type]} className={styles.messageIcon} />
+        </div>
+      )}
       <div className={styles.textContainer}>
         {text && <span className={styles.text}>{text}</span>}
         {secondaryText && (

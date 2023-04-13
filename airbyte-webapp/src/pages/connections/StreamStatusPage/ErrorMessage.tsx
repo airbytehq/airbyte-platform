@@ -1,19 +1,24 @@
+import classNames from "classnames";
 import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
+import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { AirbyteStreamWithStatusAndConfiguration } from "components/connection/StreamStatus/getStreamsWithStatus";
+import { StreamStatusType, useGetStreamStatus } from "components/connection/StreamStatus/streamStatusUtils";
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { JobStatus, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
-import styles from "./ErrorCallout.module.scss";
+import styles from "./ErrorMessage.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
 import { ConnectionRoutePaths } from "../types";
 
-const getLatestErrorMessage = (job: JobWithAttemptsRead | undefined) => {
+const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
   const latestAttempt = job?.attempts?.slice(-1)[0];
   if (latestAttempt?.failureSummary?.failures?.[0]?.failureType !== "manual_cancellation") {
     return {
@@ -23,17 +28,17 @@ const getLatestErrorMessage = (job: JobWithAttemptsRead | undefined) => {
     };
   }
 
-  return {};
+  return null;
 };
 
-export const ErrorCallout = () => {
-  const { connection } = useConnectionEditService();
+export const ErrorMessage: React.FC = () => {
   const navigate = useNavigate();
-  const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+  const { formatMessage } = useIntl();
 
   const { jobs } = useStreamsListContext();
 
-  const { formatMessage } = useIntl();
+  const { connection } = useConnectionEditService();
+  const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   const calloutDetails = useMemo<{
     errorMessage: string;
@@ -41,7 +46,7 @@ export const ErrorCallout = () => {
     buttonMessage: string;
     variant: "error" | "info";
   } | null>(() => {
-    const { jobId, attemptId, errorMessage } = getLatestErrorMessage(jobs?.[0]);
+    const { jobId, attemptId, errorMessage } = getErrorMessageFromJob(jobs?.[0]) ?? {};
     // If we have an error message and a non-breaking schema change, show the error message
     if (errorMessage && !hasBreakingSchemaChange) {
       return {
@@ -81,5 +86,44 @@ export const ErrorCallout = () => {
       </FlexContainer>
     );
   }
+
   return null;
+};
+
+export const StreamErrorMessage: React.FC<{ stream: AirbyteStreamWithStatusAndConfiguration }> = ({ stream }) => {
+  const navigate = useNavigate();
+  const { formatMessage } = useIntl();
+
+  const { jobs } = useStreamsListContext();
+
+  const { activeJob } = useConnectionSyncContext();
+  const streamJob = jobs.find((job) => job.job?.id && stream.config?.jobId && job.job.id === stream.config.jobId);
+  const streamStatus = useGetStreamStatus()(stream.config);
+  const jobErrorMessage = getErrorMessageFromJob(streamJob)?.errorMessage;
+
+  const errorMessage =
+    jobErrorMessage ??
+    formatMessage(
+      { id: "connection.stream.status.genericError" },
+      { syncType: formatMessage({ id: `sources.${streamJob?.job?.configType ?? "sync"}` }).toLowerCase() }
+    );
+
+  if (activeJob?.status === JobStatus.running || streamStatus === StreamStatusType.UpToDate) {
+    return null;
+  }
+
+  const message = (
+    <Message
+      text={errorMessage}
+      actionBtnText={formatMessage({ id: "connection.stream.status.seeLogs" })}
+      type="error"
+      onAction={() =>
+        navigate(`../${ConnectionRoutePaths.JobHistory}#${stream.config?.jobId}::${stream.config?.attemptId}`)
+      }
+      className={classNames(styles.error)}
+      hideIcon
+    />
+  );
+
+  return <Box ml="2xl">{message}</Box>;
 };

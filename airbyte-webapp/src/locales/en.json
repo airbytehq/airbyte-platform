@@ -489,6 +489,7 @@
   "connection.stream.status.pending": "Pending",
   "connection.stream.status.title": "Enabled streams status",
   "connection.stream.status.seeLogs": "See logs",
+  "connection.stream.status.genericError": "There was an error with your {syncType}. See logs for details.",
   "connection.stream.status.table.streamName": "Stream name",
   "connection.stream.status.table.lastRecordAt": "Last record committed at",
   "connection.stream.status.table.lastRecord": "Last record committed",

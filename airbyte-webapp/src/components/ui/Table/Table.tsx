@@ -1,6 +1,6 @@
-import { ColumnDef, flexRender, useReactTable, getCoreRowModel, VisibilityState } from "@tanstack/react-table";
+import { ColumnDef, flexRender, useReactTable, getCoreRowModel, VisibilityState, Row } from "@tanstack/react-table";
 import classNames from "classnames";
-import { PropsWithChildren } from "react";
+import { Fragment, PropsWithChildren } from "react";
 
 import styles from "./Table.module.scss";
 import { ColumnMeta } from "./types";
@@ -20,6 +20,9 @@ export interface TableProps<T> {
   data: T[];
   variant?: "default" | "light" | "white";
   onClickRow?: (data: T) => void;
+  getRowCanExpand?: (data: Row<T>) => boolean;
+  getIsRowExpanded?: (data: Row<T>) => boolean;
+  expandedRow?: (props: { row: Row<T> }) => React.ReactElement;
   testId?: string;
   columnVisibility?: VisibilityState;
   getRowClassName?: (data: T) => string | undefined;
@@ -32,6 +35,9 @@ export const Table = <T,>({
   data,
   variant = "default",
   onClickRow,
+  getRowCanExpand,
+  getIsRowExpanded,
+  expandedRow,
   columnVisibility,
   sortedByColumn,
   getRowClassName,
@@ -43,6 +49,8 @@ export const Table = <T,>({
       columnVisibility,
     },
     getCoreRowModel: getCoreRowModel<T>(),
+    getRowCanExpand,
+    getIsRowExpanded,
   });
 
   return (
@@ -83,33 +91,39 @@ export const Table = <T,>({
       <tbody>
         {table.getRowModel().rows.map((row) => {
           return (
-            <tr
-              className={classNames(
-                styles.tr,
-                {
-                  [styles["tr--clickable"]]: !!onClickRow,
-                },
-                getRowClassName?.(row.original)
-              )}
-              key={`table-row-${row.id}`}
-              data-testid={`table-row-${row.id}`}
-              onClick={() => onClickRow?.(row.original)}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
-                return (
-                  <td
-                    className={classNames(styles.td, meta?.tdClassName, {
-                      [styles["td--responsive"]]: meta?.responsive,
-                    })}
-                    key={`table-cell-${row.id}-${cell.id}`}
-                    data-testid={`table-cell-${row.id}-${cell.id}`}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                );
-              })}
-            </tr>
+            <Fragment key={`table-row-${row.id}`}>
+              <tr
+                className={classNames(
+                  styles.tr,
+                  {
+                    [styles["tr--clickable"]]: !!onClickRow,
+                  },
+                  getRowClassName?.(row.original)
+                )}
+                data-testid={`table-row-${row.id}`}
+                onClick={() => onClickRow?.(row.original)}
+              >
+                {row.getVisibleCells().map((cell) => {
+                  const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                  return (
+                    <td
+                      className={classNames(styles.td, meta?.tdClassName, {
+                        [styles["td--responsive"]]: meta?.responsive,
+                      })}
+                      key={`table-cell-${row.id}-${cell.id}`}
+                      data-testid={`table-cell-${row.id}-${cell.id}`}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
+              </tr>
+              {row.getIsExpanded() && expandedRow ? (
+                <tr>
+                  <td colSpan={row.getVisibleCells().length}>{expandedRow({ row })}</td>
+                </tr>
+              ) : null}
+            </Fragment>
           );
         })}
       </tbody>
