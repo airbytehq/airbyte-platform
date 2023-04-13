@@ -28,6 +28,7 @@ interface ArrayFieldProps {
   value: string[];
   setValue: (value: string[]) => void;
   error: boolean;
+  itemType?: string;
 }
 
 interface BaseFieldProps {
@@ -51,7 +52,7 @@ export type BuilderFieldProps = BaseFieldProps &
         disabled?: boolean;
       }
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
-    | { type: "array"; onChange?: (newValue: string[]) => void }
+    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
@@ -71,8 +72,10 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error }) => {
-  return <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} error={error} />;
+const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType }) => {
+  return (
+    <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} itemType={itemType} error={error} />
+  );
 };
 
 const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> = ({
@@ -157,6 +160,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           <ArrayField
             name={path}
             value={(field.value as string[] | undefined) ?? []}
+            itemType={props.itemType}
             setValue={setValue}
             error={hasError}
           />

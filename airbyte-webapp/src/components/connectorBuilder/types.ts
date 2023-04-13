@@ -3,6 +3,8 @@ import merge from "lodash/merge";
 import semver from "semver";
 import * as yup from "yup";
 
+import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
+
 import { CDK_VERSION } from "./cdk";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
@@ -36,7 +38,11 @@ import {
   PageIncrementType,
   BearerAuthenticatorType,
   BasicHttpAuthenticatorType,
+  DefaultErrorHandler,
+  CompositeErrorHandler,
+  DefaultErrorHandlerBackoffStrategiesItem,
   DeclarativeStreamTransformationsItem,
+  HttpResponseFilter,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -98,6 +104,16 @@ export type BuilderTransformation =
       path: string[];
     };
 
+interface BuilderResponseFilter extends Omit<HttpResponseFilter, "http_codes"> {
+  // turn http codes into string so they can be edited in the form - still enforced to parse into a number
+  http_codes?: string[];
+}
+
+interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strategies" | "response_filters"> {
+  backoff_strategy?: DefaultErrorHandlerBackoffStrategiesItem;
+  response_filter?: BuilderResponseFilter;
+}
+
 export interface BuilderStream {
   id: string;
   name: string;
@@ -114,6 +130,7 @@ export interface BuilderStream {
   transformations?: BuilderTransformation[];
   incrementalSync?: DatetimeBasedCursor;
   partitionRouter?: Array<ListPartitionRouter | BuilderSubstreamPartitionRouter>;
+  errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, unknown>;
 }
@@ -513,6 +530,55 @@ export const builderFormValidationSchema = yup.object().shape({
           )
           .notRequired()
           .default(undefined),
+        errorHandler: yup
+          .array(
+            yup.object().shape({
+              max_retries: yup.number(),
+              backoff_strategy: yup
+                .object()
+                .shape({
+                  backoff_time_in_seconds: yup.mixed().when("type", {
+                    is: (val: string) => val === "ConstantBackoffStrategy",
+                    then: yup.string().required("form.empty.error"),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  factor: yup.mixed().when("type", {
+                    is: (val: string) => val === "ExponentialBackoffStrategy",
+                    then: yup.string(),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  header: yup.mixed().when("type", {
+                    is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
+                    then: yup.string().required("form.empty.error"),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  regex: yup.mixed().when("type", {
+                    is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
+                    then: yup.string(),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  min_wait: yup.mixed().when("type", {
+                    is: (val: string) => val === "WaitUntilTimeFromHeader",
+                    then: yup.string(),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                })
+                .notRequired()
+                .default(undefined),
+              response_filter: yup
+                .object()
+                .shape({
+                  error_message_contains: yup.string(),
+                  predicate: yup.string().matches(/\{\{.+\}\}/, FORM_PATTERN_ERROR),
+                  http_codes: yup.array(yup.string()).notRequired().default(undefined),
+                  error_message: yup.string(),
+                })
+                .notRequired()
+                .default(undefined),
+            })
+          )
+          .notRequired()
+          .default(undefined),
         incrementalSync: yup
           .object()
           .shape({
@@ -617,6 +683,24 @@ function builderStreamPartitionRouterToManifest(
   });
 }
 
+function buildCompositeErrorHandler(errorHandlers: BuilderStream["errorHandler"]): CompositeErrorHandler | undefined {
+  if (!errorHandlers || errorHandlers.length === 0) {
+    return undefined;
+  }
+  return {
+    type: "CompositeErrorHandler",
+    error_handlers: errorHandlers.map((handler) => ({
+      ...handler,
+      backoff_strategies: handler.backoff_strategy ? [handler.backoff_strategy] : undefined,
+      response_filters: handler.response_filter
+        ? [{ ...handler.response_filter, http_codes: handler.response_filter.http_codes?.map(Number) }]
+        : undefined,
+      backoff_strategy: undefined,
+      response_filter: undefined,
+    })),
+  };
+}
+
 function builderTransformationsToManifest(
   transformations: BuilderTransformation[] | undefined
 ): DeclarativeStreamTransformationsItem[] | undefined {
@@ -679,6 +763,7 @@ function builderStreamToDeclarativeSteam(
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
         request_body_json: Object.fromEntries(stream.requestOptions.requestBody),
         authenticator: builderAuthenticatorToManifest(values.global),
+        error_handler: buildCompositeErrorHandler(stream.errorHandler),
       },
       record_selector: {
         type: "RecordSelector",

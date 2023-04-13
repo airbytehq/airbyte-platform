@@ -27,6 +27,7 @@ import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
+import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
 import { KeyValueListField } from "./KeyValueListField";
 import { PaginationSection } from "./PaginationSection";
@@ -97,6 +98,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <BuilderCard>
             <KeyValueListField
