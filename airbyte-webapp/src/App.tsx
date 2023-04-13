@@ -6,7 +6,6 @@ import { ThemeProvider } from "styled-components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { config } from "config";
-import { ApiServices } from "core/ApiServices";
 import { I18nProvider } from "core/i18n";
 import { ServicesProvider } from "core/servicesProvider";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
@@ -39,9 +38,7 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
               <ConfirmationModalService>
                 <ModalServiceProvider>
                   <FormChangeTrackerService>
-                    <HelmetProvider>
-                      <ApiServices>{children}</ApiServices>
-                    </HelmetProvider>
+                    <HelmetProvider>{children}</HelmetProvider>
                   </FormChangeTrackerService>
                 </ModalServiceProvider>
               </ConfirmationModalService>
