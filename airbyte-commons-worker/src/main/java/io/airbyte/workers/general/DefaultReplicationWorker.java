@@ -109,6 +109,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final ConnectorConfigUpdater connectorConfigUpdater;
   private final boolean fieldSelectionEnabled;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
+  private final boolean removeValidationLimit;
 
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
@@ -121,7 +122,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final WorkerMetricReporter metricReporter,
                                   final ConnectorConfigUpdater connectorConfigUpdater,
                                   final boolean fieldSelectionEnabled,
-                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone) {
+                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
+                                  final boolean removeValidationLimit) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.source = source;
@@ -135,6 +137,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.connectorConfigUpdater = connectorConfigUpdater;
     this.fieldSelectionEnabled = fieldSelectionEnabled;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
+    this.removeValidationLimit = removeValidationLimit;
 
     this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
@@ -244,7 +247,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           metricReporter,
           timeTracker,
           sourceConfig.getSourceId(),
-          fieldSelectionEnabled), executors)
+          fieldSelectionEnabled,
+          removeValidationLimit), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
@@ -365,7 +369,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                                            final WorkerMetricReporter metricReporter,
                                                            final ThreadedTimeTracker timeHolder,
                                                            final UUID sourceId,
-                                                           final boolean fieldSelectionEnabled) {
+                                                           final boolean fieldSelectionEnabled,
+                                                           final boolean removeValidationLimit) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
@@ -375,6 +380,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
        * concurrently for performance.
        */
       final ConcurrentHashMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
+      final ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors = new ConcurrentHashMap<>();
       final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
       final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields = new HashMap<>();
       final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields = new HashMap<>();
@@ -396,7 +402,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             if (fieldSelectionEnabled) {
               filterSelectedFields(streamToSelectedFields, airbyteMessage);
             }
-            validateSchema(recordSchemaValidator, streamToAllFields, unexpectedFields, validationErrors, airbyteMessage);
+            if (removeValidationLimit) {
+              validateSchemaUncounted(recordSchemaValidator, streamToAllFields, unexpectedFields, uncountedValidationErrors, airbyteMessage);
+            } else {
+              validateSchema(recordSchemaValidator, streamToAllFields, unexpectedFields, validationErrors, airbyteMessage);
+            }
+
             final AirbyteMessage message = mapper.mapMessage(airbyteMessage);
 
             messageTracker.acceptFromSource(message);
@@ -435,7 +446,14 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         timeHolder.trackSourceReadEndTime();
         LOGGER.info("Total records read: {} ({})", recordsRead,
             FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
-        if (!validationErrors.isEmpty()) {
+        if (removeValidationLimit) {
+          LOGGER.info("Schema validation was performed without limit.");
+          uncountedValidationErrors.forEach((stream, errors) -> {
+            LOGGER.warn("Schema validation errors found for stream {}. Error messages: {}", stream, errors);
+            metricReporter.trackSchemaValidationErrors(stream, errors);
+          });
+        } else {
+          LOGGER.info("Schema validation was performed to a max of 10 records with errors per stream.");
           validationErrors.forEach((stream, errorPair) -> {
             LOGGER.warn("Schema validation errors found for stream {}. Error messages: {}", stream, errorPair.getLeft());
             metricReporter.trackSchemaValidationErrors(stream, errorPair.getLeft());
@@ -615,6 +633,25 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     return failures;
   }
 
+  private static void validateSchemaUncounted(final RecordSchemaValidator recordSchemaValidator,
+                                              final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields,
+                                              final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields,
+                                              final ConcurrentHashMap<AirbyteStreamNameNamespacePair, Set<String>> validationErrors,
+                                              final AirbyteMessage message) {
+    if (message.getRecord() == null) {
+      return;
+    }
+
+    final AirbyteRecordMessage record = message.getRecord();
+    final AirbyteStreamNameNamespacePair messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record);
+
+    recordSchemaValidator.validateSchemaWithoutCounting(record, messageStream, validationErrors);
+    final Set<String> unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.get(messageStream));
+    if (!unexpectedFieldNames.isEmpty()) {
+      unexpectedFields.computeIfAbsent(messageStream, k -> new HashSet<>()).addAll(unexpectedFieldNames);
+    }
+  }
+
   private static void validateSchema(final RecordSchemaValidator recordSchemaValidator,
                                      final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields,
                                      final Map<AirbyteStreamNameNamespacePair, Set<String>> unexpectedFields,
@@ -630,16 +667,19 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     final boolean streamHasLessThenTenErrs = validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getRight() < 10;
     if (streamHasLessThenTenErrs) {
       recordSchemaValidator.validateSchema(record, messageStream, validationErrors);
-      final Set<String> unexpectedFieldNames = unexpectedFields.getOrDefault(messageStream, new HashSet<>());
-      populateUnexpectedFieldNames(record, streamToAllFields.get(messageStream), unexpectedFieldNames);
-      unexpectedFields.put(messageStream, unexpectedFieldNames);
+      final Set<String> unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.get(messageStream));
+      if (!unexpectedFieldNames.isEmpty()) {
+        unexpectedFields.computeIfAbsent(messageStream, k -> new HashSet<>()).addAll(unexpectedFieldNames);
+      }
     }
   }
 
-  private static void populateUnexpectedFieldNames(final AirbyteRecordMessage record,
-                                                   final Set<String> fieldsInCatalog,
-                                                   final Set<String> unexpectedFieldNames) {
+  private static Set<String> getUnexpectedFieldNames(final AirbyteRecordMessage record,
+                                                     final Set<String> fieldsInCatalog) {
+    Set<String> unexpectedFieldNames = new HashSet<>();
     final JsonNode data = record.getData();
+    // If it's not an object it's malformed, but we tolerate it here - it will be logged as an error by
+    // the validation.
     if (data.isObject()) {
       final Iterator<String> fieldNamesInRecord = data.fieldNames();
       while (fieldNamesInRecord.hasNext()) {
@@ -649,8 +689,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         }
       }
     }
-    // If it's not an object it's malformed, but we tolerate it here - it will be logged as an error by
-    // the validation.
+    return unexpectedFieldNames;
   }
 
   /**
