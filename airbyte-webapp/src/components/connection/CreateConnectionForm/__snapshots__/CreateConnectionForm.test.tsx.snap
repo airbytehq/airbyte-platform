@@ -996,14 +996,12 @@ exports[`CreateConnectionForm should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              No namespace
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            No namespace
+                          </p>
                         </span>
                       </div>
                       <div
@@ -1013,14 +1011,12 @@ exports[`CreateConnectionForm should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              pokemon
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            pokemon
+                          </p>
                         </span>
                       </div>
                       <div
@@ -1054,12 +1050,12 @@ exports[`CreateConnectionForm should render 1`] = `
                                 <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <span
+                                  <p
                                     class="<removed-for-snapshot-test>"
                                     data-type="text"
                                   >
                                     Full refresh
-                                  </span>
+                                  </p>
                                 </div>
                                 <div
                                   class="<removed-for-snapshot-test>"
@@ -1067,12 +1063,12 @@ exports[`CreateConnectionForm should render 1`] = `
                                 <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <span
+                                  <p
                                     class="<removed-for-snapshot-test>"
                                     data-type="text"
                                   >
                                     Overwrite
-                                  </span>
+                                  </p>
                                 </div>
                                 <svg
                                   aria-hidden="true"
@@ -1096,13 +1092,7 @@ exports[`CreateConnectionForm should render 1`] = `
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
-                      >
-                        <span
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <span />
-                        </span>
-                      </div>
+                      />
                       <div
                         class="<removed-for-snapshot-test>"
                       />
@@ -1129,14 +1119,12 @@ exports[`CreateConnectionForm should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              '&lt;destination schema&gt;
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            '&lt;destination schema&gt;
+                          </p>
                         </span>
                       </div>
                       <div
@@ -1146,14 +1134,12 @@ exports[`CreateConnectionForm should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              pokemon
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            pokemon
+                          </p>
                         </span>
                       </div>
                     </div>
@@ -1380,7 +1366,7 @@ exports[`CreateConnectionForm should render 1`] = `
                 <div
                   class="<removed-for-snapshot-test>"
                 >
-                  <span
+                  <p
                     class="<removed-for-snapshot-test>"
                     data-type="text"
                   />
@@ -1446,12 +1432,12 @@ exports[`CreateConnectionForm should render 1`] = `
                 <div
                   class="<removed-for-snapshot-test>"
                 >
-                  <span
+                  <p
                     class="<removed-for-snapshot-test>"
                     data-type="text"
                   >
                     Not available
-                  </span>
+                  </p>
                 </div>
                 <svg
                   aria-hidden="true"
@@ -1514,12 +1500,12 @@ exports[`CreateConnectionForm should render 1`] = `
                 <div
                   class="<removed-for-snapshot-test>"
                 >
-                  <span
+                  <p
                     class="<removed-for-snapshot-test>"
                     data-type="text"
                   >
                     Not available
-                  </span>
+                  </p>
                 </div>
                 <svg
                   aria-hidden="true"

@@ -567,14 +567,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              No namespace
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            No namespace
+                          </p>
                         </span>
                       </div>
                       <div
@@ -584,14 +582,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              pokemon
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            pokemon
+                          </p>
                         </span>
                       </div>
                       <div
@@ -625,12 +621,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                 <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <span
+                                  <p
                                     class="<removed-for-snapshot-test>"
                                     data-type="text"
                                   >
                                     Full refresh
-                                  </span>
+                                  </p>
                                 </div>
                                 <div
                                   class="<removed-for-snapshot-test>"
@@ -638,12 +634,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                 <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <span
+                                  <p
                                     class="<removed-for-snapshot-test>"
                                     data-type="text"
                                   >
                                     Append
-                                  </span>
+                                  </p>
                                 </div>
                                 <svg
                                   aria-hidden="true"
@@ -667,13 +663,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
-                      >
-                        <span
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <span />
-                        </span>
-                      </div>
+                      />
                       <div
                         class="<removed-for-snapshot-test>"
                       />
@@ -700,14 +690,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              '&lt;source schema&gt;
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            '&lt;source schema&gt;
+                          </p>
                         </span>
                       </div>
                       <div
@@ -717,14 +705,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <span
                           class="<removed-for-snapshot-test>"
                         >
-                          <span>
-                            <p
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              pokemon
-                            </p>
-                          </span>
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-type="text"
+                          >
+                            pokemon
+                          </p>
                         </span>
                       </div>
                     </div>
@@ -857,7 +843,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                 <div
                   class="<removed-for-snapshot-test>"
                 >
-                  <span
+                  <p
                     class="<removed-for-snapshot-test>"
                     data-type="text"
                   />
@@ -923,12 +909,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                 <div
                   class="<removed-for-snapshot-test>"
                 >
-                  <span
+                  <p
                     class="<removed-for-snapshot-test>"
                     data-type="text"
                   >
                     Not available
-                  </span>
+                  </p>
                 </div>
                 <svg
                   aria-hidden="true"
@@ -991,12 +977,12 @@ exports[`ConnectionReplicationPage should render 1`] = `
                 <div
                   class="<removed-for-snapshot-test>"
                 >
-                  <span
+                  <p
                     class="<removed-for-snapshot-test>"
                     data-type="text"
                   >
                     Not available
-                  </span>
+                  </p>
                 </div>
                 <svg
                   aria-hidden="true"
