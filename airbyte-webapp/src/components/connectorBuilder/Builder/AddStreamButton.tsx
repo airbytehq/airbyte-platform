@@ -17,6 +17,7 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
+import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
 import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
@@ -122,7 +123,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
                     label={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameLabel" })}
                     tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameTooltip" })}
                   />
-                  <BuilderField
+                  <BuilderFieldWithInputs
                     path="urlPath"
                     type="string"
                     label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}

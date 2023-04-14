@@ -19,6 +19,7 @@ import {
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
   ConnectorBuilderFormManagementStateProvider,
+  ConnectorBuilderMainFormikContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
@@ -52,13 +53,15 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
         validationSchema={builderFormValidationSchema}
       >
         {(props) => (
-          <Panels
-            editorView={editorView}
-            validateForm={props.validateForm}
-            switchToUI={switchToUI}
-            values={props.values}
-            switchToYaml={switchToYaml}
-          />
+          <ConnectorBuilderMainFormikContext.Provider value={props}>
+            <Panels
+              editorView={editorView}
+              validateForm={props.validateForm}
+              switchToUI={switchToUI}
+              values={props.values}
+              switchToYaml={switchToYaml}
+            />
+          </ConnectorBuilderMainFormikContext.Provider>
         )}
       </Formik>
     ),
