@@ -159,7 +159,7 @@ export const SMALL_DURATION_OPTIONS = [
   { value: "PT1S", description: "1 second" },
   { value: "PT1M", description: "1 minute" },
   { value: "PT1H", description: "1 hour" },
-  { value: "PT1D", description: "1 day" },
+  { value: "P1D", description: "1 day" },
 ];
 
 export const DATETIME_FORMAT_OPTIONS = [

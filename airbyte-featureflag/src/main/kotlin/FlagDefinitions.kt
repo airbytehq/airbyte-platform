@@ -67,4 +67,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
       else -> default
     }
   }
+
+  object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
 }
