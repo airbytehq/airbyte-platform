@@ -66,6 +66,7 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
         variant={INFO_TEXT_VARIANT_BY_PILL_VARIANT[variant]}
         className={styles.streamPathSelect}
         data-testid={testId}
+        withOverflowTooltip
       >
         {SourceDefinedNode}
       </InfoText>

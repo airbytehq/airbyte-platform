@@ -10,7 +10,7 @@ type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
 type TextAlignment = "left" | "center" | "right";
 
-type TextProps = HTMLAttributes<TextHTMLElement> & {
+export type TextProps = HTMLAttributes<TextHTMLElement> & {
   className?: string;
   as?: TextElementType;
   size?: TextSize;
@@ -58,7 +58,7 @@ const getTextClassNames = ({
   });
 
 export const Text = React.memo(
-  React.forwardRef<TextHTMLElement, React.PropsWithChildren<TextProps>>(
+  React.forwardRef<TextHTMLElement, React.PropsWithRef<React.PropsWithChildren<TextProps>>>(
     (
       {
         as = "p",

@@ -7,7 +7,7 @@ import { Row } from "components/SimpleTableComponents";
 import { CheckBox } from "components/ui/CheckBox";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
 import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
@@ -142,15 +142,13 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           />
         </CellText>
       )}
-      <CellText withTooltip data-testid="source-namespace-cell">
-        <Text size="md" className={styles.cellText}>
+      <CellText data-testid="source-namespace-cell">
+        <TextWithOverflowTooltip size="md">
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
-        </Text>
+        </TextWithOverflowTooltip>
       </CellText>
-      <CellText withTooltip data-testid="source-stream-name-cell">
-        <Text size="md" className={styles.cellText}>
-          {stream.stream?.name}
-        </Text>
+      <CellText data-testid="source-stream-name-cell">
+        <TextWithOverflowTooltip size="md">{stream.stream?.name}</TextWithOverflowTooltip>
       </CellText>
       <CellText size="fixed" className={styles.syncModeCell}>
         <SyncModeSelect
@@ -161,7 +159,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           disabled={disabled}
         />
       </CellText>
-      <CellText withTooltip>
+      <CellText>
         {cursorType && (
           <StreamPathSelect
             type="cursor"
@@ -174,7 +172,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           />
         )}
       </CellText>
-      <CellText withTooltip={pkType === "sourceDefined"}>
+      <CellText>
         {pkType && (
           <StreamPathSelect
             type="primary-key"
@@ -191,15 +189,11 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
       <CellText size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CellText>
-      <CellText withTooltip data-testid="destination-namespace-cell">
-        <Text size="md" className={styles.cellText}>
-          {destNamespace}
-        </Text>
+      <CellText data-testid="destination-namespace-cell">
+        <TextWithOverflowTooltip size="md">{destNamespace}</TextWithOverflowTooltip>
       </CellText>
-      <CellText withTooltip data-testid="destination-stream-name-cell">
-        <Text size="md" className={styles.cellText}>
-          {destName}
-        </Text>
+      <CellText data-testid="destination-stream-name-cell">
+        <TextWithOverflowTooltip size="md">{destName}</TextWithOverflowTooltip>
       </CellText>
     </Row>
   );
