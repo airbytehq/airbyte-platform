@@ -13,7 +13,8 @@ info:
 externalDocs:
   description: Find out more about Connector Builder
   url: "https://docs.airbyte.com/connector-development/config-based/connector-builder-ui"
-
+servers:
+  - url: "http://localhost:80/"
 paths:
   /v1/stream/read:
     post:
@@ -91,8 +92,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthCheckRead"
+      # This route is unsecured for external monitoring.
+      security: []
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     StreamRead:
       type: object
@@ -349,3 +357,5 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/KnownExceptionInfo"
+security:
+  - {}
