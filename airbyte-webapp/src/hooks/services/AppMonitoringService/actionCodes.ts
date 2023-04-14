@@ -8,4 +8,5 @@ export enum AppActionCodes {
    * LaunchDarkly did not load in time and was ignored
    */
   LD_LOAD_TIMEOUT = "LD_LOAD_TIMEOUT",
+  UNEXPECTED_CONNECTION_FLOW_STATE = "UNEXPECTED_CONNECTION_FLOW_STATE",
 }

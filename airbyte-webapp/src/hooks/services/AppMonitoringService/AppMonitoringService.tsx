@@ -39,7 +39,7 @@ export const useAppMonitoringService = (): AppMonitoringServiceProviderValue => 
 export const AppMonitoringServiceProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const trackAction = (action: string, context?: Record<string, unknown>) => {
     if (!datadogRum.getInternalContext()) {
-      console.debug(`trackAction(${action}) failed because RUM is not initialized.`);
+      console.debug(`trackAction(${action}) failed because RUM is not initialized. Context:`, context);
       return;
     }
 
