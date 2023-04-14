@@ -5,16 +5,15 @@ import { useCallback, useMemo, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle, useUpdateEffect } from "react-use";
 
-import { useSshSslImprovements } from "views/Connector/ConnectorForm/useSshSslImprovements";
-
 import styles from "./SecretTextArea.module.scss";
+import { FileUpload } from "../FileUpload/FileUpload";
 import { FlexContainer } from "../Flex";
 import { TextInputContainer, TextInputContainerProps } from "../TextInputContainer";
 
 interface SecretTextAreaProps
   extends Omit<TextInputContainerProps, "onFocus" | "onBlur">,
     React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  setValue?: (value: string) => void;
+  onUpload?: (value: string) => void;
 }
 
 export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
@@ -25,17 +24,16 @@ export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
   onBlur,
   error,
   light,
-  setValue,
+  onUpload,
   ...textAreaProps
 }) => {
   const hasValue = useMemo(() => !!value && String(value).trim().length > 0, [value]);
   const [isContentVisible, toggleIsContentVisible] = useToggle(!hasValue);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const textAreaHeightRef = useRef<number>((textAreaProps.rows ?? 1) * 20 + 14);
-  const { uploadComponent } = useSshSslImprovements(name);
 
-  const onUpload = (uploadedValue: string) => {
-    setValue?.(uploadedValue);
+  const handleUpload = (uploadedValue: string) => {
+    onUpload?.(uploadedValue);
     toggleIsContentVisible(true);
     focusTextArea(uploadedValue.length);
   };
@@ -108,7 +106,7 @@ export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
           </>
         )}
       </TextInputContainer>
-      {uploadComponent(onUpload)}
+      {onUpload && <FileUpload onUpload={handleUpload} />}
     </FlexContainer>
   );
 };
