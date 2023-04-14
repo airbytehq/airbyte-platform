@@ -40,10 +40,12 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -653,14 +655,28 @@ class DestinationDefinitionsHandlerTest {
     @Test
     @DisplayName("should return the latest list")
     void testCorrect() throws InterruptedException {
-      final StandardDestinationDefinition destinationDefinition = generateDestinationDefinition();
-      when(remoteOssCatalog.getDestinationDefinitions()).thenReturn(Collections.singletonList(destinationDefinition));
+      final ConnectorRegistryDestinationDefinition registryDestinationDefinition = new ConnectorRegistryDestinationDefinition()
+          .withDestinationDefinitionId(UUID.randomUUID())
+          .withName("some-destination")
+          .withDocumentationUrl("https://airbyte.com")
+          .withDockerRepository("dockerrepo")
+          .withDockerImageTag("1.2.4")
+          .withIcon("dest.svg")
+          .withSpec(new ConnectorSpecification().withConnectionSpecification(
+              Jsons.jsonNode(ImmutableMap.of("key", "val"))))
+          .withTombstone(false)
+          .withProtocolVersion("0.2.2")
+          .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
+          .withReleaseDate(TODAY_DATE_STRING)
+          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+      when(remoteOssCatalog.getDestinationDefinitions()).thenReturn(Collections.singletonList(registryDestinationDefinition));
 
       final var destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions();
       assertEquals(1, destinationDefinitionReadList.size());
 
       final var destinationDefinitionRead = destinationDefinitionReadList.get(0);
-      assertEquals(DestinationDefinitionsHandler.buildDestinationDefinitionRead(destinationDefinition), destinationDefinitionRead);
+      assertEquals(DestinationDefinitionsHandler.buildDestinationDefinitionRead(
+          ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDefinition)), destinationDefinitionRead);
     }
 
     @Test

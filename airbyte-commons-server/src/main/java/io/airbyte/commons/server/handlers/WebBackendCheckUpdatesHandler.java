@@ -6,8 +6,8 @@ package io.airbyte.commons.server.handlers;
 
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -68,7 +68,8 @@ public class WebBackendCheckUpdatesHandler {
 
     newActorDefToDockerImageTag = remoteOssCatalog.getDestinationDefinitions()
         .stream()
-        .collect(Collectors.toMap(StandardDestinationDefinition::getDestinationDefinitionId, StandardDestinationDefinition::getDockerImageTag));
+        .collect(Collectors.toMap(ConnectorRegistryDestinationDefinition::getDestinationDefinitionId,
+            ConnectorRegistryDestinationDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);
   }
@@ -89,7 +90,7 @@ public class WebBackendCheckUpdatesHandler {
 
     newActorDefToDockerImageTag = remoteOssCatalog.getSourceDefinitions()
         .stream()
-        .collect(Collectors.toMap(StandardSourceDefinition::getSourceDefinitionId, StandardSourceDefinition::getDockerImageTag));
+        .collect(Collectors.toMap(ConnectorRegistrySourceDefinition::getSourceDefinitionId, ConnectorRegistrySourceDefinition::getDockerImageTag));
 
     return getDiffCount(currentActorDefToDockerImageTag, newActorDefToDockerImageTag);
   }

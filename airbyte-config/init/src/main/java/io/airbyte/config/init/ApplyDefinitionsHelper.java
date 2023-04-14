@@ -6,8 +6,9 @@ package io.airbyte.config.init;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
@@ -55,29 +56,31 @@ public class ApplyDefinitionsHelper {
       final Optional<AirbyteProtocolVersionRange> currentProtocolRange = getCurrentProtocolRange();
 
       if (updateAll) {
-        final List<StandardSourceDefinition> latestSourceDefinitions = definitionsProvider.getSourceDefinitions();
-        for (final StandardSourceDefinition def : filterStandardSourceDefinitions(currentProtocolRange, latestSourceDefinitions)) {
-          configRepository.writeStandardSourceDefinition(def);
+        final List<ConnectorRegistrySourceDefinition> latestSourceDefinitions = definitionsProvider.getSourceDefinitions();
+        for (final ConnectorRegistrySourceDefinition def : filterSourceDefinitions(currentProtocolRange, latestSourceDefinitions)) {
+          configRepository.writeStandardSourceDefinition(ConnectorRegistryConverters.toStandardSourceDefinition(def));
         }
 
-        final List<StandardDestinationDefinition> latestDestinationDefinitions = definitionsProvider.getDestinationDefinitions();
-        for (final StandardDestinationDefinition def : filterStandardDestinationDefinitions(currentProtocolRange, latestDestinationDefinitions)) {
-          configRepository.writeStandardDestinationDefinition(def);
+        final List<ConnectorRegistryDestinationDefinition> latestDestinationDefinitions = definitionsProvider.getDestinationDefinitions();
+        for (final ConnectorRegistryDestinationDefinition def : filterDestinationDefinitions(currentProtocolRange, latestDestinationDefinitions)) {
+          configRepository.writeStandardDestinationDefinition(ConnectorRegistryConverters.toStandardDestinationDefinition(def));
         }
       } else {
         // todo (pedroslopez): Logic to apply definitions should be moved outside of the
         // DatabaseConfigPersistence class and behavior standardized
         configRepository.seedActorDefinitions(
-            filterStandardSourceDefinitions(currentProtocolRange, definitionsProvider.getSourceDefinitions()),
-            filterStandardDestinationDefinitions(currentProtocolRange, definitionsProvider.getDestinationDefinitions()));
+            filterSourceDefinitions(currentProtocolRange, definitionsProvider.getSourceDefinitions()).stream()
+                .map(ConnectorRegistryConverters::toStandardSourceDefinition).toList(),
+            filterDestinationDefinitions(currentProtocolRange, definitionsProvider.getDestinationDefinitions()).stream()
+                .map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList());
       }
     } else {
       log.warn("Skipping application of latest definitions.  Definitions provider not configured.");
     }
   }
 
-  private List<StandardDestinationDefinition> filterStandardDestinationDefinitions(final Optional<AirbyteProtocolVersionRange> protocolVersionRange,
-                                                                                   final List<StandardDestinationDefinition> destDefs) {
+  private List<ConnectorRegistryDestinationDefinition> filterDestinationDefinitions(final Optional<AirbyteProtocolVersionRange> protocolVersionRange,
+                                                                                    final List<ConnectorRegistryDestinationDefinition> destDefs) {
     if (protocolVersionRange.isEmpty()) {
       return destDefs;
     }
@@ -92,8 +95,8 @@ public class ApplyDefinitionsHelper {
     }).toList();
   }
 
-  private List<StandardSourceDefinition> filterStandardSourceDefinitions(final Optional<AirbyteProtocolVersionRange> protocolVersionRange,
-                                                                         final List<StandardSourceDefinition> sourceDefs) {
+  private List<ConnectorRegistrySourceDefinition> filterSourceDefinitions(final Optional<AirbyteProtocolVersionRange> protocolVersionRange,
+                                                                          final List<ConnectorRegistrySourceDefinition> sourceDefs) {
     if (protocolVersionRange.isEmpty()) {
       return sourceDefs;
     }
