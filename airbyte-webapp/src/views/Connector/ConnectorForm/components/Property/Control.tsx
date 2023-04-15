@@ -123,6 +123,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
         rows={3}
         disabled={disabled}
         error={error}
+        onUpload={helpers.setValue}
       />
     );
   } else if (property.isSecret) {

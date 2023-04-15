@@ -11,9 +11,9 @@ import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.CatalogDefinitionsConfig;
-import io.airbyte.config.CombinedConnectorCatalog;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistry;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.File;
 import java.io.IOException;
@@ -69,9 +69,10 @@ public class ConnectorSpecMaskGenerator {
     if (inputFile != null && inputFile.exists()) {
       LOGGER.info("Found catalog for processing.");
       final String jsonString = readFile(inputFile);
-      final CombinedConnectorCatalog catalog = Jsons.deserialize(jsonString, CombinedConnectorCatalog.class);
-      final Stream<ConnectorSpecification> destinationSpecs = catalog.getDestinations().stream().map(StandardDestinationDefinition::getSpec);
-      final Stream<ConnectorSpecification> sourceSpecs = catalog.getSources().stream().map(StandardSourceDefinition::getSpec);
+      final ConnectorRegistry registry = Jsons.deserialize(jsonString, ConnectorRegistry.class);
+      final Stream<ConnectorSpecification> destinationSpecs =
+          registry.getDestinations().stream().map(ConnectorRegistryDestinationDefinition::getSpec);
+      final Stream<ConnectorSpecification> sourceSpecs = registry.getSources().stream().map(ConnectorRegistrySourceDefinition::getSpec);
 
       final Set<String> secretPropertyNames = Stream.concat(destinationSpecs, sourceSpecs)
           .map(ConnectorSpecMaskGenerator::findSecrets)

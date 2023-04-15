@@ -13,11 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Download connector catalogs from airbytehq/airbyte repository.
+ * Download connector registry from airbytehq/airbyte repository.
  */
-public class CombinedConnectorCatalogDownloader {
+public class ConnectorRegistryDownloader {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CombinedConnectorCatalogDownloader.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorRegistryDownloader.class);
 
   /**
    * This method is to create a path to the resource folder in the project. This is so that it's
@@ -36,7 +36,7 @@ public class CombinedConnectorCatalogDownloader {
     final String relativeWritePath = CatalogDefinitionsConfig.getLocalCatalogWritePath();
     final Path writePath = getResourcePath(projectPath, relativeWritePath);
 
-    LOGGER.info("Downloading OSS catalog from {} to {}", AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL, writePath);
+    LOGGER.info("Downloading OSS connector registry from {} to {}", AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL, writePath);
 
     final int timeout = 10000;
     FileUtils.copyURLToFile(new URL(AirbyteCatalogConstants.REMOTE_OSS_CATALOG_URL), writePath.toFile(), timeout, timeout);

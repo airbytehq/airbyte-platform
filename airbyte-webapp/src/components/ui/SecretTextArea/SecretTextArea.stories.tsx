@@ -1,27 +1,23 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
+import { useState } from "react";
 
 import { SecretTextArea } from "./SecretTextArea";
 
 export default {
   title: "UI/SecretTextArea",
   component: SecretTextArea,
-  argTypes: {
-    value: { control: { type: { name: "text", required: false } } },
-    rows: { control: { type: { name: "number", required: false } } },
-  },
-} as ComponentMeta<typeof SecretTextArea>;
+} as Meta<typeof SecretTextArea>;
 
-const Template: ComponentStory<typeof SecretTextArea> = (args) => (
-  <SecretTextArea
-    {...args}
-    onChange={() => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-    }}
-  />
-);
-
-export const Primary = Template.bind({});
+export const Primary: StoryFn<typeof SecretTextArea> = (args) => {
+  const [value, setValue] = useState(args.value);
+  return <SecretTextArea {...args} value={value} onChange={(e) => setValue(e.target.value)} />;
+};
 Primary.args = {
-  rows: 1,
   value: "testing",
+  rows: 3,
+};
+
+export const WithUpload: StoryFn<typeof SecretTextArea> = (args) => {
+  const [value, setValue] = useState("testing");
+  return <SecretTextArea {...args} value={value} onChange={(e) => setValue(e.target.value)} onUpload={setValue} />;
 };

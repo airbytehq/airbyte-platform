@@ -6,9 +6,9 @@ package io.airbyte.config.init;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
-import io.airbyte.config.CombinedConnectorCatalog;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistry;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.micronaut.cache.annotation.CacheConfig;
 import io.micronaut.cache.annotation.Cacheable;
@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * This provider pulls the definitions from a remotely hosted catalog.
+ * This provider pulls the definitions from a remotely hosted connector registry.
  */
 @Singleton
 @Primary
@@ -55,53 +55,53 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
     try {
       this.remoteDefinitionCatalogUrl = new URI(remoteCatalogUrl);
       this.timeout = Duration.ofMillis(remoteCatalogTimeoutMs);
-    } catch (URISyntaxException e) {
+    } catch (final URISyntaxException e) {
       log.error("Invalid remote catalog URL: {}", remoteCatalogUrl);
       throw new IllegalArgumentException("Remote catalog URL Must be a valid URI.", e);
     }
   }
 
-  private Map<UUID, StandardSourceDefinition> getSourceDefinitionsMap() {
-    final CombinedConnectorCatalog catalog = getRemoteDefinitionCatalog();
-    return catalog.getSources().stream().collect(Collectors.toMap(
-        StandardSourceDefinition::getSourceDefinitionId,
+  private Map<UUID, ConnectorRegistrySourceDefinition> getSourceDefinitionsMap() {
+    final ConnectorRegistry registry = getRemoteConnectorRegistry();
+    return registry.getSources().stream().collect(Collectors.toMap(
+        ConnectorRegistrySourceDefinition::getSourceDefinitionId,
         source -> source.withProtocolVersion(
             AirbyteProtocolVersion.getWithDefault(source.getSpec() != null ? source.getSpec().getProtocolVersion() : null).serialize())));
   }
 
-  private Map<UUID, StandardDestinationDefinition> getDestinationDefinitionsMap() {
-    final CombinedConnectorCatalog catalog = getRemoteDefinitionCatalog();
+  private Map<UUID, ConnectorRegistryDestinationDefinition> getDestinationDefinitionsMap() {
+    final ConnectorRegistry catalog = getRemoteConnectorRegistry();
     return catalog.getDestinations().stream().collect(Collectors.toMap(
-        StandardDestinationDefinition::getDestinationDefinitionId,
+        ConnectorRegistryDestinationDefinition::getDestinationDefinitionId,
         destination -> destination.withProtocolVersion(
             AirbyteProtocolVersion.getWithDefault(destination.getSpec() != null ? destination.getSpec().getProtocolVersion() : null).serialize())));
   }
 
   @Override
-  public StandardSourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException {
-    final StandardSourceDefinition definition = getSourceDefinitionsMap().get(definitionId);
+  public ConnectorRegistrySourceDefinition getSourceDefinition(final UUID definitionId) throws ConfigNotFoundException {
+    final ConnectorRegistrySourceDefinition definition = getSourceDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException("remote_catalog:source_def", definitionId.toString());
+      throw new ConfigNotFoundException("remote_registry:source_def", definitionId.toString());
     }
     return definition;
   }
 
   @Override
-  public List<StandardSourceDefinition> getSourceDefinitions() {
+  public List<ConnectorRegistrySourceDefinition> getSourceDefinitions() {
     return new ArrayList<>(getSourceDefinitionsMap().values());
   }
 
   @Override
-  public StandardDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException {
-    final StandardDestinationDefinition definition = getDestinationDefinitionsMap().get(definitionId);
+  public ConnectorRegistryDestinationDefinition getDestinationDefinition(final UUID definitionId) throws ConfigNotFoundException {
+    final ConnectorRegistryDestinationDefinition definition = getDestinationDefinitionsMap().get(definitionId);
     if (definition == null) {
-      throw new ConfigNotFoundException("remote_catalog:destination_def", definitionId.toString());
+      throw new ConfigNotFoundException("remote_registry:destination_def", definitionId.toString());
     }
     return definition;
   }
 
   @Override
-  public List<StandardDestinationDefinition> getDestinationDefinitions() {
+  public List<ConnectorRegistryDestinationDefinition> getDestinationDefinitions() {
     return new ArrayList<>(getDestinationDefinitionsMap().values());
   }
 
@@ -111,20 +111,20 @@ public class RemoteDefinitionsProvider implements DefinitionsProvider {
    * @return combined catalog
    */
   @Cacheable
-  public CombinedConnectorCatalog getRemoteDefinitionCatalog() {
+  public ConnectorRegistry getRemoteConnectorRegistry() {
     try {
       final HttpRequest request = HttpRequest.newBuilder(remoteDefinitionCatalogUrl).timeout(timeout).header("accept", "application/json").build();
 
       final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (errorStatusCode(response)) {
         throw new IOException(
-            "getRemoteDefinitionCatalog request ran into status code error: " + response.statusCode() + " with message: " + response.getClass());
+            "getRemoteConnectorRegistry request ran into status code error: " + response.statusCode() + " with message: " + response.getClass());
       }
 
       log.info("Fetched latest remote definitions ({})", response.body().hashCode());
-      return Jsons.deserialize(response.body(), CombinedConnectorCatalog.class);
+      return Jsons.deserialize(response.body(), ConnectorRegistry.class);
     } catch (final Exception e) {
-      throw new RuntimeException("Failed to fetch remote definitions", e);
+      throw new RuntimeException("Failed to fetch remote connector registry", e);
     }
   }
 

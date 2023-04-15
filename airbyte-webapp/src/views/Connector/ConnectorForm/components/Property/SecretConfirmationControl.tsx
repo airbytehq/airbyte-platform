@@ -44,7 +44,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={showButtons && isEditInProgress}
         disabled={(showButtons && !isEditInProgress) || disabled}
-        setValue={helpers.setValue}
+        onUpload={helpers.setValue}
       />
     ) : (
       <Input

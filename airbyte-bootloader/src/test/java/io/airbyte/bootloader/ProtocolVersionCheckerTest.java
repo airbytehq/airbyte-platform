@@ -12,8 +12,8 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobPersistence;
@@ -340,8 +340,8 @@ class ProtocolVersionCheckerTest {
   }
 
   private void setNewDestinationDefinitions(final List<Entry<UUID, Version>> defs) {
-    final List<StandardDestinationDefinition> destDefinitions = defs.stream()
-        .map(e -> new StandardDestinationDefinition()
+    final List<ConnectorRegistryDestinationDefinition> destDefinitions = defs.stream()
+        .map(e -> new ConnectorRegistryDestinationDefinition()
             .withDestinationDefinitionId(e.getKey())
             .withSpec(new ConnectorSpecification().withProtocolVersion(e.getValue().serialize())))
         .toList();
@@ -349,8 +349,8 @@ class ProtocolVersionCheckerTest {
   }
 
   private void setNewSourceDefinitions(final List<Entry<UUID, Version>> defs) {
-    final List<StandardSourceDefinition> sourceDefinitions = defs.stream()
-        .map(e -> new StandardSourceDefinition()
+    final List<ConnectorRegistrySourceDefinition> sourceDefinitions = defs.stream()
+        .map(e -> new ConnectorRegistrySourceDefinition()
             .withSourceDefinitionId(e.getKey())
             .withSpec(new ConnectorSpecification().withProtocolVersion(e.getValue().serialize())))
         .toList();

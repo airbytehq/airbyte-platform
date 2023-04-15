@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -147,17 +149,29 @@ class WebBackendCheckUpdatesHandlerTest {
     when(configRepository.listStandardSourceDefinitions(INCLUDE_TOMBSTONE))
         .thenReturn(currentSources.stream().map(this::createSourceDef).toList());
     when(remoteOssCatalog.getSourceDefinitions())
-        .thenReturn(latestSources.stream().map(this::createSourceDef).toList());
+        .thenReturn(latestSources.stream().map(this::createRegistrySourceDef).toList());
 
     when(configRepository.listStandardDestinationDefinitions(INCLUDE_TOMBSTONE))
         .thenReturn(currentDestinations.stream().map(this::createDestinationDef).toList());
     when(remoteOssCatalog.getDestinationDefinitions())
-        .thenReturn(latestDestinations.stream().map(this::createDestinationDef).toList());
+        .thenReturn(latestDestinations.stream().map(this::createRegistryDestinationDef).toList());
+  }
+
+  private ConnectorRegistryDestinationDefinition createRegistryDestinationDef(final Entry<UUID, String> idImageTagEntry) {
+    return new ConnectorRegistryDestinationDefinition()
+        .withDestinationDefinitionId(idImageTagEntry.getKey())
+        .withDockerImageTag(idImageTagEntry.getValue());
   }
 
   private StandardDestinationDefinition createDestinationDef(final Entry<UUID, String> idImageTagEntry) {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(idImageTagEntry.getKey())
+        .withDockerImageTag(idImageTagEntry.getValue());
+  }
+
+  private ConnectorRegistrySourceDefinition createRegistrySourceDef(final Entry<UUID, String> idImageTagEntry) {
+    return new ConnectorRegistrySourceDefinition()
+        .withSourceDefinitionId(idImageTagEntry.getKey())
         .withDockerImageTag(idImageTagEntry.getValue());
   }
 

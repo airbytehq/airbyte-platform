@@ -9,8 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -32,7 +32,7 @@ class LocalDefinitionsProviderTest {
   void testGetSourceDefinition() throws Exception {
     // source
     final UUID stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de");
-    final StandardSourceDefinition stripeSource = localDefinitionsProvider.getSourceDefinition(stripeSourceId);
+    final ConnectorRegistrySourceDefinition stripeSource = localDefinitionsProvider.getSourceDefinition(stripeSourceId);
     assertEquals(stripeSourceId, stripeSource.getSourceDefinitionId());
     assertEquals("Stripe", stripeSource.getName());
     assertEquals("airbyte/source-stripe", stripeSource.getDockerRepository());
@@ -47,7 +47,7 @@ class LocalDefinitionsProviderTest {
   @SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
   void testGetDestinationDefinition() throws Exception {
     final UUID s3DestinationId = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362");
-    final StandardDestinationDefinition s3Destination = localDefinitionsProvider
+    final ConnectorRegistryDestinationDefinition s3Destination = localDefinitionsProvider
         .getDestinationDefinition(s3DestinationId);
     assertEquals(s3DestinationId, s3Destination.getDestinationDefinitionId());
     assertEquals("S3", s3Destination.getName());
@@ -72,14 +72,14 @@ class LocalDefinitionsProviderTest {
 
   @Test
   void testGetSourceDefinitions() {
-    final List<StandardSourceDefinition> sourceDefinitions = localDefinitionsProvider.getSourceDefinitions();
+    final List<ConnectorRegistrySourceDefinition> sourceDefinitions = localDefinitionsProvider.getSourceDefinitions();
     assertFalse(sourceDefinitions.isEmpty());
     assertTrue(sourceDefinitions.stream().allMatch(sourceDef -> sourceDef.getProtocolVersion().length() > 0));
   }
 
   @Test
   void testGetDestinationDefinitions() {
-    final List<StandardDestinationDefinition> destinationDefinitions = localDefinitionsProvider.getDestinationDefinitions();
+    final List<ConnectorRegistryDestinationDefinition> destinationDefinitions = localDefinitionsProvider.getDestinationDefinitions();
     assertFalse(destinationDefinitions.isEmpty());
     assertTrue(destinationDefinitions.stream().allMatch(sourceDef -> sourceDef.getProtocolVersion().length() > 0));
   }
