@@ -1219,6 +1219,11 @@ temporal:
 ##
 postgresql:
   enabled: true
+
+  ## image.repository Repository for airbyte-db statefulset
+  image:
+    repository: airbyte/db
+
   postgresqlUsername: airbyte
   postgresqlPassword: airbyte
   postgresqlDatabase: db-airbyte
@@ -1259,6 +1264,13 @@ externalDatabase:
 ##  minio.secretKey.password Minio Secret Key
 minio:
   enabled: true
+
+  ## image.repository Minio image used by Minio helm chart
+  ## image.tag Minio tag image
+  image:
+    repository: minio/minio
+    tag: latest
+
   auth:
     rootUser: minio
     rootPassword: minio123
