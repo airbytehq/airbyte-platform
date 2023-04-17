@@ -14,6 +14,9 @@ interface SecretTextAreaProps
   extends Omit<TextInputContainerProps, "onFocus" | "onBlur">,
     React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   onUpload?: (value: string) => void;
+  hiddenMessage?: string;
+  hiddenWhenEmpty?: boolean;
+  leftJustified?: boolean;
 }
 
 export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
@@ -25,10 +28,16 @@ export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
   error,
   light,
   onUpload,
+  hiddenMessage,
+  hiddenWhenEmpty,
+  leftJustified,
   ...textAreaProps
 }) => {
-  const hasValue = useMemo(() => !!value && String(value).trim().length > 0, [value]);
-  const [isContentVisible, toggleIsContentVisible] = useToggle(!hasValue);
+  const shouldReveal = useMemo(
+    () => hiddenWhenEmpty || (!!value && String(value).trim().length > 0),
+    [value, hiddenWhenEmpty]
+  );
+  const [isContentVisible, toggleIsContentVisible] = useToggle(!shouldReveal);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const textAreaHeightRef = useRef<number>((textAreaProps.rows ?? 1) * 20 + 14);
 
@@ -68,7 +77,7 @@ export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
             }}
             onBlur={(event) => {
               textAreaHeightRef.current = textAreaRef.current?.offsetHeight ?? textAreaHeightRef.current;
-              if (hasValue) {
+              if (shouldReveal) {
                 toggleIsContentVisible();
               }
               onBlur?.(event);
@@ -81,17 +90,16 @@ export const SecretTextArea: React.FC<SecretTextAreaProps> = ({
           <>
             <button
               type="button"
-              className={styles.toggleVisibilityButton}
-              onClick={() => {
-                toggleIsContentVisible();
-              }}
+              className={classNames(styles.toggleVisibilityButton, { [styles.leftJustified]: leftJustified })}
+              onClick={toggleIsContentVisible}
               style={{
                 height: textAreaHeightRef.current,
               }}
               disabled={disabled}
               data-testid="secretTextArea-visibilityButton"
             >
-              <FontAwesomeIcon icon={faEye} fixedWidth /> <FormattedMessage id="ui.secretTextArea.hidden" />
+              <FontAwesomeIcon icon={faEye} className={styles.icon} fixedWidth />
+              {hiddenMessage || <FormattedMessage id="ui.secretTextArea.hidden" />}
             </button>
             <input
               type="password"

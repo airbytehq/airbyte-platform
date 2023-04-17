@@ -3,12 +3,20 @@
 
 .controlGroup {
   display: flex;
-  justify-content: flex-end;
   margin-top: variables.$spacing-xl;
+  justify-content: space-between;
+}
 
-  .button {
-    margin-left: variables.$spacing-md;
-  }
+.button:not(:first-child) {
+  margin-left: variables.$spacing-md;
+}
+
+.deleteButton {
+  justify-self: flex-start;
+}
+
+.editActionButtons {
+  margin-left: auto;
 }
 
 .cardContent {
