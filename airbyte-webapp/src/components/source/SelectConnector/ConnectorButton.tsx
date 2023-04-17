@@ -6,12 +6,12 @@ import { ConnectorDefinition } from "core/domain/connector";
 
 import styles from "./ConnectorButton.module.scss";
 
-interface ConnectorButtonProps {
-  onClick: (definition: ConnectorDefinition) => void;
-  definition: ConnectorDefinition;
+interface ConnectorButtonProps<T extends ConnectorDefinition> {
+  onClick: (definition: T) => void;
+  definition: T;
 }
 
-export const ConnectorButton: React.FC<ConnectorButtonProps> = ({ definition, onClick }) => {
+export const ConnectorButton = <T extends ConnectorDefinition>({ definition, onClick }: ConnectorButtonProps<T>) => {
   return (
     <button className={styles.button} onClick={() => onClick(definition)}>
       <ConnectorIcon icon={definition.icon} className={styles.icon} />
