@@ -168,15 +168,12 @@ components:
         - config
       properties:
         manifest:
-          type: object
-          description: The config-based connector manifest contents
-          # $ref: "#/components/schemas/ConnectorManifest"
+          $ref: "#/components/schemas/ConnectorManifest"
         stream:
           type: string
           description: Name of the stream to read
         config:
-          type: object
-          description: The config blob containing the user inputs for testing
+          $ref: "#/components/schemas/ConnectorConfig"
         state:
           type: object
           description: The AirbyteStateMessage object to use as the starting state for this read
@@ -280,7 +277,6 @@ components:
       properties:
         manifest:
           type: object
-          x-java-type: com.fasterxml.jackson.databind.JsonNode
           description: The config-based connector manifest contents with $refs and $parameters resolved
     HealthCheckRead:
       type: object

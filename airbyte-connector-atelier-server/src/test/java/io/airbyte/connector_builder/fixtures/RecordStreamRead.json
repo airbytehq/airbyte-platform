@@ -1,0 +1,57 @@
+{
+  "type": "RECORD",
+  "record": {
+    "stream": "messages",
+    "data": {
+      "logs": [{ "message": "slice:{}" }],
+      "slices": [
+        {
+          "pages": [
+            {
+              "records": [],
+              "request": {
+                "url": "https://api.courier.com/messages",
+                "parameters": { "page_size": ["1"] },
+                "body": null,
+                "headers": {
+                  "User-Agent": "python-requests/2.28.2",
+                  "Accept-Encoding": "gzip, deflate",
+                  "Accept": "*/*",
+                  "Connection": "keep-alive",
+                  "Authorization": "Bearer pk_prod_Z0CDPQKWHQMZ63G886CZRTQWDGRV"
+                },
+                "http_method": "GET"
+              },
+              "response": {
+                "status": 200,
+                "body": "{\"paging\":{\"more\":false},\"results\":[]}",
+                "headers": {
+                  "Content-Type": "application/json",
+                  "Content-Length": "38",
+                  "Connection": "keep-alive",
+                  "Date": "Tue, 28 Mar 2023 12:15:51 GMT",
+                  "x-amzn-RequestId": "12218188-937f-40bd-82f2-4cc50a0b83c8",
+                  "Access-Control-Allow-Origin": "*",
+                  "Strict-Transport-Security": "max-age=31536000;includeSubDomains;preload",
+                  "x-amz-apigw-id": "CfcSsHqYIAMF9iA=",
+                  "X-Content-Type-Options": "nosniff",
+                  "X-Amzn-Trace-Id": "Root=1-6422da77-59bc69d9548e53ca3983985d",
+                  "Access-Control-Allow-Credentials": "true",
+                  "X-Cache": "Miss from cloudfront",
+                  "Via": "1.1 352ab4fc53db02754a30e59a7814a0d2.cloudfront.net (CloudFront)",
+                  "X-Amz-Cf-Pop": "MAD51-C3",
+                  "X-Amz-Cf-Id": "AhSMjWd2G7loPP0Y3YrFLiURFSbvBDz9LDm7ZAOR8aI4vMcWqKQVZQ=="
+                }
+              }
+            }
+          ],
+          "slice_descriptor": null,
+          "state": null
+        }
+      ],
+      "test_read_limit_reached": false,
+      "inferred_schema": null
+    },
+    "emitted_at": 1680005751000
+  }
+}
