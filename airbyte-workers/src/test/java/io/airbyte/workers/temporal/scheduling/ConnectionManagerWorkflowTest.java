@@ -26,7 +26,6 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.featureflag.CheckInputGeneration;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConstants;
@@ -210,7 +209,7 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
 
     when(mFeatureFlagFetchActivity.getFeatureFlags(Mockito.any()))
-        .thenReturn(new FeatureFlagFetchOutput(Map.of(CheckInputGeneration.INSTANCE.getKey(), true)));
+        .thenReturn(new FeatureFlagFetchOutput(Map.of()));
 
     activityOptions = ActivityOptions.newBuilder()
         .setHeartbeatTimeout(Duration.ofSeconds(30))

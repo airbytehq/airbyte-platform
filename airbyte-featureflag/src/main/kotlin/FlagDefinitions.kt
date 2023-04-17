@@ -30,8 +30,6 @@ object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", de
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
-object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
-
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
