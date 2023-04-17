@@ -357,7 +357,17 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
       return upgradeMessage(m.get());
     }
 
-    logger.error("Deserialization failed: {}", Jsons.serialize(line));
+    // If a line cannot be deserialized into an AirbyteMessage,
+    // we assume it is a log message that is mistakenly not an
+    // Airbyte Log Message.
+    //
+    // This is because some sources actually log their process on stdout,
+    // so we want to make sure this info is available in the logs.
+    //
+    // When Connector Ops rectifies this, we can remove this.
+    try (final var mdcScope = containerLogMdcBuilder.build()) {
+      logger.info(line);
+    }
     return m.stream();
   }
 
