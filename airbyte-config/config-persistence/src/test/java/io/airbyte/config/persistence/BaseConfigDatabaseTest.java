@@ -112,6 +112,7 @@ class BaseConfigDatabaseTest {
               actor_catalog,
               actor_catalog_fetch_event,
               actor_definition,
+              actor_definition_version,
               actor_definition_workspace_grant,
               actor_definition_config_injection,
               actor_oauth_parameter,

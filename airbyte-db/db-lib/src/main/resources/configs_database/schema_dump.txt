@@ -69,6 +69,7 @@ create table "public"."actor_definition" (
   "allowed_hosts" jsonb,
   "suggested_streams" jsonb,
   "max_seconds_between_messages" int,
+  "default_version_id" uuid,
   constraint "actor_definition_pkey"
     primary key ("id")
 );
@@ -80,6 +81,26 @@ create table "public"."actor_definition_config_injection" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "actor_definition_config_injection_pkey"
     primary key ("actor_definition_id", "injection_path")
+);
+create table "public"."actor_definition_version" (
+  "id" uuid not null,
+  "actor_definition_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "documentation_url" varchar(256),
+  "docker_repository" varchar(256) not null,
+  "docker_image_tag" varchar(256) not null,
+  "spec" jsonb not null,
+  "protocol_version" varchar(256),
+  "release_stage" varchar(256),
+  "release_date" date,
+  "normalization_repository" varchar(256),
+  "normalization_tag" varchar(256),
+  "supports_dbt" boolean,
+  "normalization_integration_type" varchar(256),
+  "allowed_hosts" jsonb,
+  constraint "actor_definition_version_pkey"
+    primary key ("id")
 );
 create table "public"."actor_definition_workspace_grant" (
   "actor_definition_id" uuid not null,
@@ -270,8 +291,16 @@ alter table "public"."actor_catalog_fetch_event"
   add constraint "actor_catalog_fetch_event_actor_id_fkey"
     foreign key ("actor_id")
     references "public"."actor" ("id");
+alter table "public"."actor_definition"
+  add constraint "actor_definition_default_version_id_fkey"
+    foreign key ("default_version_id")
+    references "public"."actor_definition_version" ("id");
 alter table "public"."actor_definition_config_injection"
   add constraint "actor_definition_config_injection_actor_definition_id_fkey"
+    foreign key ("actor_definition_id")
+    references "public"."actor_definition" ("id");
+alter table "public"."actor_definition_version"
+  add constraint "actor_definition_version_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
     references "public"."actor_definition" ("id");
 alter table "public"."actor_definition_workspace_grant"
@@ -324,6 +353,7 @@ create index "actor_workspace_id_idx" on "public"."actor"("workspace_id" asc);
 create index "actor_catalog_catalog_hash_id_idx" on "public"."actor_catalog"("catalog_hash" asc);
 create index "actor_catalog_fetch_event_actor_catalog_id_idx" on "public"."actor_catalog_fetch_event"("actor_catalog_id" asc);
 create index "actor_catalog_fetch_event_actor_id_idx" on "public"."actor_catalog_fetch_event"("actor_id" asc);
+create index "actor_definition_version_definition_image_tag_idx" on "public"."actor_definition_version"("actor_definition_id" asc, "docker_image_tag" asc);
 create index "actor_oauth_parameter_workspace_definition_idx" on "public"."actor_oauth_parameter"("workspace_id" asc, "actor_definition_id" asc);
 create index "airbyte_configs_migrations_s_idx" on "public"."airbyte_configs_migrations"("success" asc);
 create index "connection_destination_id_idx" on "public"."connection"("destination_id" asc);
