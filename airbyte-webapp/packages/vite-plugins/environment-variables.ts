@@ -16,13 +16,11 @@ export function environmentVariables(): Plugin {
   return {
     name: "airbyte/environment-variables",
     config: (_config, { mode }) => {
-      console.log(`🌍 Determining environment variables for env ${chalk.cyan(mode)}\n`);
-
       // Load any cloud-specific .env files
       let cloudEnvVariables = {};
       const cloudEnv = process.env.WEBAPP_BUILD_CLOUD_ENV;
       if (cloudEnv) {
-        console.log(`  - Getting env file for cloud environment ${chalk.green(cloudEnv)}\n`);
+        console.log(`☁️ Getting env file for cloud environment ${chalk.green(cloudEnv)}\n`);
         const envDirPath = path.join(ROOT_PATH, `../../cloud-webapp/envs/`, cloudEnv);
 
         // loadEnv will not throw if you give it a non-existent path, so we explicitly check here
@@ -32,14 +30,16 @@ export function environmentVariables(): Plugin {
           );
         }
 
-        cloudEnvVariables = loadEnv(mode, envDirPath, ["REACT_APP_"]);
+        cloudEnvVariables = { REACT_APP_CLOUD: true, ...loadEnv(mode, envDirPath, ["REACT_APP_"]) };
       }
 
       // Environment variables that should be available in the frontend
       const frontendEnvVariables = loadEnv(mode, ROOT_PATH, ["REACT_APP_"]);
 
       // Mirrors the backend version which is set during deployment in .github/actions/deploy/action.yaml
-      const version = JSON.stringify(`${process.env.VERSION}${process.env.WEBAPP_BUILD_CLOUD_ENV ? "-cloud" : ""}`);
+      const version = JSON.stringify(
+        `${process.env.VERSION || "dev"}${process.env.WEBAPP_BUILD_CLOUD_ENV ? "-cloud" : ""}`
+      );
 
       // Create an object of defines that will shim all required process.env variables.
       const processEnv = {
