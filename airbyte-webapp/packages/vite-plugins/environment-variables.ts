@@ -15,7 +15,7 @@ const ROOT_PATH = path.join(__dirname, `../../`);
 export function environmentVariables(): Plugin {
   return {
     name: "airbyte/environment-variables",
-    config: (_config, { mode }) => {
+    config: (_config, { command, mode }) => {
       // Load any cloud-specific .env files
       let cloudEnvVariables = {};
       const cloudEnv = process.env.WEBAPP_BUILD_CLOUD_ENV;
@@ -30,7 +30,7 @@ export function environmentVariables(): Plugin {
           );
         }
 
-        cloudEnvVariables = { REACT_APP_CLOUD: true, ...loadEnv(mode, envDirPath, ["REACT_APP_"]) };
+        cloudEnvVariables = { REACT_APP_CLOUD: "true", ...loadEnv(mode, envDirPath, ["REACT_APP_"]) };
       }
 
       // Environment variables that should be available in the frontend
@@ -53,6 +53,10 @@ export function environmentVariables(): Plugin {
           ]),
         ]),
       };
+
+      if (command === "build") {
+        console.log(`Replacing the following process.env values in the frontend code:\n`, processEnv);
+      }
 
       return {
         define: {

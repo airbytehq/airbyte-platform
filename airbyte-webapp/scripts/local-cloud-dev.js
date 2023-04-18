@@ -21,6 +21,6 @@ if (!fs.existsSync(envFile)) {
   process.exit(42);
 }
 
-process.env.REACT_APP_CLOUD = true;
+process.env.REACT_APP_CLOUD = "true";
 
 dotenv.config({ path: envFile });
