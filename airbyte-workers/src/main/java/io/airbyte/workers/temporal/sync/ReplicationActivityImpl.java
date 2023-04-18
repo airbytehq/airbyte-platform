@@ -17,11 +17,8 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_
 import datadog.trace.api.Trace;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.CancellationHandler;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.AirbyteConfigValidator;
@@ -34,23 +31,15 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
-import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
-import io.airbyte.workers.orchestrator.InMemoryOrchestratorHandleFactory;
-import io.airbyte.workers.orchestrator.KubeOrchestratorHandleFactory;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
-import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
-import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.micronaut.context.annotation.Value;
 import io.temporal.activity.Activity;
@@ -75,56 +64,34 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReplicationActivityImpl.class);
   private static final int MAX_TEMPORAL_MESSAGE_SIZE = 2 * 1024 * 1024;
 
-  private final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig;
-  private final ProcessFactory processFactory;
   private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
   private final LogConfigs logConfigs;
   private final String airbyteVersion;
-  private final FeatureFlags featureFlags;
-  private final FeatureFlagClient featureFlagClient;
-  private final Integer serverPort;
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
-  private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
-  private final WorkerConfigs workerConfigs;
-  private final SyncPersistenceFactory syncPersistenceFactory;
+  private final OrchestratorHandleFactory orchestratorHandleFactory;
 
-  public ReplicationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
-                                 @Named("replicationProcessFactory") final ProcessFactory processFactory,
-                                 final SecretsHydrator secretsHydrator,
+  public ReplicationActivityImpl(final SecretsHydrator secretsHydrator,
                                  @Named("workspaceRoot") final Path workspaceRoot,
                                  final WorkerEnvironment workerEnvironment,
                                  final LogConfigs logConfigs,
                                  @Value("${airbyte.version}") final String airbyteVersion,
-                                 final FeatureFlags featureFlags,
-                                 @Value("${micronaut.server.port}") final Integer serverPort,
                                  final AirbyteConfigValidator airbyteConfigValidator,
                                  final TemporalUtils temporalUtils,
                                  final AirbyteApiClient airbyteApiClient,
-                                 final AirbyteMessageSerDeProvider serDeProvider,
-                                 final AirbyteProtocolVersionedMigratorFactory migratorFactory,
-                                 @Named("replicationWorkerConfigs") final WorkerConfigs workerConfigs,
-                                 final FeatureFlagClient featureFlagClient,
-                                 final SyncPersistenceFactory syncPersistenceFactory) {
-    this.containerOrchestratorConfig = containerOrchestratorConfig;
-    this.processFactory = processFactory;
+                                 final OrchestratorHandleFactory orchestratorHandleFactory) {
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
     this.logConfigs = logConfigs;
     this.airbyteVersion = airbyteVersion;
-    this.featureFlags = featureFlags;
-    this.serverPort = serverPort;
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
-    this.airbyteIntegrationLauncherFactory = new AirbyteIntegrationLauncherFactory(processFactory, serDeProvider, migratorFactory, featureFlags);
-    this.workerConfigs = workerConfigs;
-    this.featureFlagClient = featureFlagClient;
-    this.syncPersistenceFactory = syncPersistenceFactory;
+    this.orchestratorHandleFactory = orchestratorHandleFactory;
   }
 
   // Marking task queue as nullable because we changed activity signature; thus runs started before
@@ -165,15 +132,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
             return fullSyncInput;
           };
 
-          final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory;
-
-          final OrchestratorHandleFactory orchestratorHandleFactory = containerOrchestratorConfig.isPresent()
-              ? new KubeOrchestratorHandleFactory(containerOrchestratorConfig.get(),
-                  workerConfigs, featureFlagClient, temporalUtils, serverPort)
-              : new InMemoryOrchestratorHandleFactory(airbyteIntegrationLauncherFactory, airbyteApiClient.getSourceApi(),
-                  airbyteApiClient.getSourceDefinitionApi(), airbyteApiClient.getDestinationApi(), syncPersistenceFactory, featureFlagClient,
-                  featureFlags);
-          workerFactory = orchestratorHandleFactory.create(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, () -> context);
+          final CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> workerFactory =
+              orchestratorHandleFactory.create(sourceLauncherConfig, destinationLauncherConfig, jobRunConfig, syncInput, () -> context);
 
           final TemporalAttemptExecution<StandardSyncInput, ReplicationOutput> temporalAttempt =
               new TemporalAttemptExecution<>(

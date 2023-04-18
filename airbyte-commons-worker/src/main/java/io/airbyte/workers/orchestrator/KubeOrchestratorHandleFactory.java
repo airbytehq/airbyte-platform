@@ -18,7 +18,11 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.annotation.Value;
 import io.temporal.activity.ActivityExecutionContext;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -29,6 +33,9 @@ import java.util.function.Supplier;
  * container-orchestrator. This factory creates the handle that spins up this pod and reads the
  * result from the processing.
  */
+@Singleton
+@Requires(property = "airbyte.container.orchestrator.enabled",
+          value = "true")
 public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory {
 
   private final ContainerOrchestratorConfig containerOrchestratorConfig;
@@ -37,11 +44,11 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   private final TemporalUtils temporalUtils;
   private final Integer serverPort;
 
-  public KubeOrchestratorHandleFactory(final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                       final WorkerConfigs workerConfigs,
+  public KubeOrchestratorHandleFactory(@Named("containerOrchestratorConfig") final ContainerOrchestratorConfig containerOrchestratorConfig,
+                                       @Named("replicationWorkerConfigs") final WorkerConfigs workerConfigs,
                                        final FeatureFlagClient featureFlagClient,
                                        final TemporalUtils temporalUtils,
-                                       final Integer serverPort) {
+                                       @Value("${micronaut.server.port}") final Integer serverPort) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
