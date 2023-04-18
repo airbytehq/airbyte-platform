@@ -233,7 +233,7 @@ public class SourceDefinitionsHandler {
         .withSpec(spec)
         .withProtocolVersion(airbyteProtocolVersion.serialize())
         .withTombstone(false)
-        .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
   }
 

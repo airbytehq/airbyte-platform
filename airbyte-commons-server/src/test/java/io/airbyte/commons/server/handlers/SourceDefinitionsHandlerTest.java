@@ -111,7 +111,7 @@ class SourceDefinitionsHandlerTest {
         .withIcon("rss.svg")
         .withSpec(spec)
         .withTombstone(false)
-        .withReleaseStage(StandardSourceDefinition.ReleaseStage.ALPHA)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
 
@@ -361,7 +361,7 @@ class SourceDefinitionsHandlerTest {
         .writeStandardSourceDefinition(
             sourceDefinition
                 .withReleaseDate(null)
-                .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+                .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
                 .withProtocolVersion(DEFAULT_PROTOCOL_VERSION));
   }
 
@@ -412,7 +412,7 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).writeCustomSourceDefinition(
         sourceDefinition
             .withReleaseDate(null)
-            .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withCustom(true),
         workspaceId);
@@ -452,7 +452,7 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository, never()).writeCustomSourceDefinition(
         sourceDefinition
             .withReleaseDate(null)
-            .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withProtocolVersion(invalidVersion)
             .withCustom(true),
         workspaceId);

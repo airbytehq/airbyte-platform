@@ -231,7 +231,7 @@ public class DestinationDefinitionsHandler {
         .withSpec(spec)
         .withProtocolVersion(airbyteProtocolVersion.serialize())
         .withTombstone(false)
-        .withReleaseStage(StandardDestinationDefinition.ReleaseStage.CUSTOM)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
     return destinationDefinition;
   }

@@ -35,8 +35,8 @@ import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -346,7 +346,7 @@ class ConnectorBuilderProjectsHandlerTest {
             .withManifestVersion(A_VERSION)
             .withManifestDescription(A_DESCRIPTION));
 
-    ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
+    final ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
 
     assertEquals(A_BUILDER_PROJECT_ID, response.getBuilderProject().getBuilderProjectId());
