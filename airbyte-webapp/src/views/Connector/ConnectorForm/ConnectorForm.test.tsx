@@ -444,6 +444,85 @@ describe("Connector form", () => {
       });
     });
 
+    it("should not render entire optional object and oneOf fields as hidden, but render the optional sub-fields as hidden", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, optional_oneof: { const_prop: "FIRST_CHOICE" } },
+        propertiesOverride: {
+          optional_object: {
+            type: "object",
+            required: ["required_obj_subfield"],
+            properties: { required_obj_subfield: { type: "string" }, optional_obj_subfield: { type: "string" } },
+          },
+          optional_oneof: {
+            type: "object",
+            oneOf: [
+              {
+                title: "First choice",
+                required: ["required_oneof_subfield"],
+                properties: {
+                  required_oneof_subfield: { type: "string" },
+                  optional_oneof_subfield: { type: "string" },
+                  const_prop: { type: "string", const: "FIRST_CHOICE" },
+                },
+              },
+              {
+                title: "Second choice",
+                required: ["different_required_oneof_subfield"],
+                properties: {
+                  different_required_oneof_subfield: { type: "integer" },
+                  optional_oneof_subfield: { type: "string" },
+                  const_prop: { type: "string", const: "SECOND_CHOICE" },
+                },
+              },
+            ],
+          },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.optional_object.required_obj_subfield")).toBeVisible();
+      expect(
+        getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield")
+      ).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.optional_oneof.required_oneof_subfield")).toBeVisible();
+      expect(
+        getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield")
+      ).not.toBeVisible();
+
+      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(0)!));
+
+      expect(getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield")).toBeVisible();
+
+      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(1)!));
+
+      expect(getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield")).toBeVisible();
+
+      const input1 = getInputByName(container, "connectionConfiguration.optional_object.required_obj_subfield");
+      userEvent.type(input1!, "required obj subfield value");
+      const input2 = getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield");
+      userEvent.type(input2!, "optional obj subfield value");
+      const input3 = getInputByName(container, "connectionConfiguration.optional_oneof.required_oneof_subfield");
+      userEvent.type(input3!, "required oneof subfield value");
+      const input4 = getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield");
+      userEvent.type(input4!, "optional oneof subfield value");
+
+      await submitForm(container);
+
+      expect(result).toEqual({
+        name: "test-name",
+        connectionConfiguration: {
+          ...filledForm,
+          optional_object: {
+            required_obj_subfield: "required obj subfield value",
+            optional_obj_subfield: "optional obj subfield value",
+          },
+          optional_oneof: {
+            required_oneof_subfield: "required oneof subfield value",
+            optional_oneof_subfield: "optional oneof subfield value",
+            const_prop: "FIRST_CHOICE",
+          },
+        },
+      });
+    });
+
     it("should load existing values in collapsed fields", async () => {
       const container = await renderForm({
         formValuesOverride: { ...filledForm, additional_same_group: "input1", additional_separate_group: "input2" },

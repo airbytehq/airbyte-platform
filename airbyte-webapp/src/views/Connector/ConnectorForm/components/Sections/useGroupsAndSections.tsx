@@ -197,7 +197,7 @@ function splitSections(
 }
 
 const getDisplayType = (block: FormBlock, rootLevel: boolean) => {
-  if (block.isRequired || block.always_show || block._type === "formCondition") {
+  if (block.isRequired || block.always_show || block._type === "formCondition" || block._type === "formGroup") {
     return "expanded";
   }
   if (block.order !== undefined || !rootLevel) {
