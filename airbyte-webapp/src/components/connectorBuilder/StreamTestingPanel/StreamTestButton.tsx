@@ -17,6 +17,7 @@ interface StreamTestButtonProps {
   hasTestInputJsonErrors: boolean;
   hasStreamListErrors: boolean;
   setTestInputOpen: (open: boolean) => void;
+  isFetchingStreamList: boolean;
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
@@ -24,6 +25,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   hasTestInputJsonErrors,
   hasStreamListErrors,
   setTestInputOpen,
+  isFetchingStreamList,
 }) => {
   const { editorView, yamlIsValid } = useConnectorBuilderFormState();
   const { hasErrors, validateAndTouch } = useBuilderErrors();
@@ -44,6 +46,11 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   let buttonDisabled = false;
   let showWarningIcon = false;
   let tooltipContent = undefined;
+
+  if (isFetchingStreamList && editorView === "yaml") {
+    buttonDisabled = true;
+    tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
+  }
 
   if (editorView === "yaml" && !yamlIsValid) {
     buttonDisabled = true;

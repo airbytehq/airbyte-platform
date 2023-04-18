@@ -391,7 +391,8 @@ function getSavingState(
 
 export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
-  const { lastValidJsonManifest, selectedView, projectId } = useConnectorBuilderFormState();
+  const { lastValidJsonManifest, selectedView, projectId, editorView, builderFormValues } =
+    useConnectorBuilderFormState();
 
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
@@ -424,9 +425,12 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
     }
   }, [selectedView]);
 
+  const streamName =
+    editorView === "ui" ? builderFormValues.streams[testStreamIndex]?.name : streams[testStreamIndex]?.name;
+
   const streamRead = useReadStream(projectId, {
     manifest,
-    stream: streams[testStreamIndex]?.name,
+    stream: streamName,
     config: testInputWithDefaults,
   });
 

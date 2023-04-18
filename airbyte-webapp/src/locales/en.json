@@ -886,6 +886,7 @@
   "connectorBuilder.warnings.noRecords": "No records could be extracted from responses, make sure the record selector is set correctly.",
   "connectorBuilder.warnings.primaryKeyMissing": "In at least one record, the configured primary key is not set. Make sure it is always available.",
   "connectorBuilder.warnings.primaryKeyDuplicate": "Primary key is not unique - found <b>{duplicateKey}</b> more than once.",
+  "connectorBuilder.resolvingStreamList": "Checking configuration",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
