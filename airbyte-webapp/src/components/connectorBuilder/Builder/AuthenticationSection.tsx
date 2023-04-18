@@ -144,13 +144,6 @@ export const AuthenticationSection: React.FC = () => {
                     label="Access token property name"
                     tooltip="The name of the property which contains the access token in the response from the token refresh endpoint"
                   />
-                  <BuilderFieldWithInputs
-                    type="string"
-                    path="global.authenticator.grant_type"
-                    optional
-                    label="Grant type"
-                    tooltip="The grant type to request for access_token"
-                  />
                   <KeyValueListField
                     path="global.authenticator.refresh_request_body"
                     label="Request Parameters"

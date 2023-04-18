@@ -169,20 +169,6 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           }
           options={LARGE_DURATION_OPTIONS}
         />
-        <BuilderFieldWithInputs
-          type="string"
-          path={streamFieldPath("incrementalSync.partition_field_start")}
-          label="Stream state field start"
-          tooltip="Set which field on the stream state to use to determine the starting point"
-          optional
-        />
-        <BuilderFieldWithInputs
-          type="string"
-          path={streamFieldPath("incrementalSync.partition_field_end")}
-          label="Stream state field end"
-          tooltip="Set which field on the stream state to use to determine the ending point"
-          optional
-        />
       </BuilderOptional>
     </BuilderCard>
   );

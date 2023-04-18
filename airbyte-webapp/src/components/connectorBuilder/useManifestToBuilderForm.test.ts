@@ -409,7 +409,7 @@ describe("Conversion successfully results in", () => {
                   key2: "val2",
                 },
                 token_refresh_endpoint: "https://api.com/refresh_token",
-                grant_type: "client_credentials",
+                grant_type: "refresh_token",
               },
             },
           },
@@ -427,7 +427,7 @@ describe("Conversion successfully results in", () => {
         ["key2", "val2"],
       ],
       token_refresh_endpoint: "https://api.com/refresh_token",
-      grant_type: "client_credentials",
+      grant_type: "refresh_token",
     });
   });
 });

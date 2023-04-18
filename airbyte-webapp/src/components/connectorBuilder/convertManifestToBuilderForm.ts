@@ -304,6 +304,13 @@ function manifestIncrementalSyncToBuilder(
     throw new ManifestCompatibilityError(streamName, "start_datetime or end_datetime are not set to a string value");
   }
 
+  if (manifestIncrementalSync.partition_field_start || manifestIncrementalSync.partition_field_end) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      "Custom partition_field_start and partition_field_end are not supported"
+    );
+  }
+
   return manifestIncrementalSync;
 }
 
@@ -384,6 +391,10 @@ function manifestAuthenticatorToBuilder(
         streamName,
         "OAuthAuthenticator contains a refresh_request_body with non-string values"
       );
+    }
+
+    if (manifestAuthenticator.grant_type && manifestAuthenticator.grant_type !== "refresh_token") {
+      throw new ManifestCompatibilityError(streamName, "OAuthAuthenticator sets custom grant_type");
     }
 
     builderAuthenticator = {
