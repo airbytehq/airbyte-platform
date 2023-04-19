@@ -8,7 +8,7 @@ import { useAnalyticsService } from "hooks/services/Analytics";
 import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
-import { BuilderField } from "./BuilderField";
+import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
 import styles from "./GlobalConfigView.module.scss";
 
@@ -21,7 +21,7 @@ export const GlobalConfigView: React.FC = () => {
       {/* Not using intl for the labels and tooltips in this component in order to keep maintainence simple */}
       <BuilderTitle path="global.connectorName" label="Connector Name" size="lg" />
       <BuilderCard className={styles.content}>
-        <BuilderField
+        <BuilderFieldWithInputs
           type="string"
           path="global.urlBase"
           label="API Base URL"

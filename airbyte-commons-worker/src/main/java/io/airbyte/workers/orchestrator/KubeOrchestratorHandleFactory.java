@@ -11,6 +11,7 @@ import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
+import io.airbyte.featureflag.ContainerOrchestratorJavaOpts;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -18,7 +19,12 @@ import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
+import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.annotation.Value;
 import io.temporal.activity.ActivityExecutionContext;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -29,6 +35,9 @@ import java.util.function.Supplier;
  * container-orchestrator. This factory creates the handle that spins up this pod and reads the
  * result from the processing.
  */
+@Singleton
+@Requires(property = "airbyte.container.orchestrator.enabled",
+          value = "true")
 public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory {
 
   private final ContainerOrchestratorConfig containerOrchestratorConfig;
@@ -37,11 +46,11 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   private final TemporalUtils temporalUtils;
   private final Integer serverPort;
 
-  public KubeOrchestratorHandleFactory(final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                       final WorkerConfigs workerConfigs,
+  public KubeOrchestratorHandleFactory(@Named("containerOrchestratorConfig") final ContainerOrchestratorConfig containerOrchestratorConfig,
+                                       @Named("replicationWorkerConfigs") final WorkerConfigs workerConfigs,
                                        final FeatureFlagClient featureFlagClient,
                                        final TemporalUtils temporalUtils,
-                                       final Integer serverPort) {
+                                       @Value("${micronaut.server.port}") final Integer serverPort) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigs = workerConfigs;
     this.featureFlagClient = featureFlagClient;
@@ -55,8 +64,9 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
                                                                                          JobRunConfig jobRunConfig,
                                                                                          StandardSyncInput syncInput,
                                                                                          final Supplier<ActivityExecutionContext> activityContext) {
-    final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorImage(featureFlagClient, containerOrchestratorConfig,
+    final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorConfig(featureFlagClient, containerOrchestratorConfig,
         syncInput.getConnectionId());
+
     return () -> new ReplicationLauncherWorker(
         syncInput.getConnectionId(),
         finalConfig,
@@ -79,31 +89,39 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
    * @return the updated ContainerOrchestratorConfig
    */
   @VisibleForTesting
-  static ContainerOrchestratorConfig injectContainerOrchestratorImage(final FeatureFlagClient client,
-                                                                      final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                                                      final UUID connectionId) {
-    // This is messy because the ContainerOrchestratorConfig is immutable, so we have to create an
-    // entirely new object.
-    ContainerOrchestratorConfig config = containerOrchestratorConfig;
+  static ContainerOrchestratorConfig injectContainerOrchestratorConfig(final FeatureFlagClient client,
+                                                                       final ContainerOrchestratorConfig containerOrchestratorConfig,
+                                                                       final UUID connectionId) {
     final String injectedOrchestratorImage =
         client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(connectionId));
-
+    String orchestratorImage = containerOrchestratorConfig.containerOrchestratorImage();
     if (!injectedOrchestratorImage.isEmpty()) {
-      config = new ContainerOrchestratorConfig(
-          containerOrchestratorConfig.namespace(),
-          containerOrchestratorConfig.documentStoreClient(),
-          containerOrchestratorConfig.environmentVariables(),
-          containerOrchestratorConfig.kubernetesClient(),
-          containerOrchestratorConfig.secretName(),
-          containerOrchestratorConfig.secretMountPath(),
-          containerOrchestratorConfig.dataPlaneCredsSecretName(),
-          containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
-          injectedOrchestratorImage,
-          containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
-          containerOrchestratorConfig.googleApplicationCredentials(),
-          containerOrchestratorConfig.workerEnvironment());
+      orchestratorImage = injectedOrchestratorImage;
     }
-    return config;
+
+    final String injectedJavaOpts = client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(connectionId));
+    // Pass this into a hashamp to always ensure we can update this.
+    final var envMap = new HashMap<>(containerOrchestratorConfig.environmentVariables());
+    if (!injectedJavaOpts.isEmpty()) {
+      envMap.put("JAVA_OPTS", injectedJavaOpts);
+    }
+
+    // This is messy because the ContainerOrchestratorConfig is immutable, so we alwasy have to create
+    // an
+    // entirely new object.
+    return new ContainerOrchestratorConfig(
+        containerOrchestratorConfig.namespace(),
+        containerOrchestratorConfig.documentStoreClient(),
+        envMap,
+        containerOrchestratorConfig.kubernetesClient(),
+        containerOrchestratorConfig.secretName(),
+        containerOrchestratorConfig.secretMountPath(),
+        containerOrchestratorConfig.dataPlaneCredsSecretName(),
+        containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
+        orchestratorImage,
+        containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
+        containerOrchestratorConfig.googleApplicationCredentials(),
+        containerOrchestratorConfig.workerEnvironment());
   }
 
 }

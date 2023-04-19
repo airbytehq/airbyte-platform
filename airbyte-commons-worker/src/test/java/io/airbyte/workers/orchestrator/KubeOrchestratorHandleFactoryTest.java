@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
+import io.airbyte.featureflag.ContainerOrchestratorJavaOpts;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -18,12 +19,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class KubeOrchestratorHandleFactoryTest {
+
+  static FeatureFlagClient client = Mockito.mock(TestClient.class);
 
   @Nested
   class ContainerImageInjection {
-
-    static FeatureFlagClient client = Mockito.mock(TestClient.class);
 
     @Test
     void shouldInjectIfConnectionIdIsIncluded() {
@@ -32,13 +34,14 @@ class KubeOrchestratorHandleFactoryTest {
       var expNamespace = "ns1";
       var expSecret = "secret";
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(correctUuid))).thenReturn(expImage);
+      when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(correctUuid))).thenReturn("");
 
-      ContainerOrchestratorConfig config =
+      final ContainerOrchestratorConfig config =
           new ContainerOrchestratorConfig(expNamespace, null, Map.of("a", "b"), null, expSecret,
               "path", "dataplane secrets", "dataplane path",
               "image 0", "pull policy", "gcp creds", null);
 
-      var actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorImage(client, config, correctUuid);
+      final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, correctUuid);
 
       assertEquals(expImage, actual.containerOrchestratorImage());
       // Spot check non image fields to make sure they remain the same.
@@ -50,13 +53,59 @@ class KubeOrchestratorHandleFactoryTest {
     void shouldNotInjectIfConnectionIdIsNotIncluded() {
       var badUuid = UUID.randomUUID();
       when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(badUuid))).thenReturn("");
+      when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(badUuid))).thenReturn("");
 
-      ContainerOrchestratorConfig config =
+      final ContainerOrchestratorConfig config =
           new ContainerOrchestratorConfig("ns 1", null, Map.of("a", "b"), null, "secret",
               "path", "dataplane secrets", "dataplane path",
               "image 0", "pull policy", "gcp creds", null);
 
-      var actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorImage(client, config, badUuid);
+      final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, badUuid);
+
+      assertEquals(config, actual);
+    }
+
+  }
+
+  @Nested
+  class JavaOptsInjection {
+
+    @Test
+    void shouldInjectIfConnectionIdIsIncluded() {
+      var correctUuid = UUID.randomUUID();
+      var expOptsString = "-Xmx1g -Xms1g";
+      var expNamespace = "ns1";
+      var expSecret = "secret";
+      when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(correctUuid))).thenReturn(expOptsString);
+      when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(correctUuid))).thenReturn("");
+
+      var orgMap = Map.of("a", "b", "JAVA_OPTS", "bad");
+      final ContainerOrchestratorConfig config =
+          new ContainerOrchestratorConfig(expNamespace, null, orgMap, null, expSecret,
+              "path", "dataplane secrets", "dataplane path",
+              "image 0", "pull policy", "gcp creds", null);
+
+      final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, correctUuid);
+
+      var expMap = Map.of("a", "b", "JAVA_OPTS", expOptsString);
+      assertEquals(expMap, actual.environmentVariables());
+      // Spot check non image fields to make sure they remain the same.
+      assertEquals(expNamespace, actual.namespace());
+      assertEquals(expSecret, actual.secretName());
+    }
+
+    @Test
+    void shouldNotInjectIfConnectionIdIsNotIncluded() {
+      var badUuid = UUID.randomUUID();
+      when(client.stringVariation(ContainerOrchestratorJavaOpts.INSTANCE, new Connection(badUuid))).thenReturn("");
+      when(client.stringVariation(ContainerOrchestratorDevImage.INSTANCE, new Connection(badUuid))).thenReturn("");
+
+      final ContainerOrchestratorConfig config =
+          new ContainerOrchestratorConfig("ns 1", null, Map.of("a", "b"), null, "secret",
+              "path", "dataplane secrets", "dataplane path",
+              "image 0", "pull policy", "gcp creds", null);
+
+      final ContainerOrchestratorConfig actual = KubeOrchestratorHandleFactory.injectContainerOrchestratorConfig(client, config, badUuid);
 
       assertEquals(config, actual);
     }

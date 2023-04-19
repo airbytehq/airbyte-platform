@@ -116,7 +116,7 @@ class DestinationDefinitionsHandlerTest {
         .withSpec(spec)
         .withProtocolVersion("0.2.2")
         .withTombstone(false)
-        .withReleaseStage(StandardDestinationDefinition.ReleaseStage.ALPHA)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
   }
@@ -411,7 +411,7 @@ class DestinationDefinitionsHandlerTest {
     verify(configRepository, never()).writeStandardDestinationDefinition(destination
         .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
         .withReleaseDate(null)
-        .withReleaseStage(StandardDestinationDefinition.ReleaseStage.CUSTOM));
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM));
   }
 
   @Test
@@ -464,7 +464,7 @@ class DestinationDefinitionsHandlerTest {
         destination
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withReleaseDate(null)
-            .withReleaseStage(StandardDestinationDefinition.ReleaseStage.CUSTOM)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withCustom(true),
         workspaceId);
   }
@@ -504,7 +504,7 @@ class DestinationDefinitionsHandlerTest {
         destination
             .withProtocolVersion(invalidProtocol)
             .withReleaseDate(null)
-            .withReleaseStage(StandardDestinationDefinition.ReleaseStage.CUSTOM)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withCustom(true),
         workspaceId);
   }

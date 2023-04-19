@@ -37,6 +37,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
@@ -222,7 +223,7 @@ public class DbConverter {
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
         .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), StandardSourceDefinition.ReleaseStage.class).orElseThrow())
+            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
             : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
@@ -259,7 +260,7 @@ public class DbConverter {
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
         .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), StandardDestinationDefinition.ReleaseStage.class).orElseThrow())
+            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
             : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
         .withSupportsDbt(record.get(ACTOR_DEFINITION.SUPPORTS_DBT) == null ? null

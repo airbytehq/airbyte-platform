@@ -85,6 +85,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               type="array"
               path={streamFieldPath("fieldPointer")}
               label="Record selector"
+              optional
               tooltip="Pointer into the response that should be extracted as the final record"
             />
             <BuilderField

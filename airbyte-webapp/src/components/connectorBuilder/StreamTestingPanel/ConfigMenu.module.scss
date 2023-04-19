@@ -31,3 +31,8 @@
   top: -1 * variables.$spacing-md;
   right: -1 * variables.$spacing-md;
 }
+
+.container {
+  position: relative;
+  align-self: flex-start;
+}

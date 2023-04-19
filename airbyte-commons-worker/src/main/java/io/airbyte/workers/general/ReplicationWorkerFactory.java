@@ -37,6 +37,7 @@ import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,7 @@ import lombok.extern.slf4j.Slf4j;
  * currently depend on input data in their constructor. This factory would disappear if all the
  * dependencies of the DefaultReplicationWorker were stateless.
  */
+@Singleton
 @Slf4j
 public class ReplicationWorkerFactory {
 

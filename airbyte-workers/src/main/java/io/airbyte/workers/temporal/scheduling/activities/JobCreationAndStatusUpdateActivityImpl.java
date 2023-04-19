@@ -31,6 +31,7 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
@@ -61,6 +62,7 @@ import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.JobStatus;
+import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.helper.FailureHelper;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.util.CollectionUtils;
@@ -303,8 +305,17 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       final UUID connectionId = UUID.fromString(job.getScope());
       ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, input.getAttemptNumber(), CONNECTION_ID_KEY, connectionId, JOB_ID_KEY, jobId));
       final JobSyncConfig jobSyncConfig = job.getConfig().getSync();
-      final String sourceDockerImage = jobSyncConfig != null ? jobSyncConfig.getSourceDockerImage() : null;
-      final String destinationDockerImage = jobSyncConfig != null ? jobSyncConfig.getDestinationDockerImage() : null;
+      final String sourceDockerImage;
+      final String destinationDockerImage;
+      if (jobSyncConfig == null) {
+        final JobResetConnectionConfig resetConfig = job.getConfig().getResetConnection();
+        // In a reset, we run a fake source
+        sourceDockerImage = resetConfig != null ? WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB : null;
+        destinationDockerImage = resetConfig != null ? resetConfig.getDestinationDockerImage() : null;
+      } else {
+        sourceDockerImage = jobSyncConfig.getSourceDockerImage();
+        destinationDockerImage = jobSyncConfig.getDestinationDockerImage();
+      }
       final SyncJobReportingContext jobContext = new SyncJobReportingContext(jobId, sourceDockerImage, destinationDockerImage);
       job.getLastFailedAttempt().flatMap(Attempt::getFailureSummary)
           .ifPresent(failureSummary -> jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext));

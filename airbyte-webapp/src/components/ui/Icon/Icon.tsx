@@ -3,6 +3,7 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import { ReactComponent as ArrowRightIcon } from "./icons/arrowRightIcon.svg";
+import { ReactComponent as ChevronRightIcon } from "./icons/chevronRightIcon.svg";
 import { ReactComponent as CreditsIcon } from "./icons/creditsIcon.svg";
 import { ReactComponent as CrossIcon } from "./icons/crossIcon.svg";
 import { ReactComponent as DocsIcon } from "./icons/docsIcon.svg";
@@ -26,6 +27,7 @@ const colorMap: Record<IconColor, string> = {
   disabled: styles[`icon--disabled`],
   error: styles[`icon--error`],
   action: styles[`icon--action`],
+  affordance: styles[`icon--affordance`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -52,6 +54,7 @@ const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   plus: PlusIcon,
   rotate: RotateIcon,
   nested: NestedIcon,
+  chevronRight: ChevronRightIcon,
 };
 
 export const Icon: React.FC<IconProps> = React.memo(
