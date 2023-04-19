@@ -40,7 +40,7 @@ export const ConnectionEditFormCard = <T extends object>({
     <Formik {...form} onSubmit={(values, formikHelpers) => mutateAsync({ values, formikHelpers })}>
       {({ resetForm, isSubmitting, dirty, isValid }) => (
         <CollapsibleCard {...props}>
-          <Form className={styles.formCard}>
+          <Form>
             <FormChangeTracker changed={dirty} />
             {children}
             <div className={styles.editControls}>

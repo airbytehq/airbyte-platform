@@ -1,0 +1,22 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-lg;
+  padding: variables.$spacing-xl;
+
+  .headerBtn {
+    all: unset;
+    cursor: pointer;
+
+    .icon {
+      transition: variables.$transition;
+
+      &.expanded {
+        transform: rotate(90deg);
+      }
+    }
+  }
+}
