@@ -59,12 +59,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
 
   return (
     <div className={styles.container}>
-      <ConfigMenu
-        className={styles.configButton}
-        testInputJsonErrors={testInputJsonErrors}
-        isOpen={isTestInputOpen}
-        setIsOpen={setTestInputOpen}
-      />
+      <ConfigMenu testInputJsonErrors={testInputJsonErrors} isOpen={isTestInputOpen} setIsOpen={setTestInputOpen} />
       {!hasStreams && (
         <div className={styles.addStreamMessage}>
           <img className={styles.logo} alt="" src={addButtonScreenshot} width={320} />
@@ -74,10 +69,10 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
         </div>
       )}
       {hasStreams && (
-        <div className={styles.selectAndTestContainer}>
+        <>
           <StreamSelector className={styles.streamSelector} />
           <StreamTester hasTestInputJsonErrors={testInputJsonErrors > 0} setTestInputOpen={setTestInputOpen} />
-        </div>
+        </>
       )}
     </div>
   );
