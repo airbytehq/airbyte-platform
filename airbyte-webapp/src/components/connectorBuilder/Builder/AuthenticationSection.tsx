@@ -45,7 +45,7 @@ export const AuthenticationSection: React.FC = () => {
                 <BuilderFieldWithInputs
                   type="string"
                   path="global.authenticator.header"
-                  label="Header"
+                  label="Header Name"
                   tooltip="HTTP header which should be set to the API Key"
                 />
                 <BuilderInputPlaceholder
