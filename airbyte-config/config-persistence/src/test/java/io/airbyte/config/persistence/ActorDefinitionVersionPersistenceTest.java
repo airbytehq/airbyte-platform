@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
  */
 class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
-  private static final UUID ACTOR_DEFINITION_VERSION_ID = UUID.randomUUID();
+  private static final UUID ID = UUID.randomUUID();
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final String SOURCE_NAME = "Test Source";
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
@@ -37,7 +37,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
       .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSourceDefinitionId(ACTOR_DEFINITION_ID);
   private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = new ActorDefinitionVersion()
-      .withId(ACTOR_DEFINITION_VERSION_ID)
+      .withId(ID)
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -64,6 +64,18 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testGetForNonExistentTagReturnsEmptyOptional() throws IOException {
     assertTrue(configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, UNPERSISTED_DOCKER_IMAGE_TAG).isEmpty());
+  }
+
+  @Test
+  void testGetActorDefinitionVersionById() throws IOException {
+    configRepository.writeActorDefinitionVersion(ACTOR_DEFINITION_VERSION);
+    assertTrue(configRepository.getActorDefinitionVersion(ID).isPresent());
+    assertEquals(configRepository.getActorDefinitionVersion(ID).get(), ACTOR_DEFINITION_VERSION);
+  }
+
+  @Test
+  void testGetActorDefinitionVersionByIdNotExistentReturnsEmptyOptional() throws IOException {
+    assertTrue(configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID).isEmpty());
   }
 
 }

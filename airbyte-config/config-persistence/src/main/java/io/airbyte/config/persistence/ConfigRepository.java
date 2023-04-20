@@ -2954,7 +2954,7 @@ public class ConfigRepository {
    *
    * @param actorDefinitionId - actor definition id
    * @param dockerImageTag - docker image tag
-   * @return actor definition version, if there is an entry in the DB already for this version,
+   * @return actor definition version if there is an entry in the DB already for this version,
    *         otherwise an empty optional
    * @throws IOException - you never know when you io
    */
@@ -2963,6 +2963,22 @@ public class ConfigRepository {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion);
+  }
+
+  /**
+   * Get an actor definition version by ID.
+   *
+   * @param actorDefinitionVersionId - actor definition version id
+   * @return actor definition version if there is an entry in the DB already with this ID, otherwise
+   *         an empty optional
+   * @throws IOException - you never know when you io
+   */
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
         .stream()
         .findFirst()
         .map(DbConverter::buildActorDefinitionVersion);
