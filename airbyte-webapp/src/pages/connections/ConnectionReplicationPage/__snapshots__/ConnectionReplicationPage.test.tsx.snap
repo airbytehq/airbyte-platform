@@ -506,6 +506,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                   >
                     <div
                       class="<removed-for-snapshot-test>"
+                      data-noexpand="true"
                     >
                       <div
                         class="<removed-for-snapshot-test>"
@@ -521,6 +522,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                     </div>
                     <div
                       class="<removed-for-snapshot-test>"
+                      data-noexpand="true"
                     >
                       <label
                         class="<removed-for-snapshot-test>"

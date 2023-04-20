@@ -75,7 +75,23 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   const paths = useMemo(() => primitiveFields.map((field) => field.path), [primitiveFields]);
   const fieldCount = fields?.length ?? 0;
   const selectedFieldCount = selectedFields?.length ?? fieldCount;
-  const onRowClick = fieldCount > 0 ? () => onExpand() : undefined;
+  const onRowClick: React.MouseEventHandler<HTMLElement> | undefined =
+    fieldCount > 0
+      ? (e) => {
+          let target: Element | null = e.target as Element;
+
+          // if the target is or has a *[data-noexpand] ancestor
+          // then exit, otherwise toggle expand
+          while (target) {
+            if (target.hasAttribute("data-noexpand")) {
+              return;
+            }
+            target = target.parentElement;
+          }
+
+          onExpand();
+        }
+      : undefined;
 
   const { streamHeaderContentStyle, pillButtonVariant } = useStreamsConfigTableRowProps(stream);
 
@@ -116,7 +132,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
       ref={rowRef}
     >
-      <CellText size="fixed" className={styles.streamRowCheckboxCell}>
+      <CellText size="fixed" className={styles.streamRowCheckboxCell} data-noexpand>
         {!disabled && (
           <>
             <StreamsConfigTableRowStatus stream={stream} />
@@ -124,7 +140,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           </>
         )}
       </CellText>
-      <CellText size="fixed" className={styles.syncCell}>
+      <CellText size="fixed" className={styles.syncCell} data-noexpand>
         <Switch
           size="sm"
           checked={stream.config?.selected}
