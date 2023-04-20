@@ -16,7 +16,8 @@ import { ConnectorBuilderMainFormikContext } from "services/connectorBuilder/Con
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
-import { BuilderFormInput, getInferredInputs } from "../types";
+import { BuilderFormInput } from "../types";
+import { useInferredInputs } from "../useInferredInputs";
 
 const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 
@@ -76,10 +77,7 @@ export const InputForm = ({
   if (!values || !setFieldValue) {
     throw new Error("formik context not available");
   }
-  const inferredInputs = useMemo(
-    () => getInferredInputs(values.global, values.inferredInputOverrides),
-    [values.global, values.inferredInputOverrides]
-  );
+  const inferredInputs = useInferredInputs();
   const usedKeys = useMemo(
     () => [...values.inputs, ...inferredInputs].map((input) => input.key),
     [values.inputs, inferredInputs]

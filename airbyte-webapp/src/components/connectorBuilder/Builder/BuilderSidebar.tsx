@@ -22,8 +22,9 @@ import { CDK_VERSION } from "../cdk";
 import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { PublishButton } from "../PublishButton";
-import { BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormValues } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useInferredInputs } from "../useInferredInputs";
 
 interface ViewSelectButtonProps {
   className?: string;
@@ -69,6 +70,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
   const handleViewSelect = (selectedView: BuilderView) => {
     setSelectedView(selectedView);
   };
+
+  const inferredInputsLength = useInferredInputs().length;
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
@@ -120,7 +123,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: values.inputs.length + getInferredInputs(values.global, values.inferredInputOverrides).length,
+                number: values.inputs.length + inferredInputsLength,
               }}
             />
           </Text>

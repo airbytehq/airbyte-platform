@@ -15,7 +15,7 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 import { BuilderField, BuilderFieldProps } from "./BuilderField";
 import styles from "./BuilderFieldWithInputs.module.scss";
 import { InputForm, newInputInEditing } from "./InputsForm";
-import { getInferredInputs } from "../types";
+import { useInferredInputs } from "../useInferredInputs";
 
 export const BuilderFieldWithInputs: React.FC<BuilderFieldProps> = (props) => {
   const [field, , helpers] = useField(props.path);
@@ -36,16 +36,16 @@ interface UserInputHelperProps {
 
 export const UserInputHelper = (props: UserInputHelperProps) => {
   const { builderFormValues } = useConnectorBuilderFormState();
+  const inferredInputs = useInferredInputs();
   const listOptions = useMemo(() => {
-    const options: Array<Option<string | undefined>> = [
-      ...builderFormValues.inputs,
-      ...getInferredInputs(builderFormValues.global, builderFormValues.inferredInputOverrides),
-    ].map((input) => ({
-      label: input.definition.title || input.key,
-      value: input.key,
-    }));
+    const options: Array<Option<string | undefined>> = [...builderFormValues.inputs, ...inferredInputs].map(
+      (input) => ({
+        label: input.definition.title || input.key,
+        value: input.key,
+      })
+    );
     return options;
-  }, [builderFormValues.global, builderFormValues.inferredInputOverrides, builderFormValues.inputs]);
+  }, [builderFormValues.inputs, inferredInputs]);
   return <InnerUserInputHelper {...props} listOptions={listOptions} />;
 };
 

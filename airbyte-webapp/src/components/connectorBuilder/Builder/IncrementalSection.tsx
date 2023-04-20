@@ -3,15 +3,23 @@ import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 
-import { DatetimeBasedCursor, RequestOption } from "core/request/ConnectorManifest";
+import { RequestOption } from "core/request/ConnectorManifest";
 import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
+import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
+import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { DATETIME_FORMAT_OPTIONS, LARGE_DURATION_OPTIONS, SMALL_DURATION_OPTIONS } from "../types";
+import {
+  BuilderIncrementalSync,
+  DATETIME_FORMAT_OPTIONS,
+  INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+  LARGE_DURATION_OPTIONS,
+  SMALL_DURATION_OPTIONS,
+} from "../types";
 
 interface IncrementalSectionProps {
   streamFieldPath: (fieldPath: string) => string;
@@ -26,15 +34,14 @@ const iso8601DurationAnchor = (
 
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<DatetimeBasedCursor | undefined>(streamFieldPath("incrementalSync"));
+  const [field, , helpers] = useField<BuilderIncrementalSync | undefined>(streamFieldPath("incrementalSync"));
 
   const handleToggle = (newToggleValue: boolean) => {
     if (newToggleValue) {
       helpers.setValue({
-        type: "DatetimeBasedCursor",
         datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
-        start_datetime: "",
-        end_datetime: "{{ now_utc() }}",
+        start_datetime: { type: "user_input" },
+        end_datetime: { type: "now" },
         step: "P1M",
         cursor_field: "",
         cursor_granularity: "",
@@ -100,17 +107,98 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         }
         options={SMALL_DURATION_OPTIONS}
       />
-      <BuilderFieldWithInputs
-        type="string"
+      <BuilderOneOf
         path={streamFieldPath("incrementalSync.start_datetime")}
         label="Start datetime"
-        tooltip="Start time to start slicing"
+        tooltip="Start time to start the sync from"
+        options={[
+          {
+            label: "User input",
+            typeValue: "user_input",
+            default: {},
+            children: (
+              <BuilderInputPlaceholder
+                label="Start date user input"
+                tooltip="The time to start syncing as a user input. Fill it in in the testing values"
+              />
+            ),
+          },
+          {
+            label: "Custom",
+            typeValue: "custom",
+            default: {
+              value: "",
+              format: INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+            },
+            children: (
+              <>
+                <BuilderFieldWithInputs
+                  type="string"
+                  path={streamFieldPath("incrementalSync.start_datetime.value")}
+                  label="Value"
+                  tooltip="The time to start syncing"
+                />
+                <BuilderFieldWithInputs
+                  type="combobox"
+                  options={DATETIME_FORMAT_OPTIONS}
+                  path={streamFieldPath("incrementalSync.start_datetime.format")}
+                  label="Format"
+                  optional
+                  tooltip="The format of the provided start date. If not specified, the format of the format of the cursor value is used"
+                />
+              </>
+            ),
+          },
+        ]}
       />
-      <BuilderFieldWithInputs
-        type="string"
+      <BuilderOneOf
         path={streamFieldPath("incrementalSync.end_datetime")}
         label="End datetime"
-        tooltip="End time to end slicing"
+        tooltip="Point in time to sync up to"
+        options={[
+          {
+            label: "User input",
+            typeValue: "user_input",
+            default: {},
+            children: (
+              <BuilderInputPlaceholder
+                label="End date user input"
+                tooltip="The time up to which to sync a user input. Fill it in in the testing values"
+              />
+            ),
+          },
+          {
+            label: "Now",
+            typeValue: "now",
+            default: {},
+          },
+          {
+            label: "Custom",
+            typeValue: "custom",
+            default: {
+              value: "",
+              format: INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+            },
+            children: (
+              <>
+                <BuilderFieldWithInputs
+                  type="string"
+                  path={streamFieldPath("incrementalSync.end_datetime.value")}
+                  label="Value"
+                  tooltip="The time up to which to sync"
+                />
+                <BuilderFieldWithInputs
+                  type="combobox"
+                  path={streamFieldPath("incrementalSync.end_datetime.format")}
+                  label="Format"
+                  options={DATETIME_FORMAT_OPTIONS}
+                  optional
+                  tooltip="The format of the provided end date. If not specified, the format of the format of the cursor value is used"
+                />
+              </>
+            ),
+          },
+        ]}
       />
       <ToggleGroupField<RequestOption>
         label="Inject start time into outgoing HTTP request"

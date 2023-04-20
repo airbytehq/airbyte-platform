@@ -7,7 +7,7 @@
 
 .formContent {
   max-height: 60vh;
-  overflow: auto;
+  min-height: 500px;
   padding: variables.$spacing-xl;
   background-color: colors.$grey-50;
   border-radius: variables.$border-radius-md;

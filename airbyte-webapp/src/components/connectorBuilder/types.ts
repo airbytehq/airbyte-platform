@@ -112,6 +112,32 @@ interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strateg
   response_filter?: BuilderResponseFilter;
 }
 
+export interface BuilderIncrementalSync
+  extends Pick<
+    DatetimeBasedCursor,
+    | "cursor_field"
+    | "datetime_format"
+    | "cursor_granularity"
+    | "step"
+    | "end_time_option"
+    | "start_time_option"
+    | "lookback_window"
+  > {
+  end_datetime:
+    | {
+        type: "user_input";
+      }
+    | { type: "now" }
+    | { type: "custom"; value: string; format?: string };
+  start_datetime:
+    | {
+        type: "user_input";
+      }
+    | { type: "custom"; value: string; format?: string };
+}
+
+export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
+
 export interface BuilderStream {
   id: string;
   name: string;
@@ -126,7 +152,7 @@ export interface BuilderStream {
   };
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
-  incrementalSync?: DatetimeBasedCursor;
+  incrementalSync?: BuilderIncrementalSync;
   partitionRouter?: Array<ListPartitionRouter | BuilderSubstreamPartitionRouter>;
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
@@ -219,6 +245,27 @@ export const CURSOR_PAGINATION: CursorPaginationType = "CursorPagination";
 export const OFFSET_INCREMENT: OffsetIncrementType = "OffsetIncrement";
 export const PAGE_INCREMENT: PageIncrementType = "PageIncrement";
 
+export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", BuilderFormInput> = {
+  start_date: {
+    key: "start_date",
+    required: true,
+    definition: {
+      type: "string",
+      title: "Start date",
+      format: "date-time",
+    },
+  },
+  end_date: {
+    key: "end_date",
+    required: true,
+    definition: {
+      type: "string",
+      title: "End date",
+      format: "date-time",
+    },
+  },
+};
+
 export const authTypeToKeyToInferredInput: Record<string, Record<string, BuilderFormInput>> = {
   NoAuth: {},
   ApiKeyAuthenticator: {
@@ -302,10 +349,22 @@ export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Reco
   );
 };
 
-function getInferredInputList(global: BuilderFormValues["global"]): BuilderFormInput[] {
+export function hasIncrementalSyncUserInput(
+  streams: BuilderFormValues["streams"],
+  key: "start_datetime" | "end_datetime"
+) {
+  return streams.some((stream) => stream.incrementalSync?.[key].type === "user_input");
+}
+
+export function getInferredInputList(
+  global: BuilderFormValues["global"],
+  inferredInputOverrides: BuilderFormValues["inferredInputOverrides"],
+  startDateInput: boolean,
+  endDateInput: boolean
+): BuilderFormInput[] {
   const authKeyToInferredInput = authTypeToKeyToInferredInput[global.authenticator.type];
   const authKeys = Object.keys(authKeyToInferredInput);
-  return authKeys.flatMap((authKey) => {
+  const inputs = authKeys.flatMap((authKey) => {
     if (
       extractInterpolatedConfigKey(Reflect.get(global.authenticator, authKey)) === authKeyToInferredInput[authKey].key
     ) {
@@ -313,14 +372,16 @@ function getInferredInputList(global: BuilderFormValues["global"]): BuilderFormI
     }
     return [];
   });
-}
 
-export function getInferredInputs(
-  global: BuilderFormValues["global"],
-  inferredInputOverrides: BuilderFormValues["inferredInputOverrides"]
-): BuilderFormInput[] {
-  const inferredInputs = getInferredInputList(global);
-  return inferredInputs.map((input) =>
+  if (startDateInput) {
+    inputs.push(incrementalSyncInferredInputs.start_date);
+  }
+
+  if (endDateInput) {
+    inputs.push(incrementalSyncInferredInputs.end_date);
+  }
+
+  return inputs.map((input) =>
     inferredInputOverrides[input.key]
       ? {
           ...input,
@@ -552,8 +613,20 @@ export const builderFormValidationSchema = yup.object().shape({
           .shape({
             cursor_field: yup.string().required("form.empty.error"),
             cursor_granularity: yup.string().required("form.empty.error"),
-            start_datetime: yup.string().required("form.empty.error"),
-            end_datetime: yup.string().required("form.empty.error"),
+            start_datetime: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: (val: string) => val === "custom",
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+            }),
+            end_datetime: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: (val: string) => val === "custom",
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+            }),
             step: yup.string().required("form.empty.error"),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
@@ -598,6 +671,34 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
     page_token_option: pageTokenOption,
     page_size_option: paginator.pageSizeOption,
     pagination_strategy: paginator.strategy,
+  };
+}
+
+function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync"]): DatetimeBasedCursor | undefined {
+  if (!formValues) {
+    return undefined;
+  }
+
+  const { start_datetime, end_datetime, ...regularFields } = formValues;
+  return {
+    type: "DatetimeBasedCursor",
+    ...regularFields,
+    start_datetime: {
+      type: "MinMaxDatetime",
+      datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
+      datetime_format:
+        start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+    },
+    end_datetime: {
+      type: "MinMaxDatetime",
+      datetime:
+        end_datetime.type === "custom"
+          ? end_datetime.value
+          : end_datetime.type === "now"
+          ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
+          : `{{ config['end_date'] }}`,
+      datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+    },
   };
 }
 
@@ -741,7 +842,7 @@ function builderStreamToDeclarativeSteam(
       ]),
     },
     transformations: builderTransformationsToManifest(stream.transformations),
-    incremental_sync: stream.incrementalSync,
+    incremental_sync: builderIncrementalToManifest(stream.incrementalSync),
   };
 
   return merge({}, declarativeStream, stream.unsupportedFields);
@@ -752,7 +853,15 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     builderStreamToDeclarativeSteam(values, stream, [])
   );
 
-  const allInputs = [...values.inputs, ...getInferredInputs(values.global, values.inferredInputOverrides)];
+  const allInputs = [
+    ...values.inputs,
+    ...getInferredInputList(
+      values.global,
+      values.inferredInputOverrides,
+      hasIncrementalSyncUserInput(values.streams, "start_datetime"),
+      hasIncrementalSyncUserInput(values.streams, "end_datetime")
+    ),
+  ];
 
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",
