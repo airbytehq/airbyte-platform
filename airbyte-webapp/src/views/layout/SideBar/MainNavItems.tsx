@@ -9,6 +9,7 @@ import DestinationIcon from "./components/DestinationIcon";
 import { MenuContent } from "./components/MenuContent";
 import { NavItem } from "./components/NavItem";
 import SourceIcon from "./components/SourceIcon";
+import styles from "./MainNavItems.module.scss";
 
 export const MainNavItems: React.FC = () => {
   const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
@@ -41,6 +42,8 @@ export const MainNavItems: React.FC = () => {
           icon={<BuilderIcon />}
           testId="builderLink"
           to={RoutePaths.ConnectorBuilder}
+          className={styles.beta}
+          activeClassName={styles["beta--active"]}
         />
       )}
     </MenuContent>
