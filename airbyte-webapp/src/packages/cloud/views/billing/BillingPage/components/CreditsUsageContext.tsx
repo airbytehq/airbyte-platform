@@ -99,20 +99,23 @@ export const CreditsUsageContextProvider: React.FC<React.PropsWithChildren<unkno
 
   const sourceOptions = useMemo(() => {
     return availableSourcesAndDestinations.sources.map((source) => {
+      const disabled = !selectedDestination ? false : !source.connectedDestinations.includes(selectedDestination);
       return {
-        label: <ConnectorOptionLabel connector={source} />,
+        label: <ConnectorOptionLabel connector={source} disabled={disabled} />,
         value: source.id,
-        disabled: !selectedDestination ? false : !source.connectedDestinations.includes(selectedDestination),
+        disabled,
       };
     });
   }, [availableSourcesAndDestinations.sources, selectedDestination]);
 
   const destinationOptions = useMemo(() => {
     return availableSourcesAndDestinations.destinations.map((destination) => {
+      const disabled = !selectedSource ? false : !destination.connectedSources.includes(selectedSource);
+
       return {
-        label: <ConnectorOptionLabel connector={destination} />,
+        label: <ConnectorOptionLabel connector={destination} disabled={disabled} />,
         value: destination.id,
-        disabled: !selectedSource ? false : !destination.connectedSources.includes(selectedSource),
+        disabled,
       };
     });
   }, [availableSourcesAndDestinations.destinations, selectedSource]);
