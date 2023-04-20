@@ -32,71 +32,75 @@ exports[`ConnectionReplicationPage should render 1`] = `
                   data-testid="configuration-card-expand-arrow"
                 />
               </div>
+              <div
+                class="<removed-for-snapshot-test>"
+              >
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <div>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Replication frequency
+                      :
+                    </p>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Manual
+                    </p>
+                  </div>
+                  <div>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Destination Namespace
+                      :
+                    </p>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Mirror source structure
+                    </p>
+                  </div>
+                  <div>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Destination Stream Prefix
+                      :
+                    </p>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Mirror source name
+                    </p>
+                  </div>
+                  <div>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Non-breaking schema updates detected
+                      :
+                    </p>
+                    <p
+                      class="<removed-for-snapshot-test>"
+                      data-type="text"
+                    >
+                      Ignore
+                    </p>
+                  </div>
+                </div>
+              </div>
             </button>
-            <div
-              class="<removed-for-snapshot-test>"
-            >
-              <div>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Replication frequency
-                  :
-                </p>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Manual
-                </p>
-              </div>
-              <div>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Destination Namespace
-                  :
-                </p>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Mirror source structure
-                </p>
-              </div>
-              <div>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Destination Stream Prefix
-                  :
-                </p>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Mirror source name
-                </p>
-              </div>
-              <div>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Non-breaking schema updates detected
-                  :
-                </p>
-                <p
-                  class="<removed-for-snapshot-test>"
-                  data-type="text"
-                >
-                  Ignore
-                </p>
-              </div>
-            </div>
           </div>
           <div
             class="<removed-for-snapshot-test>"

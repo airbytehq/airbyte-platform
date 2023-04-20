@@ -4,6 +4,7 @@ import { useToggle } from "react-use";
 
 import { FlexContainer } from "components/ui//Flex";
 import { Icon } from "components/ui//Icon";
+import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
@@ -57,11 +58,11 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       {collapsible ? (
         <button type="button" className={styles.headerBtn} onClick={toggleIsCollapsed}>
           {headerContainer}
+          {isCollapsed && collapsedPreviewInfo && <Box mt="lg">{collapsedPreviewInfo}</Box>}
         </button>
       ) : (
         headerContainer
       )}
-      {collapsible && isCollapsed && collapsedPreviewInfo}
       {collapsible ? !isCollapsed && children : children}
     </Card>
   );

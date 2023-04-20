@@ -20,8 +20,19 @@ Primary.args = {
 export const WithPreviewInfo = Template.bind({});
 WithPreviewInfo.args = {
   title: "Card Title",
-  children: "The collapsed content goes here.",
+  children: (
+    <div>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
+      magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+      consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+      Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+    </div>
+  ),
   collapsible: true,
   defaultCollapsedState: true,
-  collapsedPreviewInfo: "The preview info is only visible when the card is collapsed.",
+  collapsedPreviewInfo: (
+    <div style={{ border: "1px solid red", padding: 10 }}>
+      The preview info is only visible when the card is collapsed. It's also clickable and will toggle the card's state.
+    </div>
+  ),
 };
