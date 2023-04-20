@@ -82,6 +82,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -137,6 +138,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public void run(final ConnectionUpdaterInput connectionUpdaterInput) throws RetryableException {
+    if (connectionId == null) {
+      connectionId = Objects.requireNonNull(connectionUpdaterInput.getConnectionId());
+    }
     try {
       ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionUpdaterInput.getConnectionId()));
 
