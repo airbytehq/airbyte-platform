@@ -70,7 +70,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   public StreamRead readStream(final JsonNode manifest, final JsonNode config, final String stream, final Integer recordLimit)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     if (stream == null) {
-      throw new CdkProcessException("Missing required `stream` field.");
+      throw new AirbyteCdkInvalidInputException("Missing required `stream` field.");
     }
     final AirbyteRecordMessage record = request(manifest, config, readStreamCommand, stream, recordLimit);
     final StreamRead response = new StreamRead();
@@ -104,12 +104,12 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
 
   private StreamsListReadStreamsInner adaptStream(final JsonNode stream) {
     if (isNull(stream, "name")) {
-      throw new CdkProcessException(String.format(
+      throw new AirbyteCdkInvalidInputException(String.format(
           "Unexpected fatal error: streams are expected to have field 'name' but could not find it in %s. Please open a GitHub issue with Airbyte",
           stream));
     }
     if (isNull(stream, "url")) {
-      throw new CdkProcessException(String.format(
+      throw new AirbyteCdkInvalidInputException(String.format(
           "Unexpected fatal error: streams are expected to have field 'url' but could not find it in %s. Please open a GitHub issue with Airbyte",
           stream));
     }

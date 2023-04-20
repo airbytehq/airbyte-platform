@@ -22,7 +22,7 @@ import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListReadStreamsInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
-import io.airbyte.connector_builder.exceptions.CdkProcessException;
+import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,14 +78,14 @@ class AirbyteCdkRequesterImplTest {
   void givenNameIsNullWhenListStreamsThenThrowException() throws Exception {
     when(commandRunner.runCommand(eq(LIST_STREAMS_COMMAND), any(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"url\": \"missing name\"}]}")));
-    assertThrows(CdkProcessException.class, () -> requester.listStreams(A_MANIFEST, A_CONFIG));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.listStreams(A_MANIFEST, A_CONFIG));
   }
 
   @Test
   void givenUrlIsNullWhenListStreamsThenThrowException() throws Exception {
     when(commandRunner.runCommand(eq(LIST_STREAMS_COMMAND), any(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"name\": \"missing url\", \"url\": null}]}")));
-    assertThrows(CdkProcessException.class, () -> requester.listStreams(A_MANIFEST, A_CONFIG));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.listStreams(A_MANIFEST, A_CONFIG));
   }
 
   ArgumentCaptor<String> testReadStreamSuccess(final Integer limit) throws Exception {
@@ -136,7 +136,7 @@ class AirbyteCdkRequesterImplTest {
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), any(), any()))
         .thenReturn(
             new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"name\": \"missing stream\", \"stream\": null}]}")));
-    assertThrows(CdkProcessException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, null, A_LIMIT));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, null, A_LIMIT));
   }
 
   void assertRunCommandArgs(final ArgumentCaptor<String> configCaptor, final String command) throws Exception {
