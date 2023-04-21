@@ -176,6 +176,17 @@ webapp:
   ##
   podLabels: {}
 
+  ## Configure webapp disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  webapp.podDisruptionBudget.enabled Enable podDisruptionBudget on the webapp
+  ##  webapp.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the webapp
+  ##  webapp.podDisruptionBudget.minAvailable Minimum available pods/percentage for the webapp
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
+
   ##  webapp.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
@@ -518,6 +529,17 @@ server:
   ##
   podLabels: {}
 
+  ## Configure server disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  server.podDisruptionBudget.enabled Enable podDisruptionBudget on the server
+  ##  server.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the server
+  ##  server.podDisruptionBudget.minAvailable Minimum available pods/percentage for the server
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
+
   ##  server.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
@@ -704,6 +726,17 @@ worker:
   ##
   podLabels: {}
 
+  ## Configure worker disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  worker.podDisruptionBudget.enabled Enable podDisruptionBudget on the worker
+  ##  worker.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the worker
+  ##  worker.podDisruptionBudget.minAvailable Minimum available pods/percentage for the worker
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
+
   ##  worker.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
@@ -847,6 +880,17 @@ metrics:
   ##  metrics.podLabels [object] Add extra labels to the metrics-reporter pod
   ##
   podLabels: {}
+
+  ## Configure metrics-reporter disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  metrics.podDisruptionBudget.enabled Enable podDisruptionBudget on the metrics-reporter
+  ##  metrics.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the metrics-reporter
+  ##  metrics.podDisruptionBudget.minAvailable Minimum available pods/percentage for the metrics-reporter
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
 
   ##  metrics.containerSecurityContext Security context for the container
   ## Examples:
@@ -1094,6 +1138,17 @@ temporal:
   ##
   podLabels: {}
 
+  ## Configure temporal disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  temporal.podDisruptionBudget.enabled Enable podDisruptionBudget on the temporal
+  ##  temporal.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the temporal
+  ##  temporal.podDisruptionBudget.minAvailable Minimum available pods/percentage for the temporal
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
+
   ##  temporal.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
@@ -1297,6 +1352,17 @@ cron:
   ##
   podLabels: {}
 
+  ## Configure cron disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  cron.podDisruptionBudget.enabled Enable podDisruptionBudget on the cron
+  ##  cron.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the cron
+  ##  cron.podDisruptionBudget.minAvailable Minimum available pods/percentage for the cron
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
+
   ##  cron.containerSecurityContext Security context for the container
   ## Examples:
   ## containerSecurityContext:
@@ -1465,6 +1531,17 @@ connector-builder-server:
   enabled: true
   ##  connector-builder-server.replicaCount Number of connector-builder-server replicas
   replicaCount: 1
+
+  ## Configure connector-builder-server disruption budget
+  ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+  ##  connector-builder-server.podDisruptionBudget.enabled Enable podDisruptionBudget on the connector-builder-server
+  ##  connector-builder-server.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the connector-builder-server
+  ##  connector-builder-server.podDisruptionBudget.minAvailable Minimum available pods/percentage for the connector-builder-server
+  ##
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: ""
+    minAvailable: ""
 
   ##  connector-builder-server.image.repository The repository to use for the airbyte connector-builder-server image.
   ##  connector-builder-server.image.pullPolicy the pull policy to use for the airbyte connector-builder-server image

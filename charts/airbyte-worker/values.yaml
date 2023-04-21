@@ -127,6 +127,17 @@ podAnnotations: {}
 ##
 podLabels: {}
 
+## Configure worker disruption budget
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+##  worker.podDisruptionBudget.enabled Enable podDisruptionBudget on the worker
+##  worker.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the worker
+##  worker.podDisruptionBudget.minAvailable Minimum available pods/percentage for the worker
+##
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: ""
+  minAvailable: ""
+
 ##  worker.containerSecurityContext Security context for the container
 ## Examples:
 ## containerSecurityContext:

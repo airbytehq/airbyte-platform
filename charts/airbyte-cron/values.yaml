@@ -34,6 +34,17 @@ podAnnotations: {}
 ##
 podLabels: {}
 
+## Configure cron disruption budget
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+##  cron.podDisruptionBudget.enabled Enable podDisruptionBudget on the cron
+##  cron.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the cron
+##  cron.podDisruptionBudget.minAvailable Minimum available pods/percentage for the cron
+##
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: ""
+  minAvailable: ""
+
 ## cron.containerSecurityContext Security context for the container
 ## Examples:
 ## containerSecurityContext:

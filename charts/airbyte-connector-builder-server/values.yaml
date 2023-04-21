@@ -30,6 +30,17 @@ image:
 ##
 podAnnotations: {}
 
+## Configure connector-builder-server disruption budget
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/#specifying-a-poddisruptionbudget
+##  connector-builder-server.podDisruptionBudget.enabled Enable podDisruptionBudget on the connector-builder-server
+##  connector-builder-server.podDisruptionBudget.maxUnavailable Maximum unavailable pods/percentage for the connector-builder-server
+##  connector-builder-server.podDisruptionBudget.minAvailable Minimum available pods/percentage for the connector-builder-server
+##
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: ""
+  minAvailable: ""
+
 ##  containerSecurityContext Security context for the container
 ## Examples:
 ## containerSecurityContext:
