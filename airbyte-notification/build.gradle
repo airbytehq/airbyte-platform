@@ -2,10 +2,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id "java-library"
+    alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.jvm)
 }
 
 dependencies {
+    kapt(libs.bundles.micronaut.annotation.processor)
+
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-config:config-models')
@@ -29,4 +32,10 @@ tasks.getByName('compileTestKotlin') {
     }
 }
 
+tasks.withType(org.jetbrains.kotlin.gradle.internal.KaptGenerateStubsTask).configureEach {
+    kotlinOptions.jvmTarget = '17'
+}
 
+kapt {
+    keepJavacAnnotationProcessors = true
+}

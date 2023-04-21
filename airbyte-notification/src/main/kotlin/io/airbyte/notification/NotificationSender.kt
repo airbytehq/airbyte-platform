@@ -13,16 +13,9 @@ import java.io.IOException
 interface NotificationSender<T> {
     fun sendNotification(config: T, subject: String, message: String)
     fun notificationType(): NotificationType
-
-    companion object {
-        fun isSuccessfulHttpResponse(httpStatusCode: Int): Boolean {
-            return httpStatusCode / 100 == 2
-        }
-    }
 }
 
 @Singleton
-@Requires(property = "airbyte.notification.webhook.url")
 class WebhookNotificationSender(@Named("webhookHttpClient") private val okHttpClient: OkHttpClient) : NotificationSender<WebhookConfig> {
 
     companion object {

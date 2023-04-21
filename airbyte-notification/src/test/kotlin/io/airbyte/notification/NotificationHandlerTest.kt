@@ -20,7 +20,7 @@ class NotificationHandlerTest {
 
     @Test
     fun testNoBeanPresent() {
-        val notificationHandler = NotificationHandler(Optional.empty(), Optional.empty())
+        val notificationHandler = NotificationHandler(null, null)
 
         notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.webhook))
 
@@ -32,8 +32,7 @@ class NotificationHandlerTest {
 
     @Test
     fun testAllNotification() {
-        val notificationHandler = NotificationHandler(Optional.of(webhookConfigFetcher),
-                Optional.of(webhookNotificationSender))
+        val notificationHandler = NotificationHandler(webhookConfigFetcher, webhookNotificationSender)
 
         every {
             webhookConfigFetcher.fetchConfig(connectionId)
@@ -53,8 +52,7 @@ class NotificationHandlerTest {
 
     @Test
     fun testPartialNotification() {
-        val notificationHandler = NotificationHandler(Optional.of(webhookConfigFetcher),
-                Optional.of(webhookNotificationSender))
+        val notificationHandler = NotificationHandler(webhookConfigFetcher, webhookNotificationSender)
 
         notificationHandler.sendNotification(connectionId, subject, message, listOf())
 

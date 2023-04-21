@@ -532,8 +532,8 @@ public class TemporalClient {
     connectionManagerUtils.deleteWorkflowIfItExist(client, connectionId);
   }
 
-  public void sendSchemaChangeNotification(final UUID connectionId, final String url) {
-    notificationUtils.sendSchemaChangeNotification(client, connectionId, url);
+  public void sendSchemaChangeNotification(final UUID connectionId, final String url, final boolean containsBreakingChange) {
+    notificationUtils.sendSchemaChangeNotification(connectionId, url, containsBreakingChange);
   }
 
   /**

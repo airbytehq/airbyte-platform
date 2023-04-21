@@ -509,7 +509,7 @@ public class SchedulerHandler {
       connectionsHandler.updateConnection(updateObject);
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
         final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
-        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url);
+        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url, containsBreakingChange);
       }
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);

@@ -38,6 +38,8 @@ object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", d
 
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
 
+object UseNotificationWorkflow : Temporary<Boolean>(key = "use-notification-workflow", default = false)
+
 object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orchestrator-java-opts", default = "")
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
