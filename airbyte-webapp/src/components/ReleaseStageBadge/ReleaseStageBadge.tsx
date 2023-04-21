@@ -5,7 +5,7 @@ import { GAIcon } from "components/icons/GAIcon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { useFeature, FeatureItem } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { FreeTag } from "packages/cloud/components/experiments/FreeConnectorProgram";
 
 import styles from "./ReleaseStageBadge.module.scss";
@@ -26,19 +26,23 @@ export const ReleaseStageBadge: React.FC<ReleaseStageBadgeProps> = ({ stage, sma
     return null;
   }
 
-  const badge =
-    stage === ReleaseStage.generally_available ? (
-      <GAIcon />
-    ) : (
-      <div
-        className={classNames(styles.pill, {
-          [styles["pill--small"]]: small,
-        })}
-      >
-        <FormattedMessage id={`connector.releaseStage.${stage}`} />
-        {fcpEnabled && <FreeTag releaseStage={stage} />}
-      </div>
-    );
+  const badge = (
+    <>
+      {stage === ReleaseStage.generally_available ? (
+        <GAIcon />
+      ) : (
+        <div
+          className={classNames(styles.pill, {
+            [styles["pill--small"]]: small,
+          })}
+          aria-label={stage}
+        >
+          <FormattedMessage id={`connector.releaseStage.${stage}`} />
+          {fcpEnabled && <FreeTag releaseStage={stage} />}
+        </div>
+      )}
+    </>
+  );
 
   return tooltip ? (
     <Tooltip control={badge}>

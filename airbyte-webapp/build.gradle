@@ -13,6 +13,7 @@ def pnpmVer = new groovy.json.JsonSlurper().parse(new File("${projectDir}/packag
 // might affect them (i.e. if any of those files change we want to rerun most tasks)
 def commonConfigs = [
     '.env',
+    '.env.production',
     'package.json',
     'pnpm-lock.yaml',
     'tsconfig.json',
@@ -30,7 +31,7 @@ task validateLockFiles {
     description "Validate only a pnpm-lock.yaml lock file exists"
     inputs.files "pnpm-lock.yaml", "package-lock.json", "yarn.lock"
 
-    // The validateLockFiles has no outputs, thus we always treat the outpus up to date
+    // The validateLockFiles has no outputs, thus we always treat the outputs up to date
     // as long as the inputs have not changed
     outputs.upToDateWhen { true }
 
@@ -60,8 +61,11 @@ def publicDir = fileTree('public').matching {
 task pnpmBuild(type: PnpmTask) {
     dependsOn pnpmInstall
 
+    environment = ["VERSION": rootProject.ext.version]
+
     args = ['build']
 
+    inputs.property "cloudEnv", System.env.WEBAPP_BUILD_CLOUD_ENV ?: ""
     inputs.files commonConfigs
     inputs.files nodeModules
     inputs.files publicDir
@@ -85,7 +89,7 @@ task test(type: PnpmTask) {
     inputs.file 'babel.config.js'
     inputs.dir 'src'
 
-    // The test has no outputs, thus we always treat the outpus up to date
+    // The test has no outputs, thus we always treat the outputs up to date
     // as long as the inputs have not changed
     outputs.upToDateWhen { true }
 }
@@ -98,7 +102,7 @@ task licenseCheck(type: PnpmTask) {
     inputs.file 'package.json'
     inputs.file 'scripts/license-check.js'
 
-    // The licenseCheck has no outputs, thus we always treat the outpus up to date
+    // The licenseCheck has no outputs, thus we always treat the outputs up to date
     // as long as the inputs have not changed
     outputs.upToDateWhen { true }
 }
@@ -157,4 +161,9 @@ build.dependsOn buildStorybook
 
 tasks.named("buildDockerImage") {
     dependsOn copyDocker, copyNginx, copyBuildOutput
+}
+
+// Include some cloud-specific tasks only in the airbyte-platform-internal environment
+if (file("${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle").exists()) {
+   apply from: "${project.projectDir}/../../cloud-webapp/cloud-tasks.gradle"
 }

@@ -1,67 +1,63 @@
-import { Field, FieldProps, Form, Formik } from "formik";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { LabeledInput } from "components/LabeledInput";
-import { Button } from "components/ui/Button";
+import { Form, FormControl } from "components/forms";
+import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Card } from "components/ui/Card";
 
-import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
-import { RowFieldItem } from "packages/cloud/views/auth/components/FormComponents";
-import FeedbackBlock from "pages/SettingsPage/components/FeedbackBlock";
-import { Content, SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useNotificationService } from "hooks/services/Notification";
+import { useAuthService, useCurrentUser } from "packages/cloud/services/auth/AuthService";
 
-import { useChangeName } from "./hooks";
-
-const nameSectionValidationSchema = yup.object({
+const nameFormSchema = yup.object({
   name: yup.string().required("form.empty.error"),
 });
+
+interface NameFormValues {
+  name: string;
+}
 
 export const NameSection: React.FC = () => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();
-  const { changeName, successMessage, errorMessage } = useChangeName();
+  const { updateName } = useAuthService();
+  const { registerNotification } = useNotificationService();
+  const { trackError } = useAppMonitoringService();
+
+  const onSuccess = () => {
+    registerNotification({
+      id: "name_change_success",
+      text: formatMessage({ id: "settings.accountSettings.updateNameSuccess" }),
+      type: "success",
+    });
+  };
+
+  const onError = (e: Error, { name }: NameFormValues) => {
+    trackError(e, { name });
+    registerNotification({
+      id: "name_change_error",
+      text: formatMessage({ id: "settings.accountSettings.updateNameError" }),
+      type: "error",
+    });
+  };
 
   return (
-    <SettingsCard title={<FormattedMessage id="settings.account" />}>
-      <Content>
-        <Formik
-          validateOnBlur
-          validateOnChange
-          validationSchema={nameSectionValidationSchema}
-          initialValues={{
-            name: user.name,
-          }}
-          onSubmit={(values, formikHelpers) =>
-            changeName(values, formikHelpers).then(() => formikHelpers.resetForm({ values }))
-          }
-        >
-          {({ isSubmitting, isValid, dirty }) => (
-            <Form>
-              <RowFieldItem>
-                <Field name="name">
-                  {({ field, meta }: FieldProps<string>) => (
-                    <LabeledInput
-                      {...field}
-                      label={<FormattedMessage id="settings.accountSettings.name" />}
-                      placeholder={formatMessage({
-                        id: "settings.accountSettings.name.placeholder",
-                      })}
-                      type="text"
-                      error={!!meta.error && meta.touched}
-                      message={meta.touched && meta.error && formatMessage({ id: meta.error })}
-                    />
-                  )}
-                </Field>
-              </RowFieldItem>
-              <Button disabled={!isValid || !dirty} type="submit" isLoading={isSubmitting}>
-                <FormattedMessage id="settings.accountSettings.updateName" />
-              </Button>
-              <FeedbackBlock errorMessage={errorMessage} successMessage={successMessage} />
-            </Form>
-          )}
-        </Formik>
-      </Content>
-    </SettingsCard>
+    <Card withPadding>
+      <Form<NameFormValues>
+        onSubmit={({ name }) => updateName(name)}
+        onError={onError}
+        onSuccess={onSuccess}
+        schema={nameFormSchema}
+        defaultValues={{ name: user.name }}
+      >
+        <FormControl<NameFormValues>
+          label={formatMessage({ id: "settings.accountSettings.name" })}
+          fieldType="input"
+          name="name"
+        />
+        <FormSubmissionButtons submitKey="settings.accountSettings.updateName" />
+      </Form>
+    </Card>
   );
 };

@@ -53,6 +53,7 @@ public class OrchestratorConstants {
           EnvConfigs.DD_AGENT_HOST,
           EnvConfigs.DD_DOGSTATSD_PORT,
           EnvConfigs.METRIC_CLIENT,
+          EnvConfigs.OTEL_COLLECTOR_ENDPOINT,
           LOG_LEVEL,
           LogClientSingleton.GCS_LOG_BUCKET,
           LogClientSingleton.GOOGLE_APPLICATION_CREDENTIALS,

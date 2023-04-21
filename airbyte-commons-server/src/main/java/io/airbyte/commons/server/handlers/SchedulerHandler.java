@@ -67,6 +67,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -508,7 +509,7 @@ public class SchedulerHandler {
       connectionsHandler.updateConnection(updateObject);
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
         final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
-        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url);
+        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url, containsBreakingChange);
       }
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
@@ -561,7 +562,10 @@ public class SchedulerHandler {
   private JobInfoRead submitManualSyncToWorker(final UUID connectionId)
       throws IOException, IllegalStateException, JsonValidationException, ConfigNotFoundException {
     // get standard sync to validate connection id before submitting sync to temporal
-    configRepository.getStandardSync(connectionId);
+    final var sync = configRepository.getStandardSync(connectionId);
+    if (!sync.getStatus().equals(StandardSync.Status.ACTIVE)) {
+      throw new IllegalStateException("Can only sync an active connection");
+    }
     final ManualOperationResult manualSyncResult = eventRunner.startNewManualSync(connectionId);
 
     return readJobFromResult(manualSyncResult);

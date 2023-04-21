@@ -8,7 +8,7 @@ import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 import { Table } from "components/ui/Table";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
@@ -123,19 +123,21 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         header: () => (
           <FlexContainer alignItems="center">
             {isColumnSelectionEnabled && (
-              <Switch
-                size="xs"
-                indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length}
-                checked={!config?.fieldSelectionEnabled}
-                onChange={toggleAllFieldsSelected}
-                disabled={mode === "readonly"}
-              />
+              <FlexContainer className={styles.columnSelectionSwitchContainer}>
+                <Switch
+                  size="xs"
+                  indeterminate={config?.fieldSelectionEnabled && !!config?.selectedFields?.length}
+                  checked={!config?.fieldSelectionEnabled}
+                  onChange={toggleAllFieldsSelected}
+                  disabled={mode === "readonly"}
+                />
+              </FlexContainer>
             )}
             <FormattedMessage id="form.field.name" />
           </FlexContainer>
         ),
         cell: ({ getValue, row }) => (
-          <CellText size="small" withTooltip>
+          <CellText size="small">
             <FlexContainer alignItems="center">
               {isColumnSelectionEnabled && (
                 <SyncFieldCell
@@ -148,11 +150,12 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
                   checkIsChildFieldPrimaryKey={checkIsChildFieldPrimaryKey}
                   syncMode={config?.syncMode}
                   destinationSyncMode={config?.destinationSyncMode}
+                  className={styles.columnSelectionSwitchContainer}
                 />
               )}
-              <Text size="sm" data-testid="stream-source-field-name">
+              <TextWithOverflowTooltip size="sm" data-testid="stream-source-field-name">
                 {getFieldPathDisplayName(getValue())}
-              </Text>
+              </TextWithOverflowTooltip>
             </FlexContainer>
           </CellText>
         ),
@@ -236,10 +239,10 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         id: "destinationPath",
         header: () => <FormattedMessage id="form.field.name" />,
         cell: ({ getValue }) => (
-          <CellText size="small" withTooltip>
-            <Text size="sm" data-testid="stream-destination-field-name">
+          <CellText size="small">
+            <TextWithOverflowTooltip size="sm" data-testid="stream-destination-field-name">
               {getFieldPathDisplayName(getValue())}
-            </Text>
+            </TextWithOverflowTooltip>
           </CellText>
         ),
         meta: {

@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.protocol.serde;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.Version;
+import java.util.Optional;
 
 /**
  * Airbyte Protocol deserialization interface.
@@ -14,7 +14,7 @@ import io.airbyte.commons.version.Version;
  */
 public interface AirbyteMessageDeserializer<T> {
 
-  T deserialize(final JsonNode json);
+  Optional<T> deserialize(final String json);
 
   Version getTargetVersion();
 

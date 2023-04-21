@@ -86,7 +86,7 @@ exports[`<BulkEditPanel /> should render 1`] = `
                   <div
                     class="<removed-for-snapshot-test>"
                   >
-                    <span
+                    <p
                       class="<removed-for-snapshot-test>"
                       data-type="text"
                     />
@@ -152,12 +152,12 @@ exports[`<BulkEditPanel /> should render 1`] = `
                   <div
                     class="<removed-for-snapshot-test>"
                   >
-                    <span
+                    <p
                       class="<removed-for-snapshot-test>"
                       data-type="text"
                     >
                       Not available
-                    </span>
+                    </p>
                   </div>
                   <svg
                     aria-hidden="true"
@@ -220,12 +220,12 @@ exports[`<BulkEditPanel /> should render 1`] = `
                   <div
                     class="<removed-for-snapshot-test>"
                   >
-                    <span
+                    <p
                       class="<removed-for-snapshot-test>"
                       data-type="text"
                     >
                       Not available
-                    </span>
+                    </p>
                   </div>
                   <svg
                     aria-hidden="true"

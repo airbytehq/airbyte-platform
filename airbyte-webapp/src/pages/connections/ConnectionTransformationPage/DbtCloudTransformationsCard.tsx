@@ -48,7 +48,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
             </span>
           }
         >
-          <Text centered className={styles.cardBodyContainer}>
+          <Text align="center" className={styles.cardBodyContainer}>
             {displayMessage ? (
               <FormattedMessage id="connection.dbtCloudJobs.dbtError" values={{ displayMessage }} />
             ) : (

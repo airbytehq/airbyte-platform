@@ -66,7 +66,6 @@ class TrelloOAuthFlowTest {
     configRepository = mock(ConfigRepository.class);
     when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
         .withSourceDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(ImmutableMap.builder()
             .put("client_id", "test_client_id")
             .put("client_secret", "test_client_secret")

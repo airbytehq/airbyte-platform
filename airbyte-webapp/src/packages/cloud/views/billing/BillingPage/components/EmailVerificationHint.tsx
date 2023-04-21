@@ -1,10 +1,8 @@
-import { faEnvelope } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import styled from "styled-components";
 
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
@@ -36,16 +34,21 @@ export const EmailVerificationHint: React.FC<Props> = ({ className }) => {
   };
 
   return (
-    <Callout className={className}>
-      <FontAwesomeIcon icon={faEnvelope} size="lg" />
-      <FormattedMessage id="credits.emailVerificationRequired" />{" "}
-      {isEmailResend ? (
-        <FormattedMessage id="credits.emailVerification.resendConfirmation" />
-      ) : (
-        <ResendEmailLink onClick={onResendVerificationMail}>
-          <FormattedMessage id="credits.emailVerification.resend" />
-        </ResendEmailLink>
-      )}
-    </Callout>
+    <Message
+      type="warning"
+      text={
+        <>
+          <FormattedMessage id="credits.emailVerificationRequired" />{" "}
+          {isEmailResend ? (
+            <FormattedMessage id="credits.emailVerification.resendConfirmation" />
+          ) : (
+            <ResendEmailLink onClick={onResendVerificationMail}>
+              <FormattedMessage id="credits.emailVerification.resend" />
+            </ResendEmailLink>
+          )}
+        </>
+      }
+      className={className}
+    />
   );
 };

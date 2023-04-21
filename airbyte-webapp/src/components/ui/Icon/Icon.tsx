@@ -3,6 +3,7 @@ import React from "react";
 
 import styles from "./Icon.module.scss";
 import { ReactComponent as ArrowRightIcon } from "./icons/arrowRightIcon.svg";
+import { ReactComponent as ChevronRightIcon } from "./icons/chevronRightIcon.svg";
 import { ReactComponent as CreditsIcon } from "./icons/creditsIcon.svg";
 import { ReactComponent as CrossIcon } from "./icons/crossIcon.svg";
 import { ReactComponent as DocsIcon } from "./icons/docsIcon.svg";
@@ -11,6 +12,7 @@ import { ReactComponent as InfoIcon } from "./icons/infoIcon.svg";
 import { ReactComponent as MinusIcon } from "./icons/minusIcon.svg";
 import { ReactComponent as ModificationIcon } from "./icons/modificationIcon.svg";
 import { ReactComponent as MoonIcon } from "./icons/moonIcon.svg";
+import { ReactComponent as NestedIcon } from "./icons/nestedIcon.svg";
 import { ReactComponent as PauseIcon } from "./icons/pauseIcon.svg";
 import { ReactComponent as PencilIcon } from "./icons/pencilIcon.svg";
 import { ReactComponent as PlayIcon } from "./icons/playIcon.svg";
@@ -25,6 +27,7 @@ const colorMap: Record<IconColor, string> = {
   disabled: styles[`icon--disabled`],
   error: styles[`icon--error`],
   action: styles[`icon--action`],
+  affordance: styles[`icon--affordance`],
 };
 
 const sizeMap: Record<NonNullable<IconProps["size"]>, string> = {
@@ -50,6 +53,8 @@ const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   play: PlayIcon,
   plus: PlusIcon,
   rotate: RotateIcon,
+  nested: NestedIcon,
+  chevronRight: ChevronRightIcon,
 };
 
 export const Icon: React.FC<IconProps> = React.memo(
@@ -59,7 +64,7 @@ export const Icon: React.FC<IconProps> = React.memo(
       styles.icon,
       color ? colorMap[color] : undefined,
       withBackground ? styles["icon--withBackground"] : undefined,
-      typeof size === "string" ? sizeMap[size] : undefined
+      sizeMap[size]
     );
 
     return React.createElement(Icons[type], {

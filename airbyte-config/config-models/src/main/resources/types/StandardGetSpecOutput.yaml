@@ -4,7 +4,7 @@
 title: StandardGetSpecOutput
 description: job get spec output
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - specification
 properties:

@@ -4,7 +4,7 @@
 title: AttemptFailureSummary
 description: Attempt-level summarization of failures that occurred during a sync workflow.
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - failures
 properties:

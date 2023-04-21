@@ -152,6 +152,8 @@ const SCHEMA_WITH_MISMATCH =
   '{{}"$schema": "http://json-schema.org/schema#", "properties": {{}"name": {{}"type": "number"}}, "type": "object"}';
 export const acceptSchemaWithMismatch = () => {
   openStreamSchemaTab();
+  cy.get("textarea").clear({ force: true });
+  cy.wait(500);
   cy.get("textarea").type(SCHEMA_WITH_MISMATCH, { force: true });
 };
 

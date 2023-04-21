@@ -11,7 +11,6 @@ import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Reporter of errors that happen in the worker.
@@ -34,8 +33,11 @@ public class WorkerMetricReporter {
    * count + a metric for each error.
    */
   public void trackSchemaValidationErrors(final AirbyteStreamNameNamespacePair stream, final Set<String> validationErrors) {
-    final List<MetricAttribute> attributes = new ArrayList<>();
-    attributes.addAll(validationErrors.stream().map(f -> new MetricAttribute("validation_error", f)).collect(Collectors.toList()));
+    // Create a copy of the validationErrors set to prevent ConcurrentModificationExceptions
+    // that can occur while iterating over the set.
+    final var copiedErrors = Set.copyOf(validationErrors);
+    final List<MetricAttribute> attributes = new ArrayList<>(
+        copiedErrors.stream().map(f -> new MetricAttribute("validation_error", f.replace(",", ""))).toList());
     attributes.add(new MetricAttribute("docker_repo", dockerRepo));
     attributes.add(new MetricAttribute("docker_version", dockerVersion));
     attributes.add(new MetricAttribute("stream", stream.toString()));
@@ -48,8 +50,10 @@ public class WorkerMetricReporter {
    * DataDog count + a metric for each unexpected field.
    */
   public void trackUnexpectedFields(final AirbyteStreamNameNamespacePair stream, Set<String> unexpectedFieldNames) {
-    final List<MetricAttribute> attributes = new ArrayList<>();
-    attributes.addAll(unexpectedFieldNames.stream().map(f -> new MetricAttribute("field_name", f)).collect(Collectors.toList()));
+    // Create a copy of the unexpectedFieldNames set to prevent ConcurrentModificationExceptions
+    // that can occur while iterating over the set.
+    final var copiedUnexpected = Set.copyOf(unexpectedFieldNames);
+    final List<MetricAttribute> attributes = new ArrayList<>(copiedUnexpected.stream().map(f -> new MetricAttribute("field_name", f)).toList());
     attributes.add(new MetricAttribute("docker_repo", dockerRepo));
     attributes.add(new MetricAttribute("docker_version", dockerVersion));
     attributes.add(new MetricAttribute("stream", stream.toString()));

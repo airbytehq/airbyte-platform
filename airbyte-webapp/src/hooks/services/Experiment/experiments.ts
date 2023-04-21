@@ -11,7 +11,6 @@ export interface Experiments {
   "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;
   "connector.frequentlyUsedDestinationIds": string[];
-  "connector.form.useSelectConnectorGrid": boolean;
   "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideName": boolean;

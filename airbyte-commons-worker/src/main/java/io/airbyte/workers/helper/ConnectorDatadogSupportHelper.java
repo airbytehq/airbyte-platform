@@ -13,6 +13,8 @@ import io.micrometer.common.util.StringUtils;
 import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for Connector level Datadog support helper.
@@ -22,6 +24,8 @@ public class ConnectorDatadogSupportHelper {
   private static final String JAVA_OPTS = "JAVA_OPTS";
   private static final String DD_SERVICE = "DD_SERVICE";
   private static final String DD_VERSION = "DD_VERSION";
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorDatadogSupportHelper.class);
 
   /**
    * addServerNameAndVersionToEnvVars.
@@ -37,6 +41,8 @@ public class ConnectorDatadogSupportHelper {
     if (imageNameVersionPair.isPresent()) {
       envVars.add(new EnvVar(DD_SERVICE, imageNameVersionPair.get().left, null));
       envVars.add(new EnvVar(DD_VERSION, imageNameVersionPair.get().right.serialize(), null));
+      LOGGER.debug("Added service name {} and version {} to env vars for Datadog", imageNameVersionPair.get().left,
+          imageNameVersionPair.get().right.serialize());
     }
   }
 
@@ -54,7 +60,13 @@ public class ConnectorDatadogSupportHelper {
     final String[] imageNameAndVersion = imageName.split(delimiter);
     final int expectedCount = 2;
     if (imageNameAndVersion.length == expectedCount && StringUtils.isNotEmpty(imageNameAndVersion[0])) {
-      return Optional.of(ImmutablePair.of(imageNameAndVersion[0], new AirbyteVersion(imageNameAndVersion[1])));
+      try {
+        // custom connectors version number does not confirm to Airbyte version
+        return Optional.of(ImmutablePair.of(imageNameAndVersion[0], new AirbyteVersion(imageNameAndVersion[1])));
+      } catch (Exception ex) {
+        // logged as info because we allow processing to continue
+        LOGGER.info("error while extracting version from image: {}. Message: {}", imageName, ex.getMessage());
+      }
     }
     return Optional.empty();
   }

@@ -1,10 +1,8 @@
-import { ConsumptionPerConnectionPerTimeframe } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { ConsumptionRead } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 
 import { AvailableDestination, AvailableSource } from "./CreditsUsageContext";
 
-export const calculateAvailableSourcesAndDestinations = (
-  rawConsumptionData: ConsumptionPerConnectionPerTimeframe[]
-) => {
+export const calculateAvailableSourcesAndDestinations = (rawConsumptionData: ConsumptionRead[]) => {
   const sourceAndDestinationMaps = rawConsumptionData.reduce(
     (allSourcesAndDestinations, currentConsumptionItem) => {
       // create set of sources, including merging a set of the destinations each is connected to
@@ -13,6 +11,7 @@ export const calculateAvailableSourcesAndDestinations = (
           name: currentConsumptionItem.connection.sourceConnectionName,
           id: currentConsumptionItem.connection.sourceId,
           icon: currentConsumptionItem.connection.sourceIcon,
+          releaseStage: currentConsumptionItem.connection.sourceReleaseStage,
           connectedDestinations: [currentConsumptionItem.connection.destinationId],
         };
       } else {
@@ -32,6 +31,7 @@ export const calculateAvailableSourcesAndDestinations = (
           name: currentConsumptionItem.connection.destinationConnectionName,
           id: currentConsumptionItem.connection.destinationId,
           icon: currentConsumptionItem.connection.destinationIcon,
+          releaseStage: currentConsumptionItem.connection.destinationReleaseStage,
           connectedSources: [currentConsumptionItem.connection.sourceId],
         };
       } else {

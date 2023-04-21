@@ -13,7 +13,8 @@ info:
 externalDocs:
   description: Find out more about Connector Builder
   url: "https://docs.airbyte.com/connector-development/config-based/connector-builder-ui"
-
+servers:
+  - url: "http://localhost:80/"
 paths:
   /v1/stream/read:
     post:
@@ -91,8 +92,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthCheckRead"
+      # This route is unsecured for external monitoring.
+      security: []
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     StreamRead:
       type: object
@@ -160,15 +168,12 @@ components:
         - config
       properties:
         manifest:
-          type: object
-          description: The config-based connector manifest contents
-          # $ref: "#/components/schemas/ConnectorManifest"
+          $ref: "#/components/schemas/ConnectorManifest"
         stream:
           type: string
           description: Name of the stream to read
         config:
-          type: object
-          description: The config blob containing the user inputs for testing
+          $ref: "#/components/schemas/ConnectorConfig"
         state:
           type: object
           description: The AirbyteStateMessage object to use as the starting state for this read
@@ -272,7 +277,6 @@ components:
       properties:
         manifest:
           type: object
-          x-java-type: com.fasterxml.jackson.databind.JsonNode
           description: The config-based connector manifest contents with $refs and $parameters resolved
     HealthCheckRead:
       type: object
@@ -349,3 +353,5 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/KnownExceptionInfo"
+security:
+  - {}

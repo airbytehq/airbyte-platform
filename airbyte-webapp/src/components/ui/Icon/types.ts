@@ -2,6 +2,7 @@ export type IconType =
   | "arrowRight"
   | "credits"
   | "cross"
+  | "chevronRight"
   | "docs"
   | "ga"
   | "info"
@@ -12,9 +13,10 @@ export type IconType =
   | "pencil"
   | "play"
   | "plus"
-  | "rotate";
+  | "rotate"
+  | "nested";
 
-export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning";
+export type IconColor = "primary" | "disabled" | "action" | "success" | "error" | "warning" | "affordance";
 
 export interface IconProps {
   type: IconType;

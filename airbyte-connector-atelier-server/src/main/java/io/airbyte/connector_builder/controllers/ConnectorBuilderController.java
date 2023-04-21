@@ -12,12 +12,11 @@ import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
-import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
-import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInnerPagesInner;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRequestBody;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
+import io.airbyte.connector_builder.handlers.StreamHandler;
 import io.airbyte.connector_builder.handlers.StreamsHandler;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.MediaType;
@@ -28,8 +27,6 @@ import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
-import java.util.HashMap;
-import java.util.List;
 
 /**
  * Micronaut controller that defines the behavior for all endpoints related to building and testing
@@ -40,13 +37,16 @@ import java.util.List;
 public class ConnectorBuilderController implements V1Api {
 
   private final HealthHandler healthHandler;
+  private final StreamHandler streamHandler;
   private final ResolveManifestHandler resolveManifestHandler;
   private final StreamsHandler streamsHandler;
 
   public ConnectorBuilderController(final HealthHandler healthHandler,
                                     final ResolveManifestHandler resolveManifestHandler,
+                                    final StreamHandler streamHandler,
                                     final StreamsHandler streamsHandler) {
     this.healthHandler = healthHandler;
+    this.streamHandler = streamHandler;
     this.resolveManifestHandler = resolveManifestHandler;
     this.streamsHandler = streamsHandler;
   }
@@ -75,18 +75,7 @@ public class ConnectorBuilderController implements V1Api {
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
   public StreamRead readStream(final StreamReadRequestBody streamReadRequestBody) {
-    final HashMap<String, String> recordOne = new HashMap<>();
-    recordOne.put("name", "Joel Miller");
-    final HashMap<String, String> recordTwo = new HashMap<>();
-    recordTwo.put("name", "Ellie Williams");
-
-    final StreamReadSlicesInnerPagesInner pages = new StreamReadSlicesInnerPagesInner();
-    pages.setRecords(List.of(recordOne, recordTwo));
-    final StreamReadSlicesInner slices = new StreamReadSlicesInner();
-    slices.setPages(List.of(pages));
-    final StreamRead readResponse = new StreamRead();
-    readResponse.setSlices(List.of(slices));
-    return readResponse;
+    return streamHandler.readStream(streamReadRequestBody);
   }
 
   @Override

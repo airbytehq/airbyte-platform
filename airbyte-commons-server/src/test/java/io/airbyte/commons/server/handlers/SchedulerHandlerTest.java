@@ -85,6 +85,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -195,7 +196,7 @@ class SchedulerHandlerTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @BeforeEach
-  void setup() {
+  void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
     completedJob = mock(Job.class, RETURNS_DEEP_STUBS);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
@@ -211,6 +212,7 @@ class SchedulerHandlerTest {
 
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     configRepository = mock(ConfigRepository.class);
+    when(configRepository.getStandardSync(any())).thenReturn(new StandardSync().withStatus(StandardSync.Status.ACTIVE));
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     jobPersistence = mock(JobPersistence.class);
     eventRunner = mock(EventRunner.class);
@@ -927,7 +929,7 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId());
   }
 
@@ -988,7 +990,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
   }
 
   @Test
@@ -1111,7 +1113,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, true);
   }
 
   @Test
@@ -1175,7 +1177,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, true);
   }
 
   @Test
@@ -1324,9 +1326,9 @@ class SchedulerHandlerTest {
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(0).getStatus());
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(1).getStatus());
     assertEquals(ConnectionStatus.INACTIVE, connectionUpdateValues.get(2).getStatus());
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId2, CONNECTION_URL);
-    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId2, CONNECTION_URL, false);
+    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, CONNECTION_URL, false);
   }
 
   @Test
@@ -1500,6 +1502,20 @@ class SchedulerHandlerTest {
     assertThrows(ValueConflictKnownException.class,
         () -> schedulerHandler.syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)));
 
+  }
+
+  @Test
+  void disabledSyncThrows() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID connectionId = UUID.randomUUID();
+    when(configRepository.getStandardSync(connectionId)).thenReturn(new StandardSync().withStatus(StandardSync.Status.INACTIVE));
+    assertThrows(IllegalStateException.class, () -> schedulerHandler.syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)));
+  }
+
+  @Test
+  void deprecatedSyncThrows() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID connectionId = UUID.randomUUID();
+    when(configRepository.getStandardSync(connectionId)).thenReturn(new StandardSync().withStatus(StandardSync.Status.DEPRECATED));
+    assertThrows(IllegalStateException.class, () -> schedulerHandler.syncConnection(new ConnectionIdRequestBody().connectionId(connectionId)));
   }
 
   @Test

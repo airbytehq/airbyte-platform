@@ -68,12 +68,10 @@ public abstract class BaseOAuthFlowTest {
     when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(getOAuthParamConfig())));
     when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(getOAuthParamConfig())));
   }
 
@@ -204,6 +202,10 @@ public abstract class BaseOAuthFlowTest {
     return "state";
   }
 
+  protected Map<String, Object> getQueryParams() {
+    return Map.of(CODE, TEST_CODE);
+  }
+
   protected String getMockedResponse() {
     final Map<String, String> returnedCredentials = getExpectedOutput();
     return Jsons.serialize(returnedCredentials);
@@ -250,12 +252,10 @@ public abstract class BaseOAuthFlowTest {
     when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.emptyObject())));
     when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.emptyObject())));
     assertThrows(IllegalArgumentException.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification()));
@@ -312,7 +312,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(Jsons.serialize(returnedCredentials));
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
 
     if (hasDependencyOnConnectorConfigValues()) {
       assertThrows(IOException.class, () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL),
@@ -337,7 +337,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(Jsons.serialize(returnedCredentials));
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
 
     if (hasDependencyOnConnectorConfigValues()) {
       assertThrows(IOException.class, () -> oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL),
@@ -361,7 +361,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         getInputOAuthConfiguration(), getEmptyOAuthConfigSpecification());
     assertEquals(0, actualQueryParams.size(),
@@ -373,7 +373,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         getInputOAuthConfiguration(), getEmptyOAuthConfigSpecification());
     assertEquals(0, actualQueryParams.size(),
@@ -385,7 +385,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         Jsons.emptyObject(), getoAuthConfigSpecification());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
@@ -399,7 +399,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         Jsons.emptyObject(), getoAuthConfigSpecification());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
@@ -413,7 +413,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         getInputOAuthConfiguration(), getoAuthConfigSpecification());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
@@ -427,7 +427,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         getInputOAuthConfiguration(), getoAuthConfigSpecification());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
@@ -441,7 +441,7 @@ public abstract class BaseOAuthFlowTest {
     final HttpResponse response = mock(HttpResponse.class);
     when(response.body()).thenReturn(getMockedResponse());
     when(httpClient.send(any(), any())).thenReturn(response);
-    final Map<String, Object> queryParams = Map.of(CODE, TEST_CODE);
+    final Map<String, Object> queryParams = getQueryParams();
     final OAuthConfigSpecification oAuthConfigSpecification = getOAuthConfigSpecification();
     assertThrows(JsonValidationException.class, () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
         getInputOAuthConfiguration(), oAuthConfigSpecification));

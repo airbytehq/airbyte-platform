@@ -83,6 +83,7 @@ export const LoginPage: React.FC = () => {
                     type="password"
                     error={!!meta.error && meta.touched}
                     message={meta.touched && meta.error && formatMessage({ id: meta.error })}
+                    data-testid="login.password"
                   />
                 )}
               </Field>
@@ -96,7 +97,7 @@ export const LoginPage: React.FC = () => {
                 >
                   <FormattedMessage id="login.forgotPassword" />
                 </Link>
-                <Button size="lg" type="submit" isLoading={isSubmitting}>
+                <Button size="lg" type="submit" isLoading={isSubmitting} data-testid="login.submit">
                   <FormattedMessage id="login.login" />
                 </Button>
               </>

@@ -139,7 +139,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead resetConnectionStream(ConnectionStreamRequestBody connectionStreamRequestBody) {
+  public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 

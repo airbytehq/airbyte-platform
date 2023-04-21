@@ -52,9 +52,14 @@
   color: colors.$blue;
 }
 
-.streamList {
+.streamListContainer {
   flex-grow: 1;
   width: 100%;
+}
+
+.streamList {
+  flex-grow: 1;
+  flex-basis: 0;
   overflow-y: auto;
 }
 

@@ -104,7 +104,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           {tabs.map((tab) => (
             <Tab className={styles.tab} key={tab.key}>
               {({ selected }) => (
-                <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} size="xs">
+                <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} size="xs" align="center">
                   {tab.title}
                 </Text>
               )}

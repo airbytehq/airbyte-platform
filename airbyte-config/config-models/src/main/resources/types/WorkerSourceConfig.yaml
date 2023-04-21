@@ -4,7 +4,7 @@
 title: WorkerSourceConfig
 description: WorkerSourceConfig
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - sourceId
   - sourceConnectionConfiguration

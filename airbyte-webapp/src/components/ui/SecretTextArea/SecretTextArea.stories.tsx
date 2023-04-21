@@ -1,4 +1,9 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
+import { useState } from "react";
+
+import { Box } from "components/ui/Box";
+import { Card } from "components/ui/Card";
+import { Text } from "components/ui/Text";
 
 import { SecretTextArea } from "./SecretTextArea";
 
@@ -6,22 +11,43 @@ export default {
   title: "UI/SecretTextArea",
   component: SecretTextArea,
   argTypes: {
-    value: { control: { type: { name: "text", required: false } } },
-    rows: { control: { type: { name: "number", required: false } } },
+    value: { control: "text" },
+    disabled: { control: "boolean" },
+    light: { control: "boolean" },
+    error: { control: "boolean" },
   },
-} as ComponentMeta<typeof SecretTextArea>;
+} as Meta<typeof SecretTextArea>;
 
-const Template: ComponentStory<typeof SecretTextArea> = (args) => (
-  <SecretTextArea
-    {...args}
-    onChange={() => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-    }}
-  />
+const Template: StoryFn<typeof SecretTextArea> = (args) => (
+  <Card withPadding>
+    <Text size="lg">An extremely secret text area</Text>
+    <Box my="md">
+      <SecretTextArea
+        {...args}
+        onChange={() => {
+          // eslint-disable-next-line @typescript-eslint/no-empty-function
+        }}
+      />
+    </Box>
+  </Card>
 );
 
 export const Primary = Template.bind({});
 Primary.args = {
-  rows: 1,
   value: "testing",
+  disabled: false,
+  light: false,
+  error: false,
+};
+
+export const WithUpload: StoryFn<typeof SecretTextArea> = (args) => {
+  const [value, setValue] = useState("testing");
+  return (
+    <Card withPadding>
+      <Text size="lg">An extremely secret text area with file upload</Text>
+      <Box my="md">
+        <SecretTextArea {...args} value={value} onChange={(e) => setValue(e.target.value)} onUpload={setValue} />
+      </Box>
+    </Card>
+  );
 };

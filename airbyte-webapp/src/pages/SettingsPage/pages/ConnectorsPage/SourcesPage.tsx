@@ -61,7 +61,7 @@ const SourcesPage: React.FC = () => {
       }
     });
 
-    return Array.from(sourceDefinitionMap.values());
+    return Array.from(sourceDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [sources, sourceDefinitions]);
 
   const ConnectorsViewComponent = showBuilderNavigationLinks ? WithBuilderProjects : ConnectorsView;

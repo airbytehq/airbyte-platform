@@ -84,7 +84,7 @@ public class OAuthConfigSupplier {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
       final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
-      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
+      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, false)
           .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceConnectorConfig));
       return sourceConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {
@@ -111,7 +111,8 @@ public class OAuthConfigSupplier {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
+      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId,
+          false)
           .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationVersion.getSpec(),
               destinationConnectorConfig));
       return destinationConnectorConfig;
@@ -138,7 +139,7 @@ public class OAuthConfigSupplier {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
       final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
-      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
+      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, false)
           .ifPresent(sourceOAuthParameter -> {
             if (injectOAuthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceOAuthParameter.getConfiguration(),
                 sourceConnectorConfig)) {
@@ -171,7 +172,8 @@ public class OAuthConfigSupplier {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
+      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId,
+          false)
           .ifPresent(destinationOAuthParameter -> {
             if (injectOAuthParameters(destinationDefinition.getName(), destinationVersion.getSpec(), destinationOAuthParameter.getConfiguration(),
                 destinationConnectorConfig)) {

@@ -7,11 +7,8 @@ package io.airbyte.workers.general;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageMigrator;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
@@ -39,7 +36,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -91,10 +87,6 @@ public class ReplicationWorkerPerformanceTest {
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
     // LimitedThinRecordSourceProcess());
     final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new LimitedFatRecordSourceProcess());
-    final var serDeProvider = new AirbyteMessageSerDeProvider(
-        List.of(new AirbyteMessageV0Deserializer()),
-        List.of(new AirbyteMessageV0Serializer()));
-    serDeProvider.initialize();
 
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
@@ -102,9 +94,7 @@ public class ReplicationWorkerPerformanceTest {
     catalogMigrator.initialize();
     final var migratorFactory = new AirbyteProtocolVersionedMigratorFactory(msgMigrator, catalogMigrator);
 
-    final var versionFac =
-        new VersionedAirbyteStreamFactory(serDeProvider, migratorFactory, new Version("0.2.0"), Optional.empty(),
-            Optional.of(RuntimeException.class));
+    final var versionFac = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     final var versionedAbSource =
         new DefaultAirbyteSource(integrationLauncher, versionFac, heartbeatMonitor, migratorFactory.getProtocolSerializer(new Version("0.2.0")),
@@ -128,7 +118,8 @@ public class ReplicationWorkerPerformanceTest {
         metricReporter,
         connectorConfigUpdater,
         false,
-        heartbeatTimeoutChaperone);
+        heartbeatTimeoutChaperone,
+        false);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {

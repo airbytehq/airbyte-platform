@@ -20,6 +20,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
+import { isEmptyOrDefault } from "../types";
 import { formatJson } from "../utils";
 
 interface SchemaDiffViewProps {
@@ -84,7 +85,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
 
   return (
     <FlexContainer direction="column">
-      {editorView === "ui" && field.value && field.value !== formattedSchema && (
+      {editorView === "ui" && !isEmptyOrDefault(field.value) && field.value !== formattedSchema && (
         <Message type="warning" text={<FormattedMessage id="connectorBuilder.differentSchemaDescription" />}>
           <FlexItem grow className={styles.mergeButtons}>
             <FlexContainer direction="column">
@@ -139,7 +140,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
           </FlexItem>
         </Message>
       )}
-      {editorView === "ui" && !field.value && (
+      {editorView === "ui" && isEmptyOrDefault(field.value) && (
         <Button
           full
           variant="secondary"
@@ -156,7 +157,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
         </Button>
       )}
       <FlexItem>
-        {editorView === "yaml" || !schemaDiff.changes.length ? (
+        {editorView === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(field.value) ? (
           <pre className={styles.diffLine}>
             {formattedSchema
               .split("\n")

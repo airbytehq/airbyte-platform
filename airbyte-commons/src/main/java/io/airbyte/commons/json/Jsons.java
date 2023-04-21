@@ -348,6 +348,9 @@ public class Jsons {
    */
   public static JsonNode navigateTo(JsonNode json, final List<String> keys) {
     for (final String key : keys) {
+      if (json == null) {
+        return null;
+      }
       json = json.get(key);
     }
     return json;

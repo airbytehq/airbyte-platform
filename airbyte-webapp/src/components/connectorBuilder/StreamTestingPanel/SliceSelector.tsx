@@ -20,7 +20,7 @@ interface SliceSelectorProps {
 const ControlButton: React.FC<ListBoxControlButtonProps<number>> = ({ selectedOption }) => {
   return (
     <>
-      <Text size="md">{selectedOption.label}</Text>
+      {selectedOption && <Text size="md">{selectedOption.label}</Text>}
       <FontAwesomeIcon className={styles.arrow} icon={faAngleDown} />
     </>
   );

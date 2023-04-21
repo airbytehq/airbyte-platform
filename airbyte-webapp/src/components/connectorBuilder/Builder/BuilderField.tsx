@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
+import { ComboBox, Option } from "components/ui/ComboBox";
 import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { TagInput } from "components/ui/TagInput";
@@ -27,6 +28,7 @@ interface ArrayFieldProps {
   value: string[];
   setValue: (value: string[]) => void;
   error: boolean;
+  itemType?: string;
 }
 
 interface BaseFieldProps {
@@ -50,9 +52,10 @@ export type BuilderFieldProps = BaseFieldProps &
         disabled?: boolean;
       }
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
-    | { type: "array"; onChange?: (newValue: string[]) => void }
+    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
+    | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
   );
 
 const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, ...props }) => {
@@ -69,8 +72,10 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error }) => {
-  return <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} error={error} />;
+const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType }) => {
+  return (
+    <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} itemType={itemType} error={error} />
+  );
 };
 
 const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> = ({
@@ -155,6 +160,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           <ArrayField
             name={path}
             value={(field.value as string[] | undefined) ?? []}
+            itemType={props.itemType}
             setValue={setValue}
             error={hasError}
           />
@@ -167,6 +173,24 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           setValue={setValue}
           error={hasError}
           data-testid={path}
+        />
+      )}
+      {props.type === "combobox" && (
+        <ComboBox
+          options={props.options}
+          value={field.value as string}
+          onChange={setValue}
+          error={hasError}
+          adornment={adornment}
+          data-testid={path}
+          fieldInputProps={field}
+          onBlur={(e) => {
+            if (e.relatedTarget?.id.includes("headlessui-combobox-option")) {
+              return;
+            }
+            field.onBlur(e);
+          }}
+          filterOptions={false}
         />
       )}
       {hasError && (

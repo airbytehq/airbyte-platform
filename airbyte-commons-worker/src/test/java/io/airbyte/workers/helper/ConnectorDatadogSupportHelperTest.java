@@ -39,4 +39,10 @@ class ConnectorDatadogSupportHelperTest {
     assertFalse(supportHelper.connectorVersionCompare(CONNECTOR_VERSION, "mysql:2.0.5"));
   }
 
+  @Test
+  void verifyInvalidVersionDoesNotThrow() {
+    final Optional<ImmutablePair<String, AirbyteVersion>> pair = supportHelper.extractAirbyteVersionFromImageName("custom:v1", ":");
+    assertFalse(pair.isPresent());
+  }
+
 }

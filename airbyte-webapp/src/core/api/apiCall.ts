@@ -10,7 +10,7 @@ export interface ApiCallOptions {
 export interface RequestOptions<DataType = unknown> {
   url: string;
   method: "get" | "post" | "put" | "delete" | "patch";
-  params?: URLSearchParams;
+  params?: Record<string, string | number | boolean>;
   data?: DataType;
   headers?: HeadersInit;
   responseType?: "blob";
@@ -44,7 +44,14 @@ export const fetchApiCall = async <T, U = unknown>(
   headers = new Headers(headers);
   headers.set("X-Airbyte-Analytic-Source", "webapp");
 
-  const response = await fetch(`${requestUrl}${new URLSearchParams(params)}`, {
+  // We have a proper type for `params` in the RequestOptions interface, so types are validated correctly
+  // when calling this method. Unfortunately the `URLSearchParams` typing in TS has wrong typings, since
+  // it only allows for Record<string, string>, while the actual URLSearchParams API allow at least
+  // Record<string, string | number | boolean> so we expect a compilation error here.
+  // see https://github.com/microsoft/TypeScript/issues/32951
+  // @ts-expect-error Due to the wrong TS types.
+  const queryParams = new URLSearchParams(params).toString();
+  const response = await fetch(`${requestUrl}${queryParams.length ? `?${queryParams}` : ""}`, {
     method,
     ...(data ? { body: getRequestBody(data) } : {}),
     headers,

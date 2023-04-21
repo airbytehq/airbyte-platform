@@ -19,6 +19,7 @@ import {
   OperatorWebhookWebhookType,
   WebhookConfigRead,
   WorkspaceRead,
+  WebhookConfigWrite,
 } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -39,10 +40,16 @@ export interface DbtCloudJob {
   jobName?: string;
 }
 export type { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud/api";
-const webhookConfigName = "dbt cloud";
+
+type ServiceToken = string;
+
+const WEBHOOK_CONFIG_NAME = "dbt cloud";
+
 const jobName = (t: DbtCloudJob) => `${t.accountId}/${t.jobId}`;
 
 const isDbtWebhookConfig = (webhookConfig: WebhookConfigRead) => !!webhookConfig.name?.includes("dbt");
+
+const hasDbtIntegration = (workspace: WorkspaceRead) => !isEmpty(workspace.webhookConfigs?.filter(isDbtWebhookConfig));
 
 export const toDbtCloudJob = (operationRead: OperationRead): DbtCloudJob => {
   if (operationRead.operatorConfiguration.webhook?.webhookType === "dbtCloud") {
@@ -63,26 +70,47 @@ const isDbtCloudJob = (operation: OperationRead): boolean =>
 export const isSameJob = (remoteJob: DbtCloudJobInfo, savedJob: DbtCloudJob): boolean =>
   savedJob.accountId === remoteJob.accountId && savedJob.jobId === remoteJob.jobId;
 
-type ServiceToken = string;
-
-export const useSubmitDbtCloudIntegrationConfig = () => {
-  const { workspaceId } = useCurrentWorkspace();
+export const useDbtCloudServiceToken = () => {
+  const workspace = useCurrentWorkspace();
+  const { workspaceId } = workspace;
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
 
-  return useMutation<WorkspaceRead, Error, ServiceToken>(
+  const { mutateAsync: saveToken, isLoading: isSavingToken } = useMutation<WorkspaceRead, Error, ServiceToken>(
     ["submitWorkspaceDbtCloudToken", workspaceId],
     async (authToken: string) => {
+      const webhookConfigs = [
+        {
+          name: WEBHOOK_CONFIG_NAME,
+          authToken,
+        },
+      ];
+
       return await updateWorkspace({
         workspaceId,
-        webhookConfigs: [
-          {
-            name: webhookConfigName,
-            authToken,
-          },
-        ],
+        webhookConfigs,
       });
     }
   );
+
+  const { mutateAsync: deleteToken, isLoading: isDeletingToken } = useMutation<WorkspaceRead, Error>(
+    ["submitWorkspaceDbtCloudToken", workspaceId],
+    async () => {
+      const webhookConfigs: WebhookConfigWrite[] = [];
+
+      return await updateWorkspace({
+        workspaceId,
+        webhookConfigs,
+      });
+    }
+  );
+
+  return {
+    hasExistingToken: hasDbtIntegration(workspace),
+    saveToken,
+    isSavingToken,
+    deleteToken,
+    isDeletingToken,
+  };
 };
 
 export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
@@ -93,7 +121,6 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const notificationService = useNotificationService();
   const { formatMessage } = useIntl();
 
-  const hasDbtIntegration = !isEmpty(workspace.webhookConfigs?.filter(isDbtWebhookConfig));
   const webhookConfigId = workspace.webhookConfigs?.find((config) => isDbtWebhookConfig(config))?.id;
 
   const dbtCloudJobs = [...(connection.operations?.filter((operation) => isDbtCloudJob(operation)) || [])].map(
@@ -143,7 +170,7 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   });
 
   return {
-    hasDbtIntegration,
+    hasDbtIntegration: hasDbtIntegration(workspace),
     dbtCloudJobs,
     saveJobs: mutateAsync,
     isSaving: isLoading,

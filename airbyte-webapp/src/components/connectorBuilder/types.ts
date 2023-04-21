@@ -3,7 +3,10 @@ import merge from "lodash/merge";
 import semver from "semver";
 import * as yup from "yup";
 
+import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
+
 import { CDK_VERSION } from "./cdk";
+import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
@@ -13,7 +16,6 @@ import {
   BearerAuthenticator,
   DeclarativeStream,
   NoAuth,
-  SessionTokenAuthenticator,
   RequestOption,
   OAuthAuthenticator,
   HttpRequesterAuthenticator,
@@ -29,13 +31,17 @@ import {
   SubstreamPartitionRouter,
   ListPartitionRouterType,
   ApiKeyAuthenticatorType,
-  SessionTokenAuthenticatorType,
   OAuthAuthenticatorType,
   CursorPaginationType,
   OffsetIncrementType,
   PageIncrementType,
   BearerAuthenticatorType,
   BasicHttpAuthenticatorType,
+  DefaultErrorHandler,
+  CompositeErrorHandler,
+  DefaultErrorHandlerBackoffStrategiesItem,
+  DeclarativeStreamTransformationsItem,
+  HttpResponseFilter,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -54,7 +60,6 @@ export type BuilderFormAuthenticator = (
   | ApiKeyAuthenticator
   | BearerAuthenticator
   | BasicHttpAuthenticator
-  | SessionTokenAuthenticator
 ) & { type: string };
 
 export interface BuilderFormValues {
@@ -86,6 +91,53 @@ export interface BuilderSubstreamPartitionRouter {
   request_option?: RequestOption;
 }
 
+export type BuilderTransformation =
+  | {
+      type: "add";
+      path: string[];
+      value: string;
+    }
+  | {
+      type: "remove";
+      path: string[];
+    };
+
+interface BuilderResponseFilter extends Omit<HttpResponseFilter, "http_codes"> {
+  // turn http codes into string so they can be edited in the form - still enforced to parse into a number
+  http_codes?: string[];
+}
+
+interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strategies" | "response_filters"> {
+  backoff_strategy?: DefaultErrorHandlerBackoffStrategiesItem;
+  response_filter?: BuilderResponseFilter;
+}
+
+export interface BuilderIncrementalSync
+  extends Pick<
+    DatetimeBasedCursor,
+    | "cursor_field"
+    | "datetime_format"
+    | "cursor_granularity"
+    | "step"
+    | "end_time_option"
+    | "start_time_option"
+    | "lookback_window"
+  > {
+  end_datetime:
+    | {
+        type: "user_input";
+      }
+    | { type: "now" }
+    | { type: "custom"; value: string; format?: string };
+  start_datetime:
+    | {
+        type: "user_input";
+      }
+    | { type: "custom"; value: string; format?: string };
+}
+
+export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
+
 export interface BuilderStream {
   id: string;
   name: string;
@@ -99,8 +151,10 @@ export interface BuilderStream {
     requestBody: Array<[string, string]>;
   };
   paginator?: BuilderPaginator;
-  incrementalSync?: DatetimeBasedCursor;
+  transformations?: BuilderTransformation[];
+  incrementalSync?: BuilderIncrementalSync;
   partitionRouter?: Array<ListPartitionRouter | BuilderSubstreamPartitionRouter>;
+  errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, unknown>;
 }
@@ -113,6 +167,30 @@ export function versionSupported(version: string) {
 }
 
 export const DEFAULT_CONNECTOR_NAME = "Untitled";
+
+export const LARGE_DURATION_OPTIONS = [
+  { value: "PT1H", description: "1 hour" },
+  { value: "P1D", description: "1 day" },
+  { value: "P1W", description: "1 week" },
+  { value: "P1M", description: "1 month" },
+  { value: "P1Y", description: "1 year" },
+];
+
+export const SMALL_DURATION_OPTIONS = [
+  { value: "PT0.000001S", description: "1 microsecond" },
+  { value: "PT0.001S", description: "1 millisecond" },
+  { value: "PT1S", description: "1 second" },
+  { value: "PT1M", description: "1 minute" },
+  { value: "PT1H", description: "1 hour" },
+  { value: "P1D", description: "1 day" },
+];
+
+export const DATETIME_FORMAT_OPTIONS = [
+  { value: "%Y-%m-%d" },
+  { value: "%Y-%m-%d %H:%M:%S" },
+  { value: "%Y-%m-%d %H:%M:%S.%f+00:00" },
+  { value: "%Y-%m-%dT%H:%M:%S.%f%z" },
+];
 
 export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   global: {
@@ -127,12 +205,27 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   version: CDK_VERSION,
 };
 
+export const DEFAULT_SCHEMA = formatJson(
+  {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    properties: {},
+    additionalProperties: true,
+  },
+  true
+);
+
+export const isEmptyOrDefault = (schema?: string) => {
+  return !schema || schema === DEFAULT_SCHEMA;
+};
+
 export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   name: "",
   urlPath: "",
   fieldPointer: [],
   primaryKey: [],
   httpMethod: "GET",
+  schema: DEFAULT_SCHEMA,
   requestOptions: {
     requestParameters: [],
     requestHeaders: [],
@@ -146,12 +239,32 @@ export const SUBSTREAM_PARTITION_ROUTER: SubstreamPartitionRouterType = "Substre
 export const API_KEY_AUTHENTICATOR: ApiKeyAuthenticatorType = "ApiKeyAuthenticator";
 export const BEARER_AUTHENTICATOR: BearerAuthenticatorType = "BearerAuthenticator";
 export const BASIC_AUTHENTICATOR: BasicHttpAuthenticatorType = "BasicHttpAuthenticator";
-export const SESSION_TOKEN_AUTHENTICATOR: SessionTokenAuthenticatorType = "SessionTokenAuthenticator";
 export const OAUTH_AUTHENTICATOR: OAuthAuthenticatorType = "OAuthAuthenticator";
 
 export const CURSOR_PAGINATION: CursorPaginationType = "CursorPagination";
 export const OFFSET_INCREMENT: OffsetIncrementType = "OffsetIncrement";
 export const PAGE_INCREMENT: PageIncrementType = "PageIncrement";
+
+export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", BuilderFormInput> = {
+  start_date: {
+    key: "start_date",
+    required: true,
+    definition: {
+      type: "string",
+      title: "Start date",
+      format: "date-time",
+    },
+  },
+  end_date: {
+    key: "end_date",
+    required: true,
+    definition: {
+      type: "string",
+      title: "End date",
+      format: "date-time",
+    },
+  },
+};
 
 export const authTypeToKeyToInferredInput: Record<string, Record<string, BuilderFormInput>> = {
   NoAuth: {},
@@ -226,35 +339,6 @@ export const authTypeToKeyToInferredInput: Record<string, Record<string, Builder
       },
     },
   },
-  SessionTokenAuthenticator: {
-    username: {
-      key: "username",
-      required: false,
-      definition: {
-        type: "string",
-        title: "Username",
-      },
-    },
-    password: {
-      key: "password",
-      required: false,
-      definition: {
-        type: "string",
-        title: "Password",
-        airbyte_secret: true,
-      },
-    },
-    session_token: {
-      key: "session_token",
-      required: false,
-      definition: {
-        type: "string",
-        title: "Session token",
-        description: "Session token generated by user (if provided username and password are not required)",
-        airbyte_secret: true,
-      },
-    },
-  },
 };
 
 export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Record<string, string> => {
@@ -265,10 +349,22 @@ export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Reco
   );
 };
 
-function getInferredInputList(global: BuilderFormValues["global"]): BuilderFormInput[] {
+export function hasIncrementalSyncUserInput(
+  streams: BuilderFormValues["streams"],
+  key: "start_datetime" | "end_datetime"
+) {
+  return streams.some((stream) => stream.incrementalSync?.[key].type === "user_input");
+}
+
+export function getInferredInputList(
+  global: BuilderFormValues["global"],
+  inferredInputOverrides: BuilderFormValues["inferredInputOverrides"],
+  startDateInput: boolean,
+  endDateInput: boolean
+): BuilderFormInput[] {
   const authKeyToInferredInput = authTypeToKeyToInferredInput[global.authenticator.type];
   const authKeys = Object.keys(authKeyToInferredInput);
-  return authKeys.flatMap((authKey) => {
+  const inputs = authKeys.flatMap((authKey) => {
     if (
       extractInterpolatedConfigKey(Reflect.get(global.authenticator, authKey)) === authKeyToInferredInput[authKey].key
     ) {
@@ -276,14 +372,16 @@ function getInferredInputList(global: BuilderFormValues["global"]): BuilderFormI
     }
     return [];
   });
-}
 
-export function getInferredInputs(
-  global: BuilderFormValues["global"],
-  inferredInputOverrides: BuilderFormValues["inferredInputOverrides"]
-): BuilderFormInput[] {
-  const inferredInputs = getInferredInputList(global);
-  return inferredInputs.map((input) =>
+  if (startDateInput) {
+    inputs.push(incrementalSyncInferredInputs.start_date);
+  }
+
+  if (endDateInput) {
+    inputs.push(incrementalSyncInferredInputs.end_date);
+  }
+
+  return inputs.map((input) =>
     inferredInputOverrides[input.key]
       ? {
           ...input,
@@ -335,27 +433,12 @@ export const builderFormValidationSchema = yup.object().shape({
     urlBase: yup.string().required("form.empty.error"),
     authenticator: yup.object({
       header: yup.mixed().when("type", {
-        is: (type: string) => type === API_KEY_AUTHENTICATOR || type === SESSION_TOKEN_AUTHENTICATOR,
+        is: (type: string) => type === API_KEY_AUTHENTICATOR,
         then: yup.string().required("form.empty.error"),
         otherwise: (schema) => schema.strip(),
       }),
       token_refresh_endpoint: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
-        otherwise: (schema) => schema.strip(),
-      }),
-      session_token_response_key: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
-        otherwise: (schema) => schema.strip(),
-      }),
-      login_url: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
-        otherwise: (schema) => schema.strip(),
-      }),
-      validate_session_url: yup.mixed().when("type", {
-        is: SESSION_TOKEN_AUTHENTICATOR,
         then: yup.string().required("form.empty.error"),
         otherwise: (schema) => schema.strip(),
       }),
@@ -463,12 +546,87 @@ export const builderFormValidationSchema = yup.object().shape({
           )
           .notRequired()
           .default(undefined),
+        transformations: yup
+          .array(
+            yup.object().shape({
+              path: yup.array(yup.string()).min(1, "form.empty.error"),
+              value: yup.mixed().when("type", {
+                is: (val: string) => val === "add",
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+            })
+          )
+          .notRequired()
+          .default(undefined),
+        errorHandler: yup
+          .array(
+            yup.object().shape({
+              max_retries: yup.number(),
+              backoff_strategy: yup
+                .object()
+                .shape({
+                  backoff_time_in_seconds: yup.mixed().when("type", {
+                    is: (val: string) => val === "ConstantBackoffStrategy",
+                    then: yup.string().required("form.empty.error"),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  factor: yup.mixed().when("type", {
+                    is: (val: string) => val === "ExponentialBackoffStrategy",
+                    then: yup.string(),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  header: yup.mixed().when("type", {
+                    is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
+                    then: yup.string().required("form.empty.error"),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  regex: yup.mixed().when("type", {
+                    is: (val: string) => val === "WaitTimeFromHeader" || val === "WaitUntilTimeFromHeader",
+                    then: yup.string(),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                  min_wait: yup.mixed().when("type", {
+                    is: (val: string) => val === "WaitUntilTimeFromHeader",
+                    then: yup.string(),
+                    otherwise: (schema) => schema.strip(),
+                  }),
+                })
+                .notRequired()
+                .default(undefined),
+              response_filter: yup
+                .object()
+                .shape({
+                  error_message_contains: yup.string(),
+                  predicate: yup.string().matches(/\{\{.+\}\}/, FORM_PATTERN_ERROR),
+                  http_codes: yup.array(yup.string()).notRequired().default(undefined),
+                  error_message: yup.string(),
+                })
+                .notRequired()
+                .default(undefined),
+            })
+          )
+          .notRequired()
+          .default(undefined),
         incrementalSync: yup
           .object()
           .shape({
-            request_option: nonPathRequestOptionSchema,
-            start_datetime: yup.string().required("form.empty.error"),
-            end_datetime: yup.string().required("form.empty.error"),
+            cursor_field: yup.string().required("form.empty.error"),
+            cursor_granularity: yup.string().required("form.empty.error"),
+            start_datetime: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: (val: string) => val === "custom",
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+            }),
+            end_datetime: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: (val: string) => val === "custom",
+                then: yup.string().required("form.empty.error"),
+                otherwise: (schema) => schema.strip(),
+              }),
+            }),
             step: yup.string().required("form.empty.error"),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
@@ -488,12 +646,6 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
     return {
       ...globalSettings.authenticator,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
-    };
-  }
-  if (globalSettings.authenticator.type === "SessionTokenAuthenticator") {
-    return {
-      ...globalSettings.authenticator,
-      api_url: globalSettings.urlBase,
     };
   }
   return globalSettings.authenticator as HttpRequesterAuthenticator;
@@ -519,6 +671,34 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
     page_token_option: pageTokenOption,
     page_size_option: paginator.pageSizeOption,
     pagination_strategy: paginator.strategy,
+  };
+}
+
+function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync"]): DatetimeBasedCursor | undefined {
+  if (!formValues) {
+    return undefined;
+  }
+
+  const { start_datetime, end_datetime, ...regularFields } = formValues;
+  return {
+    type: "DatetimeBasedCursor",
+    ...regularFields,
+    start_datetime: {
+      type: "MinMaxDatetime",
+      datetime: start_datetime.type === "custom" ? start_datetime.value : `{{ config['start_date'] }}`,
+      datetime_format:
+        start_datetime.type === "custom" ? start_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+    },
+    end_datetime: {
+      type: "MinMaxDatetime",
+      datetime:
+        end_datetime.type === "custom"
+          ? end_datetime.value
+          : end_datetime.type === "now"
+          ? `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
+          : `{{ config['end_date'] }}`,
+      datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+    },
   };
 }
 
@@ -566,6 +746,52 @@ function builderStreamPartitionRouterToManifest(
   });
 }
 
+function buildCompositeErrorHandler(errorHandlers: BuilderStream["errorHandler"]): CompositeErrorHandler | undefined {
+  if (!errorHandlers || errorHandlers.length === 0) {
+    return undefined;
+  }
+  return {
+    type: "CompositeErrorHandler",
+    error_handlers: errorHandlers.map((handler) => ({
+      ...handler,
+      backoff_strategies: handler.backoff_strategy ? [handler.backoff_strategy] : undefined,
+      response_filters: handler.response_filter
+        ? [{ ...handler.response_filter, http_codes: handler.response_filter.http_codes?.map(Number) }]
+        : undefined,
+      backoff_strategy: undefined,
+      response_filter: undefined,
+    })),
+  };
+}
+
+function builderTransformationsToManifest(
+  transformations: BuilderTransformation[] | undefined
+): DeclarativeStreamTransformationsItem[] | undefined {
+  if (!transformations) {
+    return undefined;
+  }
+  if (transformations.length === 0) {
+    return undefined;
+  }
+  return transformations.map((transformation) => {
+    if (transformation.type === "add") {
+      return {
+        type: "AddFields",
+        fields: [
+          {
+            path: transformation.path,
+            value: transformation.value,
+          },
+        ],
+      };
+    }
+    return {
+      type: "RemoveFields",
+      field_pointers: [transformation.path],
+    };
+  });
+}
+
 const EMPTY_SCHEMA = { type: "InlineSchemaLoader", schema: {} } as const;
 
 function parseSchemaString(schema?: string): DeclarativeStreamSchemaLoader {
@@ -600,6 +826,7 @@ function builderStreamToDeclarativeSteam(
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
         request_body_json: Object.fromEntries(stream.requestOptions.requestBody),
         authenticator: builderAuthenticatorToManifest(values.global),
+        error_handler: buildCompositeErrorHandler(stream.errorHandler),
       },
       record_selector: {
         type: "RecordSelector",
@@ -614,7 +841,8 @@ function builderStreamToDeclarativeSteam(
         stream.id,
       ]),
     },
-    incremental_sync: stream.incrementalSync,
+    transformations: builderTransformationsToManifest(stream.transformations),
+    incremental_sync: builderIncrementalToManifest(stream.incrementalSync),
   };
 
   return merge({}, declarativeStream, stream.unsupportedFields);
@@ -625,7 +853,15 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     builderStreamToDeclarativeSteam(values, stream, [])
   );
 
-  const allInputs = [...values.inputs, ...getInferredInputs(values.global, values.inferredInputOverrides)];
+  const allInputs = [
+    ...values.inputs,
+    ...getInferredInputList(
+      values.global,
+      values.inferredInputOverrides,
+      hasIncrementalSyncUserInput(values.streams, "start_datetime"),
+      hasIncrementalSyncUserInput(values.streams, "end_datetime")
+    ),
+  ];
 
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",

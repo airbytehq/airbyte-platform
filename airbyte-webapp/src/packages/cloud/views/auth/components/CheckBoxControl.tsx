@@ -2,6 +2,7 @@ import React from "react";
 import styled from "styled-components";
 
 import { CheckBox } from "components/ui/CheckBox";
+import { FlexItem } from "components/ui/Flex";
 
 type IProps = {
   label?: React.ReactNode;
@@ -23,7 +24,9 @@ const Label = styled.label<{ disabled?: boolean }>`
 
 const CheckBoxControl: React.FC<IProps> = (props) => (
   <ToggleContainer>
-    <CheckBox {...props} id={`checkbox-${props.name}`} />
+    <FlexItem grow={false}>
+      <CheckBox {...props} id={`checkbox-${props.name}`} />
+    </FlexItem>
     <Label disabled={props.disabled} htmlFor={`checkbox-${props.name}`}>
       {props.label}
     </Label>

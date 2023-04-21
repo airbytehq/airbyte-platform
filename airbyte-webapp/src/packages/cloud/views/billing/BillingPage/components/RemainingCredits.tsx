@@ -120,19 +120,11 @@ const RemainingCredits: React.FC<Props> = ({ selfServiceCheckoutEnabled }) => {
 
   return (
     <>
-      <LowCreditBalanceHint>
-        <Button
-          disabled={!selfServiceCheckoutEnabled}
-          type="button"
-          size="xs"
-          variant="dark"
-          onClick={startStripeCheckout}
-          isLoading={isLoading || isWaitingForCredits}
-          icon={<FontAwesomeIcon icon={faPlus} />}
-        >
-          <FormattedMessage id="credits.buyCredits" />
-        </Button>
-      </LowCreditBalanceHint>
+      <LowCreditBalanceHint
+        disableCheckout={!selfServiceCheckoutEnabled}
+        onBuy={startStripeCheckout}
+        isLoading={isLoading || isWaitingForCredits}
+      />
       <Block>
         <CreditView>
           <FormattedMessage id="credits.remainingCredits" />

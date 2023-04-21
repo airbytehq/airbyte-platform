@@ -13,7 +13,7 @@ required:
   - manifest
   - manifestVersion
   - manifestDescription
-additionalProperties: false
+additionalProperties: true
 properties:
   name:
     type: string
