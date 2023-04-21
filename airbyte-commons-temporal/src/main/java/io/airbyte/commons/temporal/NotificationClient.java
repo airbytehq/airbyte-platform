@@ -26,12 +26,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Singleton
 @Slf4j
-public class NotificationUtils {
+public class NotificationClient {
 
   private final FeatureFlagClient featureFlagClient;
   private final WorkflowClient client;
 
-  public NotificationUtils(final FeatureFlagClient featureFlagClient, WorkflowClient client) {
+  public NotificationClient(final FeatureFlagClient featureFlagClient, WorkflowClient client) {
     this.featureFlagClient = featureFlagClient;
     this.client = client;
   }
