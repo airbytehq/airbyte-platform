@@ -101,6 +101,11 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
+  notification:
+    customerio:
+      apikey: ${CUSTOMER_IO_API_KEY:}
+      senderEmail: ${NOTIFICATION_SENDER_EMAIL:}
+      recipientEmail: ${NOTIFICATION_RECIPIENT_EMAIL:}
   worker:
     check:
       enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}

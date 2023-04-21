@@ -4,8 +4,6 @@ import io.airbyte.api.client.model.generated.NotificationType as ApiNotification
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -31,3 +29,5 @@ class WebhookConfigFetcher(private val workspaceApiClient: WorkspaceApi) : Confi
 
     override fun notificationType(): NotificationType = NotificationType.webhook
 }
+
+data class CustomerIoEmailConfig(val from: String, val to: String)

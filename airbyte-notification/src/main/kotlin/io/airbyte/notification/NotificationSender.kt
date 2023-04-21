@@ -1,6 +1,5 @@
 package io.airbyte.notification
 
-import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.MediaType.Companion.toMediaType

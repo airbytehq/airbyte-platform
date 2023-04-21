@@ -16,6 +16,7 @@ dependencies {
     implementation libs.okhttp
 
     testImplementation(libs.mockk)
+    testImplementation libs.mockito.inline
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
