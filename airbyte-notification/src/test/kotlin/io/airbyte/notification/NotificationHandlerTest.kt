@@ -15,7 +15,7 @@ class NotificationHandlerTest {
     private val customerIoNotificationSender: CustomerIoEmailNotificationSender = mockk()
 
     private val webhookConfig: WebhookConfig = WebhookConfig("http://webhook.com")
-    private val customerIoConfig: CustomerIoEmailConfig = CustomerIoEmailConfig("from@from.com", "to@to.com")
+    private val customerIoConfig: CustomerIoEmailConfig = CustomerIoEmailConfig( "to@to.com")
     private val subject: String = "subject"
     private val message: String = "message"
     private val connectionId: UUID = UUID.randomUUID()

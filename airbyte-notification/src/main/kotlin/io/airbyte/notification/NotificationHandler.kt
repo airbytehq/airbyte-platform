@@ -8,10 +8,12 @@ enum class NotificationType {
 }
 
 @Singleton
-open class NotificationHandler(private val maybeWebhookConfigFetcher: WebhookConfigFetcher?,
-                               private val maybeCustomerIoConfigFetcher: CustomerIoEmailConfigFetcher?,
-                               private val maybeWebhookNotificationSender: WebhookNotificationSender?,
-                               private val maybeCustomerIoNotificationSender: CustomerIoEmailNotificationSender?,) {
+open class NotificationHandler(
+        private val maybeWebhookConfigFetcher: WebhookConfigFetcher?,
+        private val maybeCustomerIoConfigFetcher: CustomerIoEmailConfigFetcher?,
+        private val maybeWebhookNotificationSender: WebhookNotificationSender?,
+        private val maybeCustomerIoNotificationSender: CustomerIoEmailNotificationSender?,
+) {
     /**
      * Send a notification with a subject and a message if a configuration is present
      */

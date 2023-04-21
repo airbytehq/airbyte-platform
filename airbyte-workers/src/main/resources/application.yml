@@ -103,8 +103,7 @@ airbyte:
     should-publish: ${PUBLISH_METRICS:false}
   notification:
     customerio:
-      apikey: ${CUSTOMER_IO_API_KEY:}
-      senderEmail: ${NOTIFICATION_SENDER_EMAIL:}
+      apikey: ${CUSTOMERIO_API_KEY:}
       recipientEmail: ${NOTIFICATION_RECIPIENT_EMAIL:}
   worker:
     check:

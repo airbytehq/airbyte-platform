@@ -30,4 +30,4 @@ class WebhookConfigFetcher(private val workspaceApiClient: WorkspaceApi) : Confi
     override fun notificationType(): NotificationType = NotificationType.webhook
 }
 
-data class CustomerIoEmailConfig(val from: String, val to: String)
+data class CustomerIoEmailConfig(val to: String)

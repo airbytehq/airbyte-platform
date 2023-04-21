@@ -36,7 +36,7 @@ class CustomerIoNotificationSenderTest {
 
     when(okHttpClient.newCall(any()))
         .thenReturn(call);
-    customerIoEmailNotificationSender.sendNotification(new CustomerIoEmailConfig("from", "to"), "subject", "message");
+    customerIoEmailNotificationSender.sendNotification(new CustomerIoEmailConfig("to"), "subject", "message");
 
     verify(okHttpClient).newCall(any());
   }
@@ -57,7 +57,7 @@ class CustomerIoNotificationSenderTest {
 
     Assertions.assertThatThrownBy(
         () -> customerIoEmailNotificationSender.sendNotification(
-            new CustomerIoEmailConfig("from", "to"), "subject", "message"))
+            new CustomerIoEmailConfig("to"), "subject", "message"))
         .isInstanceOf(RuntimeException.class)
         .hasCauseInstanceOf(IOException.class);
 
