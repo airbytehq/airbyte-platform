@@ -26,6 +26,7 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
@@ -89,7 +90,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.41.02.002";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.43.1.002";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.42.0.001";
   private static final String CDK_VERSION = "1.2.3";
 
@@ -230,7 +231,9 @@ class BootloaderTest {
     initBootloader.load();
 
     final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider();
-    configRepository.seedActorDefinitions(localDefinitions.getSourceDefinitions(), localDefinitions.getDestinationDefinitions());
+    configRepository.seedActorDefinitions(
+        localDefinitions.getSourceDefinitions().stream().map(ConnectorRegistryConverters::toStandardSourceDefinition).toList(),
+        localDefinitions.getDestinationDefinitions().stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList());
 
     final String sourceSpecs = """
                                {

@@ -24,11 +24,14 @@ import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 import java.util.Optional;
 
 /**
  * Factory to help create IntegrationLaunchers.
  */
+@Singleton
 public class AirbyteIntegrationLauncherFactory {
 
   private final ProcessFactory processFactory;
@@ -36,7 +39,7 @@ public class AirbyteIntegrationLauncherFactory {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
+  public AirbyteIntegrationLauncherFactory(@Named("replicationProcessFactory") final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                            final FeatureFlags featureFlags) {

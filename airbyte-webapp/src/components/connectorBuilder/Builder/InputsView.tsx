@@ -1,7 +1,7 @@
 import { faGear, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useFormikContext } from "formik";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -11,7 +11,8 @@ import { Text } from "components/ui/Text";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
-import { BuilderFormInput, BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormInput, BuilderFormValues } from "../types";
+import { useInferredInputs } from "../useInferredInputs";
 
 const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 
@@ -19,10 +20,7 @@ export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
   const { values } = useFormikContext<BuilderFormValues>();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
-  const inferredInputs = useMemo(
-    () => getInferredInputs(values.global, values.inferredInputOverrides),
-    [values.global, values.inferredInputOverrides]
-  );
+  const inferredInputs = useInferredInputs();
 
   return (
     <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.inputsTitle" })}>

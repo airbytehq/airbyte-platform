@@ -11,9 +11,8 @@ import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { OperationService } from "core/domain/connection";
+import { useOperationsCheck } from "core/api";
 import { OperationCreate, OperationRead } from "core/request/AirbyteClient";
-import { useGetService } from "core/servicesProvider";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { links } from "utils/links";
 import { equal } from "utils/objects";
@@ -54,7 +53,7 @@ const TransformationForm: React.FC<TransformationProps> = ({
   isNewTransformation,
 }) => {
   const { formatMessage } = useIntl();
-  const operationService = useGetService<OperationService>("OperationService");
+  const operationCheck = useOperationsCheck();
   const { clearFormChange } = useFormChangeTrackerService();
   const formId = useUniqueFormId();
 
@@ -62,7 +61,7 @@ const TransformationForm: React.FC<TransformationProps> = ({
     initialValues: transformation,
     validationSchema,
     onSubmit: async (values) => {
-      await operationService.check(values);
+      await operationCheck(values);
       clearFormChange(formId);
       onDone(values);
     },

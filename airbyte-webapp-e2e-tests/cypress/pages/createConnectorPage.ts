@@ -1,5 +1,3 @@
-const selectTypeDropdown = "div[data-testid='serviceType']";
-const getServiceTypeDropdownOption = (serviceName: string) => `div[data-testid='${serviceName}']`;
 const nameInput = "input[name=name]";
 const apiKeyInput = "input[name='connectionConfiguration.api_key']";
 const hostInput = "input[name='connectionConfiguration.host']";
@@ -11,14 +9,7 @@ const pokemonNameInput = "input[name='connectionConfiguration.pokemon_name']";
 const schemaInput = "[data-testid='tag-input'] input";
 const destinationPathInput = "input[name='connectionConfiguration.destination_path']";
 
-export const selectServiceType = (type: string) =>
-  cy
-    .get(selectTypeDropdown)
-    .click()
-    .within(() => {
-      cy.get("input").type(type);
-      cy.get(getServiceTypeDropdownOption(type)).click()
-    });
+export const selectServiceType = (type: string) => cy.contains("button", type).click();
 
 export const enterName = (name: string) => {
   cy.get(nameInput).clear().type(name);

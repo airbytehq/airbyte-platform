@@ -929,7 +929,7 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId());
   }
 
@@ -990,7 +990,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
   }
 
   @Test
@@ -1113,7 +1113,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, true);
   }
 
   @Test
@@ -1177,7 +1177,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, true);
   }
 
   @Test
@@ -1326,9 +1326,9 @@ class SchedulerHandlerTest {
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(0).getStatus());
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(1).getStatus());
     assertEquals(ConnectionStatus.INACTIVE, connectionUpdateValues.get(2).getStatus());
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId2, CONNECTION_URL);
-    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, CONNECTION_URL);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId2, CONNECTION_URL, false);
+    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, CONNECTION_URL, false);
   }
 
   @Test

@@ -22,8 +22,9 @@ import { CDK_VERSION } from "../cdk";
 import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { PublishButton } from "../PublishButton";
-import { BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormValues } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useInferredInputs } from "../useInferredInputs";
 
 interface ViewSelectButtonProps {
   className?: string;
@@ -69,6 +70,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
   const handleViewSelect = (selectedView: BuilderView) => {
     setSelectedView(selectedView);
   };
+
+  const inferredInputsLength = useInferredInputs().length;
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
@@ -120,14 +123,14 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: values.inputs.length + getInferredInputs(values.global, values.inferredInputOverrides).length,
+                number: values.inputs.length + inferredInputsLength,
               }}
             />
           </Text>
         </ViewSelectButton>
       </FlexContainer>
 
-      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamList}>
+      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamListContainer}>
         <div className={styles.streamsHeader}>
           <Text className={styles.streamsHeading} size="xs" bold>
             <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams.length }} />
@@ -139,30 +142,32 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           />
         </div>
 
-        {values.streams.map(({ name, id }, num) => (
-          <ViewSelectButton
-            key={num}
-            data-testid={`navbutton-${String(num)}`}
-            selected={selectedView === num}
-            showErrorIndicator={hasErrors(true, [num])}
-            onClick={() => {
-              handleViewSelect(num);
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
-                actionDescription: "Stream view selected",
-                stream_id: id,
-                stream_name: name,
-              });
-            }}
-          >
-            {name && name.trim() ? (
-              <Text className={styles.streamViewText}>{name}</Text>
-            ) : (
-              <Text className={styles.emptyStreamViewText}>
-                <FormattedMessage id="connectorBuilder.emptyName" />
-              </Text>
-            )}
-          </ViewSelectButton>
-        ))}
+        <div className={styles.streamList}>
+          {values.streams.map(({ name, id }, num) => (
+            <ViewSelectButton
+              key={num}
+              data-testid={`navbutton-${String(num)}`}
+              selected={selectedView === num}
+              showErrorIndicator={hasErrors(true, [num])}
+              onClick={() => {
+                handleViewSelect(num);
+                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
+                  actionDescription: "Stream view selected",
+                  stream_id: id,
+                  stream_name: name,
+                });
+              }}
+            >
+              {name && name.trim() ? (
+                <Text className={styles.streamViewText}>{name}</Text>
+              ) : (
+                <Text className={styles.emptyStreamViewText}>
+                  <FormattedMessage id="connectorBuilder.emptyName" />
+                </Text>
+              )}
+            </ViewSelectButton>
+          ))}
+        </div>
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="md">
         <DownloadYamlButton yamlIsValid yaml={yamlManifest} />

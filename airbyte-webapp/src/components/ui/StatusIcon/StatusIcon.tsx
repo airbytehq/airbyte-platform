@@ -11,6 +11,7 @@ import { CircleLoader } from "./CircleLoader";
 import styles from "./StatusIcon.module.scss";
 import { FlexContainer } from "../Flex";
 import { Text } from "../Text";
+import { Tooltip } from "../Tooltip";
 
 export type StatusIconStatus = "sleep" | "inactive" | "success" | "warning" | "loading" | "error" | "cancelled";
 type Size = "sm" | "md" | "lg";
@@ -47,34 +48,40 @@ const _iconByStatus = {
 
 export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error", size = "md", value }) => {
   return (
-    <FlexContainer
-      className={classNames(styles.container, sizeStyles[size], colorStyles[status], {
-        [styles.loading]: status === "loading",
-        [styles.withValue]: value !== undefined,
-      })}
-      direction="row"
-      justifyContent="center"
-      alignItems="center"
-      gap="none"
+    <Tooltip
+      control={
+        <FlexContainer
+          className={classNames(styles.container, sizeStyles[size], colorStyles[status], {
+            [styles.loading]: status === "loading",
+            [styles.withValue]: value !== undefined,
+          })}
+          direction="row"
+          justifyContent="center"
+          alignItems="center"
+          gap="none"
+        >
+          <FlexContainer className={classNames(styles.icon)} justifyContent="center" alignItems="center" gap="none">
+            {status === "inactive" ? (
+              <PauseIcon title={title} />
+            ) : status === "sleep" ? (
+              <MoonIcon title={title} />
+            ) : status === "error" ? (
+              <CrossIcon title={title} />
+            ) : status === "loading" ? (
+              <CircleLoader title={title} />
+            ) : (
+              <FontAwesomeIcon icon={_iconByStatus[status]} title={title} />
+            )}
+          </FlexContainer>
+          {value !== undefined && (
+            <Text size="sm" className={styles.value}>
+              {value}
+            </Text>
+          )}
+        </FlexContainer>
+      }
     >
-      <FlexContainer className={classNames(styles.icon)} justifyContent="center" alignItems="center" gap="none">
-        {status === "inactive" ? (
-          <PauseIcon title={title} />
-        ) : status === "sleep" ? (
-          <MoonIcon title={title} />
-        ) : status === "error" ? (
-          <CrossIcon title={title} />
-        ) : status === "loading" ? (
-          <CircleLoader title={title} />
-        ) : (
-          <FontAwesomeIcon icon={_iconByStatus[status]} title={title} />
-        )}
-      </FlexContainer>
-      {value !== undefined && (
-        <Text size="sm" className={styles.value}>
-          {value}
-        </Text>
-      )}
-    </FlexContainer>
+      {title}
+    </Tooltip>
   );
 };

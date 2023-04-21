@@ -41,7 +41,7 @@ public class ConnectorDatadogSupportHelper {
     if (imageNameVersionPair.isPresent()) {
       envVars.add(new EnvVar(DD_SERVICE, imageNameVersionPair.get().left, null));
       envVars.add(new EnvVar(DD_VERSION, imageNameVersionPair.get().right.serialize(), null));
-      LOGGER.info("Added service name {} and version {} to env vars for Datadog", imageNameVersionPair.get().left,
+      LOGGER.debug("Added service name {} and version {} to env vars for Datadog", imageNameVersionPair.get().left,
           imageNameVersionPair.get().right.serialize());
     }
   }

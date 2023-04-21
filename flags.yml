@@ -11,3 +11,7 @@ flags:
     serve: false
   - name: heartbeat-max-seconds-between-messages
     serve: "10800"
+  - name: use-new-notification-workflow
+    serve: false
+  - name: validation.removeValidationLimit
+    serve: false

@@ -11,13 +11,13 @@ import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
+import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
 import { useCurrentWorkspace, WorkspaceServiceProvider } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { VerifyEmailAction } from "./views/FirebaseActionRoute";
-import { RoutePaths, DestinationPaths, SourcePaths } from "../../pages/routePaths";
 
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const WorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));

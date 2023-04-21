@@ -44,6 +44,7 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -2919,6 +2920,68 @@ public class ConfigRepository {
 
   public static Supplier<Long> getMaxSecondsBetweenMessagesSupplier(final FeatureFlagClient featureFlagClient) {
     return () -> Long.parseLong(featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages.INSTANCE, new Workspace(VOID_UUID)));
+  }
+
+  /**
+   * Insert an actor definition version.
+   *
+   * @param actorDefinitionVersion - actor definition version to insert
+   * @throws IOException - you never know when you io
+   */
+  public void writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
+    database.transaction(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION))
+        .set(Tables.ACTOR_DEFINITION_VERSION.ID, actorDefinitionVersion.getId())
+        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
+        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+        // TODO (Ella): Replace the below null values with values from
+        // actorDefinitionVersion once the POJO has these fields defined
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
+        .execute();
+  }
+
+  /**
+   * Get the actor definition version associated with an actor definition and a docker image tag.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @param dockerImageTag - docker image tag
+   * @return actor definition version if there is an entry in the DB already for this version,
+   *         otherwise an empty optional
+   * @throws IOException - you never know when you io
+   */
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId, final String dockerImageTag)
+      throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
+            .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion);
+  }
+
+  /**
+   * Get an actor definition version by ID.
+   *
+   * @param actorDefinitionVersionId - actor definition version id
+   * @return actor definition version if there is an entry in the DB already with this ID, otherwise
+   *         an empty optional
+   * @throws IOException - you never know when you io
+   */
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion);
   }
 
 }

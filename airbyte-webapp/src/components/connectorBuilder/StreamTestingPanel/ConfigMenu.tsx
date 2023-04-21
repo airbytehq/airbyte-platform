@@ -21,13 +21,12 @@ import styles from "./ConfigMenu.module.scss";
 import { ConfigMenuErrorBoundaryComponent } from "./ConfigMenuErrorBoundary";
 
 interface ConfigMenuProps {
-  className?: string;
   testInputJsonErrors: number;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
-export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJsonErrors, isOpen, setIsOpen }) => {
+export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
   const { testInputJson, setTestInputJson } = useConnectorBuilderTestState();
 
@@ -73,7 +72,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ className, testInputJson
           </>
         }
         placement={editorView === "yaml" ? "left" : "top"}
-        containerClassName={className}
+        containerClassName={styles.container}
       >
         {jsonManifest.spec ? (
           <FormattedMessage id="connectorBuilder.inputsTooltip" />

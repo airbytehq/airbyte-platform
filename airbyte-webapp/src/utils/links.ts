@@ -39,6 +39,8 @@ export const links = {
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
   upcomingFeaturesPage: "https://embedded.airbyte.com/upcoming-releases",
   stripeCustomerPortal: "https://billing.stripe.com/p/login/5kAbJs2Gy83H2YwdQQ",
+  iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
+  ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
 } as const;
 
 export type OutboundLinks = typeof links;

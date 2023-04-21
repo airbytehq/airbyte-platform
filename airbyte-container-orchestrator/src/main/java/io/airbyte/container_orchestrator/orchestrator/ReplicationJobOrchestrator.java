@@ -10,34 +10,17 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY;
 
 import datadog.trace.api.Trace;
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.generated.SourceDefinitionApi;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.Configs;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.WorkerMetricReporter;
-import io.airbyte.workers.internal.HeartbeatMonitor;
-import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
-import io.airbyte.workers.orchestrator.OrchestratorFactoryHelpers;
-import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import io.airbyte.workers.general.ReplicationWorker;
+import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.KubePodProcess;
-import io.airbyte.workers.process.ProcessFactory;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
@@ -53,35 +36,15 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Configs configs;
-  private final FeatureFlags featureFlags;
-  private final FeatureFlagClient featureFlagClient;
-  private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
   private final JobRunConfig jobRunConfig;
-  private final SourceApi sourceApi;
-  private final DestinationApi destinationApi;
-  private final SourceDefinitionApi sourceDefinitionApi;
-  private final SyncPersistenceFactory syncPersistenceFactory;
+  private final ReplicationWorkerFactory replicationWorkerFactory;
 
   public ReplicationJobOrchestrator(final Configs configs,
-                                    final ProcessFactory processFactory,
-                                    final FeatureFlags featureFlags,
-                                    final FeatureFlagClient featureFlagClient,
-                                    final AirbyteMessageSerDeProvider serDeProvider,
-                                    final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                     final JobRunConfig jobRunConfig,
-                                    final SourceApi sourceApi,
-                                    final DestinationApi destinationApi,
-                                    final SourceDefinitionApi sourceDefinitionApi,
-                                    final SyncPersistenceFactory syncPersistenceFactory) {
+                                    final ReplicationWorkerFactory replicationWorkerFactory) {
     this.configs = configs;
-    this.featureFlags = featureFlags;
-    this.featureFlagClient = featureFlagClient;
-    this.airbyteIntegrationLauncherFactory = new AirbyteIntegrationLauncherFactory(processFactory, serDeProvider, migratorFactory, featureFlags);
     this.jobRunConfig = jobRunConfig;
-    this.sourceApi = sourceApi;
-    this.destinationApi = destinationApi;
-    this.sourceDefinitionApi = sourceDefinitionApi;
-    this.syncPersistenceFactory = syncPersistenceFactory;
+    this.replicationWorkerFactory = replicationWorkerFactory;
   }
 
   @Override
@@ -113,43 +76,16 @@ public class ReplicationJobOrchestrator implements JobOrchestrator<StandardSyncI
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
 
-    final HeartbeatMonitor heartbeatMonitor = OrchestratorFactoryHelpers.createHeartbeatMonitor(sourceApi, sourceDefinitionApi, syncInput);
+    final ReplicationWorker replicationWorker =
+        replicationWorkerFactory.create(syncInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig);
 
-    log.info("Setting up source...");
-    final var airbyteSource = airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
-        syncInput.getCatalog(), heartbeatMonitor);
+    log.info("Running replication worker...");
+    final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
+        jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
+    final ReplicationOutput replicationOutput = replicationWorker.run(syncInput, jobRoot);
 
-    log.info("Setting up destination...");
-    final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
-        syncInput.getDestinationResourceRequirements(), syncInput.getCatalog());
-
-    MetricClientFactory.initialize(MetricEmittingApps.WORKER);
-    final var metricClient = MetricClientFactory.getMetricClient();
-    final var metricReporter = new WorkerMetricReporter(metricClient,
-        sourceLauncherConfig.getDockerImage());
-
-    try (final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = OrchestratorFactoryHelpers.createHeartbeatTimeoutChaperone(heartbeatMonitor,
-        featureFlagClient, syncInput)) {
-
-      log.info("Setting up replication worker...");
-
-      final SyncPersistence syncPersistence =
-          OrchestratorFactoryHelpers.createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
-      final MessageTracker messageTracker = OrchestratorFactoryHelpers.createMessageTracker(syncPersistence, featureFlags, syncInput);
-      final ConnectorConfigUpdater connectorConfigUpdater = OrchestratorFactoryHelpers.createConnectorConfigUpdater(sourceApi, destinationApi);
-
-      final var replicationWorker = OrchestratorFactoryHelpers.createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
-          syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
-          syncInput);
-
-      log.info("Running replication worker...");
-      final var jobRoot = TemporalUtils.getJobRoot(configs.getWorkspaceRoot(),
-          jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
-      final ReplicationOutput replicationOutput = replicationWorker.run(syncInput, jobRoot);
-
-      log.info("Returning output...");
-      return Optional.of(Jsons.serialize(replicationOutput));
-    }
+    log.info("Returning output...");
+    return Optional.of(Jsons.serialize(replicationOutput));
   }
 
 }

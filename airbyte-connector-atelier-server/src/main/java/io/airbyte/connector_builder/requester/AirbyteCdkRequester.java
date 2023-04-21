@@ -6,6 +6,7 @@ package io.airbyte.connector_builder.requester;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
+import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamsListRead;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
@@ -21,5 +22,8 @@ public interface AirbyteCdkRequester {
       throws IOException, AirbyteCdkInvalidInputException, ConnectorBuilderException;
 
   StreamsListRead listStreams(final JsonNode manifest, JsonNode config) throws IOException, AirbyteCdkInvalidInputException, CdkProcessException;
+
+  StreamRead readStream(final JsonNode manifest, final JsonNode config, final String stream, final Integer recordLimit)
+      throws IOException, AirbyteCdkInvalidInputException, ConnectorBuilderException;
 
 }

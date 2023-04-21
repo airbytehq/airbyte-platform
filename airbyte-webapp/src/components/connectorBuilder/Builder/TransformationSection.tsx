@@ -21,7 +21,12 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
 
   const handleToggle = (newToggleValue: boolean) => {
     if (newToggleValue) {
-      helpers.setValue([]);
+      helpers.setValue([
+        {
+          type: "remove",
+          path: [],
+        },
+      ]);
     } else {
       helpers.setValue(undefined);
     }

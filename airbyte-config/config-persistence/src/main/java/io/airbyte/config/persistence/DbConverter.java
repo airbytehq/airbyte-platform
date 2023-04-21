@@ -10,6 +10,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
@@ -25,6 +26,7 @@ import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.DeclarativeManifest;
@@ -35,6 +37,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
@@ -220,7 +223,7 @@ public class DbConverter {
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
         .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), StandardSourceDefinition.ReleaseStage.class).orElseThrow())
+            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
             : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
@@ -257,7 +260,7 @@ public class DbConverter {
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
         .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), StandardDestinationDefinition.ReleaseStage.class).orElseThrow())
+            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
         .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
             : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
         .withSupportsDbt(record.get(ACTOR_DEFINITION.SUPPORTS_DBT) == null ? null
@@ -443,6 +446,21 @@ public class DbConverter {
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.ACTOR_DEFINITION_ID))
         .withInjectionPath(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.INJECTION_PATH))
         .withJsonToInject(Jsons.deserialize(record.get(ACTOR_DEFINITION_CONFIG_INJECTION.JSON_TO_INJECT).data()));
+  }
+
+  /**
+   * Actor definition version from a db record.
+   *
+   * @param record db record
+   * @return actor definition version
+   */
+  public static ActorDefinitionVersion buildActorDefinitionVersion(final Record record) {
+    return new ActorDefinitionVersion()
+        .withId(record.get(ACTOR_DEFINITION_VERSION.ID))
+        .withActorDefinitionId(record.get(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID))
+        .withDockerRepository(record.get(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY))
+        .withDockerImageTag(record.get(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG))
+        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class));
   }
 
 }

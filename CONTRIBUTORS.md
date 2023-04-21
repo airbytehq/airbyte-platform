@@ -22,6 +22,7 @@
 * [cjwooo](https://github.com/cjwooo)
 * [coetzeevs](https://github.com/coetzeevs)
 * [coeurdestenebres](https://github.com/coeurdestenebres)
+* [czomo](https://github.com/czomo)
 * [damianlegawiec](https://github.com/damianlegawiec)
 * [danieldiamond](https://github.com/danieldiamond)
 * [davinchia](https://github.com/davinchia)

@@ -2,6 +2,7 @@ import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
 import { HTMLInputTypeAttribute, ReactNode, useState } from "react";
 import { FieldError, Path, useFormContext } from "react-hook-form";
+import { useIntl } from "react-intl";
 
 import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
 import { InputProps } from "components/ui/Input";
@@ -85,15 +86,19 @@ export const FormControl = <T extends FormValues>({ label, labelTooltip, descrip
 
   function renderControl() {
     if (controlProps.fieldType === "input") {
-      return <InputWrapper {...controlProps} />;
+      // After narrowing controlProps, we need to strip controlProps.fieldType as it's no longer needed
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <InputWrapper {...withoutFieldType} />;
     }
 
     if (controlProps.fieldType === "date") {
-      return <DatepickerWrapper {...controlProps} />;
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <DatepickerWrapper {...withoutFieldType} />;
     }
 
     if (controlProps.fieldType === "dropdown") {
-      return <SelectWrapper {...controlProps} />;
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <SelectWrapper {...withoutFieldType} />;
     }
 
     throw new Error(`No matching form input found for type: ${props.fieldType}`);
@@ -103,7 +108,7 @@ export const FormControl = <T extends FormValues>({ label, labelTooltip, descrip
     <div className={styles.control}>
       <FormLabel description={description} label={label} labelTooltip={labelTooltip} htmlFor={controlId} />
       {renderControl()}
-      {error && <RHFControlError error={error} />}
+      {error && <FormControlError error={error} />}
     </div>
   );
 };
@@ -131,10 +136,17 @@ interface ControlErrorProps {
   error: FieldError;
 }
 
-export const RHFControlError: React.FC<ControlErrorProps> = ({ error }) => {
+export const FormControlError: React.FC<ControlErrorProps> = ({ error }) => {
+  const { formatMessage } = useIntl();
+
+  // It's possible that an error has no message, but in that case there's no point in rendering anything
+  if (!error.message) {
+    return null;
+  }
+
   return (
     <div className={styles.errorMessage__wrapper}>
-      <p className={styles.errorMessage}>{error.message}</p>
+      <p className={styles.errorMessage}>{formatMessage({ id: error.message })}</p>
     </div>
   );
 };

@@ -5,7 +5,7 @@ export enum RoutePaths {
   SpeakeasyRedirect = "speakeasy-redirect",
 
   Workspaces = "workspaces",
-  Preferences = "preferences",
+  Setup = "setup",
   Connections = "connections",
   Destination = "destination",
   Source = "source",

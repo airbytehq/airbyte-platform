@@ -117,6 +117,7 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
+        isFetchingStreamList={isFetchingStreamList}
         hasTestInputJsonErrors={hasTestInputJsonErrors}
         hasStreamListErrors={Boolean(streamListErrorMessage)}
         setTestInputOpen={setTestInputOpen}

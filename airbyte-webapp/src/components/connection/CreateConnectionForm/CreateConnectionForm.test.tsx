@@ -36,6 +36,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
 jest.mock("services/workspaces/WorkspacesService", () => ({
   useCurrentWorkspace: () => ({}),
   useCurrentWorkspaceId: () => "workspace-id",
+  useInvalidateWorkspaceStateQuery: () => () => null,
 }));
 
 jest.setTimeout(20000);

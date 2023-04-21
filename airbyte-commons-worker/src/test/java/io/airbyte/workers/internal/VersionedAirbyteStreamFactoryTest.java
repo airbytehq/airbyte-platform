@@ -7,6 +7,7 @@ package io.airbyte.workers.internal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -80,7 +81,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error("Deserialization failed: {}", "\"invalid line\"");
+      verify(logger).info(invalidRecord);
     }
 
     @Test
@@ -100,7 +101,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
+      verify(logger).info(invalidRecord);
     }
 
     @Test
@@ -110,7 +111,7 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
+      verify(logger).info(invalidRecord);
     }
 
     @Test
@@ -120,7 +121,9 @@ class VersionedAirbyteStreamFactoryTest {
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(invalidRecord);
 
       assertEquals(Collections.emptyList(), messageStream.collect(Collectors.toList()));
-      verify(logger).error(anyString(), anyString());
+
+      verify(logger, atLeastOnce()).info(anyString(), anyString(), anyString());
+      verify(logger, atLeastOnce()).error(anyString(), anyString());
     }
 
     @Test

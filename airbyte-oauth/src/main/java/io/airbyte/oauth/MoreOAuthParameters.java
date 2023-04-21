@@ -12,6 +12,7 @@ import com.google.common.base.Strings;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -30,43 +31,65 @@ public class MoreOAuthParameters {
   public static final String SECRET_MASK = "******";
 
   /**
-   * Get source OAuth param from stream.
+   * Get source OAuth param from stream. If the boolean is set, throws when there's a row in the
+   * actor_oauth_params table that corresponds to the definitionId & workspaceId.
    *
    * @param stream oauth param stream
    * @param workspaceId workspace id
    * @param sourceDefinitionId source definition id
+   * @param throwIfOverridePresent Throw if we find an override oauth param?
    * @return oauth params
    */
-  public static Optional<SourceOAuthParameter> getSourceOAuthParameter(
-                                                                       final Stream<SourceOAuthParameter> stream,
+  public static Optional<SourceOAuthParameter> getSourceOAuthParameter(final Stream<SourceOAuthParameter> stream,
                                                                        final UUID workspaceId,
-                                                                       final UUID sourceDefinitionId) {
-    return stream
+                                                                       final UUID sourceDefinitionId,
+                                                                       final boolean throwIfOverridePresent)
+      throws ConfigNotFoundException {
+
+    Optional<SourceOAuthParameter> sourceOAuthParameter = stream
         .filter(p -> sourceDefinitionId.equals(p.getSourceDefinitionId()))
         .filter(p -> p.getWorkspaceId() == null || workspaceId.equals(p.getWorkspaceId()))
         // we prefer params specific to a workspace before global ones (ie workspace is null)
         .min(Comparator.comparing(SourceOAuthParameter::getWorkspaceId, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(SourceOAuthParameter::getOauthParameterId));
+
+    if (throwIfOverridePresent) {
+      if (sourceOAuthParameter.filter(param -> param.getWorkspaceId() != null).isPresent()) {
+        throw new ConfigNotFoundException("OAuthParamOverride", String.format("[%s] [%s]", workspaceId, sourceDefinitionId));
+      }
+    }
+    return sourceOAuthParameter;
   }
 
   /**
-   * Get destination OAuth param from stream.
+   * Get destination OAuth param from stream. If the boolean is set, throws when there's a row in the
+   * actor_oauth_params table that corresponds to the definitionId & workspaceId.
    *
    * @param stream oauth param stream
    * @param workspaceId workspace id
    * @param destinationDefinitionId destination definition id
+   * @param throwIfOverridePresent Throw if we find an override oauth param?
    * @return oauth params
    */
   public static Optional<DestinationOAuthParameter> getDestinationOAuthParameter(
                                                                                  final Stream<DestinationOAuthParameter> stream,
                                                                                  final UUID workspaceId,
-                                                                                 final UUID destinationDefinitionId) {
-    return stream
+                                                                                 final UUID destinationDefinitionId,
+                                                                                 boolean throwIfOverridePresent)
+      throws ConfigNotFoundException {
+    Optional<DestinationOAuthParameter> destinationOAuthParameter = stream
         .filter(p -> destinationDefinitionId.equals(p.getDestinationDefinitionId()))
         .filter(p -> p.getWorkspaceId() == null || workspaceId.equals(p.getWorkspaceId()))
         // we prefer params specific to a workspace before global ones (ie workspace is null)
         .min(Comparator.comparing(DestinationOAuthParameter::getWorkspaceId, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(DestinationOAuthParameter::getOauthParameterId));
+
+    if (throwIfOverridePresent) {
+      if (destinationOAuthParameter.filter(param -> param.getWorkspaceId() != null).isPresent()) {
+        throw new ConfigNotFoundException("OAuthParamOverride", String.format("[%s] [%s]", workspaceId, destinationDefinitionId));
+      }
+    }
+    return destinationOAuthParameter;
   }
 
   /**

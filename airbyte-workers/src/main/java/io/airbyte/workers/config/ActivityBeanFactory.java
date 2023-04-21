@@ -14,6 +14,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
+import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
 import io.airbyte.workers.temporal.scheduling.activities.NotifySchemaChangeActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
@@ -117,6 +118,14 @@ public class ActivityBeanFactory {
                                      final RefreshSchemaActivity refreshSchemaActivity) {
     return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, persistStateActivity, normalizationSummaryCheckActivity,
         webhookOperationActivity, configFetchActivity, refreshSchemaActivity);
+  }
+
+  @Singleton
+  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Named("notificationActivities")
+  public List<Object> notificationActivities(
+                                             final NotifyActivity notifyActivity) {
+    return List.of(notifyActivity);
   }
 
   @Singleton

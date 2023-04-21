@@ -61,6 +61,7 @@
 }
 %streamRowCheckboxCell,
 .streamRowCheckboxCell {
+  height: 100%; // cover the parent so it can intercept & ignore row clicks
   width: 53px;
   text-align: center;
   font-size: 10px;
@@ -69,11 +70,16 @@
   justify-content: flex-end;
   align-items: center;
   gap: variables.$spacing-sm;
+  cursor: default;
 }
 
 .syncCell {
+  height: 100%; // cover the parent so it can intercept & ignore row clicks
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 35px;
-  text-align: center;
+  cursor: default;
 }
 
 .fieldsCell {
@@ -88,10 +94,4 @@
 .arrowCell {
   width: 20px;
   text-align: center;
-}
-
-.cellText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

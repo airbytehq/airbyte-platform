@@ -128,7 +128,7 @@ describe("ConnectionReplicationPage", () => {
       setupSpies();
       const renderResult = await render();
 
-      userEvent.click(renderResult.getByTestId("configuration-section-expand-arrow"));
+      userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
@@ -147,7 +147,7 @@ describe("ConnectionReplicationPage", () => {
 
       const renderResult = await render();
 
-      userEvent.click(renderResult.getByTestId("configuration-section-expand-arrow"));
+      userEvent.click(renderResult.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(renderResult.getByTestId("scheduleData"), /cron/i);
 
@@ -173,7 +173,7 @@ describe("ConnectionReplicationPage", () => {
         </TestWrapper>
       );
 
-      userEvent.click(container.getByTestId("configuration-section-expand-arrow"));
+      userEvent.click(container.getByTestId("configuration-card-expand-arrow"));
 
       await selectEvent.select(container.getByTestId("scheduleData"), /cron/i);
 

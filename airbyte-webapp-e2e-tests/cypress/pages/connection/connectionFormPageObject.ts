@@ -1,7 +1,7 @@
 import { getTestId } from "utils/selectors";
 
 const connectionNameInput = getTestId("connectionName");
-const expandConfigurationButton = getTestId("configuration-section-expand-arrow");
+const expandConfigurationIcon = getTestId("configuration-card-expand-arrow");
 const scheduleDropdown = getTestId("scheduleData");
 
 const destinationPrefixEditButton = getTestId("destination-stream-prefix-edit-button");
@@ -29,7 +29,7 @@ export const selectSchedule = (value: string) => {
 };
 
 export const expandConfigurationSection = () => {
-  cy.get(expandConfigurationButton).click();
+  cy.get(expandConfigurationIcon).click();
 };
 
 export const fillOutDestinationPrefix = (value: string) => {

@@ -2480,7 +2480,69 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
-
+  /v1/stream_statuses/list:
+    post:
+      summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
+      tags:
+        - stream_statuses
+        - streams
+      operationId: getStreamStatuses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamStatusListRequestBody"
+      responses:
+        "200":
+          description: Successfully queried stream statuses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusReadList"
+  /v1/stream_statuses/create:
+    post:
+      summary: Creates a stream status.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: createStreamStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamStatusCreateRequestBody"
+      responses:
+        "201":
+          description: Successfully created stream status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusRead"
+  /v1/stream_statuses/update:
+    put:
+      summary: Updates a stream status.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: updateStreamStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamStatusUpdateRequestBody"
+      responses:
+        "201":
+          description: Successfully created stream status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusRead"
+        "200":
+          description: Successfully updated stream status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusRead"
 components:
   securitySchemes:
     bearerAuth:
@@ -5675,7 +5737,132 @@ components:
           format: int64
         hasNormalizationFailed:
           type: boolean
-
+    StreamStatusId:
+      type: string
+      format: uuid
+    StreamStatusRunState:
+      type: string
+      enum:
+        - PENDING
+        - RUNNING
+        - COMPLETE
+        - INCOMPLETE
+    StreamStatusIncompleteRunCause:
+      type: string
+      enum:
+        - FAILED
+        - CANCELED
+    StreamStatusJobType:
+      type: string
+      enum:
+        - SYNC
+        - RESET
+    StreamStatusListRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    StreamStatusCreateRequestBody:
+      type: object
+      required:
+        - attemptNumber
+        - connectionId
+        - jobId
+        - jobType
+        - runState
+        - streamName
+        - streamNamespace
+        - transitionedAt
+        - workspaceId
+      properties:
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        incompleteRunCause:
+          $ref: "#/components/schemas/StreamStatusIncompleteRunCause"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
+        runState:
+          $ref: "#/components/schemas/StreamStatusRunState"
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        transitionedAt:
+          type: integer
+          format: int64
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    StreamStatusUpdateRequestBody:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/StreamStatusCreateRequestBody"
+      required:
+        - id
+      properties:
+        id:
+          $ref: "#/components/schemas/StreamStatusId"
+    StreamStatusRead:
+      type: object
+      required:
+        - attemptNumber
+        - connectionId
+        - id
+        - jobId
+        - jobType
+        - runState
+        - streamName
+        - streamNamespace
+        - transitionedAt
+        - workspaceId
+      properties:
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        id:
+          $ref: "#/components/schemas/StreamStatusId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        incompleteRunCause:
+          $ref: "#/components/schemas/StreamStatusIncompleteRunCause"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
+        runState:
+          $ref: "#/components/schemas/StreamStatusRunState"
+        streamName:
+          type: string
+        streamNamespace:
+          type: string
+        transitionedAt:
+          type: integer
+          format: int64
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    StreamStatusReadList:
+      type: object
+      properties:
+        streamStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamStatusRead"
     InvalidInputProperty:
       type: object
       required:

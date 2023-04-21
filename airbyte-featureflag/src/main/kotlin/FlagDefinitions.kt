@@ -24,17 +24,23 @@ object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
 
 object PerfBackgroundJsonValidation : Temporary<Boolean>(key = "performance.backgroundJsonSchemaValidation", default = false)
 
+object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
+
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
-
-object CheckInputGeneration : Temporary<Boolean>(key = "connectionManagerWorkflow.checkInputGeneration", default = false)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
 
+object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
+
 object ContainerOrchestratorDevImage : Temporary<String>(key = "container-orchestrator-dev-image", default = "")
+
+object UseNotificationWorkflow : Temporary<Boolean>(key = "use-notification-workflow", default = false)
+
+object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orchestrator-java-opts", default = "")
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
@@ -65,4 +71,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
       else -> default
     }
   }
+
+  object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
 }

@@ -10,6 +10,12 @@ required:
   - spec
 additionalProperties: true
 properties:
+  id:
+    type: string
+    format: uuid
+  actorDefinitionId:
+    type: string
+    format: uuid
   dockerRepository:
     type: string
   dockerImageTag:

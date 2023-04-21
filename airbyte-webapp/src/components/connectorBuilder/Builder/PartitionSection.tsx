@@ -86,6 +86,12 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       },
       children: (
         <>
+          <StreamReferenceField
+            currentStreamIndex={currentStreamIndex}
+            path={buildPath("parentStreamReference")}
+            label="Parent stream"
+            tooltip="The stream to read records from. Make sure there are no cyclic dependencies between streams"
+          />
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("parent_key")}
@@ -95,14 +101,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("partition_field")}
-            label="Stream slice field"
-            tooltip="The name of the field on the stream_slice object that will be set to value of the Parent key"
-          />
-          <StreamReferenceField
-            currentStreamIndex={currentStreamIndex}
-            path={buildPath("parentStreamReference")}
-            label="Parent stream"
-            tooltip="The stream to read records from. Make sure there are no cyclic dependencies between streams"
+            label="Current parent key value identifier"
+            tooltip="The name of the field on the stream_slice object that will be set to value of the Parent key. Can be accessed from other components using {{ stream_slice.identifier }}"
           />
         </>
       ),

@@ -13,7 +13,6 @@ import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
-import { isCloudApp } from "utils/app";
 
 import { SCOPE_WORKSPACE } from "../Scope";
 
@@ -48,21 +47,18 @@ export const useListProjects = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    // FIXME this is a temporary solution to avoid calling an API that's not forwarded in cloud environments yet
-    isCloudApp()
-      ? []
-      : (await service.list(workspaceId)).projects.map(
-          (projectDetails): BuilderProject => ({
-            name: projectDetails.name,
-            version:
-              typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
-                ? projectDetails.activeDeclarativeManifestVersion
-                : "draft",
-            sourceDefinitionId: projectDetails.sourceDefinitionId,
-            id: projectDetails.builderProjectId,
-            hasDraft: projectDetails.hasDraft,
-          })
-        )
+    (await service.list(workspaceId)).projects.map(
+      (projectDetails): BuilderProject => ({
+        name: projectDetails.name,
+        version:
+          typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+            ? projectDetails.activeDeclarativeManifestVersion
+            : "draft",
+        sourceDefinitionId: projectDetails.sourceDefinitionId,
+        id: projectDetails.builderProjectId,
+        hasDraft: projectDetails.hasDraft,
+      })
+    )
   );
 };
 

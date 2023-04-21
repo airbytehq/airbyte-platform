@@ -9,18 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
+import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.ProcessFactory;
@@ -54,25 +49,10 @@ class ContainerOrchestratorFactoryTest {
   ProcessFactory processFactory;
 
   @Inject
-  AirbyteMessageSerDeProvider airbyteMessageSerDeProvider;
-
-  @Inject
-  AirbyteProtocolVersionedMigratorFactory airbyteProtocolVersionedMigratorFactory;
-
-  @Inject
   JobRunConfig jobRunConfig;
 
   @Inject
-  SourceApi sourceApi;
-
-  @Inject
-  DestinationApi destinationApi;
-
-  @Inject
-  SourceDefinitionApi sourceDefinitionApi;
-
-  @Inject
-  SyncPersistenceFactory syncPersistenceFactory;
+  ReplicationWorkerFactory replicationWorkerFactory;
 
   // Tests will fail if this is uncommented, due to how the implementation of the DocumentStoreClient
   // is being created
@@ -111,35 +91,25 @@ class ContainerOrchestratorFactoryTest {
     final var factory = new ContainerOrchestratorFactory();
 
     final var repl = factory.jobOrchestrator(
-        ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi,
-        syncPersistenceFactory);
+        ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
-        NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi,
-        syncPersistenceFactory);
+        NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
-        DbtLauncherWorker.DBT, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi,
-        syncPersistenceFactory);
+        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
-        AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-        airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi,
-        syncPersistenceFactory);
+        AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
       factory.jobOrchestrator(
-          "does not exist", envConfigs, processFactory, featureFlags, featureFlagClient, workerConfigs,
-          airbyteMessageSerDeProvider, airbyteProtocolVersionedMigratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi,
-          syncPersistenceFactory);
+          "does not exist", envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
     } catch (final Exception e) {
       caught = true;
     }

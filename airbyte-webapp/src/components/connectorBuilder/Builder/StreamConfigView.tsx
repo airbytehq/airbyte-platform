@@ -27,6 +27,7 @@ import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
+import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
 import { KeyValueListField } from "./KeyValueListField";
 import { PaginationSection } from "./PaginationSection";
@@ -34,7 +35,7 @@ import { PartitionSection } from "./PartitionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BuilderStream } from "../types";
+import { BuilderStream, isEmptyOrDefault } from "../types";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
@@ -84,6 +85,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               type="array"
               path={streamFieldPath("fieldPointer")}
               label="Record selector"
+              optional
               tooltip="Pointer into the response that should be extracted as the final record"
             />
             <BuilderField
@@ -97,6 +99,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <BuilderCard>
             <KeyValueListField
@@ -236,7 +239,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string
   const [field, meta, helpers] = useField<string | undefined>(schemaFieldPath);
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestState();
 
-  const showImportButton = !field.value && streamRead.data?.inferred_schema;
+  const showImportButton = isEmptyOrDefault(field.value) && streamRead.data?.inferred_schema;
 
   return (
     <>

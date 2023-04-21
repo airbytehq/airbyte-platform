@@ -6,6 +6,7 @@ plugins {
 }
 
 dependencies {
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.1'
     implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 
     // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service

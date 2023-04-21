@@ -1,0 +1,44 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.optionsContainer {
+  position: relative;
+}
+
+.optionsMenu {
+  background-color: colors.$white;
+  border-radius: 0 0 variables.$border-radius-lg variables.$border-radius-lg;
+  box-shadow: variables.$box-shadow-raised;
+  padding: variables.$spacing-md;
+  margin-top: 0;
+  margin-bottom: 0;
+  position: absolute;
+  right: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+.option {
+  list-style-type: none;
+}
+
+.optionValue {
+  padding: variables.$spacing-md;
+  border-radius: variables.$border-radius-md;
+  cursor: pointer;
+}
+
+.active {
+  background-color: colors.$grey-50;
+  height: 100%;
+  width: 100%;
+}
+
+.selected {
+  background-color: colors.$blue-50;
+}
+
+.description {
+  color: colors.$grey-400;
+}

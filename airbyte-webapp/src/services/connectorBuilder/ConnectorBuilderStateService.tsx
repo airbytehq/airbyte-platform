@@ -1,3 +1,4 @@
+import { FormikContextType } from "formik";
 import { Transition } from "history";
 import { dump } from "js-yaml";
 import isEqual from "lodash/isEqual";
@@ -84,6 +85,7 @@ interface FormManagementStateContext {
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
 export const ConnectorBuilderTestStateContext = React.createContext<TestStateContext | null>(null);
 export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
+export const ConnectorBuilderMainFormikContext = React.createContext<FormikContextType<BuilderFormValues> | null>(null);
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { projectId } = useParams<{
@@ -389,7 +391,8 @@ function getSavingState(
 
 export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
-  const { lastValidJsonManifest, selectedView, projectId } = useConnectorBuilderFormState();
+  const { lastValidJsonManifest, selectedView, projectId, editorView, builderFormValues } =
+    useConnectorBuilderFormState();
 
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
@@ -422,9 +425,12 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
     }
   }, [selectedView]);
 
+  const streamName =
+    editorView === "ui" ? builderFormValues.streams[testStreamIndex]?.name : streams[testStreamIndex]?.name;
+
   const streamRead = useReadStream(projectId, {
     manifest,
-    stream: streams[testStreamIndex]?.name,
+    stream: streamName,
     config: testInputWithDefaults,
   });
 

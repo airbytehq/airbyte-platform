@@ -21,8 +21,6 @@ yarn-error.log*
 /.idea
 
 # Environment overwrites
-.env.development
-.env.production
 .env.local
 .env.development.local
 .env.test.local

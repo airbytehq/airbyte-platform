@@ -13,7 +13,6 @@ import { PageHeader } from "components/ui/PageHeader";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -21,7 +20,6 @@ import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocument
 export const CreateDestinationPage: React.FC = () => {
   const [selectedDestinationDefinitionId, setSelectedDestinationDefinitionId] = useState("");
   useTrackPage(PageTrackingCodes.DESTINATION_NEW);
-  const newConnectorGridExperiment = useExperiment("connector.form.useSelectConnectorGrid", false);
 
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
@@ -42,21 +40,6 @@ export const CreateDestinationPage: React.FC = () => {
     clearAllFormChanges();
     navigate(`../${result.destinationId}`);
   };
-
-  if (!newConnectorGridExperiment) {
-    return (
-      <>
-        <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
-        <ConnectorDocumentationWrapper>
-          <PageHeader title={null} middleTitleBlock={<FormattedMessage id="destinations.newDestinationTitle" />} />
-          <FormPageContent>
-            <DestinationForm onSubmit={onSubmitDestinationForm} destinationDefinitions={destinationDefinitions} />
-            <CloudInviteUsersHint connectorType="destination" />
-          </FormPageContent>
-        </ConnectorDocumentationWrapper>
-      </>
-    );
-  }
 
   return (
     <>

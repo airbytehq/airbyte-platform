@@ -8,8 +8,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
+import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -17,6 +20,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
@@ -36,6 +42,7 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
 
   private static final String ACCESS_TOKEN_URL = "https://airtable.com/oauth2/v1/token";
   private final Clock clock;
+  private final SecureRandom secureRandom;
   private static final List<String> SCOPES = Arrays.asList(
       "data.records:read",
       "data.recordComments:read",
@@ -48,31 +55,48 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
     return String.join(" ", SCOPES);
   }
 
+  /**
+   * Must be a cryptographically generated string; 43-128 characters long
+   * https://airtable.com/developers/web/api/oauth-reference#authorization-parameter-rules
+   */
   public String getCodeVerifier() {
-    // Randomly generated string, min 43 - max 150 symbols
-    return "XmG5afcqXCamPk3jshWQXmG5afcqXCamPk3jshWQXmG5afcqXCamPk3jshWQXmG5afcqXCamPk3jshWQ";
+    String allowedCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_";
+    int length = this.secureRandom.nextInt((128 - 43) + 1) + 43;
+    StringBuilder sb = new StringBuilder(length);
+    for (int i = 0; i < length; i++) {
+      int randomIndex = this.secureRandom.nextInt(allowedCharacters.length());
+      char randomChar = allowedCharacters.charAt(randomIndex);
+      sb.append(randomChar);
+    }
+    return sb.toString();
   }
 
-  public String getCodeChanlenge() {
-    // Base64(s256) from CODE_VERIFIER
-    return "jajoblvFNHmH8rSnW84xFEUKMGC8CYwR82phhRR6iCg";
-  }
-
-  @Override
-  public String getState() {
-    // State
-    return "WeHH_yy2irpl8UYAvv-my";
+  /**
+   * Base64 url encoding of the sha256 hash of code_verifier
+   * https://airtable.com/developers/web/api/oauth-reference#authorization-parameter-rules
+   */
+  public String getCodeChallenge(String codeVerifier) throws IOException {
+    try {
+      MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+      messageDigest.update(codeVerifier.getBytes(StandardCharsets.UTF_8));
+      byte[] codeChallengeBytes = messageDigest.digest();
+      return Base64.getUrlEncoder().withoutPadding().encodeToString(codeChallengeBytes);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException("Failed to get code_challenge for OAuth flow", e);
+    }
   }
 
   public AirtableOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
     super(configRepository, httpClient);
     this.clock = Clock.systemUTC();
+    this.secureRandom = new SecureRandom();
   }
 
   @VisibleForTesting
   public AirtableOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
     super(configRepository, httpClient, stateSupplier);
     this.clock = clock;
+    this.secureRandom = new SecureRandom();
   }
 
   @Override
@@ -81,6 +105,8 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
                                     final String redirectUrl,
                                     final JsonNode inputOAuthConfiguration)
       throws IOException {
+
+    final String codeVerifier = getCodeVerifier();
 
     final URIBuilder builder = new URIBuilder()
         .setScheme("https")
@@ -91,9 +117,9 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
         .addParameter("client_id", clientId)
         .addParameter("response_type", "code")
         .addParameter("scope", getScopes())
-        .addParameter("code_challenge", getCodeChanlenge())
+        .addParameter("code_challenge", getCodeChallenge(codeVerifier))
         .addParameter("code_challenge_method", "S256")
-        .addParameter("state", getState());
+        .addParameter("state", codeVerifier);
 
     try {
       return builder.build().toString();
@@ -107,10 +133,10 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
     return ACCESS_TOKEN_URL;
   }
 
-  @Override
   protected Map<String, String> getAccessTokenQueryParameters(String clientId,
                                                               String clientSecret,
                                                               String authCode,
+                                                              String state,
                                                               String redirectUrl) {
     return ImmutableMap.<String, String>builder()
         // required
@@ -118,15 +144,42 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
         .put("redirect_uri", redirectUrl)
         .put("grant_type", "authorization_code")
         .put("client_id", clientId)
-        .put("code_verifier", getCodeVerifier())
+        .put("code_verifier", state)
         .put("code_challenge_method", "S256")
         .build();
   }
 
   @Override
+  public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
+                                                 final UUID sourceDefinitionId,
+                                                 final Map<String, Object> queryParams,
+                                                 final String redirectUrl,
+                                                 final JsonNode inputOAuthConfiguration,
+                                                 final OAuthConfigSpecification oauthConfigSpecification)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
+    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
+    if (containsIgnoredOAuthError(queryParams)) {
+      return buildRequestError(queryParams);
+    }
+    return formatOAuthOutput(
+        oAuthParamConfig,
+        completeOAuthFlow(
+            getClientIdUnsafe(oAuthParamConfig),
+            getClientSecretUnsafe(oAuthParamConfig),
+            extractCodeParameter(queryParams),
+            extractStateParameter(queryParams),
+            redirectUrl,
+            inputOAuthConfiguration,
+            oAuthParamConfig),
+        oauthConfigSpecification);
+
+  }
+
   protected Map<String, Object> completeOAuthFlow(final String clientId,
                                                   final String clientSecret,
                                                   final String authCode,
+                                                  final String state,
                                                   final String redirectUrl,
                                                   final JsonNode inputOAuthConfiguration,
                                                   final JsonNode oauthParamConfig)
@@ -137,7 +190,7 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
     final HttpRequest request = HttpRequest.newBuilder()
         .POST(HttpRequest.BodyPublishers
             .ofString(tokenReqContentType.getConverter().apply(
-                getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))))
+                getAccessTokenQueryParameters(clientId, clientSecret, authCode, state, redirectUrl))))
         .uri(URI.create(accessTokenUrl))
         .header("Content-Type", tokenReqContentType.getContentType())
         .header("Authorization", "Basic " + new String(authorization, StandardCharsets.UTF_8))
@@ -172,6 +225,18 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
       throw new IOException(String.format("Missing 'expires_in' in query params from %s", accessTokenUrl));
     }
     return result;
+  }
+
+  /**
+   * This function should parse and extract the state from these query parameters in order to continue
+   * the OAuth Flow.
+   */
+  protected String extractStateParameter(final Map<String, Object> queryParams) throws IOException {
+    if (queryParams.containsKey("state")) {
+      return (String) queryParams.get("state");
+    } else {
+      throw new IOException("Undefined 'state' from consent redirected url.");
+    }
   }
 
 }

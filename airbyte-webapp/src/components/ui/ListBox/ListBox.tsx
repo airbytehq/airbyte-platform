@@ -7,6 +7,7 @@ import { Text } from "components/ui/Text";
 
 import { ReactComponent as CaretDownIcon } from "./CaretDownIcon.svg";
 import styles from "./ListBox.module.scss";
+import { FlexContainer, FlexItem } from "../Flex";
 
 export interface ListBoxControlButtonProps<T> {
   selectedOption?: Option<T>;
@@ -50,6 +51,12 @@ export interface ListBoxProps<T> {
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
   "data-testid"?: string;
   hasError?: boolean;
+  /**
+   * DEPRECATED. This is a way to hack in a custom button at the bottom of the ListBox, but this is not the right way to do this.
+   * We should be using a headlessui Menu for this instead of a ListBox: https://github.com/airbytehq/airbyte/issues/24394
+   * @deprecated
+   */
+  footerOption?: React.ReactNode;
 }
 
 export const ListBox = <T,>({
@@ -63,6 +70,7 @@ export const ListBox = <T,>({
   selectedOptionClassName,
   "data-testid": testId,
   hasError,
+  footerOption,
 }: ListBoxProps<T>) => {
   const selectedOption = options.find((option) => option.value === selectedValue);
 
@@ -80,26 +88,36 @@ export const ListBox = <T,>({
         {/* wrap in div to make `position: absolute` on Listbox.Options result in correct vertical positioning */}
         <div className={styles.optionsContainer}>
           <Listbox.Options className={styles.optionsMenu}>
-            {options.map(({ label, value, icon, disabled }, index) => (
-              <Listbox.Option
-                key={typeof label === "string" ? label : index}
-                value={value}
-                disabled={disabled}
-                className={classNames(styles.option, optionClassName, { [styles.disabled]: disabled })}
-              >
-                {({ active, selected }) => (
-                  <div
-                    className={classNames(styles.optionValue, selected && selectedOptionClassName, {
-                      [styles.active]: active,
-                      [styles.selected]: selected,
-                    })}
+            {options.length > 0 && (
+              <FlexItem>
+                {options.map(({ label, value, icon, disabled }, index) => (
+                  <Listbox.Option
+                    key={typeof label === "string" ? label : index}
+                    value={value}
+                    disabled={disabled}
+                    className={classNames(styles.option, optionClassName, { [styles.disabled]: disabled })}
                   >
-                    {icon && <span className={styles.icon}>{icon}</span>}
-                    <span className={styles.label}>{label}</span>
-                  </div>
-                )}
+                    {({ active, selected }) => (
+                      <FlexContainer
+                        alignItems="center"
+                        className={classNames(styles.optionValue, selected && selectedOptionClassName, {
+                          [styles.active]: active,
+                          [styles.selected]: selected,
+                        })}
+                      >
+                        {icon && <FlexItem className={styles.icon}>{icon}</FlexItem>}
+                        <Text className={styles.label}>{label}</Text>
+                      </FlexContainer>
+                    )}
+                  </Listbox.Option>
+                ))}
+              </FlexItem>
+            )}
+            {footerOption && (
+              <Listbox.Option value={undefined} className={classNames(styles.option, optionClassName)}>
+                {footerOption}
               </Listbox.Option>
-            ))}
+            )}
           </Listbox.Options>
         </div>
       </Listbox>

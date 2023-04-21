@@ -21,7 +21,7 @@ import { AttemptStatus, ConnectionStatus, JobStatus } from "core/request/Airbyte
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { moveTimeToFutureByPeriod } from "utils/time";
 
-import { ErrorCallout } from "./ErrorCallout";
+import { ErrorMessage, StreamErrorMessage } from "./ErrorMessage";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
@@ -145,7 +145,7 @@ export const StreamsList = () => {
     <Card title={<StreamStatusHeader streamCount={streams.length} />}>
       <FlexContainer direction="column" gap="sm" className={styles.body}>
         <StreamStatusCard />
-        <ErrorCallout />
+        <ErrorMessage />
         <div className={styles.tableContainer}>
           <StreamSearchFiltering className={styles.search} />
           <Table
@@ -156,6 +156,11 @@ export const StreamsList = () => {
             getRowClassName={(data) =>
               classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
             }
+            getIsRowExpanded={(data) =>
+              data?.original?.config?.jobStatus === JobStatus.failed ||
+              data?.original?.config?.latestAttemptStatus === AttemptStatus.failed
+            }
+            expandedRow={({ row }) => <StreamErrorMessage stream={row.original} />}
           />
         </div>
       </FlexContainer>

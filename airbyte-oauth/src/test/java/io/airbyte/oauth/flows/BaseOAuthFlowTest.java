@@ -68,12 +68,10 @@ public abstract class BaseOAuthFlowTest {
     when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(getOAuthParamConfig())));
     when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(getOAuthParamConfig())));
   }
 
@@ -254,12 +252,10 @@ public abstract class BaseOAuthFlowTest {
     when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.emptyObject())));
     when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
-        .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.emptyObject())));
     assertThrows(IllegalArgumentException.class,
         () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification()));
