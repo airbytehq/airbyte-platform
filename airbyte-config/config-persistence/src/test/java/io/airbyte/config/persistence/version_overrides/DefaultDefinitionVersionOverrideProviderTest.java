@@ -6,12 +6,17 @@ package io.airbyte.config.persistence.version_overrides;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersionOverride;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.VersionOverride;
+import io.airbyte.config.specs.GcsBucketSpecFetcher;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +33,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
   private static final String DOCKER_IMAGE_TAG = "0.1.0";
   private static final String DOCKER_IMAGE_TAG_2 = "2.0.2";
+  private static final String DOCKER_IMG_FORMAT = "%s:%s";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "key", "value")));
@@ -44,10 +50,14 @@ class DefaultDefinitionVersionOverrideProviderTest {
       .withSpec(SPEC_2);
 
   private DefaultDefinitionVersionOverrideProvider overrideProvider;
+  private GcsBucketSpecFetcher mGcsBucketSpecFetcher;
 
   @BeforeEach
   void setup() {
-    overrideProvider = new DefaultDefinitionVersionOverrideProvider(DefaultDefinitionVersionOverrideProviderTest.class, "version_overrides_test.yml");
+    mGcsBucketSpecFetcher = mock(GcsBucketSpecFetcher.class);
+    overrideProvider = new DefaultDefinitionVersionOverrideProvider(
+        DefaultDefinitionVersionOverrideProviderTest.class, "version_overrides_test.yml",
+        mGcsBucketSpecFetcher);
   }
 
   @Test
@@ -56,6 +66,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, newActorId, OverrideTargetType.ACTOR, DEFAULT_VERSION);
     assertTrue(optResult.isEmpty());
+    verifyNoInteractions(mGcsBucketSpecFetcher);
   }
 
   @Test
@@ -63,6 +74,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, OVERRIDDEN_ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION);
     assertEquals(OVERRIDE_VERSION, optResult.orElse(null));
+    verifyNoInteractions(mGcsBucketSpecFetcher);
   }
 
   @Test
@@ -70,6 +82,7 @@ class DefaultDefinitionVersionOverrideProviderTest {
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, OVERRIDDEN_WORKSPACE_ID, OverrideTargetType.WORKSPACE, DEFAULT_VERSION);
     assertEquals(OVERRIDE_VERSION, optResult.orElse(null));
+    verifyNoInteractions(mGcsBucketSpecFetcher);
   }
 
   @Test
@@ -80,15 +93,62 @@ class DefaultDefinitionVersionOverrideProviderTest {
             .withActorType(ActorType.SOURCE)
             .withVersionOverrides(List.of(
                 new VersionOverride()
-                    .withActorDefinitionVersion(new ActorDefinitionVersion()
-                        .withDockerImageTag(DOCKER_IMAGE_TAG_2)) // missing spec declaration
+                    .withActorDefinitionVersion(new ActorDefinitionVersion()) // missing image tag
                     .withActorIds(List.of(OVERRIDDEN_ACTOR_ID)))));
 
-    overrideProvider = new DefaultDefinitionVersionOverrideProvider(overridesMap);
+    overrideProvider = new DefaultDefinitionVersionOverrideProvider(overridesMap, mGcsBucketSpecFetcher);
 
     final Optional<ActorDefinitionVersion> optResult =
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, OVERRIDDEN_ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION);
     assertTrue(optResult.isEmpty());
+    verifyNoInteractions(mGcsBucketSpecFetcher);
+  }
+
+  @Test
+  void testGetVersionWithMissingSpec() {
+    when(mGcsBucketSpecFetcher.attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2))).thenReturn(Optional.of(SPEC_2));
+
+    final Map<UUID, ActorDefinitionVersionOverride> overridesMap = Map.of(
+        ACTOR_DEFINITION_ID, new ActorDefinitionVersionOverride()
+            .withActorDefinitionId(ACTOR_DEFINITION_ID)
+            .withActorType(ActorType.SOURCE)
+            .withVersionOverrides(List.of(
+                new VersionOverride()
+                    .withActorDefinitionVersion(new ActorDefinitionVersion()
+                        .withDockerImageTag(DOCKER_IMAGE_TAG_2)) // missing spec declaration
+                    .withActorIds(List.of(OVERRIDDEN_ACTOR_ID)))));
+
+    overrideProvider = new DefaultDefinitionVersionOverrideProvider(overridesMap, mGcsBucketSpecFetcher);
+
+    final Optional<ActorDefinitionVersion> optResult =
+        overrideProvider.getOverride(ACTOR_DEFINITION_ID, OVERRIDDEN_ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION);
+
+    assertEquals(OVERRIDE_VERSION, optResult.orElse(null));
+    verify(mGcsBucketSpecFetcher).attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2));
+  }
+
+  @Test
+  void testGetVersionWithMissingSpecAndMissingFetch() {
+    when(mGcsBucketSpecFetcher.attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2)))
+        .thenReturn(Optional.empty());
+
+    final Map<UUID, ActorDefinitionVersionOverride> overridesMap = Map.of(
+        ACTOR_DEFINITION_ID, new ActorDefinitionVersionOverride()
+            .withActorDefinitionId(ACTOR_DEFINITION_ID)
+            .withActorType(ActorType.SOURCE)
+            .withVersionOverrides(List.of(
+                new VersionOverride()
+                    .withActorDefinitionVersion(new ActorDefinitionVersion()
+                        .withDockerImageTag(DOCKER_IMAGE_TAG_2)) // missing spec declaration
+                    .withActorIds(List.of(OVERRIDDEN_ACTOR_ID)))));
+
+    overrideProvider = new DefaultDefinitionVersionOverrideProvider(overridesMap, mGcsBucketSpecFetcher);
+
+    final Optional<ActorDefinitionVersion> optResult =
+        overrideProvider.getOverride(ACTOR_DEFINITION_ID, OVERRIDDEN_ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION);
+
+    assertTrue(optResult.isEmpty());
+    verify(mGcsBucketSpecFetcher).attemptFetch(String.format(DOCKER_IMG_FORMAT, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG_2));
   }
 
 }
