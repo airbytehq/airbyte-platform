@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test the notificationUtils.
  */
-class NotificationUtilsTest {
+class NotificationClientTest {
 
   private static final String WEBHOOK_URL = "url";
 
@@ -37,7 +37,7 @@ class NotificationUtilsTest {
   private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final WorkflowClient workflowClient = mock(WorkflowClient.class);
 
-  private final NotificationUtils notificationUtils = spy(new NotificationUtils(featureFlagClient, workflowClient));
+  private final NotificationClient notificationClient = spy(new NotificationClient(featureFlagClient, workflowClient));
 
   @Test
   void testCallNewNotifyWorkflow() {
@@ -47,7 +47,7 @@ class NotificationUtilsTest {
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationUtils.sendSchemaChangeNotification(connectionId, "", false);
+    notificationClient.sendSchemaChangeNotification(connectionId, "", false);
 
     verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), any());
   }
@@ -60,12 +60,12 @@ class NotificationUtilsTest {
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationUtils.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
-    verify(notificationUtils).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
+    verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
         WEBHOOK_URL);
 
-    notificationUtils.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, true);
-    verify(notificationUtils).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), WEBHOOK_URL);
+    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, true);
+    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), WEBHOOK_URL);
   }
 
   @Test
@@ -76,7 +76,7 @@ class NotificationUtilsTest {
     when(workflowClient.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(connectionNotificationWorkflow);
 
-    notificationUtils.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
+    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
 
     verify(connectionNotificationWorkflow).sendSchemaChangeNotification(connectionId, WEBHOOK_URL);
   }

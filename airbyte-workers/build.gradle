@@ -56,6 +56,7 @@ dependencies {
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:specs')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-db:jooq')
     implementation project(':airbyte-db:db-lib')

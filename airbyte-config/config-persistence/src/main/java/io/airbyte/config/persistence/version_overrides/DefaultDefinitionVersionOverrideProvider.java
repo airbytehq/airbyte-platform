@@ -13,6 +13,8 @@ import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersionOverride;
 import io.airbyte.config.VersionOverride;
+import io.airbyte.config.specs.GcsBucketSpecFetcher;
+import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
@@ -33,21 +35,28 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
 
+  private final GcsBucketSpecFetcher gcsBucketSpecFetcher;
+
   private final Map<UUID, ActorDefinitionVersionOverride> overrideMap;
 
   @Creator
-  public DefaultDefinitionVersionOverrideProvider() {
-    this(DefaultDefinitionVersionOverrideProvider.class, "version_overrides.yml");
+  public DefaultDefinitionVersionOverrideProvider(final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
+    this(DefaultDefinitionVersionOverrideProvider.class, "version_overrides.yml", gcsBucketSpecFetcher);
     LOGGER.info("Initialized default definition version overrides");
   }
 
-  public DefaultDefinitionVersionOverrideProvider(final Class<?> resourceClass, final String resourceName) {
+  public DefaultDefinitionVersionOverrideProvider(final Class<?> resourceClass,
+                                                  final String resourceName,
+                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
     this.overrideMap = getLocalOverrides(resourceClass, resourceName);
+    this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
   }
 
   @VisibleForTesting
-  public DefaultDefinitionVersionOverrideProvider(final Map<UUID, ActorDefinitionVersionOverride> overrideMap) {
+  public DefaultDefinitionVersionOverrideProvider(final Map<UUID, ActorDefinitionVersionOverride> overrideMap,
+                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
     this.overrideMap = overrideMap;
+    this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
   }
 
   private Map<UUID, ActorDefinitionVersionOverride> getLocalOverrides(final Class<?> resourceClass, final String resourceName) {
@@ -79,7 +88,7 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
         if (targetIds != null && targetIds.contains(targetId)) {
           final ActorDefinitionVersion version = versionOverride.getActorDefinitionVersion();
 
-          if (StringUtils.isEmpty(version.getDockerImageTag()) || version.getSpec() == null) {
+          if (StringUtils.isEmpty(version.getDockerImageTag())) {
             LOGGER.warn("Invalid version override for {} {} with {} id {}. Falling back to default version.", override.getActorType(),
                 actorDefinitionId, targetType.getName(), targetId);
             return Optional.empty();
@@ -87,6 +96,21 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
 
           if (StringUtils.isEmpty(version.getDockerRepository())) {
             version.setDockerRepository(defaultVersion.getDockerRepository());
+          }
+
+          if (version.getSpec() == null) {
+            final Optional<ConnectorSpecification> spec = gcsBucketSpecFetcher.attemptFetch(
+                String.format("%s:%s", version.getDockerRepository(), version.getDockerImageTag()));
+
+            if (spec.isPresent()) {
+              version.setSpec(spec.get());
+              LOGGER.info("Fetched spec from remote cache for {} {} version override ({}).",
+                  override.getActorType(), actorDefinitionId, version.getDockerImageTag());
+            } else {
+              LOGGER.error("Failed to fetch spec from remote cache for {} {} version override ({}). Falling back to default version.",
+                  override.getActorType(), actorDefinitionId, version.getDockerImageTag());
+              return Optional.empty();
+            }
           }
 
           LOGGER.info("Using version override for {} {} with {} id {}: {}", override.getActorType(), actorDefinitionId, targetType.getName(),
