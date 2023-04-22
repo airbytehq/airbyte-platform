@@ -35,6 +35,7 @@ public class KubePortManagerSingleton {
   private final BlockingQueue<Integer> workerPorts;
 
   private KubePortManagerSingleton(final Set<Integer> ports) {
+    LOGGER.debug("Initializing KubePortManagerSingleton instance with ports: %s", ports);
     workerPorts = new LinkedBlockingDeque<>(ports);
   }
 
@@ -64,6 +65,7 @@ public class KubePortManagerSingleton {
   }
 
   public Integer take() throws InterruptedException {
+    LOGGER.debug("workerPorts remaining capacity: %s", workerPorts.remainingCapacity());
     return workerPorts.poll(10, TimeUnit.MINUTES);
   }
 
