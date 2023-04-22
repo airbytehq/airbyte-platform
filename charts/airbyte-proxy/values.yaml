@@ -2,7 +2,7 @@ global:
   serviceAccountName: ""
   configMapName: ""
   ## secretName with BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD, BASIC_AUTH_TOKEN secrets. BASIC_AUTH_TOKEN is base64 encoded value of user:password
-  secretName: "dd"
+  secretName: ""
   ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
   extraSelectorLabels: {}
   ## extraLabels [object] - use to specify own additional labels for deployment
