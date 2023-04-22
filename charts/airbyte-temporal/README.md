@@ -1,6 +1,6 @@
 # temporal
 
-![Version: 0.40.33](https://img.shields.io/badge/Version-0.40.33-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.17](https://img.shields.io/badge/AppVersion-0.40.17-informational?style=flat-square)
+![Version: 0.45.12](https://img.shields.io/badge/Version-0.45.12-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.2](https://img.shields.io/badge/AppVersion-0.44.2-informational?style=flat-square)
 
 Helm chart to deploy airbyte-temporal
 
@@ -21,6 +21,8 @@ Helm chart to deploy airbyte-temporal
 | extraContainers | list | `[]` |  |
 | extraEnv | list | `[]` |  |
 | extraInitContainers | list | `[]` |  |
+| extraLabels | object | `{}` |  |
+| extraSelectorLabels | object | `{}` |  |
 | extraVolumeMounts | list | `[]` |  |
 | extraVolumes | list | `[]` |  |
 | global.configMapName | string | `""` |  |
@@ -30,6 +32,8 @@ Helm chart to deploy airbyte-temporal
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
 | global.extraContainers | list | `[]` |  |
+| global.extraLabels | object | `{}` |  |
+| global.extraSelectorLabels | object | `{}` |  |
 | global.secretName | string | `""` |  |
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
@@ -43,6 +47,7 @@ Helm chart to deploy airbyte-temporal
 | livenessProbe.timeoutSeconds | int | `1` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
 | readinessProbe.enabled | bool | `true` |  |
 | readinessProbe.failureThreshold | int | `3` |  |
 | readinessProbe.initialDelaySeconds | int | `5` |  |

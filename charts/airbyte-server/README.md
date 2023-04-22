@@ -1,6 +1,6 @@
 # server
 
-![Version: 0.39.36](https://img.shields.io/badge/Version-0.39.36-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.4](https://img.shields.io/badge/AppVersion-0.40.4-informational?style=flat-square)
+![Version: 0.45.12](https://img.shields.io/badge/Version-0.45.12-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.2](https://img.shields.io/badge/AppVersion-0.44.2-informational?style=flat-square)
 
 Helm chart to deploy airbyte-server
 
@@ -16,11 +16,14 @@ Helm chart to deploy airbyte-server
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
 | containerSecurityContext | object | `{}` |  |
+| deploymentStrategyType | string | `"Recreate"` |  |
 | enabled | bool | `true` |  |
 | env_vars | object | `{}` |  |
 | extraContainers | list | `[]` |  |
 | extraEnv | list | `[]` |  |
 | extraInitContainers | list | `[]` |  |
+| extraLabels | object | `{}` |  |
+| extraSelectorLabels | object | `{}` |  |
 | extraVolumeMounts | list | `[]` |  |
 | extraVolumes | list | `[]` |  |
 | global.configMapName | string | `""` |  |
@@ -31,6 +34,8 @@ Helm chart to deploy airbyte-server
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
 | global.extraContainers | list | `[]` |  |
+| global.extraLabels | object | `{}` |  |
+| global.extraSelectorLabels | object | `{}` |  |
 | global.logs.accessKey.existingSecret | string | `""` |  |
 | global.logs.accessKey.existingSecretKey | string | `""` |  |
 | global.logs.accessKey.password | string | `"minio"` |  |
@@ -60,6 +65,7 @@ Helm chart to deploy airbyte-server
 | log.level | string | `"INFO"` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
 | readinessProbe.enabled | bool | `true` |  |
 | readinessProbe.failureThreshold | int | `3` |  |
 | readinessProbe.initialDelaySeconds | int | `10` |  |

@@ -1,6 +1,6 @@
 # metrics
 
-![Version: 0.39.36](https://img.shields.io/badge/Version-0.39.36-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.3](https://img.shields.io/badge/AppVersion-0.40.3-informational?style=flat-square)
+![Version: 0.45.12](https://img.shields.io/badge/Version-0.45.12-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.3](https://img.shields.io/badge/AppVersion-0.40.3-informational?style=flat-square)
 
 Helm chart to deploy airbyte-metrics
 
@@ -33,6 +33,7 @@ Helm chart to deploy airbyte-metrics
 | image.repository | string | `"airbyte/metrics-reporter"` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
 | replicaCount | int | `1` |  |
 | resources.limits | object | `{}` |  |
 | resources.requests | object | `{}` |  |
