@@ -5,11 +5,12 @@ import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import {
   ConnectionEditServiceProvider,
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import { ConnectionPageTitle } from "./ConnectionPageTitle";
@@ -43,12 +44,13 @@ export const ConnectionPage: React.FC = () => {
     () => location.pathname.includes(`/${ConnectionRoutePaths.Replication}`),
     [location.pathname]
   );
+  const { trackError } = useAppMonitoringService();
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 
   return (
     <ConnectionEditServiceProvider connectionId={connectionId}>
-      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+      <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
           pageTitle={<ConnectionPageTitle />}

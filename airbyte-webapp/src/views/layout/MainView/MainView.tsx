@@ -8,9 +8,10 @@ import { Version } from "components/common/Version";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useConfig } from "config";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { RoutePaths } from "pages/routePaths";
 import { links } from "utils/links";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import styles from "./MainView.module.scss";
@@ -24,6 +25,7 @@ import { SideBar } from "../SideBar/SideBar";
 
 const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { version } = useConfig();
+  const { trackError } = useAppMonitoringService();
 
   return (
     <FlexContainer className={styles.mainViewContainer} gap="none">
@@ -51,7 +53,7 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
         </MenuContent>
       </SideBar>
       <div className={styles.content}>
-        <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+        <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
           <React.Suspense fallback={<LoadingPage />}>{props.children}</React.Suspense>
         </ResourceNotFoundErrorBoundary>
       </div>
