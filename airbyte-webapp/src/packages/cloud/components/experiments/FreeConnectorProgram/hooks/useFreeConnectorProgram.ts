@@ -4,8 +4,6 @@ import { useQuery } from "react-query";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { ToastType } from "components/ui/Toast";
-
 import { pollUntil } from "core/request/pollUntil";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -46,14 +44,14 @@ export const useFreeConnectorProgram = () => {
           registerNotification({
             id: "fcp/enrollment-success",
             text: formatMessage({ id: "freeConnectorProgram.enroll.success" }),
-            type: ToastType.SUCCESS,
+            type: "success",
           });
         } else {
           trackError(new Error("Unable to confirm Free Connector Program enrollment before timeout"), { workspaceId });
           registerNotification({
             id: "fcp/enrollment-failure",
             text: formatMessage({ id: "freeConnectorProgram.enroll.failure" }),
-            type: ToastType.ERROR,
+            type: "error",
           });
         }
       });

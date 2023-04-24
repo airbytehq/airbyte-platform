@@ -5,10 +5,15 @@ import {
   authTypeToKeyToInferredInput,
   BuilderFormAuthenticator,
   BuilderFormValues,
+  BuilderIncrementalSync,
   BuilderPaginator,
   BuilderStream,
+  BuilderTransformation,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
+  hasIncrementalSyncUserInput,
+  INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
+  incrementalSyncInferredInputs,
   isInterpolatedConfigKey,
   RequestOptionOrPathInject,
 } from "./types";
@@ -16,10 +21,11 @@ import { formatJson } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
-  DatetimeBasedCursor,
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
   DeclarativeStreamSchemaLoader,
+  DefaultErrorHandler,
+  DeclarativeStreamTransformationsItem,
   DpathExtractor,
   HttpRequester,
   HttpRequesterAuthenticator,
@@ -28,6 +34,8 @@ import {
   SimpleRetrieverPartitionRouter,
   SimpleRetrieverPartitionRouterAnyOfItem,
   Spec,
+  DatetimeBasedCursorEndDatetime,
+  DatetimeBasedCursorStartDatetime,
 } from "../../core/request/ConnectorManifest";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
@@ -37,7 +45,11 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
 
   const streams = resolvedManifest.streams;
   if (streams === undefined || streams.length === 0) {
-    const { inputs, inferredInputOverrides } = manifestSpecAndAuthToBuilder(resolvedManifest.spec, undefined);
+    const { inputs, inferredInputOverrides } = manifestSpecAndAuthToBuilder(
+      resolvedManifest.spec,
+      undefined,
+      undefined
+    );
     builderFormValues.inputs = inputs;
     builderFormValues.inferredInputOverrides = inferredInputOverrides;
 
@@ -47,14 +59,6 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
   assertType<HttpRequester>(streams[0].retriever.requester, "HttpRequester", streams[0].name);
   builderFormValues.global.urlBase = streams[0].retriever.requester.url_base;
-
-  const { inputs, inferredInputOverrides, auth } = manifestSpecAndAuthToBuilder(
-    resolvedManifest.spec,
-    streams[0].retriever.requester.authenticator
-  );
-  builderFormValues.inputs = inputs;
-  builderFormValues.inferredInputOverrides = inferredInputOverrides;
-  builderFormValues.global.authenticator = auth;
 
   const serializedStreamToIndex = Object.fromEntries(streams.map((stream, index) => [JSON.stringify(stream), index]));
   builderFormValues.streams = streams.map((stream, index) =>
@@ -66,6 +70,15 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       streams[0].retriever.requester.authenticator
     )
   );
+
+  const { inputs, inferredInputOverrides, auth } = manifestSpecAndAuthToBuilder(
+    resolvedManifest.spec,
+    streams[0].retriever.requester.authenticator,
+    builderFormValues.streams
+  );
+  builderFormValues.inputs = inputs;
+  builderFormValues.inferredInputOverrides = inferredInputOverrides;
+  builderFormValues.global.authenticator = auth;
 
   return builderFormValues;
 };
@@ -119,12 +132,10 @@ const manifestStreamToBuilder = (
     incrementalSync: manifestIncrementalSyncToBuilder(stream.incremental_sync, stream.name),
     partitionRouter: manifestPartitionRouterToBuilder(retriever.partition_router, serializedStreamToIndex, stream.name),
     schema: manifestSchemaLoaderToBuilderSchema(stream.schema_loader),
+    errorHandler: manifestErrorHandlerToBuilder(stream.name, requester),
+    transformations: manifestTransformationsToBuilder(stream.name, stream.transformations),
     unsupportedFields: {
-      transformations: stream.transformations,
       retriever: {
-        requester: {
-          error_handler: stream.retriever.requester.error_handler,
-        },
         record_selector: {
           record_filter: stream.retriever.record_selector.record_filter,
         },
@@ -189,6 +200,50 @@ function manifestPartitionRouterToBuilder(
   throw new ManifestCompatibilityError(streamName, "partition_router type is unsupported");
 }
 
+function manifestErrorHandlerToBuilder(
+  streamName: string | undefined,
+  requester: HttpRequester
+): BuilderStream["errorHandler"] {
+  if (!requester.error_handler) {
+    return undefined;
+  }
+  const handlers =
+    requester.error_handler.type === "CompositeErrorHandler"
+      ? requester.error_handler.error_handlers
+      : [requester.error_handler];
+  if (handlers.some((handler) => handler.type === "CustomErrorHandler")) {
+    throw new ManifestCompatibilityError(streamName, "custom error handler used");
+  }
+  if (handlers.some((handler) => handler.type === "CompositeErrorHandler")) {
+    throw new ManifestCompatibilityError(streamName, "nested composite error handler used");
+  }
+  const defaultHandlers = handlers as DefaultErrorHandler[];
+  return defaultHandlers.map((handler) => {
+    if (handler.backoff_strategies && handler.backoff_strategies.length > 1) {
+      throw new ManifestCompatibilityError(streamName, "more than one backoff strategy");
+    }
+    const backoffStrategy = handler.backoff_strategies?.[0];
+    if (backoffStrategy?.type === "CustomBackoffStrategy") {
+      throw new ManifestCompatibilityError(streamName, "custom backoff strategy");
+    }
+    if (handler.response_filters && handler.response_filters.length > 1) {
+      throw new ManifestCompatibilityError(streamName, "more than one response filter per handler");
+    }
+    const responseHandler = handler.response_filters?.[0];
+    return {
+      ...handler,
+      response_filters: undefined,
+      response_filter: responseHandler
+        ? { ...responseHandler, http_codes: responseHandler.http_codes?.map((code) => String(code)) }
+        : undefined,
+      backoff_strategies: undefined,
+      backoff_strategy: backoffStrategy,
+    };
+  });
+
+  return handlers as DefaultErrorHandler[];
+}
+
 function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): BuilderStream["primaryKey"] {
   if (!isEqual(manifestStream.primary_key, manifestStream.primary_key)) {
     throw new ManifestCompatibilityError(
@@ -209,24 +264,116 @@ function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): Builder
   }
 }
 
+function manifestTransformationsToBuilder(
+  name: string | undefined,
+  transformations: DeclarativeStreamTransformationsItem[] | undefined
+): BuilderTransformation[] | undefined {
+  if (!transformations) {
+    return undefined;
+  }
+  const builderTransformations: BuilderTransformation[] = [];
+
+  transformations.forEach((transformation) => {
+    if (transformation.type === "CustomTransformation") {
+      throw new ManifestCompatibilityError(name, "custom transformation used");
+    }
+    if (transformation.type === "AddFields") {
+      builderTransformations.push(
+        ...(transformation.fields as Array<{ value: string; path: string[] }>).map((field) => ({
+          type: "add" as const,
+          value: field.value,
+          path: field.path,
+        }))
+      );
+    }
+    if (transformation.type === "RemoveFields") {
+      builderTransformations.push(...transformation.field_pointers.map((path) => ({ type: "remove" as const, path })));
+    }
+  });
+
+  if (builderTransformations.length === 0) {
+    return undefined;
+  }
+  return builderTransformations;
+}
+
+function getFormat(
+  format: DatetimeBasedCursorStartDatetime | DatetimeBasedCursorEndDatetime,
+  manifestIncrementalSync: DeclarativeStreamIncrementalSync
+) {
+  if (typeof format === "string" || !format.datetime_format) {
+    return manifestIncrementalSync.datetime_format;
+  }
+  return format.datetime_format;
+}
+
+function isFormatSupported(
+  format: DatetimeBasedCursorStartDatetime | DatetimeBasedCursorEndDatetime,
+  manifestIncrementalSync: DeclarativeStreamIncrementalSync
+) {
+  return getFormat(format, manifestIncrementalSync) === INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT;
+}
+
 function manifestIncrementalSyncToBuilder(
   manifestIncrementalSync: DeclarativeStreamIncrementalSync | undefined,
   streamName?: string
-): DatetimeBasedCursor | undefined {
+): BuilderStream["incrementalSync"] | undefined {
   if (!manifestIncrementalSync) {
     return undefined;
   }
   if (manifestIncrementalSync.type === "CustomIncrementalSync") {
     throw new ManifestCompatibilityError(streamName, "incremental sync uses a custom implementation");
   }
-  if (
-    typeof manifestIncrementalSync.start_datetime !== "string" ||
-    typeof manifestIncrementalSync.end_datetime !== "string"
-  ) {
-    throw new ManifestCompatibilityError(streamName, "start_datetime or end_datetime are not set to a string value");
+
+  if (manifestIncrementalSync.partition_field_start || manifestIncrementalSync.partition_field_end) {
+    throw new ManifestCompatibilityError(
+      streamName,
+      "Custom partition_field_start and partition_field_end are not supported"
+    );
   }
 
-  return manifestIncrementalSync;
+  const {
+    partition_field_end,
+    partition_field_start,
+    end_datetime: manifestEndDateTime,
+    start_datetime: manifestStartDateTime,
+    type,
+    $parameters,
+    ...regularFields
+  } = manifestIncrementalSync;
+
+  let start_datetime: BuilderIncrementalSync["start_datetime"] = {
+    type: "custom",
+    value: typeof manifestStartDateTime === "string" ? manifestStartDateTime : manifestStartDateTime.datetime,
+    format: getFormat(manifestStartDateTime, manifestIncrementalSync),
+  };
+  let end_datetime: BuilderIncrementalSync["end_datetime"] = {
+    type: "custom",
+    value: typeof manifestEndDateTime === "string" ? manifestEndDateTime : manifestEndDateTime.datetime,
+    format: getFormat(manifestEndDateTime, manifestIncrementalSync),
+  };
+
+  if (
+    start_datetime.value === "{{ config['start_date'] }}" &&
+    isFormatSupported(manifestStartDateTime, manifestIncrementalSync)
+  ) {
+    start_datetime = { type: "user_input" };
+  }
+
+  if (
+    end_datetime.value === "{{ config['end_date'] }}" &&
+    isFormatSupported(manifestEndDateTime, manifestIncrementalSync)
+  ) {
+    end_datetime = { type: "user_input" };
+  } else if (end_datetime.value === `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`) {
+    end_datetime = { type: "now" };
+  }
+
+  return {
+    ...regularFields,
+    end_datetime,
+    start_datetime,
+  };
 }
 
 function manifestPaginatorToBuilder(
@@ -293,6 +440,10 @@ function manifestAuthenticatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "authenticator has no type");
   } else if (manifestAuthenticator.type === "CustomAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a CustomAuthenticator");
+  } else if (manifestAuthenticator.type === "SessionTokenAuthenticator") {
+    throw new ManifestCompatibilityError(streamName, "uses a SessionTokenAuthenticator");
+  } else if (manifestAuthenticator.type === "SingleUseRefreshTokenOAuthAuthenticator") {
+    throw new ManifestCompatibilityError(streamName, "uses a SingleUseRefreshTokenOAuthAuthenticator");
   } else if (manifestAuthenticator.type === "OAuthAuthenticator") {
     if (
       Object.values(manifestAuthenticator.refresh_request_body ?? {}).filter((value) => typeof value !== "string")
@@ -302,6 +453,10 @@ function manifestAuthenticatorToBuilder(
         streamName,
         "OAuthAuthenticator contains a refresh_request_body with non-string values"
       );
+    }
+
+    if (manifestAuthenticator.grant_type && manifestAuthenticator.grant_type !== "refresh_token") {
+      throw new ManifestCompatibilityError(streamName, "OAuthAuthenticator sets custom grant_type");
     }
 
     builderAuthenticator = {
@@ -330,7 +485,8 @@ function manifestAuthenticatorToBuilder(
 
 function manifestSpecAndAuthToBuilder(
   manifestSpec: Spec | undefined,
-  manifestAuthenticator: HttpRequesterAuthenticator | undefined
+  manifestAuthenticator: HttpRequesterAuthenticator | undefined,
+  streams: BuilderStream[] | undefined
 ) {
   const result: {
     inputs: BuilderFormValues["inputs"];
@@ -350,9 +506,7 @@ function manifestSpecAndAuthToBuilder(
 
   Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>).forEach(
     ([specKey, specDefinition]) => {
-      const matchingInferredInput = Object.values(authTypeToKeyToInferredInput[result.auth.type]).find(
-        (input) => input.key === specKey
-      );
+      const matchingInferredInput = getMatchingInferredInput(result.auth.type, streams, specKey);
       if (matchingInferredInput) {
         result.inferredInputOverrides[matchingInferredInput.key] = specDefinition;
       } else {
@@ -366,6 +520,20 @@ function manifestSpecAndAuthToBuilder(
   );
 
   return result;
+}
+
+function getMatchingInferredInput(
+  authType: BuilderFormAuthenticator["type"],
+  streams: BuilderStream[] | undefined,
+  specKey: string
+) {
+  if (streams && specKey === "start_date" && hasIncrementalSyncUserInput(streams, "start_datetime")) {
+    return incrementalSyncInferredInputs.start_date;
+  }
+  if (streams && specKey === "end_date" && hasIncrementalSyncUserInput(streams, "end_datetime")) {
+    return incrementalSyncInferredInputs.end_date;
+  }
+  return Object.values(authTypeToKeyToInferredInput[authType]).find((input) => input.key === specKey);
 }
 
 function assertType<T extends { type: string }>(

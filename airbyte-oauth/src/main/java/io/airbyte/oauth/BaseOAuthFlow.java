@@ -42,7 +42,7 @@ public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
   protected JsonNode getSourceOAuthParamConfig(final UUID workspaceId, final UUID sourceDefinitionId) throws IOException, ConfigNotFoundException {
     try {
       final Optional<SourceOAuthParameter> param = MoreOAuthParameters.getSourceOAuthParameter(
-          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId);
+          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, true);
       if (param.isPresent()) {
         // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
         // here see https://github.com/airbytehq/airbyte/issues/7624
@@ -59,7 +59,7 @@ public abstract class BaseOAuthFlow implements OAuthFlowImplementation {
       throws IOException, ConfigNotFoundException {
     try {
       final Optional<DestinationOAuthParameter> param = MoreOAuthParameters.getDestinationOAuthParameter(
-          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId);
+          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId, true);
       if (param.isPresent()) {
         // TODO: if we write a migration to flatten persisted configs in db, we don't need to flatten
         // here see https://github.com/airbytehq/airbyte/issues/7624

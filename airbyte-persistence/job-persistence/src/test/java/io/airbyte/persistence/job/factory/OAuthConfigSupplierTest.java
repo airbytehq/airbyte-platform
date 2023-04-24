@@ -47,6 +47,13 @@ class OAuthConfigSupplierTest {
   private static final String OAUTH = "oauth";
   private static final String API_SECRET = "api_secret";
 
+  // Existing field k/v used to test that we don't overwrite/lose unrelated data during injection
+  private static final String EXISTING_FIELD_NAME = "fieldName";
+  private static final String EXISTING_FIELD_VALUE = "fieldValue";
+
+  private static final String SECRET_ONE = "mysecret";
+  private static final String SECRET_TWO = "123";
+
   private ConfigRepository configRepository;
   private TrackingClient trackingClient;
   private OAuthConfigSupplier oAuthConfigSupplier;
@@ -64,10 +71,9 @@ class OAuthConfigSupplierTest {
     sourceDefinitionId = UUID.randomUUID();
     testSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(sourceDefinitionId)
-        .withName("test")
-        .withDockerRepository("test/test")
-        .withDockerImageTag("dev");
+        .withName("test");
     testSourceVersion = new ActorDefinitionVersion()
+        .withDockerRepository("test/test")
         .withDockerImageTag("dev")
         .withSpec(null);
 
@@ -224,12 +230,12 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(workspaceId), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
     setupOAuthParamMocks(oauthParameters);
     final JsonNode actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
     final ObjectNode expectedConfig = ((ObjectNode) Jsons.clone(config));
@@ -241,12 +247,12 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
+  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
     final Map<String, Object> oauthParameters = generateOAuthParameters();
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), eq(workspaceId), eq(sourceId))).thenReturn(testSourceVersion.withSpec(null));
     setupOAuthParamMocks(oauthParameters);
     final JsonNode actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
     assertEquals(config, actualConfig);
@@ -286,9 +292,9 @@ class OAuthConfigSupplierTest {
     setupOAuthParamMocks(oauthParameters);
     final JsonNode actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
     final JsonNode expectedConfig = Jsons.jsonNode(Map.of(
-        "fieldName", "fieldValue",
+        EXISTING_FIELD_NAME, EXISTING_FIELD_VALUE,
         CREDENTIALS, Map.of(
-            API_SECRET, "123",
+            API_SECRET, SECRET_TWO,
             AUTH_TYPE, OAUTH,
             API_CLIENT, ((Map<String, String>) oauthParameters.get(CREDENTIALS)).get(API_CLIENT))));
     assertEquals(expectedConfig, actualConfig);
@@ -324,6 +330,19 @@ class OAuthConfigSupplierTest {
     assertEquals(expectedConfig, actualConfig);
   }
 
+  @Test
+  void testOAuthInjectingNestedSecrets() throws JsonValidationException, IOException {
+    final JsonNode config = generateJsonConfig();
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
+    final Map<String, Object> oauthParameters = Map.of(CREDENTIALS, generateSecretOAuthParameters());
+    setupOAuthParamMocks(oauthParameters);
+
+    final JsonNode actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, Jsons.clone(config));
+    final JsonNode expectedConfig = getExpectedNode(secretCoordinateMap());
+    assertEquals(expectedConfig, actualConfig);
+  }
+
   private static AdvancedAuth createAdvancedAuth() {
     return new AdvancedAuth()
         .withAuthFlowType(AuthFlowType.OAUTH_2_0)
@@ -336,7 +355,7 @@ class OAuthConfigSupplierTest {
 
   private void setupStandardDefinitionMock(final AdvancedAuth advancedAuth) throws JsonValidationException, ConfigNotFoundException, IOException {
     when(configRepository.getStandardSourceDefinition(any())).thenReturn(testSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(any(), any())).thenReturn(testSourceVersion
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(testSourceVersion
         .withSpec(new ConnectorSpecification().withAdvancedAuth(advancedAuth)));
   }
 
@@ -357,16 +376,26 @@ class OAuthConfigSupplierTest {
   private static ObjectNode generateJsonConfig() {
     return (ObjectNode) Jsons.jsonNode(
         Map.of(
-            "fieldName", "fieldValue",
+            EXISTING_FIELD_NAME, EXISTING_FIELD_VALUE,
             CREDENTIALS, Map.of(
-                API_SECRET, "123",
+                API_SECRET, SECRET_TWO,
                 AUTH_TYPE, OAUTH)));
   }
 
   private static Map<String, Object> generateOAuthParameters() {
     return Map.of(
-        API_SECRET, "mysecret",
+        API_SECRET, SECRET_ONE,
         API_CLIENT, UUID.randomUUID().toString());
+  }
+
+  private static Map<String, Object> generateSecretOAuthParameters() {
+    return Map.of(
+        API_SECRET, SECRET_ONE,
+        API_CLIENT, secretCoordinateMap());
+  }
+
+  private static Map<String, Object> secretCoordinateMap() {
+    return Map.of("_secret", "secret_coordinate");
   }
 
   private static Map<String, Object> generateNestedOAuthParameters() {
@@ -376,9 +405,19 @@ class OAuthConfigSupplierTest {
   private static JsonNode getExpectedNode(final String apiClient) {
     return Jsons.jsonNode(
         Map.of(
-            "fieldName", "fieldValue",
+            EXISTING_FIELD_NAME, EXISTING_FIELD_VALUE,
             CREDENTIALS, Map.of(
-                API_SECRET, "123",
+                API_SECRET, SECRET_TWO,
+                AUTH_TYPE, OAUTH,
+                API_CLIENT, apiClient)));
+  }
+
+  private static JsonNode getExpectedNode(final Map<String, Object> apiClient) {
+    return Jsons.jsonNode(
+        Map.of(
+            EXISTING_FIELD_NAME, EXISTING_FIELD_VALUE,
+            CREDENTIALS, Map.of(
+                API_SECRET, SECRET_TWO,
                 AUTH_TYPE, OAUTH,
                 API_CLIENT, apiClient)));
   }

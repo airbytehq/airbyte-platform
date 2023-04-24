@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
 import { useFormikContext } from "formik";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import Indicator from "components/Indicator";
 import { FlexContainer } from "components/ui/Flex";
@@ -12,7 +12,6 @@ import { Text } from "components/ui/Text";
 
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
-import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -20,10 +19,12 @@ import styles from "./BuilderSidebar.module.scss";
 import { SavingIndicator } from "./SavingIndicator";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
 import { CDK_VERSION } from "../cdk";
+import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { PublishButton } from "../PublishButton";
-import { BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormValues } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useInferredInputs } from "../useInferredInputs";
 
 interface ViewSelectButtonProps {
   className?: string;
@@ -63,8 +64,6 @@ interface BuilderSidebarProps {
 
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ className, toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
-  const { formatMessage } = useIntl();
-  const publishWorkflowEnabled = useExperiment("connectorBuilder.publishWorkflow", false);
   const { hasErrors } = useBuilderErrors();
   const { yamlManifest, selectedView, setSelectedView, builderFormValues } = useConnectorBuilderFormState();
   const { values } = useFormikContext<BuilderFormValues>();
@@ -72,17 +71,14 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
     setSelectedView(selectedView);
   };
 
+  const inferredInputsLength = useInferredInputs().length;
+
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
       <UiYamlToggleButton yamlSelected={false} onClick={toggleYamlEditor} />
 
       <FlexContainer direction="column" alignItems="center">
-        {/* TODO: replace with uploaded img when that functionality is added */}
-        <img
-          className={styles.connectorImg}
-          src="/logo.png"
-          alt={formatMessage({ id: "connectorBuilder.connectorImgAlt" })}
-        />
+        <ConnectorImage />
 
         <div className={styles.connectorName}>
           <Heading as="h2" size="sm">
@@ -127,14 +123,14 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: values.inputs.length + getInferredInputs(values.global, values.inferredInputOverrides).length,
+                number: values.inputs.length + inferredInputsLength,
               }}
             />
           </Text>
         </ViewSelectButton>
       </FlexContainer>
 
-      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamList}>
+      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamListContainer}>
         <div className={styles.streamsHeader}>
           <Text className={styles.streamsHeading} size="xs" bold>
             <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams.length }} />
@@ -146,36 +142,38 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           />
         </div>
 
-        {values.streams.map(({ name, id }, num) => (
-          <ViewSelectButton
-            key={num}
-            data-testid={`navbutton-${String(num)}`}
-            selected={selectedView === num}
-            showErrorIndicator={hasErrors(true, [num])}
-            onClick={() => {
-              handleViewSelect(num);
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
-                actionDescription: "Stream view selected",
-                stream_id: id,
-                stream_name: name,
-              });
-            }}
-          >
-            {name && name.trim() ? (
-              <Text className={styles.streamViewText}>{name}</Text>
-            ) : (
-              <Text className={styles.emptyStreamViewText}>
-                <FormattedMessage id="connectorBuilder.emptyName" />
-              </Text>
-            )}
-          </ViewSelectButton>
-        ))}
+        <div className={styles.streamList}>
+          {values.streams.map(({ name, id }, num) => (
+            <ViewSelectButton
+              key={num}
+              data-testid={`navbutton-${String(num)}`}
+              selected={selectedView === num}
+              showErrorIndicator={hasErrors(true, [num])}
+              onClick={() => {
+                handleViewSelect(num);
+                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
+                  actionDescription: "Stream view selected",
+                  stream_id: id,
+                  stream_name: name,
+                });
+              }}
+            >
+              {name && name.trim() ? (
+                <Text className={styles.streamViewText}>{name}</Text>
+              ) : (
+                <Text className={styles.emptyStreamViewText}>
+                  <FormattedMessage id="connectorBuilder.emptyName" />
+                </Text>
+              )}
+            </ViewSelectButton>
+          ))}
+        </div>
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="md">
         <DownloadYamlButton yamlIsValid yaml={yamlManifest} />
-        {publishWorkflowEnabled && <PublishButton />}
+        <PublishButton />
       </FlexContainer>
-      <Text size="sm" color="grey" centered>
+      <Text size="sm" color="grey" align="center">
         <FormattedMessage
           id="connectorBuilder.cdkVersion"
           values={{

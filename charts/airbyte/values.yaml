@@ -286,7 +286,7 @@ webapp:
   ##  webapp.api.url The webapp API url.
   api:
     url: /api/v1/
-  connectorBuilderServer:
+  connector-builder-server:
     url: /connector-builder-api
 
   ##  webapp.fullstory.enabled Whether or not to enable fullstory
@@ -826,9 +826,6 @@ worker:
 
   maxNotifyWorkers: 5
 
-  strictComparisonNormalizationTag: "strict_comparison2"
-  strictComparisonNormalizationWorkspaces: ""
-
 ## @section Metrics parameters
 metrics:
   enabled: false
@@ -1222,6 +1219,11 @@ temporal:
 ##
 postgresql:
   enabled: true
+
+  ## image.repository Repository for airbyte-db statefulset
+  image:
+    repository: airbyte/db
+
   postgresqlUsername: airbyte
   postgresqlPassword: airbyte
   postgresqlDatabase: db-airbyte
@@ -1262,6 +1264,13 @@ externalDatabase:
 ##  minio.secretKey.password Minio Secret Key
 minio:
   enabled: true
+
+  ## image.repository Minio image used by Minio helm chart
+  ## image.tag Minio tag image
+  image:
+    repository: minio/minio
+    tag: latest
+
   auth:
     rootUser: minio
     rootPassword: minio123
@@ -1451,7 +1460,44 @@ cron:
   ##   DATABASE_HOST: airbyte-db
   ##   DATABASE_PORT: 5432
   env_vars: {}
-connectorBuilderServer:
+
+connector-builder-server:
   enabled: true
+  ##  connector-builder-server.replicaCount Number of connector-builder-server replicas
+  replicaCount: 1
+
+  ##  connector-builder-server.image.repository The repository to use for the airbyte connector-builder-server image.
+  ##  connector-builder-server.image.pullPolicy the pull policy to use for the airbyte connector-builder-server image
+  ##  connector-builder-server.image.tag The airbyte connector-builder-server image tag. Defaults to the chart's AppVersion
+  image:
+    repository: airbyte/connector-atelier-server
+    pullPolicy: IfNotPresent
+
+  ## connector-builder-server resource requests and limits
+  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ## We usually recommend not to specify default resources and to leave this as a conscious
+  ## choice for the user. This also increases chances charts run on environments with little
+  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ##  connector-builder-server.resources.limits [object] The resources limits for the connector-builder-server container
+  ##  connector-builder-server.resources.requests [object] The requested resources for the connector-builder-server container
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 200m
+    ##    memory: 1Gi
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    memory: 256Mi
+    ##    cpu: 250m
+    requests: {}
+
+
+  ##  connector-builder-server.log.level The log level to log at.
+  log:
+    level: "INFO"
+
+  env_vars: {}
   service:
-    port: 8003
+    port: 80

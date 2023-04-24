@@ -13,10 +13,9 @@ import { LoadingPage } from "components";
 import { Markdown } from "components/ui/Markdown";
 import { StepsMenu } from "components/ui/StepsMenu";
 
-import { useConfig } from "config";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useExperiment } from "hooks/services/Experiment";
-import { useDocumentation } from "hooks/services/useDocumentation";
+import { EMBEDDED_DOCS_PATH, useDocumentation } from "hooks/services/useDocumentation";
 import { isCloudApp } from "utils/app";
 import { links } from "utils/links";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
@@ -34,10 +33,14 @@ type TabsType = "setupGuide" | "schema" | "erd";
 
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
-  const config = useConfig();
   const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
 
-  const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false);
+  const sourceType =
+    selectedConnectorDefinition &&
+    "sourceType" in selectedConnectorDefinition &&
+    selectedConnectorDefinition.sourceType;
+
+  const showRequestSchemaButton = useExperiment("connector.showRequestSchemabutton", false) && sourceType === "api";
   const [isSchemaRequested, setIsSchemaRequested] = useState(false);
   const [isERDRequested, setIsERDRequested] = useState(false);
 
@@ -49,7 +52,7 @@ export const DocumentationPanel: React.FC = () => {
       if (url.path?.startsWith("../../")) {
         if (element.tagName === "img") {
           // In images replace relative URLs with links to our bundled assets
-          return url.path.replace("../../", `${config.integrationUrl}/`);
+          return url.path.replace("../../", `${EMBEDDED_DOCS_PATH}/`);
         }
         // In links replace with a link to the external documentation instead
         // The external path is the markdown URL without the "../../" prefix and the .md extension
@@ -59,7 +62,7 @@ export const DocumentationPanel: React.FC = () => {
       return url.href;
     };
     return [[urls, sanitizeLinks], [rehypeSlug]];
-  }, [config.integrationUrl]);
+  }, []);
 
   const location = useLocation();
 

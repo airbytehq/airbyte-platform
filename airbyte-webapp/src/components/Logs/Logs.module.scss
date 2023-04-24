@@ -16,7 +16,8 @@
   color: colors.$dark-blue;
 
   &:hover {
-    background: colors.$grey-200;
+    // set important to override default styles in all situations
+    background: colors.$grey-200 !important;
   }
 
   & > a {
@@ -27,5 +28,6 @@
 }
 
 .highlightLogLine {
-  background: colors.$grey-300;
+  // set important to override default styles in all situations
+  background: colors.$grey-300 !important;
 }

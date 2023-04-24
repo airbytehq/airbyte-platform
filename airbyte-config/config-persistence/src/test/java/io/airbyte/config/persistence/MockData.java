@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Data;
 
@@ -108,6 +109,7 @@ public class MockData {
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_2 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_FETCH_EVENT_ID_3 = UUID.randomUUID();
   public static final long DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES = 10800;
+  public static final Supplier<Long> MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER = () -> DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES;
 
   public static final String MOCK_SERVICE_ACCOUNT_1 = "{\n"
       + "  \"type\" : \"service_account\",\n"
@@ -755,7 +757,7 @@ public class MockData {
           .withDescription("a description")
           .withManifest(new ObjectMapper().readTree("{\"manifest\": \"manifest\"}"))
           .withSpec(new ObjectMapper().readTree("{\"spec\": \"spec\"}"));
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }
@@ -766,7 +768,7 @@ public class MockData {
           .withActorDefinitionId(UUID.randomUUID())
           .withJsonToInject(new ObjectMapper().readTree("{\"json_to_inject\": \"a json value\"}"))
           .withInjectionPath("an_injection_path");
-    } catch (JsonProcessingException e) {
+    } catch (final JsonProcessingException e) {
       throw new RuntimeException(e);
     }
   }

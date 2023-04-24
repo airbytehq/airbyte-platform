@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useAsyncFn, useEffectOnce, useEvent } from "react-use";
 
-import { ToastType } from "components/ui/Toast";
-
 import { useConfig } from "config";
 import { ConnectorDefinition, ConnectorDefinitionSpecification, ConnectorSpecification } from "core/domain/connector";
 import { DestinationAuthService } from "core/domain/connector/DestinationAuthService";
@@ -26,6 +24,8 @@ import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMi
 import { useQuery } from "../useQuery";
 
 let windowObjectReference: Window | null = null; // global variable
+
+const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}`;
 
 function openWindow(url: string): void {
   if (windowObjectReference == null || windowObjectReference.closed) {
@@ -61,7 +61,7 @@ export function useConnectorAuth(): {
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
   const { workspaceId } = useCurrentWorkspace();
-  const { apiUrl, oauthRedirectUrl } = useConfig();
+  const { apiUrl } = useConfig();
   const notificationService = useNotificationService();
   const { connectorId } = useConnectorForm();
 
@@ -90,7 +90,7 @@ export function useConnectorAuth(): {
           const payload: SourceOauthConsentRequest = {
             workspaceId,
             sourceDefinitionId: ConnectorSpecification.id(connector),
-            redirectUrl: `${oauthRedirectUrl}/auth_flow`,
+            redirectUrl: `${OAUTH_REDIRECT_URL}/auth_flow`,
             oAuthInputConfiguration,
             sourceId: connectorId,
           };
@@ -101,7 +101,7 @@ export function useConnectorAuth(): {
         const payload: DestinationOauthConsentRequest = {
           workspaceId,
           destinationDefinitionId: ConnectorSpecification.id(connector),
-          redirectUrl: `${oauthRedirectUrl}/auth_flow`,
+          redirectUrl: `${OAUTH_REDIRECT_URL}/auth_flow`,
           oAuthInputConfiguration,
           destinationId: connectorId,
         };
@@ -128,7 +128,7 @@ export function useConnectorAuth(): {
             notificationService.registerNotification({
               id: "oauthConnector.credentialsMissing",
               text: formatMessage({ id: "connector.oauthCredentialsMissing" }),
-              type: ToastType.ERROR,
+              type: "error",
             });
           }
         }
@@ -198,7 +198,7 @@ export function useRunOauthFlow({
         registerNotification({
           id: OAUTH_ERROR_ID,
           text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: e.message }} />,
-          type: ToastType.ERROR,
+          type: "error",
         });
         return false;
       }

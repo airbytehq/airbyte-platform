@@ -4,7 +4,7 @@
 title: StandardSyncInput
 description: job sync config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - sourceId
   - sourceConfiguration
@@ -76,5 +76,9 @@ properties:
     format: uuid
   commitStateAsap:
     description: whether we want to commit states during the replication activity, defaults to false
+    type: boolean
+    default: false
+  commitStatsAsap:
+    description: whether we want to commit stats during the replication activity, defaults to false
     type: boolean
     default: false

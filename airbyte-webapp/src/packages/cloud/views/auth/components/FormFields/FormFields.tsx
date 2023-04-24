@@ -70,6 +70,7 @@ export const EmailField: React.FC<{ label?: React.ReactNode }> = ({ label }) => 
           type="text"
           error={Boolean(meta.error) && meta.touched}
           message={meta.touched && meta.error && formatMessage({ id: meta.error })}
+          data-testid="input.email"
         />
       )}
     </Field>
@@ -91,6 +92,7 @@ export const PasswordField: React.FC<{ label?: React.ReactNode }> = ({ label }) 
             })}
             type="password"
             error={Boolean(meta.error) && meta.touched}
+            data-testid="input.password"
           />
 
           <FlexContainer gap="sm" alignItems="center" className={styles.passwordCheck__container}>

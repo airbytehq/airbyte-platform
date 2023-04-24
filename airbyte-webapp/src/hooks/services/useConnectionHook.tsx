@@ -2,15 +2,13 @@ import { useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useMutation, useQueryClient } from "react-query";
 
-import { ToastType } from "components/ui/Toast";
-
 import { Action, Namespace } from "core/analytics";
 import { getFrequencyFromScheduleData } from "core/analytics/utils";
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
 import { ConnectionService } from "core/domain/connection/ConnectionService";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
+import { useCurrentWorkspaceId, useInvalidateWorkspaceStateQuery } from "services/workspaces/WorkspacesService";
 
 import { useAnalyticsService } from "./Analytics";
 import { useAppMonitoringService } from "./AppMonitoringService";
@@ -108,7 +106,7 @@ export const useSyncConnection = () => {
         registerNotification({
           id: `tables.startSyncError.${error.message}`,
           text: `${formatMessage({ id: "connection.startSyncError" })}: ${error.message}`,
-          type: ToastType.ERROR,
+          type: "error",
         });
       },
       onSuccess: async () => {
@@ -142,6 +140,7 @@ const useCreateConnection = () => {
   const service = useWebConnectionService();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
+  const invalidateWorkspaceSummary = useInvalidateWorkspaceStateQuery();
 
   return useMutation(
     async ({
@@ -183,6 +182,7 @@ const useCreateConnection = () => {
         queryClient.setQueryData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
           connections: [data, ...(lst?.connections ?? [])],
         }));
+        invalidateWorkspaceSummary();
       },
     }
   );
@@ -254,7 +254,7 @@ export const useEnableConnection = () => {
         registerNotification({
           id: `tables.updateFailed.${error.message}`,
           text: `${formatMessage({ id: "connection.updateFailed" })}: ${error.message}`,
-          type: ToastType.ERROR,
+          type: "error",
         });
       },
       onSuccess: (connection) => {

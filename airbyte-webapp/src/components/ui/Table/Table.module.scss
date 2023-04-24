@@ -50,8 +50,8 @@ $border-radius: variables.$border-radius-lg;
     font-weight: 400;
   }
 
-  &--transparent {
-    background-color: transparent;
+  &--white {
+    background-color: colors.$white;
   }
 
   &:first-child {
@@ -70,15 +70,11 @@ $border-radius: variables.$border-radius-lg;
 
 // --------- <tr/> ---------
 .tr {
-  background: colors.$white;
+  background-color: colors.$white;
   cursor: auto;
 
   &--clickable {
     cursor: pointer;
-  }
-
-  &--transparent {
-    background-color: transparent;
   }
 
   &:hover {

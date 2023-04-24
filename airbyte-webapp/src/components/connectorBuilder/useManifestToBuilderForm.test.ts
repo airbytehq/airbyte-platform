@@ -371,19 +371,7 @@ describe("Conversion successfully results in", () => {
       ...baseManifest,
       streams: [
         merge({}, stream1, {
-          transformations: [
-            {
-              type: "AddFields",
-              fields: ["id"],
-            },
-          ],
           retriever: {
-            requester: {
-              error_handler: {
-                type: "DefaultErrorHandler",
-                max_retries: 3,
-              },
-            },
             record_selector: {
               record_filter: {
                 type: "RecordFilter",
@@ -396,11 +384,7 @@ describe("Conversion successfully results in", () => {
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     expect(formValues.streams[0].unsupportedFields).toEqual({
-      transformations: manifest.streams[0].transformations,
       retriever: {
-        requester: {
-          error_handler: manifest.streams[0].retriever.requester.error_handler,
-        },
         record_selector: {
           record_filter: manifest.streams[0].retriever.record_selector.record_filter,
         },
@@ -425,7 +409,7 @@ describe("Conversion successfully results in", () => {
                   key2: "val2",
                 },
                 token_refresh_endpoint: "https://api.com/refresh_token",
-                grant_type: "client_credentials",
+                grant_type: "refresh_token",
               },
             },
           },
@@ -443,7 +427,7 @@ describe("Conversion successfully results in", () => {
         ["key2", "val2"],
       ],
       token_refresh_endpoint: "https://api.com/refresh_token",
-      grant_type: "client_credentials",
+      grant_type: "refresh_token",
     });
   });
 });

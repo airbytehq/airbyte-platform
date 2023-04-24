@@ -1,4 +1,4 @@
-import { faDownload, faWarning } from "@fortawesome/free-solid-svg-icons";
+import { faWarning } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useField } from "formik";
 import snakeCase from "lodash/snakeCase";
@@ -58,7 +58,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlDownload" />;
   }
 
-  if (editorView === "ui" && hasErrors(true)) {
+  if (editorView === "ui" && hasErrors(false)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsDownload" />;
   }
@@ -66,9 +66,10 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
   const downloadButton = (
     <Button
       full
+      variant="secondary"
       onClick={handleClick}
       disabled={buttonDisabled}
-      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : <FontAwesomeIcon icon={faDownload} />}
+      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
     >
       <FormattedMessage id="connectorBuilder.downloadYaml" />
     </Button>

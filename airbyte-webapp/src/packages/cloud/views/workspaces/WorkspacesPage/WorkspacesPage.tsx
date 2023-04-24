@@ -21,7 +21,7 @@ const WorkspacesPage: React.FC = () => {
       <Heading as="h1" size="lg" centered>
         <FormattedMessage id="workspaces.title" />
       </Heading>
-      <Text centered className={styles.subtitle}>
+      <Text align="center" className={styles.subtitle}>
         <FormattedMessage id="workspaces.subtitle" />
       </Text>
       <WorkspacesList />

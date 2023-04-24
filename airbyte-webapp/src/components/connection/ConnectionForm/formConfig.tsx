@@ -4,11 +4,11 @@ import * as yup from "yup";
 
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 
-import { frequencyConfig } from "config/frequencyConfig";
 import { SyncSchema } from "core/domain/catalog";
 import {
   isDbtTransformation,
   isNormalizationTransformation,
+  isWebhookTransformation,
   NormalizationType,
 } from "core/domain/connection/operation";
 import { SOURCE_NAMESPACE_TAG } from "core/domain/connector/source";
@@ -28,7 +28,6 @@ import {
   SyncMode,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
-import { useNewTableDesignExperiment } from "hooks/connection/useNewTableDesignExperiment";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
@@ -37,6 +36,7 @@ import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "utils/cron";
 
 import calculateInitialCatalog from "./calculateInitialCatalog";
+import { frequencyConfig } from "./frequencyConfig";
 
 export interface FormikConnectionFormValues {
   name?: string;
@@ -87,8 +87,7 @@ export function useDefaultTransformation(): OperationCreate {
 const createConnectionValidationSchema = (
   mode: ConnectionFormMode,
   allowSubOneHourCronExpressions: boolean,
-  allowAutoDetectSchema: boolean,
-  isNewTableDesignEnabled: boolean
+  allowAutoDetectSchema: boolean
 ) => {
   return yup
     .object({
@@ -173,7 +172,7 @@ const createConnectionValidationSchema = (
                     }
 
                     const errors: yup.ValidationError[] = [];
-                    const pathRoot = isNewTableDesignEnabled ? "syncCatalog" : "schema";
+                    const pathRoot = "syncCatalog";
 
                     // it's possible that primaryKey array is always present
                     // however yup couldn't determine type correctly even with .required() call
@@ -204,11 +203,7 @@ const createConnectionValidationSchema = (
                       );
                     }
 
-                    return errors.length > 0
-                      ? isNewTableDesignEnabled
-                        ? new yup.ValidationError(errors)
-                        : errors[0]
-                      : true;
+                    return errors.length > 0 ? new yup.ValidationError(errors) : true;
                   },
                 }),
             })
@@ -230,17 +225,10 @@ interface CreateConnectionValidationSchemaArgs {
 export const useConnectionValidationSchema = ({ mode }: CreateConnectionValidationSchemaArgs) => {
   const allowSubOneHourCronExpressions = useFeature(FeatureItem.AllowSyncSubOneHourCronExpressions);
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const isNewTableDesignEnabled = useNewTableDesignExperiment();
 
   return useMemo(
-    () =>
-      createConnectionValidationSchema(
-        mode,
-        allowSubOneHourCronExpressions,
-        allowAutoDetectSchema,
-        isNewTableDesignEnabled
-      ),
-    [allowAutoDetectSchema, allowSubOneHourCronExpressions, isNewTableDesignEnabled, mode]
+    () => createConnectionValidationSchema(mode, allowSubOneHourCronExpressions, allowAutoDetectSchema),
+    [allowAutoDetectSchema, allowSubOneHourCronExpressions, mode]
   );
 };
 
@@ -267,30 +255,34 @@ export function mapFormPropsToOperation(
 ): OperationCreate[] {
   const newOperations: OperationCreate[] = [];
 
-  if (values.normalization) {
-    if (values.normalization !== NormalizationType.raw) {
-      const normalizationOperation = initialOperations.find(isNormalizationTransformation);
+  if (values.normalization && values.normalization !== NormalizationType.raw) {
+    const normalizationOperation = initialOperations.find(isNormalizationTransformation);
 
-      if (normalizationOperation) {
-        newOperations.push(normalizationOperation);
-      } else {
-        newOperations.push({
-          name: "Normalization",
-          workspaceId,
-          operatorConfiguration: {
-            operatorType: OperatorType.normalization,
-            normalization: {
-              option: values.normalization,
-            },
+    if (normalizationOperation) {
+      newOperations.push(normalizationOperation);
+    } else {
+      newOperations.push({
+        name: "Normalization",
+        workspaceId,
+        operatorConfiguration: {
+          operatorType: OperatorType.normalization,
+          normalization: {
+            option: values.normalization,
           },
-        });
-      }
+        },
+      });
     }
   }
 
   if (values.transformations) {
     newOperations.push(...values.transformations);
   }
+
+  // webhook operations (e.g. dbt Cloud jobs in the Airbyte Cloud integration) are managed
+  // by separate sub-forms; they should not be ignored (which would cause accidental
+  // deletions), but managing them should not be combined with this (already-confusing)
+  // codepath, either.
+  newOperations.push(...initialOperations.filter(isWebhookTransformation));
 
   return newOperations;
 }

@@ -52,6 +52,11 @@ dependencies {
     testImplementation libs.docker.java
     testImplementation libs.docker.java.transport.httpclient5
     testImplementation libs.reactor.test
+    testImplementation libs.bundles.junit
+}
+
+test {
+    maxHeapSize = '2g'
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

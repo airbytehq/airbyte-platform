@@ -1,14 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from "react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
-import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionIdBody } from "core/request/AirbyteClient";
+import {
+  ConnectorBuilderProjectIdWithWorkspaceId,
+  DeclarativeManifestVersionRead,
+  ConnectorBuilderProjectRead,
+  SourceDefinitionIdBody,
+} from "core/request/AirbyteClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
-import { isCloudApp } from "utils/app";
 
 import { SCOPE_WORKSPACE } from "../Scope";
 
@@ -43,21 +47,18 @@ export const useListProjects = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(connectorBuilderProjectsKeys.list(workspaceId), async () =>
-    // FIXME this is a temporary solution to avoid calling an API that's not forwarded in cloud environments yet
-    isCloudApp()
-      ? []
-      : (await service.list(workspaceId)).projects.map(
-          (projectDetails): BuilderProject => ({
-            name: projectDetails.name,
-            version:
-              typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
-                ? projectDetails.activeDeclarativeManifestVersion
-                : "draft",
-            sourceDefinitionId: projectDetails.sourceDefinitionId,
-            id: projectDetails.builderProjectId,
-            hasDraft: projectDetails.hasDraft,
-          })
-        )
+    (await service.list(workspaceId)).projects.map(
+      (projectDetails): BuilderProject => ({
+        name: projectDetails.name,
+        version:
+          typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
+            ? projectDetails.activeDeclarativeManifestVersion
+            : "draft",
+        sourceDefinitionId: projectDetails.sourceDefinitionId,
+        id: projectDetails.builderProjectId,
+        hasDraft: projectDetails.hasDraft,
+      })
+    )
   );
 };
 
@@ -69,7 +70,9 @@ export const useListVersions = (project?: BuilderProject) => {
     if (!project?.sourceDefinitionId) {
       return [];
     }
-    return (await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)).manifestVersions;
+    return (
+      await service.getConnectorBuilderProjectVersions(workspaceId, project.sourceDefinitionId)
+    ).manifestVersions.sort((v1, v2) => v2.version - v1.version);
   });
 };
 
@@ -181,14 +184,128 @@ export const useUpdateProject = (projectId: string) => {
 export interface BuilderProjectPublishBody {
   name: string;
   projectId: string;
+  description: string;
   manifest: DeclarativeComponentSchema;
 }
 
+function updateProjectQueryCache(
+  queryClient: QueryClient,
+  projectId: string,
+  sourceDefinitionId: string,
+  version: number
+) {
+  if (!queryClient.getQueryData(connectorBuilderProjectsKeys.detail(projectId))) {
+    return;
+  }
+  queryClient.setQueryData(
+    connectorBuilderProjectsKeys.detail(projectId),
+    (project: ConnectorBuilderProjectRead | undefined) => {
+      if (!project) {
+        throw new Error("invariant: current project not in cache");
+      }
+      return {
+        ...project,
+        builderProject: {
+          ...project.builderProject,
+          sourceDefinitionId,
+          activeDeclarativeManifestVersion: version,
+        },
+      };
+    }
+  );
+}
+
+const FIRST_VERSION = 1;
+
 export const usePublishProject = () => {
   const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(({ name, projectId, manifest }) =>
-    service.publishBuilderProject(workspaceId, projectId, name, manifest)
+  return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
+    ({ name, projectId, description, manifest }) =>
+      service.publishBuilderProject(workspaceId, projectId, name, description, manifest, FIRST_VERSION),
+    {
+      onSuccess(data, context) {
+        queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        updateProjectQueryCache(queryClient, context.projectId, data.sourceDefinitionId, FIRST_VERSION);
+      },
+    }
+  );
+};
+
+export interface NewVersionBody {
+  sourceDefinitionId: string;
+  projectId: string;
+  description: string;
+  version: number;
+  useAsActiveVersion: boolean;
+  manifest: DeclarativeComponentSchema;
+}
+
+export const useReleaseNewVersion = () => {
+  const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<void, Error, NewVersionBody>(
+    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest }) =>
+      service.releaseNewVersion(workspaceId, sourceDefinitionId, description, version, useAsActiveVersion, manifest),
+    {
+      onSuccess(_data, context) {
+        queryClient.removeQueries(connectorBuilderProjectsKeys.versions(context.projectId));
+        if (context.useAsActiveVersion) {
+          updateProjectQueryCache(queryClient, context.projectId, context.sourceDefinitionId, context.version);
+        }
+      },
+    }
+  );
+};
+
+export interface ChangeVersionContext {
+  sourceDefinitionId: string;
+  builderProjectId: string;
+  version: number;
+}
+
+export const useChangeVersion = () => {
+  const service = useConnectorBuilderProjectsService();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<void, Error, ChangeVersionContext>(
+    async (context) => {
+      return service.changeVersion(workspaceId, context.sourceDefinitionId, context.version);
+    },
+    {
+      onSuccess: (_data, { sourceDefinitionId, version: newVersion, builderProjectId }) => {
+        updateProjectQueryCache(queryClient, builderProjectId, sourceDefinitionId, newVersion);
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.versions(builderProjectId),
+          (versions: DeclarativeManifestVersionRead[] | undefined) => {
+            if (!versions) {
+              return [];
+            }
+            return versions.map((version) =>
+              version.version === newVersion ? { ...version, isActive: true } : { ...version, isActive: false }
+            );
+          }
+        );
+        queryClient.setQueryData(
+          connectorBuilderProjectsKeys.list(workspaceId),
+          (list: BuilderProject[] | undefined) => {
+            if (!list) {
+              return [];
+            }
+            return list.map((project) => {
+              if (project.sourceDefinitionId === sourceDefinitionId) {
+                return { ...project, version: newVersion };
+              }
+              return project;
+            });
+          }
+        );
+      },
+    }
   );
 };

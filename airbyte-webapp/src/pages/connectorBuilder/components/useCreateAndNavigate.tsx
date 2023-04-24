@@ -2,8 +2,6 @@ import { useCallback, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { ToastType } from "components/ui/Toast";
-
 import { useNotificationService } from "hooks/services/Notification";
 import { CreateProjectContext, useCreateProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
@@ -38,7 +36,7 @@ export const useCreateAndNavigate = () => {
               }}
             />
           ),
-          type: ToastType.ERROR,
+          type: "error",
         });
       }
     },

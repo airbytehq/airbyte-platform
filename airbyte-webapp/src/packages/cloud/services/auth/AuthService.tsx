@@ -5,8 +5,6 @@ import { useQueryClient } from "react-query";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
 
-import { ToastType } from "components/ui/Toast";
-
 import { Action, Namespace } from "core/analytics";
 import { isCommonRequestError } from "core/request/CommonRequestError";
 import { useAnalyticsService } from "hooks/services/Analytics";
@@ -256,7 +254,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 text: formatMessage({
                   id: FirebaseAuthMessageId.NetworkFailure,
                 }),
-                type: ToastType.ERROR,
+                type: "error",
               });
               break;
             case AuthErrorCodes.TOO_MANY_ATTEMPTS_TRY_LATER:
@@ -265,7 +263,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 text: formatMessage({
                   id: FirebaseAuthMessageId.TooManyRequests,
                 }),
-                type: ToastType.WARNING,
+                type: "warning",
               });
               break;
             default:
@@ -274,7 +272,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
                 text: formatMessage({
                   id: FirebaseAuthMessageId.DefaultError,
                 }),
-                type: ToastType.ERROR,
+                type: "error",
               });
           }
         });

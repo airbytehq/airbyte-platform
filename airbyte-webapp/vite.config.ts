@@ -2,39 +2,29 @@ import path from "path";
 
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
-import { loadEnv, UserConfig } from "vite";
+import { UserConfig } from "vite";
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import svgrPlugin from "vite-plugin-svgr";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 
 import { buildInfo, docMiddleware } from "./packages/vite-plugins";
+import { environmentVariables } from "./packages/vite-plugins/environment-variables";
 import { experimentOverwrites } from "./packages/vite-plugins/experiment-overwrites";
 
-export default defineConfig(({ mode }) => {
-  // Load variables from all .env files
-  process.env = {
-    ...process.env,
-    ...loadEnv(mode, __dirname, ""),
-  };
-
-  // Environment variables that should be available in the frontend
-  const frontendEnvVariables = loadEnv(mode, __dirname, ["REACT_APP_"]);
-  // Create an object of defines that will shim all required process.env variables.
-  const processEnv = {
-    "process.env.NODE_ENV": JSON.stringify(mode),
-    ...Object.fromEntries(
-      Object.entries(frontendEnvVariables).map(([key, value]) => [`process.env.${key}`, JSON.stringify(value)])
-    ),
-  };
-
+export default defineConfig(() => {
   const config: UserConfig = {
     plugins: [
+      environmentVariables(),
       basicSsl(),
       react(),
       buildInfo(),
       viteTsconfigPaths(),
-      svgrPlugin(),
+      svgrPlugin({
+        svgrOptions: {
+          titleProp: true,
+        },
+      }),
       checker({
         // Enable checks while building the app (not just in dev mode)
         enableBuild: true,
@@ -69,9 +59,6 @@ export default defineConfig(({ mode }) => {
       headers: {
         "Content-Security-Policy": "script-src * 'unsafe-inline'; worker-src self blob:;",
       },
-    },
-    define: {
-      ...processEnv,
     },
     css: {
       modules: {

@@ -1,78 +1,154 @@
-import { Field, FieldProps, Form, Formik } from "formik";
+import classNames from "classnames";
+import { Field, FieldProps, Form, Formik, useFormikContext } from "formik";
 import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { LabeledInput } from "components/LabeledInput";
 import { Button } from "components/ui/Button";
+import { SecretTextArea } from "components/ui/SecretTextArea";
 import { Text } from "components/ui/Text";
 
-import { useSubmitDbtCloudIntegrationConfig } from "packages/cloud/services/dbtCloud";
+import { useNotificationService } from "hooks/services/Notification";
+import { useDbtCloudServiceToken } from "packages/cloud/services/dbtCloud";
 import { SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
 import { links } from "utils/links";
 
 import styles from "./DbtCloudSettingsView.module.scss";
+interface ServiceTokenFormValues {
+  serviceToken: string;
+}
+
+const cleanedErrorMessage = (e: Error): string => e.message.replace("Internal Server Error: ", "");
+// a centrally-defined key for accessing the token value within formik objects
 
 export const DbtCloudSettingsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { mutate: submitDbtCloudIntegrationConfig, isLoading } = useSubmitDbtCloudIntegrationConfig();
+  const { hasExistingToken, saveToken, isSavingToken, deleteToken, isDeletingToken } = useDbtCloudServiceToken();
   const [hasValidationError, setHasValidationError] = useState(false);
-  const [validationMessage, setValidationMessage] = useState("");
+  const { registerNotification } = useNotificationService();
+
+  const ButtonGroup = () => {
+    const { resetForm, values } = useFormikContext<ServiceTokenFormValues>();
+
+    return (
+      <div className={classNames(styles.controlGroup, styles.formButtons)}>
+        {hasExistingToken && (
+          <Button
+            variant="danger"
+            className={classNames(styles.button, styles.deleteButton)}
+            onClick={() => {
+              deleteToken(void 0, {
+                onError: (e) => {
+                  registerNotification({
+                    id: "dbtCloud/delete-token-failure",
+                    text: cleanedErrorMessage(e),
+                    type: "error",
+                  });
+                },
+                onSuccess: () => {
+                  registerNotification({
+                    id: "dbtCloud/delete-token-success",
+                    text: formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.actions.delete.success" }),
+                    type: "success",
+                  });
+                },
+              });
+            }}
+            isLoading={isDeletingToken}
+          >
+            <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.delete" />
+          </Button>
+        )}
+
+        <div className={styles.editActionButtons}>
+          <Button
+            variant="secondary"
+            type="button"
+            disabled={!values.serviceToken}
+            onClick={() => {
+              resetForm();
+            }}
+          >
+            <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.cancel" />
+          </Button>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={!values.serviceToken}
+            className={styles.button}
+            isLoading={isSavingToken}
+          >
+            <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.submit" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const ServiceTokenForm = () => (
+    <Formik
+      initialValues={{
+        serviceToken: "",
+      }}
+      onSubmit={({ serviceToken }, { resetForm }) => {
+        setHasValidationError(false);
+        return saveToken(serviceToken, {
+          onError: (e) => {
+            setHasValidationError(true);
+            registerNotification({
+              id: "dbtCloud/save-token-failure",
+              text: cleanedErrorMessage(e),
+              type: "error",
+            });
+          },
+          onSuccess: () => {
+            registerNotification({
+              id: "dbtCloud/save-token-success",
+              text: formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.actions.submit.success" }),
+              type: "success",
+            });
+            resetForm();
+          },
+        });
+      }}
+    >
+      <Form>
+        <label htmlFor="serviceToken">
+          <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.form.serviceTokenLabel" />
+          <Field name="serviceToken">
+            {({ field }: FieldProps<string>) => (
+              <SecretTextArea
+                {...field}
+                hiddenMessage={formatMessage({
+                  id: "settings.integrationSettings.dbtCloudSettings.form.serviceTokenInputHidden",
+                })}
+                error={hasValidationError}
+                leftJustified
+                hiddenWhenEmpty
+              />
+            )}
+          </Field>
+        </label>
+        <ButtonGroup />
+      </Form>
+    </Formik>
+  );
+
   return (
     <SettingsCard title={<FormattedMessage id="settings.integrationSettings.dbtCloudSettings" />}>
       <div className={styles.cardContent}>
-        <Formik
-          initialValues={{
-            serviceToken: "",
-          }}
-          onSubmit={({ serviceToken }, { resetForm }) => {
-            setHasValidationError(false);
-            setValidationMessage("");
-            return submitDbtCloudIntegrationConfig(serviceToken, {
-              onError: (e) => {
-                setHasValidationError(true);
-
-                setValidationMessage(e.message.replace("Internal Server Error: ", ""));
-              },
-              onSuccess: () => {
-                setValidationMessage(
-                  formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.form.success" })
-                );
-                resetForm();
-              },
-            });
-          }}
-        >
-          <Form>
-            <Text className={styles.description}>
-              <FormattedMessage
-                id="settings.integrationSettings.dbtCloudSettings.form.description"
-                values={{
-                  lnk: (node: React.ReactNode) => (
-                    <a href={links.dbtCloudIntegrationDocs} target="_blank" rel="noreferrer">
-                      {node}
-                    </a>
-                  ),
-                }}
-              />
-            </Text>
-            <Field name="serviceToken">
-              {({ field }: FieldProps<string>) => (
-                <LabeledInput
-                  {...field}
-                  label={<FormattedMessage id="settings.integrationSettings.dbtCloudSettings.form.serviceToken" />}
-                  error={hasValidationError}
-                  message={validationMessage}
-                  type="text"
-                />
-              )}
-            </Field>
-            <div className={styles.controlGroup}>
-              <Button variant="primary" type="submit" className={styles.button} isLoading={isLoading}>
-                <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.form.submit" />
-              </Button>
-            </div>
-          </Form>
-        </Formik>
+        <Text className={styles.description}>
+          <FormattedMessage
+            id="settings.integrationSettings.dbtCloudSettings.form.description"
+            values={{
+              lnk: (node: React.ReactNode) => (
+                <a href={links.dbtCloudIntegrationDocs} target="_blank" rel="noreferrer">
+                  {node}
+                </a>
+              ),
+            }}
+          />
+        </Text>
+        <ServiceTokenForm />
       </div>
     </SettingsCard>
   );

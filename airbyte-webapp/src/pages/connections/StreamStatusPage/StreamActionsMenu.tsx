@@ -34,17 +34,18 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
     },
     {
       displayName: formatMessage({ id: "connection.stream.actions.openDetails" }),
+      value: "openDetails",
     },
   ];
 
-  const onOptionClick = async (option: DropdownMenuOptionType) => {
-    if (option.value === "showInReplicationTable") {
+  const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
+    if (value === "showInReplicationTable" || value === "openDetails") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
-        state: { namespace: stream?.namespace, streamName: stream?.name },
+        state: { namespace: stream?.namespace, streamName: stream?.name, action: value },
       });
     }
 
-    if (option.value === "resetThisStream" && stream) {
+    if (value === "resetThisStream" && stream) {
       await resetStreams([{ streamNamespace: stream?.namespace ?? "", streamName: stream?.name }]);
     }
   };

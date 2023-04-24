@@ -24,8 +24,13 @@ const WorkspacesList: React.FC = () => {
 
   return (
     <Content>
-      {workspaces.map((workspace) => (
-        <WorkspaceItem key={workspace.workspaceId} id={workspace.workspaceId} onClick={selectWorkspace}>
+      {workspaces.map((workspace, index) => (
+        <WorkspaceItem
+          key={workspace.workspaceId}
+          id={workspace.workspaceId}
+          onClick={selectWorkspace}
+          data-testid={`select-workspace-${index}`}
+        >
           {workspace.name}
         </WorkspaceItem>
       ))}

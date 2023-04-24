@@ -1,6 +1,7 @@
 import {
   enterDestinationPath,
   selectServiceType,
+  enterApiKey,
   enterName,
   enterHost,
   enterPort,
@@ -40,6 +41,15 @@ export const fillPokeAPIForm = (name: string, pokeName: string) => {
 
   enterName(name);
   enterPokemonName(pokeName);
+};
+
+export const fillDummyApiForm = (name: string, apiKey: string) => {
+  cy.intercept("/api/v1/source_definition_specifications/get").as("getSourceSpecifications");
+
+  selectServiceType(name);
+
+  enterName(name);
+  enterApiKey(apiKey);
 };
 
 export const fillLocalJsonForm = (name: string, destinationPath: string) => {

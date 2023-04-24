@@ -1,3 +1,4 @@
+import { FormikContextType } from "formik";
 import { Transition } from "history";
 import { dump } from "js-yaml";
 import isEqual from "lodash/isEqual";
@@ -31,7 +32,12 @@ import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import { useListStreams, useReadStream, useResolvedManifest } from "./ConnectorBuilderApiService";
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
-import { BuilderProjectWithManifest, useProject, useUpdateProject } from "./ConnectorBuilderProjectsService";
+import {
+  BuilderProject,
+  BuilderProjectWithManifest,
+  useProject,
+  useUpdateProject,
+} from "./ConnectorBuilderProjectsService";
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -50,6 +56,7 @@ interface FormStateContext {
   savingState: SavingState;
   blockedOnInvalidState: boolean;
   projectId: string;
+  currentProject: BuilderProject;
   setBuilderFormValues: (values: BuilderFormValues, isInvalid: boolean) => void;
   setJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
@@ -70,8 +77,15 @@ interface TestStateContext {
   isFetchingStreamList: boolean;
 }
 
+interface FormManagementStateContext {
+  isTestInputOpen: boolean;
+  setTestInputOpen: (open: boolean) => void;
+}
+
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
 export const ConnectorBuilderTestStateContext = React.createContext<TestStateContext | null>(null);
+export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
+export const ConnectorBuilderMainFormikContext = React.createContext<FormikContextType<BuilderFormValues> | null>(null);
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { projectId } = useParams<{
@@ -83,6 +97,19 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   const { storedEditorView, setStoredEditorView } = useConnectorBuilderLocalStorage();
   const { builderProject, failedInitialFormValueConversion, initialFormValues, updateProject, updateError } =
     useInitializedBuilderProject(projectId);
+
+  const currentProject: BuilderProject = useMemo(
+    () => ({
+      name: builderProject.builderProject.name,
+      version: builderProject.builderProject.activeDeclarativeManifestVersion
+        ? builderProject.builderProject.activeDeclarativeManifestVersion
+        : "draft",
+      id: builderProject.builderProject.builderProjectId,
+      hasDraft: builderProject.builderProject.hasDraft,
+      sourceDefinitionId: builderProject.builderProject.sourceDefinitionId,
+    }),
+    [builderProject.builderProject]
+  );
 
   const [jsonManifest, setJsonManifest] = useState<DeclarativeComponentSchema>(
     (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) || DEFAULT_JSON_MANIFEST_VALUES
@@ -216,6 +243,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     savingState,
     blockedOnInvalidState,
     projectId,
+    currentProject,
     setBuilderFormValues,
     setJsonManifest,
     setYamlIsValid,
@@ -363,7 +391,8 @@ function getSavingState(
 
 export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
-  const { lastValidJsonManifest, selectedView, projectId } = useConnectorBuilderFormState();
+  const { lastValidJsonManifest, selectedView, projectId, editorView, builderFormValues } =
+    useConnectorBuilderFormState();
 
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
@@ -396,9 +425,12 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
     }
   }, [selectedView]);
 
+  const streamName =
+    editorView === "ui" ? builderFormValues.streams[testStreamIndex]?.name : streams[testStreamIndex]?.name;
+
   const streamRead = useReadStream(projectId, {
     manifest,
-    stream: streams[testStreamIndex]?.name,
+    stream: streamName,
     config: testInputWithDefaults,
   });
 
@@ -459,4 +491,35 @@ export const useSelectedPageAndSlice = () => {
   const selectedPage = streamToSelectedPage[selectedStreamName] ?? 0;
 
   return { selectedSlice, selectedPage, setSelectedSlice, setSelectedPage };
+};
+
+export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({
+  children,
+}) => {
+  const [isTestInputOpen, setTestInputOpen] = useState(false);
+
+  const ctx = useMemo(
+    () => ({
+      isTestInputOpen,
+      setTestInputOpen,
+    }),
+    [isTestInputOpen]
+  );
+
+  return (
+    <ConnectorBuilderFormManagementStateContext.Provider value={ctx}>
+      {children}
+    </ConnectorBuilderFormManagementStateContext.Provider>
+  );
+};
+
+export const useConnectorBuilderFormManagementState = (): FormManagementStateContext => {
+  const connectorBuilderState = useContext(ConnectorBuilderFormManagementStateContext);
+  if (!connectorBuilderState) {
+    throw new Error(
+      "useConnectorBuilderFormManagementState must be used within a ConnectorBuilderFormManagementStateProvider."
+    );
+  }
+
+  return connectorBuilderState;
 };

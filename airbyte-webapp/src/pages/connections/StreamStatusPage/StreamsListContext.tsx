@@ -12,7 +12,6 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 
 const useStreamsContextInit = (jobs: JobWithAttemptsRead[]) => {
   const { connection } = useConnectionEditService();
-
   const [searchTerm, setSearchTerm] = useState("");
 
   const streamsWithStatus = useStreamsWithStatus(connection, jobs);
@@ -35,6 +34,7 @@ const useStreamsContextInit = (jobs: JobWithAttemptsRead[]) => {
     setSearchTerm,
     streams,
     filteredStreams,
+    jobs,
   };
 };
 

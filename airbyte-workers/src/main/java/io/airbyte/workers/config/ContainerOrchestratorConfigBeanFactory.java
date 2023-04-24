@@ -38,6 +38,7 @@ public class ContainerOrchestratorConfigBeanFactory {
   private static final String DD_ENV_ENV_VAR = "DD_ENV";
   private static final String DD_SERVICE_ENV_VAR = "DD_SERVICE";
   private static final String DD_VERSION_ENV_VAR = "DD_VERSION";
+  private static final String DD_SUPPORT_CONNECTOR_NAMES_VAR = "CONNECTOR_DATADOG_SUPPORT_NAMES";
   private static final String JAVA_OPTS_ENV_VAR = "JAVA_OPTS";
   private static final String PUBLISH_METRICS_ENV_VAR = "PUBLISH_METRICS";
   private static final String CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR = "CONTROL_PLANE_AUTH_ENDPOINT";
@@ -70,6 +71,7 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${airbyte.metric.client}") final String metricClient,
                                                                            @Value("${datadog.agent.host}") final String dataDogAgentHost,
                                                                            @Value("${datadog.agent.port}") final String dataDogStatsdPort,
+                                                                           @Value("${airbyte.connector.datadog-support-names}") final String datadogSupportConnectors,
                                                                            @Value("${airbyte.metric.should-publish}") final String shouldPublishMetrics,
                                                                            final FeatureFlags featureFlags,
                                                                            @Value("${airbyte.container.orchestrator.java-opts}") final String containerOrchestratorJavaOpts,
@@ -95,14 +97,12 @@ public class ContainerOrchestratorConfigBeanFactory {
     environmentVariables.put(DD_AGENT_HOST_ENV_VAR, dataDogAgentHost);
     environmentVariables.put(DD_SERVICE_ENV_VAR, "airbyte-container-orchestrator");
     environmentVariables.put(DD_DOGSTATSD_PORT_ENV_VAR, dataDogStatsdPort);
+    environmentVariables.put(DD_SUPPORT_CONNECTOR_NAMES_VAR, datadogSupportConnectors);
     environmentVariables.put(PUBLISH_METRICS_ENV_VAR, shouldPublishMetrics);
     environmentVariables.put(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, Boolean.toString(featureFlags.useStreamCapableState()));
     environmentVariables.put(EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, Boolean.toString(featureFlags.autoDetectSchema()));
     environmentVariables.put(EnvVariableFeatureFlags.APPLY_FIELD_SELECTION, Boolean.toString(featureFlags.applyFieldSelection()));
     environmentVariables.put(EnvVariableFeatureFlags.FIELD_SELECTION_WORKSPACES, featureFlags.fieldSelectionWorkspaces());
-    environmentVariables.put(EnvVariableFeatureFlags.STRICT_COMPARISON_NORMALIZATION_WORKSPACES,
-        featureFlags.strictComparisonNormalizationWorkspaces());
-    environmentVariables.put(EnvVariableFeatureFlags.STRICT_COMPARISON_NORMALIZATION_TAG, featureFlags.strictComparisonNormalizationTag());
     environmentVariables.put(JAVA_OPTS_ENV_VAR, containerOrchestratorJavaOpts);
     environmentVariables.put(CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR, controlPlaneAuthEndpoint);
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath);
@@ -111,6 +111,7 @@ public class ContainerOrchestratorConfigBeanFactory {
     final Configs configs = new EnvConfigs();
     environmentVariables.put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient());
     environmentVariables.put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey());
+    environmentVariables.put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint());
     environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, configs.getSocatSidecarKubeCpuLimit());
     environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest());
 

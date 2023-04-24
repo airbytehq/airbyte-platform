@@ -13,12 +13,8 @@
   }
 }
 
-.usageValue {
-  text-align: right;
-
-  &--green {
-    color: colors.$green;
-  }
+.deleted {
+  color: colors.$grey-300;
 }
 
 .cellText {

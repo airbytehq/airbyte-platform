@@ -4,11 +4,11 @@
   "identifiers": {
     "email": "%s"
   },
+  "subject": "%s",
   "message_data": {
     "email_title": "%s",
     "email_body": "%s"
   },
-
   "disable_message_retention": false,
   "send_to_unsubscribed": true,
   "tracked": true,

@@ -3,7 +3,11 @@ import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "reac
 
 import { MissingConfigError, useConfig } from "config";
 import { CloudWorkspacesService } from "packages/cloud/lib/domain/cloudWorkspaces/CloudWorkspacesService";
-import { CloudWorkspace, CloudWorkspaceUsage } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import {
+  CloudWorkspace,
+  CloudWorkspaceUsage,
+  ConsumptionTimeWindow,
+} from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { SCOPE_USER } from "services/Scope";
@@ -16,7 +20,7 @@ export const workspaceKeys = {
   list: (filters: string) => [...workspaceKeys.lists(), { filters }] as const,
   details: () => [...workspaceKeys.all, "detail"] as const,
   detail: (id: number | string) => [...workspaceKeys.details(), id] as const,
-  usage: (id: number | string) => [...workspaceKeys.details(), id, "usage"] as const,
+  usage: (id: number | string, timeWindow: string) => [...workspaceKeys.all, id, timeWindow, "usage"] as const,
 };
 
 function useGetWorkspaceService(): CloudWorkspacesService {
@@ -123,8 +127,10 @@ export function useInvalidateCloudWorkspace(workspaceId: string): () => Promise<
   );
 }
 
-export function useGetCloudWorkspaceUsage(workspaceId: string): CloudWorkspaceUsage {
+export function useGetCloudWorkspaceUsage(workspaceId: string, timeWindow: ConsumptionTimeWindow): CloudWorkspaceUsage {
   const service = useGetWorkspaceService();
 
-  return useSuspenseQuery<CloudWorkspaceUsage>(workspaceKeys.usage(workspaceId), () => service.getUsage(workspaceId));
+  return useSuspenseQuery<CloudWorkspaceUsage>(workspaceKeys.usage(workspaceId, timeWindow), () =>
+    service.getUsage(workspaceId, timeWindow)
+  );
 }

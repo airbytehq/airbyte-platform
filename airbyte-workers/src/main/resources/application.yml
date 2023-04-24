@@ -15,6 +15,7 @@ airbyte:
     max-attempts: ${ACTIVITY_MAX_ATTEMPT:5}
     max-delay: ${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:600}
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
+    check-timeout: ${ACTIVITY_CHECK_TIMEOUT:5}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -35,6 +36,9 @@ airbyte:
           bucket: ${S3_LOG_BUCKET:}
           region: ${S3_LOG_BUCKET_REGION:}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      specs:
+        gcs:
+          bucket: ${SPEC_CACHE_BUCKET:io-airbyte-cloud-spec-cache}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -52,6 +56,7 @@ airbyte:
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
+    datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   container:
     orchestrator:
       enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}
@@ -88,10 +93,6 @@ airbyte:
     jobs:
       initialization-timeout-ms: ${JOBS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
       minimum-migration-version: ${JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION}
-  feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:config}
-    path: ${FEATURE_FLAG_PATH:/flags}
-    api-key: ${LAUNCHDARKLY_KEY:}
   internal:
     api:
       auth-header:
@@ -104,6 +105,10 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
+  notification:
+    customerio:
+      apikey: ${CUSTOMERIO_API_KEY:}
+      recipientEmail: ${NOTIFICATION_RECIPIENT_EMAIL:}
   worker:
     check:
       enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}
@@ -163,7 +168,6 @@ airbyte:
           memory:
             limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-    max-seconds-between-messages: ${MAX_SECONDS_BETWEEN_MESSAGES:10800}
     normalization:
       main:
         container:
@@ -194,7 +198,7 @@ airbyte:
       max-attempts: ${SYNC_JOB_MAX_ATTEMPTS:3}
       max-timeout: ${SYNC_JOB_MAX_TIMEOUT_DAYS:3}
     notify:
-      enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:false}
+      enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
   role: ${AIRBYTE_ROLE:}
   secret:

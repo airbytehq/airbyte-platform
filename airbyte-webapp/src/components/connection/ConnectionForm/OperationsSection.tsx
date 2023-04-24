@@ -3,13 +3,13 @@ import React from "react";
 import { useIntl } from "react-intl";
 
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import { NormalizationField } from "./NormalizationField";
-import { Section } from "./Section";
 import { TransformationField } from "./TransformationField";
 
 interface OperationsSectionProps {
@@ -35,8 +35,8 @@ export const OperationsSection: React.FC<OperationsSectionProps> = ({
   }
 
   return (
-    <Card>
-      <Section>
+    <Card withPadding>
+      <FlexContainer direction="column" gap="lg">
         {supportsNormalization || supportsTransformations ? (
           <Heading as="h2" size="sm">
             {[
@@ -59,7 +59,7 @@ export const OperationsSection: React.FC<OperationsSectionProps> = ({
             )}
           </FieldArray>
         )}
-      </Section>
+      </FlexContainer>
     </Card>
   );
 };

@@ -96,7 +96,6 @@ class DefaultDiscoverCatalogWorkerTest {
   private AirbyteStreamFactory emptyStreamFactory;
   private AirbyteStreamFactory traceStreamFactory;
   private AirbyteStreamFactory validCatalogWithTraceMessageStreamFactory;
-  private AirbyteStreamFactory streamFactory;
   private ConnectorConfigUpdater connectorConfigUpdater;
 
   @BeforeEach

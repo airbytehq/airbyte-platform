@@ -4,21 +4,18 @@
 @use "scss/z-indices";
 
 .selectConnector {
-  --grid-columns: 3;
-  --max-width: 1200px;
-
   position: relative;
   z-index: z-indices.$base;
   display: grid;
-  grid-template-columns: 1fr var(--max-width) 1fr;
+  grid-template-columns: 1fr min(100%, variables.$page-width) 1fr;
 
   &__header {
     grid-column: 2 / 3;
-    padding: variables.$spacing-xl 0;
+    padding: variables.$spacing-xl variables.$spacing-md 0;
     position: sticky;
     top: 0;
     background-color: colors.$grey-50;
-    width: var(--max-width);
+    max-width: variables.$page-width;
     z-index: 2;
   }
 
@@ -36,59 +33,9 @@
     grid-column: 3 / 4;
   }
 
-  &__input {
-    margin-top: variables.$spacing-xl;
-  }
-
   &__grid {
     grid-column: 2 / 3;
-    max-width: var(--max-width);
     margin-top: variables.$spacing-xl;
-    display: grid;
-    grid-template-columns: repeat(var(--grid-columns), 1fr);
-    gap: variables.$spacing-xl;
-  }
-
-  &__noMatches {
-    grid-column: span var(--grid-columns);
-    display: flex;
-    flex-direction: column;
-    gap: variables.$spacing-lg;
-  }
-
-  &__button {
-    border: none;
-    display: flex;
-    gap: variables.$spacing-lg;
-    align-items: stretch;
-    padding: variables.$spacing-lg;
-    box-shadow: variables.$box-shadow;
-    background-color: colors.$white;
-    border-radius: variables.$border-radius-md;
-    cursor: pointer;
-    transition: box-shadow variables.$transition ease;
-    text-align: left;
-
-    &:hover {
-      box-shadow: variables.$box-shadow-raised;
-    }
-  }
-
-  & &__icon {
-    width: 38px;
-    height: 38px;
-  }
-
-  &__text {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-  }
-
-  &__releaseStage {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
+    padding-inline: variables.$spacing-md;
   }
 }

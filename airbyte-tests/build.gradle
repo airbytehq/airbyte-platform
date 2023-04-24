@@ -34,6 +34,11 @@ configurations {
     automaticMigrationAcceptanceTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
+configurations.all {
+    // Temporary hack to avoid dependency conflicts
+    exclude group: 'io.micronaut.email'
+}
+
 dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-container-orchestrator')
@@ -98,6 +103,8 @@ task acceptanceTests(type: Test) {
         exceptionFormat "full"
     }
     mustRunAfter test
+    // Ensure they re-run since these are integration tests.
+    outputs.upToDateWhen { false }
 }
 
 task automaticMigrationAcceptanceTest(type: Test) {

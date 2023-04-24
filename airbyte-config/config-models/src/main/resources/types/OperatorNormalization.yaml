@@ -4,7 +4,7 @@
 title: OperatorNormalization
 description: Settings for a normalization operator
 type: object
-additionalProperties: false
+additionalProperties: true
 properties:
   option:
     type: string

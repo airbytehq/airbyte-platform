@@ -7,6 +7,7 @@ package io.airbyte.workers.internal.sync_persistence;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.micronaut.context.ApplicationContext;
 import jakarta.inject.Singleton;
+import java.util.UUID;
 
 /**
  * A Factory for SyncPersistence.
@@ -30,9 +31,12 @@ public class SyncPersistenceFactory {
   /**
    * Get an instance of SyncPersistence.
    */
-  public SyncPersistence get(final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
+  public SyncPersistence get(final UUID connectionId,
+                             final Long jobId,
+                             final Integer attemptNumber,
+                             final ConfiguredAirbyteCatalog configuredAirbyteCatalog) {
     final SyncPersistence syncPersistence = applicationContext.getBean(SyncPersistence.class);
-    syncPersistence.setConfiguredAirbyteCatalog(configuredAirbyteCatalog);
+    syncPersistence.setConnectionContext(connectionId, jobId, attemptNumber, configuredAirbyteCatalog);
     return syncPersistence;
   }
 

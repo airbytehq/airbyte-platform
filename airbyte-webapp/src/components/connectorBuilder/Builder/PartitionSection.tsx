@@ -52,18 +52,18 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
           <BuilderField
             type="array"
             path={buildPath("values")}
-            label="Slice values"
+            label="Partition values"
             tooltip="List of values to iterate over"
           />
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("cursor_field")}
-            label="Cursor field"
-            tooltip="Field on record to use as the cursor"
+            label="Current partition value identifier"
+            tooltip="Name of the field on the stream_slice object which should hold the current partition value. Can be accessed from other components using {{ stream_slice.identifier }}"
           />
           <ToggleGroupField<RequestOption>
-            label="Slice request option"
-            tooltip="Optionally configures how the slice values will be sent in requests to the source API"
+            label="Inject partition value into outgoing HTTP request"
+            tooltip="Optionally configures how the partition value will be sent in requests to the source API"
             fieldPath={buildPath("request_option")}
             initialValues={{
               inject_into: "request_parameter",
@@ -86,6 +86,12 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       },
       children: (
         <>
+          <StreamReferenceField
+            currentStreamIndex={currentStreamIndex}
+            path={buildPath("parentStreamReference")}
+            label="Parent stream"
+            tooltip="The stream to read records from. Make sure there are no cyclic dependencies between streams"
+          />
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("parent_key")}
@@ -95,14 +101,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("partition_field")}
-            label="Stream slice field"
-            tooltip="The name of the field on the stream_slice object that will be set to value of the Parent key"
-          />
-          <StreamReferenceField
-            currentStreamIndex={currentStreamIndex}
-            path={buildPath("parentStreamReference")}
-            label="Parent stream"
-            tooltip="The stream to read records from. Make sure there are no cyclic dependencies between streams"
+            label="Current parent key value identifier"
+            tooltip="The name of the field on the stream_slice object that will be set to value of the Parent key. Can be accessed from other components using {{ stream_slice.identifier }}"
           />
         </>
       ),
@@ -129,6 +129,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       }}
     >
       <BuilderList
+        addButtonLabel={formatMessage({ id: "connectorBuilder.addNewPartitionRouter" })}
         basePath={streamFieldPath("partitionRouter")}
         emptyItem={{
           type: LIST_PARTITION_ROUTER,

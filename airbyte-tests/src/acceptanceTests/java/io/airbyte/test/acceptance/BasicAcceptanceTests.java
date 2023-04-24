@@ -153,6 +153,9 @@ class BasicAcceptanceTests {
       "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5182): eliminate test duplication";
   private static final String DISABLE_TEMPORAL_TESTS_IN_GKE =
       "Test disabled because it specifically interacts with Temporal, which is deployment-dependent ";
+  public static final int JITTER_MAX_INTERVAL_SECS = 10;
+  public static final int FINAL_INTERVAL_SECS = 60;
+  public static final int MAX_TRIES = 3;
   private static AirbyteAcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static WebBackendApi webBackendApi;
@@ -227,12 +230,12 @@ class BasicAcceptanceTests {
         .getSourceDefinition(new SourceDefinitionIdRequestBody()
             .sourceDefinitionId(UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750"))),
         "get source definition",
-        10, 60, 3);
+        JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     final DestinationDefinitionRead destinationDef = AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionApi()
         .getDestinationDefinition(new DestinationDefinitionIdRequestBody()
             .destinationDefinitionId(UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503"))),
         "get destination definition",
-        10, 60, 3);
+        JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
@@ -509,7 +512,14 @@ class BasicAcceptanceTests {
 
     waitForSuccessfulJobWithRetries(connectionId, MAX_SCHEDULED_JOB_RETRIES);
 
-    testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    // NOTE: this is an unusual use of retryWithJitter. Sometimes the raw tables haven't been cleaned up
+    // even though the job
+    // is marked successful.
+    final String retryAssertOutcome = AirbyteApiClient.retryWithJitter(() -> {
+      testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+      return "success"; // If the assertion throws after all the retries, then retryWithJitter will return null.
+    }, "assert destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
+    assertEquals("success", retryAssertOutcome);
     apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     // remove connection to avoid exception during tear down
@@ -684,7 +694,7 @@ class BasicAcceptanceTests {
       testHarness.assertRawDestinationContains(Collections.emptyList(), new SchemaTableNamePair(PUBLIC,
           STREAM_NAME));
       return null;
-    }, "assert destination contains", 10, 60, 3);
+    }, "assert destination contains", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
 
     // sync one more time. verify it is the equivalent of a full refresh.
     LOGGER.info("Starting testIncrementalSync() sync 3");
@@ -1557,7 +1567,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
     LOGGER.info("state after sync: {}",
         AirbyteApiClient.retryWithJitter(() -> apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)),
-            "get state", 10, 60, 3));
+            "get state", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES));
     testHarness.assertSourceAndDestinationDbInSync(WITH_SCD_TABLE);
 
     // Update the catalog, so we only select the id column.
@@ -1578,7 +1588,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead2.getJob());
     LOGGER.info("state after sync: {}",
         AirbyteApiClient.retryWithJitter(() -> apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)),
-            "get state", 10, 60, 3));
+            "get state", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES));
 
     // For the normalized records, they should all only have the ID column.
     final List<JsonNode> expectedNormalizedRecords = testHarness.retrieveRecordsFromDatabase(source, STREAM_NAME).stream()

@@ -44,6 +44,7 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -70,6 +71,9 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricQueries;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -90,6 +94,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
@@ -130,6 +135,38 @@ public class ConfigRepository {
 
   }
 
+  /**
+   * Query object for paginated querying of connections in multiple workspaces.
+   *
+   * @param workspaceIds workspaces to fetch connections for
+   * @param sourceId fetch connections with this source id
+   * @param destinationId fetch connections with this destination id
+   * @param includeDeleted include tombstoned connections
+   * @param pageSize limit
+   * @param rowOffset offset
+   */
+  public record StandardSyncsQueryPaginated(
+                                            @Nonnull List<UUID> workspaceIds,
+                                            List<UUID> sourceId,
+                                            List<UUID> destinationId,
+                                            boolean includeDeleted,
+                                            int pageSize,
+                                            int rowOffset) {}
+
+  /**
+   * Query object for paginated querying of sources/destinations in multiple workspaces.
+   *
+   * @param workspaceIds workspaces to fetch resources for
+   * @param includeDeleted include tombstoned resources
+   * @param pageSize limit
+   * @param rowOffset offset
+   */
+  public record ResourcesQueryPaginated(
+                                        @Nonnull List<UUID> workspaceIds,
+                                        boolean includeDeleted,
+                                        int pageSize,
+                                        int rowOffset) {}
+
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRepository.class);
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
   private static final String OPERATION_IDS_AGG_DELIMITER = ",";
@@ -138,26 +175,27 @@ public class ConfigRepository {
       Arrays.asList(CONNECTOR_BUILDER_PROJECT.ID, CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, CONNECTOR_BUILDER_PROJECT.NAME,
           CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID, CONNECTOR_BUILDER_PROJECT.TOMBSTONE,
           field(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).as("hasDraft"));
+  private static final UUID VOID_UUID = new UUID(0, 0);
 
   private final ExceptionWrappingDatabase database;
   private final ActorDefinitionMigrator actorDefinitionMigrator;
   private final StandardSyncPersistence standardSyncPersistence;
 
-  private final long defaultMaxSecondsBetweenMessages;
+  private final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier;
 
-  public ConfigRepository(final Database database, final long defaultMaxSecondsBetweenMessages) {
+  public ConfigRepository(final Database database, final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
     this(database, new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)), new StandardSyncPersistence(database),
-        defaultMaxSecondsBetweenMessages);
+        heartbeatMaxSecondBetweenMessageSupplier);
   }
 
   ConfigRepository(final Database database,
                    final ActorDefinitionMigrator actorDefinitionMigrator,
                    final StandardSyncPersistence standardSyncPersistence,
-                   final long defaultMaxSecondsBetweenMessages) {
+                   final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
     this.database = new ExceptionWrappingDatabase(database);
     this.actorDefinitionMigrator = actorDefinitionMigrator;
     this.standardSyncPersistence = standardSyncPersistence;
-    this.defaultMaxSecondsBetweenMessages = defaultMaxSecondsBetweenMessages;
+    this.heartbeatMaxSecondBetweenMessageSupplier = heartbeatMaxSecondBetweenMessageSupplier;
   }
 
   /**
@@ -250,6 +288,26 @@ public class ConfigRepository {
         .fetch())
         .stream()
         .map(DbConverter::buildStandardWorkspace);
+  }
+
+  /**
+   * List workspaces (paginated).
+   *
+   * @param resourcesQueryPaginated - contains all the information we need to paginate
+   * @return A List of StandardWorkspace objectjs
+   * @throws IOException you never know when you IO
+   */
+  public List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
+        .from(WORKSPACE)
+        .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
+        .and(WORKSPACE.ID.in(resourcesQueryPaginated.workspaceIds()))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildStandardWorkspace)
+        .toList();
   }
 
   /**
@@ -414,7 +472,7 @@ public class ConfigRepository {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(record -> DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages))
+        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()))
         // Ensure version is set. Needed for connectors not upgraded since we added versioning.
         .map(def -> def.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(def.getProtocolVersion()).serialize()));
   }
@@ -439,7 +497,7 @@ public class ConfigRepository {
   public List<StandardSourceDefinition> listPublicSourceDefinitions(final boolean includeTombstone) throws IOException {
     return listStandardActorDefinitions(
         ActorType.source,
-        record -> DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages),
+        record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
         ACTOR_DEFINITION.PUBLIC.eq(true));
   }
@@ -458,7 +516,7 @@ public class ConfigRepository {
         workspaceId,
         JoinType.JOIN,
         ActorType.source,
-        record -> DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages),
+        record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
 
@@ -477,7 +535,8 @@ public class ConfigRepository {
         workspaceId,
         JoinType.LEFT_OUTER_JOIN,
         ActorType.source,
-        record -> actorDefinitionWithGrantStatus(record, entry -> DbConverter.buildStandardSourceDefinition(entry, defaultMaxSecondsBetweenMessages)),
+        record -> actorDefinitionWithGrantStatus(record,
+            entry -> DbConverter.buildStandardSourceDefinition(entry, heartbeatMaxSecondBetweenMessageSupplier.get())),
         ACTOR_DEFINITION.CUSTOM.eq(false),
         includeTombstones(ACTOR_DEFINITION.TOMBSTONE, includeTombstones));
   }
@@ -940,6 +999,25 @@ public class ConfigRepository {
     return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
   }
 
+  /**
+   * Returns all sources for a set of workspaces. Does not contain secrets.
+   *
+   * @param resourcesQueryPaginated - Includes all the things we might want to query
+   * @return sources
+   * @throws IOException - you never know when you IO
+   */
+  public List<SourceConnection> listWorkspacesSourceConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
+        .and(ACTOR.WORKSPACE_ID.in(resourcesQueryPaginated.workspaceIds()))
+        .and(resourcesQueryPaginated.includeDeleted() ? noCondition() : ACTOR.TOMBSTONE.notEqual(true))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch());
+    return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
+  }
+
   private Stream<DestinationConnection> listDestinationQuery(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
@@ -1046,6 +1124,25 @@ public class ConfigRepository {
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
         .and(ACTOR.WORKSPACE_ID.eq(workspaceId))
         .andNot(ACTOR.TOMBSTONE).fetch());
+    return result.stream().map(DbConverter::buildDestinationConnection).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns all destinations for a list of workspaces. Does not contain secrets.
+   *
+   * @param resourcesQueryPaginated - Includes all the things we might want to query
+   * @return destinations
+   * @throws IOException - you never know when you IO
+   */
+  public List<DestinationConnection> listWorkspacesDestinationConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR)
+        .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
+        .and(ACTOR.WORKSPACE_ID.in(resourcesQueryPaginated.workspaceIds()))
+        .and(resourcesQueryPaginated.includeDeleted() ? noCondition() : ACTOR.TOMBSTONE.notEqual(true))
+        .limit(resourcesQueryPaginated.pageSize())
+        .offset(resourcesQueryPaginated.rowOffset())
+        .fetch());
     return result.stream().map(DbConverter::buildDestinationConnection).collect(Collectors.toList());
   }
 
@@ -1233,6 +1330,63 @@ public class ConfigRepository {
   }
 
   /**
+   * List connections. Paginated.
+   */
+  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(
+                                                                           final List<UUID> workspaceIds,
+                                                                           final boolean includeDeleted,
+                                                                           final int pageSize,
+                                                                           final int rowOffset)
+      throws IOException {
+    return listWorkspaceStandardSyncsPaginated(new StandardSyncsQueryPaginated(
+        workspaceIds,
+        null,
+        null,
+        includeDeleted,
+        pageSize,
+        rowOffset));
+  }
+
+  /**
+   * List connections for workspace. Paginated.
+   *
+   * @param standardSyncsQueryPaginated query
+   * @return Map of workspace ID -> list of connections
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  public Map<UUID, List<StandardSync>> listWorkspaceStandardSyncsPaginated(final StandardSyncsQueryPaginated standardSyncsQueryPaginated)
+      throws IOException {
+    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
+        // SELECT connection.* plus the connection's associated operationIds as a concatenated list
+        .select(
+            CONNECTION.asterisk(),
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            ACTOR.WORKSPACE_ID)
+        .from(CONNECTION)
+
+        // left join with all connection_operation rows that match the connection's id.
+        // left join includes connections that don't have any connection_operations
+        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+
+        // join with source actors so that we can filter by workspaceId
+        .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .where(ACTOR.WORKSPACE_ID.in(standardSyncsQueryPaginated.workspaceIds())
+            .and(standardSyncsQueryPaginated.destinationId == null || standardSyncsQueryPaginated.destinationId.isEmpty() ? noCondition()
+                : CONNECTION.DESTINATION_ID.in(standardSyncsQueryPaginated.destinationId))
+            .and(standardSyncsQueryPaginated.sourceId == null || standardSyncsQueryPaginated.sourceId.isEmpty() ? noCondition()
+                : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId))
+            .and(standardSyncsQueryPaginated.includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+        // group by connection.id so that the groupConcat above works
+        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID))
+        .limit(standardSyncsQueryPaginated.pageSize())
+        .offset(standardSyncsQueryPaginated.rowOffset())
+        .fetch();
+
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+    return getWorkspaceIdToStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+  }
+
+  /**
    * List connections that use a source.
    *
    * @param sourceId source id
@@ -1282,6 +1436,31 @@ public class ConfigRepository {
     }
 
     return standardSyncs;
+  }
+
+  @SuppressWarnings("LineLength")
+  private Map<UUID, List<StandardSync>> getWorkspaceIdToStandardSyncsFromResult(final Result<Record> connectionAndOperationIdsResult,
+                                                                                final List<NotificationConfigurationRecord> allNeededNotificationConfigurations) {
+    final Map<UUID, List<StandardSync>> workspaceIdToStandardSync = new HashMap<>();
+
+    for (final Record record : connectionAndOperationIdsResult) {
+      final String operationIdsFromRecord = record.get(OPERATION_IDS_AGG_FIELD, String.class);
+
+      // can be null when connection has no connectionOperations
+      final List<UUID> operationIds = operationIdsFromRecord == null
+          ? Collections.emptyList()
+          : Arrays.stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER)).map(UUID::fromString).toList();
+
+      final UUID connectionId = record.get(CONNECTION.ID);
+      final List<NotificationConfigurationRecord> notificationConfigurationsForConnection = allNeededNotificationConfigurations.stream()
+          .filter(notificationConfiguration -> notificationConfiguration.getConnectionId().equals(connectionId))
+          .toList();
+      workspaceIdToStandardSync.computeIfAbsent(
+          record.get(ACTOR.WORKSPACE_ID), v -> new ArrayList<>())
+          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection));
+    }
+
+    return workspaceIdToStandardSync;
   }
 
   private Stream<StandardSyncOperation> listStandardSyncOperationQuery(final Optional<UUID> configId) throws IOException {
@@ -1704,7 +1883,7 @@ public class ConfigRepository {
 
     for (final Record record : records) {
       final SourceConnection source = DbConverter.buildSourceConnection(record);
-      final StandardSourceDefinition definition = DbConverter.buildStandardSourceDefinition(record, defaultMaxSecondsBetweenMessages);
+      final StandardSourceDefinition definition = DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get());
       sourceAndDefinitions.add(new SourceAndDefinition(source, definition));
     }
 
@@ -2737,6 +2916,72 @@ public class ConfigRepository {
   @SuppressWarnings("SameParameterValue")
   private boolean deleteById(final Table<?> table, final UUID id) throws IOException {
     return database.transaction(ctx -> ctx.deleteFrom(table)).where(field(DSL.name(PRIMARY_KEY)).eq(id)).execute() > 0;
+  }
+
+  public static Supplier<Long> getMaxSecondsBetweenMessagesSupplier(final FeatureFlagClient featureFlagClient) {
+    return () -> Long.parseLong(featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages.INSTANCE, new Workspace(VOID_UUID)));
+  }
+
+  /**
+   * Insert an actor definition version.
+   *
+   * @param actorDefinitionVersion - actor definition version to insert
+   * @throws IOException - you never know when you io
+   */
+  public void writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
+    database.transaction(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION))
+        .set(Tables.ACTOR_DEFINITION_VERSION.ID, actorDefinitionVersion.getId())
+        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
+        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+        // TODO (Ella): Replace the below null values with values from
+        // actorDefinitionVersion once the POJO has these fields defined
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
+        .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
+        .execute();
+  }
+
+  /**
+   * Get the actor definition version associated with an actor definition and a docker image tag.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @param dockerImageTag - docker image tag
+   * @return actor definition version if there is an entry in the DB already for this version,
+   *         otherwise an empty optional
+   * @throws IOException - you never know when you io
+   */
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId, final String dockerImageTag)
+      throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
+            .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion);
+  }
+
+  /**
+   * Get an actor definition version by ID.
+   *
+   * @param actorDefinitionVersionId - actor definition version id
+   * @return actor definition version if there is an entry in the DB already with this ID, otherwise
+   *         an empty optional
+   * @throws IOException - you never know when you io
+   */
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
+        .stream()
+        .findFirst()
+        .map(DbConverter::buildActorDefinitionVersion);
   }
 
 }

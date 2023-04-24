@@ -4,6 +4,7 @@ import { useAnalyticsService } from "hooks/services/Analytics";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
+import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
 import { KeyValueListField } from "./KeyValueListField";
@@ -13,7 +14,6 @@ import {
   BEARER_AUTHENTICATOR,
   inferredAuthValues,
   OAUTH_AUTHENTICATOR,
-  SESSION_TOKEN_AUTHENTICATOR,
 } from "../types";
 
 export const AuthenticationSection: React.FC = () => {
@@ -45,15 +45,12 @@ export const AuthenticationSection: React.FC = () => {
                 <BuilderFieldWithInputs
                   type="string"
                   path="global.authenticator.header"
-                  label="Header"
+                  label="Header Name"
                   tooltip="HTTP header which should be set to the API Key"
                 />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.api_token"
+                <BuilderInputPlaceholder
                   label="API Key"
                   tooltip="The API key issued by the service. Fill it in in the user inputs"
-                  readOnly
                 />
               </>
             ),
@@ -65,12 +62,9 @@ export const AuthenticationSection: React.FC = () => {
               ...inferredAuthValues("BearerAuthenticator"),
             },
             children: (
-              <BuilderField
-                type="string"
-                path="global.authenticator.api_token"
+              <BuilderInputPlaceholder
                 label="API Key"
                 tooltip="The API key issued by the service. Fill it in in the user inputs"
-                readOnly
               />
             ),
           },
@@ -82,19 +76,13 @@ export const AuthenticationSection: React.FC = () => {
             },
             children: (
               <>
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.username"
+                <BuilderInputPlaceholder
                   label="Username"
                   tooltip="The username for the login. Fill it in in the user inputs"
-                  readOnly
                 />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.password"
+                <BuilderInputPlaceholder
                   label="Password"
                   tooltip="The password for the login. Fill it in in the user inputs"
-                  readOnly
                 />
               </>
             ),
@@ -115,26 +103,17 @@ export const AuthenticationSection: React.FC = () => {
                   label="Token refresh endpoint"
                   tooltip="The URL to call to obtain a new access token"
                 />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.client_id"
+                <BuilderInputPlaceholder
                   label="Client ID"
                   tooltip="The OAuth client ID. Fill it in in the user inputs"
-                  readOnly
                 />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.client_secret"
+                <BuilderInputPlaceholder
                   label="Client secret"
                   tooltip="The OAuth client secret. Fill it in in the user inputs"
-                  readOnly
                 />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.refresh_token"
+                <BuilderInputPlaceholder
                   label="Refresh token"
                   tooltip="The OAuth refresh token. Fill it in in the user inputs"
-                  readOnly
                 />
                 <BuilderOptional>
                   <BuilderField
@@ -165,75 +144,12 @@ export const AuthenticationSection: React.FC = () => {
                     label="Access token property name"
                     tooltip="The name of the property which contains the access token in the response from the token refresh endpoint"
                   />
-                  <BuilderFieldWithInputs
-                    type="string"
-                    path="global.authenticator.grant_type"
-                    optional
-                    label="Grant type"
-                    tooltip="The grant type to request for access_token"
-                  />
                   <KeyValueListField
                     path="global.authenticator.refresh_request_body"
                     label="Request Parameters"
                     tooltip="The request body to send in the refresh request"
                   />
                 </BuilderOptional>
-              </>
-            ),
-          },
-          {
-            label: "Session token",
-            typeValue: SESSION_TOKEN_AUTHENTICATOR,
-            default: {
-              ...inferredAuthValues("SessionTokenAuthenticator"),
-            },
-            children: (
-              <>
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.header"
-                  label="Header"
-                  tooltip="Specific HTTP header of source API for providing session token"
-                />
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.session_token_response_key"
-                  label="Session token response key"
-                  tooltip="Key for retrieving session token from api response"
-                />
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.login_url"
-                  label="Login url"
-                  tooltip="Url for getting a specific session token"
-                />
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.validate_session_url"
-                  label="Validate session url"
-                  tooltip="Url to validate passed session token"
-                />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.username"
-                  label="Username"
-                  tooltip="The username for the login. Fill it in in the user inputs"
-                  readOnly
-                />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.password"
-                  label="Password"
-                  tooltip="The password for the login. Fill it in in the user inputs"
-                  readOnly
-                />
-                <BuilderField
-                  type="string"
-                  path="global.authenticator.session_token"
-                  label="Session token"
-                  tooltip="Session token generated by user (if provided, username and password are not required). Fill it in in the user inputs"
-                  readOnly
-                />
               </>
             ),
           },

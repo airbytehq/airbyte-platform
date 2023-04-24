@@ -16,6 +16,7 @@ import {
   enterUrlPathFromForm,
   getDetectedSchemaElement,
   getSlicesFromDropdown,
+  getUrlPathInput,
   goToTestPage,
   goToView,
   openDetectedSchemaTab,
@@ -25,10 +26,15 @@ import {
   submitForm,
 } from "pages/connectorBuilderPage";
 
-export const configureGlobals = () => {
+export const configureGlobals = (name: string) => {
   goToView("global");
-  enterName("Dummy API");
-  enterUrlBase("http://dummy_api:6767/");
+  enterName(name);
+
+  if (Cypress.platform == "darwin") {
+    enterUrlBase("http://host.docker.internal:6767/");
+  } else {
+    enterUrlBase("http://172.17.0.1:6767/");
+  }
 };
 
 export const configureStream = () => {
@@ -66,6 +72,13 @@ export const cleanUp = () => {
   cy.get('[data-testid="tag-tab-stream-configuration"]').click({ force: true });
   disablePagination();
   disableStreamSlicer();
+};
+
+export const publishProject = () => {
+  // debounce is 2500 so we need to wait at least more before change page
+  cy.wait(3000);
+  cy.get('[data-testid="publish-button"]').click({ force: true });
+  submitForm();
 };
 
 const testPanelContains = (str: string) => {
@@ -139,10 +152,21 @@ const SCHEMA_WITH_MISMATCH =
   '{{}"$schema": "http://json-schema.org/schema#", "properties": {{}"name": {{}"type": "number"}}, "type": "object"}';
 export const acceptSchemaWithMismatch = () => {
   openStreamSchemaTab();
+  cy.get("textarea").clear({ force: true });
+  cy.wait(500);
   cy.get("textarea").type(SCHEMA_WITH_MISMATCH, { force: true });
 };
 
 export const assertSchemaMismatch = () => {
   openDetectedSchemaTab();
   cy.contains("Detected schema and declared schema are different").should("exist");
+};
+
+export const assertUrlPath = (urlPath: string) => {
+  getUrlPathInput().should("have.attr", "value", urlPath);
+};
+
+export const acceptSchema = () => {
+  openDetectedSchemaTab();
+  cy.get("[data-testid='accept-schema']").click();
 };

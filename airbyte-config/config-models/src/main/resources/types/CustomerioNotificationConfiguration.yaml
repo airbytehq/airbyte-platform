@@ -4,5 +4,5 @@
 title: CustomerioNotificationConfiguration
 description: Customer.io Notification Settings
 type: object
-additionalProperties: false
+additionalProperties: true
 properties:

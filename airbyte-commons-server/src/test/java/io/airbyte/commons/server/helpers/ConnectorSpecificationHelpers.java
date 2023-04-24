@@ -20,6 +20,7 @@ public class ConnectorSpecificationHelpers {
 
   static final Path oAuthSpecificationPath =
       Paths.get(ConnectorSpecificationHelpers.class.getClassLoader().getResource("json/TestOAuthSpecification.json").getPath());
+  private static final String DOCUMENTATION_URL = "https://airbyte.io";
 
   public static ConnectorSpecification generateConnectorSpecification() throws IOException {
 
@@ -27,7 +28,7 @@ public class ConnectorSpecificationHelpers {
 
     try {
       return new ConnectorSpecification()
-          .withDocumentationUrl(new URI("https://airbyte.io"))
+          .withDocumentationUrl(new URI(DOCUMENTATION_URL))
           .withConnectionSpecification(Jsons.deserialize(Files.readString(path)))
           .withSupportsDBT(false)
           .withSupportsNormalization(false);
@@ -43,7 +44,7 @@ public class ConnectorSpecificationHelpers {
 
     try {
       return new ConnectorSpecification()
-          .withDocumentationUrl(new URI("https://airbyte.io"))
+          .withDocumentationUrl(new URI(DOCUMENTATION_URL))
           .withConnectionSpecification(Jsons.deserialize(Files.readString(oAuthSpecificationPath)))
           .withAdvancedAuth(advancedAuth)
           .withSupportsDBT(false)
@@ -60,9 +61,26 @@ public class ConnectorSpecificationHelpers {
 
     try {
       return new ConnectorSpecification()
-          .withDocumentationUrl(new URI("https://airbyte.io"))
+          .withDocumentationUrl(new URI(DOCUMENTATION_URL))
           .withConnectionSpecification(Jsons.deserialize(Files.readString(oAuthSpecificationPath)))
           .withAuthSpecification(authSpecification)
+          .withSupportsDBT(false)
+          .withSupportsNormalization(false);
+    } catch (final URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ConnectorSpecification generateNestedAdvancedAuthConnectorSpecification() throws IOException {
+    final Path advancedAuthPath = Paths.get(
+        ConnectorSpecificationHelpers.class.getClassLoader().getResource("json/TestAdvancedAuthNested.json").getPath());
+    AdvancedAuth advancedAuth = Jsons.deserialize(Files.readString(advancedAuthPath), AdvancedAuth.class);
+
+    try {
+      return new ConnectorSpecification()
+          .withDocumentationUrl(new URI(DOCUMENTATION_URL))
+          .withConnectionSpecification(Jsons.deserialize(Files.readString(oAuthSpecificationPath)))
+          .withAdvancedAuth(advancedAuth)
           .withSupportsDBT(false)
           .withSupportsNormalization(false);
     } catch (final URISyntaxException e) {

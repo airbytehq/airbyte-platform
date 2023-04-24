@@ -16,12 +16,12 @@ import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } 
 import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import { alterTable, createUsersTableQuery, dropUsersTableQuery } from "commands/db/queries";
-import { initialSetupCompleted } from "commands/workspaces";
 import * as connectionPage from "pages/connection/connectionPageObject";
 import * as connectionListPage from "pages/connection/connectionListPageObject";
 import * as catalogDiffModal from "pages/connection/catalogDiffModalPageObject";
+import * as connectionForm from "pages/connection/connectionFormPageObject";
 import * as replicationPage from "pages/connection/connectionReplicationPageObject";
-import streamsTablePageObject from "pages/connection/streamsTablePageObject";
+import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
 describe("Connection - Auto-detect schema changes", () => {
   let source: Source;
@@ -29,7 +29,6 @@ describe("Connection - Auto-detect schema changes", () => {
   let connection: Connection;
 
   beforeEach(() => {
-    initialSetupCompleted();
     runDbQuery(dropUsersTableQuery);
     runDbQuery(createUsersTableQuery);
 
@@ -123,9 +122,9 @@ describe("Connection - Auto-detect schema changes", () => {
       connectionPage.visit(connection, "replication");
 
       // Change users sync mode
-      streamsTablePageObject.searchStream(streamName);
-      streamsTablePageObject.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
-      streamsTablePageObject.selectCursor(streamName, "updated_at");
+      const row = streamsTable.getRow("public", streamName);
+      row.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      row.selectCursor("updated_at");
       replicationPage.clickSaveButton();
 
       // Remove cursor from db and refreshs schema to force breaking change detection
@@ -153,8 +152,9 @@ describe("Connection - Auto-detect schema changes", () => {
       replicationPage.checkSchemaChangesDetectedCleared();
 
       // Fix the conflict
-      streamsTablePageObject.searchStream("users");
-      streamsTablePageObject.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+      streamsTable.searchStream("users");
+      const row = streamsTable.getRow("public", "users");
+      row.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
 
       replicationPage.clickSaveButton();
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
@@ -176,6 +176,7 @@ describe("Connection - Auto-detect schema changes", () => {
   describe("non-breaking schema update preference", () => {
     it("saves non-breaking schema update preference change", () => {
       connectionPage.visit(connection, "replication");
+      connectionForm.expandConfigurationSection();
       replicationPage.selectNonBreakingChangesPreference("disable");
 
       cy.intercept("/api/v1/web_backend/connections/update").as("updatesNonBreakingPreference");

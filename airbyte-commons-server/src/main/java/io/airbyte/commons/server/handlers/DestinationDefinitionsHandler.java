@@ -35,6 +35,7 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -150,7 +151,7 @@ public class DestinationDefinitionsHandler {
   }
 
   private List<StandardDestinationDefinition> getLatestDestinations() {
-    return remoteOssCatalog.getDestinationDefinitions();
+    return remoteOssCatalog.getDestinationDefinitions().stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList();
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -230,7 +231,7 @@ public class DestinationDefinitionsHandler {
         .withSpec(spec)
         .withProtocolVersion(airbyteProtocolVersion.serialize())
         .withTombstone(false)
-        .withReleaseStage(StandardDestinationDefinition.ReleaseStage.CUSTOM)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
     return destinationDefinition;
   }

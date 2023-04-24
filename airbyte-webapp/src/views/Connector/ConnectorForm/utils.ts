@@ -1,3 +1,5 @@
+import toLower from "lodash/toLower";
+
 import { FormBaseItem, FormBlock } from "core/form/types";
 import { AdvancedAuth, SourceAuthSpecification } from "core/request/AirbyteClient";
 import { naturalComparator } from "utils/objects";
@@ -59,9 +61,13 @@ export function OrderComparator(checkRequiredProperty: boolean): (a: FormBlock, 
   return (a, b) => {
     const aIsNumber = Number.isInteger(a.order);
     const bIsNumber = Number.isInteger(b.order);
-    // treat being a formCondition as required, because a value must be selected for it regardless of being optional or required
-    const aIsRequired = a.isRequired || a._type === "formCondition" || a.always_show;
-    const bIsRequired = b.isRequired || b._type === "formCondition" || b.always_show;
+    // Treat being a formCondition as required, because a value must be selected for it regardless of being optional or required
+    // Treat formGroup as required, because the optional/required validations only apply to the nested fields inside of it
+    // Treat const values as required, since they aren't rendered anyway and otherwise can mess up ordering of optional fields
+    const aIsRequired =
+      a.isRequired || a._type === "formCondition" || a._type === "formGroup" || a.always_show || a.const !== undefined;
+    const bIsRequired =
+      b.isRequired || b._type === "formCondition" || b._type === "formGroup" || b.always_show || b.const !== undefined;
 
     switch (true) {
       case aIsNumber && bIsNumber:
@@ -103,4 +109,12 @@ export function getPatternDescriptor(formItem: FormBaseItem): string | undefined
     return "YYYY-MM-DDTHH:mm:ss.SSSZ";
   }
   return undefined;
+}
+
+export function isLocalhost(value: string | undefined) {
+  if (value === undefined) {
+    return false;
+  }
+  const normalized = toLower(value.trim());
+  return normalized === "localhost" || /127\.\d+\.\d+\.\d+/.test(normalized);
 }

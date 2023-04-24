@@ -1,8 +1,12 @@
 import { submitButtonClick } from "./common";
 import { createLocalJsonDestination, createPostgresDestination } from "./destination";
-import { createPokeApiSource, createPostgresSource } from "./source";
+import { createDummyApiSource, createPokeApiSource, createPostgresSource } from "./source";
 import { openAddSource } from "pages/destinationPage";
-import { selectSchedule, setupDestinationNamespaceSourceFormat, enterConnectionName } from "pages/connection/connectionFormPageObject";
+import {
+  selectSchedule,
+  setupDestinationNamespaceSourceFormat,
+  enterConnectionName,
+} from "pages/connection/connectionFormPageObject";
 
 export const createTestConnection = (sourceName: string, destinationName: string) => {
   cy.intercept("/api/v1/sources/discover_schema").as("discoverSchema");
@@ -16,6 +20,11 @@ export const createTestConnection = (sourceName: string, destinationName: string
     case sourceName.includes("Postgres"):
       createPostgresSource(sourceName);
       break;
+
+    case sourceName.includes("dummy"):
+      createDummyApiSource(sourceName);
+      break;
+
     default:
       createPostgresSource(sourceName);
   }
@@ -45,4 +54,8 @@ export const createTestConnection = (sourceName: string, destinationName: string
   submitButtonClick();
 
   cy.wait("@createConnection", { requestTimeout: 10000 });
+};
+
+export const startManualSync = () => {
+  cy.get("[data-testid='manual-sync-button']").click();
 };

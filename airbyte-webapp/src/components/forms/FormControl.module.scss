@@ -1,0 +1,42 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.control {
+  --space-below: 30px;
+
+  position: relative;
+  padding-bottom: var(--space-below);
+}
+
+.label {
+  display: block;
+  font-weight: 500;
+  margin: 0;
+  padding-bottom: variables.$spacing-sm;
+}
+
+.description {
+  font-size: variables.$font-size-sm;
+  color: colors.$grey-300;
+  margin: 0;
+}
+
+.errorMessage {
+  position: absolute;
+  width: 100%;
+  top: variables.$spacing-sm;
+  font-size: variables.$font-size-sm;
+  color: colors.$red;
+  margin: 0;
+  transition: transform variables.$transition ease-in, opacity variables.$transition ease-in-out;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &__wrapper {
+    position: absolute;
+    width: 100%;
+    height: var(--space-below);
+    bottom: 0;
+  }
+}

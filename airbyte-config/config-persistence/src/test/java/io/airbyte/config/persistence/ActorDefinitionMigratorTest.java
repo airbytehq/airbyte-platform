@@ -13,9 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.persistence.ActorDefinitionMigrator.ConnectorInfo;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -67,7 +67,7 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
       .withDocumentationUrl("https://docs.airbyte.io/integrations/sources/postgres")
       .withIcon("postgresql.svg")
       .withCustom(true)
-      .withReleaseStage(StandardDestinationDefinition.ReleaseStage.CUSTOM)
+      .withReleaseStage(ReleaseStage.CUSTOM)
       .withTombstone(false);
 
   private ActorDefinitionMigrator migrator;
@@ -78,7 +78,7 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
     truncateAllTables();
 
     migrator = new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database));
-    configRepository = new ConfigRepository(database, migrator, null, MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+    configRepository = new ConfigRepository(database, migrator, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   private void writeSource(final StandardSourceDefinition source) throws Exception {

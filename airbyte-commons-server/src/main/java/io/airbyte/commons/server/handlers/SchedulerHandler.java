@@ -67,6 +67,7 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -177,7 +178,7 @@ public class SchedulerHandler {
     final UUID sourceId = sourceIdRequestBody.getSourceId();
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceId);
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
     final Version protocolVersion = new Version(sourceDef.getProtocolVersion());
@@ -188,9 +189,8 @@ public class SchedulerHandler {
   public CheckConnectionRead checkSourceConnectionFromSourceCreate(final SourceCoreConfig sourceConfig)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceConfig.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = sourceConfig.getSourceId() != null
-        ? actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConfig.getSourceId())
-        : actorDefinitionVersionHelper.getSourceVersionForWorkspace(sourceDef, sourceConfig.getWorkspaceId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConfig.getWorkspaceId(), sourceConfig.getSourceId());
     final var partialConfig = secretsRepositoryWriter.statefulSplitEphemeralSecrets(
         sourceConfig.getConnectionConfiguration(),
         sourceVersion.getSpec());
@@ -215,8 +215,10 @@ public class SchedulerHandler {
     final SourceConnection updatedSource =
         configurationUpdate.source(sourceUpdate.getSourceId(), sourceUpdate.getName(), sourceUpdate.getConnectionConfiguration());
 
-    final ConnectorSpecification spec = getSpecFromSourceDefinitionId(updatedSource.getSourceDefinitionId(), updatedSource.getSourceId());
-    jsonSchemaValidator.ensure(spec.getConnectionSpecification(), updatedSource.getConfiguration());
+    final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(updatedSource.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDef, updatedSource.getWorkspaceId(), updatedSource.getSourceId());
+    jsonSchemaValidator.ensure(sourceVersion.getSpec().getConnectionSpecification(), updatedSource.getConfiguration());
 
     final SourceCoreConfig sourceCoreConfig = new SourceCoreConfig()
         .sourceId(updatedSource.getSourceId())
@@ -232,7 +234,7 @@ public class SchedulerHandler {
     final DestinationConnection destination = configRepository.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDef = configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getDestinationId());
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
     final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
     final boolean isCustomConnector = destinationDef.getCustom();
     final Version protocolVersion = new Version(destinationDef.getProtocolVersion());
@@ -243,9 +245,8 @@ public class SchedulerHandler {
   public CheckConnectionRead checkDestinationConnectionFromDestinationCreate(final DestinationCoreConfig destinationConfig)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition destDef = configRepository.getStandardDestinationDefinition(destinationConfig.getDestinationDefinitionId());
-    final ActorDefinitionVersion destinationVersion = destinationConfig.getDestinationId() != null
-        ? actorDefinitionVersionHelper.getDestinationVersion(destDef, destinationConfig.getDestinationId())
-        : actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destDef, destinationConfig.getWorkspaceId());
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destDef, destinationConfig.getWorkspaceId(), destinationConfig.getDestinationId());
     final var partialConfig = secretsRepositoryWriter.statefulSplitEphemeralSecrets(
         destinationConfig.getConnectionConfiguration(),
         destinationVersion.getSpec());
@@ -269,9 +270,11 @@ public class SchedulerHandler {
     final DestinationConnection updatedDestination = configurationUpdate
         .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
-    final ConnectorSpecification spec =
-        getSpecFromDestinationDefinitionId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getDestinationId());
-    jsonSchemaValidator.ensure(spec.getConnectionSpecification(), updatedDestination.getConfiguration());
+    final StandardDestinationDefinition destinationDef =
+        configRepository.getStandardDestinationDefinition(updatedDestination.getDestinationDefinitionId());
+    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDef,
+        updatedDestination.getWorkspaceId(), updatedDestination.getDestinationId());
+    jsonSchemaValidator.ensure(destinationVersion.getSpec().getConnectionSpecification(), updatedDestination.getConfiguration());
 
     final DestinationCoreConfig destinationCoreConfig = new DestinationCoreConfig()
         .destinationId(updatedDestination.getDestinationId())
@@ -287,7 +290,7 @@ public class SchedulerHandler {
     final UUID sourceId = discoverSchemaRequestBody.getSourceId();
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceId);
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
 
@@ -333,8 +336,7 @@ public class SchedulerHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
-        sourceCreate.getSourceId() != null ? actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.getSourceId())
-            : actorDefinitionVersionHelper.getSourceVersionForWorkspace(sourceDef, sourceCreate.getWorkspaceId());
+        actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.getWorkspaceId(), sourceCreate.getSourceId());
     final var partialConfig = secretsRepositoryWriter.statefulSplitEphemeralSecrets(
         sourceCreate.getConnectionConfiguration(),
         sourceVersion.getSpec());
@@ -377,7 +379,8 @@ public class SchedulerHandler {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceConnection source = configRepository.getSourceConnection(sourceIdRequestBody.getSourceId());
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceIdRequestBody.getSourceId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), sourceIdRequestBody.getSourceId());
     final ConnectorSpecification spec = sourceVersion.getSpec();
 
     return getSourceSpecificationRead(sourceDefinition, spec);
@@ -388,7 +391,7 @@ public class SchedulerHandler {
     final UUID sourceDefinitionId = sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId();
     final StandardSourceDefinition source = configRepository.getStandardSourceDefinition(sourceDefinitionId);
     final ActorDefinitionVersion sourceVersion =
-        actorDefinitionVersionHelper.getSourceVersionForWorkspace(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionVersionHelper.getSourceVersion(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
     final ConnectorSpecification spec = sourceVersion.getSpec();
 
     return getSourceSpecificationRead(source, spec);
@@ -420,7 +423,8 @@ public class SchedulerHandler {
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationIdRequestBody.getDestinationId());
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(),
+            destinationIdRequestBody.getDestinationId());
     final ConnectorSpecification spec = destinationVersion.getSpec();
     return getDestinationSpecificationRead(destinationDefinition, spec);
   }
@@ -431,7 +435,7 @@ public class SchedulerHandler {
     final UUID destinationDefinitionId = destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId();
     final StandardDestinationDefinition destination = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
     final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersionForWorkspace(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
+        actorDefinitionVersionHelper.getDestinationVersion(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     final ConnectorSpecification spec = destinationVersion.getSpec();
 
     return getDestinationSpecificationRead(destination, spec);
@@ -505,7 +509,7 @@ public class SchedulerHandler {
       connectionsHandler.updateConnection(updateObject);
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
         final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
-        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url);
+        eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url, containsBreakingChange);
       }
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
@@ -543,20 +547,6 @@ public class SchedulerHandler {
     return checkConnectionRead;
   }
 
-  private ConnectorSpecification getSpecFromSourceDefinitionId(final UUID sourceDefId, final UUID sourceId)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceDefId);
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceId);
-    return sourceVersion.getSpec();
-  }
-
-  private ConnectorSpecification getSpecFromDestinationDefinitionId(final UUID destDefId, final UUID destinationId)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final StandardDestinationDefinition destinationDef = configRepository.getStandardDestinationDefinition(destDefId);
-    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destinationId);
-    return destinationVersion.getSpec();
-  }
-
   private JobInfoRead submitCancellationToWorker(final Long jobId) throws IOException {
     final Job job = jobPersistence.getJob(jobId);
 
@@ -572,7 +562,10 @@ public class SchedulerHandler {
   private JobInfoRead submitManualSyncToWorker(final UUID connectionId)
       throws IOException, IllegalStateException, JsonValidationException, ConfigNotFoundException {
     // get standard sync to validate connection id before submitting sync to temporal
-    configRepository.getStandardSync(connectionId);
+    final var sync = configRepository.getStandardSync(connectionId);
+    if (!sync.getStatus().equals(StandardSync.Status.ACTIVE)) {
+      throw new IllegalStateException("Can only sync an active connection");
+    }
     final ManualOperationResult manualSyncResult = eventRunner.startNewManualSync(connectionId);
 
     return readJobFromResult(manualSyncResult);

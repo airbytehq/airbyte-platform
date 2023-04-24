@@ -105,11 +105,11 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
     <Suspense fallback={<LoadingSchema />}>
       <div className={styles.connectionFormContainer}>
         <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onFormSubmit}>
-          {({ values, isSubmitting, isValid, dirty, errors }) => (
+          {({ isSubmitting, isValid, dirty, errors }) => (
             <Form>
               <CreateConnectionNameField />
               {canEditDataGeographies && <DataResidency />}
-              <ConnectionFormFields values={values} isSubmitting={isSubmitting} dirty={dirty} />
+              <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty} />
               <OperationsSection
                 onStartEditTransformation={() => setEditingTransformation(true)}
                 onEndEditTransformation={() => setEditingTransformation(false)}

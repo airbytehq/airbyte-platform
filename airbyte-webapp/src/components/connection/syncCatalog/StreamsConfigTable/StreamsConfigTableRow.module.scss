@@ -1,0 +1,97 @@
+@use "scss/colors";
+@use "scss/variables";
+
+@mixin header-background($color, $hoverColor) {
+  background-color: $color;
+
+  &:hover {
+    background-color: $hoverColor;
+    cursor: pointer;
+  }
+}
+
+@keyframes highlight {
+  0%,
+  50% {
+    box-shadow: 0 0 47px -5px colors.$blue-200;
+    z-index: 1;
+  }
+
+  99% {
+    z-index: 1;
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    z-index: 0;
+  }
+}
+
+.streamHeaderContent {
+  @include header-background(colors.$white, colors.$grey-30);
+
+  border-bottom: 1px solid colors.$grey-50;
+  padding: 0 variables.$spacing-xl 0 0;
+  margin-bottom: 1px;
+  gap: variables.$spacing-sm;
+  min-height: 50px;
+  height: 50px;
+  align-items: center;
+  scrollbar-gutter: stable;
+
+  &.removed {
+    @include header-background(colors.$red-30, colors.$red-40);
+  }
+
+  &.added {
+    @include header-background(colors.$green-30, colors.$green-40);
+  }
+
+  &.changed {
+    @include header-background(colors.$blue-30, colors.$blue-40);
+  }
+
+  &.disabled {
+    background-color: colors.$grey-50;
+  }
+
+  &.highlighted {
+    animation: highlight 2s ease-out;
+  }
+}
+%streamRowCheckboxCell,
+.streamRowCheckboxCell {
+  height: 100%; // cover the parent so it can intercept & ignore row clicks
+  width: 53px;
+  text-align: center;
+  font-size: 10px;
+  line-height: 13px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: variables.$spacing-sm;
+  cursor: default;
+}
+
+.syncCell {
+  height: 100%; // cover the parent so it can intercept & ignore row clicks
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  cursor: default;
+}
+
+.fieldsCell {
+  width: 60px;
+  text-align: center;
+}
+
+.syncModeCell {
+  width: 225px;
+}
+
+.arrowCell {
+  width: 20px;
+  text-align: center;
+}

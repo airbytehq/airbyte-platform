@@ -16,10 +16,10 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -50,7 +50,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         database,
         new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
         null,
-        MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES));
+        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
   }
 
   @Test
@@ -104,7 +104,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withWorkspaceId(WORKSPACE_ID);
   }
 
-  private static StandardSourceDefinition createSourceDefinition(final ReleaseStage releaseStage) {
+  private static StandardSourceDefinition createSourceDefinition(final io.airbyte.config.ReleaseStage releaseStage) {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID)
         .withTombstone(false)
@@ -114,7 +114,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withReleaseStage(releaseStage);
   }
 
-  private static StandardDestinationDefinition createDestinationDefinition(final StandardDestinationDefinition.ReleaseStage releaseStage) {
+  private static StandardDestinationDefinition createDestinationDefinition(final io.airbyte.config.ReleaseStage releaseStage) {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withTombstone(false)
@@ -124,9 +124,8 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withReleaseStage(releaseStage);
   }
 
-  private void persistConnectorsWithReleaseStages(
-                                                  final ReleaseStage sourceReleaseStage,
-                                                  final StandardDestinationDefinition.ReleaseStage destinationReleaseStage)
+  private void persistConnectorsWithReleaseStages(final ReleaseStage sourceReleaseStage,
+                                                  final ReleaseStage destinationReleaseStage)
       throws JsonValidationException, IOException {
 
     configRepository.writeStandardSourceDefinition(createSourceDefinition(sourceReleaseStage));
@@ -194,16 +193,16 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     configRepository.writeStandardWorkspaceNoSecrets(workspace);
 
-    persistConnectorsWithReleaseStages(ReleaseStage.GENERALLY_AVAILABLE, StandardDestinationDefinition.ReleaseStage.GENERALLY_AVAILABLE);
+    persistConnectorsWithReleaseStages(ReleaseStage.GENERALLY_AVAILABLE, ReleaseStage.GENERALLY_AVAILABLE);
     assertFalse(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
 
-    persistConnectorsWithReleaseStages(ReleaseStage.ALPHA, StandardDestinationDefinition.ReleaseStage.GENERALLY_AVAILABLE);
+    persistConnectorsWithReleaseStages(ReleaseStage.ALPHA, ReleaseStage.GENERALLY_AVAILABLE);
     assertTrue(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
 
-    persistConnectorsWithReleaseStages(ReleaseStage.GENERALLY_AVAILABLE, StandardDestinationDefinition.ReleaseStage.BETA);
+    persistConnectorsWithReleaseStages(ReleaseStage.GENERALLY_AVAILABLE, ReleaseStage.BETA);
     assertTrue(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
 
-    persistConnectorsWithReleaseStages(ReleaseStage.CUSTOM, StandardDestinationDefinition.ReleaseStage.CUSTOM);
+    persistConnectorsWithReleaseStages(ReleaseStage.CUSTOM, ReleaseStage.CUSTOM);
     assertFalse(configRepository.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID));
   }
 

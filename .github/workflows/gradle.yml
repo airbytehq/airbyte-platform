@@ -485,37 +485,6 @@ jobs:
         with:
           python-version: "3.9"
 
-      - name: Publish Platform Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        id: platform-results
-        if: always()
-        with:
-          junit_files: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml\n/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
-          comment_mode: failures
-          json_file: platform_results.json
-          json_test_case_results: true
-          check_name: "Platform Test Results"
-
-      - name: Setup Google Cloud SDK
-        if: always()
-        uses: google-github-actions/setup-gcloud@v0
-        with:
-          service_account_key: ${{ secrets.GKE_TEST_SA_KEY }}
-          export_default_credentials: true
-
-      - name: Prep Test Results For GCS
-        if: always()
-        run: |
-          python tools/bin/prep_test_results_for_gcs.py --json platform_results.json  --jobid $GITHUB_JOB --runid $GITHUB_RUN_ID
-
-      - name: Upload Test Results to GCS
-        if: always()
-        run: |
-          gcs_bucket_name="dev-ab-ci-run-results"
-          filename=$(echo "${{ fromJSON( steps.platform-results.outputs.json ).check_url }}" | sed 's@.*/@@')
-          echo "$filename"
-          gsutil -h "Cache-Control:public" cp platform_results.jsonl "gs://$gcs_bucket_name/oss/$filename.jsonl"
-
       - name: Generate Test Report
         uses: dorny/test-reporter@v1
         if: always() # run this step even if previous step failed
@@ -525,16 +494,6 @@ jobs:
           path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: "false"
-
-      - name: Upload test results to BuildPulse for flaky test detection
-        if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
-        uses: Workshop64/buildpulse-action@main
-        with:
-          account: 59758427
-          repository: 283046497
-          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*"
-          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-platform-build-runner:
@@ -742,22 +701,6 @@ jobs:
           path: "./*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: "false"
-
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: Kubernetes Logs
-          path: /tmp/kubernetes_logs/*
-
-      - name: Upload test results to BuildPulse for flaky test detection
-        if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
-        uses: Workshop64/buildpulse-action@main
-        with:
-          account: 59758427
-          repository: 283046497
-          path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*"
-          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
       - name: "Display logs of k3s"
         if: failure()

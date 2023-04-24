@@ -4,13 +4,8 @@
 
 package io.airbyte.container_orchestrator.config;
 
-import io.airbyte.api.client.generated.DestinationApi;
-import io.airbyte.api.client.generated.SourceApi;
-import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider;
-import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.container_orchestrator.orchestrator.DbtJobOrchestrator;
@@ -18,11 +13,10 @@ import io.airbyte.container_orchestrator.orchestrator.JobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
-import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
 import io.airbyte.workers.process.KubePortManagerSingleton;
@@ -66,7 +60,9 @@ class ContainerOrchestratorFactory {
     return new WorkerConfigs(envConfigs);
   }
 
+  // This is currently needed for tests bceause the default env is docker
   @Singleton
+  @Named("replicationProcessFactory")
   @Requires(notEnv = Environment.KUBERNETES)
   ProcessFactory dockerProcessFactory(final WorkerConfigs workerConfigs, final EnvConfigs configs) {
     return new DockerProcessFactory(
@@ -79,6 +75,7 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
+  @Named("replicationProcessFactory")
   @Requires(env = Environment.KUBERNETES)
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigs workerConfigs,
@@ -105,20 +102,11 @@ class ContainerOrchestratorFactory {
                                      @Named("application") final String application,
                                      final EnvConfigs envConfigs,
                                      final ProcessFactory processFactory,
-                                     final FeatureFlags featureFlags,
-                                     final FeatureFlagClient featureFlagClient,
                                      final WorkerConfigs workerConfigs,
-                                     final AirbyteMessageSerDeProvider serdeProvider,
-                                     final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final JobRunConfig jobRunConfig,
-                                     final SourceApi sourceApi,
-                                     final DestinationApi destinationApi,
-                                     final SourceDefinitionApi sourceDefinitionApi,
-                                     final SyncPersistenceFactory syncPersistenceFactory) {
+                                     final ReplicationWorkerFactory replicationWorkerFactory) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, processFactory, featureFlags, featureFlagClient,
-          serdeProvider,
-          migratorFactory, jobRunConfig, sourceApi, destinationApi, sourceDefinitionApi, syncPersistenceFactory);
+      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig, replicationWorkerFactory);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigs, processFactory, jobRunConfig);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();

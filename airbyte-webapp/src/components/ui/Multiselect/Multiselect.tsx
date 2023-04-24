@@ -87,7 +87,6 @@ export const Multiselect = styled(ReactMultiselect)<MultiselectProps>`
 
     &:hover {
       box-shadow: none;
-      background: ${({ theme }) => theme.greyColor20};
       border-color: ${(props) => (props.error ? props.theme.dangerColor : props.theme.greyColor20)};
     }
 

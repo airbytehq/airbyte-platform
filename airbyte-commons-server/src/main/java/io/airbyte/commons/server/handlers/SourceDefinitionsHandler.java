@@ -36,6 +36,7 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -156,7 +157,7 @@ public class SourceDefinitionsHandler {
   }
 
   private List<StandardSourceDefinition> getLatestSources() {
-    return remoteOssCatalog.getSourceDefinitions();
+    return remoteOssCatalog.getSourceDefinitions().stream().map(ConnectorRegistryConverters::toStandardSourceDefinition).toList();
   }
 
   public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -232,7 +233,7 @@ public class SourceDefinitionsHandler {
         .withSpec(spec)
         .withProtocolVersion(airbyteProtocolVersion.serialize())
         .withTombstone(false)
-        .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
         .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(sourceDefinitionCreate.getResourceRequirements()));
   }
 

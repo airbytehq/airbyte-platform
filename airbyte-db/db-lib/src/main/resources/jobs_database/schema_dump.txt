@@ -73,6 +73,8 @@ create table "public"."stream_stats" (
   "estimated_bytes" bigint,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "bytes_committed" bigint,
+  "records_committed" bigint,
   constraint "stream_stats_pkey"
     primary key ("id"),
   constraint "uniq_stream_attempt"
@@ -94,6 +96,7 @@ create table "public"."sync_stats" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "estimated_records" bigint,
   "estimated_bytes" bigint,
+  "bytes_committed" bigint,
   constraint "sync_stats_pkey"
     primary key ("id")
 );

@@ -1,40 +1,27 @@
 @use "src/scss/variables";
 @use "src/scss/colors";
 
-.container {
-  height: 43px;
-  width: 100%;
-  position: fixed;
-  top: 0;
-  z-index: 3;
-  font-size: variables.$font-size-sm;
-  line-height: 1.2;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  background-color: colors.$blue;
-  color: colors.$white;
-
-  @media (min-width: 1280px) {
-    height: 50px;
+.speedyConnectionbanner {
+  &__container {
+    width: calc(100% - 93px);
+    position: fixed;
+    top: 0;
+    left: 93px;
+    z-index: 3;
+    padding: variables.$spacing-md;
+    background-color: colors.$blue;
+    color: colors.$white;
   }
-}
 
-.innerContainer {
-  display: flex;
-  width: 80%;
-  flex-direction: row;
-  gap: variables.$spacing-md;
-  justify-content: center;
-  align-items: center;
-  margin: auto;
-  color: colors.$white;
-}
+  &__message {
+    margin: auto;
+    color: colors.$white;
+    text-align: center;
+  }
 
-.linkCta {
-  color: colors.$white;
-
-  p {
-    color: inherit;
+  &__cta {
+    display: inline;
+    color: colors.$white;
+    font-weight: 700;
   }
 }

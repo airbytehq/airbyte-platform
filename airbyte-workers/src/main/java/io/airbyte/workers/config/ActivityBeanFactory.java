@@ -14,6 +14,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity;
+import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
 import io.airbyte.workers.temporal.scheduling.activities.NotifySchemaChangeActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity;
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity;
@@ -120,10 +121,19 @@ public class ActivityBeanFactory {
   }
 
   @Singleton
+  @Requires(env = WorkerMode.CONTROL_PLANE)
+  @Named("notificationActivities")
+  public List<Object> notificationActivities(
+                                             final NotifyActivity notifyActivity) {
+    return List.of(notifyActivity);
+  }
+
+  @Singleton
   @Named("checkActivityOptions")
-  public ActivityOptions checkActivityOptions() {
+  public ActivityOptions checkActivityOptions(@Property(name = "airbyte.activity.check-timeout",
+                                                        defaultValue = "5") final Integer checkTimeoutMinutes) {
     return ActivityOptions.newBuilder()
-        .setScheduleToCloseTimeout(Duration.ofMinutes(5))
+        .setScheduleToCloseTimeout(Duration.ofMinutes(checkTimeoutMinutes))
         .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
   }

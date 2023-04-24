@@ -12,6 +12,7 @@ interface NavItemProps extends NavItemInnerProps {
   to: string;
   as?: "a";
   className?: string;
+  activeClassName?: string;
   testId?: string;
 }
 
@@ -42,6 +43,7 @@ export const NavItem: React.FC<NavItemProps> = ({
   testId,
   as,
   className,
+  activeClassName,
   withNotification = false,
 }) => {
   const location = useLocation();
@@ -49,10 +51,15 @@ export const NavItem: React.FC<NavItemProps> = ({
   const menuItemStyle = (isActive?: boolean) => {
     const isChild = location.pathname.split("/").length > 4 && location.pathname.split("/")[3] !== "settings";
 
-    return classNames(styles.menuItem, className, {
-      [styles.active]: isActive,
-      [styles.activeChild]: isChild && isActive,
-    });
+    return classNames(
+      styles.menuItem,
+      className,
+      {
+        [styles.active]: isActive,
+        [styles.activeChild]: isChild && isActive,
+      },
+      isActive && activeClassName
+    );
   };
 
   if (as === "a") {

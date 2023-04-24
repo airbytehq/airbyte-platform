@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -39,16 +39,14 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
   const { data: versions, isLoading: isLoadingVersions } = useListVersions(selectedProject);
   const [selectedVersion, setSelectedVersion] = useState<"draft" | number>("draft");
 
-  const descendingVersions = useMemo(() => versions?.sort((v1, v2) => v2.version - v1.version), [versions]);
-
   useEffect(() => {
-    if (!descendingVersions) {
+    if (!versions) {
       return;
     }
-    setSelectedVersion(selectedProject.hasDraft ? "draft" : descendingVersions[0]?.version);
-  }, [selectedProject, descendingVersions]);
+    setSelectedVersion(selectedProject.hasDraft ? "draft" : versions[0]?.version);
+  }, [selectedProject, versions]);
 
-  const versionOptions: Array<{ label: React.ReactNode; value: "draft" | number }> = (descendingVersions || []).map(
+  const versionOptions: Array<{ label: React.ReactNode; value: "draft" | number }> = (versions || []).map(
     ({ version, description }) => {
       return {
         label: (
@@ -87,7 +85,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
             <ControlLabels label="Select a connector">
               <ListBox<BuilderProject>
                 options={projects.map((project) => {
-                  return { label: project.name, value: project };
+                  return { label: <Text size="md">{project.name}</Text>, value: project };
                 })}
                 onSelect={(selected) => selected && setSelectedProject(selected)}
                 selectedValue={selectedProject}

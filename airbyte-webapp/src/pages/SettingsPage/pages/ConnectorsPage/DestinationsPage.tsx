@@ -2,11 +2,9 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import {
-  useDestinationDefinitionList,
-  useUpdateDestinationDefinition,
-} from "services/connector/DestinationDefinitionService";
+import { useUpdateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
 import ConnectorsView from "./components/ConnectorsView";
 import { useDestinationList } from "../../../../hooks/services/useDestinationHook";
@@ -15,7 +13,7 @@ const DestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_DESTINATION);
 
   const { formatMessage } = useIntl();
-  const { destinationDefinitions } = useDestinationDefinitionList();
+  const destinationDefinitions = useAvailableDestinationDefinitions();
   const { destinations } = useDestinationList();
 
   const [feedbackList, setFeedbackList] = useState<Record<string, string>>({});
@@ -59,7 +57,7 @@ const DestinationsPage: React.FC = () => {
       }
     });
 
-    return Array.from(destinationDefinitionMap.values());
+    return Array.from(destinationDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [destinations, destinationDefinitions]);
 
   return (

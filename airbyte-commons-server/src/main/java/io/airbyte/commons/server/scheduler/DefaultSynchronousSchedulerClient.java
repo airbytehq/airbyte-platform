@@ -103,7 +103,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         source.getSourceDefinitionId(),
         () -> temporalClient.submitCheckConnection(UUID.randomUUID(), 0, taskQueue, jobCheckConnectionConfig),
         ConnectorJobOutput::getCheckConnection,
-        source.getWorkspaceId());
+        source.getWorkspaceId(),
+        source.getSourceId());
   }
 
   @Override
@@ -135,7 +136,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         destination.getDestinationDefinitionId(),
         () -> temporalClient.submitCheckConnection(jobId, 0, taskQueue, jobCheckConnectionConfig),
         ConnectorJobOutput::getCheckConnection,
-        destination.getWorkspaceId());
+        destination.getWorkspaceId(),
+        destination.getDestinationId());
   }
 
   @Override
@@ -171,7 +173,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         source.getSourceDefinitionId(),
         () -> temporalClient.submitDiscoverSchema(jobId, 0, taskQueue, jobDiscoverCatalogConfig),
         ConnectorJobOutput::getDiscoverCatalogId,
-        source.getWorkspaceId());
+        source.getWorkspaceId(),
+        source.getSourceId());
   }
 
   @Override
@@ -187,7 +190,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         null,
         () -> temporalClient.submitGetSpec(jobId, 0, jobSpecConfig),
         ConnectorJobOutput::getSpec,
-        null);
+        null, null);
   }
 
   @VisibleForTesting
@@ -196,16 +199,17 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                      @Nullable final UUID connectorDefinitionId,
                                      final Supplier<TemporalResponse<ConnectorJobOutput>> executor,
                                      final Function<ConnectorJobOutput, T> outputMapper,
-                                     final UUID workspaceId) {
+                                     @Nullable final UUID workspaceId,
+                                     @Nullable final UUID actorId) {
     final long createdAt = Instant.now().toEpochMilli();
     final UUID jobId = jobContext.jobId();
     try {
-      track(jobId, configType, connectorDefinitionId, workspaceId, JobState.STARTED, null);
+      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, JobState.STARTED, null);
       final TemporalResponse<ConnectorJobOutput> temporalResponse = executor.get();
       final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
       final JobState outputState = temporalResponse.getMetadata().isSucceeded() ? JobState.SUCCEEDED : JobState.FAILED;
 
-      track(jobId, configType, connectorDefinitionId, workspaceId, outputState, jobOutput.orElse(null));
+      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, outputState, jobOutput.orElse(null));
 
       if (outputState == JobState.FAILED && jobOutput.isPresent()) {
         reportError(configType, jobContext, jobOutput.get(), connectorDefinitionId, workspaceId);
@@ -221,7 +225,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
           createdAt,
           endedAt);
     } catch (final RuntimeException e) {
-      track(jobId, configType, connectorDefinitionId, workspaceId, JobState.FAILED, null);
+      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, JobState.FAILED, null);
       throw e;
     }
   }
@@ -232,7 +236,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   private <T> void track(final UUID jobId,
                          final ConfigType configType,
                          final UUID connectorDefinitionId,
-                         final UUID workspaceId,
+                         @Nullable final UUID workspaceId,
+                         @Nullable final UUID actorId,
                          final JobState jobState,
                          final @Nullable ConnectorJobOutput jobOutput) {
     switch (configType) {
@@ -240,15 +245,17 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
           jobId,
           connectorDefinitionId,
           workspaceId,
+          actorId,
           jobState,
           jobOutput);
       case CHECK_CONNECTION_DESTINATION -> jobTracker.trackCheckConnectionDestination(
           jobId,
           connectorDefinitionId,
           workspaceId,
+          actorId,
           jobState,
           jobOutput);
-      case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, jobState);
+      case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, actorId, jobState, jobOutput);
       case GET_SPEC -> {
         // skip tracking for get spec to avoid noise.
       }

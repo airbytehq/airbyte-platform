@@ -26,6 +26,7 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
@@ -46,7 +47,10 @@ import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator;
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider;
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator;
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.DefaultJobPersistence;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +78,8 @@ class BootloaderTest {
   private PostgreSQLContainer container;
   private DataSource configsDataSource;
   private DataSource jobsDataSource;
+
+  private FeatureFlagClient featureFlagClient;
   private static final String DOCKER = "docker";
   private static final String PROTOCOL_VERSION_123 = "1.2.3";
   private static final String PROTOCOL_VERSION_124 = "1.2.4";
@@ -84,8 +90,8 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.41.02.002";
-  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.40.28.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.43.1.002";
+  private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.42.0.001";
   private static final String CDK_VERSION = "1.2.3";
 
   @BeforeEach
@@ -100,6 +106,8 @@ class BootloaderTest {
         DataSourceFactory.create(container.getUsername(), container.getPassword(), container.getDriverClassName(), container.getJdbcUrl());
     jobsDataSource =
         DataSourceFactory.create(container.getUsername(), container.getPassword(), container.getDriverClassName(), container.getJdbcUrl());
+
+    featureFlagClient = new TestClient(Map.of("heartbeat-max-seconds-between-messages", "10800"));
   }
 
   @AfterEach
@@ -128,7 +136,7 @@ class BootloaderTest {
 
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    val configRepository = new ConfigRepository(configDatabase, 10800);
+    val configRepository = new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -186,7 +194,7 @@ class BootloaderTest {
 
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    val configRepository = new ConfigRepository(configDatabase, 10800);
+    val configRepository = new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -223,7 +231,9 @@ class BootloaderTest {
     initBootloader.load();
 
     final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider();
-    configRepository.seedActorDefinitions(localDefinitions.getSourceDefinitions(), localDefinitions.getDestinationDefinitions());
+    configRepository.seedActorDefinitions(
+        localDefinitions.getSourceDefinitions().stream().map(ConnectorRegistryConverters::toStandardSourceDefinition).toList(),
+        localDefinitions.getDestinationDefinitions().stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList());
 
     final String sourceSpecs = """
                                {
@@ -320,7 +330,7 @@ class BootloaderTest {
 
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    val configRepository = new ConfigRepository(configDatabase, 10800);
+    val configRepository = new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));
@@ -382,7 +392,7 @@ class BootloaderTest {
 
     val configDatabase = new ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false);
     val jobDatabase = new JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false);
-    val configRepository = new ConfigRepository(configDatabase, 10800);
+    val configRepository = new ConfigRepository(configDatabase, ConfigRepository.getMaxSecondsBetweenMessagesSupplier(featureFlagClient));
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L);
     val configDatabaseInitializer = DatabaseCheckFactory.createConfigsDatabaseInitializer(configsDslContext,
         configsDatabaseInitializationTimeoutMs, MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH));

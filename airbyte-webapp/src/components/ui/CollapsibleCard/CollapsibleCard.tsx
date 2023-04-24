@@ -1,50 +1,69 @@
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import classNames from "classnames";
 import React from "react";
 import { useToggle } from "react-use";
-import styled from "styled-components";
 
+import { FlexContainer } from "components/ui//Flex";
+import { Icon } from "components/ui//Icon";
+import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
+import { Heading } from "components/ui/Heading";
 
-const CardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-`;
-
-const ArrowView = styled(FontAwesomeIcon)<{ $isOpen?: boolean }>`
-  font-size: 16px;
-  line-height: 16px;
-  color: ${({ theme }) => theme.primaryColor};
-  transform: ${({ $isOpen }) => $isOpen && "rotate(90deg)"};
-  transition: 0.3s;
-  cursor: pointer;
-`;
+import styles from "./CollapsibleCard.module.scss";
 
 export interface CollapsibleCardProps {
   title: React.ReactNode;
   children: React.ReactNode;
   collapsible?: boolean;
   defaultCollapsedState?: boolean;
+  collapsedPreviewInfo?: React.ReactNode;
+  testId?: string;
+  className?: string;
 }
 
 export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   title,
   children,
   collapsible = false,
+  collapsedPreviewInfo,
   defaultCollapsedState = false,
+  testId,
 }) => {
-  const [isCollapsed, toggle] = useToggle(defaultCollapsedState);
+  const [isCollapsed, toggleIsCollapsed] = useToggle(defaultCollapsedState);
+
+  if (defaultCollapsedState && !collapsible) {
+    console.warn("Card cannot be collapsed by default if it is not collapsible");
+  }
+
+  const headerContainer = (
+    <FlexContainer justifyContent="space-between" alignItems="center">
+      {title && (
+        <Heading as="h2" size="sm">
+          {title}
+        </Heading>
+      )}
+      {collapsible && (
+        <Icon
+          type="chevronRight"
+          size="xl"
+          color="affordance"
+          className={classNames(styles.icon, { [styles.expanded]: !isCollapsed })}
+          data-testid={`${testId}-card-expand-arrow`}
+        />
+      )}
+    </FlexContainer>
+  );
 
   return (
-    <Card
-      title={
-        <CardHeader>
-          {title}
-          {collapsible && <ArrowView onClick={toggle} $isOpen={!isCollapsed} icon={faChevronRight} />}
-        </CardHeader>
-      }
-    >
-      {collapsible && isCollapsed ? true : children}
+    <Card className={classNames(styles.container, { [styles.collapsed]: collapsible && isCollapsed })}>
+      {collapsible ? (
+        <button type="button" className={styles.headerBtn} onClick={toggleIsCollapsed}>
+          {headerContainer}
+          {isCollapsed && collapsedPreviewInfo && <Box mt="lg">{collapsedPreviewInfo}</Box>}
+        </button>
+      ) : (
+        headerContainer
+      )}
+      {collapsible ? !isCollapsed && children : children}
     </Card>
   );
 };

@@ -18,6 +18,8 @@ import {
   ConnectorBuilderTestStateProvider,
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
+  ConnectorBuilderFormManagementStateProvider,
+  ConnectorBuilderMainFormikContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
@@ -46,18 +48,20 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
         initialValues={initialFormValues.current}
         validateOnBlur
         validateOnChange={false}
-        validateOnMount={false}
+        validateOnMount
         onSubmit={noop}
         validationSchema={builderFormValidationSchema}
       >
         {(props) => (
-          <Panels
-            editorView={editorView}
-            validateForm={props.validateForm}
-            switchToUI={switchToUI}
-            values={props.values}
-            switchToYaml={switchToYaml}
-          />
+          <ConnectorBuilderMainFormikContext.Provider value={props}>
+            <Panels
+              editorView={editorView}
+              validateForm={props.validateForm}
+              switchToUI={switchToUI}
+              values={props.values}
+              switchToYaml={switchToYaml}
+            />
+          </ConnectorBuilderMainFormikContext.Provider>
         )}
       </Formik>
     ),
@@ -66,14 +70,16 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
 });
 
 export const ConnectorBuilderEditPage: React.FC = () => (
-  <ConnectorBuilderLocalStorageProvider>
-    <ConnectorBuilderFormStateProvider>
-      <ConnectorBuilderTestStateProvider>
-        <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-        <ConnectorBuilderEditPageInner />
-      </ConnectorBuilderTestStateProvider>
-    </ConnectorBuilderFormStateProvider>
-  </ConnectorBuilderLocalStorageProvider>
+  <ConnectorBuilderFormManagementStateProvider>
+    <ConnectorBuilderLocalStorageProvider>
+      <ConnectorBuilderFormStateProvider>
+        <ConnectorBuilderTestStateProvider>
+          <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+          <ConnectorBuilderEditPageInner />
+        </ConnectorBuilderTestStateProvider>
+      </ConnectorBuilderFormStateProvider>
+    </ConnectorBuilderLocalStorageProvider>
+  </ConnectorBuilderFormManagementStateProvider>
 );
 
 const Panels = React.memo(

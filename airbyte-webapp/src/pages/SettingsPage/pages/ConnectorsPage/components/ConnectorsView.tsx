@@ -10,9 +10,7 @@ import { Table } from "components/ui/Table";
 
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
-import { useAvailableConnectorDefinitions } from "hooks/domain/connector/useAvailableConnectorDefinitions";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { RoutePaths } from "pages/routePaths";
 import { BuilderProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
@@ -67,11 +65,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors);
   const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
-  const workspace = useCurrentWorkspace();
-  const availableConnectorDefinitions = useAvailableConnectorDefinitions<ConnectorDefinition>(
-    connectorsDefinitions,
-    workspace
-  );
+
   const showVersionUpdateColumn = useCallback(
     (definitions: ConnectorDefinition[]) => {
       if (allowUpdateConnectors) {
@@ -153,9 +147,9 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     [connectorBuilderProjects, usedConnectorsDefinitions]
   );
 
-  const filteredAvailableConnectorDefinitions = useMemo(
-    () => filterByBuilderConnectors(availableConnectorDefinitions, connectorBuilderProjects),
-    [connectorBuilderProjects, availableConnectorDefinitions]
+  const filteredConnectorsDefinitions = useMemo(
+    () => filterByBuilderConnectors(connectorsDefinitions, connectorBuilderProjects),
+    [connectorBuilderProjects, connectorsDefinitions]
   );
 
   const ctx = useMemo(
@@ -172,9 +166,9 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
     () => renderColumns(showVersionUpdateColumn(usedConnectorsDefinitions)),
     [renderColumns, showVersionUpdateColumn, usedConnectorsDefinitions]
   );
-  const availableDefinitionColumns = useMemo(
-    () => renderColumns(showVersionUpdateColumn(availableConnectorDefinitions)),
-    [renderColumns, showVersionUpdateColumn, availableConnectorDefinitions]
+  const definitionColumns = useMemo(
+    () => renderColumns(showVersionUpdateColumn(connectorsDefinitions)),
+    [renderColumns, showVersionUpdateColumn, connectorsDefinitions]
   );
 
   const sections: Array<{ title: string; content: React.ReactNode }> = [];
@@ -200,7 +194,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
 
   sections.push({
     title: type === "sources" ? "admin.availableSource" : "admin.availableDestinations",
-    content: <Table columns={availableDefinitionColumns} data={filteredAvailableConnectorDefinitions} />,
+    content: <Table columns={definitionColumns} data={filteredConnectorsDefinitions} />,
   });
 
   return (

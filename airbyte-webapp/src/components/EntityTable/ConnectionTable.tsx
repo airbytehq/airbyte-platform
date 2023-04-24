@@ -126,6 +126,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, onClick
             value={props.cell.getValue()}
             icon={props.row.original.entityIcon}
             enabled={props.row.original.enabled}
+            hideIcon={entity !== "connection"}
           />
         ),
       }),

@@ -21,11 +21,11 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
@@ -82,7 +82,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     standardSyncPersistence = new StandardSyncPersistence(database);
 
     // only used for creating records that sync depends on.
-    configRepository = new ConfigRepository(database, MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   @Test
@@ -347,13 +347,13 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     sourceDefAlpha = createStandardSourceDefinition("1.0.0", ReleaseStage.ALPHA);
     sourceAlpha = createSourceConnection(workspaceId, sourceDefAlpha);
 
-    destDef1 = createStandardDestDefinition("0.2.3", StandardDestinationDefinition.ReleaseStage.GENERALLY_AVAILABLE);
+    destDef1 = createStandardDestDefinition("0.2.3", ReleaseStage.GENERALLY_AVAILABLE);
     destination1 = createDestinationConnection(workspaceId, destDef1);
 
-    destDef2 = createStandardDestDefinition("1.3.0", StandardDestinationDefinition.ReleaseStage.GENERALLY_AVAILABLE);
+    destDef2 = createStandardDestDefinition("1.3.0", ReleaseStage.GENERALLY_AVAILABLE);
     destination2 = createDestinationConnection(workspaceId, destDef2);
 
-    destDefBeta = createStandardDestDefinition("1.3.0", StandardDestinationDefinition.ReleaseStage.BETA);
+    destDefBeta = createStandardDestDefinition("1.3.0", ReleaseStage.BETA);
     destinationBeta = createDestinationConnection(workspaceId, destDefBeta);
   }
 
@@ -379,8 +379,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     return sourceDef;
   }
 
-  private StandardDestinationDefinition createStandardDestDefinition(final String protocolVersion,
-                                                                     final StandardDestinationDefinition.ReleaseStage releaseStage)
+  private StandardDestinationDefinition createStandardDestDefinition(final String protocolVersion, final ReleaseStage releaseStage)
       throws JsonValidationException, IOException {
     final UUID destDefId = UUID.randomUUID();
     final StandardDestinationDefinition destDef = new StandardDestinationDefinition()

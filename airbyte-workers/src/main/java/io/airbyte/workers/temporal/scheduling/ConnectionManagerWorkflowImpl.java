@@ -28,7 +28,6 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.featureflag.CheckInputGeneration;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -185,6 +184,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
+  @SuppressWarnings("PMD.UnusedLocalVariable")
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
       connectionId = connectionUpdaterInput.getConnectionId();
@@ -220,14 +220,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
       }
 
+      // This var is unused since not feature flags are currently required in this workflow
+      // We keep the activity around to get any feature flags that might be needed in the future
       final Map<String, Boolean> featureFlags = getFeatureFlags(connectionUpdaterInput.getConnectionId());
-      final boolean featureFlagCheckInputGeneration = featureFlags.getOrDefault(CheckInputGeneration.INSTANCE.getKey(), false);
 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
 
       GeneratedJobInput jobInputs = null;
-      final boolean shouldRunCheckInputGeneration = shouldRunCheckInputGeneration(featureFlagCheckInputGeneration);
+      final boolean shouldRunCheckInputGeneration = shouldRunCheckInputGeneration();
       if (!shouldRunCheckInputGeneration) {
         jobInputs = getJobInput();
       }
@@ -236,7 +237,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       StandardSyncOutput standardSyncOutput = null;
 
       try {
-        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs, featureFlagCheckInputGeneration);
+        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs);
         if (syncCheckConnectionResult.isFailed()) {
           final StandardSyncOutput checkFailureOutput = syncCheckConnectionResult.buildFailureOutput();
           workflowState.setFailed(getFailStatus(checkFailureOutput));
@@ -360,14 +361,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   /**
    * Returns whether the new check input generation activity should be called, depending on the
-   * presence of a feature flag and workflow versioning. This should be removed once the new activity
-   * is fully rolled out.
+   * presence of workflow versioning. This should be removed once the new activity is fully rolled
+   * out.
    */
-  private boolean shouldRunCheckInputGeneration(final boolean featureFlagEnabled) {
-    if (!featureFlagEnabled) {
-      return false;
-    }
-
+  private boolean shouldRunCheckInputGeneration() {
     final int generateCheckInputVersion =
         Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
     return generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION;
@@ -402,8 +399,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
-                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs,
-                                                     final boolean checkInputGenerationFeatureFlagEnabled) {
+                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs) {
     final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
     final JobCheckFailureInput jobStateInput =
@@ -418,7 +414,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     final SyncJobCheckConnectionInputs checkInputs;
-    if (!shouldRunCheckInputGeneration(checkInputGenerationFeatureFlagEnabled) && jobInputs != null) {
+    if (!shouldRunCheckInputGeneration() && jobInputs != null) {
       checkInputs = getCheckConnectionInputFromSync(jobInputs);
     } else {
       checkInputs = getCheckConnectionInput();

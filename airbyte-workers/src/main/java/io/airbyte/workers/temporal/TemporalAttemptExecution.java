@@ -52,7 +52,6 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
   private final AirbyteApiClient airbyteApiClient;
   private final String airbyteVersion;
   private final Optional<String> replicationTaskQueue;
-  private final Runnable finalizer;
 
   public TemporalAttemptExecution(final Path workspaceRoot,
                                   final WorkerEnvironment workerEnvironment,
@@ -74,8 +73,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
         airbyteApiClient,
         () -> activityContext.get().getInfo().getWorkflowId(),
         airbyteVersion,
-        Optional.empty(),
-        () -> {});
+        Optional.empty());
   }
 
   public TemporalAttemptExecution(final Path workspaceRoot,
@@ -88,8 +86,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
                                   final AirbyteApiClient airbyteApiClient,
                                   final String airbyteVersion,
                                   final Supplier<ActivityExecutionContext> activityContext,
-                                  final Optional<String> replicationTaskQueue,
-                                  final Runnable finalizer) {
+                                  final Optional<String> replicationTaskQueue) {
     this(
         workspaceRoot, workerEnvironment, logConfigs,
         jobRunConfig,
@@ -100,8 +97,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
         airbyteApiClient,
         () -> activityContext.get().getInfo().getWorkflowId(),
         airbyteVersion,
-        replicationTaskQueue,
-        finalizer);
+        replicationTaskQueue);
   }
 
   @VisibleForTesting
@@ -116,8 +112,7 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
                            final AirbyteApiClient airbyteApiClient,
                            final Supplier<String> workflowIdProvider,
                            final String airbyteVersion,
-                           final Optional<String> replicationTaskQueue,
-                           final Runnable finalizer) {
+                           final Optional<String> replicationTaskQueue) {
     this.jobRunConfig = jobRunConfig;
 
     this.jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
@@ -130,7 +125,6 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
     this.airbyteApiClient = airbyteApiClient;
     this.airbyteVersion = airbyteVersion;
     this.replicationTaskQueue = replicationTaskQueue;
-    this.finalizer = finalizer;
   }
 
   @Override
@@ -168,7 +162,6 @@ public class TemporalAttemptExecution<INPUT, OUTPUT> implements Supplier<OUTPUT>
       } finally {
         LOGGER.info("Stopping cancellation check scheduling...");
         scheduledExecutor.shutdown();
-        finalizer.run();
       }
     } catch (final Exception e) {
       throw Activity.wrap(e);

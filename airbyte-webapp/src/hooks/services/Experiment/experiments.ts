@@ -11,7 +11,6 @@ export interface Experiments {
   "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;
   "connector.frequentlyUsedDestinationIds": string[];
-  "connector.form.useSelectConnectorGrid": boolean;
   "connector.shortSetupGuides": boolean;
   "authPage.rightSideUrl": string | undefined;
   "authPage.signup.hideName": boolean;
@@ -21,16 +20,18 @@ export interface Experiments {
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connection.newTableDesign": boolean;
   "workspace.freeConnectorsProgram.visible": boolean;
   "connectorBuilder.showNavigationLinks": boolean;
-  "connectorBuilder.publishWorkflow": boolean;
   "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.errorMultiplier": number;
+  "connection.streamCentricUI.numberOfLogsToLoad": number;
   "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
   "connector.form.simplifyConfiguration": boolean;
+  "connector.form.sshSslImprovements": boolean;
+  "upcomingFeaturesPage.url": string;
+  "billing.newTrialPolicy": boolean;
 }

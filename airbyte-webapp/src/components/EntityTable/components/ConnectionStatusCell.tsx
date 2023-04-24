@@ -1,10 +1,10 @@
 import React, { useMemo } from "react";
 import { useIntl } from "react-intl";
 
+import { FlexContainer } from "components/ui/Flex";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 
-import styles from "./ConnectionStatusCell.module.scss";
 import { EntityNameCell } from "./EntityNameCell";
 import { Status } from "../types";
 
@@ -53,9 +53,9 @@ export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ stat
         });
 
   return (
-    <div className={styles.content}>
+    <FlexContainer alignItems="center">
       <StatusIcon title={title} status={statusIconStatus} />
-      <EntityNameCell className={styles.text} value={value} enabled={enabled} />
-    </div>
+      <EntityNameCell value={value} enabled={enabled} />
+    </FlexContainer>
   );
 };

@@ -4,7 +4,7 @@
 title: JobConfig
 description: job config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - configType
 properties:

@@ -100,6 +100,14 @@ export const useCurrentWorkspaceState = () => {
   });
 };
 
+export const useInvalidateWorkspaceStateQuery = () => {
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+  return useCallback(() => {
+    queryClient.invalidateQueries(workspaceKeys.state(workspaceId));
+  }, [queryClient, workspaceId]);
+};
+
 export const useListWorkspaces = () => {
   const service = useWorkspaceApiService();
 

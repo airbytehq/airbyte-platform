@@ -187,15 +187,11 @@ export const ConnectionReplicationPage: React.FC = () => {
           onSubmit={onFormSubmit}
           enableReinitialize
         >
-          {({ values, isSubmitting, isValid, dirty, resetForm, status, errors }) => (
+          {({ isSubmitting, isValid, dirty, resetForm, status, errors }) => (
             <SchemaChangeBackdrop>
               <Form>
                 <ValidateFormOnSchemaRefresh />
-                <ConnectionFormFields
-                  values={values}
-                  isSubmitting={isSubmitting}
-                  dirty={dirty || schemaHasBeenRefreshed}
-                />
+                <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty || schemaHasBeenRefreshed} />
                 <div className={styles.editControlsContainer}>
                   <EditControls
                     hidden={!status.editControlsVisible}
