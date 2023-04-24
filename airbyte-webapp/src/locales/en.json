@@ -826,6 +826,8 @@
   "connectorBuilder.inputsButton": "Testing values",
   "connectorBuilder.copyToErrorHandlerTitle": "Copy error handling settings to...",
   "connectorBuilder.copyFromErrorHandlerTitle": "Import error handling settings from...",
+  "connectorBuilder.copyToRequestOptionsTitle": "Copy request option settings to...",
+  "connectorBuilder.copyFromRequestOptionsTitle": "Import request option settings from...",
   "connectorBuilder.interUserInputValue": "Insert a user input value",
   "connectorBuilder.yamlUpload.error": "The YAML you provided is invalid: {reason} (line {line})",
   "connectorBuilder.createProject.error": "Failed to create project: {reason}",
