@@ -101,7 +101,14 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <BuilderCard>
+          <BuilderCard
+            copyConfig={{
+              path: "requestOptions",
+              currentStreamIndex: streamNum,
+              copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromRequestOptionsTitle" }),
+              copyToLabel: formatMessage({ id: "connectorBuilder.copyToRequestOptionsTitle" }),
+            }}
+          >
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestParameters")}
               label="Request Parameters"
