@@ -9,6 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { useConfig } from "config";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { RoutePaths } from "pages/routePaths";
 import { links } from "utils/links";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -26,6 +27,7 @@ import { SideBar } from "../SideBar/SideBar";
 const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const { version } = useConfig();
   const { trackError } = useAppMonitoringService();
+  const { hasNewVersions } = useGetConnectorsOutOfDate();
 
   return (
     <FlexContainer className={styles.mainViewContainer} gap="none">
@@ -46,7 +48,7 @@ const MainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
               label={<FormattedMessage id="sidebar.settings" />}
               icon={<SettingsIcon />}
               to={RoutePaths.Settings}
-              withNotification
+              withNotification={hasNewVersions}
             />
             {version && <Version primary />}
           </MenuContent>

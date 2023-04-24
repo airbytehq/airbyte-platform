@@ -40,7 +40,6 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   useIntercom();
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
-  const isAllowUpdateConnectorsEnabled = useFeature(FeatureItem.AllowUpdateConnectors);
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
   const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
   const { trackError } = useAppMonitoringService();
@@ -83,7 +82,6 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                 label={<FormattedMessage id="sidebar.settings" />}
                 icon={<SettingsIcon />}
                 to={RoutePaths.Settings}
-                withNotification={isAllowUpdateConnectorsEnabled}
               />
             </MenuContent>
           </MenuContent>
