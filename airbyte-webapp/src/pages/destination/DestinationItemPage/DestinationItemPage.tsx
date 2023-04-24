@@ -10,8 +10,9 @@ import { Breadcrumbs } from "components/ui/Breadcrumbs";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useGetDestination } from "hooks/services/useDestinationHook";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
@@ -21,6 +22,7 @@ export const DestinationItemPage: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
   const currentStep = useMemo<string>(() => (params["*"] === "" ? StepsTypes.OVERVIEW : params["*"]), [params]);
+  const { trackError } = useAppMonitoringService();
 
   const destination = useGetDestination(params.id);
 
@@ -38,7 +40,7 @@ export const DestinationItemPage: React.FC = () => {
   ];
 
   return (
-    <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+    <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
         <PageHeader

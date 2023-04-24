@@ -7,6 +7,7 @@ import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
@@ -18,7 +19,7 @@ import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
 import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";
 import { MenuContent } from "views/layout/SideBar/components/MenuContent";
@@ -42,6 +43,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
   const isAllowUpdateConnectorsEnabled = useFeature(FeatureItem.AllowUpdateConnectors);
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
   const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
+  const { trackError } = useAppMonitoringService();
 
   // exp-speedy-connection
   const { isExperimentVariant } = useExperimentSpeedyConnection();
@@ -55,7 +57,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
 
   return (
     <div className={styles.mainContainer}>
-      <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />}>
+      <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <SideBar>
           <AirbyteHomeLink />
           {isShowAdminWarningEnabled && <AdminWorkspaceWarning />}
@@ -93,7 +95,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
         >
           {showExperimentBanner ? <SpeedyConnectionBanner /> : <WorkspaceStatusBanner />}
           <div className={styles.dataBlock}>
-            <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+            <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
               <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>
             </ResourceNotFoundErrorBoundary>
           </div>

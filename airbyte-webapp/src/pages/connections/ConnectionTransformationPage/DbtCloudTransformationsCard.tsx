@@ -34,7 +34,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
 
   componentDidCatch(error: Error) {
     const { trackError, workspaceId } = this.props;
-    trackError(error, { workspaceId });
+    trackError(error, { workspaceId, errorBoundary: this.constructor.name });
   }
 
   render() {

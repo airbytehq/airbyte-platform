@@ -1,6 +1,7 @@
 import React from "react";
 
 import { CommonRequestError } from "core/request/CommonRequestError";
+import { TrackErrorFn } from "hooks/services/AppMonitoringService";
 
 interface BoundaryState {
   hasError: boolean;
@@ -12,8 +13,13 @@ const initialState: BoundaryState = {
   message: null,
 };
 
+interface InsufficientPermissionsErrorBoundaryProps {
+  errorComponent: React.ReactElement;
+  trackError: TrackErrorFn;
+}
+
 export class InsufficientPermissionsErrorBoundary extends React.Component<
-  React.PropsWithChildren<{ errorComponent: React.ReactElement }>,
+  React.PropsWithChildren<InsufficientPermissionsErrorBoundaryProps>,
   BoundaryState
 > {
   static getDerivedStateFromError(error: CommonRequestError): BoundaryState {
@@ -21,6 +27,10 @@ export class InsufficientPermissionsErrorBoundary extends React.Component<
       return { hasError: true, message: error.message };
     }
     throw error;
+  }
+
+  componentDidCatch(error: Error): void {
+    this.props.trackError(error, { errorBoundary: this.constructor.name });
   }
 
   state = initialState;

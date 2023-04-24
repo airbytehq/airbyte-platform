@@ -13,6 +13,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
@@ -29,6 +30,7 @@ interface ConfigMenuProps {
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
   const { testInputJson, setTestInputJson } = useConnectorBuilderTestState();
+  const { trackError } = useAppMonitoringService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
 
@@ -89,7 +91,11 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
           title={<FormattedMessage id="connectorBuilder.configMenuTitle" />}
         >
           <ModalBody>
-            <ConfigMenuErrorBoundaryComponent currentView={editorView} closeAndSwitchToYaml={switchToYaml}>
+            <ConfigMenuErrorBoundaryComponent
+              currentView={editorView}
+              closeAndSwitchToYaml={switchToYaml}
+              trackError={trackError}
+            >
               <FlexContainer direction="column">
                 {showInputsWarning && (
                   <Message
