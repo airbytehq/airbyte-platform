@@ -75,15 +75,17 @@ export const ErrorMessage: React.FC = () => {
 
   if (calloutDetails) {
     return (
-      <FlexContainer>
-        <Message
-          text={calloutDetails.errorMessage}
-          actionBtnText={calloutDetails.buttonMessage}
-          type={calloutDetails.variant}
-          onAction={calloutDetails.errorAction}
-          className={styles.error}
-        />
-      </FlexContainer>
+      <Box p="lg">
+        <FlexContainer>
+          <Message
+            text={calloutDetails.errorMessage}
+            actionBtnText={calloutDetails.buttonMessage}
+            type={calloutDetails.variant}
+            onAction={calloutDetails.errorAction}
+            className={styles.error}
+          />
+        </FlexContainer>
+      </Box>
     );
   }
 
