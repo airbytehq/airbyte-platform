@@ -6,15 +6,21 @@ import { MainPageWithScroll } from "components";
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionBlock } from "components/connection/ConnectionBlock";
+import { SelectDestination } from "components/connection/CreateConnection/SelectDestination";
+import { SelectSource } from "components/connection/CreateConnection/SelectSource";
 import { CreateConnectionForm } from "components/connection/CreateConnectionForm";
 import { FormPageContent } from "components/ConnectorBlocks";
 import { PageHeader } from "components/ui/PageHeader";
 import { StepsIndicator } from "components/ui/StepsIndicator";
+import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
+import { useDestinationList } from "hooks/services/useDestinationHook";
+import { useSourceList } from "hooks/services/useSourceHook";
 import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
 import { RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -38,6 +44,9 @@ export const CreateConnectionPage: React.FC = () => {
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
   const workspaceId = useCurrentWorkspaceId();
   const { trackAction } = useAppMonitoringService();
+  const isNewFlowActive = useExperiment("connection.updatedConnectionFlow.selectConnectors", false);
+  const { sources } = useSourceList();
+  const { destinations } = useDestinationList();
 
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
@@ -84,9 +93,18 @@ export const CreateConnectionPage: React.FC = () => {
 
   const renderStep = () => {
     if (currentStep === StepsTypes.CREATE_SOURCE) {
-      return (
+      return isNewFlowActive ? (
+        <SelectSource onSelectSource={onSelectExistingSource} />
+      ) : (
         <>
-          <ExistingEntityForm type="source" onSubmit={onSelectExistingSource} />
+          {sources.length > 0 && (
+            <>
+              <ExistingEntityForm type="source" onSubmit={onSelectExistingSource} />
+              <Text align="center" size="lg">
+                <FormattedMessage id="onboarding.or" />
+              </Text>
+            </>
+          )}
           <ConnectionCreateSourceForm
             afterSubmit={() => {
               if (!destination) {
@@ -100,9 +118,18 @@ export const CreateConnectionPage: React.FC = () => {
         </>
       );
     } else if (currentStep === StepsTypes.CREATE_DESTINATION) {
-      return (
+      return isNewFlowActive ? (
+        <SelectDestination onSelectDestination={onSelectExistingDestination} />
+      ) : (
         <>
-          <ExistingEntityForm type="destination" onSubmit={onSelectExistingDestination} />
+          {destinations.length > 0 && (
+            <>
+              <ExistingEntityForm type="destination" onSubmit={onSelectExistingDestination} />
+              <Text align="center" size="lg">
+                <FormattedMessage id="onboarding.or" />
+              </Text>
+            </>
+          )}
           <ConnectionCreateDestinationForm
             afterSubmit={() => {
               if (!source) {

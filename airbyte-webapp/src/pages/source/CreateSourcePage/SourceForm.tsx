@@ -17,13 +17,15 @@ import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 import styles from "./SourceForm.module.scss";
 
+export interface SourceFormValues {
+  name: string;
+  serviceType: string;
+  sourceDefinitionId?: string;
+  connectionConfiguration?: ConnectionConfiguration;
+}
+
 interface SourceFormProps {
-  onSubmit: (values: {
-    name: string;
-    serviceType: string;
-    sourceDefinitionId?: string;
-    connectionConfiguration?: ConnectionConfiguration;
-  }) => Promise<void>;
+  onSubmit: (values: SourceFormValues) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
   error?: FormError | null;
   selectedSourceDefinitionId?: string;
