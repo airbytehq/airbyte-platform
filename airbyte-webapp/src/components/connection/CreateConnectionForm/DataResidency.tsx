@@ -6,8 +6,8 @@ import { DataGeographyDropdown } from "components/common/DataGeographyDropdown";
 import { Section } from "components/connection/ConnectionForm/Section";
 import { ControlLabels } from "components/LabeledControl";
 
+import { useAvailableGeographies } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
-import { useAvailableGeographies } from "packages/cloud/services/geographies/GeographiesService";
 import { links } from "utils/links";
 
 import { FormFieldLayout } from "../ConnectionForm/FormFieldLayout";
@@ -28,7 +28,6 @@ export const DataResidency: React.FC<DataResidencyProps> = ({ name = "geography"
           <FormFieldLayout>
             <ControlLabels
               nextLine
-              optional
               label={<FormattedMessage id="connection.geographyTitle" />}
               infoTooltipContent={
                 <FormattedMessage

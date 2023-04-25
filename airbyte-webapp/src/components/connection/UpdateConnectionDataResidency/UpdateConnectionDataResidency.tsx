@@ -7,10 +7,10 @@ import { Card } from "components/ui/Card";
 import { Spinner } from "components/ui/Spinner";
 import { TooltipLearnMoreLink } from "components/ui/Tooltip";
 
+import { useAvailableGeographies } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useAvailableGeographies } from "packages/cloud/services/geographies/GeographiesService";
 import { links } from "utils/links";
 
 import styles from "./UpdateConnectionDataResidency.module.scss";
@@ -56,7 +56,7 @@ export const UpdateConnectionDataResidency: React.FC = () => {
                       {node}
                     </a>
                   ),
-                  docLink: () => <TooltipLearnMoreLink url={links.connectionDataResidency} />,
+                  docLink: <TooltipLearnMoreLink url={links.connectionDataResidency} />,
                 }}
               />
             }

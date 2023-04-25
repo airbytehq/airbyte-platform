@@ -69,6 +69,7 @@ specifiers:
   babel-jest: ^29.5.0
   chalk: ^4.1.2
   classnames: ^2.3.1
+  country-flag-icons: ^1.5.7
   date-fns: ^2.29.3
   dayjs: ^1.11.3
   diff: ^5.1.0
@@ -179,6 +180,7 @@ dependencies:
   '@types/semver': 7.3.13
   '@types/uuid': 9.0.0
   classnames: 2.3.2
+  country-flag-icons: 1.5.7
   date-fns: 2.29.3
   dayjs: 1.11.7
   diff: 5.1.0
@@ -7005,6 +7007,10 @@ packages:
       parse-json: 5.2.0
       path-type: 4.0.0
       yaml: 1.10.2
+
+  /country-flag-icons/1.5.7:
+    resolution: {integrity: sha512-AdvXhMcmSp7nBSkpGfW4qR/luAdRUutJqya9PuwRbsBzuoknThfultbv7Ib6fWsHXC43Es/4QJ8gzQQdBNm75A==}
+    dev: false
 
   /create-require/1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}

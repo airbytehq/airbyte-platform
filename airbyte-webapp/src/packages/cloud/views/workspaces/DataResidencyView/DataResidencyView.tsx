@@ -5,13 +5,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { ControlLabels } from "components";
 import { DataGeographyDropdown } from "components/common/DataGeographyDropdown";
 import { Button } from "components/ui/Button";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { useAvailableGeographies } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useAvailableGeographies } from "packages/cloud/services/geographies/GeographiesService";
 import { SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
 import { useUpdateWorkspace } from "services/workspaces/WorkspacesService";
 import { links } from "utils/links";
@@ -86,6 +87,9 @@ export const DataResidencyView: React.FC = () => {
                               <a href={links.cloudAllowlistIPsLink} target="_blank" rel="noreferrer">
                                 {node}
                               </a>
+                            ),
+                            request: (node: React.ReactNode) => (
+                              <ExternalLink href={links.dataResidencySurvey}>{node}</ExternalLink>
                             ),
                           }}
                         />

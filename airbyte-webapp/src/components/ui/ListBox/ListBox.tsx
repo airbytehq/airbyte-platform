@@ -11,15 +11,16 @@ import { FlexContainer, FlexItem } from "../Flex";
 
 export interface ListBoxControlButtonProps<T> {
   selectedOption?: Option<T>;
+  isDisabled?: boolean;
 }
 
-const DefaultControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T>) => {
+const DefaultControlButton = <T,>({ selectedOption, isDisabled }: ListBoxControlButtonProps<T>) => {
   const { formatMessage } = useIntl();
 
   return (
     <>
       {selectedOption ? (
-        <Text as="span" size="lg">
+        <Text as="span" size="lg" className={classNames({ [styles.disabledText]: isDisabled })}>
           {selectedOption.label}
         </Text>
       ) : (
@@ -48,6 +49,7 @@ export interface ListBoxProps<T> {
   selectedValue?: T;
   onSelect: (selectedValue: T) => void;
   buttonClassName?: string;
+  isDisabled?: boolean;
   controlButton?: React.ComponentType<ListBoxControlButtonProps<T>>;
   "data-testid"?: string;
   hasError?: boolean;
@@ -70,6 +72,7 @@ export const ListBox = <T,>({
   selectedOptionClassName,
   "data-testid": testId,
   hasError,
+  isDisabled,
   footerOption,
 }: ListBoxProps<T>) => {
   const selectedOption = options.find((option) => option.value === selectedValue);
@@ -81,9 +84,9 @@ export const ListBox = <T,>({
 
   return (
     <div className={className} data-testid={testId}>
-      <Listbox value={selectedValue} onChange={onOnSelect}>
+      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled}>
         <Listbox.Button className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}>
-          <ControlButton selectedOption={selectedOption} />
+          <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
         </Listbox.Button>
         {/* wrap in div to make `position: absolute` on Listbox.Options result in correct vertical positioning */}
         <div className={styles.optionsContainer}>
