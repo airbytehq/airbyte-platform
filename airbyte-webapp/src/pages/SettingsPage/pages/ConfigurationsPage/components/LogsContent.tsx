@@ -5,9 +5,9 @@ import styled from "styled-components";
 
 import { Button } from "components/ui/Button";
 
-import { LogType } from "core/domain/logs/types";
+import { useGetLogs } from "core/api";
+import { LogType } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
-import { useGetLogs } from "services/logs/LogsService";
 import { downloadFile } from "utils/file";
 
 import styles from "./LogsContainer.module.scss";
@@ -41,12 +41,12 @@ const LogsContent: React.FC = () => {
 
   // TODO: get rid of useAsyncFn and use react-query
   const [{ loading: serverLogsLoading }, downloadServerLogs] = useAsyncFn(
-    async () => await downloadLogs(LogType.Server),
+    async () => await downloadLogs(LogType.server),
     [downloadLogs]
   );
 
   const [{ loading: schedulerLogsLoading }, downloadSchedulerLogs] = useAsyncFn(
-    async () => await downloadLogs(LogType.Scheduler),
+    async () => await downloadLogs(LogType.scheduler),
     [downloadLogs]
   );
 
