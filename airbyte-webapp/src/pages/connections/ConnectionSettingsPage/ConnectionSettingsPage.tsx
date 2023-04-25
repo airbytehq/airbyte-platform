@@ -7,12 +7,15 @@ import { Navigate } from "react-router-dom";
 
 import { DeleteBlock } from "components/common/DeleteBlock";
 import { UpdateConnectionDataResidency } from "components/connection/UpdateConnectionDataResidency";
+import { UpdateConnectionName } from "components/connection/UpdateConnectionName/UpdateConnectionName";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionStatus } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useDeleteConnection } from "hooks/services/useConnectionHook";
 
@@ -25,15 +28,19 @@ export const ConnectionSettingsPageInner: React.FC = () => {
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const canUpdateDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const canSendSchemaUpdateNotifications = useFeature(FeatureItem.AllowAutoDetectSchema);
+  const isUpdatedConnectionFlow = useExperiment("connection.updatedConnectionFlow", false);
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
   const onDelete = () => deleteConnection(connection);
 
   return (
     <div className={styles.container}>
-      {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications />}
-      {canUpdateDataResidency && <UpdateConnectionDataResidency />}
-      <DeleteBlock type="connection" onDelete={onDelete} />
+      <FlexContainer direction="column" justifyContent="flex-start">
+        {isUpdatedConnectionFlow && <UpdateConnectionName />}
+        {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications />}
+        {canUpdateDataResidency && <UpdateConnectionDataResidency />}
+        <DeleteBlock type="connection" onDelete={onDelete} />
+      </FlexContainer>
       <Disclosure>
         {({ open }) => (
           <>

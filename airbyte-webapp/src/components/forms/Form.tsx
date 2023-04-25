@@ -3,6 +3,8 @@ import { ReactNode } from "react";
 import { useForm, FormProvider, DeepPartial } from "react-hook-form";
 import { SchemaOf } from "yup";
 
+import { FormChangeTracker } from "components/common/FormChangeTracker";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FormValues = Record<string, any>;
 
@@ -13,6 +15,7 @@ interface FormProps<T extends FormValues> {
   schema: SchemaOf<T>;
   defaultValues: DeepPartial<T>;
   children?: ReactNode | undefined;
+  trackDirtyChanges?: boolean;
 }
 
 export const Form = <T extends FormValues>({
@@ -22,6 +25,7 @@ export const Form = <T extends FormValues>({
   onError,
   defaultValues,
   schema,
+  trackDirtyChanges = false,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
@@ -41,6 +45,7 @@ export const Form = <T extends FormValues>({
 
   return (
     <FormProvider {...methods}>
+      {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
       <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>{children}</form>
     </FormProvider>
   );

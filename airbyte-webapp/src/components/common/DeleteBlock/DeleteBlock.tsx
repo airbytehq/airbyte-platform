@@ -1,9 +1,10 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { H5 } from "components/base/Titles";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
 import { useDeleteModal } from "hooks/useDeleteModal";
 
@@ -20,12 +21,14 @@ export const DeleteBlock: React.FC<IProps> = ({ type, onDelete }) => {
 
   return (
     <Card className={styles.deleteBlock}>
-      <div className={styles.text}>
-        <H5 bold>
+      <FlexContainer direction="column" className={styles.text}>
+        <Text size="lg">
           <FormattedMessage id={`tables.${type}Delete.title`} />
-        </H5>
-        <FormattedMessage id={`tables.${type}DataDelete`} />
-      </div>
+        </Text>
+        <Text size="xs" color="grey">
+          <FormattedMessage id={`tables.${type}DataDelete`} />
+        </Text>
+      </FlexContainer>
       <Button variant="danger" onClick={onDeleteButtonClick} data-id="open-delete-modal">
         <FormattedMessage id={`tables.${type}Delete`} />
       </Button>

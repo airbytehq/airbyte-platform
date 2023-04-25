@@ -35,4 +35,5 @@ export interface Experiments {
   "connector.form.sshSslImprovements": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
+  "connection.updatedConnectionFlow": boolean;
 }
