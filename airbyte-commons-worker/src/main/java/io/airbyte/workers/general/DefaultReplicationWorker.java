@@ -46,6 +46,7 @@ import io.airbyte.workers.internal.book_keeping.SyncStatsBuilder;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -446,6 +447,13 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         timeHolder.trackSourceReadEndTime();
         LOGGER.info("Total records read: {} ({})", recordsRead,
             FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
+
+        try {
+          recordSchemaValidator.close();
+        } catch (IOException e) {
+          LOGGER.warn("Encountered an exception trying to shut down record schema validator thread. Exception: {}", e.getMessage());
+        }
+
         if (removeValidationLimit) {
           LOGGER.info("Schema validation was performed without limit.");
           uncountedValidationErrors.forEach((stream, errors) -> {
