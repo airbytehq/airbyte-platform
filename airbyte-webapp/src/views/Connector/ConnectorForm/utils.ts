@@ -70,15 +70,15 @@ export function OrderComparator(checkRequiredProperty: boolean): (a: FormBlock, 
       b.isRequired || b._type === "formCondition" || b._type === "formGroup" || b.always_show || b.const !== undefined;
 
     switch (true) {
+      case checkRequiredProperty && aIsRequired && !bIsRequired:
+        return -1;
+      case checkRequiredProperty && !aIsRequired && bIsRequired:
+        return 1;
       case aIsNumber && bIsNumber:
         return (a.order as number) - (b.order as number);
       case aIsNumber && !bIsNumber:
         return -1;
       case bIsNumber && !aIsNumber:
-        return 1;
-      case checkRequiredProperty && aIsRequired && !bIsRequired:
-        return -1;
-      case checkRequiredProperty && !aIsRequired && bIsRequired:
         return 1;
       default:
         return naturalComparator(a.fieldKey, b.fieldKey);
