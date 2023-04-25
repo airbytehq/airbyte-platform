@@ -481,6 +481,14 @@
   "connection.schemaChange.nonBreaking": "Non-breaking schema updates detected",
   "connection.schemaChange.reviewAction": "Review changes",
 
+  "connection.status.onTime": "On time",
+  "connection.status.late": "Delayed",
+  "connection.status.pending": "Pending",
+  "connection.status.error": "Error",
+  "connection.status.actionRequired": "Action required",
+  "connection.status.disabled": "Disabled",
+  "connection.status.cancelled": "Cancelled",
+
   "connection.stream.status.actionRequired": "Action Required",
   "connection.stream.status.upToDate": "Up to date",
   "connection.stream.status.disabled": "Disabled",
@@ -493,7 +501,7 @@
   "connection.stream.status.table.streamName": "Stream name",
   "connection.stream.status.table.lastRecordAt": "Last record committed at",
   "connection.stream.status.table.lastRecord": "Last record committed",
-  "connection.stream.status.table.syncButton": "Sync {streamCount} enabled streams",
+  "connection.stream.status.table.syncButton": "Sync {streamCount} enabled {streamCount, plural, one {stream} other {streams}}",
   "connection.stream.actions.resetThisStream": "Reset this stream",
   "connection.stream.actions.showInReplicationTable": "Show in replication table",
   "connection.stream.actions.openDetails": "Open details",

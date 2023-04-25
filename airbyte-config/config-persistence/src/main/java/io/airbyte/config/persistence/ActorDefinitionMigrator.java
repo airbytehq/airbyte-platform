@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.util.MoreIterators;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -20,7 +19,6 @@ import io.airbyte.config.AirbyteConfig;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
@@ -122,29 +120,9 @@ public class ActorDefinitionMigrator {
             row -> {
               final JsonNode jsonNode;
               if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source) {
-                jsonNode = Jsons.jsonNode(new StandardSourceDefinition()
-                    .withSourceDefinitionId(row.get(ACTOR_DEFINITION.ID))
-                    .withDockerImageTag(row.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
-                    .withIcon(row.get(ACTOR_DEFINITION.ICON))
-                    .withDockerRepository(row.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-                    .withDocumentationUrl(row.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
-                    .withName(row.get(ACTOR_DEFINITION.NAME))
-                    .withPublic(row.get(ACTOR_DEFINITION.PUBLIC))
-                    .withCustom(row.get(ACTOR_DEFINITION.CUSTOM))
-                    .withSourceType(row.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
-                        : Enums.toEnum(row.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
-                    .withSpec(Jsons.deserialize(row.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class)));
+                jsonNode = Jsons.jsonNode(DbConverter.buildStandardSourceDefinition(row, 10800L));
               } else if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.destination) {
-                jsonNode = Jsons.jsonNode(new StandardDestinationDefinition()
-                    .withDestinationDefinitionId(row.get(ACTOR_DEFINITION.ID))
-                    .withDockerImageTag(row.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
-                    .withIcon(row.get(ACTOR_DEFINITION.ICON))
-                    .withDockerRepository(row.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-                    .withDocumentationUrl(row.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
-                    .withName(row.get(ACTOR_DEFINITION.NAME))
-                    .withPublic(row.get(ACTOR_DEFINITION.PUBLIC))
-                    .withCustom(row.get(ACTOR_DEFINITION.CUSTOM))
-                    .withSpec(Jsons.deserialize(row.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class)));
+                jsonNode = Jsons.jsonNode(DbConverter.buildStandardDestinationDefinition(row));
               } else {
                 throw new RuntimeException("Unknown Actor Type " + row.get(ACTOR_DEFINITION.ACTOR_TYPE));
               }

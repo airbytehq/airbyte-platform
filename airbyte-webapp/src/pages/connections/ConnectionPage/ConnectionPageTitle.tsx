@@ -47,7 +47,8 @@ export const ConnectionPageTitle: React.FC = () => {
     ];
 
     if (streamCentricUIEnabled) {
-      steps.push({
+      // insert as the 2nd step
+      steps.splice(1, 0, {
         id: ConnectionRoutePaths.JobHistory,
         name: <FormattedMessage id="connectionForm.jobHistory" />,
       });

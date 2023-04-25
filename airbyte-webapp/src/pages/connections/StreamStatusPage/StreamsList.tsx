@@ -12,6 +12,7 @@ import {
 import { useGetStreamStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { TimeIcon } from "components/icons/TimeIcon";
+import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
@@ -21,13 +22,12 @@ import { AttemptStatus, ConnectionStatus, JobStatus } from "core/request/Airbyte
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { moveTimeToFutureByPeriod } from "utils/time";
 
-import { ErrorMessage, StreamErrorMessage } from "./ErrorMessage";
+import { ConnectionStatusCard } from "./ConnectionStatusCard";
+import { StreamErrorMessage } from "./ErrorMessage";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
-import { StreamStatusCard } from "./StreamStatusCard";
-import { StreamStatusHeader } from "./StreamStatusHeader";
 
 const NextSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined }> = ({ config }) => {
   const { connection } = useConnectionEditService();
@@ -142,28 +142,31 @@ export const StreamsList = () => {
   );
 
   return (
-    <Card title={<StreamStatusHeader streamCount={streams.length} />}>
-      <FlexContainer direction="column" gap="sm" className={styles.body}>
-        <StreamStatusCard />
-        <ErrorMessage />
-        <div className={styles.tableContainer}>
-          <StreamSearchFiltering className={styles.search} />
-          <Table
-            columns={columns}
-            data={filteredStreams}
-            variant="light"
-            className={styles.table}
-            getRowClassName={(data) =>
-              classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
-            }
-            getIsRowExpanded={(data) =>
-              data?.original?.config?.jobStatus === JobStatus.failed ||
-              data?.original?.config?.latestAttemptStatus === AttemptStatus.failed
-            }
-            expandedRow={({ row }) => <StreamErrorMessage stream={row.original} />}
-          />
-        </div>
-      </FlexContainer>
-    </Card>
+    <>
+      <Box mb="lg">
+        <ConnectionStatusCard streamCount={streams.length} />
+      </Box>
+      <Card title={<FormattedMessage id="connection.stream.status.title" />}>
+        <FlexContainer direction="column" gap="sm" className={styles.body}>
+          <div className={styles.tableContainer}>
+            <StreamSearchFiltering className={styles.search} />
+            <Table
+              columns={columns}
+              data={filteredStreams}
+              variant="light"
+              className={styles.table}
+              getRowClassName={(data) =>
+                classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
+              }
+              getIsRowExpanded={(data) =>
+                data?.original?.config?.jobStatus === JobStatus.failed ||
+                data?.original?.config?.latestAttemptStatus === AttemptStatus.failed
+              }
+              expandedRow={({ row }) => <StreamErrorMessage stream={row.original} />}
+            />
+          </div>
+        </FlexContainer>
+      </Card>
+    </>
   );
 };
