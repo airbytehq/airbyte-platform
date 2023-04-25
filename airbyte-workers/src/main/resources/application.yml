@@ -108,7 +108,6 @@ airbyte:
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
-      recipientEmail: ${NOTIFICATION_RECIPIENT_EMAIL:}
   worker:
     kube-job-configs:
       default:
