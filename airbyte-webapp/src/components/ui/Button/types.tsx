@@ -5,6 +5,7 @@ export type ButtonVariant = "primary" | "secondary" | "danger" | "light" | "clea
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   full?: boolean;
+  narrow?: boolean;
   icon?: React.ReactElement;
   iconPosition?: "left" | "right";
   isLoading?: boolean;

@@ -33,7 +33,7 @@ public class ConnectionUpdaterInput {
   @Nullable
   private Integer attemptId;
   private boolean fromFailure;
-  private int attemptNumber;
+  private Integer attemptNumber;
   /**
    * The state is needed because it has an event listener in it. The event listener only listen to
    * state updates which explains why it is a member of the {@link WorkflowState} class. The event

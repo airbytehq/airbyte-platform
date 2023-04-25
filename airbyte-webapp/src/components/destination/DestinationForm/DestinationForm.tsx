@@ -16,13 +16,15 @@ const FrequentlyUsedConnectors = React.lazy(
   () => import("views/Connector/ConnectorForm/components/FrequentlyUsedConnectors")
 );
 
+export interface DestinationFormValues {
+  name: string;
+  serviceType: string;
+  destinationDefinitionId?: string;
+  connectionConfiguration?: ConnectionConfiguration;
+}
+
 interface DestinationFormProps {
-  onSubmit: (values: {
-    name: string;
-    serviceType: string;
-    destinationDefinitionId?: string;
-    connectionConfiguration?: ConnectionConfiguration;
-  }) => Promise<void>;
+  onSubmit: (values: DestinationFormValues) => Promise<void>;
   destinationDefinitions: DestinationDefinitionRead[];
   error?: FormError | null;
   selectedSourceDefinitionId?: string;

@@ -17,16 +17,25 @@
   line-height: 1.4;
   min-height: 36px;
 
-  &:hover {
+  &:disabled {
+    background: colors.$grey-30;
+    cursor: default;
+  }
+
+  &:hover:not(:disabled) {
     border-color: colors.$grey-100;
   }
 
   &--error {
     border-color: colors.$red-100;
 
-    &:hover {
+    &:hover:not(:disabled) {
       border-color: colors.$red;
     }
+  }
+
+  .disabledText {
+    color: colors.$dark-blue-200;
   }
 }
 

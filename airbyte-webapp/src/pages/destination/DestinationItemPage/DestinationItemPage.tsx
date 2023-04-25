@@ -5,12 +5,14 @@ import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { LoadingPage } from "components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { HeadTitle } from "components/common/HeadTitle";
+import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
 import { ItemTabs, StepsTypes } from "components/ConnectorBlocks";
 import { Breadcrumbs } from "components/ui/Breadcrumbs";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useGetDestination } from "hooks/services/useDestinationHook";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
@@ -21,6 +23,7 @@ export const DestinationItemPage: React.FC = () => {
   const params = useParams() as { "*": StepsTypes | ""; id: string };
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
+  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
   const currentStep = useMemo<string>(() => (params["*"] === "" ? StepsTypes.OVERVIEW : params["*"]), [params]);
   const { trackError } = useAppMonitoringService();
 
@@ -45,8 +48,12 @@ export const DestinationItemPage: React.FC = () => {
         <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
         <PageHeader
           title={<Breadcrumbs data={breadcrumbsData} />}
-          middleComponent={<ItemTabs currentStep={currentStep} setCurrentStep={onSelectStep} />}
+          middleComponent={
+            !isNewConnectionFlowEnabled && <ItemTabs currentStep={currentStep} setCurrentStep={onSelectStep} />
+          }
         />
+        {isNewConnectionFlowEnabled && <ConnectorNavigationTabs connectorType="destination" />}
+
         <Suspense fallback={<LoadingPage />}>
           <ApiErrorBoundary>
             <Outlet context={{ destination }} />

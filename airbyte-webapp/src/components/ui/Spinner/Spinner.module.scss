@@ -17,6 +17,7 @@
   border-top: 4px solid transparent;
   border-radius: 50%;
   animation: spin 1.5s linear 0s infinite;
+  flex-shrink: 0;
 }
 
 .small {

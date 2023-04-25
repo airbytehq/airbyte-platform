@@ -1,0 +1,23 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.tabContainer,
+button.tabContainer {
+  padding: variables.$spacing-lg 0;
+  border-radius: 0;
+  border: none;
+  border-bottom: variables.$border-thick solid transparent;
+  background: none;
+
+  &--active {
+    border-bottom-color: colors.$dark-blue-900;
+    color: colors.$dark-blue-900;
+  }
+}
+
+.tabContainer--inactive {
+  &:hover .text,
+  &:focus-visible .text {
+    color: colors.$blue;
+  }
+}

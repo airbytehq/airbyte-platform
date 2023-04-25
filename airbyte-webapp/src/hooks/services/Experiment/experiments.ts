@@ -27,6 +27,7 @@ export interface Experiments {
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
+  "connection.updatedConnectionFlow.selectConnectors": boolean;
   "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
@@ -34,4 +35,5 @@ export interface Experiments {
   "connector.form.sshSslImprovements": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
+  "connection.updatedConnectionFlow": boolean;
 }
