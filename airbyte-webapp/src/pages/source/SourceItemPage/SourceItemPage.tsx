@@ -4,12 +4,14 @@ import { Outlet, useNavigate, useParams } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { HeadTitle } from "components/common/HeadTitle";
+import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
 import { ItemTabs, StepsTypes } from "components/ConnectorBlocks";
 import LoadingPage from "components/LoadingPage";
 import { Breadcrumbs } from "components/ui/Breadcrumbs";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { useSetupSourceOverviewContext } from "../SourceOverviewPage/sourceOverviewContext";
@@ -19,6 +21,8 @@ export const SourceItemPage: React.FC = () => {
   const params = useParams<{ "*": StepsTypes | "" | undefined; id: string }>();
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
+  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
+
   const currentStep = useMemo<StepsTypes | "" | undefined>(
     () => (params["*"] === "" ? StepsTypes.OVERVIEW : params["*"]),
     [params]
@@ -44,9 +48,11 @@ export const SourceItemPage: React.FC = () => {
       <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
       <PageHeader
         title={<Breadcrumbs data={breadcrumbsData} />}
-        middleComponent={<ItemTabs currentStep={currentStep} setCurrentStep={onSelectStep} />}
+        middleComponent={
+          !isNewConnectionFlowEnabled && <ItemTabs currentStep={currentStep} setCurrentStep={onSelectStep} />
+        }
       />
-
+      {isNewConnectionFlowEnabled && <ConnectorNavigationTabs connectorType="source" />}
       <Suspense fallback={<LoadingPage />}>
         <ApiErrorBoundary>
           <Outlet context={{ source, sourceDefinition, connections }} />

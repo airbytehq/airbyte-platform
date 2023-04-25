@@ -39,6 +39,7 @@ const ConnectorCell: React.FC<IProps> = ({ id }) => {
   };
 
   const settingPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${id}/${ConnectionRoutePaths.Replication}`;
+
   return (
     <Content onClick={openSettings}>
       <Link to={settingPath}>

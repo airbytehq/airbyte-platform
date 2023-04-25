@@ -1,0 +1,6 @@
+@use "scss/mixins";
+@forward "./ButtonTab.module.scss";
+
+.link {
+  text-decoration: none;
+}
