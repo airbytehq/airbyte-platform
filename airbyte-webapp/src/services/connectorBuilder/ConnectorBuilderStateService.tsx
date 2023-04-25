@@ -451,7 +451,7 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
 export const useConnectorBuilderTestState = (): TestStateContext => {
   const connectorBuilderState = useContext(ConnectorBuilderTestStateContext);
   if (!connectorBuilderState) {
-    throw new Error("useConnectorBuilderTestStae must be used within a ConnectorBuilderTestStateProvider.");
+    throw new Error("useConnectorBuilderTestState must be used within a ConnectorBuilderTestStateProvider.");
   }
 
   return connectorBuilderState;
@@ -469,7 +469,7 @@ export const useConnectorBuilderFormState = (): FormStateContext => {
 export const useSelectedPageAndSlice = () => {
   const { streams, testStreamIndex } = useConnectorBuilderTestState();
 
-  const selectedStreamName = streams[testStreamIndex].name;
+  const selectedStreamName = streams[testStreamIndex]?.name;
 
   const [streamToSelectedSlice, setStreamToSelectedSlice] = useState({ [selectedStreamName]: 0 });
   const setSelectedSlice = (sliceIndex: number) => {
