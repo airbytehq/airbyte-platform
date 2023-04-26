@@ -7,8 +7,9 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
+import { useExperiment } from "hooks/services/Experiment";
 
-import { ConnectorButton } from "./ConnectorButton";
+import { BuilderConnectorButton, ConnectorButton } from "./ConnectorButton";
 import styles from "./ConnectorGrid.module.scss";
 import { RequestNewConnectorButton } from "./RequestNewConnectorButton";
 
@@ -24,6 +25,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
   onOpenRequestConnectorModal,
 }: ConnectorGridProps<T>) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
 
   const filteredDefinitions = useMemo(
     () =>
@@ -57,6 +59,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
             : definition.destinationDefinitionId;
           return <ConnectorButton definition={definition} onClick={onConnectorButtonClick} key={key} />;
         })}
+        {showBuilderNavigationLinks && <BuilderConnectorButton />}
         <RequestNewConnectorButton onClick={() => onOpenRequestConnectorModal(searchTerm)} />
       </div>
     </>

@@ -861,6 +861,7 @@
   "connectorBuilder.builderPrompt.button": "Build your connector",
   "connectorBuilder.builderPrompt.title": "Need to build your own source?",
   "connectorBuilder.builderPrompt.description": "Build your source with our {adjective} {noun}",
+  "connectorBuilder.builderPrompt.shortDescription": "Use our {adjective} {noun}",
   "connectorBuilder.builderPrompt.adjective": "low-code",
   "connectorBuilder.builderPrompt.noun": "connector builder",
   "connectorBuilder.listPage.name": "Name",
