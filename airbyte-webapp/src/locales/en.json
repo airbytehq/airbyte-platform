@@ -745,7 +745,7 @@
   "connectorBuilder.schemaTab": "Detected schema",
   "connectorBuilder.useSchemaButton": "Import schema",
   "connectorBuilder.differentSchemaDescription": "Detected schema and declared schema are different",
-  "connectorBuilder.overwriteSchemaButton": "Overwrite existing schema",
+  "connectorBuilder.overwriteSchemaButton": "Overwrite declared schema",
   "connectorBuilder.mergeSchemaButton": "Merge properties",
   "connectorBuilder.mergeSchemaTooltip": "Add all newly introduced properties from the detected schema to the declared schema without changing existing properties in case of conflicts.",
   "connectorBuilder.resultsPlaceholder": "Click Test to fetch data for this stream",
