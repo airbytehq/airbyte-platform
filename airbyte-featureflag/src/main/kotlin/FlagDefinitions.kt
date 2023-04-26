@@ -28,6 +28,8 @@ object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValida
 
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
 
+object NormalizationInDestinationBiqQuery : Temporary<Boolean>(key = "connectors.normalizationInDestination.bigquery", default = false)
+
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)

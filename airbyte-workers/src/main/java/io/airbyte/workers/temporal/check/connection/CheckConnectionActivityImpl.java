@@ -43,6 +43,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -143,7 +144,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
           workerConfigs.getResourceRequirements(),
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags);
+          featureFlags, Collections.emptyMap());
 
       final ConnectorConfigUpdater connectorConfigUpdater = new ConnectorConfigUpdater(
           airbyteApiClient.getSourceApi(),

@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -94,7 +95,7 @@ class DefaultNormalizationRunnerTest {
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, NORMALIZE_STEP),
         Map.of(),
         Map.of(),
-        "run",
+        Collections.emptyMap(), "run",
         "--integration-type", INTEGRATION_TYPE,
         "--config", WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME,
         "--catalog", WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME))

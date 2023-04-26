@@ -41,6 +41,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -123,7 +124,8 @@ public class SpecActivityImpl implements SpecActivity {
           workerConfigs.getResourceRequirements(),
           launcherConfig.getAllowedHosts(),
           launcherConfig.getIsCustomConnector(),
-          featureFlags);
+          featureFlags,
+          Collections.emptyMap());
 
       return new DefaultGetSpecWorker(integrationLauncher, streamFactory);
     };

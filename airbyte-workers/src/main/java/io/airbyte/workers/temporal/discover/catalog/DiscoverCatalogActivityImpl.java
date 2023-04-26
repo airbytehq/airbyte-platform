@@ -41,6 +41,7 @@ import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -128,7 +129,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
       final IntegrationLauncher integrationLauncher =
           new AirbyteIntegrationLauncher(launcherConfig.getJobId(), launcherConfig.getAttemptId().intValue(), launcherConfig.getDockerImage(),
               processFactory, workerConfigs.getResourceRequirements(), launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),
-              featureFlags);
+              featureFlags, Collections.emptyMap());
       final AirbyteStreamFactory streamFactory =
           new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(), Optional.empty(),
               Optional.empty());

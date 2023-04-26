@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 @ExtendWith(MockitoExtension.class)
 class AirbyteIntegrationLauncherTest {
@@ -82,7 +83,7 @@ class AirbyteIntegrationLauncherTest {
   void setUp() {
     workerConfigs = new WorkerConfigs(new EnvConfigs());
     launcher = new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, FAKE_IMAGE, processFactory, workerConfigs.getResourceRequirements(), null, false,
-        FEATURE_FLAGS);
+        FEATURE_FLAGS, Collections.emptyMap());
   }
 
   @Test
@@ -92,7 +93,7 @@ class AirbyteIntegrationLauncherTest {
     Mockito.verify(processFactory).create(SPEC_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, Collections.emptyMap(), null,
         workerConfigs.getResourceRequirements(), null, Map.of(JOB_TYPE_KEY, SPEC_JOB), JOB_METADATA,
         Map.of(),
-        "spec");
+        Collections.emptyMap(), "spec");
   }
 
   @Test
@@ -105,7 +106,7 @@ class AirbyteIntegrationLauncherTest {
         Map.of(JOB_TYPE_KEY, CHECK_JOB),
         JOB_METADATA,
         Map.of(),
-        "check",
+        Collections.emptyMap(), "check",
         CONFIG_ARG, CONFIG);
   }
 
@@ -119,7 +120,7 @@ class AirbyteIntegrationLauncherTest {
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
         JOB_METADATA,
         Map.of(),
-        "discover",
+        Collections.emptyMap(), "discover",
         CONFIG_ARG, CONFIG);
   }
 
@@ -133,7 +134,7 @@ class AirbyteIntegrationLauncherTest {
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
         JOB_METADATA,
         Map.of(),
-        Lists.newArrayList(
+        Collections.emptyMap(), Lists.newArrayList(
             "read",
             CONFIG_ARG, CONFIG,
             "--catalog", CATALOG,
@@ -141,7 +142,7 @@ class AirbyteIntegrationLauncherTest {
   }
 
   @Test
-  void write() throws WorkerException {
+  void write() throws WorkerException, JsonProcessingException {
     launcher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
 
     Mockito.verify(processFactory).create(WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true, CONFIG_CATALOG_FILES, null,
@@ -150,9 +151,25 @@ class AirbyteIntegrationLauncherTest {
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
         JOB_METADATA,
         Map.of(),
-        "write",
+        Collections.emptyMap(), "write",
         CONFIG_ARG, CONFIG,
         "--catalog", CATALOG);
+
+    final var additionalEnvVars = Map.of("HELLO", "WORLD");
+    final var envVarLauncher =
+        new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, FAKE_IMAGE, processFactory, workerConfigs.getResourceRequirements(), null, false,
+            FEATURE_FLAGS, additionalEnvVars);
+    envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
+    Mockito.verify(processFactory).create(WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true, CONFIG_CATALOG_FILES, null,
+        workerConfigs.getResourceRequirements(),
+        null,
+        Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
+        JOB_METADATA,
+        Map.of(),
+        additionalEnvVars, "write",
+        CONFIG_ARG, CONFIG,
+        "--catalog", CATALOG);
+
   }
 
 }
