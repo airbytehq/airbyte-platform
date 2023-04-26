@@ -28,7 +28,6 @@ export const ConnectionPageTitle: React.FC = () => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const navigate = useNavigate();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
-  console.log(params);
 
   const { connection, schemaRefreshing } = useConnectionEditService();
 

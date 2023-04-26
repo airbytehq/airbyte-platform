@@ -78,7 +78,6 @@ export const ListBox = <T,>({
   const selectedOption = options.find((option) => option.value === selectedValue);
 
   const onOnSelect = (value: T) => {
-    console.log("onOnSelect", value);
     onSelect(value);
   };
 
