@@ -4,9 +4,9 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.35.3
+airbyte-cdk==0.36.0
     # via connector-builder-server (setup.py)
-airbyte-protocol-models==1.0.0
+airbyte-protocol-models==0.3.6
     # via airbyte-cdk
 anyio==3.6.2
     # via starlette
