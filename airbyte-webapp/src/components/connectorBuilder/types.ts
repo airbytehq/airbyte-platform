@@ -42,6 +42,7 @@ import {
   DefaultErrorHandlerBackoffStrategiesItem,
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
+  DefaultPaginator,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -77,8 +78,19 @@ export interface BuilderFormValues {
 
 export type RequestOptionOrPathInject = Omit<RequestOption, "type"> | { inject_into: "path" };
 
+export interface BuilderCursorPagination extends Omit<CursorPagination, "cursor_value" | "stop_condition"> {
+  cursor:
+    | {
+        type: "custom";
+        cursor_value: string;
+        stop_condition?: string;
+      }
+    | { type: "response"; path: string[] }
+    | { type: "headers"; path: string[] };
+}
+
 export interface BuilderPaginator {
-  strategy: PageIncrement | OffsetIncrement | CursorPagination;
+  strategy: PageIncrement | OffsetIncrement | BuilderCursorPagination;
   pageTokenOption: RequestOptionOrPathInject;
   pageSizeOption?: RequestOption;
 }
@@ -509,14 +521,25 @@ export const builderFormValidationSchema = yup.object().shape({
                   then: yup.number().required("form.empty.error"),
                   otherwise: yup.number(),
                 }),
-                cursor_value: yup.mixed().when("type", {
+                cursor: yup.mixed().when("type", {
                   is: CURSOR_PAGINATION,
-                  then: yup.string().required("form.empty.error"),
-                  otherwise: (schema) => schema.strip(),
-                }),
-                stop_condition: yup.mixed().when("type", {
-                  is: CURSOR_PAGINATION,
-                  then: yup.string(),
+                  then: yup.object().shape({
+                    cursor_value: yup.mixed().when("type", {
+                      is: "custom",
+                      then: yup.string().required("form.empty.error"),
+                      otherwise: (schema) => schema.strip(),
+                    }),
+                    stop_condition: yup.mixed().when("type", {
+                      is: "custom",
+                      then: yup.string(),
+                      otherwise: (schema) => schema.strip(),
+                    }),
+                    path: yup.mixed().when("type", {
+                      is: (val: string) => val !== "custom",
+                      then: yup.array().of(yup.string()).min(1, "form.empty.error"),
+                      otherwise: (schema) => schema.strip(),
+                    }),
+                  }),
                   otherwise: (schema) => schema.strip(),
                 }),
                 start_from_page: yup.mixed().when("type", {
@@ -677,6 +700,37 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
   return globalSettings.authenticator as HttpRequesterAuthenticator;
 }
 
+function pathToSafeJinjaAccess(path: string[]): string {
+  return path
+    .map((segment) => {
+      const asNumber = Number(segment);
+      if (!Number.isNaN(asNumber)) {
+        return `[${asNumber}]`;
+      }
+      return `.get("${segment}", {})`;
+    })
+    .join("");
+}
+
+function builderPaginationStrategyToManifest(
+  strategy: BuilderPaginator["strategy"]
+): DefaultPaginator["pagination_strategy"] {
+  if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
+    return strategy;
+  }
+  const { cursor, ...rest } = strategy;
+
+  return {
+    ...rest,
+    cursor_value:
+      cursor.type === "custom" ? cursor.cursor_value : `{{ ${cursor.type}${pathToSafeJinjaAccess(cursor.path)} }}`,
+    stop_condition:
+      cursor.type === "custom"
+        ? cursor.stop_condition
+        : `{{ not ${cursor.type}${pathToSafeJinjaAccess(cursor.path)} }}`,
+  };
+}
+
 function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): SimpleRetrieverPaginator {
   if (!paginator) {
     return { type: "NoPagination" };
@@ -696,7 +750,7 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
     type: "DefaultPaginator",
     page_token_option: pageTokenOption,
     page_size_option: paginator.strategy.page_size ? paginator.pageSizeOption : undefined,
-    pagination_strategy: paginator.strategy,
+    pagination_strategy: builderPaginationStrategyToManifest(paginator.strategy),
   };
 }
 

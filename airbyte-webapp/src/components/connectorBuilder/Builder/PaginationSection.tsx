@@ -112,19 +112,71 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           {
             label: "Cursor Pagination",
             typeValue: CURSOR_PAGINATION,
+            default: {
+              cursor: {
+                type: "response",
+                path: [],
+              },
+            },
             children: (
               <>
-                <BuilderFieldWithInputs
-                  type="string"
-                  path={streamFieldPath("paginator.strategy.cursor_value")}
-                  manifestPath="CursorPagination.properties.cursor_value"
+                <BuilderOneOf
+                  path={streamFieldPath("paginator.strategy.cursor")}
+                  label="Next page cursor"
+                  tooltip="Specify how to select the next page"
+                  options={[
+                    {
+                      label: "Response",
+                      typeValue: "response",
+                      default: {
+                        path: [],
+                      },
+                      children: (
+                        <BuilderField
+                          type="array"
+                          path={streamFieldPath("paginator.strategy.cursor.path")}
+                          label="Path"
+                          tooltip="Path to the value in the response object to select"
+                        />
+                      ),
+                    },
+                    {
+                      label: "Header",
+                      typeValue: "headers",
+                      default: {
+                        path: [],
+                      },
+                      children: (
+                        <BuilderField
+                          type="array"
+                          path={streamFieldPath("paginator.strategy.cursor.path")}
+                          label="Path"
+                          tooltip="Path to the header value to select"
+                        />
+                      ),
+                    },
+                    {
+                      label: "Custom",
+                      typeValue: "custom",
+                      children: (
+                        <>
+                          <BuilderFieldWithInputs
+                            type="string"
+                            path={streamFieldPath("paginator.strategy.cursor_value")}
+                            manifestPath="CursorPagination.properties.cursor_value"
+                          />
+                          <BuilderFieldWithInputs
+                            type="string"
+                            path={streamFieldPath("paginator.strategy.stop_condition")}
+                            manifestPath="CursorPagination.properties.stop_condition"
+                            optional
+                          />
+                        </>
+                      ),
+                    },
+                  ]}
                 />
-                <BuilderFieldWithInputs
-                  type="string"
-                  path={streamFieldPath("paginator.strategy.stop_condition")}
-                  manifestPath="CursorPagination.properties.stop_condition"
-                  optional
-                />
+                <PageTokenOption label="cursor value" streamFieldPath={streamFieldPath} />
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
@@ -137,7 +189,6 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   optional
                 />
                 {pageSizeField.value ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
-                <PageTokenOption label="cursor value" streamFieldPath={streamFieldPath} />
               </>
             ),
           },
