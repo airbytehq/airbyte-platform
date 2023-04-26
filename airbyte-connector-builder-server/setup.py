@@ -16,7 +16,7 @@ CDK_VERSION = (HERE.parent / "airbyte-connector-builder-resources" / "CDK_VERSIO
 
 setup(
     name="connector-builder-server",
-    version="0.44.2",
+    version="0.44.3",
     description="",
     long_description=README,
     author="Airbyte",
