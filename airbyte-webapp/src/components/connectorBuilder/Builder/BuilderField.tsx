@@ -1,5 +1,7 @@
 import { FastField, FastFieldProps, FieldInputProps } from "formik";
-import { ReactNode } from "react";
+import isEqual from "lodash/isEqual";
+import toPath from "lodash/toPath";
+import { ReactNode, useEffect, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -13,6 +15,7 @@ import { TextArea } from "components/ui/TextArea";
 import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
 import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
+import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderField.module.scss";
 
@@ -78,6 +81,23 @@ const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, i
   );
 };
 
+// check whether paths are equal, normalizing [] and . notation
+function arePathsEqual(path1: string, path2: string) {
+  return isEqual(toPath(path1), toPath(path2));
+}
+
+const handleScrollToField = (
+  ref: React.RefObject<HTMLDivElement>,
+  path: string,
+  scrollToField: string | undefined,
+  setScrollToField: (value: string | undefined) => void
+) => {
+  if (ref.current && scrollToField && arePathsEqual(path, scrollToField)) {
+    ref.current.scrollIntoView({ block: "center" });
+    setScrollToField(undefined);
+  }
+};
+
 const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> = ({
   path,
   label,
@@ -93,10 +113,24 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
 }) => {
   const hasError = !!meta.error && meta.touched;
 
+  const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();
+
+  const elementRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    // Call handler in here to make sure it handles new scrollToField value from the context
+    handleScrollToField(elementRef, path, scrollToField, setScrollToField);
+  }, [path, scrollToField, setScrollToField]);
+
   if (props.type === "boolean") {
     return (
       <LabeledSwitch
         {...(field as FieldInputProps<string>)}
+        ref={(ref) => {
+          elementRef.current = ref;
+          // Call handler in here to make sure it handles new refs
+          handleScrollToField(elementRef, path, scrollToField, setScrollToField);
+        }}
         checked={field.value as boolean}
         label={
           <>
@@ -113,7 +147,16 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
   };
 
   return (
-    <ControlLabels className={styles.container} label={label} infoTooltipContent={tooltip} optional={optional}>
+    <ControlLabels
+      className={styles.container}
+      label={label}
+      infoTooltipContent={tooltip}
+      optional={optional}
+      ref={(ref) => {
+        elementRef.current = ref;
+        handleScrollToField(elementRef, path, scrollToField, setScrollToField);
+      }}
+    >
       {(props.type === "number" || props.type === "string" || props.type === "integer") && (
         <Input
           {...field}

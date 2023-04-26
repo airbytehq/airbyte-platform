@@ -80,6 +80,8 @@ interface TestStateContext {
 interface FormManagementStateContext {
   isTestInputOpen: boolean;
   setTestInputOpen: (open: boolean) => void;
+  scrollToField: string | undefined;
+  setScrollToField: (field: string | undefined) => void;
 }
 
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
@@ -497,13 +499,16 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   children,
 }) => {
   const [isTestInputOpen, setTestInputOpen] = useState(false);
+  const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
 
   const ctx = useMemo(
     () => ({
       isTestInputOpen,
       setTestInputOpen,
+      scrollToField,
+      setScrollToField,
     }),
-    [isTestInputOpen]
+    [isTestInputOpen, scrollToField]
   );
 
   return (
