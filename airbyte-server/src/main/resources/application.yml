@@ -20,7 +20,7 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowed-origins-regex:
+          allowedOrigins:
             - ^.*$
     netty:
       access-logger:
