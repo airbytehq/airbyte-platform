@@ -904,6 +904,7 @@
   "connectorBuilder.warnings.primaryKeyMissing": "In at least one record, the configured primary key is not set. Make sure it is always available.",
   "connectorBuilder.warnings.primaryKeyDuplicate": "Primary key is not unique - found <b>{duplicateKey}</b> more than once.",
   "connectorBuilder.resolvingStreamList": "Checking configuration",
+  "connectorBuilder.interpolationHeading": "Variables available for interpolation",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

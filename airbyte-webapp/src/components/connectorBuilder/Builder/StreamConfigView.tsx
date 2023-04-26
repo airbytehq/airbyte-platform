@@ -10,7 +10,6 @@ import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { Text } from "components/ui/Text";
-import { TextWithHTML } from "components/ui/TextWithHTML";
 
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
@@ -30,6 +29,7 @@ import { BuilderTitle } from "./BuilderTitle";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
 import { KeyValueListField } from "./KeyValueListField";
+import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { PartitionSection } from "./PartitionSection";
 import styles from "./StreamConfigView.module.scss";
@@ -69,32 +69,22 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderFieldWithInputs
               type="string"
               path={streamFieldPath("urlPath")}
-              label="Path URL"
-              tooltip={
-                <TextWithHTML text="Path of the API endpoint that this stream represents.<br><br>Do not put sensitive information (e.g. API tokens) into this field - use the Authentication component in the Global Configuration section for this." />
-              }
+              manifestPath="HttpRequester.properties.path"
             />
             <BuilderField
               type="enum"
               path={streamFieldPath("httpMethod")}
-              options={["GET", "POST"]}
-              label="HTTP Method"
-              tooltip="HTTP method to use for requests sent to the API"
+              options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+              manifestPath="HttpRequester.properties.http_method"
             />
             <BuilderField
               type="array"
               path={streamFieldPath("fieldPointer")}
               label="Record selector"
-              optional
-              tooltip="Pointer into the response that should be extracted as the final record"
-            />
-            <BuilderField
-              type="array"
-              path={streamFieldPath("primaryKey")}
-              label="Primary key"
-              tooltip="Pointer into the response that should be used as the primary key when deduplicating records in the destination"
+              manifestPath="DpathExtractor.properties.field_path"
               optional
             />
+            <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
           </BuilderCard>
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
@@ -111,18 +101,15 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           >
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestParameters")}
-              label="Request Parameters"
-              tooltip="Parameters to attach to API requests"
+              manifestPath="HttpRequester.properties.request_parameters"
             />
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestHeaders")}
-              label="Request Headers"
-              tooltip="Headers to attach to API requests"
+              manifestPath="HttpRequester.properties.request_headers"
             />
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestBody")}
-              label="Request Body"
-              tooltip="Body to attach to API requests as url-encoded form values"
+              manifestPath="HttpRequester.properties.request_body_json"
             />
           </BuilderCard>
         </>

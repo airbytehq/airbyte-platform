@@ -41,6 +41,7 @@ export const links = {
   stripeCustomerPortal: "https://billing.stripe.com/p/login/5kAbJs2Gy83H2YwdQQ",
   iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
   ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
+  interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
 } as const;
 
 export type OutboundLinks = typeof links;

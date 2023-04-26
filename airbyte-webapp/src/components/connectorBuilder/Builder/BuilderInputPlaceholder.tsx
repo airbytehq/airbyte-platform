@@ -10,20 +10,23 @@ import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderInputPlaceholder.module.scss";
+import { getLabelAndTooltip } from "./manifestHelpers";
 
 export interface BuilderFieldProps {
-  label: string;
+  label?: string;
   tooltip?: string;
+  manifestPath?: string;
 }
 
 export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
   const { setTestInputOpen } = useConnectorBuilderFormManagementState();
+  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, props.manifestPath, "", true);
   return (
     <FlexContainer alignItems="center">
       <FlexItem grow>
         <FlexContainer gap="none">
-          <Text size="lg">{props.label}</Text>
-          {props.tooltip && <InfoTooltip placement="top-start">{props.tooltip}</InfoTooltip>}
+          <Text size="lg">{label}</Text>
+          {tooltip && <InfoTooltip placement="top-start">{tooltip}</InfoTooltip>}
         </FlexContainer>
       </FlexItem>
       <Tooltip control={<FontAwesomeIcon icon={faUser} className={styles.tooltipTrigger} />}>

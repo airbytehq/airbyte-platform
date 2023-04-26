@@ -51,8 +51,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
         <>
           <BuilderOneOf
             path={buildPath("values")}
-            label="Partition values"
-            tooltip="List of values to iterate over"
+            manifestPath="ListPartitionRouter.properties.values"
             options={[
               {
                 label: "Value List",
@@ -79,8 +78,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("cursor_field")}
-            label="Current partition value identifier"
-            tooltip="Name of the field on the stream_slice object which should hold the current partition value. Can be accessed from other components using {{ stream_slice.identifier }}"
+            manifestPath="ListPartitionRouter.properties.cursor_field"
           />
           <ToggleGroupField<RequestOption>
             label="Inject partition value into outgoing HTTP request"
@@ -116,14 +114,12 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("parent_key")}
-            label="Parent key"
-            tooltip="The key of the parent stream's records that will be the stream slice key"
+            manifestPath="ParentStreamConfig.properties.parent_key"
           />
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("partition_field")}
-            label="Current parent key value identifier"
-            tooltip="The name of the field on the stream_slice object that will be set to value of the Parent key. Can be accessed from other components using {{ stream_slice.identifier }}"
+            manifestPath="ParentStreamConfig.properties.partition_field"
           />
         </>
       ),
@@ -162,6 +158,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
           <BuilderOneOf
             path={buildPath("")}
             label="Partition router"
+            manifestOptionPaths={["ListPartitionRouter", "ParentStreamConfig"]}
             tooltip="Method to use on this router"
             options={getSlicingOptions(buildPath)}
           />

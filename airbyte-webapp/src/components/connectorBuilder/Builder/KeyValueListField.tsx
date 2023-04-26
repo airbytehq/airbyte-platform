@@ -1,5 +1,5 @@
 import { useField } from "formik";
-import React, { useRef } from "react";
+import React, { ReactNode, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
@@ -8,6 +8,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
+import { getLabelAndTooltip } from "./manifestHelpers";
 import { RemoveButton } from "./RemoveButton";
 
 interface KeyValueInputProps {
@@ -40,12 +41,14 @@ const KeyValueInput: React.FC<KeyValueInputProps> = ({ onRemove, path }) => {
 
 interface KeyValueListFieldProps {
   path: string;
-  label: string;
-  tooltip: string;
+  label?: string;
+  tooltip?: ReactNode;
+  manifestPath?: string;
 }
 
-export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, label, tooltip }) => {
+export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, label, tooltip, manifestPath }) => {
   const [{ value: keyValueList }, , { setValue: setKeyValueList }] = useField<Array<[string, string]>>(path);
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path);
 
   // need to wrap the setter into a ref because it will be a new function on every formik state update
   const setKeyValueListRef = useRef(setKeyValueList);
@@ -53,8 +56,8 @@ export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, labe
 
   return (
     <KeyValueList
-      label={label}
-      tooltip={tooltip}
+      label={finalLabel}
+      tooltip={finalTooltip}
       keyValueList={keyValueList}
       setKeyValueList={setKeyValueListRef}
       path={path}

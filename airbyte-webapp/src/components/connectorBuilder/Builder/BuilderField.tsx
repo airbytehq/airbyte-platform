@@ -18,6 +18,7 @@ import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderField.module.scss";
+import { getLabelAndTooltip } from "./manifestHelpers";
 
 interface EnumFieldProps {
   options: string[];
@@ -37,7 +38,8 @@ interface ArrayFieldProps {
 interface BaseFieldProps {
   // path to the location in the Connector Manifest schema which should be set by this component
   path: string;
-  label: string;
+  label?: string;
+  manifestPath?: string;
   tooltip?: React.ReactNode;
   readOnly?: boolean;
   optional?: boolean;
@@ -100,8 +102,6 @@ const handleScrollToField = (
 
 const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> = ({
   path,
-  label,
-  tooltip,
   optional = false,
   readOnly,
   pattern,
@@ -109,10 +109,12 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
   meta,
   form,
   adornment,
+  manifestPath,
   ...props
 }) => {
   const hasError = !!meta.error && meta.touched;
 
+  const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, manifestPath, path);
   const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();
 
   const elementRef = useRef<HTMLDivElement | null>(null);

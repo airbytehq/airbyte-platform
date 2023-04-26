@@ -1,7 +1,5 @@
 import { useIntl } from "react-intl";
 
-import { TextWithHTML } from "components/ui/TextWithHTML";
-
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
 
@@ -23,11 +21,8 @@ export const GlobalConfigView: React.FC = () => {
       <BuilderCard className={styles.content}>
         <BuilderFieldWithInputs
           type="string"
+          manifestPath="HttpRequester.properties.url_base"
           path="global.urlBase"
-          label="API Base URL"
-          tooltip={
-            <TextWithHTML text="Base URL of the source API.<br><br>Do not put sensitive information (e.g. API tokens) into this field - use the Authentication component for this." />
-          }
           onBlur={(value: string) => {
             if (value) {
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.API_URL_CREATE, {
