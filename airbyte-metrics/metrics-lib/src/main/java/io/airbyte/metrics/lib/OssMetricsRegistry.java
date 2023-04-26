@@ -82,6 +82,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
       "time taken to create a new kube pod process"),
+
+  NORMALIZATION_IN_DESTINATION_CONTAINER(
+      MetricEmittingApps.WORKER,
+      "normalization_in_destination_container",
+      "increments when normalization is run in the destination container",
+      MetricTags.CONNECTION_ID),
+  NORMALIZATION_IN_NORMALIZATION_CONTAINER(
+      MetricEmittingApps.WORKER,
+      "normalization_in_normalization_container",
+      "increments when normalization is run in the normalization container",
+      MetricTags.CONNECTION_ID),
   NUM_ABNORMAL_SCHEDULED_SYNCS_IN_LAST_DAY(
       MetricEmittingApps.METRICS_REPORTER,
       "num_abnormal_scheduled_syncs_last_day",

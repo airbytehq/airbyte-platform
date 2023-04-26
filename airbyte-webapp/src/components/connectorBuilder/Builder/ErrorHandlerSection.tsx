@@ -10,6 +10,7 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
+import { getDescriptionByManifest, getOptionsByManifest } from "./manifestHelpers";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { BuilderStream } from "../types";
 
@@ -46,8 +47,7 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
         <BuilderField
           type="number"
           path={buildPath("backoff_strategy.backoff_time_in_seconds")}
-          label="Backoff time in seconds"
-          tooltip="Retry again after a fixed number of seconds"
+          manifestPath="ConstantBackoffStrategy.properties.backoff_time_in_seconds"
         />
       ),
     },
@@ -59,9 +59,8 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
         <BuilderField
           type="number"
           path={buildPath("backoff_strategy.factor")}
-          label="Multiplier"
+          manifestPath="ExponentialBackoffStrategy.properties.factor"
           optional
-          tooltip="A factor to control how quickly the wait time increases - used in the formula 'multiplier times 2 to the power of (# retry attempt)' seconds"
         />
       ),
     },
@@ -74,15 +73,13 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
           <BuilderField
             type="string"
             path={buildPath("backoff_strategy.header")}
-            label="Header"
-            tooltip="The header field in the HTTP response to check for a number of seconds to wait until the next request"
+            manifestPath="WaitTimeFromHeader.properties.header"
           />
           <BuilderField
             type="string"
             path={buildPath("backoff_strategy.regex")}
             optional
-            label="Regex"
-            tooltip="A regex to extract the number of seconds out of the header"
+            manifestPath="WaitTimeFromHeader.properties.regex"
           />
         </>
       ),
@@ -96,22 +93,19 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
           <BuilderField
             type="string"
             path={buildPath("backoff_strategy.header")}
-            label="Header"
-            tooltip="Extract time at which we can retry the request from response header and wait for the difference between now and that time"
+            manifestPath="WaitUntilTimeFromHeader.properties.header"
           />
           <BuilderField
             type="string"
             path={buildPath("backoff_strategy.regex")}
             optional
-            label="Regex"
-            tooltip="A regex to extract the timestamp when to retry out of the hedaer"
+            manifestPath="WaitUntilTimeFromHeader.properties.regex"
           />
           <BuilderField
             type="string"
             path={buildPath("backoff_strategy.min_wait")}
             optional
-            label="Minimum wait time"
-            tooltip="The minimum amount of time to wait before the next request"
+            manifestPath="WaitUntilTimeFromHeader.properties.min_wait"
           />
         </>
       ),
@@ -122,10 +116,7 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     <BuilderCard
       toggleConfig={{
         label: (
-          <ControlLabels
-            label="Error handler"
-            infoTooltipContent="Configure how to handle various errors in order to increase the chance for a successful sync"
-          />
+          <ControlLabels label="Error handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
         ),
         toggledOn,
         onToggle: handleToggle,
@@ -160,6 +151,12 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
                 path={buildPath("backoff_strategy")}
                 label="Strategy"
                 tooltip="The strategy to use to decide when to retry a request"
+                manifestOptionPaths={[
+                  "ConstantBackoffStrategy",
+                  "ExponentialBackoffStrategy",
+                  "WaitTimeFromHeader",
+                  "WaitUntilTimeFromHeader",
+                ]}
                 options={getBackoffOptions(buildPath)}
               />
             </ToggleGroupField>
@@ -176,39 +173,34 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
                 <BuilderField
                   type="string"
                   path={buildPath("response_filter.error_message_contains")}
-                  label="If error message matches"
                   optional
-                  tooltip="If set, this string is searched for in the response - if found the filter matches"
+                  manifestPath="HttpResponseFilter.properties.error_message_contains"
                 />
                 <BuilderField
                   type="string"
                   path={buildPath("response_filter.predicate")}
-                  label="and predicate is fulfilled"
                   optional
-                  tooltip="If set, logic in double curly braces is interpreted - if a non-empty result is returned, the filter matches"
-                  pattern={/\{\{.+\}\}/}
+                  pattern="{{ predicate logic }}"
+                  manifestPath="HttpResponseFilter.properties.predicate"
                 />
                 <BuilderField
                   type="array"
                   path={buildPath("response_filter.http_codes")}
-                  label="and HTTP codes match"
                   itemType="integer"
                   optional
-                  tooltip="If set and the response status code matches one of the specified status codes, the filter matches"
+                  manifestPath="HttpResponseFilter.properties.http_codes"
                 />
                 <BuilderField
                   type="enum"
                   path={buildPath("response_filter.action")}
-                  label="Then execute action"
-                  tooltip="The action to take if the specified filter matches"
-                  options={["IGNORE", "SUCCESS", "FAIL", "RETRY"]}
+                  options={getOptionsByManifest("HttpResponseFilter.properties.action")}
+                  manifestPath="HttpResponseFilter.properties.action"
                 />
                 <BuilderField
                   type="string"
                   path={buildPath("response_filter.error_message")}
-                  label="Error message"
                   optional
-                  tooltip="The error message shown in the logs of the connector for troubleshooting"
+                  manifestPath="HttpResponseFilter.properties.error_message"
                 />
               </>
             </ToggleGroupField>

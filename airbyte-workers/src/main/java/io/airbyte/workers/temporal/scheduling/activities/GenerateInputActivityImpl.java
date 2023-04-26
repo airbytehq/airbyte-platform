@@ -48,19 +48,26 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.NormalizationInDestinationBiqQuery;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConstants;
+import io.airbyte.workers.helper.NormalizationInDestinationHelper;
 import io.airbyte.workers.utils.ConfigReplacer;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -171,7 +178,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
                                                                             final int attempt,
                                                                             final JobSyncConfig config,
                                                                             final StandardDestinationDefinition destinationDefinition,
-                                                                            final JsonNode destinationConfiguration)
+                                                                            final JsonNode destinationConfiguration,
+                                                                            Map<String, String> additionalEnviornmentVariables)
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
     final String destinationNormalizationDockerImage = destinationDefinition.getNormalizationConfig() != null
@@ -191,7 +199,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
         .withNormalizationDockerImage(destinationNormalizationDockerImage)
         .withSupportsDbt(destinationDefinition.getSupportsDbt())
         .withNormalizationIntegrationType(normalizationIntegrationType)
-        .withAllowedHosts(configReplacer.getAllowedHosts(destinationDefinition.getAllowedHosts(), destinationConfiguration));
+        .withAllowedHosts(configReplacer.getAllowedHosts(destinationDefinition.getAllowedHosts(), destinationConfiguration))
+        .withAdditionalEnvironmentVariables(additionalEnviornmentVariables);
   }
 
   /**
@@ -264,7 +273,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
               attemptNumber,
               jobSyncConfig,
               destinationDefinition,
-              destinationConfiguration);
+              destinationConfiguration,
+              Collections.emptyMap());
 
       final StandardCheckConnectionInput sourceCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.SOURCE)
@@ -337,6 +347,15 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final StandardDestinationDefinition destinationDefinition =
           configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
 
+      final var normalizationInDestinationFeatureFlagEnabledForBigquery = featureFlagClient.boolVariation(NormalizationInDestinationBiqQuery.INSTANCE,
+          new Workspace(connectionId));
+      final var shouldNormalizeInDestination = NormalizationInDestinationHelper
+          .shouldNormalizeInDestination(config.getOperationSequence(),
+              config.getDestinationDockerImage(),
+              normalizationInDestinationFeatureFlagEnabledForBigquery);
+
+      reportNormalizationInDestinationMetrics(shouldNormalizeInDestination, config, connectionId);
+
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
           attempt,
@@ -350,7 +369,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           attempt,
           config,
           destinationDefinition,
-          attemptSyncConfig.getDestinationConfiguration());
+          attemptSyncConfig.getDestinationConfiguration(),
+          NormalizationInDestinationHelper.getAdditionalEnvironmentVariables(shouldNormalizeInDestination));
 
       final List<Context> featureFlagContext = new ArrayList<>();
       featureFlagContext.add(new Workspace(config.getWorkspaceId()));
@@ -376,13 +396,26 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withConnectionId(standardSync.getConnectionId())
           .withWorkspaceId(config.getWorkspaceId())
           .withCommitStateAsap(true)
-          .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, new Multi(featureFlagContext)));
+          .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, new Multi(featureFlagContext)))
+          .withNormalizeInDestinationContainer(shouldNormalizeInDestination);
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
 
       return new GeneratedJobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
     } catch (final Exception e) {
       throw new RetryableException(e);
+    }
+  }
+
+  private void reportNormalizationInDestinationMetrics(final boolean shouldNormalizeInDestination,
+                                                       final JobSyncConfig config,
+                                                       final UUID connectionId) {
+    if (shouldNormalizeInDestination) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_DESTINATION_CONTAINER, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+    } else if (NormalizationInDestinationHelper.normalizationStepRequired(config.getOperationSequence())) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_NORMALIZATION_CONTAINER, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     }
   }
 

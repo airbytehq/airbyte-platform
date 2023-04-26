@@ -812,8 +812,8 @@
   "connectorBuilder.inputModal.enumTooltip": "The user will only be able to choose from one of these values. If none are provided the user will be able to enter any value",
   "connectorBuilder.inputModal.unsupportedInput": "Detailed configuration for this property type is disabled, switch to YAML view to edit",
   "connectorBuilder.inputModal.inferredInputMessage": "Detailed configuration for this user input is disabled as it is tied to the configuration",
-  "connectorBuilder.key": "key",
-  "connectorBuilder.value": "value",
+  "connectorBuilder.key": "Key",
+  "connectorBuilder.value": "Value",
   "connectorBuilder.addKeyValue": "Add",
   "connectorBuilder.saveInputsForm": "Save",
   "connectorBuilder.inputsFormWarning": "Testing values are not saved with the connector. They are required in order to test your streams, and will be asked to the end user in order to setup this connector",
@@ -861,6 +861,7 @@
   "connectorBuilder.builderPrompt.button": "Build your connector",
   "connectorBuilder.builderPrompt.title": "Need to build your own source?",
   "connectorBuilder.builderPrompt.description": "Build your source with our {adjective} {noun}",
+  "connectorBuilder.builderPrompt.shortDescription": "Use our {adjective} {noun}",
   "connectorBuilder.builderPrompt.adjective": "low-code",
   "connectorBuilder.builderPrompt.noun": "connector builder",
   "connectorBuilder.listPage.name": "Name",
@@ -903,6 +904,7 @@
   "connectorBuilder.warnings.primaryKeyMissing": "In at least one record, the configured primary key is not set. Make sure it is always available.",
   "connectorBuilder.warnings.primaryKeyDuplicate": "Primary key is not unique - found <b>{duplicateKey}</b> more than once.",
   "connectorBuilder.resolvingStreamList": "Checking configuration",
+  "connectorBuilder.interpolationHeading": "Variables available for interpolation",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

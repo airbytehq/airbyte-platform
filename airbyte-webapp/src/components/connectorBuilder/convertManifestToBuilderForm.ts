@@ -36,6 +36,8 @@ import {
   Spec,
   DatetimeBasedCursorEndDatetime,
   DatetimeBasedCursorStartDatetime,
+  DefaultPaginator,
+  CursorPagination,
 } from "../../core/request/ConnectorManifest";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
@@ -168,7 +170,21 @@ function manifestPartitionRouterToBuilder(
   }
 
   if (partitionRouter.type === "ListPartitionRouter") {
-    return [partitionRouter];
+    return [
+      {
+        ...partitionRouter,
+        values:
+          typeof partitionRouter.values === "string"
+            ? {
+                value: partitionRouter.values,
+                type: "variable",
+              }
+            : {
+                value: partitionRouter.values,
+                type: "list",
+              },
+      },
+    ];
   }
 
   if (partitionRouter.type === "SubstreamPartitionRouter") {
@@ -376,6 +392,54 @@ function manifestIncrementalSyncToBuilder(
   };
 }
 
+function safeJinjaAccessToPath(expression: string, stopCondition: string): string[] | undefined {
+  const matchesSafeJinjaAccess = expression.match(
+    /\{\{ (response|headers)((\.get\("(.+?)", \{\}\))|(\[-?\d+\]))+ \}\}/
+  );
+  const matchesSafeJinjaCondition = stopCondition.match(
+    /\{\{ not (response|headers)((\.get\("(.+?)", \{\}\))|(\[-?\d+\]))+ \}\}/
+  );
+  if (
+    !matchesSafeJinjaAccess ||
+    !matchesSafeJinjaCondition ||
+    matchesSafeJinjaAccess[1] !== matchesSafeJinjaCondition[1]
+  ) {
+    return undefined;
+  }
+
+  const segmentRegex = /\.get\("(.+?)", {}\)|\[(-?\d+)\]/g;
+  const segments = [...expression.matchAll(segmentRegex)].map((match) => match[1] || match[2]);
+  const conditionSegments = [...stopCondition.matchAll(segmentRegex)].map((match) => match[1] || match[2]);
+
+  if (!isEqual(segments, conditionSegments)) {
+    return undefined;
+  }
+
+  return [matchesSafeJinjaAccess[1], ...segments];
+}
+
+function manifestPaginatorStrategyToBuilder(
+  strategy: DefaultPaginator["pagination_strategy"]
+): BuilderPaginator["strategy"] {
+  if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
+    return strategy;
+  }
+  const { cursor_value, stop_condition, ...rest } = strategy as CursorPagination;
+
+  const path = safeJinjaAccessToPath(cursor_value, stop_condition || "");
+
+  return {
+    ...rest,
+    cursor: path
+      ? { type: path[0] as "response" | "headers", path: path.slice(1) }
+      : {
+          type: "custom",
+          cursor_value,
+          stop_condition,
+        },
+  };
+}
+
 function manifestPaginatorToBuilder(
   manifestPaginator: SimpleRetrieverPaginator | undefined,
   streamName: string | undefined
@@ -404,7 +468,7 @@ function manifestPaginatorToBuilder(
   }
 
   return {
-    strategy: manifestPaginator.pagination_strategy,
+    strategy: manifestPaginatorStrategyToBuilder(manifestPaginator.pagination_strategy),
     pageTokenOption,
     pageSizeOption: manifestPaginator.page_size_option,
   };

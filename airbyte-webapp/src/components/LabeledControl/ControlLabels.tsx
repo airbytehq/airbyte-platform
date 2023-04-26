@@ -22,8 +22,8 @@ export interface ControlLabelsProps {
   format?: React.ReactNode;
 }
 
-const ControlLabels: React.FC<React.PropsWithChildren<ControlLabelsProps>> = (props) => (
-  <div className={className(styles.controlContainer, props.className)}>
+const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlLabelsProps>>((props, ref) => (
+  <div ref={ref} className={className(styles.controlContainer, props.className)}>
     <Label
       error={props.error}
       success={props.success}
@@ -48,6 +48,6 @@ const ControlLabels: React.FC<React.PropsWithChildren<ControlLabelsProps>> = (pr
     </Label>
     {props.children}
   </div>
-);
+));
 
 export { ControlLabels };

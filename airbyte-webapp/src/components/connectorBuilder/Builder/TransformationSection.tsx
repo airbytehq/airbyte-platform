@@ -8,6 +8,7 @@ import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
+import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import { BuilderStream } from "../types";
 
 interface PartitionSectionProps {
@@ -52,12 +53,11 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
       },
       children: (
         <>
-          <BuilderField type="array" path={buildPath("path")} label="Path" tooltip="Path to the field to add" />
+          <BuilderField type="array" path={buildPath("path")} manifestPath="AddedFieldDefinition.properties.path" />
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("value")}
-            label="Value"
-            tooltip="Value of the new field (use {{ record.existing_field }} syntax to reference to other fields in the same record"
+            manifestPath="AddedFieldDefinition.properties.value"
           />
         </>
       ),
@@ -70,8 +70,8 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
       toggleConfig={{
         label: (
           <ControlLabels
-            label="Transformations"
-            infoTooltipContent="Transform records before sending them to the destination by removing or changing fields."
+            label={getLabelByManifest("DeclarativeStream.properties.transformations")}
+            infoTooltipContent={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
           />
         ),
         toggledOn,

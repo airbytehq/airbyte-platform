@@ -71,6 +71,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         path={streamFieldPath("paginator.strategy")}
         label="Mode"
         tooltip="Pagination method to use for requests sent to the API"
+        manifestOptionPaths={["OffsetIncrement", "PageIncrement", "CursorPagination"]}
         options={[
           {
             label: "Offset Increment",
@@ -79,9 +80,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
               <>
                 <BuilderField
                   type="number"
+                  manifestPath="OffsetIncrement.properties.page_size"
                   path={streamFieldPath("paginator.strategy.page_size")}
-                  label="Limit"
-                  tooltip="Set the limit of each page"
                 />
                 <PageSizeOption label="limit" streamFieldPath={streamFieldPath} />
                 <PageTokenOption label="offset" streamFieldPath={streamFieldPath} />
@@ -96,14 +96,12 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
-                  label="Page size"
-                  tooltip="Set the size of each page"
+                  manifestPath="PageIncrement.properties.page_size"
                 />
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.start_from_page")}
-                  label="Start from page"
-                  tooltip="Page number to start requesting pages from"
+                  manifestPath="PageIncrement.properties.start_from_page"
                   optional
                 />
                 <PageSizeOption label="page size" streamFieldPath={streamFieldPath} />
@@ -114,37 +112,83 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           {
             label: "Cursor Pagination",
             typeValue: CURSOR_PAGINATION,
+            default: {
+              cursor: {
+                type: "response",
+                path: [],
+              },
+            },
             children: (
               <>
-                <BuilderFieldWithInputs
-                  type="string"
-                  path={streamFieldPath("paginator.strategy.cursor_value")}
-                  label="Cursor value"
-                  tooltip="Value of the cursor to send in requests to the API"
+                <BuilderOneOf
+                  path={streamFieldPath("paginator.strategy.cursor")}
+                  label="Next page cursor"
+                  tooltip="Specify how to select the next page"
+                  options={[
+                    {
+                      label: "Response",
+                      typeValue: "response",
+                      default: {
+                        path: [],
+                      },
+                      children: (
+                        <BuilderField
+                          type="array"
+                          path={streamFieldPath("paginator.strategy.cursor.path")}
+                          label="Path"
+                          tooltip="Path to the value in the response object to select"
+                        />
+                      ),
+                    },
+                    {
+                      label: "Header",
+                      typeValue: "headers",
+                      default: {
+                        path: [],
+                      },
+                      children: (
+                        <BuilderField
+                          type="array"
+                          path={streamFieldPath("paginator.strategy.cursor.path")}
+                          label="Path"
+                          tooltip="Path to the header value to select"
+                        />
+                      ),
+                    },
+                    {
+                      label: "Custom",
+                      typeValue: "custom",
+                      children: (
+                        <>
+                          <BuilderFieldWithInputs
+                            type="string"
+                            path={streamFieldPath("paginator.strategy.cursor_value")}
+                            manifestPath="CursorPagination.properties.cursor_value"
+                          />
+                          <BuilderFieldWithInputs
+                            type="string"
+                            path={streamFieldPath("paginator.strategy.stop_condition")}
+                            manifestPath="CursorPagination.properties.stop_condition"
+                            optional
+                          />
+                        </>
+                      ),
+                    },
+                  ]}
                 />
-                <BuilderFieldWithInputs
-                  type="string"
-                  path={streamFieldPath("paginator.strategy.stop_condition")}
-                  label="Stop condition"
-                  tooltip="Condition that determines when to stop requesting further pages"
-                  optional
-                />
+                <PageTokenOption label="cursor value" streamFieldPath={streamFieldPath} />
                 <BuilderField
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
+                  manifestPath="CursorPagination.properties.page_size"
                   onChange={(newValue) => {
                     if (newValue === undefined || newValue === "") {
                       pageSizeOptionHelpers.setValue(undefined);
                     }
                   }}
-                  label="Page size"
-                  tooltip="Set the size of each page"
                   optional
                 />
-                {pageSizeField.value !== undefined && pageSizeField.value !== "" && (
-                  <PageSizeOption label="page size" streamFieldPath={streamFieldPath} />
-                )}
-                <PageTokenOption label="cursor value" streamFieldPath={streamFieldPath} />
+                {pageSizeField.value ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
               </>
             ),
           },

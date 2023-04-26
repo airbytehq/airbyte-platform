@@ -122,7 +122,7 @@ export const disableStreamSlicer = () => {
 };
 
 export const configureListStreamSlicer = (values: string, cursor_field: string) => {
-  cy.get('[data-testid="tag-input-streams[0].partitionRouter[0].values"] input[type="text"]').type(values, {
+  cy.get('[data-testid="tag-input-streams[0].partitionRouter[0].values.value"] input[type="text"]').type(values, {
     force: true,
   });
   cy.get("[name='streams[0].partitionRouter[0].cursor_field']").type(cursor_field, { force: true });

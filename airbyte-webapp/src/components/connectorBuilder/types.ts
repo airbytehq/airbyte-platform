@@ -42,6 +42,7 @@ import {
   DefaultErrorHandlerBackoffStrategiesItem,
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
+  DefaultPaginator,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -77,8 +78,19 @@ export interface BuilderFormValues {
 
 export type RequestOptionOrPathInject = Omit<RequestOption, "type"> | { inject_into: "path" };
 
+export interface BuilderCursorPagination extends Omit<CursorPagination, "cursor_value" | "stop_condition"> {
+  cursor:
+    | {
+        type: "custom";
+        cursor_value: string;
+        stop_condition?: string;
+      }
+    | { type: "response"; path: string[] }
+    | { type: "headers"; path: string[] };
+}
+
 export interface BuilderPaginator {
-  strategy: PageIncrement | OffsetIncrement | CursorPagination;
+  strategy: PageIncrement | OffsetIncrement | BuilderCursorPagination;
   pageTokenOption: RequestOptionOrPathInject;
   pageSizeOption?: RequestOption;
 }
@@ -89,6 +101,10 @@ export interface BuilderSubstreamPartitionRouter {
   partition_field: string;
   parentStreamReference: string;
   request_option?: RequestOption;
+}
+
+export interface BuilderListPartitionRouter extends Omit<ListPartitionRouter, "values"> {
+  values: { type: "list"; value: string[] } | { type: "variable"; value: string };
 }
 
 export type BuilderTransformation =
@@ -153,7 +169,7 @@ export interface BuilderStream {
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
   incrementalSync?: BuilderIncrementalSync;
-  partitionRouter?: Array<ListPartitionRouter | BuilderSubstreamPartitionRouter>;
+  partitionRouter?: Array<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>;
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, unknown>;
@@ -417,6 +433,8 @@ function extractInterpolatedConfigKey(str: string | undefined): string | undefin
   return regexResult[2];
 }
 
+const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
+
 export const injectIntoValues = ["request_parameter", "header", "path", "body_data", "body_json"];
 const nonPathRequestOptionSchema = yup
   .object()
@@ -426,6 +444,8 @@ const nonPathRequestOptionSchema = yup
   })
   .notRequired()
   .default(undefined);
+
+const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
 
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
@@ -442,6 +462,11 @@ export const builderFormValidationSchema = yup.object().shape({
         then: yup.string().required("form.empty.error"),
         otherwise: (schema) => schema.strip(),
       }),
+      refresh_request_body: yup.mixed().when("type", {
+        is: OAUTH_AUTHENTICATOR,
+        then: keyValueListSchema,
+        otherwise: (schema) => schema.strip(),
+      }),
     }),
   }),
   streams: yup
@@ -455,9 +480,9 @@ export const builderFormValidationSchema = yup.object().shape({
         primaryKey: yup.array().of(yup.string()),
         httpMethod: yup.mixed().oneOf(["GET", "POST"]),
         requestOptions: yup.object().shape({
-          requestParameters: yup.array().of(yup.array().of(yup.string())),
-          requestHeaders: yup.array().of(yup.array().of(yup.string())),
-          requestBody: yup.array().of(yup.array().of(yup.string())),
+          requestParameters: keyValueListSchema,
+          requestHeaders: keyValueListSchema,
+          requestBody: keyValueListSchema,
         }),
         schema: yup.string().test({
           test: (val: string | undefined) => {
@@ -476,7 +501,11 @@ export const builderFormValidationSchema = yup.object().shape({
         paginator: yup
           .object()
           .shape({
-            pageSizeOption: nonPathRequestOptionSchema,
+            pageSizeOption: yup.mixed().when("strategy.page_size", {
+              is: (val: number) => Boolean(val),
+              then: nonPathRequestOptionSchema,
+              otherwise: (schema) => schema.strip(),
+            }),
             pageTokenOption: yup.object().shape({
               inject_into: yup.mixed().oneOf(injectIntoValues),
               field_name: yup.mixed().when("inject_into", {
@@ -492,14 +521,25 @@ export const builderFormValidationSchema = yup.object().shape({
                   then: yup.number().required("form.empty.error"),
                   otherwise: yup.number(),
                 }),
-                cursor_value: yup.mixed().when("type", {
+                cursor: yup.mixed().when("type", {
                   is: CURSOR_PAGINATION,
-                  then: yup.string().required("form.empty.error"),
-                  otherwise: (schema) => schema.strip(),
-                }),
-                stop_condition: yup.mixed().when("type", {
-                  is: CURSOR_PAGINATION,
-                  then: yup.string(),
+                  then: yup.object().shape({
+                    cursor_value: yup.mixed().when("type", {
+                      is: "custom",
+                      then: yup.string().required("form.empty.error"),
+                      otherwise: (schema) => schema.strip(),
+                    }),
+                    stop_condition: yup.mixed().when("type", {
+                      is: "custom",
+                      then: yup.string(),
+                      otherwise: (schema) => schema.strip(),
+                    }),
+                    path: yup.mixed().when("type", {
+                      is: (val: string) => val !== "custom",
+                      then: yup.array().of(yup.string()).min(1, "form.empty.error"),
+                      otherwise: (schema) => schema.strip(),
+                    }),
+                  }),
                   otherwise: (schema) => schema.strip(),
                 }),
                 start_from_page: yup.mixed().when("type", {
@@ -523,7 +563,16 @@ export const builderFormValidationSchema = yup.object().shape({
               }),
               values: yup.mixed().when("type", {
                 is: LIST_PARTITION_ROUTER,
-                then: yup.array().of(yup.string()),
+                then: yup.object().shape({
+                  value: yup.mixed().when("type", {
+                    is: "list",
+                    then: yup.array().of(yup.string()),
+                    otherwise: yup
+                      .string()
+                      .required("form.empty.error")
+                      .matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+                  }),
+                }),
                 otherwise: (schema) => schema.strip(),
               }),
               request_option: nonPathRequestOptionSchema,
@@ -598,7 +647,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 .object()
                 .shape({
                   error_message_contains: yup.string(),
-                  predicate: yup.string().matches(/\{\{.+\}\}/, FORM_PATTERN_ERROR),
+                  predicate: yup.string().matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
                   http_codes: yup.array(yup.string()).notRequired().default(undefined),
                   error_message: yup.string(),
                 })
@@ -651,6 +700,37 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
   return globalSettings.authenticator as HttpRequesterAuthenticator;
 }
 
+function pathToSafeJinjaAccess(path: string[]): string {
+  return path
+    .map((segment) => {
+      const asNumber = Number(segment);
+      if (!Number.isNaN(asNumber)) {
+        return `[${asNumber}]`;
+      }
+      return `.get("${segment}", {})`;
+    })
+    .join("");
+}
+
+function builderPaginationStrategyToManifest(
+  strategy: BuilderPaginator["strategy"]
+): DefaultPaginator["pagination_strategy"] {
+  if (strategy.type === "OffsetIncrement" || strategy.type === "PageIncrement") {
+    return strategy;
+  }
+  const { cursor, ...rest } = strategy;
+
+  return {
+    ...rest,
+    cursor_value:
+      cursor.type === "custom" ? cursor.cursor_value : `{{ ${cursor.type}${pathToSafeJinjaAccess(cursor.path)} }}`,
+    stop_condition:
+      cursor.type === "custom"
+        ? cursor.stop_condition
+        : `{{ not ${cursor.type}${pathToSafeJinjaAccess(cursor.path)} }}`,
+  };
+}
+
 function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): SimpleRetrieverPaginator {
   if (!paginator) {
     return { type: "NoPagination" };
@@ -669,8 +749,8 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
   return {
     type: "DefaultPaginator",
     page_token_option: pageTokenOption,
-    page_size_option: paginator.pageSizeOption,
-    pagination_strategy: paginator.strategy,
+    page_size_option: paginator.strategy.page_size ? paginator.pageSizeOption : undefined,
+    pagination_strategy: builderPaginationStrategyToManifest(paginator.strategy),
   };
 }
 
@@ -715,7 +795,10 @@ function builderStreamPartitionRouterToManifest(
   }
   return partitionRouter.map((subRouter) => {
     if (subRouter.type === "ListPartitionRouter") {
-      return subRouter;
+      return {
+        ...subRouter,
+        values: subRouter.values.value,
+      };
     }
     const parentStream = values.streams.find(({ id }) => id === subRouter.parentStreamReference);
     if (!parentStream) {

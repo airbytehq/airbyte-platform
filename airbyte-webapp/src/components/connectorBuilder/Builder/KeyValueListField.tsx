@@ -1,72 +1,67 @@
 import { useField } from "formik";
-import React, { useRef } from "react";
-import { FormattedMessage } from "react-intl";
+import React, { ReactNode, useRef } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
-import { Input } from "components/ui/Input";
-import { Text } from "components/ui/Text";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 
-import { UserInputHelper } from "./BuilderFieldWithInputs";
-import styles from "./KeyValueListField.module.scss";
+import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
+import { getLabelAndTooltip } from "./manifestHelpers";
 import { RemoveButton } from "./RemoveButton";
 
 interface KeyValueInputProps {
-  keyValue: [string, string];
-  onChange: (keyValue: [string, string]) => void;
+  path: string;
   onRemove: () => void;
 }
 
-const KeyValueInput: React.FC<KeyValueInputProps> = ({ keyValue, onChange, onRemove }) => {
+const KeyValueInput: React.FC<KeyValueInputProps> = ({ onRemove, path }) => {
+  const { formatMessage } = useIntl();
   return (
-    <div className={styles.inputContainer}>
-      <div className={styles.labeledInput}>
-        <Text className={styles.kvLabel}>
-          <FormattedMessage id="connectorBuilder.key" />
-        </Text>
-        <Input
-          value={keyValue[0]}
-          onChange={(e) => onChange([e.target.value, keyValue[1]])}
-          adornment={
-            <UserInputHelper setValue={(newValue) => onChange([newValue, keyValue[1]])} currentValue={keyValue[0]} />
-          }
-          className={styles.inputWithHelper}
+    <FlexContainer gap="xl" alignItems="flex-start">
+      <FlexItem grow>
+        <BuilderFieldWithInputs
+          label={formatMessage({ id: "connectorBuilder.key" })}
+          type="string"
+          path={`${path}.0`}
         />
-      </div>
-      <div className={styles.labeledInput}>
-        <Text className={styles.kvLabel}>
-          <FormattedMessage id="connectorBuilder.value" />
-        </Text>
-        <Input
-          value={keyValue[1]}
-          onChange={(e) => onChange([keyValue[0], e.target.value])}
-          adornment={
-            <UserInputHelper setValue={(newValue) => onChange([keyValue[0], newValue])} currentValue={keyValue[1]} />
-          }
-          className={styles.inputWithHelper}
+      </FlexItem>
+      <FlexItem grow>
+        <BuilderFieldWithInputs
+          label={formatMessage({ id: "connectorBuilder.value" })}
+          type="string"
+          path={`${path}.1`}
         />
-      </div>
+      </FlexItem>
       <RemoveButton onClick={onRemove} />
-    </div>
+    </FlexContainer>
   );
 };
 
 interface KeyValueListFieldProps {
   path: string;
-  label: string;
-  tooltip: string;
+  label?: string;
+  tooltip?: ReactNode;
+  manifestPath?: string;
 }
 
-export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, label, tooltip }) => {
+export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, label, tooltip, manifestPath }) => {
   const [{ value: keyValueList }, , { setValue: setKeyValueList }] = useField<Array<[string, string]>>(path);
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path);
 
   // need to wrap the setter into a ref because it will be a new function on every formik state update
   const setKeyValueListRef = useRef(setKeyValueList);
   setKeyValueListRef.current = setKeyValueList;
 
   return (
-    <KeyValueList label={label} tooltip={tooltip} keyValueList={keyValueList} setKeyValueList={setKeyValueListRef} />
+    <KeyValueList
+      label={finalLabel}
+      tooltip={finalTooltip}
+      keyValueList={keyValueList}
+      setKeyValueList={setKeyValueListRef}
+      path={path}
+    />
   );
 };
 
@@ -76,7 +71,8 @@ const KeyValueList = React.memo(
     setKeyValueList,
     label,
     tooltip,
-  }: Omit<KeyValueListFieldProps, "path"> & {
+    path,
+  }: KeyValueListFieldProps & {
     keyValueList: Array<[string, string]>;
     setKeyValueList: React.MutableRefObject<(val: Array<[string, string]>) => void>;
   }) => {
@@ -93,14 +89,10 @@ const KeyValueList = React.memo(
           </Button>
         }
       >
-        {keyValueList.map((keyValue, keyValueIndex) => (
+        {keyValueList.map((_keyValue, keyValueIndex) => (
           <KeyValueInput
             key={keyValueIndex}
-            keyValue={keyValue}
-            onChange={(newKeyValue) => {
-              const updatedList = keyValueList.map((entry, index) => (index === keyValueIndex ? newKeyValue : entry));
-              setKeyValueList.current(updatedList);
-            }}
+            path={`${path}.${keyValueIndex}`}
             onRemove={() => {
               const updatedList = keyValueList.filter((_, index) => index !== keyValueIndex);
               setKeyValueList.current(updatedList);

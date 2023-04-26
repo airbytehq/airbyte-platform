@@ -27,6 +27,10 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WebhookOperationSummary;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -48,8 +52,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private static final Logger LOGGER = LoggerFactory.getLogger(SyncWorkflowImpl.class);
   private static final String VERSION_LABEL = "sync-workflow";
   private static final int CURRENT_VERSION = 3;
-  private static final String NORMALIZATION_SUMMARY_CHECK_TAG = "normalization_summary_check";
-  private static final int NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION = 1;
   private static final String AUTO_DETECT_SCHEMA_TAG = "auto_detect_schema";
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
   private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
@@ -138,29 +140,17 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
         if (standardSyncOperation.getOperatorType() == OperatorType.NORMALIZATION) {
-          final int normalizationSummaryCheckVersion =
-              Workflow.getVersion(NORMALIZATION_SUMMARY_CHECK_TAG, Workflow.DEFAULT_VERSION, NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION);
-          if (normalizationSummaryCheckVersion >= NORMALIZATION_SUMMARY_CHECK_CURRENT_VERSION) {
-            Boolean shouldRun;
-            try {
-              shouldRun = normalizationSummaryCheckActivity.shouldRunNormalization(Long.valueOf(jobRunConfig.getJobId()), jobRunConfig.getAttemptId(),
-                  Optional.ofNullable(syncOutput.getStandardSyncSummary().getTotalStats().getRecordsCommitted()));
-            } catch (final Exception e) {
-              shouldRun = true;
-            }
-            if (!shouldRun) {
-              LOGGER.info("No records to normalize detected");
-              // Normalization skip has been disabled: issue #5417
-              // LOGGER.info("Skipping normalization because there are no records to normalize.");
-              // continue;
-            }
+          if (syncInput.getNormalizeInDestinationContainer()) {
+            LOGGER.info("Not Running Normalization Container for connection {}, because it ran in destination", connectionId);
+          } else {
+            LOGGER.info("generating normalization input");
+            final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
+            final NormalizationSummary normalizationSummary =
+                normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
+            syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
+            MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NORMALIZATION_IN_NORMALIZATION_CONTAINER, 1,
+                new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
           }
-
-          LOGGER.info("generating normalization input");
-          final NormalizationInput normalizationInput = generateNormalizationInput(syncInput, syncOutput);
-          final NormalizationSummary normalizationSummary =
-              normalizationActivity.normalize(jobRunConfig, destinationLauncherConfig, normalizationInput);
-          syncOutput = syncOutput.withNormalizationSummary(normalizationSummary);
         } else if (standardSyncOperation.getOperatorType() == OperatorType.DBT) {
           final OperatorDbtInput operatorDbtInput = new OperatorDbtInput()
               .withConnectionId(syncInput.getConnectionId())

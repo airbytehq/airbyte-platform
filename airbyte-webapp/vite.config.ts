@@ -1,5 +1,6 @@
 import path from "path";
 
+import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
 import { UserConfig } from "vite";
@@ -20,6 +21,7 @@ export default defineConfig(() => {
       react(),
       buildInfo(),
       viteTsconfigPaths(),
+      viteYaml(),
       svgrPlugin({
         svgrOptions: {
           titleProp: true,

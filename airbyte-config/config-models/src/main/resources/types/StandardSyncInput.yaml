@@ -82,3 +82,7 @@ properties:
     description: whether we want to commit stats during the replication activity, defaults to false
     type: boolean
     default: false
+  normalizeInDestinationContainer:
+    description: whether normalization should be run in the destination container
+    type: boolean
+    default: false

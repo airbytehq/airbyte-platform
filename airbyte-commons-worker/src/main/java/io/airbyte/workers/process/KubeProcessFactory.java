@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.process;
 
+import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
@@ -95,6 +96,7 @@ public class KubeProcessFactory implements ProcessFactory {
                         final Map<String, String> customLabels,
                         final Map<String, String> jobMetadata,
                         final Map<Integer, Integer> internalToExternalPorts,
+                        @NotNull final Map<String, String> additionalEnvironmentVariables,
                         final String... args)
       throws WorkerException {
     try {
@@ -141,7 +143,7 @@ public class KubeProcessFactory implements ProcessFactory {
           workerConfigs.getJobSocatImage(),
           workerConfigs.getJobBusyboxImage(),
           workerConfigs.getJobCurlImage(),
-          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap()),
+          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables),
           internalToExternalPorts,
           args).toProcess();
     } catch (final Exception e) {

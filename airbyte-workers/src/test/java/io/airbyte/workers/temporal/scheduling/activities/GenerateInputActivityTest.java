@@ -53,6 +53,7 @@ import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.S
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -187,7 +188,8 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage());
+        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
     final GeneratedJobInput expectedGeneratedJobInput = new GeneratedJobInput(
         expectedJobRunConfig,
@@ -259,7 +261,8 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobResetConfig.getDestinationDockerImage());
+        .withDockerImage(jobResetConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
     final GeneratedJobInput expectedGeneratedJobInput = new GeneratedJobInput(
         expectedJobRunConfig,
@@ -319,7 +322,8 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage());
+        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
     final StandardCheckConnectionInput expectedDestinationCheckInput = new StandardCheckConnectionInput()
         .withActorId(DESTINATION_ID)

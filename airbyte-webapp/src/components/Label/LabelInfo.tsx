@@ -9,7 +9,7 @@ import styles from "./LabelInfo.module.scss";
 interface LabelInfoProps {
   label: React.ReactNode;
   examples?: JSONSchema7Type;
-  description?: string;
+  description?: string | React.ReactNode;
   options?: Array<{ title: string; description?: string }>;
 }
 
@@ -22,7 +22,11 @@ const Description: React.FC<Pick<LabelInfoProps, "label" | "description">> = ({ 
     <div>
       {/* don't use <Text as=h4> here, because we want the default parent styling for this header */}
       <h3 className={styles.descriptionHeader}>{label}</h3>
-      <TextWithHTML className={styles.description} text={description} />
+      {typeof description === "string" ? (
+        <TextWithHTML className={styles.description} text={description} />
+      ) : (
+        <div className={styles.description}>{description}</div>
+      )}
     </div>
   );
 };
@@ -68,8 +72,10 @@ const Examples: React.FC<Pick<LabelInfoProps, "examples">> = ({ examples }) => {
         <FormattedMessage id="connector.exampleValues" values={{ count: examplesArray.length }} />
       </h4>
       <div className={styles.exampleContainer}>
-        {examplesArray.map((example) => (
-          <span className={styles.exampleItem}>{String(example)}</span>
+        {examplesArray.map((example, i) => (
+          <span key={i} className={styles.exampleItem}>
+            {typeof example === "object" ? JSON.stringify(example) : String(example)}
+          </span>
         ))}
       </div>
     </div>
