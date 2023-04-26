@@ -433,6 +433,8 @@ const nonPathRequestOptionSchema = yup
   .notRequired()
   .default(undefined);
 
+const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
+
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
     connectorName: yup.string().required("form.empty.error"),
@@ -448,6 +450,11 @@ export const builderFormValidationSchema = yup.object().shape({
         then: yup.string().required("form.empty.error"),
         otherwise: (schema) => schema.strip(),
       }),
+      refresh_request_body: yup.mixed().when("type", {
+        is: OAUTH_AUTHENTICATOR,
+        then: keyValueListSchema,
+        otherwise: (schema) => schema.strip(),
+      }),
     }),
   }),
   streams: yup
@@ -461,9 +468,9 @@ export const builderFormValidationSchema = yup.object().shape({
         primaryKey: yup.array().of(yup.string()),
         httpMethod: yup.mixed().oneOf(["GET", "POST"]),
         requestOptions: yup.object().shape({
-          requestParameters: yup.array().of(yup.array().of(yup.string())),
-          requestHeaders: yup.array().of(yup.array().of(yup.string())),
-          requestBody: yup.array().of(yup.array().of(yup.string())),
+          requestParameters: keyValueListSchema,
+          requestHeaders: keyValueListSchema,
+          requestBody: keyValueListSchema,
         }),
         schema: yup.string().test({
           test: (val: string | undefined) => {
