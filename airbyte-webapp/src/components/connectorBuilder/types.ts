@@ -476,7 +476,11 @@ export const builderFormValidationSchema = yup.object().shape({
         paginator: yup
           .object()
           .shape({
-            pageSizeOption: nonPathRequestOptionSchema,
+            pageSizeOption: yup.mixed().when("strategy.page_size", {
+              is: (val: number) => Boolean(val),
+              then: nonPathRequestOptionSchema,
+              otherwise: (schema) => schema.strip(),
+            }),
             pageTokenOption: yup.object().shape({
               inject_into: yup.mixed().oneOf(injectIntoValues),
               field_name: yup.mixed().when("inject_into", {
@@ -669,7 +673,7 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
   return {
     type: "DefaultPaginator",
     page_token_option: pageTokenOption,
-    page_size_option: paginator.pageSizeOption,
+    page_size_option: paginator.strategy.page_size ? paginator.pageSizeOption : undefined,
     pagination_strategy: paginator.strategy,
   };
 }
