@@ -38,7 +38,7 @@ interface BaseFieldProps {
   tooltip?: React.ReactNode;
   readOnly?: boolean;
   optional?: boolean;
-  pattern?: RegExp;
+  pattern?: string;
   adornment?: ReactNode;
   className?: string;
 }

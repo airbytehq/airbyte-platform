@@ -186,7 +186,7 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
                   label="and predicate is fulfilled"
                   optional
                   tooltip="If set, logic in double curly braces is interpreted - if a non-empty result is returned, the filter matches"
-                  pattern={/\{\{.+\}\}/}
+                  pattern="{{ predicate logic }}"
                 />
                 <BuilderField
                   type="array"

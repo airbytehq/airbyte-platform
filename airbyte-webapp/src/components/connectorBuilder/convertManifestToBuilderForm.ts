@@ -168,7 +168,21 @@ function manifestPartitionRouterToBuilder(
   }
 
   if (partitionRouter.type === "ListPartitionRouter") {
-    return [partitionRouter];
+    return [
+      {
+        ...partitionRouter,
+        values:
+          typeof partitionRouter.values === "string"
+            ? {
+                value: partitionRouter.values,
+                type: "variable",
+              }
+            : {
+                value: partitionRouter.values,
+                type: "list",
+              },
+      },
+    ];
   }
 
   if (partitionRouter.type === "SubstreamPartitionRouter") {

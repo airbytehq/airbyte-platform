@@ -91,6 +91,10 @@ export interface BuilderSubstreamPartitionRouter {
   request_option?: RequestOption;
 }
 
+export interface BuilderListPartitionRouter extends Omit<ListPartitionRouter, "values"> {
+  values: { type: "list"; value: string[] } | { type: "variable"; value: string };
+}
+
 export type BuilderTransformation =
   | {
       type: "add";
@@ -153,7 +157,7 @@ export interface BuilderStream {
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
   incrementalSync?: BuilderIncrementalSync;
-  partitionRouter?: Array<ListPartitionRouter | BuilderSubstreamPartitionRouter>;
+  partitionRouter?: Array<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>;
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, unknown>;
@@ -417,6 +421,8 @@ function extractInterpolatedConfigKey(str: string | undefined): string | undefin
   return regexResult[2];
 }
 
+const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
+
 export const injectIntoValues = ["request_parameter", "header", "path", "body_data", "body_json"];
 const nonPathRequestOptionSchema = yup
   .object()
@@ -527,7 +533,16 @@ export const builderFormValidationSchema = yup.object().shape({
               }),
               values: yup.mixed().when("type", {
                 is: LIST_PARTITION_ROUTER,
-                then: yup.array().of(yup.string()),
+                then: yup.object().shape({
+                  value: yup.mixed().when("type", {
+                    is: "list",
+                    then: yup.array().of(yup.string()),
+                    otherwise: yup
+                      .string()
+                      .required("form.empty.error")
+                      .matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+                  }),
+                }),
                 otherwise: (schema) => schema.strip(),
               }),
               request_option: nonPathRequestOptionSchema,
@@ -602,7 +617,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 .object()
                 .shape({
                   error_message_contains: yup.string(),
-                  predicate: yup.string().matches(/\{\{.+\}\}/, FORM_PATTERN_ERROR),
+                  predicate: yup.string().matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
                   http_codes: yup.array(yup.string()).notRequired().default(undefined),
                   error_message: yup.string(),
                 })
@@ -719,7 +734,10 @@ function builderStreamPartitionRouterToManifest(
   }
   return partitionRouter.map((subRouter) => {
     if (subRouter.type === "ListPartitionRouter") {
-      return subRouter;
+      return {
+        ...subRouter,
+        values: subRouter.values.value,
+      };
     }
     const parentStream = values.streams.find(({ id }) => id === subRouter.parentStreamReference);
     if (!parentStream) {

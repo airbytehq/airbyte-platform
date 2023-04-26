@@ -29,7 +29,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       helpers.setValue([
         {
           type: LIST_PARTITION_ROUTER,
-          values: [],
+          values: { type: "list", value: [] },
           cursor_field: "",
         },
       ]);
@@ -44,16 +44,37 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       label: "List",
       typeValue: LIST_PARTITION_ROUTER,
       default: {
-        values: [],
+        values: { type: "list", value: [] },
         cursor_field: "",
       },
       children: (
         <>
-          <BuilderField
-            type="array"
+          <BuilderOneOf
             path={buildPath("values")}
             label="Partition values"
             tooltip="List of values to iterate over"
+            options={[
+              {
+                label: "Value List",
+                typeValue: "list",
+                default: { value: [] },
+                children: <BuilderField type="array" path={buildPath("values.value")} label="Value list" />,
+              },
+              {
+                label: "User Input",
+                typeValue: "variable",
+                default: { value: "" },
+                children: (
+                  <BuilderFieldWithInputs
+                    type="string"
+                    path={buildPath("values.value")}
+                    label="Value"
+                    tooltip="Reference an array user input here to allow the user to specify the values to iterate over: {{ config['user_input_name'] }}"
+                    pattern={"{{ config['user_input_name'] }}"}
+                  />
+                ),
+              },
+            ]}
           />
           <BuilderFieldWithInputs
             type="string"

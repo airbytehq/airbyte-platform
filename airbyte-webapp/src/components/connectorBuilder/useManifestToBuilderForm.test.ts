@@ -293,12 +293,12 @@ describe("Conversion successfully results in", () => {
               {
                 type: "ListPartitionRouter",
                 cursor_field: "id",
-                slice_values: ["slice1", "slice2"],
+                values: ["slice1", "slice2"],
               },
               {
                 type: "ListPartitionRouter",
                 cursor_field: "id2",
-                slice_values: ["slice2", "slice3"],
+                values: "{{ config['abc'] }}",
               },
             ],
           },
@@ -306,7 +306,18 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
-    expect(formValues.streams[0].partitionRouter).toEqual(manifest.streams[0].retriever.partition_router);
+    expect(formValues.streams[0].partitionRouter).toEqual([
+      {
+        type: "ListPartitionRouter",
+        cursor_field: "id",
+        values: { type: "list", value: ["slice1", "slice2"] },
+      },
+      {
+        type: "ListPartitionRouter",
+        cursor_field: "id2",
+        values: { type: "variable", value: "{{ config['abc'] }}" },
+      },
+    ]);
   });
 
   it("substream partition router converted to builder partition router", async () => {
