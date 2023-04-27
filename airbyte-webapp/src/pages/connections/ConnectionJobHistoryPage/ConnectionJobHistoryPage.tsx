@@ -12,9 +12,9 @@ import { Link } from "components/ui/Link";
 
 import { Action, Namespace } from "core/analytics";
 import { getFrequencyFromScheduleData } from "core/analytics/utils";
+import { useListJobs } from "core/api";
 import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "hooks/services/Analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useListJobs } from "services/job/JobService";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
