@@ -83,6 +83,7 @@ function formInputToInputInEditing(
 ): InputInEditing {
   return {
     key,
+    previousKey: key,
     definition,
     required,
     isNew: false,

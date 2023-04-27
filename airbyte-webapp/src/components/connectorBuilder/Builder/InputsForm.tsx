@@ -33,6 +33,8 @@ const supportedTypes = [
 
 export interface InputInEditing {
   key: string;
+  // the old key of the input if it was edited
+  previousKey?: string;
   definition: AirbyteJSONSchema;
   required: boolean;
   isNew?: boolean;
@@ -133,7 +135,7 @@ export const InputForm = ({
             "inputs",
             inputInEditing.isNew
               ? [...values.inputs, newInput]
-              : values.inputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
+              : values.inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
           );
           onClose(newInput);
         }
