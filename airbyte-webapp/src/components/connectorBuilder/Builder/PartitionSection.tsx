@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import { ControlLabels } from "components/LabeledControl";
 
 import { RequestOption } from "core/request/ConnectorManifest";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
@@ -128,13 +129,14 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderPartitioning}
+      label={
+        <ControlLabels
+          label="Partitioning"
+          infoTooltipContent="Configure how to partition a stream into subsets of records and iterate over the data. If multiple partition routers are defined, the cartesian product of the slices from all routers is formed."
+        />
+      }
       toggleConfig={{
-        label: (
-          <ControlLabels
-            label="Partitioning"
-            infoTooltipContent="Configure how to partition a stream into subsets of records and iterate over the data. If multiple partition routers are defined, the cartesian product of the slices from all routers is formed."
-          />
-        ),
         toggledOn,
         onToggle: handleToggle,
       }}

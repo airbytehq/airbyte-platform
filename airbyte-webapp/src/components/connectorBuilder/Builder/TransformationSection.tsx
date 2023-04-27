@@ -3,6 +3,8 @@ import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 
+import { links } from "utils/links";
+
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
@@ -67,13 +69,14 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderTransformations}
+      label={
+        <ControlLabels
+          label={getLabelByManifest("DeclarativeStream.properties.transformations")}
+          infoTooltipContent={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
+        />
+      }
       toggleConfig={{
-        label: (
-          <ControlLabels
-            label={getLabelByManifest("DeclarativeStream.properties.transformations")}
-            infoTooltipContent={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
-          />
-        ),
         toggledOn,
         onToggle: handleToggle,
       }}

@@ -1,5 +1,8 @@
+import { ControlLabels } from "components/LabeledControl";
+
 import { Action, Namespace } from "core/analytics";
 import { useAnalyticsService } from "hooks/services/Analytics";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
@@ -20,10 +23,10 @@ export const AuthenticationSection: React.FC = () => {
   const analyticsService = useAnalyticsService();
 
   return (
-    <BuilderCard>
+    <BuilderCard docLink={links.connectorBuilderAuthentication} label={<ControlLabels label="Authentication" />}>
       <BuilderOneOf
         path="global.authenticator"
-        label="Authentication"
+        label="Method"
         manifestPath="HttpRequester.properties.authenticator"
         manifestOptionPaths={[
           "ApiKeyAuthenticator",

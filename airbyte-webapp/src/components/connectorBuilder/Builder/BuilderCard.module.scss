@@ -9,11 +9,6 @@
   position: relative;
 }
 
-.toggleContainer {
-  display: flex;
-  gap: variables.$spacing-md;
-}
-
 .copyButtonContainer {
   position: absolute;
   right: -50px;
@@ -42,4 +37,8 @@
     cursor: pointer;
     background: colors.$grey-50;
   }
+}
+
+.docLink {
+  color: colors.$blue-400;
 }
