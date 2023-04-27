@@ -46,6 +46,9 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
+object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
+
+
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.

@@ -7,6 +7,7 @@ import { FormattedMessage } from "react-intl";
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
 import { ComboBox, Option } from "components/ui/ComboBox";
+import DatePicker from "components/ui/DatePicker";
 import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { TagInput } from "components/ui/TagInput";
@@ -56,6 +57,7 @@ export type BuilderFieldProps = BaseFieldProps &
         onBlur?: (value: string) => void;
         disabled?: boolean;
       }
+    | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
     | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
@@ -179,6 +181,20 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           onBlur={(e) => {
             field.onBlur(e);
             props.onBlur?.(e.target.value);
+          }}
+        />
+      )}
+      {(props.type === "date" || props.type === "date-time") && (
+        <DatePicker
+          error={hasError}
+          withTime={props.type === "date-time"}
+          onChange={(value) => {
+            form.setFieldValue(path, value);
+            form.setFieldTouched(path, true);
+          }}
+          value={(field.value as string) ?? ""}
+          onBlur={() => {
+            form.setFieldTouched(path, true);
           }}
         />
       )}

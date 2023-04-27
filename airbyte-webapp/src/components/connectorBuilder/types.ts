@@ -269,6 +269,7 @@ export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", Bu
       type: "string",
       title: "Start date",
       format: "date-time",
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
     },
   },
   end_date: {
@@ -278,6 +279,7 @@ export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", Bu
       type: "string",
       title: "End date",
       format: "date-time",
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
     },
   },
 };

@@ -7,7 +7,7 @@ RUN yum update -y && \
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11
-ARG CDK_VERSION=0.35.3
+ARG CDK_VERSION=0.36.1
 # Set up python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT /root/.pyenv
@@ -19,7 +19,7 @@ ENV CDK_ENTRYPOINT ${PYENV_ROOT}/versions/${PYTHON_VERSION}/lib/python3.9/site-p
 ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
 RUN ${PIP} install airbyte-cdk==${CDK_VERSION}
 
-ARG VERSION=0.44.2
+ARG VERSION=0.44.3
 
 ENV APPLICATION airbyte-connector-atelier-server
 ENV VERSION ${VERSION}
@@ -32,5 +32,5 @@ ADD bin/${APPLICATION}-${VERSION}.tar /app
 # wait for upstream dependencies to become available before starting server
 ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
 
-LABEL io.airbyte.version=0.44.2
+LABEL io.airbyte.version=0.44.3
 LABEL io.airbyte.name=airbyte/connector-atelier-server

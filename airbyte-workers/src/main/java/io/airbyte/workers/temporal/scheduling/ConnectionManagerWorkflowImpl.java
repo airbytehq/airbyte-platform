@@ -28,6 +28,7 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
+import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -37,6 +38,7 @@ import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity.CheckConnectionInput;
+import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
@@ -98,6 +100,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
 
   private static final String GENERATE_CHECK_INPUT_TAG = "generate_check_input";
+  private static final String CHECK_WITH_API_TAG = "check_with_api";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
 
   private WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
@@ -106,6 +109,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private static final String GET_FEATURE_FLAGS_TAG = "get_feature_flags";
   private static final int GET_FEATURE_FLAGS_CURRENT_VERSION = 1;
+  private static final int CHECK_WITH_API_CURRENT_VERSION = 1;
 
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private GenerateInputActivity getSyncInputActivity;
@@ -117,6 +121,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private AutoDisableConnectionActivity autoDisableConnectionActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private CheckConnectionActivity checkActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private SubmitCheckConnectionActivity submitCheckActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private StreamResetActivity streamResetActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -237,7 +243,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       StandardSyncOutput standardSyncOutput = null;
 
       try {
-        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs);
+        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs, featureFlags);
         if (syncCheckConnectionResult.isFailed()) {
           final StandardSyncOutput checkFailureOutput = syncCheckConnectionResult.buildFailureOutput();
           workflowState.setFailed(getFailStatus(checkFailureOutput));
@@ -399,7 +405,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   }
 
   private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
-                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs) {
+                                                     @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs,
+                                                     final Map<String, Boolean> featureFlags) {
     final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
     final JobCheckFailureInput jobStateInput =
@@ -431,7 +438,18 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       log.info("SOURCE CHECK: Skipped, reset job");
     } else {
       log.info("SOURCE CHECK: Starting");
-      final ConnectorJobOutput sourceCheckResponse = getCheckResponse(checkSourceInput);
+      final ConnectorJobOutput sourceCheckResponse;
+
+      final int checkWithApiVersion =
+          Workflow.getVersion(CHECK_WITH_API_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_API_CURRENT_VERSION);
+
+      if (checkWithApiVersion >= CHECK_WITH_API_CURRENT_VERSION && featureFlags.get(CheckConnectionUseApiEnabled.INSTANCE.getKey())) {
+        sourceCheckResponse = runMandatoryActivityWithOutput(submitCheckActivity::submitCheckConnectionToSource,
+            checkInputs.getSourceCheckConnectionInput().getActorId());
+      } else {
+        sourceCheckResponse = getCheckResponse(checkSourceInput);
+      }
+
       if (SyncCheckConnectionResult.isOutputFailed(sourceCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
         checkConnectionResult.setFailureOutput(sourceCheckResponse);
@@ -450,7 +468,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       log.info("DESTINATION CHECK: Skipped, source check failed");
     } else {
       log.info("DESTINATION CHECK: Starting");
-      final ConnectorJobOutput destinationCheckResponse = getCheckResponse(checkDestinationInput);
+      final ConnectorJobOutput destinationCheckResponse;
+      final int checkWithApiVersion =
+          Workflow.getVersion(CHECK_WITH_API_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_API_CURRENT_VERSION);
+      if (checkWithApiVersion >= CHECK_WITH_API_CURRENT_VERSION && featureFlags.get(CheckConnectionUseApiEnabled.INSTANCE.getKey())) {
+        destinationCheckResponse = runMandatoryActivityWithOutput(submitCheckActivity::submitCheckConnectionToDestination,
+            checkInputs.getDestinationCheckConnectionInput().getActorId());
+      } else {
+        destinationCheckResponse = getCheckResponse(checkDestinationInput);
+      }
       if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
         checkConnectionResult.setFailureOutput(destinationCheckResponse);
