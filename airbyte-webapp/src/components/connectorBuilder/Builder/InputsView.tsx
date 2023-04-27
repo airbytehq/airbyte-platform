@@ -62,18 +62,32 @@ export const InputsView: React.FC = () => {
   );
 };
 
+// Return user input type for a given schema definition
+function getType(definition: BuilderFormInput["definition"]): InputInEditing["type"] {
+  if (definition.format === "date") {
+    return "date";
+  }
+  if (definition.format === "date-time") {
+    return "date-time";
+  }
+  const supportedType = supportedTypes.find((type) => type === definition.type) || "unknown";
+  if (supportedType !== "unknown" && definition.enum) {
+    return "enum";
+  }
+  return supportedType;
+}
+
 function formInputToInputInEditing(
   { key, definition, required }: BuilderFormInput,
   isInferredInputOverride: boolean
 ): InputInEditing {
-  const supportedType = supportedTypes.find((type) => type === definition.type) || "unknown";
   return {
     key,
     definition,
     required,
     isNew: false,
     showDefaultValueField: Boolean(definition.default),
-    type: supportedType !== "unknown" && definition.enum ? "enum" : supportedType,
+    type: getType(definition),
     isInferredInputOverride,
   };
 }
