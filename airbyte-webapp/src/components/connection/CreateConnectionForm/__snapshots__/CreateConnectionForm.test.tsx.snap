@@ -82,7 +82,7 @@ exports[`CreateConnectionForm should render 1`] = `
                     data-testid="connectionName"
                     name="name"
                     placeholder="Name"
-                    value="Scrafty <> Heroku Postgres"
+                    value="Scrafty → Heroku Postgres"
                   />
                 </div>
               </div>

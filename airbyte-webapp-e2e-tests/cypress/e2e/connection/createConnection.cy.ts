@@ -217,7 +217,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         expect(interception.request.method).to.eq("POST");
 
         const connection: Partial<Connection> = {
-          name: `${source.name} <> ${destination.name}`,
+          name: `${source.name} → ${destination.name}`,
           scheduleType: "manual",
         };
         expect(interception.request.body).to.contain(connection);
