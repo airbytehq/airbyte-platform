@@ -26,10 +26,11 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConstants;
-import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
+import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
@@ -117,8 +118,8 @@ class ConnectionManagerWorkflowTest {
 
   private final ConfigFetchActivity mConfigFetchActivity =
       mock(ConfigFetchActivity.class, Mockito.withSettings().withoutAnnotations());
-  private final CheckConnectionActivity mCheckConnectionActivity =
-      mock(CheckConnectionActivity.class, Mockito.withSettings().withoutAnnotations());
+  private final SubmitCheckConnectionActivity mSubmitCheckConnectionActivity =
+      mock(SubmitCheckConnectionActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final GenerateInputActivityImpl mGenerateInputActivityImpl =
       mock(GenerateInputActivityImpl.class, Mockito.withSettings().withoutAnnotations());
   private static final JobCreationAndStatusUpdateActivity mJobCreationAndStatusUpdateActivity =
@@ -156,7 +157,7 @@ class ConnectionManagerWorkflowTest {
   @BeforeEach
   void setUp() {
     Mockito.reset(mConfigFetchActivity);
-    Mockito.reset(mCheckConnectionActivity);
+    Mockito.reset(mSubmitCheckConnectionActivity);
     Mockito.reset(mGenerateInputActivityImpl);
     Mockito.reset(mJobCreationAndStatusUpdateActivity);
     Mockito.reset(mAutoDisableConnectionActivity);
@@ -193,7 +194,10 @@ class ConnectionManagerWorkflowTest {
                 new IntegrationLauncherConfig(),
                 new StandardSyncInput()));
 
-    when(mCheckConnectionActivity.runWithJobOutput(Mockito.any()))
+    when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource(Mockito.any()))
+        .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
+            .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.SUCCEEDED).withMessage("check worked")));
+    when(mSubmitCheckConnectionActivity.submitCheckConnectionToDestination(Mockito.any()))
         .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
             .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.SUCCEEDED).withMessage("check worked")));
 
@@ -209,7 +213,7 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
 
     when(mFeatureFlagFetchActivity.getFeatureFlags(Mockito.any()))
-        .thenReturn(new FeatureFlagFetchOutput(Map.of()));
+        .thenReturn(new FeatureFlagFetchOutput(Map.of(CheckConnectionUseApiEnabled.INSTANCE.getKey(), true)));
 
     activityOptions = ActivityOptions.newBuilder()
         .setHeartbeatTimeout(Duration.ofSeconds(30))
@@ -920,7 +924,8 @@ class ConnectionManagerWorkflowTest {
 
       final Worker managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name());
       managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
-      managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mCheckConnectionActivity, mGenerateInputActivityImpl,
+      managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity,
+          mGenerateInputActivityImpl,
           mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity,
           mWorkflowConfigActivity, mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity);
 
@@ -1018,7 +1023,8 @@ class ConnectionManagerWorkflowTest {
 
       final Worker managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name());
       managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
-      managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mCheckConnectionActivity, mGenerateInputActivityImpl,
+      managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity,
+          mGenerateInputActivityImpl,
           mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity,
           mWorkflowConfigActivity, mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity);
 
@@ -1039,7 +1045,7 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(new JobCreationOutput(JOB_ID));
       when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
           .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
-      when(mCheckConnectionActivity.runWithJobOutput(Mockito.any()))
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource((Mockito.any())))
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("nope")));
 
@@ -1079,7 +1085,7 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(new JobCreationOutput(JOB_ID));
       when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
           .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
-      when(mCheckConnectionActivity.runWithJobOutput(Mockito.any()))
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource((Mockito.any())))
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withFailureReason(new FailureReason().withFailureType(FailureType.SYSTEM_ERROR)));
 
@@ -1119,11 +1125,11 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(new JobCreationOutput(JOB_ID));
       when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
           .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
-      when(mCheckConnectionActivity.runWithJobOutput(Mockito.any()))
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource(Mockito.any()))
           // First call (source) succeeds
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.SUCCEEDED).withMessage("all good")))
-
+              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.SUCCEEDED).withMessage("all good")));
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToDestination(Mockito.any()))
           // Second call (destination) fails
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("nope")));
@@ -1164,11 +1170,11 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(new JobCreationOutput(JOB_ID));
       when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
           .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
-      when(mCheckConnectionActivity.runWithJobOutput(Mockito.any()))
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource(Mockito.any()))
           // First call (source) succeeds
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.SUCCEEDED).withMessage("all good")))
-
+              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.SUCCEEDED).withMessage("all good")));
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToDestination(Mockito.any()))
           // Second call (destination) fails
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withFailureReason(new FailureReason().withFailureType(FailureType.SYSTEM_ERROR)));
@@ -1224,8 +1230,8 @@ class ConnectionManagerWorkflowTest {
       when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
           .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
       mockResetJobInput(jobRunConfig);
-      when(mCheckConnectionActivity.runWithJobOutput(Mockito.any()))
-          // first call, but should fail destination because source check is skipped
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToDestination(Mockito.any()))
+          // only call destination because because source check is skipped
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("nope")));
 
@@ -1616,7 +1622,8 @@ class ConnectionManagerWorkflowTest {
 
     final Worker managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name());
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));
-    managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mCheckConnectionActivity, mGenerateInputActivityImpl,
+    managerWorker.registerActivitiesImplementations(mConfigFetchActivity, mSubmitCheckConnectionActivity,
+        mGenerateInputActivityImpl,
         mJobCreationAndStatusUpdateActivity, mAutoDisableConnectionActivity, mRecordMetricActivity,
         mWorkflowConfigActivity, mRouteToSyncTaskQueueActivity, mFeatureFlagFetchActivity);
 

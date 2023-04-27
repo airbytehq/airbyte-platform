@@ -8,6 +8,7 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
+import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
@@ -77,7 +78,8 @@ public class ActivityBeanFactory {
                                                   final RecordMetricActivity recordMetricActivity,
                                                   final WorkflowConfigActivity workflowConfigActivity,
                                                   final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
-                                                  final FeatureFlagFetchActivity featureFlagFetchActivity) {
+                                                  final FeatureFlagFetchActivity featureFlagFetchActivity,
+                                                  final SubmitCheckConnectionActivity submitCheckConnectionActivity) {
     return List.of(generateInputActivity,
         jobCreationAndStatusUpdateActivity,
         configFetchActivity,
@@ -87,7 +89,8 @@ public class ActivityBeanFactory {
         recordMetricActivity,
         workflowConfigActivity,
         routeToSyncTaskQueueActivity,
-        featureFlagFetchActivity);
+        featureFlagFetchActivity,
+        submitCheckConnectionActivity);
   }
 
   @Singleton
