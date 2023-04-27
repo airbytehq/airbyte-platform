@@ -32,6 +32,7 @@ interface AddStreamButtonProps {
   button?: React.ReactElement;
   initialValues?: Partial<BuilderStream>;
   "data-testid"?: string;
+  modalTitle?: string;
 }
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
@@ -39,6 +40,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   button,
   initialValues,
   "data-testid": testId,
+  modalTitle,
 }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
@@ -110,7 +112,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             <FormikPatch />
             <Modal
               size="sm"
-              title={<FormattedMessage id="connectorBuilder.addStreamModal.title" />}
+              title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
               onClose={() => {
                 setIsOpen(false);
               }}

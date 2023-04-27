@@ -192,6 +192,10 @@ const StreamControls = ({
             <FontAwesomeIcon icon={faCopy} />
           </button>
         }
+        modalTitle={formatMessage(
+          { id: "connectorBuilder.copyStreamModal.title" },
+          { name: field.value[streamNum].name }
+        )}
       />
       <button className={classNames(styles.deleteButton, styles.controlButton)} type="button" onClick={handleDelete}>
         <FontAwesomeIcon icon={faTrashCan} />
