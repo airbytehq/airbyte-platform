@@ -49,8 +49,8 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const schema = useMemo(
     () =>
       yup.object().shape({
-        name: yup.string().required("form.empty.error"),
-        description: yup.string(),
+        name: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
+        description: yup.string().max(256, "connectorBuilder.maxLength"),
         useVersion: yup.bool(),
         version: yup.number().min(minVersion),
       }),

@@ -450,7 +450,7 @@ const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("
 
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
-    connectorName: yup.string().required("form.empty.error"),
+    connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
     urlBase: yup.string().required("form.empty.error"),
     authenticator: yup.object({
       header: yup.mixed().when("type", {
