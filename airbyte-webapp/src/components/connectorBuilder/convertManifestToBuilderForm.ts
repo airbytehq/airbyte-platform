@@ -1,5 +1,6 @@
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
+import pick from "lodash/pick";
 
 import {
   authTypeToKeyToInferredInput,
@@ -36,6 +37,10 @@ import {
   Spec,
   DatetimeBasedCursorEndDatetime,
   DatetimeBasedCursorStartDatetime,
+  ApiKeyAuthenticator,
+  BasicHttpAuthenticator,
+  BearerAuthenticator,
+  OAuthAuthenticator,
   DefaultPaginator,
   CursorPagination,
 } from "../../core/request/ConnectorManifest";
@@ -85,6 +90,36 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   return builderFormValues;
 };
 
+const RELEVANT_AUTHENTICATOR_KEYS = [
+  "type",
+  "api_token",
+  "header",
+  "username",
+  "password",
+  "client_id",
+  "client_secret",
+  "refresh_token",
+  "token_refresh_endpoint",
+  "access_token_name",
+  "expires_in_name",
+  "grant_type",
+  "refresh_request_body",
+  "scopes",
+  "token_expiry_date",
+  "token_expiry_date_format",
+] as const;
+
+// This type is a union of all keys of the supported authenticators
+type RelevantAuthenticatorKeysType = Exclude<
+  keyof ApiKeyAuthenticator | keyof BasicHttpAuthenticator | keyof BearerAuthenticator | keyof OAuthAuthenticator,
+  "$parameters"
+>;
+
+// Re-assign to make sure RELEVANT_AUTHENTICATOR_KEYS is listing all keys of all supported authenticators
+// If a key is not listed above, it will cause a typescript error
+const authenticatorKeysToCheck: Readonly<Array<(typeof RELEVANT_AUTHENTICATOR_KEYS)[number]>> =
+  RELEVANT_AUTHENTICATOR_KEYS as Readonly<RelevantAuthenticatorKeysType[]>;
+
 const manifestStreamToBuilder = (
   stream: DeclarativeStream,
   index: number,
@@ -97,12 +132,15 @@ const manifestStreamToBuilder = (
 
   assertType<HttpRequester>(retriever.requester, "HttpRequester", stream.name);
   const requester = retriever.requester;
+  const cleanedAuthenticator = pick(retriever.requester.authenticator, authenticatorKeysToCheck);
+  const cleanedFirstStreamAuthenticator = pick(firstStreamAuthenticator, authenticatorKeysToCheck);
 
   if (
     !firstStreamAuthenticator || firstStreamAuthenticator.type === "NoAuth"
       ? requester.authenticator && requester.authenticator.type !== "NoAuth"
-      : !isEqual(retriever.requester.authenticator, firstStreamAuthenticator)
+      : !isEqual(cleanedAuthenticator, cleanedFirstStreamAuthenticator)
   ) {
+    console.log("authenticator", cleanedAuthenticator, cleanedFirstStreamAuthenticator);
     throw new ManifestCompatibilityError(stream.name, "authenticator does not match the first stream's");
   }
 

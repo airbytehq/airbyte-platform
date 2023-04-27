@@ -5,6 +5,7 @@ import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 
 import { DefaultErrorHandlerBackoffStrategiesItem, HttpResponseFilter } from "core/request/ConnectorManifest";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
@@ -114,10 +115,11 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderErrorHandler}
+      label={
+        <ControlLabels label="Error handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
+      }
       toggleConfig={{
-        label: (
-          <ControlLabels label="Error handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
-        ),
         toggledOn,
         onToggle: handleToggle,
       }}

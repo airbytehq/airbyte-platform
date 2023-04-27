@@ -4,6 +4,7 @@ import { useIntl } from "react-intl";
 import { ControlLabels } from "components/LabeledControl";
 
 import { RequestOption } from "core/request/ConnectorManifest";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
@@ -57,13 +58,14 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderIncrementalSync}
+      label={
+        <ControlLabels
+          label="Incremental sync"
+          infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
+        />
+      }
       toggleConfig={{
-        label: (
-          <ControlLabels
-            label="Incremental sync"
-            infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
-          />
-        ),
         toggledOn,
         onToggle: handleToggle,
       }}

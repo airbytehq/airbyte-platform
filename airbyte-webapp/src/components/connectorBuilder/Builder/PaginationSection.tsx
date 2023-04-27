@@ -5,6 +5,7 @@ import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 
 import { RequestOption } from "core/request/ConnectorManifest";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
@@ -50,13 +51,11 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderPagination}
+      label={
+        <ControlLabels label="Pagination" infoTooltipContent="Configure how pagination is handled by your connector" />
+      }
       toggleConfig={{
-        label: (
-          <ControlLabels
-            label="Pagination"
-            infoTooltipContent="Configure how pagination is handled by your connector"
-          />
-        ),
         toggledOn,
         onToggle: handleToggle,
       }}

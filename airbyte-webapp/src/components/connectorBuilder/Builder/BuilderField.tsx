@@ -15,7 +15,7 @@ import { Text } from "components/ui/Text";
 import { TextArea } from "components/ui/TextArea";
 import { InfoTooltip } from "components/ui/Tooltip/InfoTooltip";
 
-import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
+import { FORM_PATTERN_ERROR } from "core/form/types";
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderField.module.scss";

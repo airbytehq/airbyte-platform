@@ -4,11 +4,13 @@ import classNames from "classnames";
 import { useField, useFormikContext } from "formik";
 import get from "lodash/get";
 import React, { useState } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { CheckBox } from "components/ui/CheckBox";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
@@ -17,8 +19,8 @@ import { BuilderStream } from "../types";
 
 interface BuilderCardProps {
   className?: string;
+  label?: React.ReactNode;
   toggleConfig?: {
-    label: React.ReactNode;
     toggledOn: boolean;
     onToggle: (newToggleValue: boolean) => void;
   };
@@ -28,6 +30,7 @@ interface BuilderCardProps {
     copyToLabel: string;
     copyFromLabel: string;
   };
+  docLink?: string;
 }
 
 export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = ({
@@ -35,24 +38,44 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   className,
   toggleConfig,
   copyConfig,
+  docLink,
+  label,
 }) => {
+  const { formatMessage } = useIntl();
   const { setFieldValue, getFieldMeta } = useFormikContext();
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
   const streams = getFieldMeta<BuilderStream[]>("streams").value;
   return (
     <Card className={classNames(className, styles.card)}>
-      {toggleConfig && (
-        <div className={styles.toggleContainer}>
-          <CheckBox
-            data-testid="toggle"
-            checked={toggleConfig.toggledOn}
-            onChange={(event) => {
-              toggleConfig.onToggle(event.target.checked);
-            }}
-          />
-          {toggleConfig.label}
-        </div>
+      {(toggleConfig || label) && (
+        <FlexContainer alignItems="center">
+          <FlexItem grow>
+            <FlexContainer>
+              {toggleConfig && (
+                <CheckBox
+                  data-testid="toggle"
+                  checked={toggleConfig.toggledOn}
+                  onChange={(event) => {
+                    toggleConfig.onToggle(event.target.checked);
+                  }}
+                />
+              )}
+              <span>{label}</span>
+            </FlexContainer>
+          </FlexItem>
+          {docLink && (
+            <a
+              href={docLink}
+              title={formatMessage({ id: "connectorBuilder.documentationLink" })}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.docLink}
+            >
+              <Icon type="docs" size="lg" />
+            </a>
+          )}
+        </FlexContainer>
       )}
       {copyConfig && streams.length > 1 && (
         <div className={styles.copyButtonContainer}>

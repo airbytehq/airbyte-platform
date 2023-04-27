@@ -1,12 +1,10 @@
 import { JSONSchema7, JSONSchema7Type } from "json-schema";
 import * as yup from "yup";
 
-import { FormBlock, FormGroupItem, FormObjectArrayItem, FormConditionItem } from "core/form/types";
+import { FormBlock, FormGroupItem, FormObjectArrayItem, FormConditionItem, FORM_PATTERN_ERROR } from "core/form/types";
 import { isDefined } from "utils/common";
 
 import { FormBuildError } from "./FormBuildError";
-
-export const FORM_PATTERN_ERROR = "form.pattern.error";
 
 /**
  * Returns yup.schema for validation

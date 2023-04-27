@@ -83,16 +83,16 @@ export const goToTestPage = (page: number) => {
   cy.get(testPageItem).contains(page).click();
 };
 
-const getPaginationCheckbox = () => {
+const getFirstCheckbox = () => {
   return cy.get(toggleInput).first();
 };
 
 export const enablePagination = () => {
-  getPaginationCheckbox().check({ force: true });
+  getFirstCheckbox().check({ force: true });
 };
 
 export const disablePagination = () => {
-  getPaginationCheckbox().uncheck({ force: true });
+  getFirstCheckbox().uncheck({ force: true });
 };
 
 export const configureLimitOffsetPagination = (
