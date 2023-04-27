@@ -3,6 +3,7 @@
 
 .content {
   height: 100%;
+  min-width: variables.$min-width-wide-table-container;
 }
 
 .emailVerificationHint {

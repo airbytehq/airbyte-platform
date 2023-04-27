@@ -225,9 +225,6 @@ export const ConnectorBuilderProjectTable = ({
       columnHelper.display({
         id: "actions",
         header: () => null,
-        meta: {
-          responsive: true,
-        },
         cell: (props) => (
           <FlexContainer justifyContent="flex-end" gap="sm">
             <Button
