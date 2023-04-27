@@ -3,7 +3,8 @@ import * as yup from "yup";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
 import { jsonSchemaToFormBlock } from "./schemaToFormBlock";
-import { buildYupFormForJsonSchema, FORM_PATTERN_ERROR } from "./schemaToYup";
+import { buildYupFormForJsonSchema } from "./schemaToYup";
+import { FORM_PATTERN_ERROR } from "./types";
 
 // Note: We have to check yup schema with JSON.stringify
 // as exactly same objects throw now equality due to `Received: serializes to the same string` error

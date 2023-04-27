@@ -3,10 +3,9 @@ import merge from "lodash/merge";
 import semver from "semver";
 import * as yup from "yup";
 
-import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
-
 import { CDK_VERSION } from "./cdk";
 import { formatJson } from "./utils";
+import { FORM_PATTERN_ERROR } from "../../core/form/types";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 import {
   ConnectorManifest,
