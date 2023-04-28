@@ -206,7 +206,7 @@ jobs:
             ${{ secrets.GH_PAT_BUILD_RUNNER_OSS }} \
             ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
       - name: Stop EC2 runner
-        uses: airbytehq/ec2-github-runner@MSGv0.0.4
+        uses: airbytehq/ec2-github-runner@MSGv0.0.5
         with:
           mode: stop
           github-token: ${{ env.PAT }}
@@ -316,7 +316,7 @@ jobs:
             ${{ secrets.GH_PAT_BUILD_RUNNER_OSS }} \
             ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
       - name: Stop EC2 runner
-        uses: airbytehq/ec2-github-runner@MSGv0.0.4
+        uses: airbytehq/ec2-github-runner@MSGv0.0.5
         with:
           mode: stop
           github-token: ${{ env.PAT }}
@@ -521,7 +521,7 @@ jobs:
             ${{ secrets.GH_PAT_BUILD_RUNNER_OSS }} \
             ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
       - name: Stop EC2 runner
-        uses: airbytehq/ec2-github-runner@MSGv0.0.4
+        uses: airbytehq/ec2-github-runner@MSGv0.0.5
         with:
           mode: stop
           github-token: ${{ env.PAT }}
@@ -734,7 +734,7 @@ jobs:
             ${{ secrets.GH_PAT_BUILD_RUNNER_OSS }} \
             ${{ secrets.GH_PAT_BUILD_RUNNER_BACKUP }}
       - name: Stop EC2 runner
-        uses: airbytehq/ec2-github-runner@MSGv0.0.4
+        uses: airbytehq/ec2-github-runner@MSGv0.0.5
         with:
           mode: stop
           github-token: ${{ env.PAT }}
