@@ -1,96 +1,61 @@
-import { Field, FieldProps, Form, Formik } from "formik";
-import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
-import styled from "styled-components";
+import React, { useEffect } from "react";
+import { useIntl } from "react-intl";
 import * as yup from "yup";
 
-import { LabeledInput } from "components";
-import { Row, Cell } from "components/SimpleTableComponents";
-import { Button } from "components/ui/Button";
+import { Form, FormControl } from "components/forms";
+import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
-import styles from "./AccountForm.module.scss";
-
-const InputRow = styled(Row)`
-  height: auto;
-`;
-
-const EmailForm = styled(Form)`
-  position: relative;
-`;
-
-const Response = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.successColor};
-  position: absolute;
-  bottom: -19px;
-`;
-
-const Error = styled(Response)`
-  color: ${({ theme }) => theme.dangerColor};
-`;
-
-const Success = styled.div`
-  color: ${({ theme }) => theme.successColor};
-`;
+import { useNotificationService } from "hooks/services/Notification";
 
 const accountValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
 });
 
-interface AccountFormProps {
+interface AccountFormValues {
   email: string;
-  successMessage?: React.ReactNode;
-  errorMessage?: React.ReactNode;
-  onSubmit: (data: { email: string }) => void;
 }
 
-const AccountForm: React.FC<AccountFormProps> = ({ email, onSubmit, successMessage, errorMessage }) => {
+interface AccountFormProps {
+  email: string;
+  onSubmit: (data: AccountFormValues) => Promise<void>;
+}
+
+const ACCOUNT_UPDATE_NOTIFICATION_ID = "account-update-notification";
+
+const AccountForm: React.FC<AccountFormProps> = ({ email, onSubmit }) => {
   const { formatMessage } = useIntl();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
+
+  useEffect(
+    () => () => {
+      unregisterNotificationById(ACCOUNT_UPDATE_NOTIFICATION_ID);
+    },
+    [unregisterNotificationById]
+  );
 
   return (
-    <Formik
-      initialValues={{ email }}
-      validateOnBlur
-      validateOnChange={false}
-      validationSchema={accountValidationSchema}
-      enableReinitialize
-      onSubmit={(data) => {
-        onSubmit(data);
+    <Form<AccountFormValues>
+      onSubmit={onSubmit}
+      onSuccess={() => {
+        registerNotification({
+          id: ACCOUNT_UPDATE_NOTIFICATION_ID,
+          text: formatMessage({ id: "form.changesSaved" }),
+          type: "success",
+        });
       }}
+      onError={() => {
+        registerNotification({
+          id: ACCOUNT_UPDATE_NOTIFICATION_ID,
+          text: formatMessage({ id: "form.someError" }),
+          type: "error",
+        });
+      }}
+      schema={accountValidationSchema}
+      defaultValues={{ email }}
     >
-      {({ isSubmitting, dirty, values }) => (
-        <EmailForm>
-          <InputRow className={styles.formItem}>
-            <Cell flex={3}>
-              <Field name="email">
-                {({ field, meta }: FieldProps<string>) => (
-                  <LabeledInput
-                    {...field}
-                    placeholder={formatMessage({
-                      id: "form.email.placeholder",
-                    })}
-                    error={!!meta.error && meta.touched}
-                    message={!!meta.error && meta.touched ? <FormattedMessage id={meta.error} /> : ""}
-                    label={<FormattedMessage id="form.yourEmail" />}
-                  />
-                )}
-              </Field>
-            </Cell>
-          </InputRow>
-          <div className={styles.submit}>
-            <Button isLoading={isSubmitting} type="submit" disabled={!dirty || !values.email}>
-              <FormattedMessage id="form.saveChanges" />
-            </Button>
-          </div>
-          {!dirty &&
-            (successMessage ? (
-              <Success>{successMessage}</Success>
-            ) : errorMessage ? (
-              <Error>{errorMessage}</Error>
-            ) : null)}
-        </EmailForm>
-      )}
-    </Formik>
+      <FormControl<AccountFormValues> label={formatMessage({ id: "form.yourEmail" })} fieldType="input" name="email" />
+      <FormSubmissionButtons submitKey="form.saveChanges" />
+    </Form>
   );
 };
 

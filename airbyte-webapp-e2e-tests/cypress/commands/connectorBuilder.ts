@@ -126,7 +126,7 @@ export const assertMaxNumberOfSlices = () => {
 
 export const assertMaxNumberOfSlicesAndPages = () => {
   for (let i = 0; i < MAX_NUMBER_OF_SLICES; i++) {
-    getSlicesFromDropdown().contains(`Slice ${i}`).click();
+    getSlicesFromDropdown().contains(`Partition ${i}`).click();
     assertMaxNumberOfPages();
   }
 };

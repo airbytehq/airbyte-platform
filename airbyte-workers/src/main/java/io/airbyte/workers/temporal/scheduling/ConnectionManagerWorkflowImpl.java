@@ -84,6 +84,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -144,7 +145,13 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @Override
   public void run(final ConnectionUpdaterInput connectionUpdaterInput) throws RetryableException {
     try {
-      ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionUpdaterInput.getConnectionId()));
+      /*
+       * Always ensure that the connection ID is set from the input before performing any additional work.
+       * Failure to set the connection ID before performing any work in this workflow could result in
+       * additional failures when attempting to handle a failed workflow AND/OR the inability to identify
+       * impacted connections when errors do occur.
+       */
+      setConnectionId(connectionUpdaterInput);
 
       // Fetch workflow delay first so that it is set if any subsequent activities fail and need to be
       // re-attempted.
@@ -167,7 +174,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         if (workflowState.isRunning()) {
           log.info("Cancelling the current running job because a connection deletion was requested");
           // This call is not needed anymore since this will be cancel using the the cancellation state
-          reportCancelled(connectionUpdaterInput.getConnectionId());
+          reportCancelled(connectionId);
         }
 
         return;
@@ -193,8 +200,6 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @SuppressWarnings("PMD.UnusedLocalVariable")
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
-      connectionId = connectionUpdaterInput.getConnectionId();
-
       // workflow state is only ever set in test cases. for production cases, it will always be null.
       if (connectionUpdaterInput.getWorkflowState() != null) {
         workflowState = connectionUpdaterInput.getWorkflowState();
@@ -915,6 +920,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     if (connectionId != null) {
       ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
     }
+  }
+
+  private void setConnectionId(final ConnectionUpdaterInput connectionUpdaterInput) {
+    connectionId = Objects.requireNonNull(connectionUpdaterInput.getConnectionId());
+    ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
   }
 
 }
