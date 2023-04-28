@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
 import { getConnectionSyncStatus } from "components/EntityTable/utils";
 
+import { useCancelJob } from "core/api";
 import {
   JobRead,
   ConnectionStatus,
@@ -15,7 +16,6 @@ import {
 } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
-import { useCancelJob } from "services/job/JobService";
 import { moveTimeToFutureByPeriod } from "utils/time";
 
 interface ConnectionSyncContext {

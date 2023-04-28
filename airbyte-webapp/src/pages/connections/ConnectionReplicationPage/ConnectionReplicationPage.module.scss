@@ -7,6 +7,7 @@ $container-padding-bottom: 28px; // (intercom height + margins (88px) - button h
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  min-width: variables.$min-width-wide-table-container;
 
   > form {
     display: flex;

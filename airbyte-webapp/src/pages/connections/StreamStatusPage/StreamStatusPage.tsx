@@ -1,8 +1,8 @@
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 
+import { useListJobs } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
-import { useListJobs } from "services/job/JobService";
 
 import { StreamsList } from "./StreamsList";
 import { StreamsListContextProvider } from "./StreamsListContext";

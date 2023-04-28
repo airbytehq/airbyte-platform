@@ -187,6 +187,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "state_commit_not_attempted",
       "number of attempts to commit states dropped due to an early termination",
       MetricTags.GEOGRAPHY),
+  STATE_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "state_commit_close_successful",
+      "number of final to connection exiting with the a successful final state flush",
+      MetricTags.GEOGRAPHY),
 
   STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "stats_commit_attempt",
@@ -206,6 +210,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
       "stats_commit_not_attempted",
       "number of attempts to commit stats dropped due to an early termination",
+      MetricTags.GEOGRAPHY),
+  STATS_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "stats_commit_close_successful",
+      "number of final to connection exiting with the a successful final stats flush",
       MetricTags.GEOGRAPHY),
   @Deprecated
   // To be deleted along with PersistStateActivity

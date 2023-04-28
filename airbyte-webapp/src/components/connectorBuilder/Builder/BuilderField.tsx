@@ -114,7 +114,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
   manifestPath,
   ...props
 }) => {
-  const hasError = !!meta.error && meta.touched;
+  const hasError = !!meta.error && (meta.touched || meta.error === "connectorBuilder.maxLength");
 
   const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, manifestPath, path);
   const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();

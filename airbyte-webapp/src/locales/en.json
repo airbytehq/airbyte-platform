@@ -764,6 +764,7 @@
   "connectorBuilder.addStreamModal.streamNameTooltip": "Name of the new stream",
   "connectorBuilder.addStreamModal.urlPathLabel": "URL path",
   "connectorBuilder.addStreamModal.urlPathTooltip": "URL path of the endpoint for this stream",
+  "connectorBuilder.copyStreamModal.title": "Duplicate {name} stream",
   "connectorBuilder.deleteStreamModal.title": "Delete stream",
   "connectorBuilder.deleteStreamModal.text": "Are you sure you want to delete this stream?",
   "connectorBuilder.deleteStreamModal.submitButton": "Delete",
@@ -906,6 +907,7 @@
   "connectorBuilder.resolvingStreamList": "Checking configuration",
   "connectorBuilder.documentationLink": "Open documentation in separate tab",
   "connectorBuilder.interpolationHeading": "Variables available for interpolation",
+  "connectorBuilder.maxLength": "Must be at most 256 characters",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

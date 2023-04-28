@@ -8,8 +8,8 @@ import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 import { Text } from "components/ui/Text";
 
+import { useGetDebugInfoJob } from "core/api";
 import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/AirbyteClient";
-import { useGetDebugInfoJob } from "services/job/JobService";
 
 import styles from "./JobLogs.module.scss";
 import { LogsDetails } from "./LogsDetails";
