@@ -1,6 +1,15 @@
 import uniqueId from "lodash/uniqueId";
 import { KeyboardEventHandler, useMemo, useState } from "react";
-import { ActionMeta, GroupBase, MultiValue, OnChangeValue, StylesConfig, components, InputProps } from "react-select";
+import {
+  ActionMeta,
+  GroupBase,
+  MultiValue,
+  OnChangeValue,
+  StylesConfig,
+  components,
+  InputProps,
+  InputActionMeta,
+} from "react-select";
 import CreatableSelect from "react-select/creatable";
 
 import styles from "./TagInput.module.scss";
@@ -71,10 +80,14 @@ const generateStringFromTag = (tag: Tag): string => tag.label;
 const delimiters = [",", ";"];
 
 export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, disabled, id, error, itemType }) => {
-  const tags = useMemo(() => fieldValue.map(generateTagFromString), [fieldValue]);
+  const [draftValue, setDraftValue] = useState("");
+  const draftExists = draftValue.length > 0;
 
-  // input value is a tag draft
-  const [inputValue, setInputValue] = useState("");
+  const tags = useMemo(() => {
+    const nonDraftValues =
+      draftExists && fieldValue.length > 0 ? fieldValue.slice(0, fieldValue.length - 1) : fieldValue;
+    return nonDraftValues.map(generateTagFromString);
+  }, [draftExists, fieldValue]);
 
   // handles various ways of deleting a value
   const handleDelete = (_value: OnChangeValue<Tag, true>, actionMeta: ActionMeta<Tag>) => {
@@ -92,7 +105,13 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     } else if (actionMeta.action === "pop-value") {
       updatedTags = updatedTags.slice(0, updatedTags.length - 1);
     }
-    onChange(updatedTags.map((tag) => generateStringFromTag(tag)));
+
+    const updatedTagsAsStrings = updatedTags.map((tag) => generateStringFromTag(tag));
+    if (draftExists) {
+      onChange([...updatedTagsAsStrings, draftValue]);
+    } else {
+      onChange(updatedTagsAsStrings);
+    }
   };
 
   function normalizeInput(input: string) {
@@ -107,45 +126,65 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
   }
 
   // handle when a user types OR pastes in the input
-  const handleInputChange = (inputValue: string) => {
-    setInputValue(inputValue);
+  const handleInputChange = (newDraftValue: string, actionMeta: InputActionMeta) => {
+    // only handle events where the input is changed; ignore blur events as they are handled separately
+    if (actionMeta.action !== "input-change") {
+      return;
+    }
 
-    delimiters.forEach((delimiter) => {
-      if (inputValue.includes(delimiter)) {
-        const newTagStrings = inputValue.split(delimiter).map(normalizeInput).filter(Boolean);
+    const fieldValueMinusLast = fieldValue.slice(0, fieldValue.length - 1);
 
-        newTagStrings.length > 0 && onChange([...fieldValue, ...newTagStrings]);
-        setInputValue("");
+    const delimiter = delimiters.find((del) => newDraftValue.includes(del));
+
+    if (delimiter) {
+      const newTagStrings = newDraftValue.split(delimiter).map(normalizeInput).filter(Boolean);
+      if (newTagStrings.length === 0) {
+        return;
       }
-    });
+
+      setDraftValue("");
+
+      if (draftExists) {
+        onChange([...fieldValueMinusLast, ...newTagStrings]);
+      } else {
+        onChange([...fieldValue, ...newTagStrings]);
+      }
+    } else {
+      const normalizedDraft = normalizeInput(newDraftValue);
+
+      setDraftValue(newDraftValue);
+
+      if (draftExists) {
+        if (newDraftValue.length === 0) {
+          onChange([...fieldValueMinusLast]);
+        } else {
+          onChange([...fieldValueMinusLast, normalizedDraft]);
+        }
+      } else {
+        onChange([...fieldValue, normalizedDraft]);
+      }
+    }
   };
 
   // handle when user presses keyboard keys in the input
   const handleKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => {
-    if (!inputValue || !inputValue.length) {
+    if (!draftValue || !draftValue.length) {
       return;
     }
     switch (event.key) {
       case "Enter":
       case "Tab":
-        const normalizedInput = normalizeInput(inputValue);
-        normalizedInput.length >= 1 && onChange([...fieldValue, normalizedInput]);
-
         event.preventDefault();
-        setInputValue("");
+        setDraftValue("");
     }
   };
 
   /**
-   * Add current input value as new tag when leaving the control.
+   * Clear the draft value state when leaving the control, causing the draft value to be shown as a tag.
    * This needs to be implemented outside of the onBlur prop of react-select because it's not default behavior.
    */
   const onBlurControl = () => {
-    const normalizedInput = normalizeInput(inputValue);
-    if (normalizedInput) {
-      onChange([...fieldValue, normalizedInput]);
-      setInputValue("");
-    }
+    setDraftValue("");
   };
 
   const overwrittenComponents = useMemo(
@@ -164,7 +203,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
         inputId={id}
         name={name}
         components={overwrittenComponents}
-        inputValue={inputValue}
+        inputValue={draftValue}
         placeholder=""
         aria-invalid={Boolean(error)}
         isClearable
