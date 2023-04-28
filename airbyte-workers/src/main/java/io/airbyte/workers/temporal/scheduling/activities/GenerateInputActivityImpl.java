@@ -348,7 +348,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
 
       final var normalizationInDestinationFeatureFlagEnabledForBigquery = featureFlagClient.boolVariation(NormalizationInDestinationBiqQuery.INSTANCE,
-          new Workspace(connectionId));
+          new Workspace(destination.getWorkspaceId()));
       final var shouldNormalizeInDestination = NormalizationInDestinationHelper
           .shouldNormalizeInDestination(config.getOperationSequence(),
               config.getDestinationDockerImage(),
