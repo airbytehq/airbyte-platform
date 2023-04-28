@@ -161,12 +161,12 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                         <>
                           <BuilderFieldWithInputs
                             type="string"
-                            path={streamFieldPath("paginator.strategy.cursor_value")}
+                            path={streamFieldPath("paginator.strategy.cursor.cursor_value")}
                             manifestPath="CursorPagination.properties.cursor_value"
                           />
                           <BuilderFieldWithInputs
                             type="string"
-                            path={streamFieldPath("paginator.strategy.stop_condition")}
+                            path={streamFieldPath("paginator.strategy.cursor.stop_condition")}
                             manifestPath="CursorPagination.properties.stop_condition"
                             optional
                           />
