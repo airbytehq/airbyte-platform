@@ -23,6 +23,8 @@ import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
@@ -89,6 +91,8 @@ public class SpecActivityImpl implements SpecActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public ConnectorJobOutput run(final JobRunConfig jobRunConfig, final IntegrationLauncherConfig launcherConfig) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_SPEC, 1);
+
     ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), DOCKER_IMAGE_KEY, launcherConfig.getDockerImage(),
         JOB_ID_KEY, jobRunConfig.getJobId()));
 

@@ -16,6 +16,8 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -55,6 +57,7 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     if (!envVariableFeatureFlags.autoDetectSchema()) {
       return;
     }
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_REFRESH_SCHEMA, 1);
 
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, SOURCE_ID_KEY, sourceCatalogId));
 

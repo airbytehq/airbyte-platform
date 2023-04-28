@@ -104,6 +104,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                       final IntegrationLauncherConfig destinationLauncherConfig,
                                       final StandardSyncInput syncInput,
                                       @Nullable final String taskQueue) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+
     final Map<String, Object> traceAttributes =
         Map.of(
             ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(),

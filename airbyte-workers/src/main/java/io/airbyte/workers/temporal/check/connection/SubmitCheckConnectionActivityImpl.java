@@ -21,6 +21,8 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,8 @@ public class SubmitCheckConnectionActivityImpl implements SubmitCheckConnectionA
   @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   public ConnectorJobOutput submitCheckConnectionToSource(final UUID sourceId) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_SUBMIT_CHECK_SOURCE_CONNECTION, 1);
+
     ConnectorJobOutput jobOutput = new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION);
     try {
       CheckConnectionRead checkResult = AirbyteApiClient.retryWithJitter(
@@ -64,6 +68,8 @@ public class SubmitCheckConnectionActivityImpl implements SubmitCheckConnectionA
   @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   public ConnectorJobOutput submitCheckConnectionToDestination(final UUID destinationId) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_SUBMIT_CHECK_DESTINATION_CONNECTION, 1);
+
     ConnectorJobOutput jobOutput = new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION);
     try {
       CheckConnectionRead checkResult = AirbyteApiClient.retryWithJitter(

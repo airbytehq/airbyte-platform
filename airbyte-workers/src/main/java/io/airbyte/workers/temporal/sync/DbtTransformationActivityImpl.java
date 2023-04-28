@@ -23,6 +23,8 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -96,6 +98,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                   final IntegrationLauncherConfig destinationLauncherConfig,
                   final ResourceRequirements resourceRequirements,
                   final OperatorDbtInput input) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_DBT_TRANSFORMATION, 1);
+
     ApmTraceUtils.addTagsToTrace(
         Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY,
             destinationLauncherConfig.getDockerImage()));

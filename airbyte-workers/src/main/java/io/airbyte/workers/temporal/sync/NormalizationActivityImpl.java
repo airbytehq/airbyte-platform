@@ -30,6 +30,8 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
@@ -109,6 +111,8 @@ public class NormalizationActivityImpl implements NormalizationActivity {
   public NormalizationSummary normalize(final JobRunConfig jobRunConfig,
                                         final IntegrationLauncherConfig destinationLauncherConfig,
                                         final NormalizationInput input) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_NORMALIZATION, 1);
+
     ApmTraceUtils.addTagsToTrace(
         Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY,
             destinationLauncherConfig.getDockerImage()));
