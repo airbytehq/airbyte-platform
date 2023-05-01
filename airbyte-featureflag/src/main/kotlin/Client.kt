@@ -35,12 +35,6 @@ import kotlin.io.path.notExists
  */
 sealed interface FeatureFlagClient {
   /**
-   * Returns true if the flag with the provided context should be enabled. Returns false otherwise.
-   */
-  @Deprecated("use boolVariation instead")
-  fun enabled(flag: Flag<Boolean>, context: Context): Boolean
-
-  /**
    * Calculates the boolean value of the [flag] for the given [context].
    *
    * Returns the [flag] default value if the [flag] cannot be evaluated.
@@ -107,8 +101,6 @@ class ConfigFileClient(@Property(name = CONFIG_FF_PATH) config: Path?) : Feature
     }
   }
 
-  override fun enabled(flag: Flag<Boolean>, context: Context) = boolVariation(flag, context)
-
   override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
     return when (flag) {
       is EnvVar -> flag.enabled(context)
@@ -140,8 +132,6 @@ class ConfigFileClient(@Property(name = CONFIG_FF_PATH) config: Path?) : Feature
 @Singleton
 @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
 class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
-  override fun enabled(flag: Flag<Boolean>, context: Context) = boolVariation(flag, context)
-
   override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
     return when (flag) {
       is EnvVar -> flag.enabled(context)
@@ -168,8 +158,6 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
  * @param [values] is a map of [Flag.key] to its status.
  */
 class TestClient @JvmOverloads constructor(val values: Map<String, Any> = mapOf()) : FeatureFlagClient {
-  override fun enabled(flag: Flag<Boolean>, context: Context) = boolVariation(flag, context)
-
   override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
     return when (flag) {
       is EnvVar -> {

@@ -186,7 +186,7 @@ public class ReplicationWorkerFactory {
     // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
     final UUID workspaceId = syncInput.getWorkspaceId();
     final boolean fieldSelectionEnabled = workspaceId != null
-        && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
+        && (featureFlagClient.boolVariation(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
             || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
     final boolean removeValidationLimit =
         workspaceId != null && featureFlagClient.boolVariation(RemoveValidationLimit.INSTANCE, new Workspace(workspaceId));

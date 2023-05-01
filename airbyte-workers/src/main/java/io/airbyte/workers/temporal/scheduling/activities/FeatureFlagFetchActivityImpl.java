@@ -56,10 +56,10 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
     // No feature flags are currently in use.
     // To get value for a feature flag with the workspace context, add it to the workspaceFlags list.
-    final List<Flag> workspaceFlags = List.of(CheckConnectionUseApiEnabled.INSTANCE);
+    final List<Flag<Boolean>> workspaceFlags = List.of(CheckConnectionUseApiEnabled.INSTANCE);
     final Map<String, Boolean> featureFlags = new HashMap<>();
-    for (final Flag flag : workspaceFlags) {
-      featureFlags.put(flag.getKey(), featureFlagClient.enabled(flag, new Workspace(workspaceId)));
+    for (final Flag<Boolean> flag : workspaceFlags) {
+      featureFlags.put(flag.getKey(), featureFlagClient.boolVariation(flag, new Workspace(workspaceId)));
     }
 
     return new FeatureFlagFetchOutput(featureFlags);
