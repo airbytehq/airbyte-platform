@@ -24,12 +24,15 @@ import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest
+// tests may be running on a real k8s environment, override the environment to something else for
+// this test
+@MicronautTest(environments = Environment.TEST)
 class ContainerOrchestratorFactoryTest {
 
   @Inject
