@@ -15,7 +15,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const StoreProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
+export const QueryProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <QueryClientProvider client={queryClient}>
     <ReactQueryDevtools
       initialIsOpen={false}
@@ -28,5 +28,3 @@ const StoreProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
     {children}
   </QueryClientProvider>
 );
-
-export { StoreProvider };
