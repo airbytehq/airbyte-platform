@@ -74,6 +74,9 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.featureflag.AutoPropagateSchema;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
@@ -91,6 +94,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -117,6 +121,7 @@ public class SchedulerHandler {
   private final FeatureFlags envVariableFeatureFlags;
   private final WebUrlHelper webUrlHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   // TODO: Convert to be fully using micronaut
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -130,7 +135,8 @@ public class SchedulerHandler {
                           final ConnectionsHandler connectionsHandler,
                           final FeatureFlags envVariableFeatureFlags,
                           final WebUrlHelper webUrlHelper,
-                          final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                          final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                          final FeatureFlagClient featureFlagClient) {
     this(
         configRepository,
         secretsRepositoryWriter,
@@ -143,7 +149,8 @@ public class SchedulerHandler {
         connectionsHandler,
         envVariableFeatureFlags,
         webUrlHelper,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        featureFlagClient);
   }
 
   @VisibleForTesting
@@ -158,7 +165,8 @@ public class SchedulerHandler {
                    final ConnectionsHandler connectionsHandler,
                    final FeatureFlags envVariableFeatureFlags,
                    final WebUrlHelper webUrlHelper,
-                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                   final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -171,6 +179,7 @@ public class SchedulerHandler {
     this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.webUrlHelper = webUrlHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -507,6 +516,7 @@ public class SchedulerHandler {
       }
       updateObject.status(connectionStatus);
       connectionsHandler.updateConnection(updateObject);
+
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
         final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
         eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url, containsBreakingChange);
@@ -514,6 +524,13 @@ public class SchedulerHandler {
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
       }
+    }
+  }
+
+  @VisibleForTesting
+  void autoPropagateSchemaChange(final UUID workspaceId) {
+    if (featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))) {
+      throw new NotImplementedException();
     }
   }
 

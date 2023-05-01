@@ -91,6 +91,10 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.featureflag.AutoPropagateSchema;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
@@ -112,6 +116,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -194,6 +199,7 @@ class SchedulerHandlerTest {
   private EnvVariableFeatureFlags envVariableFeatureFlags;
   private WebUrlHelper webUrlHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private FeatureFlagClient featureFlagClient;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -223,6 +229,8 @@ class SchedulerHandlerTest {
 
     jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
 
+    featureFlagClient = mock(TestClient.class);
+
     schedulerHandler = new SchedulerHandler(
         configRepository,
         secretsRepositoryWriter,
@@ -235,7 +243,8 @@ class SchedulerHandlerTest {
         connectionsHandler,
         envVariableFeatureFlags,
         webUrlHelper,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        featureFlagClient);
   }
 
   @Test
@@ -1596,6 +1605,17 @@ class SchedulerHandlerTest {
     schedulerHandler.cancelJob(new JobIdRequestBody().id(jobId));
 
     verify(eventRunner).startNewCancellation(connectionId);
+  }
+
+  @Test
+  void testAutopropagateChange() {
+    final UUID workspaceId = UUID.randomUUID();
+    when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
+    assertThrows(NotImplementedException.class, () -> schedulerHandler.autoPropagateSchemaChange(workspaceId));
+
+    when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))).thenReturn(false);
+    // Test that it doesn't throw
+    schedulerHandler.autoPropagateSchemaChange(workspaceId);
   }
 
 }

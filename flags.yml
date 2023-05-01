@@ -15,3 +15,5 @@ flags:
     serve: false
   - name: validation.removeValidationLimit
     serve: false
+  - name: autopropagation.enabled
+    serve: false
