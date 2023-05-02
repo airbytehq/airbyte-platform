@@ -18,7 +18,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.validation.json.JsonValidationException;
-import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,7 +34,6 @@ import org.slf4j.LoggerFactory;
  * Helpers for interacting with Workspaces.
  */
 @SuppressWarnings("PMD.AvoidCatchingThrowable")
-@Singleton
 public class WorkspaceHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceHelper.class);
