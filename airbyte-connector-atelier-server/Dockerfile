@@ -7,7 +7,7 @@ RUN yum update -y && \
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11
-ARG CDK_VERSION=0.36.1
+ARG CDK_VERSION=0.36.2
 # Set up python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT /root/.pyenv
