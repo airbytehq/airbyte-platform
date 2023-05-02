@@ -6,14 +6,21 @@ import { TableItemTitle } from "components/ConnectorBlocks";
 import Placeholder, { ResourceTypes } from "components/Placeholder";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
+import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 import { RoutePaths } from "pages/routePaths";
+import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 
-import { useSourceOverviewContext } from "./sourceOverviewContext";
+import { useGetSourceFromParams } from "./useGetSourceFromParams";
+
 const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable"));
 
 export const SourceOverviewPage = () => {
-  const { source, sourceDefinition, connections } = useSourceOverviewContext();
+  const source = useGetSourceFromParams();
+
+  const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
+  const { connections } = useConnectionList({ sourceId: [source.sourceId] });
+
   // We load all destinations so the add destination button has a pre-filled list of options.
   const { destinations } = useDestinationList();
 

@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { useOutletContext } from "react-router-dom";
+
+import { Box } from "components/ui/Box";
+import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
@@ -17,16 +19,17 @@ import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 import styles from "./DestinationSettings.module.scss";
-import { DestinationOutletContext } from "../types";
+import { useGetDestinationFromParams } from "../useGetDestinationFromParams";
 
 export const DestinationSettingsPage: React.FC = () => {
-  const { destination } = useOutletContext<DestinationOutletContext>();
+  const destination = useGetDestinationFromParams();
+
   const { connections: connectionsWithDestination } = useConnectionList({ destinationId: [destination.destinationId] });
+  const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const destinationSpecification = useGetDestinationDefinitionSpecification(
     destination.destinationDefinitionId,
     destination.destinationId
   );
-  const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const reloadDestination = useInvalidateDestination(destination.destinationId);
   const { mutateAsync: updateDestination } = useUpdateDestination();
   const { mutateAsync: deleteDestination } = useDeleteDestination();
@@ -55,17 +58,19 @@ export const DestinationSettingsPage: React.FC = () => {
       return null;
     }
     return (
-      <p>
-        <FormattedMessage
-          id="tables.affectedConnectionsOnDeletion"
-          values={{ count: connectionsWithDestination.length }}
-        />
-        {connectionsWithDestination.map((connection) => (
-          <React.Fragment key={connection.connectionId}>
-            - <strong>{`${connection.name}\n`}</strong>
-          </React.Fragment>
-        ))}
-      </p>
+      <Box pt="lg">
+        <Text size="lg">
+          <FormattedMessage
+            id="tables.affectedConnectionsOnDeletion"
+            values={{ count: connectionsWithDestination.length }}
+          />
+        </Text>
+        <ul>
+          {connectionsWithDestination.map((connection) => (
+            <li key={connection.connectionId}>{connection.name}</li>
+          ))}
+        </ul>
+      </Box>
     );
   }, [connectionsWithDestination]);
 

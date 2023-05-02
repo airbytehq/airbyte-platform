@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useOutletContext } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { TableItemTitle } from "components/ConnectorBlocks";
@@ -13,12 +12,12 @@ import { useSourceList } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
-import { DestinationOutletContext } from "./types";
+import { useGetDestinationFromParams } from "./useGetDestinationFromParams";
 
 export const DestinationOverviewPage = () => {
   const navigate = useNavigate();
 
-  const { destination } = useOutletContext<DestinationOutletContext>();
+  const destination = useGetDestinationFromParams();
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   // We load only connections attached to this destination to be shown in the connections grid
   const { connections } = useConnectionList({ destinationId: [destination.destinationId] });

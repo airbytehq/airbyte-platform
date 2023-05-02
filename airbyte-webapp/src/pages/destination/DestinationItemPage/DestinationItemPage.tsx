@@ -1,6 +1,6 @@
-import React, { Suspense, useMemo } from "react";
+import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
-import { Outlet, useNavigate, useParams } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
@@ -13,22 +13,24 @@ import { PageHeader } from "components/ui/PageHeader";
 import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
-import { useGetDestination } from "hooks/services/useDestinationHook";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
+import { useGetDestinationFromParams, useGetDestinationTabFromParams } from "../useGetDestinationFromParams";
+
 export const DestinationItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM);
-  const params = useParams() as { "*": StepsTypes | ""; id: string };
-  const navigate = useNavigate();
+  const destination = useGetDestinationFromParams();
+
   const { formatMessage } = useIntl();
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
-  const currentStep = useMemo<string>(() => (params["*"] === "" ? StepsTypes.OVERVIEW : params["*"]), [params]);
+  const currentStep = useGetDestinationTabFromParams();
+
   const { trackError } = useAppMonitoringService();
 
-  const destination = useGetDestination(params.id);
-
+  // can be removed after flag enabled for all users
+  const navigate = useNavigate();
   const onSelectStep = (id: string) => {
     const path = id === StepsTypes.OVERVIEW ? "." : id.toLowerCase();
     navigate(path);
@@ -41,6 +43,7 @@ export const DestinationItemPage: React.FC = () => {
     },
     { label: destination.name },
   ];
+  // to here
 
   return (
     <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
@@ -56,7 +59,7 @@ export const DestinationItemPage: React.FC = () => {
 
         <Suspense fallback={<LoadingPage />}>
           <ApiErrorBoundary>
-            <Outlet context={{ destination }} />
+            <Outlet />
           </ApiErrorBoundary>
         </Suspense>
       </ConnectorDocumentationWrapper>
