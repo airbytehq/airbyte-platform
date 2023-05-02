@@ -29,6 +29,8 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DefaultGetSpecWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -55,7 +57,7 @@ import java.util.function.Supplier;
 @Requires(env = WorkerMode.CONTROL_PLANE)
 public class SpecActivityImpl implements SpecActivity {
 
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final Path workspaceRoot;
   private final WorkerEnvironment workerEnvironment;
@@ -66,8 +68,8 @@ public class SpecActivityImpl implements SpecActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public SpecActivityImpl(@Named("specWorkerConfigs") final WorkerConfigs workerConfigs,
-                          @Named("specProcessFactory") final ProcessFactory processFactory,
+  public SpecActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
+                          final ProcessFactory processFactory,
                           @Named("workspaceRoot") final Path workspaceRoot,
                           final WorkerEnvironment workerEnvironment,
                           final LogConfigs logConfigs,
@@ -76,7 +78,7 @@ public class SpecActivityImpl implements SpecActivity {
                           final AirbyteMessageSerDeProvider serDeProvider,
                           final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                           final FeatureFlags featureFlags) {
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
@@ -119,6 +121,7 @@ public class SpecActivityImpl implements SpecActivity {
   private CheckedSupplier<Worker<JobGetSpecConfig, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                     final IntegrationLauncherConfig launcherConfig) {
     return () -> {
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.SPEC);
       final AirbyteStreamFactory streamFactory = getStreamFactory(launcherConfig);
       final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
           launcherConfig.getJobId(),

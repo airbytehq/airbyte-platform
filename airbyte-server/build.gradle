@@ -27,6 +27,7 @@ dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
+    implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:init')

@@ -30,6 +30,7 @@ import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.WorkerEnvConstants;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -86,6 +87,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   public Process spec(final Path jobRoot) throws WorkerException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId, JOB_ROOT_KEY, jobRoot, DOCKER_IMAGE_KEY, imageName));
     return processFactory.create(
+        ResourceType.SPEC,
         SPEC_JOB,
         jobId,
         attempt,
@@ -109,6 +111,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   public Process check(final Path jobRoot, final String configFilename, final String configContents) throws WorkerException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId, JOB_ROOT_KEY, jobRoot, DOCKER_IMAGE_KEY, imageName));
     return processFactory.create(
+        ResourceType.CHECK,
         CHECK_JOB,
         jobId,
         attempt,
@@ -133,6 +136,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   public Process discover(final Path jobRoot, final String configFilename, final String configContents) throws WorkerException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId, JOB_ROOT_KEY, jobRoot, DOCKER_IMAGE_KEY, imageName));
     return processFactory.create(
+        ResourceType.DISCOVER,
         DISCOVER_JOB,
         jobId,
         attempt,
@@ -181,6 +185,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
     }
 
     return processFactory.create(
+        ResourceType.REPLICATION,
         READ_STEP,
         jobId,
         attempt,
@@ -213,6 +218,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         catalogFilename, catalogContents);
 
     return processFactory.create(
+        ResourceType.REPLICATION,
         WRITE_STEP,
         jobId,
         attempt,

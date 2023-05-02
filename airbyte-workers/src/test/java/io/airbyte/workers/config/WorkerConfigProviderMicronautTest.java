@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -64,7 +65,7 @@ class WorkerConfigProviderMicronautTest {
 
   @Test
   void checkWorkerConfigProvider() {
-    final WorkerConfigs specKubeConfig = workerConfigsProvider.getConfig("spec");
+    final WorkerConfigs specKubeConfig = workerConfigsProvider.getConfig(ResourceType.SPEC);
 
     assertEquals("default cpu limit", specKubeConfig.getResourceRequirements().getCpuLimit());
     assertEquals("", specKubeConfig.getResourceRequirements().getCpuRequest());

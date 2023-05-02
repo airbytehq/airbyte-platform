@@ -30,6 +30,8 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DefaultDiscoverCatalogWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -55,7 +57,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
 
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
@@ -67,8 +69,8 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public DiscoverCatalogActivityImpl(@Named("discoverWorkerConfigs") final WorkerConfigs workerConfigs,
-                                     @Named("discoverProcessFactory") final ProcessFactory processFactory,
+  public DiscoverCatalogActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
+                                     final ProcessFactory processFactory,
                                      final SecretsHydrator secretsHydrator,
                                      @Named("workspaceRoot") final Path workspaceRoot,
                                      final WorkerEnvironment workerEnvironment,
@@ -78,7 +80,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags) {
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
@@ -130,6 +132,7 @@ public class DiscoverCatalogActivityImpl implements DiscoverCatalogActivity {
   private CheckedSupplier<Worker<StandardDiscoverCatalogInput, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                                 final IntegrationLauncherConfig launcherConfig) {
     return () -> {
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DISCOVER);
       final IntegrationLauncher integrationLauncher =
           new AirbyteIntegrationLauncher(launcherConfig.getJobId(), launcherConfig.getAttemptId().intValue(), launcherConfig.getDockerImage(),
               processFactory, workerConfigs.getResourceRequirements(), launcherConfig.getAllowedHosts(), launcherConfig.getIsCustomConnector(),

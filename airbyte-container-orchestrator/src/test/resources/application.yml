@@ -3,6 +3,9 @@ micronaut:
     port: 9000
 
 airbyte:
+  deployment-mode: OSS
+  role: ${AIRBYTE_ROLE:}
+  version: 0.4128173.0
   acceptance:
     test:
       enabled: false
@@ -21,3 +24,30 @@ airbyte:
         name: ""
         value: ""
       host: airbyte-server-svc:8001
+  worker:
+    isolated:
+      kube:
+        use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
+        node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
+    job:
+      kube:
+        images:
+          busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
+          curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
+          socat: ${JOB_KUBE_SOCAT_IMAGE:`alpine/socat:1.7.4.3-r0`}
+        main:
+          container:
+            image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+            image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
+        sidecar:
+          container:
+            image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
+        tolerations: ${JOB_KUBE_TOLERATIONS:}
+    kube-job-configs:
+      default:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:1Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}

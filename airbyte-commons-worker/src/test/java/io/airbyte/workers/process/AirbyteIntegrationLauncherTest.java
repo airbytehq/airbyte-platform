@@ -22,6 +22,7 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.WorkerEnvConstants;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -90,7 +91,9 @@ class AirbyteIntegrationLauncherTest {
   void spec() throws WorkerException {
     launcher.spec(JOB_ROOT);
 
-    Mockito.verify(processFactory).create(SPEC_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, Collections.emptyMap(), null,
+    Mockito.verify(processFactory).create(ResourceType.SPEC, SPEC_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false,
+        Collections.emptyMap(),
+        null,
         workerConfigs.getResourceRequirements(), null, Map.of(JOB_TYPE_KEY, SPEC_JOB), JOB_METADATA,
         Map.of(),
         Collections.emptyMap(), "spec");
@@ -100,7 +103,7 @@ class AirbyteIntegrationLauncherTest {
   void check() throws WorkerException {
     launcher.check(JOB_ROOT, CONFIG, "{}");
 
-    Mockito.verify(processFactory).create(CHECK_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.CHECK, CHECK_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES, null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, CHECK_JOB),
@@ -114,7 +117,8 @@ class AirbyteIntegrationLauncherTest {
   void discover() throws WorkerException {
     launcher.discover(JOB_ROOT, CONFIG, "{}");
 
-    Mockito.verify(processFactory).create(DISCOVER_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.DISCOVER, DISCOVER_JOB, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_FILES,
+        null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
@@ -128,7 +132,9 @@ class AirbyteIntegrationLauncherTest {
   void read() throws WorkerException {
     launcher.read(JOB_ROOT, CONFIG, "{}", CATALOG, "{}", "state", "{}");
 
-    Mockito.verify(processFactory).create(READ_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false, CONFIG_CATALOG_STATE_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.REPLICATION, READ_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, false,
+        CONFIG_CATALOG_STATE_FILES,
+        null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
@@ -145,7 +151,8 @@ class AirbyteIntegrationLauncherTest {
   void write() throws WorkerException, JsonProcessingException {
     launcher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
 
-    Mockito.verify(processFactory).create(WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true, CONFIG_CATALOG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true,
+        CONFIG_CATALOG_FILES, null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
@@ -160,7 +167,8 @@ class AirbyteIntegrationLauncherTest {
         new AirbyteIntegrationLauncher(JOB_ID, JOB_ATTEMPT, FAKE_IMAGE, processFactory, workerConfigs.getResourceRequirements(), null, false,
             FEATURE_FLAGS, additionalEnvVars);
     envVarLauncher.write(JOB_ROOT, CONFIG, "{}", CATALOG, "{}");
-    Mockito.verify(processFactory).create(WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true, CONFIG_CATALOG_FILES, null,
+    Mockito.verify(processFactory).create(ResourceType.REPLICATION, WRITE_STEP, JOB_ID, JOB_ATTEMPT, JOB_ROOT, FAKE_IMAGE, false, true,
+        CONFIG_CATALOG_FILES, null,
         workerConfigs.getResourceRequirements(),
         null,
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),

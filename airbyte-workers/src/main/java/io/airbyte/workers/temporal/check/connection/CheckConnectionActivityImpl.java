@@ -32,6 +32,8 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DefaultCheckConnectionWorker;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -55,7 +57,7 @@ import java.util.Optional;
 @Singleton
 public class CheckConnectionActivityImpl implements CheckConnectionActivity {
 
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
@@ -67,8 +69,8 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public CheckConnectionActivityImpl(@Named("checkWorkerConfigs") final WorkerConfigs workerConfigs,
-                                     @Named("checkProcessFactory") final ProcessFactory processFactory,
+  public CheckConnectionActivityImpl(final WorkerConfigsProvider workerConfigsProvider,
+                                     final ProcessFactory processFactory,
                                      final SecretsHydrator secretsHydrator,
                                      @Named("workspaceRoot") final Path workspaceRoot,
                                      final WorkerEnvironment workerEnvironment,
@@ -78,7 +80,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
                                      final AirbyteMessageSerDeProvider serDeProvider,
                                      final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                      final FeatureFlags featureFlags) {
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
@@ -140,6 +142,7 @@ public class CheckConnectionActivityImpl implements CheckConnectionActivity {
   private CheckedSupplier<Worker<StandardCheckConnectionInput, ConnectorJobOutput>, Exception> getWorkerFactory(
                                                                                                                 final IntegrationLauncherConfig launcherConfig) {
     return () -> {
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.CHECK);
       final IntegrationLauncher integrationLauncher = new AirbyteIntegrationLauncher(
           launcherConfig.getJobId(),
           Math.toIntExact(launcherConfig.getAttemptId()),

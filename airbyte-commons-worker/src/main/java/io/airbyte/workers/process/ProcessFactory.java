@@ -6,6 +6,7 @@ package io.airbyte.workers.process;
 
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.nio.file.Path;
@@ -26,6 +27,8 @@ public interface ProcessFactory {
   /**
    * Creates a ProcessBuilder to run a program in a new Process.
    *
+   * @param resourceType type of the resource. This is used to pull the base configuration from the
+   *        WorkerConfigsProvider.
    * @param jobType type of job to add to name for easier operational processes.
    * @param jobId job Id
    * @param attempt attempt Id
@@ -45,9 +48,10 @@ public interface ProcessFactory {
    * @return ProcessBuilder object to run the process.
    * @throws WorkerException exception thrown from worker
    */
-  Process create(String jobType,
-                 String jobId,
-                 int attempt,
+  Process create(final ResourceType resourceType,
+                 final String jobType,
+                 final String jobId,
+                 final int attempt,
                  final Path jobPath,
                  final String imageName,
                  final boolean usesIsolatedPool,

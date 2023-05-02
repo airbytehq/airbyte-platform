@@ -29,6 +29,7 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.process.ProcessFactory;
 import java.io.ByteArrayInputStream;
@@ -88,7 +89,7 @@ class DefaultNormalizationRunnerTest {
         WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, Jsons.serialize(config),
         WorkerConstants.DESTINATION_CATALOG_JSON_FILENAME, Jsons.serialize(catalog));
 
-    when(processFactory.create(NORMALIZE_STEP, JOB_ID, JOB_ATTEMPT, jobRoot,
+    when(processFactory.create(ResourceType.NORMALIZATION, NORMALIZE_STEP, JOB_ID, JOB_ATTEMPT, jobRoot,
         getTaggedImageName(NORMALIZATION_IMAGE, NORMALIZATION_TAG), false, false, files, null,
         workerConfigs.getResourceRequirements(),
         null,
