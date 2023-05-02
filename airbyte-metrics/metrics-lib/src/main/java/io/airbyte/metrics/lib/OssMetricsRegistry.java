@@ -33,6 +33,55 @@ import java.util.List;
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
+  ACTIVITY_DBT_TRANSFORMATION(
+      MetricEmittingApps.WORKER,
+      "activity_dbt_transformation",
+      "increments when we start a dbt transformation activity"),
+  ACTIVITY_CHECK_CONNECTION(
+      MetricEmittingApps.WORKER,
+      "activity_check_connection",
+      "increments when we start a check connection activity"),
+  ACTIVITY_DISCOVER_CATALOG(
+      MetricEmittingApps.WORKER,
+      "activity_discover_catalog",
+      "increments when we start a discover catalog activity"),
+  ACTIVITY_NORMALIZATION(
+      MetricEmittingApps.WORKER,
+      "activity_normalization",
+      "increments when we start a normalization activity"),
+  ACTIVITY_NORMALIZATION_SUMMARY_CHECK(
+      MetricEmittingApps.WORKER,
+      "activity_normalization_summary_check",
+      "increments when we start a normalization summary check activity"),
+  ACTIVITY_PERSIST_STATE(
+      MetricEmittingApps.WORKER,
+      "activity_persist_state",
+      "increments when we start a persist state activtiy"),
+  ACTIVITY_REFRESH_SCHEMA(
+      MetricEmittingApps.WORKER,
+      "activity_refresh_schema",
+      "increments when we start a refresh schema activity"),
+  ACTIVITY_REPLICATION(
+      MetricEmittingApps.WORKER,
+      "activity_replication",
+      "increments when we start a replication activity"),
+  ACTIVITY_SPEC(
+      MetricEmittingApps.WORKER,
+      "activity_spec",
+      "increments when we start a spec activity"),
+  ACTIVITY_SUBMIT_CHECK_DESTINATION_CONNECTION(
+      MetricEmittingApps.WORKER,
+      "activity_submit_check_destination_connection",
+      "increments when we start a submit check connection activity"),
+  ACTIVITY_SUBMIT_CHECK_SOURCE_CONNECTION(
+      MetricEmittingApps.WORKER,
+      "activity_submit_check_source_connection",
+      "increments when we start a submit check connection activity"),
+  ACTIVITY_WEBHOOK_OPERATION(
+      MetricEmittingApps.WORKER,
+      "activity_webhook_operation",
+      "increments when we start a webhook operation activity"),
+
   ATTEMPT_CREATED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "attempt_created_by_release_stage",

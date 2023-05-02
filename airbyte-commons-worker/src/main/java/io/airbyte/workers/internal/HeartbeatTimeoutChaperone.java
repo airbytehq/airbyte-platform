@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * that means that the heartbeat has stopped. If this occurs the chaperone cancels the runnable
  * thread and then throws an exception. If the runnable thread completes first, the chaperone
  * cancels the heartbeat and then returns.
- *
+ * <p>
  * This allows us to run an arbitrary runnable that we can kill if a heartbeat stops. This is useful
  * in cases like the platform reading from the source. The thread that reads from the source is
  * allowed to run as long as the heartbeat from the sources is fresh.
@@ -111,7 +111,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     LOGGER.info("thread status... heartbeat thread: {} , replication thread: {}", heartbeatFuture.isDone(), runnableFuture.isDone());
 
     if (heartbeatFuture.isDone() && !runnableFuture.isDone()) {
-      if (featureFlagClient.enabled(ShouldFailSyncIfHeartbeatFailure.INSTANCE, new Workspace(workspaceId))) {
+      if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE, new Workspace(workspaceId))) {
         runnableFuture.cancel(true);
         throw new HeartbeatTimeoutException(
             String.format("Heartbeat has stopped. Heartbeat freshness threshold: %s secs Actual heartbeat age: %s secs",

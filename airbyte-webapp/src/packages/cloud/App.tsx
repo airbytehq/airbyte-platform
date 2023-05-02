@@ -7,6 +7,7 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { ConfigServiceProvider, config } from "config";
+import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -20,7 +21,6 @@ import cloudLocales from "packages/cloud/locales/en.json";
 import { AuthenticationProvider } from "packages/cloud/services/auth/AuthService";
 import { theme } from "packages/cloud/theme";
 import { AnalyticsProvider } from "views/common/AnalyticsProvider";
-import { StoreProvider } from "views/common/StoreProvider";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
 import { IntercomProvider } from "./services/thirdParty/intercom/IntercomProvider";
@@ -62,7 +62,7 @@ const App: React.FC = () => {
     <React.StrictMode>
       <StyleProvider>
         <I18nProvider locale="en" messages={messages}>
-          <StoreProvider>
+          <QueryProvider>
             <Suspense fallback={<LoadingPage />}>
               <ConfigServiceProvider config={config}>
                 <Router>
@@ -72,7 +72,7 @@ const App: React.FC = () => {
                 </Router>
               </ConfigServiceProvider>
             </Suspense>
-          </StoreProvider>
+          </QueryProvider>
         </I18nProvider>
       </StyleProvider>
     </React.StrictMode>

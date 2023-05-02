@@ -779,7 +779,7 @@ class DefaultJobPersistenceTest {
     jobPersistence.succeedAttempt(job1, job1Attempt3);
     jobPersistence.succeedAttempt(job2, job2Attempt3);
 
-    final List<AttemptWithJobInfo> allAttempts = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC, Instant.ofEpochSecond(0));
+    final List<AttemptWithJobInfo> allAttempts = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC, Instant.ofEpochSecond(0), 1000);
     assertEquals(6, allAttempts.size());
 
     assertEquals(job1, allAttempts.get(0).getJobInfo().getId());
@@ -801,7 +801,7 @@ class DefaultJobPersistenceTest {
     assertEquals(job2Attempt3, allAttempts.get(5).getAttempt().getAttemptNumber());
 
     final List<AttemptWithJobInfo> attemptsAfterTimestamp = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC,
-        Instant.ofEpochSecond(allAttempts.get(2).getAttempt().getEndedAtInSecond().orElseThrow()));
+        Instant.ofEpochSecond(allAttempts.get(2).getAttempt().getEndedAtInSecond().orElseThrow()), 1000);
     assertEquals(3, attemptsAfterTimestamp.size());
 
     assertEquals(job1, attemptsAfterTimestamp.get(0).getJobInfo().getId());
@@ -1435,7 +1435,8 @@ class DefaultJobPersistenceTest {
     void testGetFirstSyncJobForConnectionId() throws IOException {
       final long jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH));
-      final List<AttemptWithJobInfo> attemptsWithJobInfo = jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH);
+      final List<AttemptWithJobInfo> attemptsWithJobInfo =
+          jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH, 1000);
       final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0).getAttempt());
 
       final Instant afterNow = NOW.plusSeconds(1000);

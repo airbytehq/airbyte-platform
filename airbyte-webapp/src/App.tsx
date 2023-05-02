@@ -6,6 +6,7 @@ import { ThemeProvider } from "styled-components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { config } from "config";
+import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
 import { ServicesProvider } from "core/servicesProvider";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
@@ -15,7 +16,6 @@ import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import { AnalyticsProvider } from "views/common/AnalyticsProvider";
-import { StoreProvider } from "views/common/StoreProvider";
 
 import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";
@@ -55,7 +55,7 @@ const App: React.FC = () => {
     <React.StrictMode>
       <StyleProvider>
         <I18nProvider locale="en" messages={en}>
-          <StoreProvider>
+          <QueryProvider>
             <ServicesProvider>
               <Suspense fallback={<LoadingPage />}>
                 <ConfigServiceProvider config={config}>
@@ -67,7 +67,7 @@ const App: React.FC = () => {
                 </ConfigServiceProvider>
               </Suspense>
             </ServicesProvider>
-          </StoreProvider>
+          </QueryProvider>
         </I18nProvider>
       </StyleProvider>
     </React.StrictMode>

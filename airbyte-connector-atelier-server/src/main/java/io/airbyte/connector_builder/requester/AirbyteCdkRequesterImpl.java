@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import datadog.trace.api.Trace;
+import io.airbyte.connector_builder.ApmTraceConstants;
 import io.airbyte.connector_builder.api.model.generated.ResolveManifest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
@@ -67,27 +69,35 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
    * Launch a CDK process responsible for handling resolve_manifest requests.
    */
   @Override
+  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
   public StreamRead readStream(final JsonNode manifest, final JsonNode config, final String stream, final Integer recordLimit)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     if (stream == null) {
       throw new AirbyteCdkInvalidInputException("Missing required `stream` field.");
     }
     final AirbyteRecordMessage record = request(manifest, config, readStreamCommand, stream, recordLimit);
+    return recordToResponse(record);
+  }
+
+  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
+  private StreamRead recordToResponse(final AirbyteRecordMessage record) {
     final StreamRead response = new StreamRead();
     final JsonNode data = record.getData();
-    final List<Object> logList = convertToList(data.get("logs"), new TypeReference<List<Object>>() {});
-    final List<StreamReadSlicesInner> sliceList = convertToList(data.get("slices"), new TypeReference<List<StreamReadSlicesInner>>() {});
+    final List<Object> logList = convertToList(data.get("logs"), new TypeReference<>() {});
+    final List<StreamReadSlicesInner> sliceList = convertToList(data.get("slices"), new TypeReference<>() {});
     response.setLogs(logList);
     response.setSlices(sliceList);
     response.setInferredSchema(data.get("inferred_schema"));
     response.setTestReadLimitReached(data.get("test_read_limit_reached").asBoolean());
     return response;
+
   }
 
   /**
    * Launch a CDK process responsible for handling resolve_manifest requests.
    */
   @Override
+  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
   public ResolveManifest resolveManifest(final JsonNode manifest)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     final AirbyteRecordMessage record = request(manifest, CONFIG_NODE, resolveManifestCommand);
@@ -95,6 +105,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
   }
 
   @Override
+  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
   public StreamsListRead listStreams(final JsonNode manifest, final JsonNode config)
       throws IOException, AirbyteCdkInvalidInputException, CdkProcessException {
     return new StreamsListRead().streams(

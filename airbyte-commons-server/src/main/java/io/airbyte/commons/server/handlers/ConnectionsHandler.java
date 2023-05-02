@@ -191,7 +191,7 @@ public class ConnectionsHandler {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
     final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
-    if (workspaceId != null && featureFlagClient.enabled(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
+    if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
       // TODO this is the hook for future check with catalog work
       LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
     }
