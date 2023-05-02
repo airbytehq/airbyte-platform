@@ -4,10 +4,12 @@
 
 package io.airbyte.commons.temporal.scheduling;
 
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
+import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.Set;
@@ -25,15 +27,15 @@ public class RouterService {
   private final ConfigRepository configRepository;
   private final TaskQueueMapper taskQueueMapper;
 
-  private final FeatureFlags featureFlags;
+  private final FeatureFlagClient featureFlagClient;
 
   private static final Set<TemporalJobType> WORKSPACE_ROUTING_JOB_TYPE_SET =
       Set.of(TemporalJobType.DISCOVER_SCHEMA, TemporalJobType.CHECK_CONNECTION);
 
-  public RouterService(final ConfigRepository configRepository, final TaskQueueMapper taskQueueMapper, final FeatureFlags featureFlags) {
+  public RouterService(final ConfigRepository configRepository, final TaskQueueMapper taskQueueMapper, final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.taskQueueMapper = taskQueueMapper;
-    this.featureFlags = featureFlags;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -43,7 +45,7 @@ public class RouterService {
   public String getTaskQueue(final UUID connectionId, final TemporalJobType jobType) throws IOException {
     final Geography geography = configRepository.getGeographyForConnection(connectionId);
     final UUID workspaceId = configRepository.getStandardWorkspaceFromConnection(connectionId, false).getWorkspaceId();
-    if (featureFlags.processInGcpDataPlane(workspaceId.toString())) {
+    if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
       return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
     } else {
       return taskQueueMapper.getTaskQueue(geography, jobType);
@@ -65,7 +67,7 @@ public class RouterService {
     }
 
     final Geography geography = configRepository.getGeographyForWorkspace(workspaceId);
-    if (featureFlags.processInGcpDataPlane(workspaceId.toString())) {
+    if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
       return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
     } else {
       return taskQueueMapper.getTaskQueue(geography, jobType);

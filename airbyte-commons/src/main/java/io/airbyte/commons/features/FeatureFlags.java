@@ -37,6 +37,4 @@ public interface FeatureFlags {
    */
   String fieldSelectionWorkspaces();
 
-  boolean processInGcpDataPlane(final String workspaceId);
-
 }
