@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.handlers.helper;
+package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,7 +11,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.net.URI;

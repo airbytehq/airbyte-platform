@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.handlers.helper;
+package io.airbyte.commons.server.handlers.helpers;
 
 import static io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_FIELD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
-import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;

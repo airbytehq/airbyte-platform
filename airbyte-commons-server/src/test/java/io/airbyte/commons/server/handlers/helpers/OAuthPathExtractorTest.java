@@ -2,11 +2,10 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.handlers.helper;
+package io.airbyte.commons.server.handlers.helpers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.handlers.helpers.OAuthPathExtractor;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
