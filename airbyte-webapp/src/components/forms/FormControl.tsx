@@ -1,7 +1,8 @@
 import classNames from "classnames";
 import uniqueId from "lodash/uniqueId";
 import { HTMLInputTypeAttribute, ReactNode, useState } from "react";
-import { FieldError, Path, useFormContext } from "react-hook-form";
+import React from "react";
+import { FieldError, Path, get, useFormState } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
@@ -73,14 +74,15 @@ export interface SelectControlProps<T extends FormValues>
 }
 
 export const FormControl = <T extends FormValues>({ label, labelTooltip, description, ...props }: ControlProps<T>) => {
-  const { formState, getFieldState } = useFormContext<T>();
-  const { error } = getFieldState(props.name, formState); // Subscribe to receive reactive updates
+  // only retrieve new form state if form state of current field has changed
+  const { errors } = useFormState<T>({ name: props.name });
+  const error = get(errors, props.name);
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
   // Properties to pass to the underlying control
   const controlProps = {
     ...props,
-    hasError: Boolean(error),
+    hasError: error,
     controlId,
   };
 

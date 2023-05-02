@@ -42,6 +42,7 @@ describe(`${Form.name}`, () => {
     userEvent.type(screen.getByLabelText("First Name"), "John");
     userEvent.type(screen.getByLabelText("Last Name"), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
+    await waitFor(() => expect(submitButton).toBeEnabled());
     userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledWith({ firstName: "John", lastName: "Doe" }));
@@ -65,6 +66,7 @@ describe(`${Form.name}`, () => {
     userEvent.type(screen.getByLabelText("First Name"), "John");
     userEvent.type(screen.getByLabelText("Last Name"), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
+    await waitFor(() => expect(submitButton).toBeEnabled());
     userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnSuccess).toHaveBeenCalledTimes(1));
@@ -89,6 +91,7 @@ describe(`${Form.name}`, () => {
     userEvent.type(screen.getByLabelText("First Name"), "John");
     userEvent.type(screen.getByLabelText("Last Name"), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
+    await waitFor(() => expect(submitButton).toBeEnabled());
     userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnError).toHaveBeenCalledTimes(1));

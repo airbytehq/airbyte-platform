@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ReactNode } from "react";
-import { useForm, FormProvider, DeepPartial } from "react-hook-form";
+import { useForm, FormProvider, DeepPartial, useFormState } from "react-hook-form";
 import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
@@ -17,6 +17,11 @@ interface FormProps<T extends FormValues> {
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
 }
+
+const HookFormDirtyTracker = () => {
+  const { isDirty } = useFormState();
+  return <FormChangeTracker changed={isDirty} />;
+};
 
 export const Form = <T extends FormValues>({
   children,
@@ -45,7 +50,7 @@ export const Form = <T extends FormValues>({
 
   return (
     <FormProvider {...methods}>
-      {trackDirtyChanges && <FormChangeTracker changed={methods.formState.isDirty} />}
+      {trackDirtyChanges && <HookFormDirtyTracker />}
       <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>{children}</form>
     </FormProvider>
   );
