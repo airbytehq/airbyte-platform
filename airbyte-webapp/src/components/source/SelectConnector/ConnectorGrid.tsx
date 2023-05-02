@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { Input } from "components/ui/Input";
+import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
@@ -38,12 +38,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
   return (
     <>
       <Box pb="xl">
-        <Input
-          placeholder="Search"
-          value={searchTerm}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value || "")}
-          light
-        />
+        <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </Box>
       {filteredDefinitions.length === 0 && (
         <div className={styles.connectorGrid__noMatches}>

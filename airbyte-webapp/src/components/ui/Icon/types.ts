@@ -6,6 +6,7 @@ export type IconType =
   | "docs"
   | "ga"
   | "info"
+  | "lens"
   | "minus"
   | "modification"
   | "moon"

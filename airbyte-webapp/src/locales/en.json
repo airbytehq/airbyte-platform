@@ -35,6 +35,7 @@
   "form.selectValue": "Select a value",
   "form.selectConnector": "Type to search for a connector",
   "form.searchName": "search by name...",
+  "form.search.placeholder": "Search",
   "form.noResult": "No result",
   "form.noConnectorFound": "No matching connector found",
   "form.connectionName": "Connection name",
