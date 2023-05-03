@@ -30,6 +30,8 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
@@ -54,7 +56,7 @@ import java.util.function.Supplier;
 public class DbtTransformationActivityImpl implements DbtTransformationActivity {
 
   private final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig;
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
@@ -67,8 +69,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final AirbyteApiClient airbyteApiClient;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
-                                       @Named("defaultWorkerConfigs") final WorkerConfigs workerConfigs,
-                                       @Named("defaultProcessFactory") final ProcessFactory processFactory,
+                                       final WorkerConfigsProvider workerConfigsProvider,
+                                       final ProcessFactory processFactory,
                                        final SecretsHydrator secretsHydrator,
                                        @Named("workspaceRoot") final Path workspaceRoot,
                                        final WorkerEnvironment workerEnvironment,
@@ -79,7 +81,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        final TemporalUtils temporalUtils,
                                        final AirbyteApiClient airbyteApiClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
@@ -117,6 +119,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
           final CheckedSupplier<Worker<OperatorDbtInput, Void>, Exception> workerFactory;
 
           if (containerOrchestratorConfig.isPresent()) {
+            final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
             workerFactory =
                 getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
                     () -> context, input.getConnectionId());

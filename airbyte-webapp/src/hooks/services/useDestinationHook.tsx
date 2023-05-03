@@ -1,13 +1,13 @@
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
-import { Action, Namespace } from "core/analytics";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { DestinationService } from "core/domain/connector/DestinationService";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
 import { isDefined } from "utils/common";
 
-import { useAnalyticsService } from "./Analytics";
 import { useRemoveConnectionsFromList } from "./useConnectionHook";
 import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";

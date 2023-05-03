@@ -390,8 +390,7 @@ public class KubePodProcess implements KubePod {
   }
 
   @SuppressWarnings({"PMD.InvalidLogMessageFormat", "VariableDeclarationUsageDistance"})
-  public KubePodProcess(final boolean isOrchestrator,
-                        final String processRunnerHost,
+  public KubePodProcess(final String processRunnerHost,
                         final KubernetesClient fabricClient,
                         final String podName,
                         final String namespace,
@@ -549,10 +548,6 @@ public class KubePodProcess implements KubePod {
         .withAnnotations(annotations)
         .endMetadata()
         .withNewSpec();
-
-    if (isOrchestrator) {
-      podBuilder = podBuilder.withServiceAccount("airbyte-admin").withAutomountServiceAccountToken(true);
-    }
 
     final List<LocalObjectReference> pullSecrets = imagePullSecrets
         .stream()

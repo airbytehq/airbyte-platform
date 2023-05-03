@@ -8,10 +8,10 @@ import { Button } from "components/ui/Button";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/analytics";
 import { FormikPatch } from "core/form/FormikPatch";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderMainFormikContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";

@@ -9,6 +9,7 @@ import { ReactComponent as CrossIcon } from "./icons/crossIcon.svg";
 import { ReactComponent as DocsIcon } from "./icons/docsIcon.svg";
 import { ReactComponent as GAIcon } from "./icons/gAIcon.svg";
 import { ReactComponent as InfoIcon } from "./icons/infoIcon.svg";
+import { ReactComponent as LensIcon } from "./icons/lensIcon.svg";
 import { ReactComponent as MinusIcon } from "./icons/minusIcon.svg";
 import { ReactComponent as ModificationIcon } from "./icons/modificationIcon.svg";
 import { ReactComponent as MoonIcon } from "./icons/moonIcon.svg";
@@ -55,6 +56,7 @@ const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = {
   rotate: RotateIcon,
   nested: NestedIcon,
   chevronRight: ChevronRightIcon,
+  lens: LensIcon,
 };
 
 export const Icon: React.FC<IconProps> = React.memo(

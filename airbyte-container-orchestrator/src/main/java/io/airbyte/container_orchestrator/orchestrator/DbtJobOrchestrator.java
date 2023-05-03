@@ -16,6 +16,8 @@ import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
@@ -36,16 +38,16 @@ public class DbtJobOrchestrator implements JobOrchestrator<OperatorDbtInput> {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private final Configs configs;
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final JobRunConfig jobRunConfig;
 
   public DbtJobOrchestrator(final Configs configs,
-                            final WorkerConfigs workerConfigs,
+                            final WorkerConfigsProvider workerConfigsProvider,
                             final ProcessFactory processFactory,
                             final JobRunConfig jobRunConfig) {
     this.configs = configs;
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.jobRunConfig = jobRunConfig;
   }
@@ -75,6 +77,7 @@ public class DbtJobOrchestrator implements JobOrchestrator<OperatorDbtInput> {
             destinationLauncherConfig.getDockerImage()));
 
     log.info("Setting up dbt worker...");
+    final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
     final DbtTransformationWorker worker = new DbtTransformationWorker(
         jobRunConfig.getJobId(),
         Math.toIntExact(jobRunConfig.getAttemptId()),

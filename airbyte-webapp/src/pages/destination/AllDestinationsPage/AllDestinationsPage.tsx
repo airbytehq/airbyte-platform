@@ -10,7 +10,7 @@ import { DestinationsTable } from "components/destination/DestinationsTable";
 import { Button } from "components/ui/Button";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 
 import { RoutePaths } from "../../routePaths";

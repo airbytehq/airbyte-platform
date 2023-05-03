@@ -94,6 +94,7 @@ include ':airbyte-persistence:job-persistence' // transitively used by airbyte-w
 include ':airbyte-worker-models'
 
 include ':airbyte-bootloader'
+include ':airbyte-commons-micronaut'
 include ':airbyte-commons-server'
 include ':airbyte-connector-atelier-server'
 include ':airbyte-connector-builder-server'

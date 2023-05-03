@@ -13,7 +13,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionStatus } from "core/request/AirbyteClient";
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";

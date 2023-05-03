@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useRef } from "react";
 
 import { useConfig } from "config";
-import { AnalyticsService } from "core/analytics/AnalyticsService";
+
+import { AnalyticsService } from "./AnalyticsService";
 
 type AnalyticsContext = Record<string, unknown>;
 

@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
@@ -77,6 +79,10 @@ import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
@@ -94,7 +100,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -506,6 +511,15 @@ public class SchedulerHandler {
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
               CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
       final boolean containsBreakingChange = containsBreakingChange(diff);
+
+      if (containsBreakingChange) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
+      } else {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
+      }
+
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().breakingChange(containsBreakingChange).connectionId(connectionRead.getConnectionId());
       final ConnectionStatus connectionStatus;
@@ -515,6 +529,17 @@ public class SchedulerHandler {
         connectionStatus = connectionRead.getStatus();
       }
       updateObject.status(connectionStatus);
+
+      if (!diff.getTransforms().isEmpty() && !containsBreakingChange) {
+        autoPropagateSchemaChange(workspaceId,
+            connectionRead.getConnectionId(),
+            updateObject,
+            currentAirbyteCatalog,
+            discoveredSchema.getCatalog(),
+            diff.getTransforms(),
+            discoveredSchema.getCatalogId());
+      }
+
       connectionsHandler.updateConnection(updateObject);
 
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
@@ -528,9 +553,22 @@ public class SchedulerHandler {
   }
 
   @VisibleForTesting
-  void autoPropagateSchemaChange(final UUID workspaceId) {
+  void autoPropagateSchemaChange(final UUID workspaceId,
+                                 final UUID connectionId,
+                                 final ConnectionUpdate updateObject,
+                                 final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
+                                 final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
+                                 final List<StreamTransform> transformations,
+                                 final UUID sourceCatalogId) {
     if (featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))) {
-      throw new NotImplementedException();
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+      io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
+          currentAirbyteCatalog,
+          newCatalog,
+          transformations);
+      updateObject.setSyncCatalog(catalog);
+      updateObject.setSourceCatalogId(sourceCatalogId);
     }
   }
 
@@ -626,7 +664,8 @@ public class SchedulerHandler {
     return jobConverter.getJobInfoRead(job);
   }
 
-  private boolean containsBreakingChange(final CatalogDiff diff) {
+  @VisibleForTesting
+  boolean containsBreakingChange(final CatalogDiff diff) {
     for (final StreamTransform streamTransform : diff.getTransforms()) {
       if (streamTransform.getTransformType() != TransformTypeEnum.UPDATE_STREAM) {
         continue;

@@ -17,6 +17,8 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.io.IOException;
@@ -50,7 +52,7 @@ public class DockerProcessFactory implements ProcessFactory {
   public static final String JAVA_OPTS = "JAVA_OPTS";
 
   private final String workspaceMountSource;
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final Path workspaceRoot;
   private final String localMountSource;
   private final String networkName;
@@ -64,12 +66,12 @@ public class DockerProcessFactory implements ProcessFactory {
    * @param localMountSource local volume
    * @param networkName docker network
    */
-  public DockerProcessFactory(final WorkerConfigs workerConfigs,
+  public DockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                               final Path workspaceRoot,
                               final String workspaceMountSource,
                               final String localMountSource,
                               final String networkName) {
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.workspaceRoot = workspaceRoot;
     this.workspaceMountSource = workspaceMountSource;
     this.localMountSource = localMountSource;
@@ -92,7 +94,8 @@ public class DockerProcessFactory implements ProcessFactory {
   }
 
   @Override
-  public Process create(final String jobType,
+  public Process create(final ResourceType resourceType,
+                        final String jobType,
                         final String jobId,
                         final int attempt,
                         final Path jobRoot,
@@ -154,6 +157,7 @@ public class DockerProcessFactory implements ProcessFactory {
         cmd.add(String.format("%s:%s", localMountSource, LOCAL_MOUNT_DESTINATION));
       }
 
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
       final Map<String, String> allEnvMap = MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap());
       for (final Map.Entry<String, String> envEntry : allEnvMap.entrySet()) {
         cmd.add("-e");

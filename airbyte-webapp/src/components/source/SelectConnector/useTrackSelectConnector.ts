@@ -1,8 +1,7 @@
 import capitalize from "lodash/capitalize";
 import { useCallback } from "react";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { useAnalyticsService, Action, Namespace } from "core/services/analytics";
 
 export const useTrackSelectConnector = (connectorType: "source" | "destination") => {
   const analytics = useAnalyticsService();

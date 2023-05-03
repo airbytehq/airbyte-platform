@@ -178,9 +178,32 @@ jooq:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
 
+jpa:
+  default:
+    entity-scan:
+      # this is where JPA/Hibernate will look for domain objects to map to
+      packages:
+        - "io.airbyte.server.repositories.domain"
+  # disable these since they are not managed by JPA/Hibernate
+  jobs:
+    enabled: false
+  config:
+    enabled: false
+
+    properties:
+      hibernate:
+#        Uncomment to help diagnose sql/ORM issues
+#        show_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        hbm2ddl:
+          auto: none
+
 logger:
   levels:
   # Uncomment to help resolve issues with conditional beans
   #    io.micronaut.context.condition: DEBUG
   # Uncomment to help resolve issues with security beans
   #    io.micronaut.security: DEBUG
+  # Uncomment to help resolve issues with micronaut data
+  #    com.zaxxer.hikari.HikariConfig: DEBUG
+  #    com.zaxxer.hikari: TRACE

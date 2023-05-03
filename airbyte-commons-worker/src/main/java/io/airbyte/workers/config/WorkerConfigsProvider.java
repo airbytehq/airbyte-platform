@@ -13,6 +13,7 @@ import io.airbyte.workers.WorkerConfigs;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,9 +22,58 @@ import java.util.stream.Collectors;
 
 /**
  * Provide WorkerConfigs.
+ * <p>
+ * This provider gathers the configuration from the application.yml that are nested under the
+ * `airbyte.worker.kube-job-configs` key.
  */
 @Singleton
 public class WorkerConfigsProvider {
+
+  /**
+   * Set of known resource types.
+   */
+  public enum ResourceType {
+
+    DEFAULT("default"),
+    CHECK("check"),
+    DISCOVER("discover"),
+    NORMALIZATION("normalization"),
+    REPLICATION("replication"),
+    SPEC("spec");
+
+    private final String value;
+    private static final Map<String, ResourceType> CONSTANTS = new HashMap<>();
+
+    static {
+      for (final ResourceType r : values()) {
+        CONSTANTS.put(r.value, r);
+      }
+    }
+
+    ResourceType(final String value) {
+      this.value = value;
+    }
+
+    @Override
+    public String toString() {
+      return this.value;
+    }
+
+    /**
+     * Get a ResourceType from a string.
+     *
+     * @param value the string
+     * @return the ResourceType
+     */
+    public static ResourceType fromValue(final String value) {
+      final ResourceType type = CONSTANTS.get(value);
+      if (type == null) {
+        throw new IllegalArgumentException(String.format("Unknown ResourceType \"%s\"", value));
+      }
+      return type;
+    }
+
+  }
 
   @Singleton
   record WorkerConfigsDefaults(WorkerEnvironment workerEnvironment,
@@ -41,11 +91,12 @@ public class WorkerConfigsProvider {
 
   }
 
-  private final Map<String, KubeResourceConfig> kubeResourceConfigsByName;
+  private final Map<ResourceType, KubeResourceConfig> kubeResourceConfigsByName;
   private final WorkerConfigsDefaults workerConfigsDefaults;
 
   public WorkerConfigsProvider(final List<KubeResourceConfig> kubeResourceConfigs, final WorkerConfigsDefaults defaults) {
-    this.kubeResourceConfigsByName = kubeResourceConfigs.stream().collect(Collectors.toMap(KubeResourceConfig::getName, Function.identity()));
+    this.kubeResourceConfigsByName = kubeResourceConfigs.stream()
+        .collect(Collectors.toMap(c -> ResourceType.fromValue(c.getName()), Function.identity()));
     this.workerConfigsDefaults = defaults;
   }
 
@@ -55,7 +106,7 @@ public class WorkerConfigsProvider {
    * @param name of the Task.
    * @return the WorkerConfig.
    */
-  public WorkerConfigs getConfig(final String name) {
+  public WorkerConfigs getConfig(final ResourceType name) {
     final KubeResourceConfig kubeResourceConfig = getKubeResourceConfig(name).orElseThrow();
 
     final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
@@ -76,7 +127,7 @@ public class WorkerConfigsProvider {
         workerConfigsDefaults.jobDefaultEnvMap());
   }
 
-  private Optional<KubeResourceConfig> getKubeResourceConfig(final String name) {
+  private Optional<KubeResourceConfig> getKubeResourceConfig(final ResourceType name) {
     return Optional.ofNullable(kubeResourceConfigsByName.get(name));
   }
 

@@ -18,6 +18,7 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+    implementation libs.bundles.micronaut.data.jpa
     implementation libs.micronaut.jaxrs.server
     implementation libs.flyway.core
     implementation libs.s3
@@ -27,6 +28,7 @@ dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
+    implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:init')
@@ -36,6 +38,7 @@ dependencies {
     implementation project(":airbyte-featureflag")
     implementation project(':airbyte-metrics:metrics-lib')
     implementation project(':airbyte-db:db-lib')
+    implementation project(':airbyte-db:jooq')
     implementation project(":airbyte-json-validation")
     implementation project(':airbyte-notification')
     implementation project(':airbyte-oauth')

@@ -1,4 +1,4 @@
-import type { AnalyticsService } from "core/analytics/AnalyticsService";
+import type { AnalyticsService } from "../AnalyticsService";
 
 export const useAnalyticsService = (): AnalyticsService => {
   return {

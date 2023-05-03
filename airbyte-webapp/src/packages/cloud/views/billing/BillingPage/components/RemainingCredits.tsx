@@ -8,9 +8,9 @@ import styled from "styled-components";
 
 import { Button } from "components/ui/Button";
 
-import { Action, Namespace } from "core/analytics";
 import { useStripeCheckout } from "core/api/cloud";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { CloudWorkspace } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import {

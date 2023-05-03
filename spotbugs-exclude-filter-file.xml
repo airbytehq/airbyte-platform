@@ -19,5 +19,10 @@
     <Class name="io.airbyte.integrations.debezium.internals.AirbyteFileOffsetBackingStore" />
     <Bug code="SECOBDES" />
   </Match>
+  <Match>
+    <Package name="io.airbyte.server.repositories.domain.*" />
+    <!-- All args constructor used by builders trigger this error -->
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE" />
+  </Match>
 
 </FindBugsFilter>

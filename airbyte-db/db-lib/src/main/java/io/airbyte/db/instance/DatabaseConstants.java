@@ -61,6 +61,8 @@ public final class DatabaseConstants {
 
   public static final String NOTIFICATION_CONFIGURATION_TABLE = "notification_configuration";
 
+  public static final String SCHEMA_MANAGEMENT_TABLE = "schema_management";
+
   /**
    * Private constructor to prevent instantiation.
    */

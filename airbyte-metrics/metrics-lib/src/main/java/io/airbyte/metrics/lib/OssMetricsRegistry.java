@@ -290,7 +290,22 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricTags.ATTEMPT_QUEUE,
       MetricTags.ATTEMPT_OUTCOME,
       MetricTags.FAILURE_ORIGIN, // only includes the first failure origin
-      MetricTags.FAILURE_TYPE); // only includes the first failure type
+      MetricTags.FAILURE_TYPE), // only includes the first failure type
+
+  BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
+      "breaking_change_detected",
+      "a breaking schema change has been detected",
+      MetricTags.CONNECTION_ID),
+
+  NON_BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
+      "non_breaking_change_detected",
+      "a non breaking schema change has been detected",
+      MetricTags.CONNECTION_ID),
+
+  SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
+      "schema_change_auto_propagated",
+      "a schema change have been propagated",
+      MetricTags.CONNECTION_ID);
 
   private final MetricEmittingApp application;
   private final String metricName;

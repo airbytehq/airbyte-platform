@@ -5,7 +5,7 @@ import styled from "styled-components";
 
 import { Button } from "components/ui/Button";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
 

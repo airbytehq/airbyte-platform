@@ -10,7 +10,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFeature, FeatureItem } from "hooks/services/Feature";
 import { LargeEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";

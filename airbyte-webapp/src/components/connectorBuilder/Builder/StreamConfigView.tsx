@@ -11,8 +11,8 @@ import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   BuilderView,

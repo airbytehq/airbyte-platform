@@ -7,14 +7,10 @@ package io.airbyte.workers.config;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import io.airbyte.commons.map.MoreMaps;
-import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.config.Configs.DeploymentMode;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
-import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.context.env.Environment;
 import jakarta.inject.Named;
@@ -32,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Factory
 @Slf4j
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "LineLength", "MissingJavadocMethod"})
-public class WorkerConfigurationBeanFactory {
+public class ConfigurationBeanFactory {
 
   private static final String AIRBYTE_ROLE = "AIRBYTE_ROLE";
   private static final String AIRBYTE_VERSION = "AIRBYTE_VERSION";
@@ -86,43 +82,6 @@ public class WorkerConfigurationBeanFactory {
         .map(this::parseToleration)
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
-  }
-
-  @Singleton
-  @Named("normalizationResourceRequirements")
-  public ResourceRequirements normalizationResourceRequirements(final WorkerConfigsProvider workerConfigsProvider) {
-    return workerConfigsProvider.getConfig("normalization").getResourceRequirements();
-  }
-
-  @Singleton
-  @Named("checkWorkerConfigs")
-  public WorkerConfigs checkWorkerConfigs(final WorkerConfigsProvider workerConfigsProvider) {
-    return workerConfigsProvider.getConfig("check");
-  }
-
-  @Singleton
-  @Named("defaultWorkerConfigs")
-  public WorkerConfigs defaultWorkerConfigs(final WorkerConfigsProvider workerConfigsProvider) {
-    return workerConfigsProvider.getConfig("default");
-  }
-
-  @Singleton
-  @Named("discoverWorkerConfigs")
-  public WorkerConfigs discoverWorkerConfigs(final WorkerConfigsProvider workerConfigsProvider) {
-    return workerConfigsProvider.getConfig("discover");
-  }
-
-  @Singleton
-  @Named("replicationWorkerConfigs")
-  public WorkerConfigs replicationWorkerConfigs(final WorkerConfigsProvider workerConfigsProvider) {
-    return workerConfigsProvider.getConfig("replication");
-  }
-
-  @Singleton
-  @Requires(env = WorkerMode.CONTROL_PLANE)
-  @Named("specWorkerConfigs")
-  public WorkerConfigs specWorkerConfigs(final WorkerConfigsProvider workerConfigsProvider) {
-    return workerConfigsProvider.getConfig("spec");
   }
 
   private TolerationPOJO parseToleration(final String tolerationStr) {

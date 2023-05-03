@@ -23,7 +23,6 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { moveTimeToFutureByPeriod } from "utils/time";
 
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
-import { StreamErrorMessage } from "./ErrorMessage";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
@@ -158,11 +157,6 @@ export const StreamsList = () => {
               getRowClassName={(data) =>
                 classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
               }
-              getIsRowExpanded={(data) =>
-                data?.original?.config?.jobStatus === JobStatus.failed ||
-                data?.original?.config?.latestAttemptStatus === AttemptStatus.failed
-              }
-              expandedRow={({ row }) => <StreamErrorMessage stream={row.original} />}
             />
           </div>
         </FlexContainer>
