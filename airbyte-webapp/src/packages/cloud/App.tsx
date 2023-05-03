@@ -9,6 +9,7 @@ import LoadingPage from "components/LoadingPage";
 import { ConfigServiceProvider, config } from "config";
 import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
+import { AnalyticsProvider } from "core/services/analytics";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { defaultCloudFeatures, FeatureService } from "hooks/services/Feature";
@@ -20,7 +21,6 @@ import { Routing } from "packages/cloud/cloudRoutes";
 import cloudLocales from "packages/cloud/locales/en.json";
 import { AuthenticationProvider } from "packages/cloud/services/auth/AuthService";
 import { theme } from "packages/cloud/theme";
-import { AnalyticsProvider } from "views/common/AnalyticsProvider";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
 import { IntercomProvider } from "./services/thirdParty/intercom/IntercomProvider";

@@ -10,7 +10,7 @@ import { Text } from "components/ui/Text";
 
 import { useAvailableGeographies } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";

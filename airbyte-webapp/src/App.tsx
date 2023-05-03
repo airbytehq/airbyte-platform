@@ -8,6 +8,7 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { config } from "config";
 import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
+import { AnalyticsProvider } from "core/services/analytics";
 import { ServicesProvider } from "core/servicesProvider";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -15,7 +16,6 @@ import { defaultOssFeatures, FeatureService } from "hooks/services/Feature";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
-import { AnalyticsProvider } from "views/common/AnalyticsProvider";
 
 import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";

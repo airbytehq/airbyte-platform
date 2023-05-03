@@ -10,10 +10,10 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Link } from "components/ui/Link";
 
-import { Action, Namespace } from "core/analytics";
-import { getFrequencyFromScheduleData } from "core/analytics/utils";
 import { useListJobs } from "core/api";
-import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "hooks/services/Analytics";
+import { getFrequencyFromScheduleData } from "core/services/analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";

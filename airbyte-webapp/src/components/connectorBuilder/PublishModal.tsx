@@ -8,9 +8,9 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 
-import { Action, Namespace } from "core/analytics";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   useListVersions,

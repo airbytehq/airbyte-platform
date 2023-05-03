@@ -7,9 +7,9 @@ import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/analytics";
 import { StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { links } from "utils/links";
 

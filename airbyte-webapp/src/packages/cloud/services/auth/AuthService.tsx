@@ -5,9 +5,9 @@ import { useQueryClient } from "react-query";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
 
-import { Action, Namespace } from "core/analytics";
 import { isCommonRequestError } from "core/request/CommonRequestError";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { AuthProviders, OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";

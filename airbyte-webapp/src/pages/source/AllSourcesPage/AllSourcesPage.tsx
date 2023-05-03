@@ -9,7 +9,7 @@ import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { Button } from "components/ui/Button";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useSourceList } from "hooks/services/useSourceHook";
 
 import { SourcesTable } from "./SourcesTable";

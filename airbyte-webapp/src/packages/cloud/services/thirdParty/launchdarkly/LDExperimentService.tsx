@@ -8,7 +8,7 @@ import { LoadingPage } from "components";
 
 import { useConfig } from "config";
 import { useI18nContext } from "core/i18n";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
 import { ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";

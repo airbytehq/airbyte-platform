@@ -12,9 +12,9 @@ import { FeatureService } from "../src/hooks/services/Feature";
 import { ConfigServiceProvider, config } from "../src/config";
 import { DocumentationPanelProvider } from "../src/views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 import { ServicesProvider } from "../src/core/servicesProvider";
-import { analyticsServiceContext } from "../src/hooks/services/Analytics";
+import { analyticsServiceContext } from "../src/core/services/analytics";
 import { AppMonitoringServiceProvider } from "../src/hooks/services/AppMonitoringService";
-import type { AnalyticsService } from "../src/core/analytics";
+import type { AnalyticsService } from "../src/core/services/analytics";
 
 const analyticsContextMock: AnalyticsService = {
     track: () => {},

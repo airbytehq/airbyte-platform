@@ -14,7 +14,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { StepsIndicator } from "components/ui/StepsIndicator";
 import { Text } from "components/ui/Text";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";

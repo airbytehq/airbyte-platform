@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
-import { Action, Namespace } from "core/analytics";
 import { SyncSchema } from "core/domain/catalog";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { SourceService } from "core/domain/connector/SourceService";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
 import { isDefined } from "utils/common";
 
-import { useAnalyticsService } from "./Analytics";
 import { useRemoveConnectionsFromList } from "./useConnectionHook";
 import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";

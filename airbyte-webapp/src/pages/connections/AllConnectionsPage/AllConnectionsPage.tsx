@@ -10,7 +10,7 @@ import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding
 import { Button } from "components/ui/Button";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 
 import ConnectionsTable from "./ConnectionsTable";

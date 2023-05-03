@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";

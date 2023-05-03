@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
 
 import logoUrl from "./components/workspaceHeaderLogo.svg";

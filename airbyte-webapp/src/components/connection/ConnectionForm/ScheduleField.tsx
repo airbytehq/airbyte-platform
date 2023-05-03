@@ -9,9 +9,9 @@ import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/analytics";
 import { ConnectionScheduleData, ConnectionScheduleType } from "core/request/AirbyteClient";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { links } from "utils/links";
 

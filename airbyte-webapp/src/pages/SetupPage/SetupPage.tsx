@@ -7,7 +7,7 @@ import { SetupForm } from "components/settings/SetupForm";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import useWorkspace from "hooks/services/useWorkspace";
 
 export const SetupPage: React.FC = () => {

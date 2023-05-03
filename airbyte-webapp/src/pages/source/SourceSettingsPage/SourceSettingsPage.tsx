@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";

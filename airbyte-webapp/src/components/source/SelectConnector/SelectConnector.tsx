@@ -3,7 +3,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Heading } from "components/ui/Heading";
 
-import { useTrackSelectConnector } from "core/analytics/useTrackSelectConnector";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useModalService } from "hooks/services/Modal";
@@ -12,6 +11,7 @@ import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { ConnectorGrid } from "./ConnectorGrid";
 import styles from "./SelectConnector.module.scss";
+import { useTrackSelectConnector } from "./useTrackSelectConnector";
 
 interface SelectConnectorProps {
   connectorType: "source" | "destination";

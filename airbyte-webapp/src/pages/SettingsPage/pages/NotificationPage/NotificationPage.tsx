@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 
 import { HeadTitle } from "components/common/HeadTitle";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
 import { WebHookForm } from "./components/WebHookForm";

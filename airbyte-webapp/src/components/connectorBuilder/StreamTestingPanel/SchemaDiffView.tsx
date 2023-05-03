@@ -11,9 +11,9 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
 import { StreamReadInferredSchema } from "core/request/ConnectorBuilderClient";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestState,
