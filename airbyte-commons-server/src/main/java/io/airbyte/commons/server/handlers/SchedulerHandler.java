@@ -79,6 +79,10 @@ import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
@@ -508,6 +512,14 @@ public class SchedulerHandler {
               CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
       final boolean containsBreakingChange = containsBreakingChange(diff);
 
+      if (containsBreakingChange) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
+      } else {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
+      }
+
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().breakingChange(containsBreakingChange).connectionId(connectionRead.getConnectionId());
       final ConnectionStatus connectionStatus;
@@ -520,6 +532,7 @@ public class SchedulerHandler {
 
       if (!diff.getTransforms().isEmpty() && !containsBreakingChange) {
         autoPropagateSchemaChange(workspaceId,
+            connectionRead.getConnectionId(),
             updateObject,
             currentAirbyteCatalog,
             discoveredSchema.getCatalog(),
@@ -541,12 +554,15 @@ public class SchedulerHandler {
 
   @VisibleForTesting
   void autoPropagateSchemaChange(final UUID workspaceId,
+                                 final UUID connectionId,
                                  final ConnectionUpdate updateObject,
                                  final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
                                  final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
                                  final List<StreamTransform> transformations,
                                  final UUID sourceCatalogId) {
     if (featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
       io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
           currentAirbyteCatalog,
           newCatalog,

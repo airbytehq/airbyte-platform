@@ -1612,13 +1612,14 @@ class SchedulerHandlerTest {
   @Test
   void testAutoPropagateChange() {
     final UUID workspaceId = UUID.randomUUID();
+    final UUID connectionId = UUID.randomUUID();
 
     ConnectionUpdate connectionUpdate = mock(ConnectionUpdate.class);
     io.airbyte.api.model.generated.AirbyteCatalog catalog = mock(io.airbyte.api.model.generated.AirbyteCatalog.class);
     UUID sourceCatalogId = UUID.randomUUID();
     when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId)))
         .thenReturn(true);
-    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
+    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
     verify(connectionUpdate).setSyncCatalog(any());
     verify(connectionUpdate).setSourceCatalogId(sourceCatalogId);
 
@@ -1626,7 +1627,7 @@ class SchedulerHandlerTest {
 
     when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId)))
         .thenReturn(false);
-    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
+    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
     verifyNoInteractions(connectionUpdate);
   }
 
@@ -1674,11 +1675,11 @@ class SchedulerHandlerTest {
         false))
             .thenReturn(discoverResponse);
     when(envVariableFeatureFlags.autoDisablesFailingConnections()).thenReturn(false);
-    doNothing().when(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any());
+    doNothing().when(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any(), any());
 
     schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
-    verify(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any());
+    verify(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any(), any());
   }
 
 }
