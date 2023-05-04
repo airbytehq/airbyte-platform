@@ -12,9 +12,9 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncomplet
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
-import io.airbyte.server.repositories.StreamStatusRepository.FilterParams;
-import io.airbyte.server.repositories.StreamStatusRepository.FilterParams.FilterParamsBuilder;
-import io.airbyte.server.repositories.StreamStatusRepository.Pagination;
+import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams;
+import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams.FilterParamsBuilder;
+import io.airbyte.server.repositories.StreamStatusesRepository.Pagination;
 import io.airbyte.server.repositories.domain.StreamStatus;
 import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder;
 import io.micronaut.context.ApplicationContext;
@@ -42,11 +42,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 @SuppressWarnings("MissingJavadocType")
 @MicronautTest
-class StreamStatusRepositoryTest {
+class StreamStatusesRepositoryTest {
 
   static ApplicationContext context;
 
-  static StreamStatusRepository repo;
+  static StreamStatusesRepository repo;
 
   static DSLContext jooqDslContext;
 
@@ -80,7 +80,7 @@ class StreamStatusRepositoryTest {
     // so we don't have to deal with making jobs as well
     jooqDslContext.alterTable(Tables.STREAM_STATUSES).dropForeignKey(Keys.STREAM_STATUSES__STREAM_STATUSES_JOB_ID_FKEY.constraint()).execute();
 
-    repo = context.getBean(StreamStatusRepository.class);
+    repo = context.getBean(StreamStatusesRepository.class);
   }
 
   @BeforeEach

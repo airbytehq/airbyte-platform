@@ -7,43 +7,31 @@ package io.airbyte.server.repositories.domain;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState;
-import io.hypersistence.utils.hibernate.type.basic.PostgreSQLEnumType;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.data.annotation.AutoPopulated;
 import io.micronaut.data.annotation.DateCreated;
 import io.micronaut.data.annotation.DateUpdated;
+import io.micronaut.data.annotation.Id;
+import io.micronaut.data.annotation.MappedEntity;
+import io.micronaut.data.annotation.TypeDef;
+import io.micronaut.data.model.DataType;
 import java.time.OffsetDateTime;
 import java.util.UUID;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.Type;
-import org.hibernate.annotations.TypeDef;
 
 /**
  * DTO for our data access layer.
  */
 @Builder
-@AllArgsConstructor // The builder uses this constructor
-@NoArgsConstructor // Hibernate uses this constructor and sets the values individually
 @Getter
-@Setter
 @EqualsAndHashCode(exclude = {"id", "createdAt", "updatedAt"})
-@Entity(name = "stream_statuses")
-@TypeDef(name = StreamStatus.PGSQL_ENUM,
-         typeClass = PostgreSQLEnumType.class)
+@MappedEntity("stream_statuses")
 public class StreamStatus {
 
-  static final String PGSQL_ENUM = "pgsql_enum";
-
   @Id
-  @GeneratedValue
+  @AutoPopulated
   private UUID id;
 
   private UUID workspaceId;
@@ -58,8 +46,7 @@ public class StreamStatus {
 
   private String streamName;
 
-  @Enumerated(EnumType.STRING)
-  @Type(type = PGSQL_ENUM)
+  @TypeDef(type = DataType.OBJECT)
   private JobStreamStatusJobType jobType;
 
   @DateCreated
@@ -68,14 +55,41 @@ public class StreamStatus {
   @DateUpdated
   private OffsetDateTime updatedAt;
 
-  @Enumerated(EnumType.STRING)
-  @Type(type = PGSQL_ENUM)
+  @TypeDef(type = DataType.OBJECT)
   private JobStreamStatusRunState runState;
 
-  @Enumerated(EnumType.STRING)
-  @Type(type = PGSQL_ENUM)
+  @Nullable
+  @TypeDef(type = DataType.OBJECT)
   private JobStreamStatusIncompleteRunCause incompleteRunCause;
 
   private OffsetDateTime transitionedAt;
+
+  public StreamStatus(final UUID id,
+                      final UUID workspaceId,
+                      final UUID connectionId,
+                      final Long jobId,
+                      final Integer attemptNumber,
+                      final String streamNamespace,
+                      final String streamName,
+                      final JobStreamStatusJobType jobType,
+                      final OffsetDateTime createdAt,
+                      final OffsetDateTime updatedAt,
+                      final JobStreamStatusRunState runState,
+                      final @Nullable JobStreamStatusIncompleteRunCause incompleteRunCause,
+                      final OffsetDateTime transitionedAt) {
+    this.id = id;
+    this.workspaceId = workspaceId;
+    this.connectionId = connectionId;
+    this.jobId = jobId;
+    this.attemptNumber = attemptNumber;
+    this.streamNamespace = streamNamespace;
+    this.streamName = streamName;
+    this.jobType = jobType;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.runState = runState;
+    this.incompleteRunCause = incompleteRunCause;
+    this.transitionedAt = transitionedAt;
+  }
 
 }
