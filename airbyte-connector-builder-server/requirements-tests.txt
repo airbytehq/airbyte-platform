@@ -4,7 +4,7 @@
 #
 #    pip-compile --extra=tests --output-file=requirements-tests.txt
 #
-airbyte-cdk==0.36.2
+airbyte-cdk==0.36.3
     # via connector-builder-server (setup.py)
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -120,7 +120,7 @@ pyyaml==5.4.1
     #   airbyte-cdk
     #   pre-commit
     #   vcrpy
-requests==2.28.2
+requests==2.29.0
     # via
     #   airbyte-cdk
     #   requests-cache
