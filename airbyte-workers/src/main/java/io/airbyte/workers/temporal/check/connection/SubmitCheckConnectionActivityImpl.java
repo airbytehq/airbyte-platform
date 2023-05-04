@@ -40,7 +40,7 @@ public class SubmitCheckConnectionActivityImpl implements SubmitCheckConnectionA
   private final EnvVariableFeatureFlags envVariableFeatureFlags;
 
   public SubmitCheckConnectionActivityImpl(final SourceApi sourceApi,
-                                           DestinationApi destinationApi,
+                                           final DestinationApi destinationApi,
                                            final EnvVariableFeatureFlags envVariableFeatureFlags) {
     this.sourceApi = sourceApi;
     this.destinationApi = destinationApi;
