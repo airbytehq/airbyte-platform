@@ -4,8 +4,10 @@
 
 package io.airbyte.config.persistence;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -37,7 +39,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
       .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSourceDefinitionId(ACTOR_DEFINITION_ID);
   private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = new ActorDefinitionVersion()
-      .withId(ID)
+      .withVersionId(ID)
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -67,15 +69,15 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testGetActorDefinitionVersionById() throws IOException {
+  void testGetActorDefinitionVersionById() throws IOException, ConfigNotFoundException {
     configRepository.writeActorDefinitionVersion(ACTOR_DEFINITION_VERSION);
-    assertTrue(configRepository.getActorDefinitionVersion(ID).isPresent());
-    assertEquals(configRepository.getActorDefinitionVersion(ID).get(), ACTOR_DEFINITION_VERSION);
+    assertNotNull(configRepository.getActorDefinitionVersion(ID));
+    assertEquals(configRepository.getActorDefinitionVersion(ID), ACTOR_DEFINITION_VERSION);
   }
 
   @Test
-  void testGetActorDefinitionVersionByIdNotExistentReturnsEmptyOptional() throws IOException {
-    assertTrue(configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID).isEmpty());
+  void testGetActorDefinitionVersionByIdNotExistentThrowsConfigNotFound() {
+    assertThrows(ConfigNotFoundException.class, () -> configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID));
   }
 
 }
