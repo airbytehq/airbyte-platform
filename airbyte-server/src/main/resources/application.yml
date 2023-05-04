@@ -28,6 +28,8 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
+  shutdown:
+    delay_ms: 20000
   cloud:
     storage:
       logs:
