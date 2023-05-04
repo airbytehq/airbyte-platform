@@ -74,8 +74,7 @@ const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn): Options 
 
 export default defineConfig({
   api: createApi("../airbyte-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall"),
-  // Can be uncommented to manually generate updated CloudApi files, when running in airbyte-platform-internal
-  // cloudApi: createApi("../../cloud-api/src/main/openapi/config.yaml", "CloudApi", "cloudApiCall"),
+  cloudApi: createApi("../airbyte-api/src/main/openapi/cloud-config.yaml", "CloudApi", "cloudApiCall"),
   connectorBuilder: createApi(
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",
