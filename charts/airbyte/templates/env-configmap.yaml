@@ -27,6 +27,9 @@ data:
 {{- if $.Values.global.jobs.kube.annotations }}
   JOB_KUBE_ANNOTATIONS: {{ $.Values.global.jobs.kube.annotations | include "airbyte.flattenMap" | quote }}
 {{- end }}
+{{- if $.Values.global.jobs.kube.labels }}
+  JOB_KUBE_LABELS: {{ $.Values.global.jobs.kube.labels | include "airbyte.flattenMap" | quote }}
+{{- end }}
 {{- if $.Values.global.jobs.kube.nodeSelector }}
   JOB_KUBE_NODE_SELECTORS: {{ $.Values.global.jobs.kube.nodeSelector | include "airbyte.flattenMap" | quote }}
 {{- end }}

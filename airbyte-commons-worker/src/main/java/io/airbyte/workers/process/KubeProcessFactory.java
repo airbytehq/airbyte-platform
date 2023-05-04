@@ -108,9 +108,9 @@ public class KubeProcessFactory implements ProcessFactory {
       final int stderrLocalPort = KubePortManagerSingleton.getInstance().take();
       LOGGER.info("{} stderrLocalPort = {}", podName, stderrLocalPort);
 
-      final var allLabels = getLabels(jobId, attempt, customLabels);
-
       final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
+
+      final var allLabels = getLabels(jobId, attempt, customLabels, workerConfigs.getWorkerKubeLabels());
 
       // If using isolated pool, check workerConfigs has isolated pool set. If not set, fall back to use
       // regular node pool.
@@ -153,8 +153,17 @@ public class KubeProcessFactory implements ProcessFactory {
    * Returns general labels to be applied to all Kubernetes pods. All general labels should be added
    * here.
    */
-  public static Map<String, String> getLabels(final String jobId, final int attemptId, final Map<String, String> customLabels) {
-    final var allLabels = new HashMap<>(customLabels);
+  public static Map<String, String> getLabels(final String jobId,
+                                              final int attemptId,
+                                              final Map<String, String> customLabels,
+                                              final Map<String, String> envLabels) {
+    final var allLabels = new HashMap<String, String>();
+
+    if (envLabels != null) {
+      allLabels.putAll(envLabels);
+    }
+
+    allLabels.putAll(customLabels);
 
     final var generalKubeLabels = Map.of(
         Metadata.JOB_LABEL_KEY, jobId,

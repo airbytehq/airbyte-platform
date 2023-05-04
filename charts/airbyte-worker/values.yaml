@@ -87,6 +87,11 @@ global:
       ##  jobs.kube.annotations [object] key/value annotations applied to kube jobs
       annotations: {}
 
+      ## JOB_KUBE_LABELS
+      ## pod labels of the sync job and the default pod labels fallback for others jobs
+      ##  jobs.kube.labels [object] key/value labels applied to kube jobs
+      labels: {}
+
       ## JOB_KUBE_NODE_SELECTORS
       ## pod node selector of the sync job and the default pod node selector fallback for others jobs
       ##  jobs.kube.nodeSelector [object] key/value node selector applied to kube jobs
@@ -359,9 +364,10 @@ secrets: {}
 #   NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:
 #   NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:
 
-#   # Worker pod tolerations, annotations and node selectors
+#   # Job pod tolerations, annotations, labels and node selectors
 #   JOB_KUBE_TOLERATIONS:
 #   JOB_KUBE_ANNOTATIONS:
+#   JOB_KUBE_LABELS:
 #   JOB_KUBE_NODE_SELECTORS:
 
 #   # Job image pull policy

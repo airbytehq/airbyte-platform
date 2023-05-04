@@ -476,6 +476,27 @@ public interface Configs {
   Map<String, String> getDiscoverJobKubeAnnotations();
 
   /**
+   * Define one or more Job pod labels. Each kv-pair is separated by a `,`. Used for the sync job
+   * and as fallback in case job specific (spec, check, discover) annotations are not defined.
+   */
+  Map<String, String> getJobKubeLabels();
+
+  /**
+   * Define labels for Spec job pods specifically. Each kv-pair is separated by a `,`.
+   */
+  Map<String, String> getSpecJobKubeLabels();
+
+  /**
+   * Define labels for Check job pods specifically. Each kv-pair is separated by a `,`.
+   */
+  Map<String, String> getCheckJobKubeLabels();
+
+  /**
+   * Define labels for Discover job pods specifically. Each kv-pair is separated by a `,`.
+   */
+  Map<String, String> getDiscoverJobKubeLabels();
+
+  /**
    * Define the Job pod connector image pull policy.
    */
   String getJobKubeMainContainerImagePullPolicy();

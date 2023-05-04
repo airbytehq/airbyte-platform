@@ -118,6 +118,7 @@ public class WorkerConfigsProvider {
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
         splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations()),
+        splitKVPairsFromEnvString(kubeResourceConfig.getLabels()),
         workerConfigsDefaults.mainContainerImagePullSecret(),
         workerConfigsDefaults.mainContainerImagePullPolicy(),
         workerConfigsDefaults.sidecarContainerImagePullPolicy(),

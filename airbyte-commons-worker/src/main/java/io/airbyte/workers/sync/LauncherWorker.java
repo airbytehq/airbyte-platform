@@ -36,6 +36,7 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.temporal.activity.ActivityExecutionContext;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +151,8 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         final var allLabels = KubeProcessFactory.getLabels(
             jobRunConfig.getJobId(),
             Math.toIntExact(jobRunConfig.getAttemptId()),
-            generateMetadataLabels());
+            generateMetadataLabels(),
+            Collections.emptyMap());
 
         final var podNameAndJobPrefix = podNamePrefix + "-job-" + jobRunConfig.getJobId() + "-attempt-";
         final var podName = podNameAndJobPrefix + jobRunConfig.getAttemptId();

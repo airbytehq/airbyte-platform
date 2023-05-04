@@ -8,6 +8,7 @@ airbyte:
         cpu-limit: default cpu limit
       check:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:check annotations}
+        labels: ${CHECK_JOB_KUBE_LABELS:check labels}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:check node-selectors}
         cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:check cpu limit}
         cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:check cpu request}
@@ -15,6 +16,7 @@ airbyte:
         memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:check mem request}
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:spec annotations}
+        labels: ${SPEC_JOB_KUBE_LABELS:spec labels}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:spec node selectors}
         memory-limit: spec memory limit
         memory-request: ${SOMETHING_NOT_THERE:}

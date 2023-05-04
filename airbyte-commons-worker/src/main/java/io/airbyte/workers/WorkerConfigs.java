@@ -24,6 +24,7 @@ public class WorkerConfigs {
   private final Map<String, String> workerKubeNodeSelectors;
   private final Optional<Map<String, String>> workerIsolatedKubeNodeSelectors;
   private final Map<String, String> workerKubeAnnotations;
+  private final Map<String, String> workerKubeLabels;
   private final List<String> jobImagePullSecrets;
   private final String jobImagePullPolicy;
   private final String sidecarImagePullPolicy;
@@ -48,6 +49,7 @@ public class WorkerConfigs {
         configs.getJobKubeNodeSelectors(),
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
         configs.getJobKubeAnnotations(),
+        configs.getJobKubeLabels(),
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
@@ -69,6 +71,10 @@ public class WorkerConfigs {
         ? configs.getSpecJobKubeAnnotations()
         : configs.getJobKubeAnnotations();
 
+    final Map<String, String> labels = configs.getSpecJobKubeLabels() != null
+        ? configs.getSpecJobKubeLabels()
+        : configs.getJobKubeLabels();
+
     return new WorkerConfigs(
         configs.getWorkerEnvironment(),
         new ResourceRequirements()
@@ -80,6 +86,7 @@ public class WorkerConfigs {
         nodeSelectors,
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
         annotations,
+        labels,
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
@@ -101,6 +108,10 @@ public class WorkerConfigs {
         ? configs.getCheckJobKubeAnnotations()
         : configs.getJobKubeAnnotations();
 
+    final Map<String, String> labels = configs.getCheckJobKubeLabels() != null
+        ? configs.getCheckJobKubeLabels()
+        : configs.getJobKubeLabels();
+
     return new WorkerConfigs(
         configs.getWorkerEnvironment(),
         new ResourceRequirements()
@@ -112,6 +123,7 @@ public class WorkerConfigs {
         nodeSelectors,
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
         annotations,
+        labels,
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
@@ -133,6 +145,10 @@ public class WorkerConfigs {
         ? configs.getDiscoverJobKubeAnnotations()
         : configs.getJobKubeAnnotations();
 
+    final Map<String, String> labels = configs.getDiscoverJobKubeLabels() != null
+        ? configs.getDiscoverJobKubeLabels()
+        : configs.getJobKubeLabels();
+
     return new WorkerConfigs(
         configs.getWorkerEnvironment(),
         new ResourceRequirements()
@@ -144,6 +160,7 @@ public class WorkerConfigs {
         nodeSelectors,
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
         annotations,
+        labels,
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
@@ -171,6 +188,7 @@ public class WorkerConfigs {
         configs.getJobKubeNodeSelectors(),
         configs.getUseCustomKubeNodeSelector() ? Optional.of(configs.getIsolatedJobKubeNodeSelectors()) : Optional.empty(),
         configs.getJobKubeAnnotations(),
+        configs.getJobKubeLabels(),
         configs.getJobKubeMainContainerImagePullSecrets(),
         configs.getJobKubeMainContainerImagePullPolicy(),
         configs.getJobKubeSidecarContainerImagePullPolicy(),
@@ -202,6 +220,9 @@ public class WorkerConfigs {
 
   public Map<String, String> getWorkerKubeAnnotations() {
     return workerKubeAnnotations;
+  }
+  public Map<String, String> getWorkerKubeLabels() {
+    return workerKubeLabels;
   }
 
   public List<String> getJobImagePullSecrets() {

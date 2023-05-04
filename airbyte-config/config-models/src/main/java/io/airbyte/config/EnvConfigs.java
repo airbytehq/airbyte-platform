@@ -78,6 +78,7 @@ public class EnvConfigs implements Configs {
   public static final String JOB_ISOLATED_KUBE_NODE_SELECTORS = "JOB_ISOLATED_KUBE_NODE_SELECTORS";
   public static final String USE_CUSTOM_NODE_SELECTOR = "USE_CUSTOM_NODE_SELECTOR";
   public static final String JOB_KUBE_ANNOTATIONS = "JOB_KUBE_ANNOTATIONS";
+  public static final String JOB_KUBE_LABELS = "JOB_KUBE_LABELS";
   private static final String DEFAULT_SIDECAR_MEMORY_REQUEST = "25Mi";
   private static final String SIDECAR_MEMORY_REQUEST = "SIDECAR_MEMORY_REQUEST";
   private static final String DEFAULT_SIDECAR_KUBE_MEMORY_LIMIT = "50Mi";
@@ -181,6 +182,9 @@ public class EnvConfigs implements Configs {
   public static final String SPEC_JOB_KUBE_ANNOTATIONS = "SPEC_JOB_KUBE_ANNOTATIONS";
   public static final String CHECK_JOB_KUBE_ANNOTATIONS = "CHECK_JOB_KUBE_ANNOTATIONS";
   public static final String DISCOVER_JOB_KUBE_ANNOTATIONS = "DISCOVER_JOB_KUBE_ANNOTATIONS";
+  public static final String SPEC_JOB_KUBE_LABELS = "SPEC_JOB_KUBE_LABELS";
+  public static final String DISCOVER_JOB_KUBE_LABELS = "DISCOVER_JOB_KUBE_LABELS";
+  public static final String CHECK_JOB_KUBE_LABELS = "CHECK_JOB_KUBE_LABELS";
 
   private static final String REPLICATION_ORCHESTRATOR_CPU_REQUEST = "REPLICATION_ORCHESTRATOR_CPU_REQUEST";
   private static final String REPLICATION_ORCHESTRATOR_CPU_LIMIT = "REPLICATION_ORCHESTRATOR_CPU_LIMIT";
@@ -735,6 +739,51 @@ public class EnvConfigs implements Configs {
   @Override
   public Map<String, String> getDiscoverJobKubeAnnotations() {
     return splitKVPairsFromEnvString(getEnvOrDefault(DISCOVER_JOB_KUBE_ANNOTATIONS, ""));
+  }
+
+  /**
+   * Returns a map of labels from its own environment variable. The value of the env is a string
+   * that represents one or more labels. Each kv-pair is separated by a `,`
+   * <p>
+   * For example:- The following represents two labels
+   * <p>
+   * airbyte=worker,type=preemptive
+   *
+   * @return map containing kv pairs of labels, or `null` if none present.
+   */
+  @Override
+  public Map<String, String> getJobKubeLabels() {
+    return splitKVPairsFromEnvString(getEnvOrDefault(JOB_KUBE_LABELS, ""));
+  }
+
+  /**
+   * Returns a map of labels for Spec job pods specifically.
+   *
+   * @return map containing kv pairs of labels, or `null` if none present.
+   */
+  @Override
+  public Map<String, String> getSpecJobKubeLabels() {
+    return splitKVPairsFromEnvString(getEnvOrDefault(SPEC_JOB_KUBE_LABELS, ""));
+  }
+
+  /**
+   * Returns a map of labels for Check job pods specifically.
+   *
+   * @return map containing kv pairs of labels, or `null` if none present.
+   */
+  @Override
+  public Map<String, String> getCheckJobKubeLabels() {
+    return splitKVPairsFromEnvString(getEnvOrDefault(CHECK_JOB_KUBE_LABELS, ""));
+  }
+
+  /**
+   * Returns a map of labels for Discover job pods specifically.
+   *
+   * @return map containing kv pairs of labels, or `null` if none present.
+   */
+  @Override
+  public Map<String, String> getDiscoverJobKubeLabels() {
+    return splitKVPairsFromEnvString(getEnvOrDefault(DISCOVER_JOB_KUBE_LABELS, ""));
   }
 
   /**
