@@ -10,7 +10,7 @@ required:
   - spec
 additionalProperties: true
 properties:
-  id:
+  versionId:
     type: string
     format: uuid
   actorDefinitionId:

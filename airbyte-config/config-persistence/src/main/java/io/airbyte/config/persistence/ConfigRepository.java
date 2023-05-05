@@ -297,7 +297,7 @@ public class ConfigRepository {
    * @return A List of StandardWorkspace objectjs
    * @throws IOException you never know when you IO
    */
-  public List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+  public List<StandardWorkspace> listStandardWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
         .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
@@ -1006,7 +1006,7 @@ public class ConfigRepository {
    * @return sources
    * @throws IOException - you never know when you IO
    */
-  public List<SourceConnection> listWorkspacesSourceConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+  public List<SourceConnection> listWorkspacesSourceConnections(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
@@ -1134,7 +1134,7 @@ public class ConfigRepository {
    * @return destinations
    * @throws IOException - you never know when you IO
    */
-  public List<DestinationConnection> listWorkspacesDestinationConnections(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
+  public List<DestinationConnection> listWorkspacesDestinationConnections(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
     final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
@@ -2930,7 +2930,7 @@ public class ConfigRepository {
    */
   public void writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
     database.transaction(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION))
-        .set(Tables.ACTOR_DEFINITION_VERSION.ID, actorDefinitionVersion.getId())
+        .set(Tables.ACTOR_DEFINITION_VERSION.ID, actorDefinitionVersion.getVersionId())
         .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
         .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
         .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
@@ -2972,16 +2972,18 @@ public class ConfigRepository {
    * Get an actor definition version by ID.
    *
    * @param actorDefinitionVersionId - actor definition version id
-   * @return actor definition version if there is an entry in the DB already with this ID, otherwise
-   *         an empty optional
+   * @return actor definition version
+   * @throws ConfigNotFoundException if an actor definition version with the provided ID does not
+   *         exist
    * @throws IOException - you never know when you io
    */
-  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException {
+  public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
         .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
+        .map(DbConverter::buildActorDefinitionVersion)
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.ACTOR_DEFINITION_VERSION, actorDefinitionVersionId.toString()));
   }
 
 }

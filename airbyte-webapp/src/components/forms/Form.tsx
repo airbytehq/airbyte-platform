@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useForm, FormProvider, DeepPartial, useFormState } from "react-hook-form";
 import { SchemaOf } from "yup";
 
@@ -16,6 +16,10 @@ interface FormProps<T extends FormValues> {
   defaultValues: DeepPartial<T>;
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
+  /**
+   * Reinitialize form values when defaultValues changes. This will only work if the form is not dirty. Defaults to false.
+   */
+  reinitializeDefaultValues?: boolean;
 }
 
 const HookFormDirtyTracker = () => {
@@ -31,12 +35,19 @@ export const Form = <T extends FormValues>({
   defaultValues,
   schema,
   trackDirtyChanges = false,
+  reinitializeDefaultValues = false,
 }: FormProps<T>) => {
   const methods = useForm<T>({
     defaultValues,
     resolver: yupResolver(schema),
     mode: "onChange",
   });
+
+  useEffect(() => {
+    if (reinitializeDefaultValues && !methods.formState.isDirty) {
+      methods.reset(defaultValues);
+    }
+  }, [reinitializeDefaultValues, defaultValues, methods]);
 
   const processSubmission = (values: T) =>
     onSubmit(values)

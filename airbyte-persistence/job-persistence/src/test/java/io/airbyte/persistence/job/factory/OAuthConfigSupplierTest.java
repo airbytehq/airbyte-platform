@@ -230,7 +230,7 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException {
+  void testOAuthFullInjectionBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();
@@ -247,7 +247,7 @@ class OAuthConfigSupplierTest {
   }
 
   @Test
-  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException {
+  void testOAuthNoMaskingBecauseNoOAuthSpec() throws JsonValidationException, IOException, ConfigNotFoundException {
     final JsonNode config = generateJsonConfig();
     final UUID workspaceId = UUID.randomUUID();
     final UUID sourceId = UUID.randomUUID();

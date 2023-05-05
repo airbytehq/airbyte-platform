@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
@@ -24,6 +25,18 @@ const mockDefaultValues: MockFormValues = {
   lastName: "",
 };
 
+const FIRST_NAME = {
+  label: "First Name",
+  name: "firstName",
+  fieldType: "input",
+};
+
+const LAST_NAME = {
+  label: "Last Name",
+  name: "lastName",
+  fieldType: "input",
+};
+
 describe(`${Form.name}`, () => {
   it("should call onSubmit upon submission", async () => {
     const mockOnSubmit = jest.fn();
@@ -33,14 +46,14 @@ describe(`${Form.name}`, () => {
         defaultValues={mockDefaultValues}
         onSubmit={(values) => Promise.resolve(mockOnSubmit(values))}
       >
-        <FormControl name="firstName" label="First Name" fieldType="input" />
-        <FormControl name="lastName" label="Last Name" fieldType="input" />
+        <FormControl name={FIRST_NAME.name} label={FIRST_NAME.label} fieldType="input" />
+        <FormControl name={LAST_NAME.name} label={LAST_NAME.label} fieldType="input" />
         <FormSubmissionButtons />
       </Form>
     );
 
-    userEvent.type(screen.getByLabelText("First Name"), "John");
-    userEvent.type(screen.getByLabelText("Last Name"), "Doe");
+    userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+    userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
     await waitFor(() => expect(submitButton).toBeEnabled());
     userEvent.click(submitButton);
@@ -57,14 +70,14 @@ describe(`${Form.name}`, () => {
         onSubmit={() => Promise.resolve()}
         onSuccess={mockOnSuccess}
       >
-        <FormControl name="firstName" label="First Name" fieldType="input" />
-        <FormControl name="lastName" label="Last Name" fieldType="input" />
+        <FormControl name="firstName" label={FIRST_NAME.label} fieldType="input" />
+        <FormControl name="lastName" label={LAST_NAME.label} fieldType="input" />
         <FormSubmissionButtons />
       </Form>
     );
 
-    userEvent.type(screen.getByLabelText("First Name"), "John");
-    userEvent.type(screen.getByLabelText("Last Name"), "Doe");
+    userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+    userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
     await waitFor(() => expect(submitButton).toBeEnabled());
     userEvent.click(submitButton);
@@ -82,18 +95,86 @@ describe(`${Form.name}`, () => {
         onSubmit={() => Promise.reject()}
         onError={mockOnError}
       >
-        <FormControl name="firstName" label="First Name" fieldType="input" />
-        <FormControl name="lastName" label="Last Name" fieldType="input" />
+        <FormControl name={FIRST_NAME.name} label={FIRST_NAME.label} fieldType="input" />
+        <FormControl name={LAST_NAME.name} label={LAST_NAME.label} fieldType="input" />
         <FormSubmissionButtons />
       </Form>
     );
 
-    userEvent.type(screen.getByLabelText("First Name"), "John");
-    userEvent.type(screen.getByLabelText("Last Name"), "Doe");
+    userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+    userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
     const submitButton = screen.getAllByRole("button").filter((button) => button.getAttribute("type") === "submit")[0];
     await waitFor(() => expect(submitButton).toBeEnabled());
     userEvent.click(submitButton);
 
     await waitFor(() => expect(mockOnError).toHaveBeenCalledTimes(1));
+  });
+
+  describe("reinitializeDefaultValues", () => {
+    const mockStartDefaultValues = {
+      firstName: "John",
+      lastName: "Doe",
+    };
+
+    const mockEndDefaultValues = {
+      firstName: "Jane",
+      lastName: "Smith",
+    };
+
+    const CHANGE_DEFAULT_VALUES_BUTTON_TEXT = "Change default values";
+
+    // A simple wrapper that will change the default values of the form
+    const MockReinitializeForm = ({ reinitializeDefaultValues }: { reinitializeDefaultValues?: boolean }) => {
+      const [defaultValues, setDefaultValues] = React.useState(mockStartDefaultValues);
+
+      return (
+        <>
+          <Form
+            schema={mockSchema}
+            defaultValues={defaultValues}
+            onSubmit={() => Promise.resolve()}
+            reinitializeDefaultValues={reinitializeDefaultValues}
+          >
+            <FormControl name={FIRST_NAME.name} label={FIRST_NAME.label} fieldType="input" />
+            <FormControl name={LAST_NAME.name} label={LAST_NAME.label} fieldType="input" />
+            <FormSubmissionButtons />
+          </Form>
+          <button onClick={() => setDefaultValues(mockEndDefaultValues)} type="button">
+            {CHANGE_DEFAULT_VALUES_BUTTON_TEXT}
+          </button>
+        </>
+      );
+    };
+
+    it("does not reinitialize default values by default", async () => {
+      await render(<MockReinitializeForm />);
+
+      userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
+
+      await waitFor(() =>
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(mockStartDefaultValues.firstName)
+      );
+    });
+
+    it("reinitializes default values when reinitializeDefaultValues is true", async () => {
+      await render(<MockReinitializeForm reinitializeDefaultValues />);
+
+      userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
+
+      await waitFor(() => expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(mockEndDefaultValues.firstName));
+    });
+
+    it("does not reinitialize default values if the form is dirty", async () => {
+      const NEW_FIRST_NAME = "Susan";
+
+      await render(<MockReinitializeForm reinitializeDefaultValues />);
+
+      userEvent.click(screen.getByText(CHANGE_DEFAULT_VALUES_BUTTON_TEXT));
+
+      // By making the form dirty, reinitialization of default values should not occur
+      userEvent.type(screen.getByLabelText(FIRST_NAME.label), `{selectall}${NEW_FIRST_NAME}`);
+
+      await waitFor(() => expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(NEW_FIRST_NAME));
+    });
   });
 });

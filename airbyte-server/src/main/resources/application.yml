@@ -28,6 +28,8 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
+  shutdown:
+    delay_ms: 20000
   cloud:
     storage:
       logs:
@@ -177,26 +179,6 @@ jooq:
     jobs:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
-
-jpa:
-  default:
-    entity-scan:
-      # this is where JPA/Hibernate will look for domain objects to map to
-      packages:
-        - "io.airbyte.server.repositories.domain"
-  # disable these since they are not managed by JPA/Hibernate
-  jobs:
-    enabled: false
-  config:
-    enabled: false
-
-    properties:
-      hibernate:
-#        Uncomment to help diagnose sql/ORM issues
-#        show_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        hbm2ddl:
-          auto: none
 
 logger:
   levels:

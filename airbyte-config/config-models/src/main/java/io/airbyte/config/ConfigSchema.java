@@ -34,6 +34,13 @@ public enum ConfigSchema implements AirbyteConfig {
       ConnectorBuilderProject.class,
       project -> project.getBuilderProjectId().toString(),
       "builderProjectId"),
+
+  // actor definition version
+  ACTOR_DEFINITION_VERSION("ActorDefinitionVersion.yaml",
+      ActorDefinitionVersion.class,
+      actorDefinitionVersion -> actorDefinitionVersion.getVersionId().toString(),
+      "versionId"),
+
   // source
   STANDARD_SOURCE_DEFINITION("StandardSourceDefinition.yaml",
       StandardSourceDefinition.class,

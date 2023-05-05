@@ -17,12 +17,14 @@ interface ConnectorGridProps<T extends ConnectorDefinition> {
   connectorDefinitions: T[];
   onConnectorButtonClick: (definition: T) => void;
   onOpenRequestConnectorModal: (searchTerm: string) => void;
+  showConnectorBuilderButton?: boolean;
 }
 
 export const ConnectorGrid = <T extends ConnectorDefinition>({
   connectorDefinitions,
   onConnectorButtonClick,
   onOpenRequestConnectorModal,
+  showConnectorBuilderButton = false,
 }: ConnectorGridProps<T>) => {
   const [searchTerm, setSearchTerm] = useState("");
   const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
@@ -54,7 +56,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
             : definition.destinationDefinitionId;
           return <ConnectorButton definition={definition} onClick={onConnectorButtonClick} key={key} />;
         })}
-        {showBuilderNavigationLinks && <BuilderConnectorButton />}
+        {showBuilderNavigationLinks && showConnectorBuilderButton && <BuilderConnectorButton />}
         <RequestNewConnectorButton onClick={() => onOpenRequestConnectorModal(searchTerm)} />
       </div>
     </>

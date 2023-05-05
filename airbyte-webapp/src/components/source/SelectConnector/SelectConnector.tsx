@@ -69,6 +69,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           connectorDefinitions={connectorDefinitions}
           onConnectorButtonClick={handleConnectorButtonClick}
           onOpenRequestConnectorModal={onOpenRequestConnectorModal}
+          showConnectorBuilderButton={connectorType === "source"}
         />
       </div>
     </div>

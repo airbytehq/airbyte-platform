@@ -233,7 +233,7 @@ services:
       bootloader:
         condition: service_completed_successfully
   airbyte-connector-builder-server:
-    image: airbyte/connector-builder-server:${VERSION} # Replace with airbyte/connector-atelier-server:${VERSION} to test the builder micronaut refactor
+    image: airbyte/connector-atelier-server:${VERSION}
     logging: *default-logging
     container_name: airbyte-connector-builder-server
     restart: unless-stopped

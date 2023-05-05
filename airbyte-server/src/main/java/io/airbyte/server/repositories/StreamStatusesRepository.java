@@ -8,11 +8,10 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATUSES;
 
 import com.google.common.base.CaseFormat;
 import io.airbyte.server.repositories.domain.StreamStatus;
-import io.micronaut.data.annotation.Repository;
-import io.micronaut.data.annotation.RepositoryConfiguration;
+import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Pageable;
-import io.micronaut.data.model.query.builder.jpa.JpaQueryBuilder;
+import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.PageableRepository;
 import io.micronaut.data.repository.jpa.JpaSpecificationExecutor;
 import io.micronaut.data.repository.jpa.criteria.PredicateSpecification;
@@ -24,9 +23,8 @@ import org.jooq.TableField;
  * Data Access layer for StreamStatus.
  */
 @SuppressWarnings("MissingJavadocType")
-@Repository
-@RepositoryConfiguration(queryBuilder = JpaQueryBuilder.class) // Despite what your IDE says, we must specify the query builder
-public interface StreamStatusRepository extends PageableRepository<StreamStatus, UUID>, JpaSpecificationExecutor<StreamStatus> {
+@JdbcRepository(dialect = Dialect.POSTGRES)
+public interface StreamStatusesRepository extends PageableRepository<StreamStatus, UUID>, JpaSpecificationExecutor<StreamStatus> {
 
   /**
    * Returns stream statuses filtered by the provided params.

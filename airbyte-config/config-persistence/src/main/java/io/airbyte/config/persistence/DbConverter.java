@@ -210,6 +210,7 @@ public class DbConverter {
   public static StandardSourceDefinition buildStandardSourceDefinition(final Record record, final long defaultMaxSecondsBetweenMessages) {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
+        .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
         .withDockerRepository(record.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
@@ -249,6 +250,7 @@ public class DbConverter {
   public static StandardDestinationDefinition buildStandardDestinationDefinition(final Record record) {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
+        .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
         .withDockerRepository(record.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
@@ -456,7 +458,7 @@ public class DbConverter {
    */
   public static ActorDefinitionVersion buildActorDefinitionVersion(final Record record) {
     return new ActorDefinitionVersion()
-        .withId(record.get(ACTOR_DEFINITION_VERSION.ID))
+        .withVersionId(record.get(ACTOR_DEFINITION_VERSION.ID))
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID))
         .withDockerRepository(record.get(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY))
         .withDockerImageTag(record.get(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG))

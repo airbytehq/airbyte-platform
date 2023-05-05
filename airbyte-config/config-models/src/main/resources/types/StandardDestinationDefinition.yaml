@@ -16,6 +16,9 @@ properties:
   destinationDefinitionId:
     type: string
     format: uuid
+  defaultVersionId:
+    type: string
+    format: uuid
   name:
     type: string
   dockerRepository:
