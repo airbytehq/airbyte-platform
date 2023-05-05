@@ -123,3 +123,23 @@ class DestinationTest {
     }
   }
 }
+
+class SourceDefinitionTest {
+  @Test
+  fun `verify data`() {
+    SourceDefinition("source definition key").also {
+      assert(it.kind == "source-definition")
+      assert(it.key == "source definition key")
+    }
+  }
+}
+
+class DestinationDefinitionTest {
+  @Test
+  fun `verify data`() {
+    DestinationDefinition("destination definition key").also {
+      assert(it.kind == "destination-definition")
+      assert(it.key == "destination definition key")
+    }
+  }
+}
