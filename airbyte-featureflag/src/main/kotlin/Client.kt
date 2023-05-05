@@ -13,6 +13,8 @@ import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.server.LDClient
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Secondary
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.lang.Thread.MIN_PRIORITY
@@ -149,15 +151,28 @@ class LaunchDarklyClient(private val client: LDClient) : FeatureFlagClient {
 }
 
 /**
- * Test feature-flag client.
+ * Test feature-flag client. Only to be used in test scenarios.
  *
- * Intended only for usage in testing scenarios. Can also be mocked in unit tests.
+ * This class can be mocked and can also be used with Micronaut's @MockBean annotation to replace the [FeatureFlagClient] dependency.
+ *
+ * To use with the @MockBean annotation define the following method within your @MicronautTest annotated test class:
+ * ```java
+ * @MockBean(FeatureFlagClient.class)
+ * TestClient featureFlagClient() {
+ *   return mock(TestClient.class);
+ * }
+ * ```
  *
  * All [Flag] instances will use the provided [values] map as their source of truth, including [EnvVar] flags.
  *
  * @param [values] is a map of [Flag.key] to its status.
  */
-class TestClient @JvmOverloads constructor(val values: Map<String, Any> = mapOf()) : FeatureFlagClient {
+@Secondary
+open class TestClient(val values: Map<String, Any>) : FeatureFlagClient {
+
+  @Inject
+  constructor() : this(mapOf())
+
   override fun boolVariation(flag: Flag<Boolean>, context: Context): Boolean {
     return when (flag) {
       is EnvVar -> {
