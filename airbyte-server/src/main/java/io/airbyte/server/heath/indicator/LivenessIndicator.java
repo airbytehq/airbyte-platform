@@ -7,6 +7,7 @@ package io.airbyte.server.heath.indicator;
 import io.micronaut.health.HealthStatus;
 import io.micronaut.management.health.indicator.AbstractHealthIndicator;
 import io.micronaut.management.health.indicator.annotation.Liveness;
+import jakarta.inject.Singleton;
 import java.util.Map;
 
 /**
@@ -15,6 +16,7 @@ import java.util.Map;
  * Kubernetes)
  */
 @Liveness
+@Singleton
 public class LivenessIndicator extends AbstractHealthIndicator<Map<String, Object>> {
 
   @Override

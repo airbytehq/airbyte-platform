@@ -4,9 +4,12 @@
 
 package io.airbyte.server.heath.indicator;
 
+import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.micronaut.health.HealthStatus;
 import io.micronaut.management.health.indicator.AbstractHealthIndicator;
 import io.micronaut.management.health.indicator.annotation.Readiness;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.util.Map;
 
 /**
@@ -15,12 +18,21 @@ import java.util.Map;
  * shutting down.
  */
 @Readiness
+@Singleton
 public class ReadinessIndicator extends AbstractHealthIndicator<Map<String, Object>> {
+
+  @Inject
+  private HealthCheckHandler healthCheckHandler;
 
   @Override
   protected Map<String, Object> getHealthInformation() {
-    Map<String, Object> details = Map.of("ready", true);
-    this.healthStatus = HealthStatus.UP;
+    var ready = healthCheckHandler.isReady();
+    Map<String, Object> details = Map.of("ready", ready);
+    if (ready) {
+      this.healthStatus = HealthStatus.UP;
+    } else {
+      this.healthStatus = HealthStatus.DOWN;
+    }
     return details;
   }
 
