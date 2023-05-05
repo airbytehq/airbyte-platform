@@ -8,10 +8,7 @@ import { Button } from "components/ui/Button";
 
 import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
 import { FieldItem } from "packages/cloud/views/auth/components/FormComponents";
-import useWorkspaceEditor from "pages/SettingsPage/components/useWorkspaceEditor";
-import NotificationsForm from "pages/SettingsPage/pages/NotificationPage/components/NotificationsForm";
 import { Content, SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { useEmail } from "./hooks";
 import { FormValues } from "./typings";
@@ -33,13 +30,6 @@ const EmailSection: React.FC = () => {
   const user = useCurrentUser();
 
   const emailService = useEmail();
-
-  const workspace = useCurrentWorkspace();
-  const { errorMessage, successMessage, loading, updateData } = useWorkspaceEditor();
-
-  const onChange = async (data: { news: boolean; securityUpdates: boolean }) => {
-    await updateData({ ...workspace, ...data, anonymousDataCollection: !!workspace.anonymousDataCollection });
-  };
 
   return (
     <SettingsCard>
@@ -87,16 +77,6 @@ const EmailSection: React.FC = () => {
                   )}
                 </TextInputsSection>
               </FieldItem>
-              <NotificationsForm
-                isLoading={loading}
-                errorMessage={errorMessage}
-                successMessage={successMessage}
-                onChange={onChange}
-                preferencesValues={{
-                  news: !!workspace.news,
-                  securityUpdates: !!workspace.securityUpdates,
-                }}
-              />
               <ChangeEmailFooter style={{ display: "none" }}>
                 <Button type="submit" disabled={user.email === values.email}>
                   <FormattedMessage id="settings.accountSettings.updateEmail" />

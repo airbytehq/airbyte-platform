@@ -1,8 +1,7 @@
-import { Field, FieldProps, Formik, Form } from "formik";
+import { Formik, Form } from "formik";
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
-import styled from "styled-components";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
@@ -13,7 +12,6 @@ import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { isGdprCountry } from "utils/dataPrivacy";
 
 import styles from "./SignupForm.module.scss";
-import CheckBoxControl from "../../components/CheckBoxControl";
 import { BottomBlock, FieldItem, RowFieldItem } from "../../components/FormComponents";
 import { CompanyNameField, EmailField, NameField, PasswordField } from "../../components/FormFields/FormFields";
 
@@ -24,20 +22,6 @@ interface FormValues {
   password: string;
   news: boolean;
 }
-
-const MarginBlock = styled.div`
-  margin-bottom: 15px;
-`;
-
-export const NewsField: React.FC = () => (
-  <Field name="news">
-    {({ field }: FieldProps<string>) => (
-      <MarginBlock>
-        <CheckBoxControl {...field} checked={!!field.value} label={<FormattedMessage id="login.subscribe" />} />
-      </MarginBlock>
-    )}
-  </Field>
-);
 
 interface SignupButtonProps {
   isLoading: boolean;
@@ -120,9 +104,6 @@ export const SignupForm: React.FC = () => {
           </FieldItem>
           <FieldItem>
             <PasswordField />
-          </FieldItem>
-          <FieldItem>
-            <NewsField />
           </FieldItem>
           <BottomBlock>
             <SignupButton isLoading={isSubmitting} disabled={!isValid} />

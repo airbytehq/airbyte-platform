@@ -268,12 +268,7 @@
   "preferences.title": "Specify your preferences",
   "preferences.anonymizeUsage": "Anonymize usage data collection",
   "preferences.collectData": "We collect data only for product improvements.",
-  "preferences.news": "News and feature updates",
-  "preferences.security": "Security updates",
   "preferences.anonymizeData": "Anonymize my usage data.",
-  "preferences.featureUpdates": "Receive feature updates.",
-  "preferences.unsubscribeAnyTime": " You can unsubscribe any time.",
-  "preferences.securityUpdates": "Receive emails about security updates.",
 
   "onboarding.createSource": "Create a source",
   "onboarding.sourceSetUp": "Set up a new source",

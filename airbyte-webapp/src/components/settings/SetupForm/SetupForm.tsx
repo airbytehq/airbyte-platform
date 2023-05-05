@@ -17,8 +17,6 @@ import { SecurityCheck } from "./SecurityCheck";
 export interface SetupFormValues {
   email: string;
   anonymousDataCollection: boolean;
-  news: boolean;
-  securityUpdates: boolean;
   securityCheck: "loading" | "secured" | "unsecured" | "check_failed" | "ignored";
 }
 
@@ -50,8 +48,6 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onSubmit }) => {
       initialValues={{
         email: "",
         anonymousDataCollection: !config.segment.enabled,
-        news: false,
-        securityUpdates: true,
         securityCheck: "loading",
       }}
       initialErrors={{
@@ -96,30 +92,6 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onSubmit }) => {
                 </Box>
               </Box>
             )}
-            <Box>
-              <SettingHeader>
-                <FormattedMessage id="preferences.news" />
-              </SettingHeader>
-              <Field name="news">
-                {({ field }: FieldProps<string>) => (
-                  <LabeledSwitch
-                    {...field}
-                    label={<FormattedMessage id="preferences.featureUpdates" />}
-                    message={<FormattedMessage id="preferences.unsubscribeAnyTime" />}
-                  />
-                )}
-              </Field>
-            </Box>
-            <Box>
-              <SettingHeader>
-                <FormattedMessage id="preferences.security" />
-              </SettingHeader>
-              <Field name="securityUpdates">
-                {({ field }: FieldProps<string>) => (
-                  <LabeledSwitch {...field} label={<FormattedMessage id="preferences.securityUpdates" />} />
-                )}
-              </Field>
-            </Box>
             <Box my="md">
               <SecurityCheck />
             </Box>
