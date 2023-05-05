@@ -1522,7 +1522,7 @@ public class DefaultJobPersistence implements JobPersistence {
     /*
      * Currently, this replaces both the literal unicode null character (\0 or \u0000) and a string
      * representation of the unicode value ("\u0000"). This is necessary because the literal unicode
-     * value gets converted into a 6 character value during JSON seriealization.
+     * value gets converted into a 6 character value during JSON serialization.
      */
     return value != null ? value.replaceAll("\\u0000|\\\\u0000", "") : null;
   }
