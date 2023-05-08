@@ -17,6 +17,7 @@ import io.airbyte.commons.logging.LoggingHelper.Color;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.logging.MdcScope.Builder;
 import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerUtils;
@@ -24,6 +25,7 @@ import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.normalization.NormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
+import io.airbyte.workers.WorkerConstants;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,6 +43,7 @@ public class DbtTransformationRunner implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DbtTransformationRunner.class);
   private static final String DBT_ENTRYPOINT_SH = "entrypoint.sh";
+  private static final String DBT_CONFIG_JSON = "dbt_config.json";
   private static final MdcScope.Builder CONTAINER_LOG_MDC_BUILDER = new Builder()
       .setLogPrefix("dbt")
       .setPrefixColor(Color.PURPLE_BACKGROUND);
@@ -104,7 +107,11 @@ public class DbtTransformationRunner implements AutoCloseable {
     try {
       final Map<String, String> files = ImmutableMap.of(
           DBT_ENTRYPOINT_SH, MoreResources.readResource("dbt_transformation_entrypoint.sh"),
-          "sshtunneling.sh", MoreResources.readResource("sshtunneling.sh"));
+          "sshtunneling.sh", MoreResources.readResource("sshtunneling.sh"),
+          "generate_profile.py", MoreResources.readResource("generate_profile.py"),
+          "dbt_config.json", Jsons.serialize(dbtConfig),
+          WorkerConstants.DESTINATION_CONFIG_JSON_FILENAME, Jsons.serialize(config)
+      );
       final List<String> dbtArguments = new ArrayList<>();
       dbtArguments.add(DBT_ENTRYPOINT_SH);
       if (Strings.isNullOrEmpty(dbtConfig.getDbtArguments())) {
