@@ -30,23 +30,9 @@ export const SliceSelector: React.FC<SliceSelectorProps> = ({ className, slices,
   const { formatMessage } = useIntl();
 
   const getSliceLabel = useCallback(
-    (slice: StreamReadSlicesItem, sliceIndex: number) => {
-      const fallback = `${formatMessage({ id: "connectorBuilder.sliceLabel" })} ${sliceIndex}`;
-
-      const sliceDescriptor = slice.slice_descriptor;
-
-      if (!sliceDescriptor) {
-        return fallback;
-      }
-
-      const listItem = sliceDescriptor.listItem;
-      const startDatetime = sliceDescriptor.startDatetime;
-
-      if (!listItem && !startDatetime) {
-        return fallback;
-      }
-
-      return [listItem, startDatetime].filter(Boolean).join(" | ");
+    (_slice: StreamReadSlicesItem, sliceIndex: number) => {
+      // TODO: Use slice_descriptor for better messages
+      return `${formatMessage({ id: "connectorBuilder.sliceLabel" })} ${sliceIndex}`;
     },
     [formatMessage]
   );
