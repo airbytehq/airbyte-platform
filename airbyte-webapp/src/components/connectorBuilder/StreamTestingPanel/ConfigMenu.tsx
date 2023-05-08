@@ -12,7 +12,7 @@ import { NumberBadge } from "components/ui/NumberBadge";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
+import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -113,7 +113,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                   selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
                   formValues={{ connectionConfiguration: testInputJson }}
                   onSubmit={async (values) => {
-                    setTestInputJson(values.connectionConfiguration as StreamReadRequestBodyConfig);
+                    setTestInputJson(values.connectionConfiguration as ConnectorConfig);
                     setIsOpen(false);
                   }}
                   isEditMode

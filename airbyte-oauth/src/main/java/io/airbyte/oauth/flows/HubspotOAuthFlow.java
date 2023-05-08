@@ -73,22 +73,25 @@ public class HubspotOAuthFlow extends BaseOAuth2Flow {
 
   private String getOptionalScopes() {
     return String.join(" ", "content",
-        "crm.schemas.deals.read",
-        "crm.objects.owners.read",
-        "forms",
-        "tickets",
+        "automation",
         "e-commerce",
-        "crm.objects.companies.read",
-        "crm.lists.read",
-        "crm.objects.deals.read",
-        "crm.objects.contacts.read",
-        "crm.schemas.companies.read",
         "files",
-        "forms-uploaded-files",
         "files.ui_hidden.read",
-        "crm.objects.feedback_submissions.read",
+        "forms",
+        "forms-uploaded-files",
         "sales-email-read",
-        "automation");
+        "tickets",
+        "crm.lists.read",
+        "crm.objects.companies.read",
+        "crm.objects.contacts.read",
+        "crm.objects.custom.read",
+        "crm.objects.deals.read",
+        "crm.objects.feedback_submissions.read",
+        "crm.objects.goals.read",
+        "crm.objects.owners.read",
+        "crm.schemas.companies.read",
+        "crm.schemas.custom.read",
+        "crm.schemas.deals.read");
   }
 
   private String getRequiredScopes() {

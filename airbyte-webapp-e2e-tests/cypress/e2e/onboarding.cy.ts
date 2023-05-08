@@ -22,7 +22,6 @@ describe("Setup actions", () => {
     cy.url().should("include", `/setup`);
 
     fillEmail("test-email-onboarding@test-onboarding-domain.com");
-    cy.get("input[name=securityUpdates]").parent().click();
 
     cy.get("[data-testid=securityCheckRunning]").should("be.visible");
     cy.get("button[type=submit]").should("be.disabled");
@@ -37,7 +36,6 @@ describe("Setup actions", () => {
     cy.url().should("include", `/setup`);
 
     fillEmail("test-email-onboarding@test-onboarding-domain.com");
-    cy.get("input[name=securityUpdates]").parent().click();
 
     cy.get("button[type=submit]").should("be.enabled");
   });
@@ -53,7 +51,6 @@ describe("Setup actions", () => {
     cy.url().should("include", `/setup`);
 
     fillEmail("test-email-onboarding@test-onboarding-domain.com");
-    cy.get("input[name=securityUpdates]").parent().click();
 
     cy.get("button[type=submit]").should("be.disabled");
     cy.get("[data-testid=advancedOptions]").click();
@@ -73,7 +70,6 @@ describe("Setup actions", () => {
     cy.url().should("include", `/setup`);
 
     fillEmail("test-email-onboarding@test-onboarding-domain.com");
-    cy.get("input[name=securityUpdates]").parent().click();
 
     submitButtonClick();
 

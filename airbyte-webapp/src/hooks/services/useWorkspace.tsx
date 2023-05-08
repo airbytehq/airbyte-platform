@@ -28,8 +28,6 @@ const useWorkspace = () => {
       actionDescription: "Setup preferences set",
       email: data.email,
       anonymized: data.anonymousDataCollection,
-      subscribed_newsletter: data.news,
-      subscribed_security: data.securityUpdates,
       security_check_result: securityCheck,
     });
 

@@ -276,6 +276,29 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(2, notificationConfigurations.size());
   }
 
+  @Test
+  void testDontUpdateIfNotNeeded() throws JsonValidationException, IOException, SQLException {
+    createBaseObjects();
+
+    final StandardSync syncGa = createStandardSync(source1, destination1);
+    syncGa.setNotifySchemaChangesByEmail(true);
+    standardSyncPersistence.writeStandardSync(syncGa);
+    final StandardSync syncGa2 = createStandardSync(source2, destination2);
+    syncGa2.setNotifySchemaChangesByEmail(true);
+    standardSyncPersistence.writeStandardSync(syncGa2);
+
+    syncGa.setNotifySchemaChangesByEmail(false);
+    standardSyncPersistence.writeStandardSync(syncGa);
+    final List<NotificationConfigurationRecord> notificationConfigurations = getNotificationConfigurations();
+
+    assertEquals(2, notificationConfigurations.size());
+    assertEquals(NotificationType.email,
+        notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
+            .equals(syncGa.getConnectionId())).map(record -> record.getNotificationType()).findFirst().get());
+    assertFalse(notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
+        .equals(syncGa.getConnectionId())).map(record -> record.getEnabled()).findFirst().get());
+  }
+
   private List<NotificationConfigurationRecord> getNotificationConfigurations() throws SQLException {
     return database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION).fetch());
   }

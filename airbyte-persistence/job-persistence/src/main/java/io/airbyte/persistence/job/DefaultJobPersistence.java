@@ -534,7 +534,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
     jobDatabase.transaction(
         ctx -> ctx.update(ATTEMPTS)
-            .set(ATTEMPTS.FAILURE_SUMMARY, JSONB.valueOf(Jsons.serialize(failureSummary)))
+            .set(ATTEMPTS.FAILURE_SUMMARY, JSONB.valueOf(removeUnsupportedUnicode(Jsons.serialize(failureSummary))))
             .set(ATTEMPTS.UPDATED_AT, now)
             .where(ATTEMPTS.JOB_ID.eq(jobId), ATTEMPTS.ATTEMPT_NUMBER.eq(attemptNumber))
             .execute());
@@ -1510,6 +1510,21 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static Table<Record> getTable(final String schema, final String tableName) {
     return DSL.table(String.format("%s.%s", schema, tableName));
+  }
+
+  /**
+   * Removes unsupported unicode characters (as defined by Postgresql) from the provided input string.
+   *
+   * @param value A string that may contain unsupported unicode values.
+   * @return The modified string with any unsupported unicode values removed.
+   */
+  private String removeUnsupportedUnicode(final String value) {
+    /*
+     * Currently, this replaces both the literal unicode null character (\0 or \u0000) and a string
+     * representation of the unicode value ("\u0000"). This is necessary because the literal unicode
+     * value gets converted into a 6 character value during JSON serialization.
+     */
+    return value != null ? value.replaceAll("\\u0000|\\\\u0000", "") : null;
   }
 
 }

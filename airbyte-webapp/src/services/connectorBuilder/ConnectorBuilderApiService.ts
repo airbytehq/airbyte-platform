@@ -5,12 +5,12 @@ import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types"
 import { useConfig } from "config";
 import { ConnectorBuilderServerRequestService } from "core/domain/connectorBuilder/ConnectorBuilderServerRequestService";
 import {
+  ConnectorConfig,
+  ConnectorManifest,
   StreamReadRequestBody,
   StreamsListRequestBody,
-  StreamsListRequestBodyConfig,
-  StreamsListRequestBodyManifest,
 } from "core/request/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema } from "core/request/ConnectorManifest";
+import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
@@ -19,7 +19,7 @@ const connectorBuilderKeys = {
   all: ["connectorBuilder"] as const,
   read: (projectId: string, streamName: string) =>
     [...connectorBuilderKeys.all, "read", { projectId, streamName }] as const,
-  list: (manifest: StreamsListRequestBodyManifest, config: StreamsListRequestBodyConfig) =>
+  list: (manifest: ConnectorManifest, config: ConnectorConfig) =>
     [...connectorBuilderKeys.all, "list", { manifest, config }] as const,
   template: ["template"] as const,
   resolve: (manifest?: unknown) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
@@ -51,12 +51,6 @@ export const useListStreams = (params: StreamsListRequestBody) => {
     cacheTime: 0,
     retry: false,
   });
-};
-
-export const useManifestTemplate = () => {
-  const service = useConnectorBuilderService();
-
-  return useSuspenseQuery(connectorBuilderKeys.template, () => service.getManifestTemplate());
 };
 
 export const useResolveManifest = () => {

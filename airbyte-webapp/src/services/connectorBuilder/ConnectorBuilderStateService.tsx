@@ -20,11 +20,7 @@ import {
 
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
-import {
-  StreamRead,
-  StreamReadRequestBodyConfig,
-  StreamsListReadStreamsItem,
-} from "core/request/ConnectorBuilderClient";
+import { ConnectorConfig, StreamRead, StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/request/ConnectorManifest";
 import { useBlocker } from "hooks/router/useBlocker";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -69,8 +65,8 @@ interface FormStateContext {
 interface TestStateContext {
   streams: StreamsListReadStreamsItem[];
   streamListErrorMessage: string | undefined;
-  testInputJson: StreamReadRequestBodyConfig;
-  setTestInputJson: (value: StreamReadRequestBodyConfig | undefined) => void;
+  testInputJson: ConnectorConfig;
+  setTestInputJson: (value: ConnectorConfig | undefined) => void;
   setTestStreamIndex: (streamIndex: number) => void;
   testStreamIndex: number;
   streamRead: UseQueryResult<StreamRead, unknown>;
@@ -265,7 +261,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 
 const EMPTY_SCHEMA = {};
 
-function useTestInputDefaultValues(testInputJson: StreamReadRequestBodyConfig | undefined, spec?: Spec) {
+function useTestInputDefaultValues(testInputJson: ConnectorConfig | undefined, spec?: Spec) {
   const currentSpec = useRef<Spec | undefined>(undefined);
   return useMemo(() => {
     if (testInputJson) {
@@ -399,7 +395,7 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
   // config
-  const [testInputJson, setTestInputJson] = useState<StreamReadRequestBodyConfig | undefined>();
+  const [testInputJson, setTestInputJson] = useState<ConnectorConfig | undefined>();
 
   const testInputWithDefaults = useTestInputDefaultValues(testInputJson, manifest.spec);
 

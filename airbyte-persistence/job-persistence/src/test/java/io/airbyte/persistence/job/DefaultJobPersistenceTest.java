@@ -88,6 +88,7 @@ import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -369,6 +370,27 @@ class DefaultJobPersistenceTest {
     final Job updated = jobPersistence.getJob(jobId);
     assertEquals(Optional.of(failureSummary), updated.getAttempts().get(0).getFailureSummary());
     assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+  }
+
+  @Test
+  @DisplayName("Should be able to read attemptFailureSummary that was written with unsupported unicode")
+  void testWriteAttemptFailureSummaryWithUnsupportedUnicode() throws IOException {
+    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+    final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+    final Job created = jobPersistence.getJob(jobId);
+    final AttemptFailureSummary failureSummary = new AttemptFailureSummary().withFailures(
+        Collections.singletonList(new FailureReason().withFailureOrigin(FailureOrigin.SOURCE)
+            .withStacktrace(Character.toString(0))
+            .withInternalMessage("Includes invalid unicode \u0000")
+            .withExternalMessage("Includes invalid unicode \0")));
+    when(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242));
+    jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
+
+    Assertions.assertDoesNotThrow(() -> {
+      final Job updated = jobPersistence.getJob(jobId);
+      assertTrue(updated.getAttempts().get(0).getFailureSummary().isPresent());
+      assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+    });
   }
 
   @Nested

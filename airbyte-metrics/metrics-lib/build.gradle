@@ -23,7 +23,7 @@ dependencies {
     testImplementation project(':airbyte-config:config-persistence')
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.platform.testcontainers.postgresql
-    testImplementation "io.opentracing:opentracing-util:0.33.0:tests"
+    testImplementation(variantOf(libs.opentracing.util.test) { classifier('tests') })
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)

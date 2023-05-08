@@ -105,6 +105,7 @@ mockk = { module = "io.mockk:mockk", version = "1.13.3" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
+opentracing-util-test = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
 otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.14.0" }
 otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.14.0" }
 otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-metrics-testing", version = "1.13.0-alpha" }

@@ -76,7 +76,7 @@ export default defineConfig({
   api: createApi("../airbyte-api/src/main/openapi/config.yaml", "AirbyteClient", "apiCall"),
   cloudApi: createApi("../airbyte-api/src/main/openapi/cloud-config.yaml", "CloudApi", "cloudApiCall"),
   connectorBuilder: createApi(
-    "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
+    "../airbyte-connector-atelier-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",
     "connectorBuilderApiCall"
   ),

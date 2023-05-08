@@ -7,7 +7,7 @@ import { Spinner } from "components/ui/Spinner";
 
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
-import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
+import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { Spec } from "core/request/ConnectorManifest";
 import {
   useConnectorBuilderTestState,
@@ -23,7 +23,7 @@ import styles from "./StreamTestingPanel.module.scss";
 
 const EMPTY_SCHEMA = {};
 
-function useTestInputJsonErrors(testInputJson: StreamReadRequestBodyConfig, spec?: Spec): number {
+function useTestInputJsonErrors(testInputJson: ConnectorConfig, spec?: Spec): number {
   return useMemo(() => {
     try {
       const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;

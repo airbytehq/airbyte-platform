@@ -1,3 +1,5 @@
+import java.util.concurrent.TimeUnit
+
 plugins {
     id 'java-library'
 }
@@ -14,11 +16,12 @@ dependencies {
 
 task downloadConnectorRegistry(type: JavaExec, dependsOn: compileJava) {
     /**
-     * run this once a day. if you want to force this task to run do so with --rerun
-     * e.g. ./gradlew :airbyte-config:specs:downloadConnectorRegistry --info --rerun
+     * run this once a day or if the file doesn't exist. if you want to force this task to run
+     * do so with --rerun  e.g. ./gradlew :airbyte-config:specs:downloadConnectorRegistry --info --rerun
      */
-    inputs.property("todaysDate", new Date().clearTime() )
-    outputs.upToDateWhen { true }
+    def outputFile = file(rootProject.project(':airbyte-config:init').projectDir.path + '/src/main/resources/seed/oss_registry.json')
+    outputs.upToDateWhen { outputFile.exists() &&
+            System.currentTimeMillis() - outputFile.lastModified() < TimeUnit.DAYS.toMillis(1) }
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.airbyte.config.specs.ConnectorRegistryDownloader'
     args project(":airbyte-config:init").projectDir

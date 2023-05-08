@@ -6,18 +6,21 @@
 
   <!-- examples: https://spotbugs.readthedocs.io/en/stable/filter.html#complete-example -->
   <Match>
-    <Source name="~.*build/generated.*" />
+    <Source name="~.*build/generated.*"/>
   </Match>
   <Match>
-    <Package name="io.airbyte.workers.general.jmh_generated.*" />
+    <Package name="io.airbyte.workers.general.jmh_generated.*"/>
   </Match>
   <Match>
-    <Package name="io.airbyte.api.client.*" />
+    <Package name="io.airbyte.api.client.*"/>
   </Match>
   <!-- Suppress warning about use if InputStream#readObject. The usage is safe because it is not from an untrusted source. -->
   <Match>
-    <Class name="io.airbyte.integrations.debezium.internals.AirbyteFileOffsetBackingStore" />
-    <Bug code="SECOBDES" />
+    <Class name="io.airbyte.integrations.debezium.internals.AirbyteFileOffsetBackingStore"/>
+    <Bug code="SECOBDES"/>
+  </Match>
+  <Match>
+    <Source name="~.*\.kt"/>
   </Match>
   <Match>
     <Package name="io.airbyte.server.repositories.domain.*" />
