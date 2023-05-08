@@ -497,7 +497,7 @@
   "connection.stream.status.error": "Error",
   "connection.stream.status.late": "Late",
   "connection.stream.status.pending": "Pending",
-  "connection.stream.status.title": "Enabled streams status",
+  "connection.stream.status.title": "Enabled streams",
   "connection.stream.status.seeLogs": "See logs",
   "connection.stream.status.genericError": "There was an error with your {syncType}. See logs for details.",
   "connection.stream.status.table.streamName": "Stream name",

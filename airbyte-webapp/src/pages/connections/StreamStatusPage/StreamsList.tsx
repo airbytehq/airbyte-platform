@@ -18,54 +18,13 @@ import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
-import { AttemptStatus, ConnectionStatus, JobStatus } from "core/request/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { moveTimeToFutureByPeriod } from "utils/time";
+import { AttemptStatus, JobStatus } from "core/request/AirbyteClient";
 
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
-
-const NextSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined }> = ({ config }) => {
-  const { connection } = useConnectionEditService();
-
-  if (connection.status === ConnectionStatus.inactive || !config || !config.selected) {
-    return null;
-  }
-
-  if (config.isResetting) {
-    return <FormattedMessage id="connection.resetInProgress" />;
-  }
-
-  if (config.isSyncing) {
-    return <FormattedMessage id="connection.syncInProgress" />;
-  }
-
-  if (
-    !["cron", "manual"].includes(config.scheduleType ?? "") &&
-    config.scheduleData?.basicSchedule &&
-    config.latestAttemptCreatedAt
-  ) {
-    const latestSync = dayjs(config.latestAttemptCreatedAt * 1000);
-
-    const nextSync = moveTimeToFutureByPeriod(
-      latestSync.subtract(config.scheduleData?.basicSchedule.units, config.scheduleData?.basicSchedule.timeUnit),
-      config.scheduleData?.basicSchedule.units,
-      config.scheduleData?.basicSchedule.timeUnit
-    );
-
-    const attemptWasSuccessful =
-      config.latestAttemptStatus === AttemptStatus.succeeded || config.jobStatus === JobStatus.succeeded;
-
-    const id = `connection.stream.status.${attemptWasSuccessful ? "nextSync" : "nextTry"}`;
-
-    return <FormattedMessage id={id} values={{ sync: nextSync.fromNow() }} />;
-  }
-
-  return null;
-};
 
 const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showRelativeTime: boolean }> = ({
   config,
@@ -127,11 +86,6 @@ export const StreamsList = () => {
         cell: (props) => <LastSync config={props.cell.getValue()} showRelativeTime={showRelativeTime} />,
       }),
       columnHelper.accessor("config", {
-        id: "timeToNextSync",
-        header: () => null,
-        cell: (props) => <NextSync config={props.cell.getValue()} />,
-      }),
-      columnHelper.accessor("config", {
         header: () => null,
         id: "actions",
         cell: (props) => <StreamActionsMenu stream={props.row.original.stream} />,
@@ -147,7 +101,7 @@ export const StreamsList = () => {
       </Box>
       <Card title={<FormattedMessage id="connection.stream.status.title" />}>
         <FlexContainer direction="column" gap="sm" className={styles.body}>
-          <div className={styles.tableContainer}>
+          <div className={styles.tableContainer} data-survey="streamcentric">
             <StreamSearchFiltering className={styles.search} />
             <Table
               columns={columns}
