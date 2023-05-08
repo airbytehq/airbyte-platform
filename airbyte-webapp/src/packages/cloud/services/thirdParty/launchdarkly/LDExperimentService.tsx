@@ -9,6 +9,7 @@ import { LoadingPage } from "components";
 import { useConfig } from "config";
 import { useI18nContext } from "core/i18n";
 import { useAnalyticsService } from "core/services/analytics";
+import { useDebugVariable } from "core/utils/debug";
 import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
 import { ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
@@ -130,6 +131,11 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
         setState("failed");
       });
   }
+
+  useDebugVariable("_EXPERIMENTS", () => ({
+    ...ldClient.current?.allFlags(),
+    ...((process.env.REACT_APP_EXPERIMENT_OVERWRITES as unknown as Record<string, unknown>) ?? {}),
+  }));
 
   useEffectOnce(() => {
     const onFeatureFlagsChanged = () => {
