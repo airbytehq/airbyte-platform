@@ -18,8 +18,6 @@ import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
-import { AttemptStatus, JobStatus } from "core/request/AirbyteClient";
-
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
