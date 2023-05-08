@@ -12,7 +12,11 @@
   min-width: 150px;
 }
 
-.errorMessage {
-  color: colors.$red;
-  margin-top: variables.$spacing-sm;
+.chatWithUsBtn {
+  all: unset;
+  text-decoration: underline;
+
+  &:hover {
+    cursor: pointer;
+  }
 }

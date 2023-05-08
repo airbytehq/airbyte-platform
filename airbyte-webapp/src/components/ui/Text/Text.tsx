@@ -4,7 +4,7 @@ import React, { HTMLAttributes } from "react";
 import styles from "./Text.module.scss";
 
 type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
-type TextColor = "darkBlue" | "grey" | "grey300" | "green";
+type TextColor = "darkBlue" | "grey" | "grey300" | "green" | "red";
 type TextElementType = "p" | "span" | "div";
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
@@ -35,6 +35,7 @@ const colors: Record<TextColor, string> = {
   green: styles.green,
   grey: styles.grey,
   grey300: styles.grey300,
+  red: styles.red,
 };
 
 const textAlignments: Record<TextAlignment, string> = {
