@@ -240,6 +240,8 @@ public class StandardSyncPersistence {
         ctx.update(NOTIFICATION_CONFIGURATION)
             .set(NOTIFICATION_CONFIGURATION.ENABLED, getNotificationEnabled(standardSync, notificationType))
             .set(NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
+            .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
+            .and(NOTIFICATION_CONFIGURATION.NOTIFICATION_TYPE.eq(notificationType))
             .execute();
       }
     } else if (getNotificationEnabled(standardSync, notificationType)) {
