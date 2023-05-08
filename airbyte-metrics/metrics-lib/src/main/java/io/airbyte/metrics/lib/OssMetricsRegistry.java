@@ -305,7 +305,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
       "schema_change_auto_propagated",
       "a schema change have been propagated",
-      MetricTags.CONNECTION_ID);
+      MetricTags.CONNECTION_ID),
+
+  INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
+      "inconsistent_activity_input",
+      "whenever we detect a mismatch between the input and the actual config");
 
   private final MetricEmittingApp application;
   private final String metricName;
