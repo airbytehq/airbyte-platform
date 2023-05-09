@@ -120,7 +120,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     }
     const parsedInput = itemType === "integer" ? Number.parseInt(input) : Number.parseFloat(input);
     if (Number.isNaN(parsedInput)) {
-      return "";
+      return undefined;
     }
     return parsedInput.toString();
   }
@@ -137,7 +137,10 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
     const delimiter = delimiters.find((del) => newDraftValue.includes(del));
 
     if (delimiter) {
-      const newTagStrings = newDraftValue.split(delimiter).map(normalizeInput).filter(Boolean);
+      const newTagStrings = newDraftValue
+        .split(delimiter)
+        .map(normalizeInput)
+        .filter((tag): tag is string => Boolean(tag));
       if (newTagStrings.length === 0) {
         return;
       }
@@ -151,6 +154,9 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
       }
     } else {
       const normalizedDraft = normalizeInput(newDraftValue);
+      if (normalizedDraft === undefined) {
+        return;
+      }
 
       setDraftValue(newDraftValue);
 
