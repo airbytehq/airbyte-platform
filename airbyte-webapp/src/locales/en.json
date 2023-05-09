@@ -310,6 +310,7 @@
   "sources.request.prioritize.erd": "We're still building this feature for you. Let us know if you're interested in a Entity Relationship Diagram (ERD) for this source.",
   "sources.request.prioritize.schema": "We're still building this feature for you. Let us know if you're interested in a schema for this source.",
   "sources.request.thankYou": "Thank you for your request.",
+  "jobs.jobId": "Job id: {id}",
   "jobs.jobStatus.reset_connection.failed": "Reset Failed ({count, plural, =0 {0 streams} one {# stream} other {# streams}})",
   "jobs.jobStatus.reset_connection.running": "Reset Running ({count, plural, =0 {0 streams} one {# stream} other {# streams}})",
   "jobs.jobStatus.reset_connection.succeeded": "Reset Succeeded ({count, plural, =0 {0 streams} one {# stream} other {# streams}})",

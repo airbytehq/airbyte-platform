@@ -17,5 +17,4 @@ export const getJobStatus: (job: SynchronousJobRead | JobsWithJobs) => JobStatus
 export const getJobAttempts: (job: SynchronousJobRead | JobsWithJobs) => AttemptRead[] | undefined = (job) =>
   "attempts" in job ? job.attempts : undefined;
 
-export const getJobId = (job: SynchronousJobRead | JobsWithJobs): string | number =>
-  "id" in job ? job.id : job.job.id;
+export const getJobId = (job: SynchronousJobRead | JobsWithJobs): string => ("id" in job ? job.id : String(job.job.id));
