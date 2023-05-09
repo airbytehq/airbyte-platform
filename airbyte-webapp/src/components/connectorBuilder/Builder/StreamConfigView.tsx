@@ -17,7 +17,7 @@ import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   BuilderView,
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -140,7 +140,7 @@ const StreamControls = ({
   const [field, , helpers] = useField<BuilderStream[]>("streams");
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setSelectedView } = useConnectorBuilderFormState();
-  const { streamRead: readStream } = useConnectorBuilderTestState();
+  const { streamRead: readStream } = useConnectorBuilderTestRead();
   const [schema, meta] = useField<string | undefined>(streamFieldPath("schema"));
   const formattedDetectedSchema = useMemo(
     () => readStream.data?.inferred_schema && formatJson(readStream.data?.inferred_schema, true),
@@ -237,7 +237,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string
   const analyticsService = useAnalyticsService();
   const schemaFieldPath = streamFieldPath("schema");
   const [field, meta, helpers] = useField<string | undefined>(schemaFieldPath);
-  const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestState();
+  const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
 
   const showImportButton = isEmptyOrDefault(field.value) && streamRead.data?.inferred_schema;
 

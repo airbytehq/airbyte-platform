@@ -10,7 +10,7 @@ import { Text } from "components/ui/Text";
 import { StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { links } from "utils/links";
 
 import { LogsDisplay } from "./LogsDisplay";
@@ -39,7 +39,7 @@ export const StreamTester: React.FC<{
       dataUpdatedAt,
       errorUpdatedAt,
     },
-  } = useConnectorBuilderTestState();
+  } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage<boolean>("connectorBuilderLimitWarning", true);
 
   const streamName = streams[testStreamIndex]?.name;

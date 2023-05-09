@@ -15,7 +15,7 @@ import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
-  ConnectorBuilderTestStateProvider,
+  ConnectorBuilderTestReadProvider,
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
   ConnectorBuilderFormManagementStateProvider,
@@ -73,10 +73,10 @@ export const ConnectorBuilderEditPage: React.FC = () => (
   <ConnectorBuilderFormManagementStateProvider>
     <ConnectorBuilderLocalStorageProvider>
       <ConnectorBuilderFormStateProvider>
-        <ConnectorBuilderTestStateProvider>
+        <ConnectorBuilderTestReadProvider>
           <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
           <ConnectorBuilderEditPageInner />
-        </ConnectorBuilderTestStateProvider>
+        </ConnectorBuilderTestReadProvider>
       </ConnectorBuilderFormStateProvider>
     </ConnectorBuilderLocalStorageProvider>
   </ConnectorBuilderFormManagementStateProvider>

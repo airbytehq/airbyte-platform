@@ -10,10 +10,10 @@ import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { Spec } from "core/request/ConnectorManifest";
 import {
-  useConnectorBuilderTestState,
   useConnectorBuilderFormState,
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestInputState } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import addButtonScreenshot from "./add-button.png";
 import { ConfigMenu } from "./ConfigMenu";
@@ -23,7 +23,7 @@ import styles from "./StreamTestingPanel.module.scss";
 
 const EMPTY_SCHEMA = {};
 
-function useTestInputJsonErrors(testInputJson: ConnectorConfig, spec?: Spec): number {
+function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec?: Spec): number {
   return useMemo(() => {
     try {
       const jsonSchema = spec && spec.connection_specification ? spec.connection_specification : EMPTY_SCHEMA;
@@ -43,7 +43,7 @@ function useTestInputJsonErrors(testInputJson: ConnectorConfig, spec?: Spec): nu
 export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
   const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
-  const { testInputJson } = useConnectorBuilderTestState();
+  const { testInputJson } = useConnectorBuilderTestInputState();
 
   const testInputJsonErrors = useTestInputJsonErrors(testInputJson, jsonManifest.spec);
 

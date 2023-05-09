@@ -8,7 +8,7 @@ import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import {
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -36,7 +36,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { selectedView, setSelectedView } = useConnectorBuilderFormState();
-  const { testStreamIndex, setTestStreamIndex } = useConnectorBuilderTestState();
+  const { testStreamIndex, setTestStreamIndex } = useConnectorBuilderTestRead();
 
   const streams = useStreamNames();
 
@@ -75,7 +75,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
 function useStreamNames() {
   const { builderFormValues, editorView, formValuesValid } = useConnectorBuilderFormState();
-  const { streams: testStreams, isFetchingStreamList, streamListErrorMessage } = useConnectorBuilderTestState();
+  const { streams: testStreams, isFetchingStreamList, streamListErrorMessage } = useConnectorBuilderTestRead();
 
   let streams: Array<{ name: string }> = editorView === "ui" ? builderFormValues.streams : testStreams;
 
