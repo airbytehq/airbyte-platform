@@ -622,6 +622,60 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
+    @DisplayName("Writing stats for different streams should not have side effects")
+    void testWritingStatsForDifferentStreams() throws IOException {
+      final long jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final int jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH);
+
+      final String stream1 = "s1";
+      final String namespace1 = "ns1";
+      final String stream2 = "s2";
+      final String namespace2 = "ns2";
+      final String stream3 = "s3";
+      final String namespace3 = null;
+
+      var streamStatsUpdate0 = List.of(
+          new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
+              .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+          new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
+              .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+          new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
+              .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, null, null, 1000L, null, streamStatsUpdate0);
+
+      var streamStatsUpdate1 = List.of(
+          new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
+              .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 1L, 10L, 1000L, null, streamStatsUpdate1);
+
+      var streamStatsUpdate2 = List.of(
+          new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
+              .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 3L, 30L, 1000L, null, streamStatsUpdate2);
+
+      var streamStatsUpdate3 = List.of(
+          new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
+              .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 6L, 60L, 1000L, null, streamStatsUpdate3);
+
+      final Map<JobAttemptPair, AttemptStats> stats = jobPersistence.getAttemptStats(List.of(jobOneId));
+      final AttemptStats attempt1Stats = stats.get(new JobAttemptPair(jobOneId, jobOneAttemptNumberOne));
+
+      final List<StreamSyncStats> actualStreamSyncStats1 = getStreamSyncStats(attempt1Stats, stream1, namespace1);
+      assertEquals(streamStatsUpdate1, actualStreamSyncStats1);
+      final List<StreamSyncStats> actualStreamSyncStats2 = getStreamSyncStats(attempt1Stats, stream2, namespace2);
+      assertEquals(streamStatsUpdate2, actualStreamSyncStats2);
+      final List<StreamSyncStats> actualStreamSyncStats3 = getStreamSyncStats(attempt1Stats, stream3, namespace3);
+      assertEquals(streamStatsUpdate3, actualStreamSyncStats3);
+    }
+
+    private List<StreamSyncStats> getStreamSyncStats(final AttemptStats attemptStats, final String streamName, final String namespace) {
+      return attemptStats.perStreamStats().stream()
+          .filter(s -> s.getStreamName().equals(streamName) && (namespace == null || s.getStreamNamespace().equals(namespace)))
+          .toList();
+    }
+
+    @Test
     @DisplayName("Retrieving stats for an empty list should not cause an exception.")
     void testGetStatsForEmptyJobList() throws IOException {
       assertNotNull(jobPersistence.getAttemptStats(List.of()));
