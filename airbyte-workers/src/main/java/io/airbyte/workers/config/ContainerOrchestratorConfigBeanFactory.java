@@ -22,6 +22,7 @@ import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -84,7 +85,8 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${airbyte.data.plane.service-account.credentials-path}") final String dataPlaneServiceAccountCredentialsPath,
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") final String containerOrchestratorDataPlaneCredsSecretMountPath,
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-name}") final String containerOrchestratorDataPlaneCredsSecretName,
-                                                                           @Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode) {
+                                                                           @Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode,
+                                                                           @Value("${datadog.orchestrator.disabled.integrations}") final String disabledIntegrations) {
     final var kubernetesClient = new DefaultKubernetesClient();
 
     final DocumentStoreClient documentStoreClient = StateClients.create(
@@ -107,6 +109,11 @@ public class ContainerOrchestratorConfigBeanFactory {
     environmentVariables.put(CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR, controlPlaneAuthEndpoint);
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath);
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR, dataPlaneServiceAccountEmail);
+
+    // Disable DD agent integrations based on the configuration
+    if (StringUtils.isNotEmpty(disabledIntegrations)) {
+      Arrays.asList(disabledIntegrations.split(",")).forEach(e -> environmentVariables.put(e.trim(), Boolean.FALSE.toString()));
+    }
 
     final Configs configs = new EnvConfigs();
     environmentVariables.put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient());
