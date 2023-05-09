@@ -85,8 +85,7 @@ public class SubmitCheckConnectionActivityImpl implements SubmitCheckConnectionA
 
   private StandardCheckConnectionOutput convertApiOutputToStandardOutput(final CheckConnectionRead apiOutput) {
     StandardCheckConnectionOutput output = new StandardCheckConnectionOutput().withMessage(apiOutput.getMessage());
-
-    if (apiOutput.getStatus().equals(StatusEnum.SUCCEEDED)) {
+    if (StatusEnum.SUCCEEDED.equals(apiOutput.getStatus())) {
       output.withStatus(Status.SUCCEEDED);
     } else {
       output.withStatus(Status.FAILED);
