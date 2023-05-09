@@ -91,10 +91,21 @@ export const useUpdateDestinationDefinitions = () => {
 };
 
 export const useGetConnectorsOutOfDate = () => {
-  const outOfDateConnectors = useGetOutOfDateConnectorsCount();
+  const { data: outOfDateConnectors } = useGetOutOfDateConnectorsCount();
 
-  const hasNewSourceVersion = outOfDateConnectors.sourceDefinitions > 0;
-  const hasNewDestinationVersion = outOfDateConnectors.destinationDefinitions > 0;
+  if (!outOfDateConnectors) {
+    return {
+      hasNewVersions: false,
+      hasNewSourceVersion: false,
+      hasNewDestinationVersion: false,
+      countNewSourceVersion: 0,
+      countNewDestinationVersion: 0,
+      outOfDateConnectors: undefined,
+    };
+  }
+
+  const hasNewSourceVersion = outOfDateConnectors?.sourceDefinitions > 0;
+  const hasNewDestinationVersion = outOfDateConnectors?.destinationDefinitions > 0;
   const hasNewVersions = hasNewSourceVersion || hasNewDestinationVersion;
 
   return {
