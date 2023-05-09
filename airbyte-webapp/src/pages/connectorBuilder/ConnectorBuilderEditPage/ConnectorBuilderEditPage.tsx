@@ -81,6 +81,7 @@ export const ConnectorBuilderEditPage: React.FC = () => (
     </ConnectorBuilderLocalStorageProvider>
   </ConnectorBuilderFormManagementStateProvider>
 );
+ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
 const Panels = React.memo(
   ({
@@ -144,3 +145,4 @@ const Panels = React.memo(
     );
   }
 );
+Panels.displayName = "Panels";

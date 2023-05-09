@@ -107,3 +107,4 @@ export const SecurityCheck: React.FC = memo(() => {
     />
   );
 });
+SecurityCheck.displayName = "SecurityCheck";

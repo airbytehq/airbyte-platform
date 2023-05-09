@@ -75,3 +75,4 @@ export const Icon: React.FC<IconProps> = React.memo(
     });
   }
 );
+Icon.displayName = "Icon";

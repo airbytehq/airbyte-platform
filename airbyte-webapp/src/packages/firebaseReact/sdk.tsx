@@ -9,6 +9,7 @@ const AuthSdkContext = React.createContext<Auth | undefined>(undefined);
 type FirebaseSdks = Auth;
 
 function getSdkProvider<Sdk extends FirebaseSdks>(SdkContext: React.Context<Sdk | undefined>) {
+  // eslint-disable-next-line react/display-name
   return (props: React.PropsWithChildren<{ sdk: Sdk }>) => {
     if (!props.sdk) {
       throw new Error("no sdk provided");

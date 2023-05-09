@@ -79,6 +79,7 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
     />
   );
 });
+DatepickerButton.displayName = "DatepickerButton";
 
 export const DatePicker: React.FC<DatePickerProps> = ({
   disabled,

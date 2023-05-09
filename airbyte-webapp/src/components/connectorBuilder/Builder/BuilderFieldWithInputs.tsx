@@ -109,6 +109,7 @@ const InnerUserInputHelper = React.memo(
     );
   }
 );
+InnerUserInputHelper.displayName = "InnerUserInputHelper";
 
 const UserInputHelperControlButton: React.FC<ListBoxControlButtonProps<string | undefined>> = () => {
   return (

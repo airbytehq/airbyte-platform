@@ -122,6 +122,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
   );
 });
 
+StreamConfigView.displayName = "StreamConfigView";
+
 const StreamControls = ({
   streamNum,
   selectedTab,
