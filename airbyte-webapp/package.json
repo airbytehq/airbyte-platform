@@ -112,6 +112,7 @@
     "@babel/preset-env": "^7.20.2",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.21.0",
+    "@formatjs/icu-messageformat-parser": "^2.4.0",
     "@modyfi/vite-plugin-yaml": "^1.0.4",
     "@storybook/addon-actions": "^7.0.2",
     "@storybook/addon-docs": "^7.0.2",
