@@ -354,7 +354,7 @@ paths:
     post:
       tags:
         - permission
-      summary: Creates a permission ressource
+      summary: Creates a permission resource
       operationId: createPermission
       requestBody:
         content:
