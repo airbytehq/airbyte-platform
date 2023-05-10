@@ -48,8 +48,8 @@ public class ContainerOrchestratorConfigBeanFactory {
   private static final String AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_NAME";
   private static final String AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_VALUE";
   private static final String INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST";
-
   private static final String ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED";
+  private static final String DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED";
 
   // IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
   // version is deployed!
@@ -112,7 +112,8 @@ public class ContainerOrchestratorConfigBeanFactory {
 
     // Disable DD agent integrations based on the configuration
     if (StringUtils.isNotEmpty(disabledIntegrations)) {
-      Arrays.asList(disabledIntegrations.split(",")).forEach(e -> environmentVariables.put(e.trim(), Boolean.FALSE.toString()));
+      Arrays.asList(disabledIntegrations.split(","))
+          .forEach(e -> environmentVariables.put(String.format(DD_INTEGRATION_ENV_VAR_FORMAT, e.trim()), Boolean.FALSE.toString()));
     }
 
     final Configs configs = new EnvConfigs();
