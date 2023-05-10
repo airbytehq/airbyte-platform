@@ -87,7 +87,7 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
 
     /*
      * Jooq holds onto the names of the columns in snake_case, so we have to convert to lower camelCase
-     * for Hibernate to do predicate filtering.
+     * for the JpaSpecificationExecutor to do predicate filtering.
      */
     static String formatJooqColumnName(final TableField<?, ?> jooqColumn) {
       return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, jooqColumn.getName());
@@ -100,8 +100,8 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
   }
 
   /**
-   * Column names for StreamStatus in camel case for Hibernate. In lieu of a metamodel, we pre-create
-   * Hibernate-friendly column names for the already generated Jooq model.
+   * Column names for StreamStatus in camel case for the JpaSpecificationExecutor. In lieu of a
+   * metamodel, we pre-create JPA-friendly column names from the already generated Jooq model.
    */
   class Columns {
 
