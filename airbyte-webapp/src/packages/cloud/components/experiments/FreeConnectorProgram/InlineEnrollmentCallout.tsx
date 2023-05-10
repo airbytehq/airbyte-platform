@@ -37,14 +37,9 @@ export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = (
       text={
         <Text size="sm">
           <FormattedMessage
-            id="freeConnectorProgram.youCanEnroll"
+            id="freeConnectorProgram.joinTheFreeConnectorProgram"
             values={{
               enrollLink: (content: React.ReactNode) => <EnrollLink>{content}</EnrollLink>,
-              freeText: (content: React.ReactNode) => (
-                <Text as="span" size="sm" bold className={styles.freeText}>
-                  {content}
-                </Text>
-              ),
             }}
           />
         </Text>
