@@ -61,6 +61,7 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
@@ -783,6 +784,7 @@ class DefaultReplicationWorkerTest {
   }
 
   private ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
+    final FieldSelector fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -792,11 +794,11 @@ class DefaultReplicationWorkerTest {
         messageTracker,
         syncPersistence,
         recordSchemaValidator,
+        fieldSelector,
         workerMetricReporter,
         connectorConfigUpdater,
         fieldSelectionEnabled,
-        heartbeatTimeoutChaperone,
-        false);
+        heartbeatTimeoutChaperone);
   }
 
 }
