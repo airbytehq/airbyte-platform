@@ -42,7 +42,7 @@ function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec
 
 export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
-  const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
+  const { jsonManifest, yamlEditorIsMounted, editorView } = useConnectorBuilderFormState();
   const { testInputJson } = useConnectorBuilderTestInputState();
 
   const testInputJsonErrors = useTestInputJsonErrors(testInputJson, jsonManifest.spec);
@@ -60,19 +60,18 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
   return (
     <div className={styles.container}>
       <ConfigMenu testInputJsonErrors={testInputJsonErrors} isOpen={isTestInputOpen} setIsOpen={setTestInputOpen} />
-      {!hasStreams && (
+      {hasStreams || editorView === "yaml" ? (
+        <>
+          <StreamSelector className={styles.streamSelector} />
+          <StreamTester hasTestInputJsonErrors={testInputJsonErrors > 0} setTestInputOpen={setTestInputOpen} />
+        </>
+      ) : (
         <div className={styles.addStreamMessage}>
           <img className={styles.logo} alt="" src={addButtonScreenshot} width={320} />
           <Heading as="h2" className={styles.addStreamHeading}>
             <FormattedMessage id="connectorBuilder.noStreamsMessage" />
           </Heading>
         </div>
-      )}
-      {hasStreams && (
-        <>
-          <StreamSelector className={styles.streamSelector} />
-          <StreamTester hasTestInputJsonErrors={testInputJsonErrors > 0} setTestInputOpen={setTestInputOpen} />
-        </>
       )}
     </div>
   );

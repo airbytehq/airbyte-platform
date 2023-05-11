@@ -43,13 +43,14 @@ export const useReadStream = (projectId: string, params: StreamReadRequestBody) 
   });
 };
 
-export const useListStreams = (params: StreamsListRequestBody) => {
+export const useListStreams = (params: StreamsListRequestBody, enabled = true) => {
   const service = useConnectorBuilderService();
 
   return useQuery(connectorBuilderKeys.list(params.manifest, params.config), () => service.listStreams(params), {
     keepPreviousData: true,
     cacheTime: 0,
     retry: false,
+    enabled,
   });
 };
 

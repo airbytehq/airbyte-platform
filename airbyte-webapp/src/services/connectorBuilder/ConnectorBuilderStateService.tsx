@@ -404,7 +404,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     isError: isStreamListError,
     error: streamListError,
     isFetching: isFetchingStreamList,
-  } = useListStreams({ manifest, config: testInputWithDefaults });
+  } = useListStreams(
+    { manifest, config: testInputWithDefaults },
+    Boolean(editorView === "yaml" || manifest.streams?.length)
+  );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const streamListErrorMessage = isStreamListError
     ? streamListError instanceof Error

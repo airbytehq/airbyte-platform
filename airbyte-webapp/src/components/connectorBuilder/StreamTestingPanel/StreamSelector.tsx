@@ -2,6 +2,7 @@ import classNames from "classnames";
 import capitalize from "lodash/capitalize";
 import { useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
@@ -39,6 +40,16 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const { testStreamIndex, setTestStreamIndex } = useConnectorBuilderTestRead();
 
   const streams = useStreamNames();
+
+  if (streams.length === 0) {
+    return (
+      <Box py="md">
+        <Heading className={styles.label} as="h1" size="sm">
+          -
+        </Heading>
+      </Box>
+    );
+  }
 
   const options = streams.map((stream) => {
     const label =
