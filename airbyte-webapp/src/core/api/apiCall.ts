@@ -1,3 +1,6 @@
+import { shortUuid } from "core/utils/uuid";
+import { trackError } from "utils/datadog";
+
 import { CommonRequestError } from "../request/CommonRequestError";
 import { RequestMiddleware } from "../request/RequestMiddleware";
 import { VersionError } from "../request/VersionError";
@@ -64,42 +67,62 @@ export const fetchApiCall = async <T, U = unknown>(
    * If it references a type that is `type: string`, and `format: binary` it does not interpret
    * it correctly. So I am making an assumption that if it's not explicitly JSON, it's a binary file.
    */
-  return parseResponse(response, responseType);
+  return parseResponse(response, requestUrl, responseType);
 };
 
-/** Parses errors from server */
-async function parseResponse<T>(response: Response, responseType?: "blob"): Promise<T> {
+/** Parses response from server */
+async function parseResponse<T>(response: Response, requestUrl: string, responseType?: "blob"): Promise<T> {
   if (response.status === 204) {
     return {} as T;
   }
-  if (response.status >= 200 && response.status < 300) {
+
+  if (response.ok) {
     /*
      * Orval only generates `responseType: "blob"` if the schema for an endpoint
      * is `type: string, and format: binary`.
      * If it references a type that is `type: string, and format: binary` it does not interpret
      * it correct. So I am making an assumption that if it's not explicitly JSON, it's a binary file.
      */
-    return responseType === "blob" || response.headers.get("Content-Type") !== "application/json"
+    return responseType === "blob" || response.headers.get("content-type") !== "application/json"
       ? response.blob()
       : response.json();
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let resultJsonResponse: any;
 
-  // If some error returned in json, lets try to parse it
-  try {
-    resultJsonResponse = await response.json();
-  } catch (e) {
-    // non json result
-    console.log("// non json result");
-    throw new CommonRequestError(response, "non-json response");
-  }
+  if (response.headers.get("content-type") === "application/json") {
+    const jsonError = await response.json();
 
-  if (resultJsonResponse?.error) {
-    if (resultJsonResponse.error.startsWith("Version mismatch between")) {
-      throw new VersionError(resultJsonResponse.error);
+    if (jsonError?.error?.startsWith("Version mismatch between")) {
+      throw new VersionError(jsonError.error);
     }
+
+    throw new CommonRequestError(response, jsonError?.message ?? JSON.stringify(jsonError?.detail));
   }
 
-  throw new CommonRequestError(response, resultJsonResponse?.message ?? JSON.stringify(resultJsonResponse?.detail));
+  let responseText: string | undefined;
+
+  // Try to load the response body as text, since it wasn't JSON
+  try {
+    responseText = await response.text();
+  } catch (e) {
+    responseText = "<cannot load response body>";
+  }
+
+  const requestId = shortUuid();
+
+  const error = new CommonRequestError(
+    response,
+    `${response.status === 502 || response.status === 503 ? "Server temporarily unavailable" : "Unknown error"} (http.${
+      response.status
+    }.${requestId})`
+  );
+
+  trackError(error, {
+    httpStatus: response.status,
+    httpUrl: requestUrl,
+    httpBody: responseText,
+    requestId,
+  });
+  console.error(`${requestUrl}: ${responseText} (http.${response.status}.${requestId})`);
+
+  throw error;
 }
