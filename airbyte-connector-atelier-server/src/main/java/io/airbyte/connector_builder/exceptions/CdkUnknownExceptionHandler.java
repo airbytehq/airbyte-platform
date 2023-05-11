@@ -12,17 +12,17 @@ import io.micronaut.http.server.exceptions.ExceptionHandler;
 import jakarta.inject.Singleton;
 
 /**
- * Custom Micronaut exception handler for the {@link CdkProcessException}.
+ * Custom Micronaut exception handler for the {@link CdkUnknownException}.
  */
 @Produces
 @Singleton
-@Requires(classes = CdkProcessException.class)
-public class CdkProcessExceptionHandler implements ExceptionHandler<CdkProcessException, HttpResponse> {
+@Requires(classes = CdkUnknownException.class)
+public class CdkUnknownExceptionHandler implements ExceptionHandler<CdkUnknownException, HttpResponse> {
 
   final ExceptionHelper helper = new ExceptionHelper();
 
   @Override
-  public HttpResponse handle(final HttpRequest request, final CdkProcessException exception) {
+  public HttpResponse handle(final HttpRequest request, final CdkUnknownException exception) {
     return helper.handle(request, exception);
   }
 
