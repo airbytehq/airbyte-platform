@@ -175,7 +175,12 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                     <Button variant="secondary" type="reset" onClick={onClose}>
                       <FormattedMessage id="form.cancel" />
                     </Button>
-                    <Button type="submit" disabled={!isValid} isLoading={isSubmitting}>
+                    <Button
+                      type="submit"
+                      disabled={!isValid}
+                      isLoading={isSubmitting}
+                      data-testid="publish-submit-button"
+                    >
                       <FormattedMessage
                         id={
                           currentProject.sourceDefinitionId
