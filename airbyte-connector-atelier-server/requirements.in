@@ -1,2 +1,1 @@
-requests==2.29.0 # version 2.30.0 imports a new version of urllib3 which requires OpenSSL 1.1.1+
-airbyte-cdk==0.36.3
+airbyte-cdk==0.36.5

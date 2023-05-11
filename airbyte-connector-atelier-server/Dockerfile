@@ -3,11 +3,11 @@ FROM ${JDK_IMAGE} AS connector-atelier-server
 
 RUN yum update -y && \
     yum groupinstall -y "Development Tools" && \
-    yum install -y openssl-devel bzip2-devel libffi-devel zlib-devel sqlite-devel xz-devel
+    yum install -y openssl11-devel bzip2-devel libffi-devel zlib-devel sqlite-devel xz-devel
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11
-ARG CDK_VERSION=0.36.4
+ARG CDK_VERSION=0.36.5
 # Set up python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ENV PYENV_ROOT /root/.pyenv
