@@ -15,6 +15,9 @@ import io.airbyte.api.client.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -33,11 +36,14 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   private final SourceApi sourceApi;
   private final EnvVariableFeatureFlags envVariableFeatureFlags;
+  private final FeatureFlagClient featureFlagClient;
 
   public RefreshSchemaActivityImpl(final SourceApi sourceApi,
-                                   final EnvVariableFeatureFlags envVariableFeatureFlags) {
+                                   final EnvVariableFeatureFlags envVariableFeatureFlags,
+                                   final FeatureFlagClient featureFlagClient) {
     this.sourceApi = sourceApi;
     this.envVariableFeatureFlags = envVariableFeatureFlags;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Override
@@ -55,6 +61,9 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   public void refreshSchema(final UUID sourceCatalogId, final UUID connectionId) {
     if (!envVariableFeatureFlags.autoDetectSchema()) {
+      return;
+    }
+    if (!featureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Connection(connectionId))) {
       return;
     }
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_REFRESH_SCHEMA, 1);
