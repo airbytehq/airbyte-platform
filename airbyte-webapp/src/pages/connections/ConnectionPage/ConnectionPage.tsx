@@ -10,9 +10,11 @@ import {
   ConnectionEditServiceProvider,
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
+import { ConnectionPageHeader } from "./ConnectionPageHeader";
 import { ConnectionPageTitle } from "./ConnectionPageTitle";
 import { ConnectionRoutePaths } from "../types";
 
@@ -45,6 +47,7 @@ export const ConnectionPage: React.FC = () => {
     [location.pathname]
   );
   const { trackError } = useAppMonitoringService();
+  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 
@@ -53,7 +56,7 @@ export const ConnectionPage: React.FC = () => {
       <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
-          pageTitle={<ConnectionPageTitle />}
+          pageTitle={isNewConnectionFlowEnabled ? <ConnectionPageHeader /> : <ConnectionPageTitle />}
           noBottomPadding={isReplicationPage}
         >
           <Suspense fallback={<LoadingPage />}>

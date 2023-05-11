@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { Box } from "components/ui/Box";
 import { Tabs } from "components/ui/Tabs";
 import { LinkTab } from "components/ui/Tabs/LinkTab";
 
+import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 enum TabTypes {
@@ -13,21 +13,26 @@ enum TabTypes {
   SETTINGS = "settings",
 }
 
-export const ConnectorNavigationTabs: React.FC<{ connectorType: "source" | "destination" }> = ({ connectorType }) => {
-  const params = useParams<{ "*": TabTypes | "" | undefined; workspaceId: string; id: string }>();
+export const ConnectorNavigationTabs: React.FC<{
+  connectorType: "source" | "destination";
+  connector: SourceRead | DestinationRead;
+  id: string;
+}> = ({ connectorType, id }) => {
+  const params = useParams<{ "*": TabTypes | "" | undefined; workspaceId: string }>();
 
   const connectorTypePath = connectorType === "source" ? RoutePaths.Source : RoutePaths.Destination;
 
+  const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${connectorTypePath}/${id}`;
   const tabs = [
     {
       id: TabTypes.OVERVIEW,
       name: <FormattedMessage id="tables.overview" />,
-      to: `/${RoutePaths.Workspaces}/${params.workspaceId}/${connectorTypePath}/${params.id}/`,
+      to: basePath,
     },
     {
       id: TabTypes.SETTINGS,
       name: <FormattedMessage id="tables.settings" />,
-      to: `/${RoutePaths.Workspaces}/${params.workspaceId}/${connectorTypePath}/${params.id}/settings`,
+      to: `${basePath}/settings`,
     },
   ];
 
@@ -37,20 +42,18 @@ export const ConnectorNavigationTabs: React.FC<{ connectorType: "source" | "dest
   );
 
   return (
-    <Box pl="xl">
-      <Tabs>
-        {tabs.map((tabItem) => {
-          return (
-            <LinkTab
-              id={tabItem.id}
-              key={tabItem.id}
-              name={tabItem.name}
-              to={tabItem.to}
-              isActive={tabItem.id === currentTab}
-            />
-          );
-        })}
-      </Tabs>
-    </Box>
+    <Tabs>
+      {tabs.map((tabItem) => {
+        return (
+          <LinkTab
+            id={tabItem.id}
+            key={tabItem.id}
+            name={tabItem.name}
+            to={tabItem.to}
+            isActive={tabItem.id === currentTab}
+          />
+        );
+      })}
+    </Tabs>
   );
 };

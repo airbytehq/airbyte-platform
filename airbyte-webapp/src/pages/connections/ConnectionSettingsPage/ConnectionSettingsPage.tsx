@@ -39,7 +39,7 @@ export const ConnectionSettingsPageInner: React.FC = () => {
         {isUpdatedConnectionFlow && <UpdateConnectionName />}
         {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications />}
         {canUpdateDataResidency && <UpdateConnectionDataResidency />}
-        <DeleteBlock type="connection" onDelete={onDelete} />
+        {connection.status !== "deprecated" && <DeleteBlock type="connection" onDelete={onDelete} />}
       </FlexContainer>
       <Disclosure>
         {({ open }) => (

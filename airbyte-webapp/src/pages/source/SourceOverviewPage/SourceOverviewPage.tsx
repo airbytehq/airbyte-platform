@@ -5,6 +5,7 @@ import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { TableItemTitle } from "components/ConnectorBlocks";
 import Placeholder, { ResourceTypes } from "components/Placeholder";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { FlexContainer } from "components/ui/Flex/FlexContainer";
 
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDestinationList } from "hooks/services/useDestinationHook";
@@ -54,7 +55,7 @@ export const SourceOverviewPage = () => {
   };
 
   return (
-    <>
+    <FlexContainer direction="column" gap="xl">
       <TableItemTitle
         type="destination"
         dropdownOptions={destinationDropdownOptions}
@@ -63,12 +64,13 @@ export const SourceOverviewPage = () => {
         entityName={source.name}
         entityIcon={source.icon}
         releaseStage={sourceDefinition.releaseStage}
+        connectionsCount={connections ? connections.length : 0}
       />
       {connections.length ? (
         <SourceConnectionTable connections={connections} />
       ) : (
         <Placeholder resource={ResourceTypes.Destinations} />
       )}
-    </>
+    </FlexContainer>
   );
 };

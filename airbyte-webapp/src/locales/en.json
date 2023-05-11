@@ -528,6 +528,7 @@
   "tables.name": "Name",
   "tables.connector": "Connector",
   "tables.connections": "Connections",
+  "tables.connections.pluralized": "{value, plural, one {connection} other {# connections}}",
   "tables.sourceConnectWith": "Destination",
   "tables.destinationConnectWith": "Source",
   "tables.sources": "Sources",

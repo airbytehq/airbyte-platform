@@ -40,7 +40,7 @@ export const SchemaUpdateNotifications: React.FC = () => {
       <Switch
         checked={connection.notifySchemaChanges}
         onChange={(event) => onChange(event.target.checked)}
-        disabled={connectionUpdating}
+        disabled={connectionUpdating || connection.status === "deprecated"}
         loading={loading}
       />
     </Card>

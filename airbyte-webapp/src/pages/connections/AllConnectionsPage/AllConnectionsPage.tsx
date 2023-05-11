@@ -8,9 +8,12 @@ import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
 import { Button } from "components/ui/Button";
+import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
+import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 
 import ConnectionsTable from "./ConnectionsTable";
@@ -18,6 +21,7 @@ import { RoutePaths } from "../../routePaths";
 
 export const AllConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
+  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_LIST);
   const { connections } = useConnectionList();
@@ -33,20 +37,41 @@ export const AllConnectionsPage: React.FC = () => {
           <MainPageWithScroll
             softScrollEdge={false}
             pageTitle={
-              <PageHeader
-                title={<FormattedMessage id="sidebar.connections" />}
-                endComponent={
-                  <Button
-                    icon={<FontAwesomeIcon icon={faPlus} />}
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onCreateClick()}
-                    data-testid="new-connection-button"
-                  >
-                    <FormattedMessage id="connection.newConnection" />
-                  </Button>
-                }
-              />
+              isNewConnectionFlowEnabled ? (
+                <NextPageHeader
+                  leftComponent={
+                    <Heading as="h1" size="lg">
+                      <FormattedMessage id="sidebar.connections" />
+                    </Heading>
+                  }
+                  endComponent={
+                    <Button
+                      icon={<FontAwesomeIcon icon={faPlus} />}
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onCreateClick()}
+                      data-testid="new-connection-button"
+                    >
+                      <FormattedMessage id="connection.newConnection" />
+                    </Button>
+                  }
+                />
+              ) : (
+                <PageHeader
+                  title={<FormattedMessage id="sidebar.connections" />}
+                  endComponent={
+                    <Button
+                      icon={<FontAwesomeIcon icon={faPlus} />}
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onCreateClick()}
+                      data-testid="new-connection-button"
+                    >
+                      <FormattedMessage id="connection.newConnection" />
+                    </Button>
+                  }
+                />
+              )
             }
           >
             <ConnectionsTable connections={connections} />
