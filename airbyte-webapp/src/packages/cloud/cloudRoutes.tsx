@@ -55,7 +55,7 @@ const MainRoutes: React.FC = () => {
   );
   useAnalyticsRegisterValues(analyticsContext);
 
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   return (
     <ApiErrorBoundary>

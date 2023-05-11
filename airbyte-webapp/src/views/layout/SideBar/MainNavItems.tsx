@@ -12,7 +12,7 @@ import SourceIcon from "./components/SourceIcon";
 import styles from "./MainNavItems.module.scss";
 
 export const MainNavItems: React.FC = () => {
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   return (
     <MenuContent data-testid="navMainItems">

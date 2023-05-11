@@ -27,7 +27,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
   showConnectorBuilderButton = false,
 }: ConnectorGridProps<T>) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   const filteredDefinitions = useMemo(
     () =>
