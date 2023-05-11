@@ -108,6 +108,8 @@
   "settings.integrationSettings.dbtCloudSettings": "dbt Cloud Integration",
   "settings.integrationSettings.dbtCloudSettings.actions.cancel": "Cancel",
   "settings.integrationSettings.dbtCloudSettings.actions.delete": "Delete service token",
+  "settings.integrationSettings.dbtCloudSettings.actions.delete.confirm": "Confirm dbt Service Token deletion",
+  "settings.integrationSettings.dbtCloudSettings.action.delete.modal": "Are you sure you want to remove your dbt Service Token? \n \nThis will stop all dbt Cloud transformations from running and may cause sync failures.  You will need to manually remove these transformations from your connections to keep syncing.",
   "settings.integrationSettings.dbtCloudSettings.actions.delete.success": "Service token deleted successfully",
   "settings.integrationSettings.dbtCloudSettings.actions.submit": "Save changes",
   "settings.integrationSettings.dbtCloudSettings.actions.submit.success": "Service Token saved successfully",
