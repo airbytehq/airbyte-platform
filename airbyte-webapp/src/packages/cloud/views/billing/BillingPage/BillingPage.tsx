@@ -14,16 +14,14 @@ import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
-import { useFeature, FeatureItem } from "hooks/services/Feature";
-import { LargeEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
+import { FeatureItem, useFeature } from "hooks/services/Feature";
+import LargeEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
 import { links } from "utils/links";
 
 import styles from "./BillingPage.module.scss";
-import CreditsUsage from "./components/CreditsUsage";
+import { CreditsUsage } from "./components/CreditsUsage";
 import { CreditsUsageContextProvider } from "./components/CreditsUsageContext";
-import { EmailVerificationHint } from "./components/EmailVerificationHint";
-import RemainingCredits from "./components/RemainingCredits";
+import { RemainingCredits } from "./components/RemainingCredits";
 import { ReactComponent as FilesIcon } from "./filesIcon.svg";
 
 export interface BillingPageQueryParams {
@@ -47,11 +45,9 @@ const StripePortalLink: React.FC = () => {
   );
 };
 export const BillingPage: React.FC = () => {
-  const { emailVerified } = useAuthService();
   useTrackPage(PageTrackingCodes.CREDITS);
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
-
   return (
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "credits.billing" }]} />}
@@ -70,9 +66,8 @@ export const BillingPage: React.FC = () => {
         )
       }
     >
-      <div className={styles.content}>
-        {!emailVerified && <EmailVerificationHint className={styles.emailVerificationHint} />}
-        <RemainingCredits selfServiceCheckoutEnabled={emailVerified} />
+      <FlexContainer direction="column" className={styles.content}>
+        <RemainingCredits />
         {fcpEnabled && <LargeEnrollmentCallout />}
         <React.Suspense
           fallback={
@@ -88,7 +83,7 @@ export const BillingPage: React.FC = () => {
             <CreditsUsage />
           </CreditsUsageContextProvider>
         </React.Suspense>
-      </div>
+      </FlexContainer>
     </MainPageWithScroll>
   );
 };

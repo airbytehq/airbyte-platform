@@ -20,7 +20,6 @@ export interface Experiments {
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "workspace.freeConnectorsProgram.visible": boolean;
   "connectorBuilder.showNavigationLinks": boolean;
   "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;

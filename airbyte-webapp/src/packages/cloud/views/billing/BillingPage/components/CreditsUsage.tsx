@@ -14,7 +14,7 @@ import { EmptyState } from "./EmptyState";
 import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
-const CreditsUsage: React.FC = () => {
+export const CreditsUsage: React.FC = () => {
   const { freeAndPaidUsageByTimeChunk } = useCreditsContext();
   const isBillingInsightsEnabled = useExperiment("billing.billingInsights", false);
 
@@ -50,5 +50,3 @@ const CreditsUsage: React.FC = () => {
     </Card>
   );
 };
-
-export default CreditsUsage;
