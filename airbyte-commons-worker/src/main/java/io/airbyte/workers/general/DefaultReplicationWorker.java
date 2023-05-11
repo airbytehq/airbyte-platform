@@ -24,13 +24,12 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
@@ -56,7 +55,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -85,6 +83,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
   private final String jobId;
   private final int attempt;
+  private final ReplicationWorkerHelper replicationWorkerHelper;
   private final AirbyteSource source;
   private final AirbyteMapper mapper;
   private final AirbyteDestination destination;
@@ -95,9 +94,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final AtomicBoolean cancelled;
   private final AtomicBoolean hasFailed;
   private final RecordSchemaValidator recordSchemaValidator;
-  private final FieldSelector fieldSelector;
   private final WorkerMetricReporter metricReporter;
-  private final ConnectorConfigUpdater connectorConfigUpdater;
   private final boolean fieldSelectionEnabled;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
 
@@ -116,6 +113,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone) {
     this.jobId = jobId;
     this.attempt = attempt;
+    this.replicationWorkerHelper = new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence, connectorConfigUpdater);
     this.source = source;
     this.mapper = mapper;
     this.destination = destination;
@@ -123,9 +121,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.syncPersistence = syncPersistence;
     this.executors = Executors.newFixedThreadPool(2);
     this.recordSchemaValidator = recordSchemaValidator;
-    this.fieldSelector = fieldSelector;
     this.metricReporter = metricReporter;
-    this.connectorConfigUpdater = connectorConfigUpdater;
     this.fieldSelectionEnabled = fieldSelectionEnabled;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
 
@@ -207,11 +203,14 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       source.start(sourceConfig, jobRoot);
       timeTracker.trackDestinationWriteStartTime();
 
+      final ReplicationContext replicationContext = new ReplicationContext(connectionId, sourceConfig.getSourceId(),
+          destinationConfig.getDestinationId());
+      replicationWorkerHelper.beforeReplication(sourceConfig.getCatalog());
+
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, messageTracker, syncPersistence, connectorConfigUpdater, mdc, timeTracker,
-              destinationConfig.getDestinationId(), connectionId, commitStatesAsap),
+          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, replicationContext, mdc, timeTracker, commitStatesAsap),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -227,15 +226,11 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       final CompletableFuture<Void> readSrcAndWriteDstThread = CompletableFuture.runAsync(readFromSrcAndWriteToDstRunnable(
           source,
           destination,
-          sourceConfig.getCatalog(),
+          replicationWorkerHelper,
+          replicationContext,
           cancelled,
-          mapper,
-          messageTracker,
-          connectorConfigUpdater,
           mdc,
-          fieldSelector,
-          timeTracker,
-          sourceConfig.getSourceId()), executors)
+          timeTracker), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
@@ -284,13 +279,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
                                               final AtomicBoolean cancelled,
-                                              final MessageTracker messageTracker,
-                                              final SyncPersistence syncPersistence,
-                                              final ConnectorConfigUpdater connectorConfigUpdater,
+                                              final ReplicationWorkerHelper replicationWorkerHelper,
+                                              final ReplicationContext replicationContext,
                                               final Map<String, String> mdc,
                                               final ThreadedTimeTracker timeHolder,
-                                              final UUID destinationId,
-                                              final UUID connectionId,
                                               final boolean commitStatesAsap) {
     return () -> {
       MDC.setContextMap(mdc);
@@ -304,21 +296,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             throw new DestinationException("Destination process read attempt failed", e);
           }
           if (messageOptional.isPresent()) {
-            final AirbyteMessage message = messageOptional.get();
-            LOGGER.info("State in DefaultReplicationWorker from destination: {}", message);
-
-            messageTracker.acceptFromDestination(message);
-            if (commitStatesAsap && message.getType() == Type.STATE) {
-              syncPersistence.persist(connectionId, message.getState());
-            }
-
-            try {
-              if (message.getType() == Type.CONTROL) {
-                acceptDstControlMessage(destinationId, message.getControl(), connectorConfigUpdater);
-              }
-            } catch (final Exception e) {
-              LOGGER.error("Error updating destination configuration", e);
-            }
+            replicationWorkerHelper.processMessageFromDestination(messageOptional.get(), commitStatesAsap, replicationContext);
           }
         }
         timeHolder.trackDestinationWriteEndTime();
@@ -346,21 +324,15 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromSrcAndWriteToDstRunnable(final AirbyteSource source,
                                                            final AirbyteDestination destination,
-                                                           final ConfiguredAirbyteCatalog catalog,
+                                                           final ReplicationWorkerHelper replicationWorkerHelper,
+                                                           final ReplicationContext replicationContext,
                                                            final AtomicBoolean cancelled,
-                                                           final AirbyteMapper mapper,
-                                                           final MessageTracker messageTracker,
-                                                           final ConnectorConfigUpdater connectorConfigUpdater,
                                                            final Map<String, String> mdc,
-                                                           final FieldSelector fieldSelector,
-                                                           final ThreadedTimeTracker timeHolder,
-                                                           final UUID sourceId) {
+                                                           final ThreadedTimeTracker timeHolder) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
-      long recordsRead = 0L;
 
-      fieldSelector.populateFields(catalog);
       try {
         while (!cancelled.get() && !source.isFinished()) {
           final Optional<AirbyteMessage> messageOptional;
@@ -372,34 +344,18 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
           if (messageOptional.isPresent()) {
             final AirbyteMessage airbyteMessage = messageOptional.get();
-            fieldSelector.filterSelectedFields(airbyteMessage);
-            fieldSelector.validateSchema(airbyteMessage);
+            final Optional<AirbyteMessage> processedAirbyteMessage =
+                replicationWorkerHelper.processMessageFromSource(airbyteMessage, replicationContext);
 
-            final AirbyteMessage message = mapper.mapMessage(airbyteMessage);
-
-            messageTracker.acceptFromSource(message);
-
-            try {
-              if (message.getType() == Type.CONTROL) {
-                acceptSrcControlMessage(sourceId, message.getControl(), connectorConfigUpdater);
+            if (processedAirbyteMessage.isPresent()) {
+              final AirbyteMessage message = processedAirbyteMessage.get();
+              try {
+                if (message.getType() == Type.RECORD || message.getType() == Type.STATE) {
+                  destination.accept(message);
+                }
+              } catch (final Exception e) {
+                throw new DestinationException("Destination process message delivery failed", e);
               }
-            } catch (final Exception e) {
-              LOGGER.error("Error updating source configuration", e);
-            }
-
-            try {
-              if (message.getType() == Type.RECORD || message.getType() == Type.STATE) {
-                destination.accept(message);
-              }
-            } catch (final Exception e) {
-              throw new DestinationException("Destination process message delivery failed", e);
-            }
-
-            recordsRead += 1;
-
-            if (recordsRead % 5000 == 0) {
-              LOGGER.info("Records read: {} ({})", recordsRead,
-                  FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
             }
           } else {
             LOGGER.info("Source has no more messages, closing connection.");
@@ -411,10 +367,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           }
         }
         timeHolder.trackSourceReadEndTime();
-        LOGGER.info("Total records read: {} ({})", recordsRead,
-            FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
 
-        fieldSelector.reportMetrics(sourceId);
+        replicationWorkerHelper.endOfSource(replicationContext);
 
         try {
           destination.notifyEndOfInput();
@@ -441,22 +395,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         }
       }
     };
-  }
-
-  private static void acceptSrcControlMessage(final UUID sourceId,
-                                              final AirbyteControlMessage controlMessage,
-                                              final ConnectorConfigUpdater connectorConfigUpdater) {
-    if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
-      connectorConfigUpdater.updateSource(sourceId, controlMessage.getConnectorConfig().getConfig());
-    }
-  }
-
-  private static void acceptDstControlMessage(final UUID destinationId,
-                                              final AirbyteControlMessage controlMessage,
-                                              final ConnectorConfigUpdater connectorConfigUpdater) {
-    if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
-      connectorConfigUpdater.updateDestination(destinationId, controlMessage.getConnectorConfig().getConfig());
-    }
   }
 
   private ReplicationOutput getReplicationOutput(final StandardSyncInput syncInput,
