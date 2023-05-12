@@ -486,12 +486,15 @@
   "connection.schemaChange.reviewAction": "Review changes",
 
   "connection.status.onTime": "On time",
+  "connection.status.onTrack": "On track",
   "connection.status.late": "Delayed",
   "connection.status.pending": "Pending",
   "connection.status.error": "Error",
   "connection.status.actionRequired": "Action required",
   "connection.status.disabled": "Disabled",
   "connection.status.cancelled": "Cancelled",
+
+  "connection.status.onTrack.description": "The last sync encountered an issue but is expected to self-heal",
 
   "connection.stream.status.actionRequired": "Action Required",
   "connection.stream.status.upToDate": "Up to date",
