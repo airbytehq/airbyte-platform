@@ -29,12 +29,19 @@ interface ConnectionSyncContext {
   resetStarting: boolean;
   jobResetRunning: boolean;
   activeJob?: JobRead;
+  lastCompletedSyncJob?: JobWithAttemptsRead;
   connectionStatus: ConnectionSyncStatus;
   latestSyncJobCreatedAt?: JobCreatedAt;
   nextSync?: dayjs.Dayjs;
   lastSuccessfulSync?: number;
 }
 
+const jobStatusesIndicatingFinishedExecution: string[] = [
+  JobStatus.cancelled,
+  JobStatus.succeeded,
+  JobStatus.failed,
+  JobStatus.incomplete,
+];
 const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);
@@ -83,10 +90,14 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSy
     [activeJob?.configType, activeJob?.status]
   );
 
-  const lastSyncJob = jobs.find(({ job }) => job?.configType === JobConfigType.sync);
-  const lastSyncJobStatus = lastSyncJob?.job?.status || connection.latestSyncJobStatus;
+  const lastCompletedSyncJob = jobs.find(
+    ({ job }) =>
+      job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
+  );
+  const lastSyncJobStatus = lastCompletedSyncJob?.job?.status || connection.latestSyncJobStatus;
   const connectionStatus = getConnectionSyncStatus(connection.status, lastSyncJobStatus);
 
+  const lastSyncJob = jobs.find(({ job }) => job?.configType === JobConfigType.sync);
   const latestSyncJobCreatedAt = lastSyncJob?.job?.createdAt;
 
   const lastSuccessfulSyncJob = jobs.find(
@@ -115,6 +126,7 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSy
     resetStarting,
     jobResetRunning,
     activeJob,
+    lastCompletedSyncJob,
     connectionStatus,
     latestSyncJobCreatedAt,
     nextSync,

@@ -62,7 +62,7 @@ const isConnectionLate = (
   );
 };
 
-const useConnectionStatus = () => {
+export const useConnectionStatus = () => {
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
 
@@ -85,7 +85,8 @@ const useConnectionStatus = () => {
     !hasBreakingSchemaChange &&
     connectionStatus === ConnectionSyncStatus.FAILED &&
     (isUnscheduledConnection(connection.scheduleType) ||
-      isConnectionLate(connection, lastSuccessfulSync, errorMultiplier))
+      isConnectionLate(connection, lastSuccessfulSync, errorMultiplier) ||
+      lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
   ) {
     return ConnectionStatusIndicatorStatus.Error;
   }
