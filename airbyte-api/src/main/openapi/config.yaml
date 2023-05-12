@@ -954,7 +954,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-
+  /v1/sources/apply_schema_changes:
+    post:
+      tags:
+        - source
+      summary:
+        Auto propagate the change on a catalog to a catalog saved in the DB. It will fetch all the connections linked to
+        a source id and apply the provided diff to their catalog.
+      operationId: applySchemaChangeForSource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceAutoPropagateChange"
+        required: true
+      responses:
+        "204":
+          description: The schema was properly auto propagate
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/write_discover_catalog_result:
     post:
       tags:
@@ -3437,6 +3457,28 @@ components:
           type: boolean
         connectionStatus:
           $ref: "#/components/schemas/ConnectionStatus"
+    SourceAutoPropagateChange:
+      description:
+        Input of the source propagation, it contains the discovered catalog and a list of diff that need to be applied
+        to the existing catalog.
+      type: object
+      required:
+        - catalog
+        - catalogId
+        - sourceId
+        - workspaceId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/AirbyteCatalog"
+        catalogId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
     SourceSearch:
       type: object
       properties:
@@ -5575,8 +5617,8 @@ components:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
     NonBreakingChangesPreference:
       enum:
-        - ignore
-        - disable
+        - ignore # do nothing if we detect a schema change
+        - disable # disable the connection, pausing the sync
       type: string
     WebBackendConnectionReadList:
       type: object

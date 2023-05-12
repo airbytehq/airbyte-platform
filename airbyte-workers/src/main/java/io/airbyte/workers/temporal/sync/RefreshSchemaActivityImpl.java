@@ -11,7 +11,11 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_ID_KEY;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
@@ -35,13 +39,16 @@ import lombok.extern.slf4j.Slf4j;
 public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   private final SourceApi sourceApi;
+  private final WorkspaceApi workspaceApi;
   private final EnvVariableFeatureFlags envVariableFeatureFlags;
   private final FeatureFlagClient featureFlagClient;
 
   public RefreshSchemaActivityImpl(final SourceApi sourceApi,
+                                   final WorkspaceApi workspaceApi,
                                    final EnvVariableFeatureFlags envVariableFeatureFlags,
                                    final FeatureFlagClient featureFlagClient) {
     this.sourceApi = sourceApi;
+    this.workspaceApi = workspaceApi;
     this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.featureFlagClient = featureFlagClient;
   }
@@ -59,7 +66,7 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
 
   @Override
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  public void refreshSchema(final UUID sourceCatalogId, final UUID connectionId) {
+  public void refreshSchema(final UUID sourceId, final UUID connectionId) {
     if (!envVariableFeatureFlags.autoDetectSchema()) {
       return;
     }
@@ -68,19 +75,54 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
     }
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_REFRESH_SCHEMA, 1);
 
-    ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, SOURCE_ID_KEY, sourceCatalogId));
+    ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId, SOURCE_ID_KEY, sourceId));
 
     final SourceDiscoverSchemaRequestBody requestBody =
-        new SourceDiscoverSchemaRequestBody().sourceId(sourceCatalogId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
+        new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
+
+    final SourceDiscoverSchemaRead sourceDiscoverSchemaRead;
 
     try {
-      AirbyteApiClient.retryWithJitter(
+      sourceDiscoverSchemaRead = AirbyteApiClient.retryWithJitter(
           () -> sourceApi.discoverSchemaForSource(requestBody),
           "Trigger discover schema");
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       // catching this exception because we don't want to block replication due to a failed schema refresh
       log.error("Attempted schema refresh, but failed with error: ", e);
+      return;
+    }
+
+    final UUID workspaceId;
+
+    try {
+      workspaceId = AirbyteApiClient.retryWithJitter(
+          () -> workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)).getWorkspaceId(),
+          "Get the workspace by connection Id");
+    } catch (final Exception e) {
+      ApmTraceUtils.addExceptionToTrace(e);
+      // catching this exception because we don't want to block replication due to a failed schema refresh
+      log.error("Attempted fetching workspace by connection id, but failed with error: ", e);
+      return;
+    }
+
+    final SourceAutoPropagateChange sourceAutoPropagateChange = new SourceAutoPropagateChange()
+        .sourceId(sourceId)
+        .catalog(sourceDiscoverSchemaRead.getCatalog())
+        .workspaceId(workspaceId)
+        .catalogId(sourceDiscoverSchemaRead.getCatalogId());
+
+    try {
+      AirbyteApiClient.retryWithJitter(
+          () -> {
+            sourceApi.applySchemaChangeForSource(sourceAutoPropagateChange);
+            return null;
+          },
+          "Auto propagate the schema change");
+    } catch (final Exception e) {
+      ApmTraceUtils.addExceptionToTrace(e);
+      // catching this exception because we don't want to block replication due to a failed schema refresh
+      log.error("Attempted schema propagation, but failed with error: ", e);
     }
   }
 
