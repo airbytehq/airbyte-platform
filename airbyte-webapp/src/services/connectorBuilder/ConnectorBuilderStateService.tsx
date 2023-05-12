@@ -203,12 +203,13 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
       return;
     }
     const newProject: BuilderProjectWithManifest = { name: builderFormValues.global.connectorName };
-    if (lastValidJsonManifest.streams.length > 0) {
+    // do not save invalid ui-based manifest (e.g. no streams), but always save yaml-based manifest
+    if (storedEditorView === "yaml" || lastValidJsonManifest.streams.length > 0) {
       newProject.manifest = lastValidJsonManifest;
     }
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [builderFormValues.global.connectorName, lastValidJsonManifest, updateProject]);
+  }, [builderFormValues.global.connectorName, lastValidJsonManifest, storedEditorView, updateProject]);
 
   useDebounce(
     () => {
