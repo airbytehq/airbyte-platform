@@ -1,15 +1,15 @@
 @use "scss/variables";
 
 .container {
-  margin: 13px auto 0;
-  padding-bottom: variables.$spacing-xl;
+  padding: 0 variables.$spacing-md variables.$spacing-xl;
+  margin: variables.$spacing-lg auto 0;
+  max-width: 833px;
 
   &.cloud {
     padding-bottom: variables.$spacing-page-bottom-cloud;
   }
 
-  &:not(.big) {
-    width: 80%;
-    max-width: 813px;
+  &.wide {
+    max-width: variables.$page-width;
   }
 }

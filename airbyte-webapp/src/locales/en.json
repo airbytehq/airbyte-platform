@@ -160,6 +160,7 @@
   "connectionForm.destinationExisting": "Select an existing destination",
   "connectionForm.destinationExistingDescription": "Use a data destination that you've already set up in Airbyte",
   "connectionForm.sourceExisting": "Select an existing source",
+  "connectionForm.sourceExisting.connectionCount": "{count, plural, =0 { } one {# connection} other {# connections}}",
   "connectionForm.sourceExistingDescription": "Use a data source that you've already set up in Airbyte",
   "connectionForm.sourceUse": "Use existing source",
   "connectionForm.destinationUse": "Use existing destination",

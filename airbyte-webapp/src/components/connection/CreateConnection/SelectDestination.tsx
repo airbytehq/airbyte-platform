@@ -2,20 +2,18 @@ import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
-import { DestinationForm, DestinationFormValues } from "components/destination/DestinationForm/DestinationForm";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateDestination, useDestinationList } from "hooks/services/useDestinationHook";
-import ExistingEntityForm from "pages/connections/CreateConnectionPage/ExistingEntityForm";
+import { useDestinationList } from "hooks/services/useDestinationHook";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
+import { CreateNewDestination } from "./CreateNewDestination";
 import { RadioButtonTiles } from "./RadioButtonTiles";
+import { SelectExistingConnector } from "./SelectExistingConnector";
 
 type DestinationType = "existing" | "new";
 
@@ -32,26 +30,9 @@ export const SelectDestination: React.FC<SelectDestinationProps> = ({
   const [selectedDestinationType, setSelectedDestinationType] = useState<DestinationType>(
     destinations.length === 0 ? "new" : initialSelectedDestinationType
   );
-  const destinationDefinitions = useAvailableDestinationDefinitions();
-  const { clearAllFormChanges, hasFormChanges } = useFormChangeTrackerService();
+  const { hasFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setDocumentationPanelOpen } = useDocumentationPanelContext();
-  const { mutateAsync: createDestination } = useCreateDestination();
-  const { trackAction } = useAppMonitoringService();
-
-  const onCreateDestination = async (values: DestinationFormValues) => {
-    const destinationConnector = destinationDefinitions.find(
-      (item) => item.destinationDefinitionId === values.serviceType
-    );
-    if (!destinationConnector) {
-      trackAction(AppActionCodes.CONNECTOR_NOT_FOUND, { destinationDefinitionId: values.serviceType });
-      throw new Error(AppActionCodes.CONNECTOR_NOT_FOUND);
-    }
-    const result = await createDestination({ values, destinationConnector });
-    clearAllFormChanges();
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    onSelectDestination(result.destinationId);
-  };
 
   const onSelectDestinationType = (destinationType: DestinationType) => {
     if (hasFormChanges) {
@@ -105,12 +86,17 @@ export const SelectDestination: React.FC<SelectDestinationProps> = ({
           />
         </Box>
       </Card>
-      {selectedDestinationType === "existing" && (
-        <ExistingEntityForm type="destination" onSubmit={(destinationId) => onSelectDestination(destinationId)} />
-      )}
-      {selectedDestinationType === "new" && (
-        <DestinationForm destinationDefinitions={destinationDefinitions} onSubmit={onCreateDestination} />
-      )}
+      <Box mt="xl">
+        {selectedDestinationType === "existing" && (
+          <SelectExistingConnector
+            connectors={destinations}
+            onSelectConnector={({ destinationId }) => onSelectDestination(destinationId)}
+          />
+        )}
+        {selectedDestinationType === "new" && (
+          <CreateNewDestination onDestinationCreated={(destinationId) => onSelectDestination(destinationId)} />
+        )}
+      </Box>
       <CloudInviteUsersHint connectorType="destination" />
     </>
   );

@@ -1,7 +1,10 @@
 import classNames from "classnames";
+import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
+import { SearchInput } from "components/ui/SearchInput";
 
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
@@ -30,6 +33,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { email } = useCurrentWorkspace();
   const { openModal, closeModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleConnectorButtonClick = (definition: ConnectorDefinition) => {
     if (isSourceDefinition(definition)) {
@@ -41,7 +45,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     }
   };
 
-  const onOpenRequestConnectorModal = (searchTerm: string) =>
+  const onOpenRequestConnectorModal = () =>
     openModal({
       title: formatMessage({ id: "connector.requestConnector" }),
       content: () => (
@@ -54,6 +58,14 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       ),
     });
 
+  const filteredDefinitions = useMemo(
+    () =>
+      connectorDefinitions.filter((definition) =>
+        definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())
+      ),
+    [searchTerm, connectorDefinitions]
+  );
+
   return (
     <div className={styles.selectConnector}>
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--left"])} />
@@ -61,12 +73,15 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
         <Heading as="h2" size="lg">
           <FormattedMessage id={headingKey} />
         </Heading>
+        <Box mt="lg">
+          <SearchInput value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        </Box>
       </div>
       <div className={classNames(styles.selectConnector__gutter, styles["selectConnector__gutter--right"])} />
 
       <div className={styles.selectConnector__grid}>
         <ConnectorGrid
-          connectorDefinitions={connectorDefinitions}
+          connectorDefinitions={filteredDefinitions}
           onConnectorButtonClick={handleConnectorButtonClick}
           onOpenRequestConnectorModal={onOpenRequestConnectorModal}
           showConnectorBuilderButton={connectorType === "source"}

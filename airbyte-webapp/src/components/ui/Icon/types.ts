@@ -2,6 +2,7 @@ export type IconType =
   | "arrowRight"
   | "credits"
   | "cross"
+  | "chevronLeft"
   | "chevronRight"
   | "docs"
   | "ga"
