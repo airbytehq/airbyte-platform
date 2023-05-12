@@ -132,5 +132,5 @@ properties:
   nonBreakingChangesPreference:
     type: string
     enum:
-      - ignore # do nothing if we detect a schema change
-      - disable # disable the connection, pausing the sync
+      - ignore
+      - disable

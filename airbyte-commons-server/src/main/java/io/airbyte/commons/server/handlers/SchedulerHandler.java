@@ -35,7 +35,6 @@ import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
-import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
@@ -347,35 +346,6 @@ public class SchedulerHandler {
         .catalogId(currentCatalog.get().getId());
   }
 
-  public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    final ConnectionReadList connectionsForSource =
-        connectionsHandler.listConnectionsForSource(sourceAutoPropagateChange.getSourceId(), false);
-    for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
-      final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler
-          .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
-      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog currentAirbyteCatalog =
-          connectionRead.getSyncCatalog();
-      final CatalogDiff diff =
-          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog),
-              sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
-
-      final ConnectionUpdate updateObject =
-          new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
-
-      if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
-        applySchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
-            updateObject,
-            currentAirbyteCatalog,
-            sourceAutoPropagateChange.getCatalog(),
-            diff.getTransforms(),
-            sourceAutoPropagateChange.getCatalogId());
-      }
-      connectionsHandler.updateConnection(updateObject);
-    }
-  }
-
   public SourceDiscoverSchemaRead discoverSchemaForSourceFromSourceCreate(final SourceCoreConfig sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId());
@@ -474,8 +444,7 @@ public class SchedulerHandler {
   }
 
   @SuppressWarnings("LineLength")
-  public DestinationDefinitionSpecificationRead getDestinationSpecification(
-                                                                            final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
+  public DestinationDefinitionSpecificationRead getDestinationSpecification(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final UUID destinationDefinitionId = destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId();
     final StandardDestinationDefinition destination = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
@@ -553,7 +522,6 @@ public class SchedulerHandler {
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().breakingChange(containsBreakingChange).connectionId(connectionRead.getConnectionId());
-
       final ConnectionStatus connectionStatus;
       if (shouldDisableConnection(containsBreakingChange, connectionRead.getNonBreakingChangesPreference(), diff)) {
         connectionStatus = ConnectionStatus.INACTIVE;
@@ -561,6 +529,16 @@ public class SchedulerHandler {
         connectionStatus = connectionRead.getStatus();
       }
       updateObject.status(connectionStatus);
+
+      if (!diff.getTransforms().isEmpty() && !containsBreakingChange) {
+        autoPropagateSchemaChange(workspaceId,
+            connectionRead.getConnectionId(),
+            updateObject,
+            currentAirbyteCatalog,
+            discoveredSchema.getCatalog(),
+            diff.getTransforms(),
+            discoveredSchema.getCatalogId());
+      }
 
       connectionsHandler.updateConnection(updateObject);
 
@@ -574,29 +552,24 @@ public class SchedulerHandler {
     }
   }
 
-  private boolean shouldAutoPropagate(final CatalogDiff diff, final UUID workspaceId, final ConnectionRead connectionRead) {
-    final boolean hasDiff = !diff.getTransforms().isEmpty();
-    final boolean nonBreakingChange = !containsBreakingChange(diff);
-    final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
-    final boolean autoPropagationIsEnabledForConnection =
-        connectionRead.getNonBreakingChangesPreference() != null;
-    return hasDiff && nonBreakingChange && autoPropagationIsEnabledForWorkspace && autoPropagationIsEnabledForConnection;
-  }
-
-  private void applySchemaChange(final UUID connectionId,
+  @VisibleForTesting
+  void autoPropagateSchemaChange(final UUID workspaceId,
+                                 final UUID connectionId,
                                  final ConnectionUpdate updateObject,
                                  final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
                                  final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
                                  final List<StreamTransform> transformations,
                                  final UUID sourceCatalogId) {
-    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
-        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
-    final io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
-        currentAirbyteCatalog,
-        newCatalog,
-        transformations);
-    updateObject.setSyncCatalog(catalog);
-    updateObject.setSourceCatalogId(sourceCatalogId);
+    if (featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+      io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
+          currentAirbyteCatalog,
+          newCatalog,
+          transformations);
+      updateObject.setSyncCatalog(catalog);
+      updateObject.setSourceCatalogId(sourceCatalogId);
+    }
   }
 
   private boolean shouldNotifySchemaChange(final CatalogDiff diff,
