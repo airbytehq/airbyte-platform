@@ -354,7 +354,7 @@ paths:
     post:
       tags:
         - permission
-      summary: Creates a permission resource
+      summary: Creates a permission ressource
       operationId: createPermission
       requestBody:
         content:
@@ -588,9 +588,19 @@ paths:
         - web_backend
       summary: Revokes a user's session token.
       operationId: webBackendRevokeUserSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: false
       responses:
         "204":
           description: The user's session token was expired successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/permissioned_cloud_workspace/create:
     post:
       tags:

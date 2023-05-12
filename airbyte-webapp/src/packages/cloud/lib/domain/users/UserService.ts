@@ -52,7 +52,7 @@ export class UserService extends AirbyteRequestService {
   }
 
   public async revokeUserSession(): Promise<void> {
-    return this.fetch("v1/web_backend/users/revoke_user_session", {});
+    return this.fetch("v1/web_backend/users/revoke_user_session");
   }
 
   public async remove(workspaceId: string, email: string): Promise<void> {

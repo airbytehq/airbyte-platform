@@ -123,7 +123,6 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slugify = { module = "com.github.slugify:slugify", version = "2.4" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.7.3" }
 spring-core = { module = "org.springframework:spring-core", version = "6.0.8" }
-stripe = { module = "com.stripe:stripe-java", version = "20.102.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", version.ref = "temporal" }
