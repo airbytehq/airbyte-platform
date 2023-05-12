@@ -27,7 +27,7 @@ interface DestinationFormProps {
   onSubmit: (values: DestinationFormValues) => Promise<void>;
   destinationDefinitions: DestinationDefinitionRead[];
   error?: FormError | null;
-  selectedSourceDefinitionId?: string;
+  selectedDestinationDefinitionId?: string;
 }
 
 const hasDestinationDefinitionId = (state: unknown): state is { destinationDefinitionId: string } => {
@@ -42,12 +42,12 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
   onSubmit,
   destinationDefinitions,
   error,
-  selectedSourceDefinitionId,
+  selectedDestinationDefinitionId,
 }) => {
   const location = useLocation();
 
   const [destinationDefinitionId, setDestinationDefinitionId] = useState(
-    selectedSourceDefinitionId ??
+    selectedDestinationDefinitionId ??
       (hasDestinationDefinitionId(location.state) ? location.state.destinationDefinitionId : null)
   );
 

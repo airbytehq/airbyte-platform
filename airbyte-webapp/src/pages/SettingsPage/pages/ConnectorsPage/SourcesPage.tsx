@@ -22,7 +22,7 @@ const SourcesPage: React.FC = () => {
   const { sources } = useSourceList();
   const sourceDefinitions = useAvailableSourceDefinitions();
 
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();

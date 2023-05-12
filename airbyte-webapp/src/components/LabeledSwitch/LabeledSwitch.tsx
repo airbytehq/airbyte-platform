@@ -33,3 +33,4 @@ export const LabeledSwitch = React.forwardRef<HTMLDivElement, LabeledSwitchProps
     </div>
   );
 });
+LabeledSwitch.displayName = "LabeledSwitch";

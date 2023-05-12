@@ -49,6 +49,7 @@ const _iconByStatus = {
 export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error", size = "md", value }) => {
   return (
     <Tooltip
+      disabled={!title}
       control={
         <FlexContainer
           className={classNames(styles.container, sizeStyles[size], colorStyles[status], {

@@ -50,7 +50,7 @@ class StreamStatusesRepositoryTest {
 
   static DSLContext jooqDslContext;
 
-  // we run against an actual database to ensure hibernate and jooq properly integrate
+  // we run against an actual database to ensure micronaut data and jooq properly integrate
   static PostgreSQLContainer<?> container = new PostgreSQLContainer<>("postgres:13-alpine")
       .withDatabaseName("airbyte")
       .withUsername("docker")

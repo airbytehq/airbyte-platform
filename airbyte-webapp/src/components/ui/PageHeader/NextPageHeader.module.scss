@@ -1,0 +1,7 @@
+@use "scss/z-indices";
+@use "scss/variables";
+
+.container {
+  z-index: z-indices.$pageHeader;
+  padding: variables.$spacing-xl variables.$spacing-xl 0;
+}

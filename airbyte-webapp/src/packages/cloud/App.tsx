@@ -21,6 +21,7 @@ import { Routing } from "packages/cloud/cloudRoutes";
 import cloudLocales from "packages/cloud/locales/en.json";
 import { AuthenticationProvider } from "packages/cloud/services/auth/AuthService";
 import { theme } from "packages/cloud/theme";
+import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
 import { IntercomProvider } from "./services/thirdParty/intercom/IntercomProvider";
@@ -42,9 +43,11 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
                 <FeatureService features={defaultCloudFeatures}>
                   <AppServicesProvider>
                     <AuthenticationProvider>
-                      <HelmetProvider>
-                        <IntercomProvider>{children}</IntercomProvider>
-                      </HelmetProvider>
+                      <ConnectorBuilderTestInputProvider>
+                        <HelmetProvider>
+                          <IntercomProvider>{children}</IntercomProvider>
+                        </HelmetProvider>
+                      </ConnectorBuilderTestInputProvider>
                     </AuthenticationProvider>
                   </AppServicesProvider>
                 </FeatureService>

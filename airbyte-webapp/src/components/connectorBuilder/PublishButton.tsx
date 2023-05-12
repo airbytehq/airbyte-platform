@@ -8,7 +8,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import {
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { PublishModal } from "./PublishModal";
@@ -23,7 +23,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const { editorView, currentProject, yamlIsValid } = useConnectorBuilderFormState();
   const { hasErrors } = useBuilderErrors();
 
-  const { streamListErrorMessage } = useConnectorBuilderTestState();
+  const { streamListErrorMessage } = useConnectorBuilderTestRead();
 
   let buttonDisabled = false;
   let showWarningIcon = false;

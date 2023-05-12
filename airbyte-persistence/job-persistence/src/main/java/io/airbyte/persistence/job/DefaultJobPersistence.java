@@ -494,7 +494,10 @@ public class DefaultJobPersistence implements JobPersistence {
                 .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
                 .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
                 .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
-                .where(STREAM_STATS.ATTEMPT_ID.eq(attemptId))
+                .where(
+                    STREAM_STATS.ATTEMPT_ID.eq(attemptId),
+                    PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
+                    PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace()))
                 .execute();
             return;
           }

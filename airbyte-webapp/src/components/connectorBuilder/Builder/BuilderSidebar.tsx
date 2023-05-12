@@ -184,3 +184,4 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
     </FlexContainer>
   );
 });
+BuilderSidebar.displayName = "BuilderSidebar";

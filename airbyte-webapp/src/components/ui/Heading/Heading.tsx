@@ -48,3 +48,4 @@ export const Heading: React.FC<React.PropsWithChildren<HeadingProps>> = React.me
     });
   }
 );
+Heading.displayName = "Heading";

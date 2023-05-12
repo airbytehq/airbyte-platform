@@ -103,3 +103,4 @@ const KeyValueList = React.memo(
     );
   }
 );
+KeyValueList.displayName = "KeyValueList";

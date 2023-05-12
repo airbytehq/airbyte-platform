@@ -86,6 +86,7 @@ module.exports = {
     "@typescript-eslint/consistent-indexed-object-style": ["warn", "record"],
     "@typescript-eslint/consistent-type-definitions": ["warn", "interface"],
     "@typescript-eslint/no-unused-vars": "warn",
+    "react/display-name": "warn",
     "react/function-component-definition": [
       "warn",
       {
@@ -160,6 +161,12 @@ module.exports = {
       rules: {
         "@typescript-eslint/await-thenable": "warn",
         "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      },
+    },
+    {
+      files: ["**/*.test.*", "**/*.stories.tsx"],
+      rules: {
+        "react/display-name": "off",
       },
     },
   ],

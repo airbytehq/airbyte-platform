@@ -66,7 +66,7 @@ export const UpdateConnectionDataResidency: React.FC = () => {
           <div className={styles.spinner}>{connectionUpdating && <Spinner size="sm" />}</div>
           <div className={styles.dropdown}>
             <DataGeographyDropdown
-              isDisabled={connectionUpdating}
+              isDisabled={connectionUpdating || connection.status === "deprecated"}
               geographies={geographies}
               value={selectedValue || connection.geography || geographies[0]}
               onChange={handleSubmit}

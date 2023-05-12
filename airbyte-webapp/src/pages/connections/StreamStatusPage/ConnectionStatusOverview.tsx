@@ -13,14 +13,19 @@ import {
 import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { ConnectionScheduleType, WebBackendConnectionRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
+import styles from "./ConnectionStatusOverview.module.scss";
+
 const MESSAGE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   onTime: "connection.status.onTime",
+  onTrack: "connection.status.onTrack",
   late: "connection.status.late",
   pending: "connection.status.pending",
   error: "connection.status.error",
@@ -57,7 +62,7 @@ const isConnectionLate = (
   );
 };
 
-const useConnectionStatus = () => {
+export const useConnectionStatus = () => {
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
 
@@ -80,7 +85,8 @@ const useConnectionStatus = () => {
     !hasBreakingSchemaChange &&
     connectionStatus === ConnectionSyncStatus.FAILED &&
     (isUnscheduledConnection(connection.scheduleType) ||
-      isConnectionLate(connection, lastSuccessfulSync, errorMultiplier))
+      isConnectionLate(connection, lastSuccessfulSync, errorMultiplier) ||
+      lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
   ) {
     return ConnectionStatusIndicatorStatus.Error;
   }
@@ -98,6 +104,10 @@ const useConnectionStatus = () => {
     return ConnectionStatusIndicatorStatus.Late;
   }
 
+  if (connectionStatus === ConnectionSyncStatus.FAILED) {
+    return ConnectionStatusIndicatorStatus.OnTrack;
+  }
+
   return ConnectionStatusIndicatorStatus.OnTime;
 };
 
@@ -113,14 +123,20 @@ export const ConnectionStatusOverview: React.FC = () => {
       <ConnectionStatusIndicator status={status} withBox loading={isLoading} />
       <Box ml="md">
         <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
+        {status === ConnectionStatusIndicatorStatus.OnTrack && (
+          <Tooltip control={<Icon type="info" color="action" className={styles.onTrackInfo} />} placement="top">
+            <FormattedMessage id="connection.status.onTrack.description" />
+          </Tooltip>
+        )}
         <Box as="span" ml="md">
           <Text color="grey" bold size="sm" as="span">
             {status === ConnectionStatusIndicatorStatus.OnTime && nextSync && (
               <FormattedMessage id="connection.stream.status.nextSync" values={{ sync: nextSync.fromNow() }} />
             )}
-            {status === ConnectionStatusIndicatorStatus.Late && nextSync && (
-              <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: nextSync.fromNow() }} />
-            )}
+            {(status === ConnectionStatusIndicatorStatus.Late || status === ConnectionStatusIndicatorStatus.OnTrack) &&
+              nextSync && (
+                <FormattedMessage id="connection.stream.status.nextTry" values={{ sync: nextSync.fromNow() }} />
+              )}
           </Text>
         </Box>
       </Box>

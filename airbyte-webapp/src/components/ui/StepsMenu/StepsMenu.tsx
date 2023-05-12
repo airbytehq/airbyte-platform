@@ -3,7 +3,7 @@ import styled from "styled-components";
 
 import { Step } from "./Step";
 
-interface StepMenuItem {
+export interface StepMenuItem {
   id: string;
   name: string | React.ReactNode;
   icon?: React.ReactNode;

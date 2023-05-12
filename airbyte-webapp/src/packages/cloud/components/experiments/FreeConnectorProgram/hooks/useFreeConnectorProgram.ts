@@ -6,7 +6,7 @@ import { useEffectOnce } from "react-use";
 
 import { pollUntil } from "core/request/pollUntil";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
+import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -19,7 +19,7 @@ export const useFreeConnectorProgram = () => {
   const workspaceId = useCurrentWorkspaceId();
   const middlewares = useDefaultRequestMiddlewares();
   const requestOptions = { middlewares };
-  const freeConnectorProgramEnabled = useExperiment("workspace.freeConnectorsProgram.visible", false);
+  const freeConnectorProgramEnabled = useFeature(FeatureItem.FreeConnectorProgram);
   const [searchParams, setSearchParams] = useSearchParams();
   const [userDidEnroll, setUserDidEnroll] = useState(false);
   const { formatMessage } = useIntl();
@@ -71,8 +71,22 @@ export const useFreeConnectorProgram = () => {
     )
   );
 
+  // similar to the one above, but only returns eligible and non-eligible connection counts as this
+  // is used separately in the app
+  const connectionStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
+    webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions).then(
+      ({ hasEligibleConnections, hasNonEligibleConnections }) => {
+        return {
+          hasEligibleConnections: freeConnectorProgramEnabled && hasEligibleConnections,
+          hasNonEligibleConnections: freeConnectorProgramEnabled && hasNonEligibleConnections,
+        };
+      }
+    )
+  );
+
   return {
     enrollmentStatusQuery,
     userDidEnroll,
+    connectionStatusQuery,
   };
 };

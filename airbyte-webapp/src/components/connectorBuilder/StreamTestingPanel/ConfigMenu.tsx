@@ -14,8 +14,8 @@ import { Tooltip } from "components/ui/Tooltip";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestInputState } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./ConfigMenu.module.scss";
@@ -29,7 +29,7 @@ interface ConfigMenuProps {
 
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
-  const { testInputJson, setTestInputJson } = useConnectorBuilderTestState();
+  const { testInputJson, setTestInputJson } = useConnectorBuilderTestInputState();
   const { trackError } = useAppMonitoringService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);

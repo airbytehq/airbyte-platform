@@ -10,6 +10,7 @@ import { SelectDestination } from "components/connection/CreateConnection/Select
 import { SelectSource } from "components/connection/CreateConnection/SelectSource";
 import { CreateConnectionForm } from "components/connection/CreateConnectionForm";
 import { FormPageContent } from "components/ConnectorBlocks";
+import { Box } from "components/ui/Box";
 import { PageHeader } from "components/ui/PageHeader";
 import { StepsIndicator } from "components/ui/StepsIndicator";
 import { Text } from "components/ui/Text";
@@ -100,9 +101,11 @@ export const CreateConnectionPage: React.FC = () => {
           {sources.length > 0 && (
             <>
               <ExistingEntityForm type="source" onSubmit={onSelectExistingSource} />
-              <Text align="center" size="lg">
-                <FormattedMessage id="onboarding.or" />
-              </Text>
+              <Box my="xl">
+                <Text align="center" size="lg">
+                  <FormattedMessage id="onboarding.or" />
+                </Text>
+              </Box>
             </>
           )}
           <ConnectionCreateSourceForm
@@ -125,9 +128,11 @@ export const CreateConnectionPage: React.FC = () => {
           {destinations.length > 0 && (
             <>
               <ExistingEntityForm type="destination" onSubmit={onSelectExistingDestination} />
-              <Text align="center" size="lg">
-                <FormattedMessage id="onboarding.or" />
-              </Text>
+              <Box my="xl">
+                <Text align="center" size="lg">
+                  <FormattedMessage id="onboarding.or" />
+                </Text>
+              </Box>
             </>
           )}
           <ConnectionCreateDestinationForm

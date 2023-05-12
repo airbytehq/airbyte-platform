@@ -27,23 +27,23 @@ const LogPath = styled.span`
 `;
 
 export const LogsDetails: React.FC<{
-  id: number | string;
+  jobId: string;
   path: string;
   currentAttempt?: AttemptRead;
   jobDebugInfo?: JobDebugInfoRead;
   showAttemptStats: boolean;
   logs?: string[];
-}> = ({ path, id, currentAttempt, jobDebugInfo, showAttemptStats, logs }) => (
+}> = ({ path, jobId, currentAttempt, jobDebugInfo, showAttemptStats, logs }) => (
   <>
     {currentAttempt && showAttemptStats && (
       <AttemptDetailsSection>
-        <AttemptDetails attempt={currentAttempt} />
+        <AttemptDetails attempt={currentAttempt} jobId={jobId} />
       </AttemptDetailsSection>
     )}
     <LogHeader>
       <LogPath>{path}</LogPath>
-      <LinkToAttemptButton jobId={id} attemptId={currentAttempt?.id} />
-      {jobDebugInfo && <DownloadButton jobDebugInfo={jobDebugInfo} fileName={`logs-${id}`} />}
+      <LinkToAttemptButton jobId={jobId} attemptId={currentAttempt?.id} />
+      {jobDebugInfo && <DownloadButton jobDebugInfo={jobDebugInfo} fileName={`logs-${jobId}`} />}
     </LogHeader>
     <Logs logsArray={logs} />
   </>

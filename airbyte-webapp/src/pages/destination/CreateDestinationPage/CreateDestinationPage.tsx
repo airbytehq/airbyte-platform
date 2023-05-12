@@ -62,7 +62,7 @@ export const CreateDestinationPage: React.FC = () => {
             <DestinationForm
               onSubmit={onSubmitDestinationForm}
               destinationDefinitions={destinationDefinitions}
-              selectedSourceDefinitionId={selectedDestinationDefinitionId}
+              selectedDestinationDefinitionId={selectedDestinationDefinitionId}
             />
             <CloudInviteUsersHint connectorType="destination" />
           </FormPageContent>

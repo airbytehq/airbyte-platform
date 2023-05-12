@@ -16,7 +16,7 @@ import jakarta.inject.Singleton;
  */
 @Produces
 @Singleton
-@Requires(classes = AirbyteCdkInvalidInputException.class)
+@Requires(classes = CdkProcessException.class)
 public class CdkProcessExceptionHandler implements ExceptionHandler<CdkProcessException, HttpResponse> {
 
   final ExceptionHelper helper = new ExceptionHelper();

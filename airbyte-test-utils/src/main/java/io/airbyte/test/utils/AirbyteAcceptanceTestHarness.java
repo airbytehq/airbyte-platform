@@ -311,10 +311,27 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
+  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   public void cleanup() {
     try {
       clearSourceDbData();
       clearDestinationDbData();
+
+      // wait until db data verified to be cleaned
+      int sourceTableCount = listAllTables(getSourceDatabase()).size();
+      int destinationTableCount = listAllTables(getDestinationDatabase()).size();
+      int iterations = 0;
+      while (sourceTableCount > 0 || destinationTableCount > 0) {
+        if (iterations > 100) {
+          throw new RuntimeException("databases tables aren't dropping after too long, exiting...");
+        }
+        iterations++;
+        LOGGER.warn("tableCount is still greater than 0! Source table count: {}. Destination table count: {}. iterations: {}", sourceTableCount,
+            destinationTableCount, iterations);
+        sleep(1000);
+        sourceTableCount = listAllTables(getSourceDatabase()).size();
+        destinationTableCount = listAllTables(getDestinationDatabase()).size();
+      }
 
       for (final UUID operationId : operationIds) {
         deleteOperation(operationId);
@@ -340,6 +357,7 @@ public class AirbyteAcceptanceTestHarness {
         DataSourceFactory.close(destinationDataSource);
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
+
     } catch (final Exception e) {
       LOGGER.error("Error tearing down test fixtures: {}", e);
     }
@@ -684,7 +702,7 @@ public class AirbyteAcceptanceTestHarness {
     return createOperation(defaultWorkspaceId);
   }
 
-  public OperationRead createOperation(UUID workspaceId) throws ApiException {
+  public OperationRead createOperation(final UUID workspaceId) throws ApiException {
     final OperatorConfiguration normalizationConfig = new OperatorConfiguration()
         .operatorType(OperatorType.NORMALIZATION).normalization(new OperatorNormalization().option(
             OperatorNormalization.OptionEnum.BASIC));

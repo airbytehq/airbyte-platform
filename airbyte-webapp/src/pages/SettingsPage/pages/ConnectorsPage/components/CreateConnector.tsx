@@ -38,7 +38,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     setIsModalOpen(!isModalOpen);
     setErrorMessage("");
   };
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   const { formatMessage } = useIntl();
 

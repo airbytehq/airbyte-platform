@@ -4,7 +4,7 @@
 #
 #    pip-compile --extra=tests --output-file=requirements-tests.txt
 #
-airbyte-cdk==0.36.3
+airbyte-cdk==0.36.4
     # via connector-builder-server (setup.py)
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk

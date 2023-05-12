@@ -34,6 +34,7 @@ import {
   useProject,
   useUpdateProject,
 } from "./ConnectorBuilderProjectsService";
+import { useConnectorBuilderTestInputState } from "./ConnectorBuilderTestInputService";
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -62,11 +63,9 @@ interface FormStateContext {
   triggerUpdate: () => void;
 }
 
-interface TestStateContext {
+interface TestReadContext {
   streams: StreamsListReadStreamsItem[];
   streamListErrorMessage: string | undefined;
-  testInputJson: ConnectorConfig;
-  setTestInputJson: (value: ConnectorConfig | undefined) => void;
   setTestStreamIndex: (streamIndex: number) => void;
   testStreamIndex: number;
   streamRead: UseQueryResult<StreamRead, unknown>;
@@ -81,7 +80,7 @@ interface FormManagementStateContext {
 }
 
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
-export const ConnectorBuilderTestStateContext = React.createContext<TestStateContext | null>(null);
+export const ConnectorBuilderTestReadContext = React.createContext<TestReadContext | null>(null);
 export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
 export const ConnectorBuilderMainFormikContext = React.createContext<FormikContextType<BuilderFormValues> | null>(null);
 
@@ -204,12 +203,13 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
       return;
     }
     const newProject: BuilderProjectWithManifest = { name: builderFormValues.global.connectorName };
-    if (lastValidJsonManifest.streams.length > 0) {
+    // do not save invalid ui-based manifest (e.g. no streams), but always save yaml-based manifest
+    if (storedEditorView === "yaml" || lastValidJsonManifest.streams.length > 0) {
       newProject.manifest = lastValidJsonManifest;
     }
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [builderFormValues.global.connectorName, lastValidJsonManifest, updateProject]);
+  }, [builderFormValues.global.connectorName, lastValidJsonManifest, storedEditorView, updateProject]);
 
   useDebounce(
     () => {
@@ -387,7 +387,7 @@ function getSavingState(
   return "loading";
 }
 
-export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
   const { lastValidJsonManifest, selectedView, projectId, editorView, builderFormValues } =
     useConnectorBuilderFormState();
@@ -395,7 +395,7 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
   // config
-  const [testInputJson, setTestInputJson] = useState<ConnectorConfig | undefined>();
+  const { testInputJson } = useConnectorBuilderTestInputState();
 
   const testInputWithDefaults = useTestInputDefaultValues(testInputJson, manifest.spec);
 
@@ -405,7 +405,10 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
     isError: isStreamListError,
     error: streamListError,
     isFetching: isFetchingStreamList,
-  } = useListStreams({ manifest, config: testInputWithDefaults });
+  } = useListStreams(
+    { manifest, config: testInputWithDefaults },
+    Boolean(editorView === "yaml" || manifest.streams?.length)
+  );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const streamListErrorMessage = isStreamListError
     ? streamListError instanceof Error
@@ -435,21 +438,19 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const ctx = {
     streams,
     streamListErrorMessage,
-    testInputJson: testInputWithDefaults,
-    setTestInputJson,
     testStreamIndex,
     setTestStreamIndex,
     streamRead,
     isFetchingStreamList,
   };
 
-  return <ConnectorBuilderTestStateContext.Provider value={ctx}>{children}</ConnectorBuilderTestStateContext.Provider>;
+  return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;
 };
 
-export const useConnectorBuilderTestState = (): TestStateContext => {
-  const connectorBuilderState = useContext(ConnectorBuilderTestStateContext);
+export const useConnectorBuilderTestRead = (): TestReadContext => {
+  const connectorBuilderState = useContext(ConnectorBuilderTestReadContext);
   if (!connectorBuilderState) {
-    throw new Error("useConnectorBuilderTestState must be used within a ConnectorBuilderTestStateProvider.");
+    throw new Error("useConnectorBuilderTestRead must be used within a ConnectorBuilderTestReadProvider.");
   }
 
   return connectorBuilderState;
@@ -465,7 +466,7 @@ export const useConnectorBuilderFormState = (): FormStateContext => {
 };
 
 export const useSelectedPageAndSlice = () => {
-  const { streams, testStreamIndex } = useConnectorBuilderTestState();
+  const { streams, testStreamIndex } = useConnectorBuilderTestRead();
 
   const selectedStreamName = streams[testStreamIndex]?.name;
 

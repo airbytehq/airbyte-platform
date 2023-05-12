@@ -79,7 +79,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {(jobSyncRunning || jobResetRunning) && (
         <Button
           onClick={cancelJob}
-          disabled={syncStarting || resetStarting || !connectionEnabled}
+          disabled={syncStarting || resetStarting}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}

@@ -48,6 +48,7 @@ export const links = {
   connectorBuilderPartitioning: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
+  creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
 } as const;
 
 export type OutboundLinks = typeof links;

@@ -11,7 +11,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
-import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -20,9 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 @MicronautTest
-@Requires(property = "mockito.test.enabled",
-          defaultValue = StringUtils.TRUE,
-          value = StringUtils.TRUE)
 @Requires(env = {Environment.TEST})
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class DestinationDefinitionSpecificationApiTest extends BaseControllerTest {

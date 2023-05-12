@@ -3,11 +3,12 @@
 
 .tabContainer,
 button.tabContainer {
-  padding: variables.$spacing-lg 0;
-  border-radius: 0;
+  border-radius: variables.$border-radius-xs variables.$border-radius-xs 0 0;
   border: none;
-  border-bottom: variables.$border-thick solid transparent;
   background: none;
+  padding: variables.$spacing-md variables.$spacing-sm;
+  border-bottom: variables.$border-thick solid transparent;
+  white-space: nowrap;
 
   &--active {
     border-bottom-color: colors.$dark-blue-900;
@@ -15,9 +16,9 @@ button.tabContainer {
   }
 }
 
-.tabContainer--inactive {
-  &:hover .text,
-  &:focus-visible .text {
-    color: colors.$blue;
+.tabContainer--inactive:not(.tabContainer--disabled) {
+  &:hover,
+  &:focus-visible {
+    background-color: colors.$grey-40;
   }
 }

@@ -70,6 +70,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       onClick={handleClick}
       disabled={buttonDisabled}
       icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      data-testid="download-yaml-button"
     >
       <FormattedMessage id="connectorBuilder.downloadYaml" />
     </Button>

@@ -51,3 +51,4 @@ const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<C
 ));
 
 export { ControlLabels };
+ControlLabels.displayName = "ControlLabels";

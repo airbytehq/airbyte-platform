@@ -10,6 +10,7 @@ import { ConnectionStatusLoadingSpinner } from "./ConnectionStatusLoadingSpinner
 
 export enum ConnectionStatusIndicatorStatus {
   OnTime = "onTime",
+  OnTrack = "onTrack",
   Late = "late",
   Pending = "pending",
   Error = "error",
@@ -20,6 +21,7 @@ export enum ConnectionStatusIndicatorStatus {
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
   onTime: <SuccessIcon />,
+  onTrack: <SuccessIcon />,
   error: <Icon type="cross" />,
   disabled: <Icon type="pause" />,
   pending: <ClockIcon />,
@@ -30,6 +32,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   onTime: styles["status--upToDate"],
+  onTrack: styles["status--upToDate"],
   error: styles["status--error"],
   disabled: styles["status--disabled"],
   pending: styles["status--pending"],
@@ -40,6 +43,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
   onTime: styles["status--upToDate-withBox"],
+  onTrack: styles["status--upToDate-withBox"],
   error: styles["status--error-withBox"],
   disabled: styles["status--disabled-withBox"],
   pending: styles["status--pending-withBox"],

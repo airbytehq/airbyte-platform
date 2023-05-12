@@ -16,6 +16,7 @@ import { defaultOssFeatures, FeatureService } from "hooks/services/Feature";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
+import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";
@@ -38,7 +39,9 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
               <ConfirmationModalService>
                 <ModalServiceProvider>
                   <FormChangeTrackerService>
-                    <HelmetProvider>{children}</HelmetProvider>
+                    <ConnectorBuilderTestInputProvider>
+                      <HelmetProvider>{children}</HelmetProvider>
+                    </ConnectorBuilderTestInputProvider>
                   </FormChangeTrackerService>
                 </ModalServiceProvider>
               </ConfirmationModalService>

@@ -29,8 +29,6 @@ import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.db.Database;
 import io.micronaut.context.annotation.Replaces;
-import io.micronaut.context.annotation.Requires;
-import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.client.HttpClient;
@@ -64,9 +62,6 @@ import org.mockito.Mockito;
  * </ul>
  */
 @MicronautTest
-@Requires(property = "mockito.test.enabled",
-          defaultValue = StringUtils.TRUE,
-          value = StringUtils.TRUE)
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 abstract class BaseControllerTest {
 

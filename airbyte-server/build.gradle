@@ -114,8 +114,6 @@ test {
     environment 'AIRBYTE_VERSION', env.VERSION
     environment 'MICRONAUT_ENVIRONMENTS', 'test'
     environment 'SERVICE_NAME', project.name
-
-    systemProperty 'mockito.test.enabled', true
 }
 
 // produce reproducible archives

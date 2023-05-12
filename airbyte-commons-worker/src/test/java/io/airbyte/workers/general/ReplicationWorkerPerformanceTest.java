@@ -24,6 +24,7 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
+import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
@@ -108,6 +109,9 @@ public class ReplicationWorkerPerformanceTest {
         UUID.randomUUID(),
         new NotImplementedMetricClient());
 
+    final boolean fieldSelectionEnabled = false;
+    final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, fieldSelectionEnabled, false);
+
     final var worker = new DefaultReplicationWorker("1", 0,
         versionedAbSource,
         dstNamespaceMapper,
@@ -115,11 +119,11 @@ public class ReplicationWorkerPerformanceTest {
         messageTracker,
         syncPersistence,
         validator,
+        fieldSelector,
         metricReporter,
         connectorConfigUpdater,
-        false,
-        heartbeatTimeoutChaperone,
-        false);
+        fieldSelectionEnabled,
+        heartbeatTimeoutChaperone);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {

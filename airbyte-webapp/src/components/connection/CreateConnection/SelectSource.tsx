@@ -6,16 +6,14 @@ import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
-import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateSource, useSourceList } from "hooks/services/useSourceHook";
-import ExistingEntityForm from "pages/connections/CreateConnectionPage/ExistingEntityForm";
-import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
+import { useSourceList } from "hooks/services/useSourceHook";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
+import { CreateNewSource } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";
+import { SelectExistingConnector } from "./SelectExistingConnector";
 
 type SourceType = "existing" | "new";
 
@@ -32,24 +30,9 @@ export const SelectSource: React.FC<SelectSourceProps> = ({
   const [selectedSourceType, setSelectedSourceType] = useState<SourceType>(
     sources.length === 0 ? "new" : initialSelectedSourceType
   );
-  const sourceDefinitions = useAvailableSourceDefinitions();
-  const { clearAllFormChanges, hasFormChanges } = useFormChangeTrackerService();
+  const { hasFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setDocumentationPanelOpen } = useDocumentationPanelContext();
-  const { mutateAsync: createSource } = useCreateSource();
-  const { trackAction } = useAppMonitoringService();
-
-  const onCreateSource = async (values: SourceFormValues) => {
-    const sourceConnector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
-    if (!sourceConnector) {
-      trackAction(AppActionCodes.CONNECTOR_NOT_FOUND, { sourceDefinitionId: values.serviceType });
-      throw new Error(AppActionCodes.CONNECTOR_NOT_FOUND);
-    }
-    const result = await createSource({ values, sourceConnector });
-    clearAllFormChanges();
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    onSelectSource(result.sourceId);
-  };
 
   const onSelectSourceType = (sourceType: SourceType) => {
     if (hasFormChanges) {
@@ -103,10 +86,15 @@ export const SelectSource: React.FC<SelectSourceProps> = ({
           />
         </Box>
       </Card>
-      {selectedSourceType === "existing" && (
-        <ExistingEntityForm type="source" onSubmit={(sourceId) => onSelectSource(sourceId)} />
-      )}
-      {selectedSourceType === "new" && <SourceForm sourceDefinitions={sourceDefinitions} onSubmit={onCreateSource} />}
+      <Box mt="xl">
+        {selectedSourceType === "existing" && (
+          <SelectExistingConnector
+            connectors={sources}
+            onSelectConnector={({ sourceId }) => onSelectSource(sourceId)}
+          />
+        )}
+        {selectedSourceType === "new" && <CreateNewSource onSourceCreated={(sourceId) => onSelectSource(sourceId)} />}
+      </Box>
       <CloudInviteUsersHint connectorType="source" />
     </>
   );

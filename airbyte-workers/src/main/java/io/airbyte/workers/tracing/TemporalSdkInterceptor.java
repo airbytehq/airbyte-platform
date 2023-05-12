@@ -7,11 +7,13 @@ package io.airbyte.workers.tracing;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
 
 import com.google.common.annotations.VisibleForTesting;
+import datadog.trace.api.DDTags;
 import datadog.trace.api.interceptor.MutableSpan;
 import datadog.trace.api.interceptor.TraceInterceptor;
 import io.micronaut.core.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -32,9 +34,19 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
   static final String SYNC_WORKFLOW_IMPL_RESOURCE_NAME = "SyncWorkflowImpl.run";
 
   /**
+   * The {@code error.msg} tag name.
+   */
+  static final String ERROR_MSG_TAG = "error.msg";
+
+  /**
+   * The {@code error.message} tag name.
+   */
+  static final String ERROR_MESSAGE_TAG = DDTags.ERROR_MSG;
+
+  /**
    * Error message tag key name that contains the Temporal exit error message.
    */
-  static final String ERROR_MESSAGE_TAG_KEY = "error.msg";
+  static final Set<String> ERROR_MESSAGE_TAG_KEYS = Set.of(ERROR_MSG_TAG, ERROR_MESSAGE_TAG);
 
   /**
    * Temporal exit error message text.
@@ -83,7 +95,8 @@ public class TemporalSdkInterceptor implements TraceInterceptor {
     }
 
     return trace.isError()
-        && EXIT_ERROR_MESSAGE.equalsIgnoreCase(trace.getTags().getOrDefault(ERROR_MESSAGE_TAG_KEY, "").toString())
+        && ERROR_MESSAGE_TAG_KEYS.stream().map(key -> trace.getTags().getOrDefault(key, "").toString())
+            .anyMatch(v -> EXIT_ERROR_MESSAGE.equalsIgnoreCase(v))
         && (safeEquals(trace.getOperationName(), WORKFLOW_TRACE_OPERATION_NAME)
             || safeEquals(trace.getResourceName(), CONNECTION_MANAGER_WORKFLOW_IMPL_RESOURCE_NAME)
             || safeEquals(trace.getResourceName(), SYNC_WORKFLOW_IMPL_RESOURCE_NAME));

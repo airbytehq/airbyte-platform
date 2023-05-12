@@ -1,3 +1,5 @@
+import { useQuery } from "react-query";
+
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "services/Scope";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -41,5 +43,5 @@ export const useConnectorSpecifications = (): ConnectorSpecifications => {
 
 export const useGetOutOfDateConnectorsCount = () => {
   const service = useConnectorService();
-  return useSuspenseQuery(connectorDefinitionKeys.count(), () => service.checkUpdates());
+  return useQuery(connectorDefinitionKeys.count(), () => service.checkUpdates());
 };
