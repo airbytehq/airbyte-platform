@@ -2,6 +2,12 @@ plugins {
     id 'application'
 }
 
+configurations.all {
+    resolutionStrategy {
+        force 'net.minidev:json-smart:2.4.10'
+    }
+}
+
 dependencies {
     implementation 'com.auth0:java-jwt:3.19.2'
     implementation libs.bundles.kubernetes.client
