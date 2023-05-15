@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.36.5
+airbyte-cdk==0.37.0
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -45,7 +45,7 @@ markupsafe==2.1.2
     # via jinja2
 pendulum==2.1.2
     # via airbyte-cdk
-platformdirs==3.5.0
+platformdirs==3.5.1
     # via requests-cache
 pydantic==1.9.2
     # via
