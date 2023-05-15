@@ -80,7 +80,6 @@ jobs:
               - 'airbyte-connector-builder-server/CDK_VERSION'
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
-              - 'airbyte-webapp-e2e-tests/**'
 
   # Uncomment to debug.
   #  changes-output:
@@ -289,6 +288,7 @@ jobs:
       - name: Run End-to-End Frontend Tests
         env:
           CYPRESS_WEBAPP_KEY: ${{ secrets.CYPRESS_WEBAPP_KEY }}
+          CYPRESS_CACHE_FOLDER: "~/.cache/Cypress"
         run: ./tools/bin/e2e_test.sh
 
   # In case of self-hosted EC2 errors, remove this block.
