@@ -52,6 +52,8 @@ object AutoPropagateSchema : Temporary<Boolean>(key = "autopropagation.enabled",
 
 object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
 
+object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-connection-use-child-workflow", default = false)
+
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key="should-run-on-gke-dataplane", default = false)
 
 object ShouldRunRefreshSchema : Temporary<Boolean>(key="should-run-refresh-schema", default = true)

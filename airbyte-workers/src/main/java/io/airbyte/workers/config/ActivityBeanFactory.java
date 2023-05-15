@@ -77,7 +77,7 @@ public class ActivityBeanFactory {
                                                   final StreamResetActivity streamResetActivity,
                                                   final RecordMetricActivity recordMetricActivity,
                                                   final WorkflowConfigActivity workflowConfigActivity,
-                                                  final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
+                                                  final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
                                                   final SubmitCheckConnectionActivity submitCheckConnectionActivity) {
     return List.of(generateInputActivity,
@@ -88,7 +88,7 @@ public class ActivityBeanFactory {
         streamResetActivity,
         recordMetricActivity,
         workflowConfigActivity,
-        routeToSyncTaskQueueActivity,
+        routeToTaskQueueActivity,
         featureFlagFetchActivity,
         submitCheckConnectionActivity);
   }

@@ -33,10 +33,26 @@ public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueAct
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public RouteToSyncTaskQueueOutput route(final RouteToSyncTaskQueueInput input) {
+    return routeToSync(input);
+  }
+
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public RouteToSyncTaskQueueOutput routeToSync(final RouteToSyncTaskQueueInput input) {
+    return routeToTask(input, TemporalJobType.SYNC);
+  }
+
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @Override
+  public RouteToSyncTaskQueueOutput routeToCheckConnection(final RouteToSyncTaskQueueInput input) {
+    return routeToTask(input, TemporalJobType.CHECK_CONNECTION);
+  }
+
+  private RouteToSyncTaskQueueOutput routeToTask(final RouteToSyncTaskQueueInput input, TemporalJobType jobType) {
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
 
     try {
-      final String taskQueueForConnectionId = routerService.getTaskQueue(input.getConnectionId(), TemporalJobType.SYNC);
+      final String taskQueueForConnectionId = routerService.getTaskQueue(input.getConnectionId(), jobType);
 
       return new RouteToSyncTaskQueueOutput(taskQueueForConnectionId);
     } catch (final IOException e) {
