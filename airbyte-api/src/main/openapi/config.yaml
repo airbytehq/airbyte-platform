@@ -5742,6 +5742,13 @@ components:
       format: uuid
     StreamStatusRunState:
       type: string
+      description: >
+        Values:
+          * `PENDING` - The stream operation has been selected to run
+          * `RUNNING` - The stream operation is running
+          * `COMPLETE` - The stream operation ran successfully to completion
+          * `INCOMPLETE` - The stream operation has terminated in an incomplete state.
+          See StreamStatusIncompleteRunCause for more details.
       enum:
         - PENDING
         - RUNNING
@@ -5749,6 +5756,10 @@ components:
         - INCOMPLETE
     StreamStatusIncompleteRunCause:
       type: string
+      description: >
+        Values:
+          * `FAILED` - A failure has occurred
+          * `CANCELED` - The run has been canceled
       enum:
         - FAILED
         - CANCELED
