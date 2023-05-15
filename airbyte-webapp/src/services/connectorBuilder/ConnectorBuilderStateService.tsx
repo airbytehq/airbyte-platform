@@ -433,6 +433,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     manifest,
     stream: streamName,
     config: testInputWithDefaults,
+    record_limit: 1000,
   });
 
   const ctx = {
