@@ -61,7 +61,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       docLink={links.connectorBuilderIncrementalSync}
       label={
         <ControlLabels
-          label="Incremental sync"
+          label="Incremental Sync"
           infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
         />
       }

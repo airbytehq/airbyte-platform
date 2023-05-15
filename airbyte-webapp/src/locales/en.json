@@ -775,7 +775,7 @@
   "connectorBuilder.resetModal.submitButton": "Reset",
   "connectorBuilder.streamsHeading": "STREAMS ({number})",
   "connectorBuilder.globalConfiguration": "Global Configuration",
-  "connectorBuilder.userInputs": "User inputs ({number})",
+  "connectorBuilder.userInputs": "User Inputs ({number})",
   "connectorBuilder.noStreamsMessage": "Add a stream to test it here",
   "connectorBuilder.toggleModal.text": "Your YAML manifest is not compatible with the Connector Builder UI, due to the following error:\n\n<b>{error}</b>\n\nClicking confirm will erase any changes you have made in the YAML editor before swiching back to the Builder UI.\n\nIn order to save your current YAML, cancel and click the Download Config button.",
   "connectorBuilder.toggleModal.title": "Incompatible YAML",

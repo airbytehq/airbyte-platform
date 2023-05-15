@@ -117,7 +117,7 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     <BuilderCard
       docLink={links.connectorBuilderErrorHandler}
       label={
-        <ControlLabels label="Error handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
+        <ControlLabels label="Error Handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
       }
       toggleConfig={{
         toggledOn,
@@ -141,7 +141,7 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
         {({ buildPath }) => (
           <FlexContainer direction="column">
             <ToggleGroupField<DefaultErrorHandlerBackoffStrategiesItem>
-              label="Backoff strategy"
+              label="Backoff Strategy"
               tooltip="Optionally configures how to retry a request multiple times"
               fieldPath={buildPath("backoff_strategy")}
               initialValues={{
@@ -163,7 +163,7 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
               />
             </ToggleGroupField>
             <ToggleGroupField<HttpResponseFilter>
-              label="Response filter"
+              label="Response Filter"
               tooltip="Specify a filter to specify how to handle certain requests"
               fieldPath={buildPath("response_filter")}
               initialValues={{

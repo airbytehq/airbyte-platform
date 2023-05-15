@@ -80,7 +80,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderField
               type="array"
               path={streamFieldPath("fieldPointer")}
-              label="Record selector"
+              label="Record Selector"
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
