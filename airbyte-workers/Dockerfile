@@ -3,8 +3,9 @@ FROM ${JDK_IMAGE} AS worker
 
 ARG DOCKER_BUILD_ARCH=amd64
 
-RUN amazon-linux-extras install -y docker
-RUN yum install -y jq tar && yum clean all
+#RUN amazon-linux-extras install -y docker
+#RUN yum install -y jq tar && yum clean all
+RUN apk add docker jq tar curl
 
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${DOCKER_BUILD_ARCH}/kubectl" \
         && chmod +x kubectl && mv kubectl /usr/local/bin/

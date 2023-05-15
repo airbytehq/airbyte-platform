@@ -1,16 +1,17 @@
 ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
 FROM ${JDK_IMAGE} AS connector-atelier-server
 
-RUN yum update -y && \
-    yum groupinstall -y "Development Tools" && \
-    yum install -y openssl-devel bzip2-devel libffi-devel zlib-devel sqlite-devel xz-devel
+#RUN yum update -y && \
+#    yum groupinstall -y "Development Tools" && \
+#    yum install -y openssl-devel bzip2-devel libffi-devel zlib-devel sqlite-devel xz-devel
+RUN apk add openssl-dev bzip2-dev libffi-dev zlib-dev sqlite-dev git
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11
 ARG CDK_VERSION=0.36.4
 # Set up python
-RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-ENV PYENV_ROOT /root/.pyenv
+RUN git clone https://github.com/pyenv/pyenv.git .pyenv
+ENV PYENV_ROOT /app/.pyenv
 ENV PATH ${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:$PATH
 RUN pyenv install ${PYTHON_VERSION} && pyenv global ${PYTHON_VERSION}
 ENV CDK_PYTHON=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/python
