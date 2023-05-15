@@ -1,5 +1,5 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
-FROM ${JDK_IMAGE} AS connector-atelier-server
+# Forcing all image as alpine requieres more work to use pyenv https://betterup.atlassian.net/browse/DATAOPS-1848
+FROM airbyte/airbyte-base-java-image:2.0.2 AS connector-atelier-server
 
 #RUN yum update -y && \
 #    yum groupinstall -y "Development Tools" && \
