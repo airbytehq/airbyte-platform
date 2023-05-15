@@ -20,11 +20,7 @@ import {
 
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
-import {
-  StreamRead,
-  StreamReadRequestBodyConfig,
-  StreamsListReadStreamsItem,
-} from "core/request/ConnectorBuilderClient";
+import { ConnectorConfig, StreamRead, StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
 import { ConnectorManifest, DeclarativeComponentSchema, Spec } from "core/request/ConnectorManifest";
 import { useBlocker } from "hooks/router/useBlocker";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -38,6 +34,7 @@ import {
   useProject,
   useUpdateProject,
 } from "./ConnectorBuilderProjectsService";
+import { useConnectorBuilderTestInputState } from "./ConnectorBuilderTestInputService";
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -66,11 +63,9 @@ interface FormStateContext {
   triggerUpdate: () => void;
 }
 
-interface TestStateContext {
+interface TestReadContext {
   streams: StreamsListReadStreamsItem[];
   streamListErrorMessage: string | undefined;
-  testInputJson: StreamReadRequestBodyConfig;
-  setTestInputJson: (value: StreamReadRequestBodyConfig | undefined) => void;
   setTestStreamIndex: (streamIndex: number) => void;
   testStreamIndex: number;
   streamRead: UseQueryResult<StreamRead, unknown>;
@@ -80,10 +75,12 @@ interface TestStateContext {
 interface FormManagementStateContext {
   isTestInputOpen: boolean;
   setTestInputOpen: (open: boolean) => void;
+  scrollToField: string | undefined;
+  setScrollToField: (field: string | undefined) => void;
 }
 
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
-export const ConnectorBuilderTestStateContext = React.createContext<TestStateContext | null>(null);
+export const ConnectorBuilderTestReadContext = React.createContext<TestReadContext | null>(null);
 export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
 export const ConnectorBuilderMainFormikContext = React.createContext<FormikContextType<BuilderFormValues> | null>(null);
 
@@ -206,12 +203,13 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
       return;
     }
     const newProject: BuilderProjectWithManifest = { name: builderFormValues.global.connectorName };
-    if (lastValidJsonManifest.streams.length > 0) {
+    // do not save invalid ui-based manifest (e.g. no streams), but always save yaml-based manifest
+    if (storedEditorView === "yaml" || lastValidJsonManifest.streams.length > 0) {
       newProject.manifest = lastValidJsonManifest;
     }
     await updateProject(newProject);
     setPersistedState(newProject);
-  }, [builderFormValues.global.connectorName, lastValidJsonManifest, updateProject]);
+  }, [builderFormValues.global.connectorName, lastValidJsonManifest, storedEditorView, updateProject]);
 
   useDebounce(
     () => {
@@ -263,7 +261,7 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
 
 const EMPTY_SCHEMA = {};
 
-function useTestInputDefaultValues(testInputJson: StreamReadRequestBodyConfig | undefined, spec?: Spec) {
+function useTestInputDefaultValues(testInputJson: ConnectorConfig | undefined, spec?: Spec) {
   const currentSpec = useRef<Spec | undefined>(undefined);
   return useMemo(() => {
     if (testInputJson) {
@@ -389,7 +387,7 @@ function getSavingState(
   return "loading";
 }
 
-export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
   const { lastValidJsonManifest, selectedView, projectId, editorView, builderFormValues } =
     useConnectorBuilderFormState();
@@ -397,7 +395,7 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
   // config
-  const [testInputJson, setTestInputJson] = useState<StreamReadRequestBodyConfig | undefined>();
+  const { testInputJson } = useConnectorBuilderTestInputState();
 
   const testInputWithDefaults = useTestInputDefaultValues(testInputJson, manifest.spec);
 
@@ -407,7 +405,10 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
     isError: isStreamListError,
     error: streamListError,
     isFetching: isFetchingStreamList,
-  } = useListStreams({ manifest, config: testInputWithDefaults });
+  } = useListStreams(
+    { manifest, config: testInputWithDefaults },
+    Boolean(editorView === "yaml" || manifest.streams?.length)
+  );
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
   const streamListErrorMessage = isStreamListError
     ? streamListError instanceof Error
@@ -437,21 +438,19 @@ export const ConnectorBuilderTestStateProvider: React.FC<React.PropsWithChildren
   const ctx = {
     streams,
     streamListErrorMessage,
-    testInputJson: testInputWithDefaults,
-    setTestInputJson,
     testStreamIndex,
     setTestStreamIndex,
     streamRead,
     isFetchingStreamList,
   };
 
-  return <ConnectorBuilderTestStateContext.Provider value={ctx}>{children}</ConnectorBuilderTestStateContext.Provider>;
+  return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;
 };
 
-export const useConnectorBuilderTestState = (): TestStateContext => {
-  const connectorBuilderState = useContext(ConnectorBuilderTestStateContext);
+export const useConnectorBuilderTestRead = (): TestReadContext => {
+  const connectorBuilderState = useContext(ConnectorBuilderTestReadContext);
   if (!connectorBuilderState) {
-    throw new Error("useConnectorBuilderTestStae must be used within a ConnectorBuilderTestStateProvider.");
+    throw new Error("useConnectorBuilderTestRead must be used within a ConnectorBuilderTestReadProvider.");
   }
 
   return connectorBuilderState;
@@ -467,9 +466,9 @@ export const useConnectorBuilderFormState = (): FormStateContext => {
 };
 
 export const useSelectedPageAndSlice = () => {
-  const { streams, testStreamIndex } = useConnectorBuilderTestState();
+  const { streams, testStreamIndex } = useConnectorBuilderTestRead();
 
-  const selectedStreamName = streams[testStreamIndex].name;
+  const selectedStreamName = streams[testStreamIndex]?.name;
 
   const [streamToSelectedSlice, setStreamToSelectedSlice] = useState({ [selectedStreamName]: 0 });
   const setSelectedSlice = (sliceIndex: number) => {
@@ -497,13 +496,16 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   children,
 }) => {
   const [isTestInputOpen, setTestInputOpen] = useState(false);
+  const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
 
   const ctx = useMemo(
     () => ({
       isTestInputOpen,
       setTestInputOpen,
+      scrollToField,
+      setScrollToField,
     }),
-    [isTestInputOpen]
+    [isTestInputOpen, scrollToField]
   );
 
   return (

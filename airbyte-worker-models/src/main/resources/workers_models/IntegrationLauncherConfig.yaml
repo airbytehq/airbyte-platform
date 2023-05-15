@@ -31,3 +31,6 @@ properties:
   allowedHosts:
     type: object
     existingJavaType: io.airbyte.config.AllowedHosts
+  additionalEnvironmentVariables:
+    type: object
+    existingJavaType: "java.util.Map<String,String>"

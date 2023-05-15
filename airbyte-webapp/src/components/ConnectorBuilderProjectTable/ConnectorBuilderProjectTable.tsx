@@ -16,8 +16,8 @@ import { SortableTableHeader } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 import { getEditPath } from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -225,9 +225,6 @@ export const ConnectorBuilderProjectTable = ({
       columnHelper.display({
         id: "actions",
         header: () => null,
-        meta: {
-          responsive: true,
-        },
         cell: (props) => (
           <FlexContainer justifyContent="flex-end" gap="sm">
             <Button

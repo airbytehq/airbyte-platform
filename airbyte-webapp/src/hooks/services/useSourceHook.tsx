@@ -2,19 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
-import { Action, Namespace } from "core/analytics";
 import { SyncSchema } from "core/domain/catalog";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { SourceService } from "core/domain/connector/SourceService";
-import { JobInfo } from "core/domain/job";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
 import { isDefined } from "utils/common";
 
-import { useAnalyticsService } from "./Analytics";
 import { useRemoveConnectionsFromList } from "./useConnectionHook";
 import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
-import { SourceRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
+import { SourceRead, SynchronousJobRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
 import { useSuspenseQuery } from "../../services/connector/useSuspenseQuery";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
 import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
@@ -164,7 +163,7 @@ const useUpdateSource = () => {
   );
 };
 
-export type SchemaError = (Error & { status: number; response: JobInfo }) | null;
+export type SchemaError = (Error & { status: number; response: SynchronousJobRead }) | null;
 
 const useDiscoverSchema = (
   sourceId: string,

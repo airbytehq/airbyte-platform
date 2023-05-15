@@ -46,7 +46,7 @@
 }
 
 .grey {
-  color: colors.$grey;
+  color: colors.$grey-400;
 }
 
 .grey300 {
@@ -55,6 +55,10 @@
 
 .green {
   color: colors.$green;
+}
+
+.red {
+  color: colors.$red;
 }
 
 .bold,

@@ -10,8 +10,8 @@ import { Box } from "components/ui/Box";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";

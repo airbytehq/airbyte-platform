@@ -88,6 +88,7 @@ import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -371,6 +372,27 @@ class DefaultJobPersistenceTest {
     assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
   }
 
+  @Test
+  @DisplayName("Should be able to read attemptFailureSummary that was written with unsupported unicode")
+  void testWriteAttemptFailureSummaryWithUnsupportedUnicode() throws IOException {
+    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+    final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+    final Job created = jobPersistence.getJob(jobId);
+    final AttemptFailureSummary failureSummary = new AttemptFailureSummary().withFailures(
+        Collections.singletonList(new FailureReason().withFailureOrigin(FailureOrigin.SOURCE)
+            .withStacktrace(Character.toString(0))
+            .withInternalMessage("Includes invalid unicode \u0000")
+            .withExternalMessage("Includes invalid unicode \0")));
+    when(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242));
+    jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
+
+    Assertions.assertDoesNotThrow(() -> {
+      final Job updated = jobPersistence.getJob(jobId);
+      assertTrue(updated.getAttempts().get(0).getFailureSummary().isPresent());
+      assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+    });
+  }
+
   @Nested
   @DisplayName("Stats Related Tests")
   class Stats {
@@ -600,6 +622,60 @@ class DefaultJobPersistenceTest {
     }
 
     @Test
+    @DisplayName("Writing stats for different streams should not have side effects")
+    void testWritingStatsForDifferentStreams() throws IOException {
+      final long jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final int jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH);
+
+      final String stream1 = "s1";
+      final String namespace1 = "ns1";
+      final String stream2 = "s2";
+      final String namespace2 = "ns2";
+      final String stream3 = "s3";
+      final String namespace3 = null;
+
+      var streamStatsUpdate0 = List.of(
+          new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
+              .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+          new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
+              .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+          new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
+              .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, null, null, 1000L, null, streamStatsUpdate0);
+
+      var streamStatsUpdate1 = List.of(
+          new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
+              .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 1L, 10L, 1000L, null, streamStatsUpdate1);
+
+      var streamStatsUpdate2 = List.of(
+          new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
+              .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 3L, 30L, 1000L, null, streamStatsUpdate2);
+
+      var streamStatsUpdate3 = List.of(
+          new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
+              .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)));
+      jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 6L, 60L, 1000L, null, streamStatsUpdate3);
+
+      final Map<JobAttemptPair, AttemptStats> stats = jobPersistence.getAttemptStats(List.of(jobOneId));
+      final AttemptStats attempt1Stats = stats.get(new JobAttemptPair(jobOneId, jobOneAttemptNumberOne));
+
+      final List<StreamSyncStats> actualStreamSyncStats1 = getStreamSyncStats(attempt1Stats, stream1, namespace1);
+      assertEquals(streamStatsUpdate1, actualStreamSyncStats1);
+      final List<StreamSyncStats> actualStreamSyncStats2 = getStreamSyncStats(attempt1Stats, stream2, namespace2);
+      assertEquals(streamStatsUpdate2, actualStreamSyncStats2);
+      final List<StreamSyncStats> actualStreamSyncStats3 = getStreamSyncStats(attempt1Stats, stream3, namespace3);
+      assertEquals(streamStatsUpdate3, actualStreamSyncStats3);
+    }
+
+    private List<StreamSyncStats> getStreamSyncStats(final AttemptStats attemptStats, final String streamName, final String namespace) {
+      return attemptStats.perStreamStats().stream()
+          .filter(s -> s.getStreamName().equals(streamName) && (namespace == null || s.getStreamNamespace().equals(namespace)))
+          .toList();
+    }
+
+    @Test
     @DisplayName("Retrieving stats for an empty list should not cause an exception.")
     void testGetStatsForEmptyJobList() throws IOException {
       assertNotNull(jobPersistence.getAttemptStats(List.of()));
@@ -779,7 +855,7 @@ class DefaultJobPersistenceTest {
     jobPersistence.succeedAttempt(job1, job1Attempt3);
     jobPersistence.succeedAttempt(job2, job2Attempt3);
 
-    final List<AttemptWithJobInfo> allAttempts = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC, Instant.ofEpochSecond(0));
+    final List<AttemptWithJobInfo> allAttempts = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC, Instant.ofEpochSecond(0), 1000);
     assertEquals(6, allAttempts.size());
 
     assertEquals(job1, allAttempts.get(0).getJobInfo().getId());
@@ -801,7 +877,7 @@ class DefaultJobPersistenceTest {
     assertEquals(job2Attempt3, allAttempts.get(5).getAttempt().getAttemptNumber());
 
     final List<AttemptWithJobInfo> attemptsAfterTimestamp = jobPersistence.listAttemptsWithJobInfo(ConfigType.SYNC,
-        Instant.ofEpochSecond(allAttempts.get(2).getAttempt().getEndedAtInSecond().orElseThrow()));
+        Instant.ofEpochSecond(allAttempts.get(2).getAttempt().getEndedAtInSecond().orElseThrow()), 1000);
     assertEquals(3, attemptsAfterTimestamp.size());
 
     assertEquals(job1, attemptsAfterTimestamp.get(0).getJobInfo().getId());
@@ -1435,7 +1511,8 @@ class DefaultJobPersistenceTest {
     void testGetFirstSyncJobForConnectionId() throws IOException {
       final long jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG).orElseThrow();
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH));
-      final List<AttemptWithJobInfo> attemptsWithJobInfo = jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH);
+      final List<AttemptWithJobInfo> attemptsWithJobInfo =
+          jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH, 1000);
       final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0).getAttempt());
 
       final Instant afterNow = NOW.plusSeconds(1000);

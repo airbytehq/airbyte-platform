@@ -4,7 +4,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
-import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "hooks/services/Analytics/useAnalyticsService";
+import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
@@ -55,7 +55,7 @@ const MainRoutes: React.FC = () => {
   );
   useAnalyticsRegisterValues(analyticsContext);
 
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   return (
     <ApiErrorBoundary>
@@ -148,11 +148,18 @@ export const Routing: React.FC = () => {
           {/* Allow email verification no matter whether the user is logged in or not */}
           <Routes>
             <Route path={CloudRoutes.FirebaseAction} element={<VerifyEmailAction />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  {/* Show the login screen if the user is not logged in */}
+                  {!user && <Auth />}
+                  {/* Allow all regular routes if the user is logged in */}
+                  {user && <CloudMainViewRoutes />}
+                </>
+              }
+            />
           </Routes>
-          {/* Show the login screen if the user is not logged in */}
-          {!user && <Auth />}
-          {/* Allow all regular routes if the user is logged in */}
-          {user && <CloudMainViewRoutes />}
         </Suspense>
       </LDExperimentServiceProvider>
     </WorkspaceServiceProvider>

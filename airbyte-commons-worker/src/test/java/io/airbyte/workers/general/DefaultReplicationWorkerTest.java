@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -60,6 +61,7 @@ import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
@@ -81,6 +83,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -226,6 +232,44 @@ class DefaultReplicationWorkerTest {
         new ConcurrentHashMap<>());
     verify(source).close();
     verify(destination).close();
+  }
+
+  @Test
+  void testWorkerShutsDownLongRunningSchemaValidationThread() throws Exception {
+    final String streamName = sourceConfig.getCatalog().getStreams().get(0).getStream().getName();
+    final String streamNamespace = sourceConfig.getCatalog().getStreams().get(0).getStream().getNamespace();
+    final ExecutorService executorService = Executors.newFixedThreadPool(1);
+    final JsonSchemaValidator jsonSchemaValidator = mock(JsonSchemaValidator.class);
+    recordSchemaValidator = new RecordSchemaValidator(Map.of(new AirbyteStreamNameNamespacePair(streamName, streamNamespace),
+        sourceConfig.getCatalog().getStreams().get(0).getStream().getJsonSchema()), executorService, jsonSchemaValidator);
+
+    final CountDownLatch countDownLatch = new CountDownLatch(1);
+    doAnswer(invocation -> {
+      // Make the schema validation thread artificially hang so that we can test the behavior
+      // of what happens in the case the schema validation thread takes longer than the worker
+      countDownLatch.await(1, TimeUnit.MINUTES);
+      return null;
+    }).when(jsonSchemaValidator).validateInitializedSchema(Mockito.any(), Mockito.any());
+
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    worker.run(syncInput, jobRoot);
+
+    verify(source).start(sourceConfig, jobRoot);
+    verify(destination).start(destinationConfig, jobRoot);
+    verify(destination).accept(RECORD_MESSAGE1);
+    verify(destination).accept(RECORD_MESSAGE2);
+    verify(source, atLeastOnce()).close();
+    verify(destination).close();
+
+    // We want to ensure the thread is forcibly shut down by the worker (not running even though
+    // it should run for at least 2 minutes, in this test's mock) so that we never write to
+    // validationErrors while the metricReporter is trying to read from it.
+    assertTrue(executorService.isShutdown());
+
+    // Since the thread was left to hang after the first call, we expect 1, not 2, calls to
+    // validateInitializedSchema by the time the replication worker is done and shuts down the
+    // validation thread. We therefore expect the metricReporter to only report on the first record.
+    verify(jsonSchemaValidator, Mockito.times(1)).validateInitializedSchema(Mockito.any(), Mockito.any());
   }
 
   @Test
@@ -740,6 +784,7 @@ class DefaultReplicationWorkerTest {
   }
 
   private ReplicationWorker getDefaultReplicationWorker(final boolean fieldSelectionEnabled) {
+    final FieldSelector fieldSelector = new FieldSelector(recordSchemaValidator, workerMetricReporter, fieldSelectionEnabled, false);
     return new DefaultReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -749,11 +794,11 @@ class DefaultReplicationWorkerTest {
         messageTracker,
         syncPersistence,
         recordSchemaValidator,
+        fieldSelector,
         workerMetricReporter,
         connectorConfigUpdater,
         fieldSelectionEnabled,
-        heartbeatTimeoutChaperone,
-        false);
+        heartbeatTimeoutChaperone);
   }
 
 }

@@ -10,6 +10,7 @@ import { ConnectorIds } from "utils/connectors";
 
 import styles from "./AuthButton.module.scss";
 import GoogleAuthButton from "./GoogleAuthButton";
+import QuickBooksAuthButton from "./QuickBooksAuthButton";
 import { useFormikOauthAdapter } from "./useOauthFlowAdapter";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
@@ -35,6 +36,9 @@ function isGoogleConnector(connectorDefinitionId: string): boolean {
 function getButtonComponent(connectorDefinitionId: string) {
   if (isGoogleConnector(connectorDefinitionId)) {
     return GoogleAuthButton;
+  }
+  if (connectorDefinitionId === ConnectorIds.Sources.QuickBooks) {
+    return QuickBooksAuthButton;
   }
   return Button;
 }

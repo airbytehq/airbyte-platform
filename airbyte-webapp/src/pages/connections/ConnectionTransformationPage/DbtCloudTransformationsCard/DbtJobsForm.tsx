@@ -16,7 +16,7 @@ import { links } from "utils/links";
 import styles from "./DbtJobsForm.module.scss";
 import { JobsList } from "./JobsList";
 
-interface DbtJobListValues {
+export interface DbtJobListValues {
   jobs: DbtCloudJob[];
 }
 

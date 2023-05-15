@@ -299,7 +299,7 @@ public interface JobPersistence {
    *         attempts' endedAt in ascending order
    * @throws IOException while interacting with the db.
    */
-  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
+  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp, final int limit) throws IOException;
   /// ARCHIVE
 
   /**

@@ -8,8 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { Text } from "components/ui/Text";
 
-import { FORM_PATTERN_ERROR } from "core/form/schemaToYup";
-import { FormBaseItem } from "core/form/types";
+import { FormBaseItem, FORM_PATTERN_ERROR } from "core/form/types";
 import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./PropertySection.module.scss";

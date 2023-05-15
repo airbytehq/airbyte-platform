@@ -11,12 +11,12 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
 import { StreamReadInferredSchema } from "core/request/ConnectorBuilderClient";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import {
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
@@ -64,7 +64,7 @@ function getDiff(existingSchema: string | undefined, detectedSchema: object): Di
 
 export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }) => {
   const analyticsService = useAnalyticsService();
-  const { streams, testStreamIndex } = useConnectorBuilderTestState();
+  const { streams, testStreamIndex } = useConnectorBuilderTestRead();
   const { editorView } = useConnectorBuilderFormState();
   const [field, , helpers] = useField(`streams[${testStreamIndex}].schema`);
   const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);

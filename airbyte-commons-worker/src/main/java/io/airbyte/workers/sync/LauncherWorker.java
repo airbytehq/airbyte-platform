@@ -129,11 +129,15 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
         // Manually add the worker environment to the env var map
         envMap.put(WorkerConstants.WORKER_ENVIRONMENT, containerOrchestratorConfig.workerEnvironment().name());
 
+        // Merge in the env from the ContainerOrchestratorConfig
+        containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
+
         final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
         fileMap.putAll(Map.of(
             OrchestratorConstants.INIT_FILE_APPLICATION, application,
             OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG, Jsons.serialize(jobRunConfig),
             OrchestratorConstants.INIT_FILE_INPUT, Jsons.serialize(input),
+            // OrchestratorConstants.INIT_FILE_ENV_MAP might be duplicated since the pod env contains everything
             OrchestratorConstants.INIT_FILE_ENV_MAP, Jsons.serialize(envMap)));
 
         final Map<Integer, Integer> portMap = Map.of(
@@ -168,7 +172,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
             containerOrchestratorConfig.dataPlaneCredsSecretName(),
             containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
             containerOrchestratorConfig.googleApplicationCredentials(),
-            containerOrchestratorConfig.environmentVariables(),
+            envMap,
             serverPort);
 
         // Define what to do on cancellation.

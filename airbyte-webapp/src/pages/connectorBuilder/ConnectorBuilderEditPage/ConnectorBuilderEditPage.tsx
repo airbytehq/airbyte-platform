@@ -11,11 +11,11 @@ import { builderFormValidationSchema, BuilderFormValues } from "components/conne
 import { YamlEditor } from "components/connectorBuilder/YamlEditor";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
-  ConnectorBuilderTestStateProvider,
+  ConnectorBuilderTestReadProvider,
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
   ConnectorBuilderFormManagementStateProvider,
@@ -73,14 +73,15 @@ export const ConnectorBuilderEditPage: React.FC = () => (
   <ConnectorBuilderFormManagementStateProvider>
     <ConnectorBuilderLocalStorageProvider>
       <ConnectorBuilderFormStateProvider>
-        <ConnectorBuilderTestStateProvider>
+        <ConnectorBuilderTestReadProvider>
           <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
           <ConnectorBuilderEditPageInner />
-        </ConnectorBuilderTestStateProvider>
+        </ConnectorBuilderTestReadProvider>
       </ConnectorBuilderFormStateProvider>
     </ConnectorBuilderLocalStorageProvider>
   </ConnectorBuilderFormManagementStateProvider>
 );
+ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
 const Panels = React.memo(
   ({
@@ -144,3 +145,4 @@ const Panels = React.memo(
     );
   }
 );
+Panels.displayName = "Panels";

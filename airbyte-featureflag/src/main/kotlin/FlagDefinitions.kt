@@ -28,11 +28,15 @@ object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValida
 
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
 
+object NormalizationInDestinationBiqQuery : Temporary<Boolean>(key = "connectors.normalizationInDestination.bigquery", default = false)
+
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
+
+object UseActorDefinitionVersionTableDefaults : Temporary<Boolean>(key = "connectors.useActorDefinitionVersionTableDefaults", default = false)
 
 object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
@@ -44,6 +48,13 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy", default = false)
 
+object AutoPropagateSchema : Temporary<Boolean>(key = "autopropagation.enabled", default = false)
+
+object CheckConnectionUseApiEnabled : Temporary<Boolean>(key = "check-connection-use-api", default = false)
+
+object ShouldRunOnGkeDataplane : Temporary<Boolean>(key="should-run-on-gke-dataplane", default = false)
+
+object ShouldRunRefreshSchema : Temporary<Boolean>(key="should-run-refresh-schema", default = true)
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -51,6 +62,7 @@ object NewTrialPolicyEnabled : Temporary<Boolean>(key = "billing.newTrialPolicy"
 object HeartbeatMaxSecondsBetweenMessages : Permanent<String>(key = "heartbeat-max-seconds-between-messages", default = "10800")
 
 object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.failSync", default = true)
+
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {

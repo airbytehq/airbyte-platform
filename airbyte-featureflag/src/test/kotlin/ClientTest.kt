@@ -8,6 +8,7 @@ import com.launchdarkly.sdk.server.LDClient
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
+import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.called
 import io.mockk.clearMocks
@@ -16,6 +17,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -26,7 +28,6 @@ import kotlin.io.path.writeText
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** workspaceId used across multiple tests */
@@ -404,11 +405,10 @@ class InjectTest {
   }
 
   @Inject
-  var featureFlagClient: FeatureFlagClient? = null
+  lateinit var featureFlagClient: FeatureFlagClient
 
   @Test
   fun `ConfigFileClient loads if no client property defined`() {
-    assertNotNull(featureFlagClient)
     assertTrue { featureFlagClient is ConfigFileClient }
     assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
   }
@@ -416,7 +416,6 @@ class InjectTest {
   @Property(name = CONFIG_FF_CLIENT, value = "")
   @Test
   fun `ConfigFileClient loads if client property is empty`() {
-    assertNotNull(featureFlagClient)
     assertTrue { featureFlagClient is ConfigFileClient }
     assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
   }
@@ -424,7 +423,6 @@ class InjectTest {
   @Property(name = CONFIG_FF_CLIENT, value = "not-launchdarkly")
   @Test
   fun `ConfigFileClient loads if client property is not ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
-    assertNotNull(featureFlagClient)
     assertTrue { featureFlagClient is ConfigFileClient }
     assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
   }
@@ -434,8 +432,38 @@ class InjectTest {
   fun `LaunchDarklyClient loads if client is defined as ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
     every { ldClient.boolVariation(flag.key, any<LDContext>(), flag.default) } returns flag.default
 
-    assertNotNull(featureFlagClient)
     assertTrue { featureFlagClient is LaunchDarklyClient }
     assertTrue { featureFlagClient?.boolVariation(flag, context) ?: false }
   }
+}
+
+@MicronautTest(rebuildContext = true)
+class NonMockBeanTest {
+  @Singleton
+  class Dummy(val ffClient: FeatureFlagClient)
+
+  @Inject
+  lateinit var dummy: Dummy
+
+  @Test
+  fun `ensure ConfigFileClient is injected when no MockBean is defined`() {
+    assertTrue { dummy.ffClient is ConfigFileClient }
+  }
+}
+
+@MicronautTest(rebuildContext = true)
+class MockBeanTest {
+  @Singleton
+  class Dummy(val ffClient: FeatureFlagClient)
+
+  @Inject
+  lateinit var dummy: Dummy
+
+  @Test
+  fun `ensure MockBean is injected when @MockBean is defined`() {
+    assertTrue { dummy.ffClient is TestClient }
+  }
+
+  @MockBean(FeatureFlagClient::class)
+  fun featureFlagClient(): TestClient = mockk<TestClient>()
 }

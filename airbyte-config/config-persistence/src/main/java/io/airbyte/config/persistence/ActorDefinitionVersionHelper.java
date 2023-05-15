@@ -12,8 +12,10 @@ import io.airbyte.config.persistence.version_overrides.LocalDefinitionVersionOve
 import io.airbyte.config.persistence.version_overrides.OverrideTargetType;
 import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseActorDefinitionVersionTableDefaults;
 import io.airbyte.featureflag.Workspace;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -30,23 +32,45 @@ public class ActorDefinitionVersionHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
 
+  private final ConfigRepository configRepository;
   private final LocalDefinitionVersionOverrideProvider localOverrideProvider;
   private final FeatureFlagClient featureFlagClient;
 
-  public ActorDefinitionVersionHelper(final LocalDefinitionVersionOverrideProvider localOverrideProvider, final FeatureFlagClient featureFlagClient) {
+  public ActorDefinitionVersionHelper(final ConfigRepository configRepository,
+                                      final LocalDefinitionVersionOverrideProvider localOverrideProvider,
+                                      final FeatureFlagClient featureFlagClient) {
     this.localOverrideProvider = localOverrideProvider;
     this.featureFlagClient = featureFlagClient;
+    this.configRepository = configRepository;
     LOGGER.info("ActorDefinitionVersionHelper initialized with {}", localOverrideProvider.getClass().getSimpleName());
   }
 
-  private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition) {
+  private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition, final UUID workspaceId)
+      throws IOException, ConfigNotFoundException {
+    if (featureFlagClient.boolVariation(UseActorDefinitionVersionTableDefaults.INSTANCE, new Workspace(workspaceId))) {
+      final UUID versionId = sourceDefinition.getDefaultVersionId();
+      if (versionId == null) {
+        throw new RuntimeException("Source Definition " + sourceDefinition.getSourceDefinitionId() + " has no default version");
+      }
+      return configRepository.getActorDefinitionVersion(versionId);
+    }
+
     return new ActorDefinitionVersion()
         .withDockerRepository(sourceDefinition.getDockerRepository())
         .withDockerImageTag(sourceDefinition.getDockerImageTag())
         .withSpec(sourceDefinition.getSpec());
   }
 
-  private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition) {
+  private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition, final UUID workspaceId)
+      throws ConfigNotFoundException, IOException {
+    if (featureFlagClient.boolVariation(UseActorDefinitionVersionTableDefaults.INSTANCE, new Workspace(workspaceId))) {
+      final UUID versionId = destinationDefinition.getDefaultVersionId();
+      if (versionId == null) {
+        throw new RuntimeException("Destination Definition " + destinationDefinition.getDestinationDefinitionId() + " has no default version");
+      }
+      return configRepository.getActorDefinitionVersion(versionId);
+    }
+
     return new ActorDefinitionVersion()
         .withDockerRepository(destinationDefinition.getDockerRepository())
         .withDockerImageTag(destinationDefinition.getDockerImageTag())
@@ -63,8 +87,9 @@ public class ActorDefinitionVersionHelper {
    */
   public ActorDefinitionVersion getSourceVersion(final StandardSourceDefinition sourceDefinition,
                                                  final UUID workspaceId,
-                                                 @Nullable final UUID actorId) {
-    final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition);
+                                                 @Nullable final UUID actorId)
+      throws ConfigNotFoundException, IOException {
+    final ActorDefinitionVersion defaultVersion = getDefaultSourceVersion(sourceDefinition, workspaceId);
 
     if (!featureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(workspaceId))) {
       return defaultVersion;
@@ -92,7 +117,8 @@ public class ActorDefinitionVersionHelper {
    * @param workspaceId workspace id
    * @return actor definition version
    */
-  public ActorDefinitionVersion getSourceVersion(final StandardSourceDefinition sourceDefinition, final UUID workspaceId) {
+  public ActorDefinitionVersion getSourceVersion(final StandardSourceDefinition sourceDefinition, final UUID workspaceId)
+      throws ConfigNotFoundException, IOException {
     return getSourceVersion(sourceDefinition, workspaceId, null);
   }
 
@@ -106,8 +132,9 @@ public class ActorDefinitionVersionHelper {
    */
   public ActorDefinitionVersion getDestinationVersion(final StandardDestinationDefinition destinationDefinition,
                                                       final UUID workspaceId,
-                                                      @Nullable final UUID actorId) {
-    final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition);
+                                                      @Nullable final UUID actorId)
+      throws ConfigNotFoundException, IOException {
+    final ActorDefinitionVersion defaultVersion = getDefaultDestinationVersion(destinationDefinition, workspaceId);
 
     if (!featureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(workspaceId))) {
       return defaultVersion;
@@ -136,7 +163,8 @@ public class ActorDefinitionVersionHelper {
    * @return actor definition version
    */
   public ActorDefinitionVersion getDestinationVersion(final StandardDestinationDefinition destinationDefinition,
-                                                      final UUID workspaceId) {
+                                                      final UUID workspaceId)
+      throws ConfigNotFoundException, IOException {
     return getDestinationVersion(destinationDefinition, workspaceId, null);
   }
 

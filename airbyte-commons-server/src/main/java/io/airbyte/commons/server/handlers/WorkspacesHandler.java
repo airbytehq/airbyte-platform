@@ -143,7 +143,6 @@ public class WorkspacesHandler {
     for (final SourceRead sourceRead : sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody).getSources()) {
       sourceHandler.deleteSource(sourceRead);
     }
-
     persistedWorkspace.withTombstone(true);
     persistStandardWorkspace(persistedWorkspace);
   }
@@ -155,7 +154,7 @@ public class WorkspacesHandler {
     return new WorkspaceReadList().workspaces(reads);
   }
 
-  public WorkspaceReadList listWorkspacesPaginated(ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+  public WorkspaceReadList listWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
       throws IOException {
     final List<StandardWorkspace> standardWorkspaces = configRepository.listStandardWorkspacesPaginated(new ResourcesQueryPaginated(
         listResourcesForWorkspacesRequestBody.getWorkspaceIds(),

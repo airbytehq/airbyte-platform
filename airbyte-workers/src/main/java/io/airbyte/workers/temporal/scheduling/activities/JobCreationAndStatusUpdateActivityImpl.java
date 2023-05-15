@@ -6,11 +6,8 @@ package io.airbyte.workers.temporal.scheduling.activities;
 
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_ORIGINS_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.FAILURE_TYPES_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.persistence.job.models.AttemptStatus.FAILED;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -63,6 +60,7 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.JobStatus;
 import io.airbyte.workers.WorkerConstants;
+import io.airbyte.workers.context.AttemptContext;
 import io.airbyte.workers.helper.FailureHelper;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.util.CollectionUtils;
@@ -169,9 +167,9 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public JobCreationOutput createNewJob(final JobCreationInput input) {
-    try {
-      ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
+    new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
 
+    try {
       // Fail non-terminal jobs first to prevent this activity from repeatedly trying to create a new job
       // and failing, potentially resulting in the workflow ending up in a quarantined state.
       // Another non-terminal job is not expected to exist at this point in the normal case, but this
@@ -244,9 +242,10 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public AttemptNumberCreationOutput createNewAttemptNumber(final AttemptCreationInput input) throws RetryableException {
+    new AttemptContext(null, input.getJobId(), null).addTagsToTrace();
+
     try {
       final long jobId = input.getJobId();
-      ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId));
       final Job job = jobPersistence.getJob(jobId);
 
       final Path jobRoot = TemporalUtils.getJobRoot(workspaceRoot, String.valueOf(jobId), job.getAttemptsCount());
@@ -265,12 +264,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void jobSuccessWithAttemptNumber(final JobSuccessInputWithAttemptNumber input) {
-    ApmTraceUtils.addTagsToTrace(
-        Map.of(ATTEMPT_NUMBER_KEY, input.getAttemptNumber(), CONNECTION_ID_KEY, input.getConnectionId(), JOB_ID_KEY, input.getJobId()));
+    new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
+
     try {
       final long jobId = input.getJobId();
       final int attemptNumber = input.getAttemptNumber();
-      ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, attemptNumber, JOB_ID_KEY, jobId));
 
       if (input.getStandardSyncOutput() != null) {
         final JobOutput jobOutput = new JobOutput().withSync(input.getStandardSyncOutput());
@@ -294,6 +292,8 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void jobFailure(final JobFailureInput input) {
+    new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
+
     try {
       final long jobId = input.getJobId();
       jobPersistence.failJob(jobId);
@@ -303,7 +303,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       emitJobIdToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, jobId);
 
       final UUID connectionId = UUID.fromString(job.getScope());
-      ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, input.getAttemptNumber(), CONNECTION_ID_KEY, connectionId, JOB_ID_KEY, jobId));
+      if (!connectionId.equals(input.getConnectionId())) {
+        log.warn("inconsistent connectionId for jobId '{}' (input:'{}', db:'{}')", jobId, input.getConnectionId(), connectionId);
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT, 1);
+      }
+
       final JobSyncConfig jobSyncConfig = job.getConfig().getSync();
       final String sourceDockerImage;
       final String destinationDockerImage;
@@ -329,15 +333,13 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void attemptFailureWithAttemptNumber(final AttemptNumberFailureInput input) {
-    ApmTraceUtils.addTagsToTrace(
-        Map.of(ATTEMPT_NUMBER_KEY, input.getAttemptNumber(), CONNECTION_ID_KEY, input.getConnectionId(), JOB_ID_KEY, input.getJobId()));
+    new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
       final int attemptNumber = input.getAttemptNumber();
       final long jobId = input.getJobId();
       final AttemptFailureSummary failureSummary = input.getAttemptFailureSummary();
 
-      ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, attemptNumber, JOB_ID_KEY, jobId));
       traceFailures(failureSummary);
 
       jobPersistence.failAttempt(jobId, attemptNumber);
@@ -358,13 +360,11 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void jobCancelledWithAttemptNumber(final JobCancelledInputWithAttemptNumber input) {
-    ApmTraceUtils.addTagsToTrace(
-        Map.of(ATTEMPT_NUMBER_KEY, input.getAttemptNumber(), CONNECTION_ID_KEY, input.getConnectionId(), JOB_ID_KEY, input.getJobId()));
+    new AttemptContext(input.getConnectionId(), input.getJobId(), input.getAttemptNumber()).addTagsToTrace();
 
     try {
       final long jobId = input.getJobId();
       final int attemptNumber = input.getAttemptNumber();
-      ApmTraceUtils.addTagsToTrace(Map.of(ATTEMPT_NUMBER_KEY, attemptNumber, JOB_ID_KEY, jobId));
       jobPersistence.failAttempt(jobId, attemptNumber);
       jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, input.getAttemptFailureSummary());
       jobPersistence.cancelJob(jobId);
@@ -382,8 +382,9 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void reportJobStart(final ReportJobStartInput input) {
+    new AttemptContext(input.getConnectionId(), input.getJobId(), null).addTagsToTrace();
+
     try {
-      ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, input.getJobId()));
       final Job job = jobPersistence.getJob(input.getJobId());
       jobTracker.trackSync(job, JobState.STARTED);
     } catch (final IOException e) {
@@ -394,7 +395,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public void ensureCleanJobState(final EnsureCleanJobStateInput input) {
-    ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, input.getConnectionId()));
+    new AttemptContext(input.getConnectionId(), null, null).addTagsToTrace();
     failNonTerminalJobs(input.getConnectionId());
   }
 

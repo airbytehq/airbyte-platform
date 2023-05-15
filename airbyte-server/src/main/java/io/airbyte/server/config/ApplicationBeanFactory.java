@@ -11,9 +11,7 @@ import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.TemporalEventRunner;
 import io.airbyte.commons.temporal.TemporalClient;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
-import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.Configs.TrackingStrategy;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -54,16 +52,6 @@ public class ApplicationBeanFactory {
   @Singleton
   public TrackingStrategy trackingStrategy(@Value("${airbyte.tracking-strategy}") final String trackingStrategy) {
     return convertToEnum(trackingStrategy, TrackingStrategy::valueOf, TrackingStrategy.LOGGING);
-  }
-
-  @Singleton
-  public AirbyteVersion airbyteVersion(@Value("${airbyte.version}") final String airbyteVersion) {
-    return new AirbyteVersion(airbyteVersion);
-  }
-
-  @Singleton
-  public DeploymentMode deploymentMode(@Value("${airbyte.deployment-mode}") final String deploymentMode) {
-    return convertToEnum(deploymentMode, DeploymentMode::valueOf, DeploymentMode.OSS);
   }
 
   @Singleton

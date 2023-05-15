@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 
 export const useAnalyticsTrackFunctions = () => {
   const analytics = useAnalyticsService();

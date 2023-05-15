@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 
 import {
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 export const useTestWarnings = () => {
@@ -12,7 +12,7 @@ export const useTestWarnings = () => {
   const {
     testStreamIndex,
     streamRead: { data: streamReadData },
-  } = useConnectorBuilderTestState();
+  } = useConnectorBuilderTestRead();
 
   const currentStream = editorView === "ui" && builderFormValues.streams[testStreamIndex];
 

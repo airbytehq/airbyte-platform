@@ -24,8 +24,8 @@ import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.util.Collections;
 import java.util.Optional;
 
 /**
@@ -39,7 +39,7 @@ public class AirbyteIntegrationLauncherFactory {
   private final AirbyteProtocolVersionedMigratorFactory migratorFactory;
   private final FeatureFlags featureFlags;
 
-  public AirbyteIntegrationLauncherFactory(@Named("replicationProcessFactory") final ProcessFactory processFactory,
+  public AirbyteIntegrationLauncherFactory(final ProcessFactory processFactory,
                                            final AirbyteMessageSerDeProvider serDeProvider,
                                            final AirbyteProtocolVersionedMigratorFactory migratorFactory,
                                            final FeatureFlags featureFlags) {
@@ -68,7 +68,9 @@ public class AirbyteIntegrationLauncherFactory {
         // At this moment, if either source or destination is from custom connector image, we will put all
         // jobs into isolated pool to run.
         launcherConfig.getIsCustomConnector(),
-        featureFlags);
+        featureFlags,
+        Optional.ofNullable(launcherConfig.getAdditionalEnvironmentVariables())
+            .orElse(Collections.emptyMap()));
   }
 
   /**

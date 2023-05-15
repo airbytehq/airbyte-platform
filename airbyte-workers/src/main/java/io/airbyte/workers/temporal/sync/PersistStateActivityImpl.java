@@ -49,6 +49,8 @@ public class PersistStateActivityImpl implements PersistStateActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public boolean persist(final UUID connectionId, final StandardSyncOutput syncOutput, final ConfiguredAirbyteCatalog configuredCatalog) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_PERSIST_STATE, 1);
+
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId.toString()));
 
     if (syncOutput.getCommitStateAsap() != null && syncOutput.getCommitStateAsap()) {

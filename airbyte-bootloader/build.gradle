@@ -56,11 +56,6 @@ run {
     environment 'DATABASE_URL', 'jdbc:postgresql://localhost:5432/airbyte'
 }
 
-test {
-    // Required to enable mocked beans
-    systemProperty("mockito.test.enabled", "true")
-}
-
 // produce reproducible archives
 // (see https://docs.gradle.org/current/userguide/working_with_files.html#sec:reproducible_archives)
 tasks.withType(AbstractArchiveTask) {

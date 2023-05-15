@@ -1,5 +1,6 @@
 import path from "path";
 
+import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
 import { UserConfig } from "vite";
@@ -8,9 +9,13 @@ import checker from "vite-plugin-checker";
 import svgrPlugin from "vite-plugin-svgr";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 
-import { buildInfo, docMiddleware } from "./packages/vite-plugins";
-import { environmentVariables } from "./packages/vite-plugins/environment-variables";
-import { experimentOverwrites } from "./packages/vite-plugins/experiment-overwrites";
+import {
+  buildInfo,
+  compileFormatJsMessages,
+  docMiddleware,
+  environmentVariables,
+  experimentOverwrites,
+} from "./packages/vite-plugins";
 
 export default defineConfig(() => {
   const config: UserConfig = {
@@ -19,7 +24,9 @@ export default defineConfig(() => {
       basicSsl(),
       react(),
       buildInfo(),
+      compileFormatJsMessages(),
       viteTsconfigPaths(),
+      viteYaml(),
       svgrPlugin({
         svgrOptions: {
           titleProp: true,

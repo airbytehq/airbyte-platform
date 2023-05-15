@@ -33,4 +33,6 @@ export const webBackendGetFreeConnectorProgramInfoForWorkspace = (
 export interface WorkspaceFreeConnectorProgramInfoResponse {
   hasEligibleConnector: boolean;
   hasPaymentAccountSaved: boolean;
+  hasEligibleConnections: boolean;
+  hasNonEligibleConnections: boolean;
 }

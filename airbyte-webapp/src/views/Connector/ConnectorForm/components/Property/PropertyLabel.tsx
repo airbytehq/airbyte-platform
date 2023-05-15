@@ -1,10 +1,9 @@
 import React, { useMemo } from "react";
 
+import { LabelInfo } from "components/Label";
 import { ControlLabels } from "components/LabeledControl";
 
 import { FormBlock } from "core/form/types";
-
-import { LabelInfo } from "./LabelInfo";
 
 interface PropertyLabelProps {
   property: FormBlock;

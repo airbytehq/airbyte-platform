@@ -12,9 +12,10 @@ import { NumberBadge } from "components/ui/NumberBadge";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
-import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderTestInputState } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./ConfigMenu.module.scss";
@@ -28,7 +29,8 @@ interface ConfigMenuProps {
 
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
-  const { testInputJson, setTestInputJson } = useConnectorBuilderTestState();
+  const { testInputJson, setTestInputJson } = useConnectorBuilderTestInputState();
+  const { trackError } = useAppMonitoringService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
 
@@ -89,7 +91,11 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
           title={<FormattedMessage id="connectorBuilder.configMenuTitle" />}
         >
           <ModalBody>
-            <ConfigMenuErrorBoundaryComponent currentView={editorView} closeAndSwitchToYaml={switchToYaml}>
+            <ConfigMenuErrorBoundaryComponent
+              currentView={editorView}
+              closeAndSwitchToYaml={switchToYaml}
+              trackError={trackError}
+            >
               <FlexContainer direction="column">
                 {showInputsWarning && (
                   <Message
@@ -107,7 +113,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                   selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
                   formValues={{ connectionConfiguration: testInputJson }}
                   onSubmit={async (values) => {
-                    setTestInputJson(values.connectionConfiguration as StreamReadRequestBodyConfig);
+                    setTestInputJson(values.connectionConfiguration as ConnectorConfig);
                     setIsOpen(false);
                   }}
                   isEditMode

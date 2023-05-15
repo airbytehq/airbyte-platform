@@ -7,8 +7,8 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { downloadFile } from "utils/file";
 
@@ -70,6 +70,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
       onClick={handleClick}
       disabled={buttonDisabled}
       icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      data-testid="download-yaml-button"
     >
       <FormattedMessage id="connectorBuilder.downloadYaml" />
     </Button>

@@ -1,7 +1,7 @@
 import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useCurrentWorkspace, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
 
 export interface WebhookPayload {
@@ -28,8 +28,6 @@ const useWorkspace = () => {
       actionDescription: "Setup preferences set",
       email: data.email,
       anonymized: data.anonymousDataCollection,
-      subscribed_newsletter: data.news,
-      subscribed_security: data.securityUpdates,
       security_check_result: securityCheck,
     });
 

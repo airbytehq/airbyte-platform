@@ -83,3 +83,25 @@
 .emptyStreamViewText {
   color: colors.$grey-300;
 }
+
+.slackLink {
+  color: colors.$dark-blue;
+
+  &:hover {
+    color: colors.$blue;
+  }
+
+  & a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.slackIcon {
+  height: 14px;
+  width: 14px;
+}
+
+.cdkVersion {
+  color: colors.$grey-300;
+}

@@ -8,7 +8,7 @@ import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { User } from "packages/cloud/lib/domain/users";

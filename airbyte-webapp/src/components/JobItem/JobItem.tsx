@@ -1,5 +1,4 @@
 import React, { Suspense, useCallback, useRef, useState } from "react";
-import styled from "styled-components";
 
 import { Spinner } from "components/ui/Spinner";
 
@@ -7,23 +6,13 @@ import { SynchronousJobRead } from "core/request/AirbyteClient";
 
 import { useAttemptLink } from "./attemptLinkUtils";
 import ContentWrapper from "./components/ContentWrapper";
-import MainInfo from "./components/MainInfo";
+import { JobSummary } from "./components/JobSummary";
 import styles from "./JobItem.module.scss";
 import { JobsWithJobs } from "./types";
 import { didJobSucceed, getJobAttempts, getJobId } from "./utils";
 
 const ErrorDetails = React.lazy(() => import("./components/ErrorDetails"));
 const JobLogs = React.lazy(() => import("./components/JobLogs"));
-
-const Item = styled.div<{ isFailed: boolean }>`
-  border-bottom: 1px solid ${({ theme }) => theme.greyColor20};
-  font-size: 15px;
-  line-height: 18px;
-
-  &:hover {
-    background: ${({ theme, isFailed }) => (isFailed ? theme.dangerTransparentColor : theme.greyColor0)};
-  }
-`;
 
 interface JobItemProps {
   job: SynchronousJobRead | JobsWithJobs;
@@ -52,13 +41,13 @@ export const JobItem: React.FC<JobItemProps> = ({ job }) => {
   }, [job, linkedJobId]);
 
   return (
-    <Item isFailed={!didSucceed} ref={scrollAnchor}>
-      <MainInfo isOpen={isOpen} isFailed={!didSucceed} onExpand={onExpand} job={job} attempts={getJobAttempts(job)} />
+    <div className={styles.jobItem} ref={scrollAnchor}>
+      <JobSummary isOpen={isOpen} isFailed={!didSucceed} onExpand={onExpand} job={job} attempts={getJobAttempts(job)} />
       <ContentWrapper isOpen={isOpen} onToggled={onDetailsToggled}>
         <div>
           <Suspense
             fallback={
-              <div className={styles.logsLoadingContainer}>
+              <div className={styles.jobItem__loading}>
                 <Spinner size="sm" />
               </div>
             }
@@ -72,6 +61,6 @@ export const JobItem: React.FC<JobItemProps> = ({ job }) => {
           </Suspense>
         </div>
       </ContentWrapper>
-    </Item>
+    </div>
   );
 };

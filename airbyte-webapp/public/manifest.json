@@ -3,22 +3,37 @@
   "name": "Airbyte",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "icon_blue_16.png",
+      "type": "image/png",
+      "sizes": "16x16"
     },
     {
-      "src": "logo112.png",
+      "src": "icon_blue_24.png",
+      "type": "image/png",
+      "sizes": "24x24"
+    },
+    {
+      "src": "icon_blue_32.png",
+      "type": "image/png",
+      "sizes": "32x32"
+    },
+    {
+      "src": "icon_blue_64.png",
+      "type": "image/png",
+      "sizes": "64x64"
+    },
+    {
+      "src": "icon_blue_112.png",
       "type": "image/png",
       "sizes": "112x112"
     },
     {
-      "src": "logo224.png",
+      "src": "icon_blue_224.png",
       "type": "image/png",
       "sizes": "224x224"
     },
     {
-      "src": "logo336.png",
+      "src": "logo.png",
       "type": "image/png",
       "sizes": "336x336"
     }

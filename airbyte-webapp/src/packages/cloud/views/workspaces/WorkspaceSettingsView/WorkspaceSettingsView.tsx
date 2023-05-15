@@ -8,7 +8,8 @@ import * as yup from "yup";
 import { LabeledInput } from "components";
 import { Button } from "components/ui/Button";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import {
@@ -36,25 +37,35 @@ export const WorkspaceSettingsView: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const [workspaceWasDeleted, setWorkspaceWasDeleted] = useState(false);
   const navigate = useNavigate();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
-  const deleteCurrentWorkspace = () =>
-    removeCloudWorkspace(workspace.workspaceId)
-      .then(() => {
-        registerNotification({
-          id: "settings.workspace.delete.success",
-          text: formatMessage({ id: "settings.workspaceSettings.delete.success" }),
-          type: "success",
-        });
-        setWorkspaceWasDeleted(true);
-        setTimeout(() => navigate(`/${RoutePaths.Workspaces}`), 600);
-      })
-      .catch(() => {
-        registerNotification({
-          id: "settings.workspace.delete.error",
-          text: formatMessage({ id: "settings.workspaceSettings.delete.error" }),
-          type: "error",
-        });
-      });
+  const deleteCurrentWorkspace = () => {
+    openConfirmationModal({
+      title: "settings.workspaceSettings.delete.confirmation.title",
+      text: "settings.workspaceSettings.delete.confirmation.text",
+      submitButtonText: "settings.workspaceSettings.delete.confirmation.submitButtonText",
+      onSubmit() {
+        removeCloudWorkspace(workspace.workspaceId)
+          .then(() => {
+            registerNotification({
+              id: "settings.workspace.delete.success",
+              text: formatMessage({ id: "settings.workspaceSettings.delete.success" }),
+              type: "success",
+            });
+            setWorkspaceWasDeleted(true);
+            setTimeout(() => navigate(`/${RoutePaths.Workspaces}`), 600);
+          })
+          .catch(() => {
+            registerNotification({
+              id: "settings.workspace.delete.error",
+              text: formatMessage({ id: "settings.workspaceSettings.delete.error" }),
+              type: "error",
+            });
+          })
+          .finally(closeConfirmationModal);
+      },
+    });
+  };
 
   return (
     <>

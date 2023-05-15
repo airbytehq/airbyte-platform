@@ -253,7 +253,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   }
 
   private void registerNotification(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfig) {
-    log.error("registering new notification workflow");
+    log.info("registering new notification workflow");
     final Worker notificationWorker = factory.newWorker(TemporalJobType.NOTIFY.name(), getWorkerOptions(maxWorkersConfig.getMaxNotifyWorkers()));
     final WorkflowImplementationOptions options =
         WorkflowImplementationOptions.newBuilder().setFailWorkflowExceptionTypes(NonDeterministicException.class).build();

@@ -8,9 +8,10 @@
 }
 
 .content {
-  padding: 0 35px;
+  padding: 0 variables.$spacing-2xl;
 }
 
+// can be removed with new connection flow flag being turned on
 .stepsContainer {
   padding-top: variables.$spacing-lg;
   padding-left: variables.$spacing-lg;

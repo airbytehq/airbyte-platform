@@ -30,6 +30,7 @@ import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.WorkerEnvConstants;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -51,6 +52,8 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   private final ResourceRequirements resourceRequirement;
   private final FeatureFlags featureFlags;
 
+  private final Map<String, String> additionalEnvironmentVariables;
+
   /**
    * If true, launcher will use a separated isolated pool to run the job.
    * <p>
@@ -66,7 +69,8 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
                                     final ResourceRequirements resourceRequirement,
                                     final AllowedHosts allowedHosts,
                                     final boolean useIsolatedPool,
-                                    final FeatureFlags featureFlags) {
+                                    final FeatureFlags featureFlags,
+                                    final Map<String, String> additionalEnvironmentVariables) {
     this.jobId = jobId;
     this.attempt = attempt;
     this.imageName = imageName;
@@ -75,6 +79,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
     this.allowedHosts = allowedHosts;
     this.featureFlags = featureFlags;
     this.useIsolatedPool = useIsolatedPool;
+    this.additionalEnvironmentVariables = additionalEnvironmentVariables;
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -82,6 +87,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   public Process spec(final Path jobRoot) throws WorkerException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId, JOB_ROOT_KEY, jobRoot, DOCKER_IMAGE_KEY, imageName));
     return processFactory.create(
+        ResourceType.SPEC,
         SPEC_JOB,
         jobId,
         attempt,
@@ -96,6 +102,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         Map.of(JOB_TYPE_KEY, SPEC_JOB),
         getWorkerMetadata(),
         Collections.emptyMap(),
+        additionalEnvironmentVariables,
         "spec");
   }
 
@@ -104,6 +111,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   public Process check(final Path jobRoot, final String configFilename, final String configContents) throws WorkerException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId, JOB_ROOT_KEY, jobRoot, DOCKER_IMAGE_KEY, imageName));
     return processFactory.create(
+        ResourceType.CHECK,
         CHECK_JOB,
         jobId,
         attempt,
@@ -118,6 +126,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         Map.of(JOB_TYPE_KEY, CHECK_JOB),
         getWorkerMetadata(),
         Collections.emptyMap(),
+        additionalEnvironmentVariables,
         "check",
         CONFIG, configFilename);
   }
@@ -127,6 +136,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
   public Process discover(final Path jobRoot, final String configFilename, final String configContents) throws WorkerException {
     ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId, JOB_ROOT_KEY, jobRoot, DOCKER_IMAGE_KEY, imageName));
     return processFactory.create(
+        ResourceType.DISCOVER,
         DISCOVER_JOB,
         jobId,
         attempt,
@@ -141,6 +151,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         Map.of(JOB_TYPE_KEY, DISCOVER_JOB),
         getWorkerMetadata(),
         Collections.emptyMap(),
+        additionalEnvironmentVariables,
         "discover",
         CONFIG, configFilename);
   }
@@ -174,6 +185,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
     }
 
     return processFactory.create(
+        ResourceType.REPLICATION,
         READ_STEP,
         jobId,
         attempt,
@@ -188,6 +200,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, READ_STEP),
         getWorkerMetadata(),
         Collections.emptyMap(),
+        additionalEnvironmentVariables,
         arguments.toArray(new String[arguments.size()]));
   }
 
@@ -205,6 +218,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         catalogFilename, catalogContents);
 
     return processFactory.create(
+        ResourceType.REPLICATION,
         WRITE_STEP,
         jobId,
         attempt,
@@ -219,6 +233,7 @@ public class AirbyteIntegrationLauncher implements IntegrationLauncher {
         Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, WRITE_STEP),
         getWorkerMetadata(),
         Collections.emptyMap(),
+        additionalEnvironmentVariables,
         "write",
         CONFIG, configFilename,
         "--catalog", catalogFilename);

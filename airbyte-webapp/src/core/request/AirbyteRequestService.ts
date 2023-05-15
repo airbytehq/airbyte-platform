@@ -1,5 +1,8 @@
 import merge from "lodash/merge";
 
+import { shortUuid } from "core/utils/uuid";
+import { trackError } from "utils/datadog";
+
 import { CommonRequestError } from "./CommonRequestError";
 import { RequestMiddleware } from "./RequestMiddleware";
 import { VersionError } from "./VersionError";
@@ -46,12 +49,12 @@ abstract class AirbyteRequestService {
     }
     const response = await fetch(path, preparedOptions);
 
-    return parseResponse(response);
+    return parseResponse(response, path);
   }
 }
 
 /** Parses errors from server */
-async function parseResponse<T>(response: Response): Promise<T> {
+async function parseResponse<T>(response: Response, requestUrl: string): Promise<T> {
   if (response.status === 204) {
     return {} as T;
   }
@@ -65,24 +68,44 @@ async function parseResponse<T>(response: Response): Promise<T> {
     // @ts-expect-error TODO: needs refactoring of services
     return response;
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let resultJsonResponse: any;
 
-  // If some error returned in json, lets try to parse it
-  try {
-    resultJsonResponse = await response.json();
-  } catch (e) {
-    // non json result
-    throw new CommonRequestError(response, "non-json response");
-  }
+  if (response.headers.get("content-type") === "application/json") {
+    const jsonError = await response.json();
 
-  if (resultJsonResponse?.error) {
-    if (resultJsonResponse.error.startsWith("Version mismatch between")) {
-      throw new VersionError(resultJsonResponse.error);
+    if (jsonError?.error?.startsWith("Version mismatch between")) {
+      throw new VersionError(jsonError.error);
     }
+
+    throw new CommonRequestError(response, jsonError?.message ?? JSON.stringify(jsonError?.detail));
   }
 
-  throw new CommonRequestError(response, resultJsonResponse?.message);
+  let responseText: string | undefined;
+
+  // Try to load the response body as text, since it wasn't JSON
+  try {
+    responseText = await response.text();
+  } catch (e) {
+    responseText = "<cannot load response body>";
+  }
+
+  const requestId = shortUuid();
+
+  const error = new CommonRequestError(
+    response,
+    `${response.status === 502 || response.status === 503 ? "Server temporarily unavailable" : "Unknown error"} (http.${
+      response.status
+    }.${requestId})`
+  );
+
+  trackError(error, {
+    httpStatus: response.status,
+    httpUrl: requestUrl,
+    httpBody: responseText,
+    requestId,
+  });
+  console.error(`${requestUrl}: ${responseText} (http.${response.status}.${requestId})`);
+
+  throw error;
 }
 
 export { AirbyteRequestService };

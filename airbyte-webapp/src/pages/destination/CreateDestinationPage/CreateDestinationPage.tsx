@@ -11,8 +11,8 @@ import { Box } from "components/ui/Box";
 import { PageHeader } from "components/ui/PageHeader";
 
 import { ConnectionConfiguration } from "core/domain/connection";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -62,7 +62,7 @@ export const CreateDestinationPage: React.FC = () => {
             <DestinationForm
               onSubmit={onSubmitDestinationForm}
               destinationDefinitions={destinationDefinitions}
-              selectedSourceDefinitionId={selectedDestinationDefinitionId}
+              selectedDestinationDefinitionId={selectedDestinationDefinitionId}
             />
             <CloudInviteUsersHint connectorType="destination" />
           </FormPageContent>

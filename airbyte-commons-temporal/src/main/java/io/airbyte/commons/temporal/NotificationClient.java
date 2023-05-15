@@ -72,7 +72,7 @@ public class NotificationClient {
       throw new RuntimeException(e);
     }
     try {
-      notificationWorkflow.sendNotification(connectionId, "", message, List.of(NotificationType.webhook));
+      notificationWorkflow.sendNotification(connectionId, "", message, List.of(NotificationType.webhook, NotificationType.customerio));
     } catch (final RuntimeException e) {
       log.error("There was an error while sending a Schema Change Notification", e);
       throw e;

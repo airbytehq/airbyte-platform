@@ -7,7 +7,9 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { ConfigServiceProvider, config } from "config";
+import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
+import { AnalyticsProvider } from "core/services/analytics";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { defaultCloudFeatures, FeatureService } from "hooks/services/Feature";
@@ -19,8 +21,7 @@ import { Routing } from "packages/cloud/cloudRoutes";
 import cloudLocales from "packages/cloud/locales/en.json";
 import { AuthenticationProvider } from "packages/cloud/services/auth/AuthService";
 import { theme } from "packages/cloud/theme";
-import { AnalyticsProvider } from "views/common/AnalyticsProvider";
-import { StoreProvider } from "views/common/StoreProvider";
+import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
 import { IntercomProvider } from "./services/thirdParty/intercom/IntercomProvider";
@@ -42,9 +43,11 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
                 <FeatureService features={defaultCloudFeatures}>
                   <AppServicesProvider>
                     <AuthenticationProvider>
-                      <HelmetProvider>
-                        <IntercomProvider>{children}</IntercomProvider>
-                      </HelmetProvider>
+                      <ConnectorBuilderTestInputProvider>
+                        <HelmetProvider>
+                          <IntercomProvider>{children}</IntercomProvider>
+                        </HelmetProvider>
+                      </ConnectorBuilderTestInputProvider>
                     </AuthenticationProvider>
                   </AppServicesProvider>
                 </FeatureService>
@@ -62,7 +65,7 @@ const App: React.FC = () => {
     <React.StrictMode>
       <StyleProvider>
         <I18nProvider locale="en" messages={messages}>
-          <StoreProvider>
+          <QueryProvider>
             <Suspense fallback={<LoadingPage />}>
               <ConfigServiceProvider config={config}>
                 <Router>
@@ -72,7 +75,7 @@ const App: React.FC = () => {
                 </Router>
               </ConfigServiceProvider>
             </Suspense>
-          </StoreProvider>
+          </QueryProvider>
         </I18nProvider>
       </StyleProvider>
     </React.StrictMode>

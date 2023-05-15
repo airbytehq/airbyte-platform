@@ -9,11 +9,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mock.Strictness.LENIENT;
 
-import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import java.io.IOException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,15 +47,15 @@ class RouterServiceTest {
   @Mock(strictness = LENIENT)
   private TaskQueueMapper mTaskQueueMapper;
 
-  @Mock
-  private FeatureFlags mockFeatureFlag;
+  private FeatureFlagClient mockFeatureFlagClient;
 
   private RouterService routerService;
 
   @BeforeEach
   void init() {
+    mockFeatureFlagClient = Mockito.mock(TestClient.class);
     routerService = new RouterService(mConfigRepository, mTaskQueueMapper,
-        mockFeatureFlag);
+        mockFeatureFlagClient);
 
     Mockito.when(mConfigRepository.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID));
@@ -68,8 +71,8 @@ class RouterServiceTest {
 
   @Test
   void testGetTaskQueue() throws IOException {
-    Mockito.when(mockFeatureFlag.processInGcpDataPlane(WORKSPACE_ID.toString())).thenReturn(false);
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
+    Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
 
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.US);
@@ -81,7 +84,7 @@ class RouterServiceTest {
 
   @Test
   void testGetTaskQueueBehindFlag() throws IOException {
-    Mockito.when(mockFeatureFlag.processInGcpDataPlane(WORKSPACE_ID.toString())).thenReturn(true);
+    Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
@@ -95,7 +98,7 @@ class RouterServiceTest {
 
   @Test
   void testGetWorkspaceTaskQueue() throws IOException {
-    Mockito.when(mockFeatureFlag.processInGcpDataPlane(WORKSPACE_ID.toString())).thenReturn(false);
+    Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
 
     Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));
@@ -109,7 +112,7 @@ class RouterServiceTest {
 
   @Test
   void testGetWorkspaceTaskQueueBehindFlag() throws IOException {
-    Mockito.when(mockFeatureFlag.processInGcpDataPlane(WORKSPACE_ID.toString())).thenReturn(true);
+    Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
     assertEquals(US_FLAGGED_TASK_QUEUE, routerService.getTaskQueueForWorkspace(WORKSPACE_ID, TemporalJobType.CHECK_CONNECTION));

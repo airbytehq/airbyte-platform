@@ -1,24 +1,24 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useOutletContext } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { TableItemTitle } from "components/ConnectorBlocks";
 import { DestinationConnectionTable } from "components/destination/DestinationConnectionTable";
 import Placeholder, { ResourceTypes } from "components/Placeholder";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { FlexContainer } from "components/ui/Flex";
 
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
-import { DestinationOutletContext } from "./types";
+import { useGetDestinationFromParams } from "./useGetDestinationFromParams";
 
 export const DestinationOverviewPage = () => {
   const navigate = useNavigate();
 
-  const { destination } = useOutletContext<DestinationOutletContext>();
+  const destination = useGetDestinationFromParams();
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   // We load only connections attached to this destination to be shown in the connections grid
   const { connections } = useConnectionList({ destinationId: [destination.destinationId] });
@@ -53,7 +53,7 @@ export const DestinationOverviewPage = () => {
   };
 
   return (
-    <>
+    <FlexContainer direction="column" gap="xl">
       <TableItemTitle
         type="source"
         dropdownOptions={sourceDropdownOptions}
@@ -62,13 +62,14 @@ export const DestinationOverviewPage = () => {
         entity={destination.destinationName}
         entityIcon={destination.icon}
         releaseStage={destinationDefinition.releaseStage}
+        connectionsCount={connections.length}
       />
       {connections.length ? (
         <DestinationConnectionTable connections={connections} />
       ) : (
         <Placeholder resource={ResourceTypes.Sources} />
       )}
-    </>
+    </FlexContainer>
   );
 };
 

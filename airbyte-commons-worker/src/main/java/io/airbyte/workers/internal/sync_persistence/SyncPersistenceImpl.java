@@ -25,7 +25,9 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -197,7 +199,8 @@ public class SyncPersistenceImpl implements SyncPersistence {
       final boolean terminated = stateFlushExecutorService.awaitTermination(flushTerminationTimeoutInSeconds, TimeUnit.SECONDS);
       if (!terminated) {
         if (stateToFlush != null && !stateToFlush.isEmpty()) {
-          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+          emitFailedStateCloseMetrics();
+          emitFailedStatsCloseMetrics();
         }
 
         // Ongoing flush failed to terminate within the allocated time
@@ -209,7 +212,8 @@ public class SyncPersistenceImpl implements SyncPersistence {
       }
     } catch (final InterruptedException e) {
       if (stateToFlush != null && !stateToFlush.isEmpty()) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+        emitFailedStateCloseMetrics();
+        emitFailedStatsCloseMetrics();
       }
 
       // The current thread is getting interrupted
@@ -235,11 +239,16 @@ public class SyncPersistenceImpl implements SyncPersistence {
         }, "Flush States from SyncPersistenceImpl");
       } catch (final Exception e) {
         if (stateToFlush != null && !stateToFlush.isEmpty()) {
-          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+          emitFailedStateCloseMetrics();
+          emitFailedStatsCloseMetrics();
         }
         throw e;
       }
     }
+
+    // At this point, the final state flush is either successful or there was no state left to flush.
+    // From a connection point of view, it should be considered a success since no state are lost.
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_CLOSE_SUCCESSFUL, 1);
 
     // On close, this check is independent of hasDataToFlush. We could be in a state where state flush
     // was successful but stats flush failed, so we should check for stats to flush regardless of the
@@ -251,10 +260,22 @@ public class SyncPersistenceImpl implements SyncPersistence {
           return null;
         }, "Flush Stats from SyncPersistenceImpl");
       } catch (final Exception e) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, 1);
+        emitFailedStatsCloseMetrics();
         throw e;
       }
     }
+
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATS_COMMIT_CLOSE_SUCCESSFUL, 1);
+  }
+
+  private void emitFailedStateCloseMetrics() {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+  }
+
+  private void emitFailedStatsCloseMetrics() {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
   }
 
   private boolean hasStatesToFlush() {

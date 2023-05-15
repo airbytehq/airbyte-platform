@@ -9,7 +9,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";

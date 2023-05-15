@@ -1,6 +1,6 @@
 # airbyte
 
-![Version: 0.44.8](https://img.shields.io/badge/Version-0.44.8-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.2](https://img.shields.io/badge/AppVersion-0.44.2-informational?style=flat-square)
+![Version: 0.44.8](https://img.shields.io/badge/Version-0.44.8-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.5](https://img.shields.io/badge/AppVersion-0.44.5-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
@@ -96,6 +96,9 @@ Helm chart to deploy airbyte
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
 | global.jobs.kube.annotations | object | `{}` |  |
+| global.jobs.kube.images.busybox | string | `""` |  |
+| global.jobs.kube.images.curl | string | `""` |  |
+| global.jobs.kube.images.socat | string | `""` |  |
 | global.jobs.kube.main_container_image_pull_secret | string | `""` |  |
 | global.jobs.kube.nodeSelector | object | `{}` |  |
 | global.jobs.kube.tolerations | list | `[]` |  |

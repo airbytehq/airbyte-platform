@@ -10,9 +10,9 @@ import * as yup from "yup";
 import { Button } from "components/ui/Button";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/analytics";
 import { FormikPatch } from "core/form/FormikPatch";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AddStreamButton.module.scss";
@@ -32,6 +32,7 @@ interface AddStreamButtonProps {
   button?: React.ReactElement;
   initialValues?: Partial<BuilderStream>;
   "data-testid"?: string;
+  modalTitle?: string;
 }
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
@@ -39,6 +40,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   button,
   initialValues,
   "data-testid": testId,
+  modalTitle,
 }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
@@ -110,7 +112,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             <FormikPatch />
             <Modal
               size="sm"
-              title={<FormattedMessage id="connectorBuilder.addStreamModal.title" />}
+              title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
               onClose={() => {
                 setIsOpen(false);
               }}

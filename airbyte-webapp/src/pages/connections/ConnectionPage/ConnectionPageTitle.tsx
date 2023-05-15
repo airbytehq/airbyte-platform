@@ -22,16 +22,17 @@ const LargeEnrollmentCallout = React.lazy(
 );
 
 export const ConnectionPageTitle: React.FC = () => {
-  const params = useParams<{ id: string; "*": ConnectionRoutePaths }>();
+  const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const navigate = useNavigate();
-  const currentStep = params["*"] || ConnectionRoutePaths.Status;
+  const currentTab = params["*"] || ConnectionRoutePaths.Status;
 
   const { connection, schemaRefreshing } = useConnectionEditService();
 
   const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);
+  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
-  const steps = useMemo(() => {
-    const steps = [
+  const tabs = useMemo(() => {
+    const tabs = [
       {
         id: ConnectionRoutePaths.Status,
         name: <FormattedMessage id="sources.status" />,
@@ -47,22 +48,23 @@ export const ConnectionPageTitle: React.FC = () => {
     ];
 
     if (streamCentricUIEnabled) {
-      steps.push({
+      // insert as the 2nd step
+      tabs.splice(1, 0, {
         id: ConnectionRoutePaths.JobHistory,
         name: <FormattedMessage id="connectionForm.jobHistory" />,
       });
     }
 
     connection.status !== ConnectionStatus.deprecated &&
-      steps.push({
+      tabs.push({
         id: ConnectionRoutePaths.Settings,
         name: <FormattedMessage id="sources.settings" />,
       });
 
-    return steps;
+    return tabs;
   }, [connection.status, streamCentricUIEnabled]);
 
-  const onSelectStep = useCallback(
+  const onSelectTab = useCallback(
     (id: string) => {
       if (id === ConnectionRoutePaths.Status) {
         navigate("");
@@ -76,25 +78,27 @@ export const ConnectionPageTitle: React.FC = () => {
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   return (
-    <div className={styles.container}>
-      {connection.status === ConnectionStatus.deprecated && (
-        <Message
-          className={styles.connectionDeleted}
-          type="warning"
-          text={<FormattedMessage id="connection.connectionDeletedView" />}
-        />
-      )}
-      <Text as="div" align="center" bold className={styles.connectionTitle}>
-        <FormattedMessage id="connection.title" />
-      </Text>
-      <ConnectionName />
-      <div className={styles.statusContainer}>
-        <FlexContainer direction="column" gap="none">
-          <ConnectionInfoCard />
-          {fcpEnabled && <LargeEnrollmentCallout />}
-        </FlexContainer>
+    <div className={isNewConnectionFlowEnabled ? styles.nextContainer : styles.container}>
+      <div className={isNewConnectionFlowEnabled ? styles.container : undefined}>
+        {connection.status === ConnectionStatus.deprecated && (
+          <Message
+            className={styles.connectionDeleted}
+            type="warning"
+            text={<FormattedMessage id="connection.connectionDeletedView" />}
+          />
+        )}
+        <Text as="div" align="center" bold className={styles.connectionTitle}>
+          <FormattedMessage id="connection.title" />
+        </Text>
+        <ConnectionName />
+        <div className={styles.statusContainer}>
+          <FlexContainer direction="column" gap="none">
+            <ConnectionInfoCard />
+            {fcpEnabled && <LargeEnrollmentCallout />}
+          </FlexContainer>
+        </div>
       </div>
-      <StepsMenu lightMode data={steps} onSelect={onSelectStep} activeStep={currentStep} disabled={schemaRefreshing} />
+      <StepsMenu lightMode data={tabs} onSelect={onSelectTab} activeStep={currentTab} disabled={schemaRefreshing} />
     </div>
   );
 };

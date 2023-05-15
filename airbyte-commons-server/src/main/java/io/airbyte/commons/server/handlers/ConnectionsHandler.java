@@ -191,7 +191,7 @@ public class ConnectionsHandler {
       populateSyncFromLegacySchedule(standardSync, connectionCreate);
     }
     final UUID workspaceId = workspaceHelper.getWorkspaceForDestinationId(connectionCreate.getDestinationId());
-    if (workspaceId != null && featureFlagClient.enabled(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
+    if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog.INSTANCE, new Workspace(workspaceId))) {
       // TODO this is the hook for future check with catalog work
       LOGGER.info("Entered into Dark Launch Code for Check with Catalog");
     }
@@ -382,6 +382,10 @@ public class ConnectionsHandler {
 
     if (patch.getNotifySchemaChanges() != null) {
       sync.setNotifySchemaChanges(patch.getNotifySchemaChanges());
+    }
+
+    if (patch.getNotifySchemaChangesByEmail() != null) {
+      sync.setNotifySchemaChangesByEmail(patch.getNotifySchemaChangesByEmail());
     }
 
     if (patch.getNonBreakingChangesPreference() != null) {
@@ -624,21 +628,21 @@ public class ConnectionsHandler {
     }
   }
 
-  public ConnectionReadList listConnectionsForWorkspaces(ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
+  public ConnectionReadList listConnectionsForWorkspaces(final ListConnectionsForWorkspacesRequestBody listConnectionsForWorkspacesRequestBody)
       throws IOException {
 
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
 
-    Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = configRepository.listWorkspaceStandardSyncsPaginated(
+    final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = configRepository.listWorkspaceStandardSyncsPaginated(
         listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
         listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),
         PaginationHelper.pageSize(listConnectionsForWorkspacesRequestBody.getPagination()),
         PaginationHelper.rowOffset(listConnectionsForWorkspacesRequestBody.getPagination()));
 
     for (final Entry<UUID, List<StandardSync>> entry : workspaceIdToStandardSyncsMap.entrySet()) {
-      UUID workspaceId = entry.getKey();
-      for (StandardSync standardSync : entry.getValue()) {
-        ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+      final UUID workspaceId = entry.getKey();
+      for (final StandardSync standardSync : entry.getValue()) {
+        final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
         connectionRead.setWorkspaceId(workspaceId);
         connectionReads.add(connectionRead);
       }

@@ -214,6 +214,15 @@ create table "public"."operation" (
   constraint "operation_pkey"
     primary key ("id")
 );
+create table "public"."schema_management" (
+  "id" uuid not null,
+  "auto_propagation_status" "public"."auto_propagation_status" not null,
+  "connection_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "schema_management_pkey"
+    primary key ("id")
+);
 create table "public"."state" (
   "id" uuid not null,
   "connection_id" uuid not null,
@@ -339,6 +348,10 @@ alter table "public"."operation"
   add constraint "operation_workspace_id_fkey"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."schema_management"
+  add constraint "schema_management_connection_id_fkey"
+    foreign key ("connection_id")
+    references "public"."connection" ("id");
 alter table "public"."state"
   add constraint "state_connection_id_fkey"
     foreign key ("connection_id")
@@ -361,4 +374,5 @@ create index "connection_source_id_idx" on "public"."connection"("source_id" asc
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
+create index "connection_idx" on "public"."schema_management"("connection_id" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);

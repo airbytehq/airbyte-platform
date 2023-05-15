@@ -6,6 +6,8 @@ micronaut:
     enabled: ${API_AUTHORIZATION_ENABLED:false}
   server:
     port: 80
+    cors:
+      enabled: true
   endpoints:
     v1/list/streams:
       enabled: true

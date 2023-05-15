@@ -1,5 +1,6 @@
-import { datadogRum } from "@datadog/browser-rum";
 import React, { createContext, useContext } from "react";
+
+import { trackAction, trackError } from "utils/datadog";
 
 import { AppActionCodes } from "./actionCodes";
 
@@ -37,23 +38,5 @@ export const useAppMonitoringService = (): AppMonitoringServiceProviderValue => 
  * This implementation of the AppMonitoringService uses the datadog SDK to track errors and actions
  */
 export const AppMonitoringServiceProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const trackAction = (action: string, context?: Record<string, unknown>) => {
-    if (!datadogRum.getInternalContext()) {
-      console.debug(`trackAction(${action}) failed because RUM is not initialized. Context: \n`, context);
-      return;
-    }
-
-    datadogRum.addAction(action, context);
-  };
-
-  const trackError = (error: Error, context?: Record<string, unknown>) => {
-    if (!datadogRum.getInternalContext()) {
-      console.debug(`trackError() failed because RUM is not initialized. Error: \n`, error, `Context: \n`, context);
-      return;
-    }
-
-    datadogRum.addError(error, context);
-  };
-
   return <appMonitoringContext.Provider value={{ trackAction, trackError }}>{children}</appMonitoringContext.Provider>;
 };

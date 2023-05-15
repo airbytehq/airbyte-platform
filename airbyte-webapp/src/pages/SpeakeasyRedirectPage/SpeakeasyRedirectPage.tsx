@@ -59,7 +59,7 @@ export class SpeakeasyErrorBoundary extends React.Component<React.PropsWithChild
   }
 
   componentDidCatch(error: Error): void {
-    this.props.trackError(error);
+    this.props.trackError(error, { errorBoundary: this.constructor.name });
   }
 
   render() {

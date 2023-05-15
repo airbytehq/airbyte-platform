@@ -8,9 +8,9 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 
-import { Action, Namespace } from "core/analytics";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   useListVersions,
@@ -49,8 +49,8 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const schema = useMemo(
     () =>
       yup.object().shape({
-        name: yup.string().required("form.empty.error"),
-        description: yup.string(),
+        name: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
+        description: yup.string().max(256, "connectorBuilder.maxLength"),
         useVersion: yup.bool(),
         version: yup.number().min(minVersion),
       }),
@@ -175,7 +175,12 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                     <Button variant="secondary" type="reset" onClick={onClose}>
                       <FormattedMessage id="form.cancel" />
                     </Button>
-                    <Button type="submit" disabled={!isValid} isLoading={isSubmitting}>
+                    <Button
+                      type="submit"
+                      disabled={!isValid}
+                      isLoading={isSubmitting}
+                      data-testid="publish-submit-button"
+                    >
                       <FormattedMessage
                         id={
                           currentProject.sourceDefinitionId

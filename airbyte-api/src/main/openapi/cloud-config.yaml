@@ -1,0 +1,1708 @@
+openapi: 3.0.0
+info:
+  description: |
+    Airbyte Cloud Configuration API
+    [https://airbyte.io](https://airbyte.io).
+
+    This API is a collection of HTTP RPC-style methods. While it is not a REST API, those familiar with REST should find the conventions of this API recognizable.
+
+    Here are some conventions that this API follows:
+    * All endpoints are http POST methods.
+    * All endpoints accept data via `application/json` request bodies. The API does not accept any data via query params.
+    * The naming convention for endpoints is: localhost:8000/{VERSION}/{METHOD_FAMILY}/{METHOD_NAME} e.g. `localhost:8000/v1/connections/create`.
+    * For all `update` methods, the whole object must be passed in, even the fields that did not change.
+
+    Change Management:
+    * The major version of the API endpoint can be determined / specified in the URL `localhost:8080/v1/connections/create`
+    * Minor version bumps will be invisible to the end user. The user cannot specify minor versions in requests.
+    * All backwards incompatible changes will happen in major version bumps. We will not make backwards incompatible changes in minor version bumps. Examples of non-breaking changes (includes but not limited to...):
+      * Adding fields to request or response bodies.
+      * Adding new HTTP endpoints.
+  version: "1.0.0"
+  title: Airbyte Cloud Configuration API
+  contact:
+    email: contact@airbyte.io
+  license:
+    name: private
+externalDocs:
+  description: Find out more about Airbyte
+  url: "https://airbyte.io"
+servers:
+  - url: "http://localhost:8002/cloud"
+tags:
+  - name: user
+    description: User related resources.
+  - name: cloud_workspace
+    description: Workspace related resources.
+  - name: permission
+    description: Permission related resources.
+  - name: web_backend
+    description: Resources for easier FE/BE interactions
+  - name: health
+    description: Healthchecks
+  - name: stripe
+    description: Stripe related resource.
+paths:
+  /v1/health:
+    get:
+      tags:
+        - health
+      summary: Health Check
+      operationId: getHealthCheck
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheckRead"
+      # This route is unsecured for external monitoring.
+      security: []
+  # USERS
+  /v1/users/create:
+    post:
+      tags:
+        - user
+      summary: Creates a user (this is the low-level route that does not handle workspace and permissions, see the web_backend route instead)
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/users/list:
+    post:
+      tags:
+        - user
+      summary: Lists users
+      operationId: listUsers
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserReadList"
+  /v1/users/get:
+    post:
+      tags:
+        - user
+      summary: Find user by ID
+      operationId: getUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/get_by_auth_id:
+    post:
+      tags:
+        - user
+      summary: Find user by auth id
+      operationId: getUserByAuthId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAuthIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/get_by_email:
+    post:
+      tags:
+        - user
+      summary: Find user by email
+      operationId: getUserByEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserEmailRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/update:
+    post:
+      tags:
+        - user
+      summary: Update user state
+      operationId: updateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/users/delete:
+    post:
+      tags:
+        - user
+      summary: Deletes a user (this is the low-level route that does not handle workspaces, see the web_backend routes instead as this may result in orphaned workspaces)
+      operationId: deleteUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  # CLOUD_WORKSPACE
+  /v1/cloud_workspaces/create:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Creates a cloud workspace
+      operationId: createCloudWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloudWorkspaceCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceRead"
+        "422":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/cloud_workspaces/list:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Lists workspaces, excluding credit balance information as it is expensive to retrieve for every workspace.
+      operationId: listWorkspaces
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceReadList"
+  /v1/cloud_workspaces/list_workspaces_by_most_recently_running_jobs:
+    post:
+      operationId: listWorkspacesByMostRecentlyRunningJobs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeWindowRequestBody"
+        required: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceIdList"
+          description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      summary: Lists workspaces with the most recently running jobs within the given time window
+      tags:
+        - cloud_workspace
+      x-accepts: application/json
+  /v1/cloud_workspaces/get:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Find cloud workspace by ID
+      operationId: getCloudWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/cloud_workspaces/update:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Updates a cloud workspace
+      operationId: updateCloudWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloudWorkspaceUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/cloud_workspaces/delete:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Deletes a cloud workspace (this is the low-level route that does not handle Airbyte workspace, see the web_backend route instead)
+      operationId: deleteCloudWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/cloud_workspaces/get_usage:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Get usage for a workspace.
+      operationId: getCloudWorkspaceUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloudWorkspaceUsageRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  # permissions
+  /v1/permissions/create:
+    post:
+      tags:
+        - permission
+      summary: Creates a permission resource
+      operationId: createPermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "422":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/permissions/list:
+    post:
+      tags:
+        - permission
+      summary: List all permissions
+      operationId: listPermissions
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionReadList"
+  /v1/permissions/get:
+    post:
+      tags:
+        - permission
+      summary: Find a permission ressource by ID
+      operationId: getPermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/update:
+    post:
+      tags:
+        - permission
+      summary: Updates a permission ressource
+      operationId: updatePermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/delete:
+    post:
+      tags:
+        - permission
+      summary: Deletes a permission ressource
+      operationId: deletePermission
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/check:
+    post:
+      tags:
+        - permission
+      summary: Check permissions for user
+      operationId: checkPermissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionCheckRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionCheckRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/permissions/check_multiple_workspaces:
+    post:
+      tags:
+        - permission
+      summary: Check permissions for user across workspaces
+      operationId: checkPermissionsAcrossMultipleWorkspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionsCheckMultipleWorkspacesRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionCheckRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  # STRIPE
+  /v1/stripe/create_checkout_session:
+    post:
+      tags:
+        - stripe
+      summary: Creates a Stripe Checkout session for the user and workspace, returning the Stripe URL that the user should be redirected to.
+      operationId: createStripeCheckoutSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StripeCheckoutSessionCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeCheckoutSessionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/stripe/complete_checkout_session:
+    post:
+      tags:
+        - stripe
+      summary: Handle Stripe Checkout Completed event by adding credits to customer in Orb
+      operationId: stripeCheckoutSessionCompleted
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StripeCheckoutSessionCompletedEvent"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          description: Invalid payload
+        "401":
+          description: Invalid signature
+      # This route is unsecured as it accepts webhook events from Stripe.
+      # Validation of these events happens in the Cloud Server's ExternalRequestAuthFilter.
+      security: []
+  # WEB_BACKEND
+  /v1/web_backend/users/create:
+    post:
+      tags:
+        - web_backend
+      summary: Creates a user, cloud workspace, permissions, and airbyte workspace in a single API call
+      operationId: webBackendCreateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRead"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/web_backend/users/delete:
+    post:
+      tags:
+        - web_backend
+      summary: Deletes a user, their owned cloud workspace and associated airbyte workspace in a single API call
+      operationId: webBackendDeleteUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/users/revoke_user_session:
+    post:
+      tags:
+        - web_backend
+      summary: Revokes a user's session token.
+      operationId: webBackendRevokeUserSession
+      responses:
+        "204":
+          description: The user's session token was expired successfully.
+  /v1/web_backend/permissioned_cloud_workspace/create:
+    post:
+      tags:
+        - web_backend
+      summary: Creates a cloud workspace, a workspace, and sets ownership permissions for the creator user
+      operationId: webBackendCreatePermissionedCloudWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PermissionedCloudWorkspaceCreate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceRead"
+        "422":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/web_backend/cloud_workspaces/invite_with_signin_link:
+    post:
+      tags:
+        - web_backend
+      summary: Invites a user to join a workspace with a passwordless sign-in link.
+      operationId: webBackendInviteUserToWorkspaceWithSignInLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUserInviteWithSignInLink"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionRead"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
+
+  /v1/web_backend/cloud_workspaces/resend_with_signin_link:
+    post:
+      tags:
+        - web_backend
+      summary: Resend an email with a signin link to a user who previously have been invited to join a workspace.
+      operationId: webBackendResendWithSigninLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendUserInviteWithSignInLink"
+        required: true
+      responses:
+        "204":
+          description: Successfully resend email to user.
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
+      # This route is unsecured. User has not signed in yet at the time when they call this API.
+      security: []
+  /v1/web_backend/cloud_workspaces/delete:
+    post:
+      tags:
+        - web_backend
+      summary: Deletes a cloud workspace and associated airbyte workspace in a single API call.
+      operationId: webBackendDeleteCloudWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/web_backend/cloud_workspaces/revoke_user:
+    post:
+      tags:
+        - web_backend
+      summary: Revokes a user's workspace access. The calling user must have editor permission on the workspace in question. To keep things simple, a user cannot remove themselves from a workspace.
+      operationId: webBackendRevokeUserFromWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceRevokeUser"
+        required: true
+      responses:
+        "204":
+          description: Access was successfully revoked.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/ExceptionResponse"
+  /v1/web_backend/cloud_workspaces/get_available_dbt_jobs:
+    post:
+      tags:
+        - web_backend
+      summary: Calls the dbt Cloud `List Accounts` and `List jobs` APIs to get the list of available jobs for the dbt auth token associated with the requested workspace config.
+      operationId: webBackendGetAvailableDbtJobsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceGetDbtJobsRequest"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved available dbt Cloud jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceGetDbtJobsResponse"
+  /v1/web_backend/cloud_workspaces/free_connector_program_info:
+    post:
+      tags:
+        - web_backend
+      summary: Return a summary of Free Connector Program info for the indicated Cloud Workspace
+      operationId: webBackendGetFreeConnectorProgramInfoForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved Free Connector Program info for Cloud Workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceFreeConnectorProgramInfoResponse"
+  /v1/web_backend/permissions/list_by_user:
+    post:
+      tags:
+        - web_backend
+      summary: List permissions a user has access to
+      operationId: webBackendListPermissionsByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermissionReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/permissions/list_workspaces_owned_by_user:
+    post:
+      tags:
+        - web_backend
+      summary: List cloud workspaces owned by a user
+      operationId: webBackendListWorkspacesOwnedByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/permissions/list_workspaces_by_user:
+    post:
+      tags:
+        - web_backend
+      summary: List cloud workspaces a user has access to
+      operationId: webBackendListWorkspacesByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/permissions/list_users_by_workspace:
+    post:
+      tags:
+        - web_backend
+      summary: List users that have access to a cloud workspace
+      operationId: webBackendListUsersByWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUserReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+components:
+  schemas:
+    # Health
+    HealthCheckRead:
+      type: object
+      required:
+        - db
+      properties:
+        db:
+          type: boolean
+    # USER
+    UserId:
+      type: string
+      description: Internal Airbyte Cloud User ID
+      format: uuid
+    UserIdRequestBody:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+    UserEmailRequestBody:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+    UserAuthIdRequestBody:
+      type: object
+      required:
+        - authUserId
+        - authProvider
+      properties:
+        authUserId:
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+    UserCreate:
+      type: object
+      required:
+        - name
+        - authUserId
+        - authProvider
+        - email
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        authUserId:
+          description: The userId from the Auth provider
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+        news:
+          type: boolean
+          default: false
+    UserPaymentAccountId:
+      type: string
+      description: UserPaymentAccount ID from the Cloud database
+      format: uuid
+    UserRead:
+      type: object
+      required:
+        - userId
+        - authUserId
+        - authProvider
+        - email
+        - defaultWorkspaceId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        authUserId:
+          description: The userId from the Auth provider
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+        defaultWorkspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+        news:
+          type: boolean
+        intercomHash:
+          type: string
+    UserReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserRead"
+    UserUpdate:
+      type: object
+      required:
+        - userId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        authUserId:
+          description: The userId from the Auth provider
+          type: string
+        authProvider:
+          $ref: "#/components/schemas/AuthProvider"
+        defaultWorkspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        companyName:
+          type: string
+        email:
+          type: string
+          format: email
+        news:
+          type: boolean
+    UserStatus:
+      type: string
+      description: user status
+      enum:
+        - invited # To use when a registered user invites someone by email to join
+        - registered
+        - disabled
+    AuthProvider:
+      type: string
+      description: Auth Provider
+      default: google_identity_platform
+      enum:
+        # - auth0
+        - google_identity_platform
+    # WORKSPACE
+    WorkspaceUserRead:
+      type: object
+      required:
+        - userId
+        - isDefaultWorkspace
+        - status
+        - email
+        - permissionId
+        - permissionType
+        - workspaceId
+      properties:
+        name:
+          description: Caption name for the user
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+        isDefaultWorkspace:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        email:
+          type: string
+          format: email
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    WorkspaceUserReadList:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceUserRead"
+    WorkspaceUserInvite:
+      type: object
+      required:
+        - email
+        - workspaceId
+      properties:
+        email:
+          type: string
+          format: email
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    WorkspaceUserInviteWithSignInLink:
+      type: object
+      required:
+        - email
+        - workspaceId
+      properties:
+        email:
+          type: string
+          format: email
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        continueUrl:
+          type: string
+          format: uri
+        metadata:
+          type: object
+          description: Metadata about the request that Airbyte uses for analytics and tracking purposes.
+          properties:
+            invitedFrom:
+              description: Indicates from which page an invitation was initiated.
+              type: string
+              enum:
+                - source
+                - destination
+                - user_settings
+    ResendUserInviteWithSignInLink:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+        continueUrl:
+          type: string
+          format: uri
+    WorkspaceRevokeUser:
+      type: object
+      required:
+        - email
+        - workspaceId
+      properties:
+        email:
+          type: string
+          format: email
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    WorkspaceId:
+      type: string
+      description: Workspace Id from OSS Airbyte instance
+      format: uuid
+    Credits:
+      type: integer
+      description: Number of credits bought by the customer
+      format: int64
+    WorkspaceIdRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    WorkspaceCreditsRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - credits
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        credits:
+          $ref: "#/components/schemas/Credits"
+    TimeWindowRequestBody:
+      description: Input to filter workspaces with most recently running jobs within the given time window
+      type: object
+      required:
+        - timeWindowInHours
+      properties:
+        timeWindowInHours:
+          description: Time window value (in hours), e.g. 48
+          type: integer
+          format: int32
+    WorkspaceIdList:
+      description: List of workspace IDs
+      type: object
+      required:
+        - workspaceIds
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+    WorkspaceFreeConnectorProgramInfoResponse:
+      type: object
+      required:
+        - hasEligibleConnector
+        - hasPaymentAccountSaved
+        - hasEligibleConnections
+        - hasNonEligibleConnections
+      properties:
+        hasEligibleConnector:
+          type: boolean
+        hasPaymentAccountSaved:
+          type: boolean
+        hasEligibleConnections:
+          type: boolean
+        hasNonEligibleConnections:
+          type: boolean
+    StripeCheckoutSessionCreate:
+      type: object
+      description: Input for creating a Stripe Checkout Session for an Airbyte workspace
+      required:
+        - workspaceId
+        - successUrl
+        - cancelUrl
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        successUrl:
+          description: The Airbyte URL that the user should be redirected to upon payment success
+          type: string
+        cancelUrl:
+          description: The Airbyte URL that the user should be redirected to upon payment cancellation
+          type: string
+        quantity:
+          description: For payment mode only. Optional quantity of credits to use in the Stripe Checkout Session (can still be adjusted by the user). If unspecified, a default quantity will be set
+          $ref: "#/components/schemas/Credits"
+        stripeMode:
+          # TODO make this a required property after front-end has a chance to set it in the existing payment flow. openapi doesn't
+          # support default values when using a $ref so the handler code needs to impose the default behavior when this isn't set
+          description: The mode that the Checkout Session should be created in.
+          $ref: "#/components/schemas/StripeMode"
+    StripeMode:
+      # See Stripe API docs for more info https://stripe.com/docs/api/checkout/sessions/create#create_checkout_session-mode
+      description: Stripe's 'mode' param for the Stripe Checkout Session API. If unspecified, default to 'payment'
+      type: string
+      enum:
+        - payment
+        - setup
+    StripeCheckoutSessionRead:
+      description: Output of creating a Stripe Checkout Session, containing the session URL
+      type: object
+      required:
+        - stripeUrl
+      properties:
+        stripeUrl:
+          description: The URL of the Stripe Checkout Session created for this purchase, which the user should be redirected to
+          type: string
+    StripeCheckoutSessionCompletedEvent:
+      description: Webhook event coming from Stripe for the checkout.session.completed event
+      type: object
+      required:
+        - id
+        - type
+        - data
+      properties:
+        id:
+          description: ID of the Stripe webhook event
+          type: string
+        created:
+          description: The creation time of the Stripe webhook event in unix time seconds
+          type: integer
+        type:
+          description: The type of the webhook event. This spec only allows the following value, as this endpoint only processes Checkout Session Completed events
+          type: string
+          enum:
+            - checkout.session.completed
+        data:
+          description: The data payload of the webhook event. Redundantly, the actual Checkout Session object is further nested inside the 'object' property of this 'data' field. Since this comes directly from Stripe, we do not have control over this structure
+          type: object
+          required:
+            - object
+          properties:
+            object:
+              $ref: "#/components/schemas/StripeCheckoutSessionCompletedObject"
+    StripeCheckoutSessionCompletedObject:
+      description: The actual Checkout Session object in the webhook event. This has been pared down to contain only the necessary event properties for this API to function
+      type: object
+      required:
+        - id
+        - mode
+        - customer
+      properties:
+        id:
+          description: ID of the Checkout Session object in Stripe
+          type: string
+        mode:
+          description: The mode of the completed Checkout Session
+          $ref: "#/components/schemas/StripeMode"
+        customer:
+          description: The ID of the customer for the Session. Airbyte refers to this as the 'Stripe Customer ID'
+          type: string
+        invoice:
+          description: The Stripe Invoice ID associated with the completed session, if one exists.
+          type: string
+        payment_intent:
+          description: The Stripe Payment Intent ID associated with the completed session, if one exists.
+          type: string
+        metadata:
+          description: Metadata that Airbyte populates on the Checkout Session. At the moment, this only contains the Airbyte workspace ID
+          additionalProperties:
+            maxLength: 500
+            type: string
+          nullable: true
+          type: object
+    # CLOUD_WORKSPACE extends Airbyte OSS WORKSPACE
+    CloudWorkspaceCreate:
+      type: object
+      required:
+        - workspaceId
+        - creatorUserId
+      properties:
+        name:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        creatorUserId:
+          $ref: "#/components/schemas/UserId"
+    PermissionedCloudWorkspaceCreate:
+      type: object
+      required:
+        - name
+        - userId
+      properties:
+        name:
+          type: string
+        userId:
+          $ref: "#/components/schemas/UserId"
+    CloudWorkspaceRead:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        name:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        creatorUserId:
+          $ref: "#/components/schemas/UserId"
+        tombstone:
+          description:
+            If not set or false, the configuration is active. If true, then this
+            configuration is permanently off.
+          type: boolean
+        remainingCredits:
+          type: number
+          format: double
+        creditStatus:
+          description:
+            Status of the workspace's credit balance, to determine if sync jobs
+            can be launched for this workspace.
+          type: string
+          enum:
+            - positive
+            - negative_within_grace_period
+            - negative_beyond_grace_period
+            - negative_max_threshold
+        lastCreditPurchaseIncrementTimestamp:
+          description: The timestamp of the last time that credits were incremented for this workspace as a result of a credit purchase. Format is in unix epoch time milliseconds.
+          type: integer
+          format: int64
+        workspaceTrialStatus:
+          description: Status of the workspace trial, depending on trial expiry date and credit purchase history
+          type: string
+          enum:
+            - pre_trial
+            - in_trial
+            - out_of_trial
+            - credit_purchased
+        trialExpiryTimestamp:
+          description: The timestamp of when the workspace trial's expires. Format is in unix epoch time milliseconds. Unset if workspace is out of trial.
+          type: integer
+          format: int64
+        userPaymentAccountId:
+          $ref: "#/components/schemas/UserPaymentAccountId"
+    CloudWorkspaceReadList:
+      type: object
+      required:
+        - workspaces
+      properties:
+        workspaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/CloudWorkspaceRead"
+    CloudWorkspaceUpdate:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        name:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        creatorUserId:
+          $ref: "#/components/schemas/UserId"
+        tombstone:
+          description:
+            If not set or false, the configuration is active. If true, then this
+            configuration is permanently off.
+          type: boolean
+
+    ActorReleaseStage:
+      type: string
+      enum:
+        - alpha
+        - beta
+        - generally_available
+        - custom
+
+    ConnectionProto:
+      type: object
+      required:
+        - connectionId
+        - connectionName
+        - status
+        - sourceId
+        - sourceDefinitionId
+        - sourceDefinitionName
+        - sourceConnectionName
+        - sourceIcon
+        - sourceReleaseStage
+        - destinationId
+        - destinationDefinitionId
+        - destinationDefinitionName
+        - destinationConnectionName
+        - destinationIcon
+        - destinationReleaseStage
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        connectionName:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - deprecated
+        creditsConsumed:
+          description: Number of credits consumed rounded to two decimal places.
+          type: number
+          format: double
+        sourceId:
+          type: string
+          format: uuid
+        sourceDefinitionId:
+          type: string
+          format: uuid
+        sourceDefinitionName:
+          description: Name of the type of source
+          type: string
+        sourceConnectionName:
+          description: Name of this particular source as used in a single sync connection
+          type: string
+        sourceIcon:
+          description: Icon of the source actor.
+          type: string
+        sourceReleaseStage:
+          description: Release stage of source actor.
+          $ref: "#/components/schemas/ActorReleaseStage"
+        destinationId:
+          type: string
+          format: uuid
+        destinationDefinitionId:
+          type: string
+          format: uuid
+        destinationDefinitionName:
+          description: Name of the type of destination
+          type: string
+        destinationConnectionName:
+          description: Name of this particular destination as used in a single sync connection
+          type: string
+        destinationIcon:
+          description: Icon of the destination actor.
+          type: string
+        destinationReleaseStage:
+          description: Release stage of destination actor.
+          $ref: "#/components/schemas/ActorReleaseStage"
+        connectionScheduleType:
+          type: string
+        connectionScheduleTimeUnit:
+          type: string
+        connectionScheduleUnits:
+          format: int64
+          type: integer
+
+    ConsumptionTimeWindow:
+      type: string
+      enum:
+        - lastMonth
+        - lastSixMonths
+        - lastYear
+      default: lastMonth
+
+    CloudWorkspaceUsageRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        timeWindow:
+          description: Time window to calculate workspace credit consumptions
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+
+    ConsumptionRead:
+      type: object
+      required:
+        - startTime
+        - endTime
+        - billedCost
+        - freeUsage
+        - connection
+      properties:
+        startTime:
+          description: start date of the timeframe, format "yyyy-mm-dd"
+          type: string
+        endTime:
+          description: end date of the timeframe, format "yyyy-mm-dd"
+          type: string
+        timeframe:
+          type: string
+        billedCost:
+          description: Billed costs consumed.
+          type: number
+          format: double
+        freeUsage:
+          description: Free usages consumed.
+          type: number
+          format: double
+        connection:
+          $ref: "#/components/schemas/ConnectionProto"
+
+    CloudWorkspaceUsageRead:
+      type: object
+      required:
+        - workspaceId
+        - timeWindow
+        - consumptionPerConnectionPerTimeframe
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        timeWindow:
+          $ref: "#/components/schemas/ConsumptionTimeWindow"
+        consumptionPerConnectionPerTimeframe:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsumptionRead"
+
+    # PERMISSIONS
+    PermissionIdRequestBody:
+      type: object
+      required:
+        - permissionId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+    PermissionCreate:
+      type: object
+      required:
+        - type
+        - userId
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PermissionRead:
+      type: object
+      required:
+        - permissionId
+        - type
+        - userId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PermissionReadList:
+      type: object
+      required:
+        - permissions
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionRead"
+    PermissionUpdate:
+      type: object
+      required:
+        - permissionId
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PermissionType:
+      type: string
+      description: Describes what actions/endpoints the permission entitles to
+      enum:
+        - instance_admin # Permission to do anything (all permissions below)
+        - workspace_owner # Permission to own a workspace (and being billed for it)
+        # - workspace_permissions_editor # Permission to change the permissions of a workspace
+        # - workspace_editor # Permission to edit a workspace content (all permissions below)
+        # - sources_editor # Permission to edit sources from a workspace
+        # - destinations_editor # Permission to edit destinations from a workspace
+        # - connections_editor # Permission to edit connections from a workspace
+        # - connectors_admin # Permission to edit standard connector definitions from a workspace
+    PermissionCheckRequest:
+      type: object
+      required:
+        - permissionType
+        - userId
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PermissionsCheckMultipleWorkspacesRequest:
+      type: object
+      required:
+        - permissionType
+        - userId
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
+    PermissionCheckRead:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - succeeded
+            - failed
+        message:
+          type: string
+    WorkspaceGetDbtJobsRequest:
+      description: Get the available dbt Cloud jobs associated with the given workspace config.
+      type: object
+      required:
+        - workspaceId
+        - dbtConfigId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        dbtConfigId:
+          type: string
+          format: uuid
+          description: The config id associated with the dbt Cloud config, references the webhookConfigId in the core API.
+    DbtCloudJobInfo:
+      type: object
+      description: A dbt Cloud job
+      required:
+        - accountId
+        - jobId
+        - jobName
+      properties:
+        accountId:
+          type: integer
+          description: The account id associated with the job
+        jobId:
+          type: integer
+          description: The the specific job id returned by the dbt Cloud API
+        jobName:
+          type: string
+          description: The human-readable name of the job returned by the dbt Cloud API
+    WorkspaceGetDbtJobsResponse:
+      description: The available dbt Cloud jobs for the requested workspace config
+      type: object
+      required:
+        - availableDbtJobs
+      properties:
+        availableDbtJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/DbtCloudJobInfo"
+    # EXCEPTIONS / ERRORS
+    InvalidInputProperty:
+      type: object
+      required:
+        - propertyPath
+      properties:
+        propertyPath:
+          type: string
+        invalidValue:
+          type: string
+        message:
+          type: string
+    NotFoundKnownExceptionInfo:
+      type: object
+      required:
+        - message
+      properties:
+        id:
+          type: string
+        message:
+          type: string
+        exceptionClassName:
+          type: string
+        exceptionStack:
+          type: array
+          items:
+            type: string
+        rootCauseExceptionClassName:
+          type: string
+        rootCauseExceptionStack:
+          type: array
+          items:
+            type: string
+    KnownExceptionInfo:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        exceptionClassName:
+          type: string
+        exceptionStack:
+          type: array
+          items:
+            type: string
+        rootCauseExceptionClassName:
+          type: string
+        rootCauseExceptionStack:
+          type: array
+          items:
+            type: string
+    InvalidInputExceptionInfo:
+      type: object
+      required:
+        - message
+        - validationErrors
+      properties:
+        message:
+          type: string
+        exceptionClassName:
+          type: string
+        exceptionStack:
+          type: array
+          items:
+            type: string
+        validationErrors:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvalidInputProperty"
+  responses:
+    NotFoundResponse:
+      description: Object with given id was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/NotFoundKnownExceptionInfo"
+    InvalidInputResponse:
+      description: Input failed validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/InvalidInputExceptionInfo"
+    ExceptionResponse:
+      description: Exception occurred; see message for details.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/KnownExceptionInfo"
+security:
+  - {}

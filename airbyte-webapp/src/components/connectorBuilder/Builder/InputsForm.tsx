@@ -8,10 +8,10 @@ import { Button } from "components/ui/Button";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/analytics";
 import { FormikPatch } from "core/form/FormikPatch";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderMainFormikContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";
@@ -19,10 +19,22 @@ import styles from "./InputsForm.module.scss";
 import { BuilderFormInput } from "../types";
 import { useInferredInputs } from "../useInferredInputs";
 
-const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
+const supportedTypes = [
+  "string",
+  "integer",
+  "number",
+  "array",
+  "boolean",
+  "enum",
+  "unknown",
+  "date",
+  "date-time",
+] as const;
 
 export interface InputInEditing {
   key: string;
+  // the old key of the input if it was edited
+  previousKey?: string;
   definition: AirbyteJSONSchema;
   required: boolean;
   isNew?: boolean;
@@ -47,6 +59,9 @@ export function newInputInEditing(): InputInEditing {
   };
 }
 
+const DATE_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}$";
+const DATE_TIME_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$";
+
 function inputInEditingToFormInput({
   type,
   showDefaultValueField,
@@ -57,10 +72,17 @@ function inputInEditingToFormInput({
     ...values,
     definition: {
       ...values.definition,
-      type: type === "enum" ? "string" : type === "unknown" ? values.definition.type : type,
+      type:
+        type === "enum" || type === "date" || type === "date-time"
+          ? "string"
+          : type === "unknown"
+          ? values.definition.type
+          : type,
       // only respect the enum values if the user explicitly selected enum as type
       enum: type === "enum" && values.definition.enum?.length ? values.definition.enum : undefined,
       default: showDefaultValueField ? values.definition.default : undefined,
+      format: type === "date" ? "date" : type === "date-time" ? "date-time" : values.definition.format,
+      pattern: type === "date" ? DATE_PATTERN : type === "date-time" ? DATE_TIME_PATTERN : values.definition.pattern,
     },
   };
 }
@@ -113,7 +135,7 @@ export const InputForm = ({
             "inputs",
             inputInEditing.isNew
               ? [...values.inputs, newInput]
-              : values.inputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
+              : values.inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
           );
           onClose(newInput);
         }
@@ -225,9 +247,11 @@ const InputModal = ({
             <BuilderField
               path="type"
               type="enum"
-              options={["string", "number", "integer", "array", "boolean", "enum"]}
+              options={["string", "number", "integer", "array", "boolean", "enum", "date", "date-time"]}
               onChange={() => {
                 setFieldValue("definition.default", undefined);
+                setFieldValue("definition.pattern", undefined);
+                setFieldValue("definition.format", undefined);
               }}
               label={formatMessage({ id: "connectorBuilder.inputModal.type" })}
               tooltip={formatMessage({ id: "connectorBuilder.inputModal.typeTooltip" })}

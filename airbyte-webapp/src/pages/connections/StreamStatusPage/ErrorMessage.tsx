@@ -35,9 +35,8 @@ export const ErrorMessage: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
 
-  const { jobs } = useStreamsListContext();
-
   const { connection } = useConnectionEditService();
+  const { lastCompletedSyncJob } = useConnectionSyncContext();
   const { hasSchemaChanges, hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   const calloutDetails = useMemo<{
@@ -46,8 +45,8 @@ export const ErrorMessage: React.FC = () => {
     buttonMessage: string;
     variant: "error" | "info";
   } | null>(() => {
-    const { jobId, attemptId, errorMessage } = getErrorMessageFromJob(jobs?.[0]) ?? {};
-    // If we have an error message and a non-breaking schema change, show the error message
+    const { jobId, attemptId, errorMessage } = getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
+    // If we have an error message and no breaking schema changes, show the error message
     if (errorMessage && !hasBreakingSchemaChange) {
       return {
         errorMessage,
@@ -71,19 +70,21 @@ export const ErrorMessage: React.FC = () => {
     }
 
     return null;
-  }, [formatMessage, hasBreakingSchemaChange, hasSchemaChanges, jobs, navigate]);
+  }, [formatMessage, hasBreakingSchemaChange, hasSchemaChanges, lastCompletedSyncJob, navigate]);
 
   if (calloutDetails) {
     return (
-      <FlexContainer>
-        <Message
-          text={calloutDetails.errorMessage}
-          actionBtnText={calloutDetails.buttonMessage}
-          type={calloutDetails.variant}
-          onAction={calloutDetails.errorAction}
-          className={styles.error}
-        />
-      </FlexContainer>
+      <Box p="lg">
+        <FlexContainer>
+          <Message
+            text={calloutDetails.errorMessage}
+            actionBtnText={calloutDetails.buttonMessage}
+            type={calloutDetails.variant}
+            onAction={calloutDetails.errorAction}
+            className={styles.error}
+          />
+        </FlexContainer>
+      </Box>
     );
   }
 

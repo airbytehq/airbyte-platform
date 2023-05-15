@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -20,10 +19,8 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.persistence.ActorDefinitionMigrator.ConnectorInfo;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,37 +106,16 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testHasNewVersion() {
-    assertTrue(ActorDefinitionMigrator.hasNewVersion("0.1.99", DEFAULT_PROTOCOL_VERSION));
-    assertFalse(ActorDefinitionMigrator.hasNewVersion("invalid_version", "0.1.2"));
+  void testUpdateIsAvailable() {
+    assertTrue(ActorDefinitionMigrator.updateIsAvailable("0.1.99", DEFAULT_PROTOCOL_VERSION));
+    assertFalse(ActorDefinitionMigrator.updateIsAvailable("invalid_version", "0.1.2"));
   }
 
   @Test
-  void testHasNewPatchVersion() {
-    assertFalse(ActorDefinitionMigrator.hasNewPatchVersion("0.1.99", DEFAULT_PROTOCOL_VERSION));
-    assertFalse(ActorDefinitionMigrator.hasNewPatchVersion("invalid_version", "0.3.1"));
-    assertTrue(ActorDefinitionMigrator.hasNewPatchVersion("0.1.0", "0.1.3"));
-  }
-
-  @Test
-  void testGetNewFields() {
-    final JsonNode o1 = Jsons.deserialize("{ \"field1\": 1, \"field2\": 2 }");
-    final JsonNode o2 = Jsons.deserialize("{ \"field1\": 1, \"field3\": 3 }");
-    assertEquals(Collections.emptySet(), ActorDefinitionMigrator.getNewFields(o1, o1));
-    assertEquals(Collections.singleton("field3"), ActorDefinitionMigrator.getNewFields(o1, o2));
-    assertEquals(Collections.singleton("field2"), ActorDefinitionMigrator.getNewFields(o2, o1));
-  }
-
-  @Test
-  void testGetDefinitionWithNewFields() {
-    final JsonNode current = Jsons.deserialize("{ \"field1\": 1, \"field2\": 2 }");
-    final JsonNode latest = Jsons.deserialize("{ \"field1\": 1, \"field3\": 3, \"field4\": 4 }");
-    final Set<String> newFields = Set.of("field3");
-
-    assertEquals(current, ActorDefinitionMigrator.getDefinitionWithNewFields(current, latest, Collections.emptySet()));
-
-    final JsonNode currentWithNewFields = Jsons.deserialize("{ \"field1\": 1, \"field2\": 2, \"field3\": 3 }");
-    assertEquals(currentWithNewFields, ActorDefinitionMigrator.getDefinitionWithNewFields(current, latest, newFields));
+  void testUpdateIsPatchOnly() {
+    assertFalse(ActorDefinitionMigrator.updateIsPatchOnly("0.1.99", DEFAULT_PROTOCOL_VERSION));
+    assertFalse(ActorDefinitionMigrator.updateIsPatchOnly("invalid_version", "0.3.1"));
+    assertTrue(ActorDefinitionMigrator.updateIsPatchOnly("0.1.0", "0.1.3"));
   }
 
   @Test

@@ -42,7 +42,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     <button
       ref={ref}
       style={widthStyle}
-      className={classNames(styles.button, className, buttonStyles)}
+      className={classNames(styles.button, buttonStyles, className)}
       disabled={disabled || isLoading}
       {...buttonProps}
     >
@@ -76,3 +76,4 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     </button>
   );
 });
+Button.displayName = "Button";

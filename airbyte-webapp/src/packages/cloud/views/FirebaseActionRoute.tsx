@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAsync } from "react-use";
 import { match } from "ts-pattern";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";

@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.helpers.AutoPropagateSchemaChangeHelper.getUpdatedSchema;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
@@ -74,6 +76,13 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.featureflag.AutoPropagateSchema;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
@@ -117,6 +126,7 @@ public class SchedulerHandler {
   private final FeatureFlags envVariableFeatureFlags;
   private final WebUrlHelper webUrlHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   // TODO: Convert to be fully using micronaut
   public SchedulerHandler(final ConfigRepository configRepository,
@@ -130,7 +140,8 @@ public class SchedulerHandler {
                           final ConnectionsHandler connectionsHandler,
                           final FeatureFlags envVariableFeatureFlags,
                           final WebUrlHelper webUrlHelper,
-                          final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                          final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                          final FeatureFlagClient featureFlagClient) {
     this(
         configRepository,
         secretsRepositoryWriter,
@@ -143,7 +154,8 @@ public class SchedulerHandler {
         connectionsHandler,
         envVariableFeatureFlags,
         webUrlHelper,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        featureFlagClient);
   }
 
   @VisibleForTesting
@@ -158,7 +170,8 @@ public class SchedulerHandler {
                    final ConnectionsHandler connectionsHandler,
                    final FeatureFlags envVariableFeatureFlags,
                    final WebUrlHelper webUrlHelper,
-                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                   final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                   final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -171,6 +184,7 @@ public class SchedulerHandler {
     this.envVariableFeatureFlags = envVariableFeatureFlags;
     this.webUrlHelper = webUrlHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -497,6 +511,15 @@ public class SchedulerHandler {
           connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
               CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
       final boolean containsBreakingChange = containsBreakingChange(diff);
+
+      if (containsBreakingChange) {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
+      } else {
+        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED, 1,
+            new MetricAttribute(MetricTags.CONNECTION_ID, connectionRead.getConnectionId().toString()));
+      }
+
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().breakingChange(containsBreakingChange).connectionId(connectionRead.getConnectionId());
       final ConnectionStatus connectionStatus;
@@ -506,7 +529,19 @@ public class SchedulerHandler {
         connectionStatus = connectionRead.getStatus();
       }
       updateObject.status(connectionStatus);
+
+      if (!diff.getTransforms().isEmpty() && !containsBreakingChange) {
+        autoPropagateSchemaChange(workspaceId,
+            connectionRead.getConnectionId(),
+            updateObject,
+            currentAirbyteCatalog,
+            discoveredSchema.getCatalog(),
+            diff.getTransforms(),
+            discoveredSchema.getCatalogId());
+      }
+
       connectionsHandler.updateConnection(updateObject);
+
       if (shouldNotifySchemaChange(diff, connectionRead, discoverSchemaRequestBody)) {
         final String url = webUrlHelper.getConnectionUrl(workspaceId, connectionRead.getConnectionId());
         eventRunner.sendSchemaChangeNotification(connectionRead.getConnectionId(), url, containsBreakingChange);
@@ -514,6 +549,26 @@ public class SchedulerHandler {
       if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
         discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(connectionStatus);
       }
+    }
+  }
+
+  @VisibleForTesting
+  void autoPropagateSchemaChange(final UUID workspaceId,
+                                 final UUID connectionId,
+                                 final ConnectionUpdate updateObject,
+                                 final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
+                                 final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
+                                 final List<StreamTransform> transformations,
+                                 final UUID sourceCatalogId) {
+    if (featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))) {
+      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
+          new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+      io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
+          currentAirbyteCatalog,
+          newCatalog,
+          transformations);
+      updateObject.setSyncCatalog(catalog);
+      updateObject.setSourceCatalogId(sourceCatalogId);
     }
   }
 
@@ -609,7 +664,8 @@ public class SchedulerHandler {
     return jobConverter.getJobInfoRead(job);
   }
 
-  private boolean containsBreakingChange(final CatalogDiff diff) {
+  @VisibleForTesting
+  boolean containsBreakingChange(final CatalogDiff diff) {
     for (final StreamTransform streamTransform : diff.getTransforms()) {
       if (streamTransform.getTransformType() != TransformTypeEnum.UPDATE_STREAM) {
         continue;

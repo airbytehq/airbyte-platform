@@ -13,18 +13,21 @@ import { SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
 import { links } from "utils/links";
 
 import styles from "./DbtCloudSettingsView.module.scss";
+import { useDbtTokenRemovalModal } from "./useDbtTokenRemovalModal";
 interface ServiceTokenFormValues {
   serviceToken: string;
 }
 
-const cleanedErrorMessage = (e: Error): string => e.message.replace("Internal Server Error: ", "");
+export const cleanedErrorMessage = (e: Error): string => e.message.replace("Internal Server Error: ", "");
 // a centrally-defined key for accessing the token value within formik objects
 
 export const DbtCloudSettingsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { hasExistingToken, saveToken, isSavingToken, deleteToken, isDeletingToken } = useDbtCloudServiceToken();
+  const { hasExistingToken, saveToken, isSavingToken, isDeletingToken } = useDbtCloudServiceToken();
   const [hasValidationError, setHasValidationError] = useState(false);
   const { registerNotification } = useNotificationService();
+
+  const onDeleteClick = useDbtTokenRemovalModal();
 
   const ButtonGroup = () => {
     const { resetForm, values } = useFormikContext<ServiceTokenFormValues>();
@@ -34,25 +37,9 @@ export const DbtCloudSettingsView: React.FC = () => {
         {hasExistingToken && (
           <Button
             variant="danger"
+            type="button"
             className={classNames(styles.button, styles.deleteButton)}
-            onClick={() => {
-              deleteToken(void 0, {
-                onError: (e) => {
-                  registerNotification({
-                    id: "dbtCloud/delete-token-failure",
-                    text: cleanedErrorMessage(e),
-                    type: "error",
-                  });
-                },
-                onSuccess: () => {
-                  registerNotification({
-                    id: "dbtCloud/delete-token-success",
-                    text: formatMessage({ id: "settings.integrationSettings.dbtCloudSettings.actions.delete.success" }),
-                    type: "success",
-                  });
-                },
-              });
-            }}
+            onClick={onDeleteClick}
             isLoading={isDeletingToken}
           >
             <FormattedMessage id="settings.integrationSettings.dbtCloudSettings.actions.delete" />

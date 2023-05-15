@@ -366,7 +366,7 @@ export const useInitialValues = (
 
     // Is Create Mode
     if (!isNotCreateMode) {
-      initialValues.name = connection.name ?? `${connection.source.name} <> ${connection.destination.name}`;
+      initialValues.name = connection.name ?? `${connection.source.name} → ${connection.destination.name}`;
     }
 
     const operations = connection.operations ?? [];

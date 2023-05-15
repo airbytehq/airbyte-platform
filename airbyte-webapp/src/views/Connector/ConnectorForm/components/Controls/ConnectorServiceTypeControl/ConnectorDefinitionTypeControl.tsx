@@ -39,7 +39,7 @@ import { WarningMessage } from "../../WarningMessage";
 type MenuWithRequestButtonProps = MenuListProps<DropDownOptionDataItem, false> & { selectProps: any };
 
 const ConnectorList: React.FC<React.PropsWithChildren<MenuWithRequestButtonProps>> = ({ children, ...props }) => {
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   return (
     <>

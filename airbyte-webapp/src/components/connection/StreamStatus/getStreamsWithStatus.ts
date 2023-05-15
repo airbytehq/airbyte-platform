@@ -98,11 +98,18 @@ export const useStreamsWithStatus = (
           return streamStats;
         }
         const { job, attempts } = jobAttempt;
-        attempts?.forEach((attempt) => {
-          attempt.streamStats
-            // reverse so we get the latest
-            ?.reverse()
-            .forEach((streamStat) =>
+        [...(attempts || [])] // avoid mutating the platform response
+          .sort((a, b) => {
+            // ensure the most recent attempt (highest id) is processed first
+            if (a.id < b.id) {
+              return 1;
+            } else if (a.id > b.id) {
+              return -1;
+            }
+            return 0;
+          })
+          .forEach((attempt) => {
+            attempt.streamStats?.forEach((streamStat) =>
               addStatToStream(
                 getStreamKey(streamStat.streamName, streamStat.streamNamespace),
                 streamStats,
@@ -110,7 +117,7 @@ export const useStreamsWithStatus = (
                 attempt
               )
             );
-        });
+          });
         // This is populated on syncs
         job.enabledStreams?.forEach(({ name, namespace }) =>
           addStatToStream(getStreamKey(name, namespace), streamStats, job)

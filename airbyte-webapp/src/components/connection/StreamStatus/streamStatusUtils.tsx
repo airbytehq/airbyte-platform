@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { useCallback } from "react";
 
 import { useExperiment } from "hooks/services/Experiment";
+import { naturalComparatorBy } from "utils/objects";
 
 import { AirbyteStreamWithStatusAndConfiguration, FakeStreamConfigWithStatus } from "./getStreamsWithStatus";
 
@@ -88,11 +89,12 @@ export const useGetStreamStatus = () => {
   );
 };
 
-export const useSortStreams = (
-  streams: AirbyteStreamWithStatusAndConfiguration[]
-): Record<StreamStatusType, AirbyteStreamWithStatusAndConfiguration[]> => {
+type StreamMapping = Record<StreamStatusType, AirbyteStreamWithStatusAndConfiguration[]>;
+
+export const useSortStreams = (streams: AirbyteStreamWithStatusAndConfiguration[]): StreamMapping => {
   const getStreamStatus = useGetStreamStatus();
-  return streams.reduce<Record<StreamStatusType, AirbyteStreamWithStatusAndConfiguration[]>>(
+
+  const mappedStreams = streams.reduce<Record<StreamStatusType, AirbyteStreamWithStatusAndConfiguration[]>>(
     (sortedStreams, stream) => {
       sortedStreams[getStreamStatus(stream.config)].push(stream);
       return sortedStreams;
@@ -107,11 +109,20 @@ export const useSortStreams = (
       [StreamStatusType.Disabled]: [],
     }
   );
+
+  // sort each bucket
+  const bucketSorter = naturalComparatorBy<AirbyteStreamWithStatusAndConfiguration>((stream) => {
+    return stream.stream?.name ?? "";
+  });
+  Object.entries(mappedStreams).forEach(([_key, configuredStreams]) => {
+    configuredStreams.sort(bucketSorter);
+  });
+
+  return mappedStreams;
 };
 
-export const filterEmptyStreamStatuses = (
-  streams: Record<StreamStatusType, AirbyteStreamWithStatusAndConfiguration[]>
-) => Object.entries(streams).filter(([, streams]) => !!streams.length);
+export const filterEmptyStreamStatuses = (streams: StreamMapping) =>
+  Object.entries(streams).filter(([, streams]) => !!streams.length);
 
 export const useLateMultiplierExperiment = () => useExperiment("connection.streamCentricUI.lateMultiplier", 2);
 export const useErrorMultiplierExperiment = () => useExperiment("connection.streamCentricUI.errorMultiplier", 2);

@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -91,6 +92,10 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.featureflag.AutoPropagateSchema;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.models.Job;
@@ -194,6 +199,7 @@ class SchedulerHandlerTest {
   private EnvVariableFeatureFlags envVariableFeatureFlags;
   private WebUrlHelper webUrlHelper;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private FeatureFlagClient featureFlagClient;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -223,7 +229,9 @@ class SchedulerHandlerTest {
 
     jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
 
-    schedulerHandler = new SchedulerHandler(
+    featureFlagClient = mock(TestClient.class);
+
+    schedulerHandler = spy(new SchedulerHandler(
         configRepository,
         secretsRepositoryWriter,
         synchronousSchedulerClient,
@@ -235,7 +243,8 @@ class SchedulerHandlerTest {
         connectionsHandler,
         envVariableFeatureFlags,
         webUrlHelper,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper,
+        featureFlagClient));
   }
 
   @Test
@@ -1315,6 +1324,8 @@ class SchedulerHandlerTest {
         io.airbyte.protocol.models.AirbyteCatalog.class);
     final io.airbyte.api.model.generated.AirbyteCatalog expectedActorCatalog = CatalogConverter.toApi(persistenceCatalog, sourceDef);
 
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any()))
+        .thenReturn(false);
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(catalogDiff1, actual.getCatalogDiff());
     assertEquals(expectedActorCatalog, actual.getCatalog());
@@ -1596,6 +1607,79 @@ class SchedulerHandlerTest {
     schedulerHandler.cancelJob(new JobIdRequestBody().id(jobId));
 
     verify(eventRunner).startNewCancellation(connectionId);
+  }
+
+  @Test
+  void testAutoPropagateChange() {
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID connectionId = UUID.randomUUID();
+
+    ConnectionUpdate connectionUpdate = mock(ConnectionUpdate.class);
+    io.airbyte.api.model.generated.AirbyteCatalog catalog = mock(io.airbyte.api.model.generated.AirbyteCatalog.class);
+    UUID sourceCatalogId = UUID.randomUUID();
+    when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId)))
+        .thenReturn(true);
+    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
+    verify(connectionUpdate).setSyncCatalog(any());
+    verify(connectionUpdate).setSourceCatalogId(sourceCatalogId);
+
+    connectionUpdate = mock(ConnectionUpdate.class);
+
+    when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId)))
+        .thenReturn(false);
+    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
+    verifyNoInteractions(connectionUpdate);
+  }
+
+  @Test
+  void testDiscoverSchemaWithAutoDetectSchema() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
+    final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
+        .connectionId(UUID.randomUUID());
+
+    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
+    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
+    when(discoverResponse.isSuccess()).thenReturn(true);
+    when(discoverResponse.getOutput()).thenReturn(UUID.randomUUID());
+    final ActorCatalog actorCatalog = new ActorCatalog()
+        .withCatalog(Jsons.jsonNode(airbyteCatalog))
+        .withCatalogHash("")
+        .withId(UUID.randomUUID());
+    when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
+    when(discoverResponse.getMetadata()).thenReturn(metadata);
+    when(metadata.isSucceeded()).thenReturn(true);
+
+    final ConnectionRead connectionRead = new ConnectionRead();
+    connectionRead.syncCatalog(new io.airbyte.api.model.generated.AirbyteCatalog())
+        .connectionId(UUID.randomUUID())
+        .notifySchemaChanges(false);
+    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
+    final CatalogDiff catalogDiff = mock(CatalogDiff.class);
+    List<StreamTransform> transforms = List.of(
+        new StreamTransform());
+    when(catalogDiff.getTransforms()).thenReturn(transforms);
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+    when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
+        .thenReturn(sourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
+        .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(SOURCE_DOCKER_REPO)
+            .withDockerImageTag(SOURCE_DOCKER_TAG));
+    when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
+    when(configRepository.getActorCatalog(any(), any(), any())).thenReturn(Optional.empty());
+    when(synchronousSchedulerClient.createDiscoverSchemaJob(source, SOURCE_DOCKER_IMAGE, SOURCE_DOCKER_TAG, new Version(SOURCE_PROTOCOL_VERSION),
+        false))
+            .thenReturn(discoverResponse);
+    when(envVariableFeatureFlags.autoDisablesFailingConnections()).thenReturn(false);
+    doNothing().when(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any(), any());
+
+    schedulerHandler.discoverSchemaForSourceFromSourceId(request);
+
+    verify(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any(), any());
   }
 
 }

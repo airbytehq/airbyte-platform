@@ -2,15 +2,15 @@ import { useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useMutation, useQueryClient } from "react-query";
 
-import { Action, Namespace } from "core/analytics";
-import { getFrequencyFromScheduleData } from "core/analytics/utils";
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
 import { ConnectionService } from "core/domain/connection/ConnectionService";
+import { getFrequencyFromScheduleData } from "core/services/analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
 import { useCurrentWorkspaceId, useInvalidateWorkspaceStateQuery } from "services/workspaces/WorkspacesService";
 
-import { useAnalyticsService } from "./Analytics";
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
 import { useCurrentWorkspace } from "./useWorkspace";

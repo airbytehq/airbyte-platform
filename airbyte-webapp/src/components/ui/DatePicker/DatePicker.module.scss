@@ -111,6 +111,7 @@
 :global(.react-datepicker-time__header) {
   font-weight: 500;
   color: colors.$dark-blue-900;
+  font-size: variables.$font-size-sm;
 }
 
 :global(.react-datepicker__time-list-item) {

@@ -7,6 +7,7 @@ import { Heading } from "components/ui/Heading";
 import { Input } from "components/ui/Input";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 import withKeystrokeHandler from "utils/withKeystrokeHandler";
 
 import styles from "./ConnectionName.module.scss";
@@ -14,6 +15,11 @@ import styles from "./ConnectionName.module.scss";
 const InputWithKeystroke = withKeystrokeHandler(Input);
 
 export const ConnectionName: React.FC = () => {
+  // this component will be removed when the new connection flow is turned on as this component will be replaced
+  // for this interim state, we'll just serve a "readonly" version of this component when the flag is on
+  // the new component will be added in the main header redesign PR.
+
+  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
   const { connection, updateConnection } = useConnectionEditService();
   const { name } = connection;
   const [editingState, setEditingState] = useState(false);
@@ -67,31 +73,39 @@ export const ConnectionName: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
-      {editingState ? (
-        <div className={styles.editingContainer}>
-          <div className={styles.inputContainer} onBlur={onBlur}>
-            <InputWithKeystroke
-              className={styles.input}
-              value={connectionName}
-              onChange={inputChange}
-              onEscape={onEscape}
-              onEnter={onEnter}
-              disabled={loading}
-              autoFocus
-            />
-          </div>
-        </div>
+    <>
+      {isNewConnectionFlowEnabled ? (
+        <Heading as="h2" size="lg">
+          {name}
+        </Heading>
       ) : (
-        <button className={styles.nameContainer} onClick={() => setEditingState(true)}>
-          <div>
-            <Heading as="h2" size="lg">
-              {name}
-            </Heading>
-          </div>
-          <FontAwesomeIcon className={styles.icon} icon={faPenToSquare} />
-        </button>
+        <div className={styles.container}>
+          {editingState ? (
+            <div className={styles.editingContainer}>
+              <div className={styles.inputContainer} onBlur={onBlur}>
+                <InputWithKeystroke
+                  className={styles.input}
+                  value={connectionName}
+                  onChange={inputChange}
+                  onEscape={onEscape}
+                  onEnter={onEnter}
+                  disabled={loading}
+                  autoFocus
+                />
+              </div>
+            </div>
+          ) : (
+            <button className={styles.nameContainer} onClick={() => setEditingState(true)}>
+              <div>
+                <Heading as="h2" size="lg">
+                  {name}
+                </Heading>
+              </div>
+              <FontAwesomeIcon className={styles.icon} icon={faPenToSquare} />
+            </button>
+          )}
+        </div>
       )}
-    </div>
+    </>
   );
 };

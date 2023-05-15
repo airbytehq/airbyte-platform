@@ -15,6 +15,8 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
 import io.airbyte.workers.process.DockerProcessFactory;
@@ -24,12 +26,15 @@ import io.airbyte.workers.sync.NormalizationLauncherWorker;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@MicronautTest
+// tests may be running on a real k8s environment, override the environment to something else for
+// this test
+@MicronautTest(environments = Environment.TEST)
 class ContainerOrchestratorFactoryTest {
 
   @Inject
@@ -43,7 +48,7 @@ class ContainerOrchestratorFactoryTest {
   EnvConfigs envConfigs;
 
   @Inject
-  WorkerConfigs workerConfigs;
+  WorkerConfigsProvider workerConfigsProvider;
 
   @Inject
   ProcessFactory processFactory;
@@ -72,6 +77,7 @@ class ContainerOrchestratorFactoryTest {
 
   @Test
   void workerConfigs() {
+    final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
     // check two variables to ensure the WorkerConfig was created correctly
     assertEquals("1", workerConfigs.getResourceRequirements().getCpuLimit());
     assertEquals("1Gi", workerConfigs.getResourceRequirements().getMemoryLimit());
@@ -91,25 +97,25 @@ class ContainerOrchestratorFactoryTest {
     final var factory = new ContainerOrchestratorFactory();
 
     final var repl = factory.jobOrchestrator(
-        ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
+        ReplicationLauncherWorker.REPLICATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
     assertEquals("Replication", repl.getOrchestratorName());
 
     final var norm = factory.jobOrchestrator(
-        NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
+        NormalizationLauncherWorker.NORMALIZATION, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
-        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
+        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
-        AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
+        AsyncOrchestratorPodProcess.NO_OP, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
     assertEquals("NO_OP", noop.getOrchestratorName());
 
     var caught = false;
     try {
       factory.jobOrchestrator(
-          "does not exist", envConfigs, processFactory, workerConfigs, jobRunConfig, replicationWorkerFactory);
+          "does not exist", envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
     } catch (final Exception e) {
       caught = true;
     }

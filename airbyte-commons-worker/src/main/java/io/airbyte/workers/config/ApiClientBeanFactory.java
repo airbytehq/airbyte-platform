@@ -60,7 +60,7 @@ public class ApiClientBeanFactory {
         .setBasePath("/api")
         .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setConnectTimeout(Duration.ofSeconds(30))
-        .setReadTimeout(Duration.ofSeconds(30))
+        .setReadTimeout(Duration.ofSeconds(300))
         .setRequestInterceptor(builder -> {
           builder.setHeader("User-Agent", "WorkerApp");
           // internalApiAuthToken is in BeanProvider because we want to create a new token each

@@ -26,12 +26,6 @@ interface IncrementalSectionProps {
   currentStreamIndex: number;
 }
 
-const iso8601DurationAnchor = (
-  <a href={links.iso8601Duration} target="_blank" rel="noreferrer">
-    ISO 8601 duration
-  </a>
-);
-
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
   const [field, , helpers] = useField<BuilderIncrementalSync | undefined>(streamFieldPath("incrementalSync"));
@@ -64,13 +58,14 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderIncrementalSync}
+      label={
+        <ControlLabels
+          label="Incremental sync"
+          infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
+        />
+      }
       toggleConfig={{
-        label: (
-          <ControlLabels
-            label="Incremental sync"
-            infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
-          />
-        ),
         toggledOn,
         onToggle: handleToggle,
       }}
@@ -84,33 +79,23 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       <BuilderFieldWithInputs
         type="string"
         path={streamFieldPath("incrementalSync.cursor_field")}
-        label="Cursor field"
-        tooltip="Field on record to use as the cursor"
+        manifestPath="DatetimeBasedCursor.properties.cursor_field"
       />
       <BuilderFieldWithInputs
         type="combobox"
         path={streamFieldPath("incrementalSync.datetime_format")}
-        label="Datetime format"
-        tooltip="Specify the format of the start and end time, e.g. %Y-%m-%d"
+        manifestPath="DatetimeBasedCursor.properties.datetime_format"
         options={DATETIME_FORMAT_OPTIONS}
       />
       <BuilderFieldWithInputs
         type="combobox"
         path={streamFieldPath("incrementalSync.cursor_granularity")}
-        label="Cursor granularity"
-        tooltip={
-          <>
-            Smallest increment the datetime format has ({iso8601DurationAnchor}) that will be used to ensure that the
-            start of a slice does not overlap with the end of the previous one, e.g. for %Y-%m-%d the granularity should
-            be P1D, for %Y-%m-%dT%H:%M:%SZ the granularity should be PT1S
-          </>
-        }
+        manifestPath="DatetimeBasedCursor.properties.cursor_granularity"
         options={SMALL_DURATION_OPTIONS}
       />
       <BuilderOneOf
         path={streamFieldPath("incrementalSync.start_datetime")}
-        label="Start datetime"
-        tooltip="Start time to start the sync from"
+        manifestPath="DatetimeBasedCursor.properties.start_datetime"
         options={[
           {
             label: "User input",
@@ -153,8 +138,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       />
       <BuilderOneOf
         path={streamFieldPath("incrementalSync.end_datetime")}
-        label="End datetime"
-        tooltip="Point in time to sync up to"
+        manifestPath="DatetimeBasedCursor.properties.end_datetime"
         options={[
           {
             label: "User input",
@@ -236,25 +220,13 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         <BuilderFieldWithInputs
           type="combobox"
           path={streamFieldPath("incrementalSync.step")}
-          label="Step"
-          tooltip={
-            <>
-              Time interval ({iso8601DurationAnchor}) for which to break up stream into slices, e.g. P1D for daily
-              slices
-            </>
-          }
+          manifestPath="DatetimeBasedCursor.properties.step"
           options={LARGE_DURATION_OPTIONS}
         />
         <BuilderFieldWithInputs
           type="combobox"
           path={streamFieldPath("incrementalSync.lookback_window")}
-          label="Lookback window"
-          tooltip={
-            <>
-              Time interval ({iso8601DurationAnchor}) before the start_datetime to read data for, e.g. P1M for looking
-              back one month
-            </>
-          }
+          manifestPath="DatetimeBasedCursor.properties.lookback_window"
           options={LARGE_DURATION_OPTIONS}
         />
       </BuilderOptional>

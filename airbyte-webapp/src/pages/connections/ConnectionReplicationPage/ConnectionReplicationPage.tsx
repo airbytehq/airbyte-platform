@@ -14,11 +14,11 @@ import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/Schem
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import LoadingSchema from "components/LoadingSchema";
 
-import { Action, Namespace } from "core/analytics";
-import { getFrequencyFromScheduleData } from "core/analytics/utils";
 import { toWebBackendConnectionUpdate } from "core/domain/connection";
+import { getFrequencyFromScheduleData } from "core/services/analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
-import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "hooks/services/Analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import {
   tidyConnectionFormValues,

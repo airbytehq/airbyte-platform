@@ -11,7 +11,7 @@ import { InfoTooltip } from "components/ui/Tooltip";
 import { StreamReadInferredSchema, StreamReadSlicesItemPagesItem } from "core/request/ConnectorBuilderClient";
 import {
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PageDisplay.module.scss";
@@ -35,7 +35,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const { formatMessage } = useIntl();
 
   const { editorView } = useConnectorBuilderFormState();
-  const { testStreamIndex, streamRead } = useConnectorBuilderTestState();
+  const { testStreamIndex, streamRead } = useConnectorBuilderTestRead();
   const [field] = useField(`streams[${testStreamIndex}].schema`);
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);

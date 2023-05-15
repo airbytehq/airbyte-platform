@@ -10,7 +10,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { trackPageview } from "utils/fathom";
 

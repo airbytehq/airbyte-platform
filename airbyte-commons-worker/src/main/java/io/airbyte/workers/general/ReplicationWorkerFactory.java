@@ -29,6 +29,7 @@ import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
@@ -186,11 +187,12 @@ public class ReplicationWorkerFactory {
     // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
     final UUID workspaceId = syncInput.getWorkspaceId();
     final boolean fieldSelectionEnabled = workspaceId != null
-        && (featureFlagClient.enabled(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
+        && (featureFlagClient.boolVariation(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
             || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
     final boolean removeValidationLimit =
         workspaceId != null && featureFlagClient.boolVariation(RemoveValidationLimit.INSTANCE, new Workspace(workspaceId));
 
+    final RecordSchemaValidator recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
     return new DefaultReplicationWorker(
         jobRunConfig.getJobId(),
         Math.toIntExact(jobRunConfig.getAttemptId()),
@@ -200,11 +202,11 @@ public class ReplicationWorkerFactory {
         messageTracker,
         syncPersistence,
         new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
+        new FieldSelector(recordSchemaValidator, metricReporter, fieldSelectionEnabled, removeValidationLimit),
         metricReporter,
         connectorConfigUpdater,
         fieldSelectionEnabled,
-        heartbeatTimeoutChaperone,
-        removeValidationLimit);
+        heartbeatTimeoutChaperone);
   }
 
   /**

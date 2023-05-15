@@ -20,7 +20,7 @@ micronaut:
       enabled: true
       configurations:
         web:
-          allowedOrigins:
+          allowed-origins-regex:
             - ^.*$
     netty:
       access-logger:
@@ -28,6 +28,8 @@ micronaut:
     idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
 
 airbyte:
+  shutdown:
+    delay_ms: 20000
   cloud:
     storage:
       logs:
@@ -184,3 +186,6 @@ logger:
   #    io.micronaut.context.condition: DEBUG
   # Uncomment to help resolve issues with security beans
   #    io.micronaut.security: DEBUG
+  # Uncomment to help resolve issues with micronaut data
+  #    com.zaxxer.hikari.HikariConfig: DEBUG
+  #    com.zaxxer.hikari: TRACE

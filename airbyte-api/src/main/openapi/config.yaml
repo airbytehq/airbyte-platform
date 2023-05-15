@@ -2519,7 +2519,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/StreamStatusRead"
   /v1/stream_statuses/update:
-    put:
+    post:
       summary: Updates a stream status.
       tags:
         - stream_statuses

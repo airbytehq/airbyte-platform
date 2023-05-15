@@ -60,5 +60,6 @@ const ServiceOverrides: React.FC<React.PropsWithChildren<unknown>> = React.memo(
 
   return registeredMiddlewares ? <>{children}</> : <LoadingPage />;
 });
+ServiceOverrides.displayName = "ServiceOverrides";
 
 export { AppServicesProvider };

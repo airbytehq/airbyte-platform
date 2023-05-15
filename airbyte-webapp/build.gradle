@@ -94,10 +94,39 @@ task test(type: PnpmTask) {
     outputs.upToDateWhen { true }
 }
 
+task e2etest(type: PnpmTask) {
+    dependsOn pnpmInstall
+
+    // If the cypressWebappKey property has been set from the outside (see tools/bin/e2e_test.sh)
+    // we'll record the cypress session, otherwise we're not recording
+    def recordCypress = project.hasProperty('cypressWebappKey') && project.getProperty('cypressWebappKey')
+    if (recordCypress) {
+        environment = [CYPRESS_KEY: project.getProperty('cypressWebappKey')]
+        args = ['run', 'cypress:ci:record']
+    } else {
+        args = ['run', 'cypress:ci']
+    }
+
+    // Mark the outputs as never up to date, to ensure we always run the tests.
+    // We want this because they are e2e tests and can depend on other factors e.g., external dependencies.
+    outputs.upToDateWhen { false }
+}
+
+task cloudE2eTest(type: PnpmTask) {
+    dependsOn pnpmInstall
+
+    args = ['run', 'cloud-test:stage']
+
+    // Mark the outputs as never up to date, to ensure we always run the tests.
+    // We want this because they are e2e tests and can depend on other factors e.g., external dependencies.
+    outputs.upToDateWhen { false }
+}
+
 task licenseCheck(type: PnpmTask) {
     dependsOn pnpmInstall
 
     args = ['run', 'license-check']
+
     inputs.files nodeModules
     inputs.file 'package.json'
     inputs.file 'scripts/license-check.js'
@@ -125,6 +154,7 @@ task validateLinks(type: PnpmTask) {
 
 task buildStorybook(type: PnpmTask) {
     dependsOn pnpmInstall
+
     args = ['run', 'build:storybook']
 
     inputs.files commonConfigs
