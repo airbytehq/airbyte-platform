@@ -910,6 +910,8 @@
   "connectorBuilder.documentationLink": "Open documentation in separate tab",
   "connectorBuilder.interpolationHeading": "Variables available for interpolation",
   "connectorBuilder.maxLength": "Must be at most 256 characters",
+  "connectorBuilder.slackChannel": "#help-connector-development",
+  "connectorBuilder.slackChannelTooltip": "Ask any questions or provide feedback in our public slack channel",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
