@@ -15,6 +15,7 @@ RUN if [ -f /etc/os-release ]; then \
         apk update && apk upgrade && apk upgrade -U openssl && \
         apk del openldap; \
       elif [[ "$ID" == "amzn" ]]; then \
+        echo "Building for Amazon Linux" && \
         yum install -y tar;  \
       fi \
     fi
