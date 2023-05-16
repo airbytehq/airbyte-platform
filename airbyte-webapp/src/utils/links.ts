@@ -8,7 +8,7 @@ export const links = {
   dbtCommandsReference: "https://docs.getdbt.com/reference/dbt-commands",
   dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
-  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting/on-deploying`,
+  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting`,
   termsLink: "https://airbyte.com/terms",
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
