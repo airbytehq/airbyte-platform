@@ -13,6 +13,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: variables.$spacing-md;
   font-size: variables.$font-size-lg;
   line-height: 1.4;
   min-height: 36px;
@@ -54,6 +55,7 @@
   right: 0;
   left: 0;
   width: 100%;
+  min-width: fit-content;
   display: flex;
   flex-direction: column;
   gap: variables.$spacing-sm;
