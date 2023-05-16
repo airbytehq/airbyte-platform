@@ -27,6 +27,7 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
@@ -35,6 +36,7 @@ import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
+import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
@@ -55,27 +57,35 @@ import lombok.extern.slf4j.Slf4j;
 public class ReplicationWorkerFactory {
 
   private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
+  private final ConnectorConfigUpdater connectorConfigUpdater;
   private final SourceApi sourceApi;
   private final SourceDefinitionApi sourceDefinitionApi;
   private final DestinationApi destinationApi;
   private final SyncPersistenceFactory syncPersistenceFactory;
-
+  private final AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   private final FeatureFlagClient featureFlagClient;
   private final FeatureFlags featureFlags;
+  private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
 
   public ReplicationWorkerFactory(
                                   final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory,
+                                  final ConnectorConfigUpdater connectorConfigUpdater,
+                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final SourceApi sourceApi,
                                   final SourceDefinitionApi sourceDefinitionApi,
                                   final DestinationApi destinationApi,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
-                                  final FeatureFlags featureFlags) {
+                                  final FeatureFlags featureFlags,
+                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
+    this.connectorConfigUpdater = connectorConfigUpdater;
     this.sourceApi = sourceApi;
     this.sourceDefinitionApi = sourceDefinitionApi;
     this.destinationApi = destinationApi;
     this.syncPersistenceFactory = syncPersistenceFactory;
+    this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
+    this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
 
     this.featureFlagClient = featureFlagClient;
     this.featureFlags = featureFlags;
@@ -109,19 +119,10 @@ public class ReplicationWorkerFactory {
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
     final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, syncInput);
-    // TODO ConnectorConfigUpdater should be injectable
-    final ConnectorConfigUpdater connectorConfigUpdater = createConnectorConfigUpdater(sourceApi, destinationApi);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
-        syncInput);
-  }
-
-  /**
-   * Create ConnectorConfigUpdater.
-   */
-  private static ConnectorConfigUpdater createConnectorConfigUpdater(final SourceApi sourceApi, final DestinationApi destinationApi) {
-    return new ConnectorConfigUpdater(sourceApi, destinationApi);
+        syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
   }
 
   /**
@@ -181,7 +182,9 @@ public class ReplicationWorkerFactory {
                                                            final FeatureFlagClient featureFlagClient,
                                                            final FeatureFlags featureFlags,
                                                            final JobRunConfig jobRunConfig,
-                                                           final StandardSyncInput syncInput) {
+                                                           final StandardSyncInput syncInput,
+                                                           final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
+                                                           final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper) {
     // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
     // environment-variable flags say so (deprecated).
     // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
@@ -205,8 +208,10 @@ public class ReplicationWorkerFactory {
         new FieldSelector(recordSchemaValidator, metricReporter, fieldSelectionEnabled, removeValidationLimit),
         metricReporter,
         connectorConfigUpdater,
-        fieldSelectionEnabled,
-        heartbeatTimeoutChaperone);
+        heartbeatTimeoutChaperone,
+        featureFlagClient,
+        airbyteMessageDataExtractor,
+        replicationEventPublishingHelper);
   }
 
   /**

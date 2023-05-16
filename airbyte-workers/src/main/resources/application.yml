@@ -8,6 +8,13 @@ micronaut:
     # entries are UUID connectionIds, so 100,000 entries should be roughly 1.6MB
     connection-workspace-id:
       maximumSize: 100_000
+  executors:
+    control-message:
+      type: fixed
+      n-threads: ${CONTROL_MESSAGE_EXECUTOR_THREADS:1}
+    stream-status:
+      type: fixed
+      n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
 
 airbyte:
   activity:

@@ -18,6 +18,7 @@ import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.StateApi;
+import io.airbyte.api.client.generated.StreamStatusesApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import java.util.Random;
@@ -61,6 +62,7 @@ public class AirbyteApiClient {
   private final HealthApi healthApi;
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
+  private final StreamStatusesApi streamStatusesApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
     connectionApi = new ConnectionApi(apiClient);
@@ -78,6 +80,7 @@ public class AirbyteApiClient {
     healthApi = new HealthApi(apiClient);
     attemptApi = new AttemptApi(apiClient);
     stateApi = new StateApi(apiClient);
+    streamStatusesApi = new StreamStatusesApi(apiClient);
   }
 
   public ConnectionApi getConnectionApi() {
@@ -138,6 +141,10 @@ public class AirbyteApiClient {
 
   public StateApi getStateApi() {
     return stateApi;
+  }
+
+  public StreamStatusesApi getStreamStatusesApi() {
+    return streamStatusesApi;
   }
 
   /**

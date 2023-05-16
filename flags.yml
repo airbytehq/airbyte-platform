@@ -17,3 +17,5 @@ flags:
     serve: false
   - name: autopropagation.enabled
     serve: false
+  - name: handle.stream.status
+    serve: false

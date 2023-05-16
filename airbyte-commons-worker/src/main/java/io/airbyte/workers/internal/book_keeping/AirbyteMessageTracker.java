@@ -12,8 +12,6 @@ import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.State;
-import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
-import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -46,11 +44,6 @@ public class AirbyteMessageTracker implements MessageTracker {
   private final StateAggregator stateAggregator;
   private final FeatureFlags featureFlags;
   private final boolean featureFlagLogConnectorMsgs;
-
-  private enum ConnectorType {
-    SOURCE,
-    DESTINATION
-  }
 
   public AirbyteMessageTracker(final FeatureFlags featureFlags) {
     this(new DefaultSyncStatsTracker(), featureFlags);
@@ -85,10 +78,10 @@ public class AirbyteMessageTracker implements MessageTracker {
     logMessageAsJSON("source", message);
 
     switch (message.getType()) {
-      case TRACE -> handleEmittedTrace(message.getTrace(), ConnectorType.SOURCE);
+      case TRACE -> handleEmittedTrace(message.getTrace(), AirbyteMessageOrigin.SOURCE);
       case RECORD -> handleSourceEmittedRecord(message.getRecord());
       case STATE -> handleSourceEmittedState(message.getState());
-      case CONTROL -> handleEmittedOrchestratorMessage(message.getControl(), ConnectorType.SOURCE);
+      case CONTROL -> log.debug("Control message not currently tracked.");
       default -> log.warn("Invalid message type for message: {}", message);
     }
   }
@@ -99,9 +92,9 @@ public class AirbyteMessageTracker implements MessageTracker {
     logMessageAsJSON("destination", message);
 
     switch (message.getType()) {
-      case TRACE -> handleEmittedTrace(message.getTrace(), ConnectorType.DESTINATION);
+      case TRACE -> handleEmittedTrace(message.getTrace(), AirbyteMessageOrigin.DESTINATION);
       case STATE -> handleDestinationEmittedState(message.getState());
-      case CONTROL -> handleEmittedOrchestratorMessage(message.getControl(), ConnectorType.DESTINATION);
+      case CONTROL -> log.debug("Control message not currently tracked.");
       default -> log.warn("Invalid message type for message: {}", message);
     }
   }
@@ -138,41 +131,21 @@ public class AirbyteMessageTracker implements MessageTracker {
   }
 
   /**
-   * When a connector signals that the platform should update persist an update.
-   */
-  private void handleEmittedOrchestratorMessage(final AirbyteControlMessage controlMessage, final ConnectorType connectorType) {
-    switch (controlMessage.getType()) {
-      case CONNECTOR_CONFIG -> handleEmittedOrchestratorConnectorConfig(controlMessage.getConnectorConfig(), connectorType);
-      default -> log.warn("Invalid orchestrator message type for message: {}", controlMessage);
-    }
-  }
-
-  /**
-   * When a connector needs to update its configuration.
-   */
-  @SuppressWarnings("PMD") // until method is implemented
-  private void handleEmittedOrchestratorConnectorConfig(final AirbyteControlConnectorConfigMessage configMessage,
-                                                        final ConnectorType connectorType) {
-    // Config updates are being persisted as part of the DefaultReplicationWorker.
-    // In the future, we could add tracking of these kinds of messages here. Nothing to do for now.
-  }
-
-  /**
    * When a connector emits a trace message, check the type and call the correct function. If it is an
    * error trace message, add it to the list of errorTraceMessages for the connector type
    */
-  private void handleEmittedTrace(final AirbyteTraceMessage traceMessage, final ConnectorType connectorType) {
+  private void handleEmittedTrace(final AirbyteTraceMessage traceMessage, final AirbyteMessageOrigin airbyteMessageOrigin) {
     switch (traceMessage.getType()) {
       case ESTIMATE -> handleEmittedEstimateTrace(traceMessage.getEstimate());
-      case ERROR -> handleEmittedErrorTrace(traceMessage, connectorType);
+      case ERROR -> handleEmittedErrorTrace(traceMessage, airbyteMessageOrigin);
       default -> log.warn("Invalid message type for trace message: {}", traceMessage);
     }
   }
 
-  private void handleEmittedErrorTrace(final AirbyteTraceMessage errorTraceMessage, final ConnectorType connectorType) {
-    if (connectorType.equals(ConnectorType.DESTINATION)) {
+  private void handleEmittedErrorTrace(final AirbyteTraceMessage errorTraceMessage, final AirbyteMessageOrigin airbyteMessageOrigin) {
+    if (airbyteMessageOrigin.equals(AirbyteMessageOrigin.DESTINATION)) {
       destinationErrorTraceMessages.add(errorTraceMessage);
-    } else if (connectorType.equals(ConnectorType.SOURCE)) {
+    } else if (airbyteMessageOrigin.equals(AirbyteMessageOrigin.SOURCE)) {
       sourceErrorTraceMessages.add(errorTraceMessage);
     }
   }

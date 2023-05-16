@@ -105,7 +105,8 @@ class ContainerOrchestratorFactoryTest {
     assertEquals("Normalization", norm.getOrchestratorName());
 
     final var dbt = factory.jobOrchestrator(
-        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
+        DbtLauncherWorker.DBT, envConfigs, processFactory, workerConfigsProvider, jobRunConfig,
+        replicationWorkerFactory);
     assertEquals("DBT Transformation", dbt.getOrchestratorName());
 
     final var noop = factory.jobOrchestrator(
@@ -114,8 +115,7 @@ class ContainerOrchestratorFactoryTest {
 
     var caught = false;
     try {
-      factory.jobOrchestrator(
-          "does not exist", envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
+      factory.jobOrchestrator("does not exist", envConfigs, processFactory, workerConfigsProvider, jobRunConfig, replicationWorkerFactory);
     } catch (final Exception e) {
       caught = true;
     }
