@@ -941,7 +941,7 @@ class DefaultReplicationWorkerTest {
         workerMetricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        featureFlagClient,
+        new ReplicationFeatureFlagReader(featureFlagClient),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper);
   }

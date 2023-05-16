@@ -12,6 +12,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
+import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.FieldSelector;
@@ -48,6 +49,8 @@ class ReplicationWorkerHelper {
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private StreamDescriptor currentSourceStream = null;
+  private ReplicationContext replicationContext = null;
+  private ReplicationFeatureFlags replicationFeatureFlags = null;
 
   public ReplicationWorkerHelper(
                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
@@ -68,20 +71,55 @@ class ReplicationWorkerHelper {
     this.recordsRead = 0L;
   }
 
+  public void initialize(final ReplicationContext replicationContext, final ReplicationFeatureFlags replicationFeatureFlags) {
+    this.replicationContext = replicationContext;
+    this.replicationFeatureFlags = replicationFeatureFlags;
+  }
+
   public void beforeReplication(final ConfiguredAirbyteCatalog catalog) {
     fieldSelector.populateFields(catalog);
   }
 
-  public void endOfSource(final ReplicationContext replicationContext) {
+  public void endOfReplication() {
+    // Publish a complete status event for all streams associated with the connection.
+    // This is to ensure that all streams end up in a complete state and is necessary for
+    // connections with destinations that do not emit messages to trigger the completion.
+    replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
+        AirbyteMessageOrigin.INTERNAL);
+  }
+
+  public void endOfSource() {
     LOGGER.info("Total records read: {} ({})", recordsRead,
         FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
 
     fieldSelector.reportMetrics(replicationContext.sourceId());
   }
 
-  public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage,
-                                                           final ReplicationContext replicationContext,
-                                                           final boolean handleStreamStatus) {
+  public void endOfDestination() {
+    // Publish the completed state for the last stream, if present
+    final StreamDescriptor currentStream = getCurrentDestinationStream();
+    if (replicationFeatureFlags.shouldHandleStreamStatus() && currentStream != null) {
+      replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentStream, replicationContext,
+          AirbyteMessageOrigin.DESTINATION);
+    }
+  }
+
+  public void handleSourceFailure() {
+    if (replicationFeatureFlags.shouldHandleStreamStatus()) {
+      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(getCurrentSourceStream(),
+          replicationContext, AirbyteMessageOrigin.SOURCE);
+    }
+  }
+
+  public void handleDestinationFailure() {
+    if (replicationFeatureFlags.shouldHandleStreamStatus()) {
+      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(getCurrentSourceStream(),
+          replicationContext, AirbyteMessageOrigin.DESTINATION);
+    }
+
+  }
+
+  public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {
     final StreamDescriptor previousStream = currentSourceStream;
     currentSourceStream = airbyteMessageDataExtractor.extractStreamDescriptor(airbyteMessage, previousStream);
     if (currentSourceStream != null) {
@@ -95,7 +133,7 @@ class ReplicationWorkerHelper {
 
     messageTracker.acceptFromSource(message);
 
-    if (handleStreamStatus && shouldPublishMessage(airbyteMessage)) {
+    if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(airbyteMessage)) {
       LOGGER.debug("Publishing source event for stream {}:{}...", currentSourceStream.getNamespace(), currentSourceStream.getName());
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, message, replicationContext));
@@ -119,10 +157,7 @@ class ReplicationWorkerHelper {
     return Optional.of(message);
   }
 
-  public void processMessageFromDestination(final AirbyteMessage message,
-                                            final boolean commitStatesAsap,
-                                            final boolean handleStreamStatus,
-                                            final ReplicationContext replicationContext) {
+  public void processMessageFromDestination(final AirbyteMessage message) {
     LOGGER.info("State in DefaultReplicationWorker from destination: {}", message);
     final StreamDescriptor previousStream = currentDestinationStream;
     currentDestinationStream = airbyteMessageDataExtractor.extractStreamDescriptor(message, previousStream);
@@ -132,17 +167,17 @@ class ReplicationWorkerHelper {
 
     // If the worker has moved on to the next stream, ensure that a completed status is sent
     // for the previously tracked stream.
-    if (handleStreamStatus && previousStream != null && !previousStream.equals(currentDestinationStream)) {
+    if (replicationFeatureFlags.shouldHandleStreamStatus() && previousStream != null && !previousStream.equals(currentDestinationStream)) {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentDestinationStream, replicationContext,
           AirbyteMessageOrigin.DESTINATION);
     }
 
     messageTracker.acceptFromDestination(message);
-    if (commitStatesAsap && message.getType() == Type.STATE) {
+    if (replicationFeatureFlags.shouldCommitStateAsap() && message.getType() == Type.STATE) {
       syncPersistence.persist(replicationContext.connectionId(), message.getState());
     }
 
-    if (handleStreamStatus && shouldPublishMessage(message)) {
+    if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(message)) {
       LOGGER.debug("Publishing destination event for stream {}:{}...", currentDestinationStream.getNamespace(), currentDestinationStream.getName());
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, message, replicationContext));

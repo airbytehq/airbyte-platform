@@ -163,7 +163,7 @@ public class ReplicationWorkerFactory {
   private static MessageTracker createMessageTracker(final SyncPersistence syncPersistence,
                                                      final FeatureFlags featureFlags,
                                                      final StandardSyncInput syncInput) {
-    final boolean commitStatsAsap = DefaultReplicationWorker.shouldCommitStatsAsap(syncInput);
+    final boolean commitStatsAsap = ReplicationFeatureFlagReader.shouldCommitStatsAsap(syncInput);
     final MessageTracker messageTracker =
         commitStatsAsap ? new AirbyteMessageTracker(syncPersistence, featureFlags) : new AirbyteMessageTracker(featureFlags);
     return messageTracker;
@@ -209,7 +209,7 @@ public class ReplicationWorkerFactory {
         metricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        featureFlagClient,
+        new ReplicationFeatureFlagReader(featureFlagClient),
         airbyteMessageDataExtractor,
         replicationEventPublishingHelper);
   }
@@ -221,7 +221,7 @@ public class ReplicationWorkerFactory {
                                                        final StandardSyncInput syncInput,
                                                        final IntegrationLauncherConfig sourceLauncherConfig) {
     // TODO clean up the feature flag init once commitStates and commitStats have been rolled out
-    final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
+    final boolean commitStatesAsap = ReplicationFeatureFlagReader.shouldCommitStateAsap(syncInput);
     final SyncPersistence syncPersistence = commitStatesAsap
         ? syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
             sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog())

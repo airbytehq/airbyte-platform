@@ -146,7 +146,7 @@ public class ReplicationWorkerPerformanceTest {
         metricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        featureFlagClient,
+        new ReplicationFeatureFlagReader(featureFlagClient),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
