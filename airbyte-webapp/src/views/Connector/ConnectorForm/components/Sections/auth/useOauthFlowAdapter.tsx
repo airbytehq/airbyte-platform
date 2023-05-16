@@ -51,7 +51,11 @@ function useFormikOauthAdapter(
     }
 
     Object.entries(newValues).forEach(([key, value]) => {
-      setValue(key as keyof ConnectorFormValues<Credentials>, value);
+      setValue(key as keyof ConnectorFormValues<Credentials>, value, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
     });
     setHasRun(true);
   };
