@@ -12,7 +12,7 @@ RUN if [ -f /etc/os-release ]; then \
         echo "Building for Alpine" && \
         apk add tar && \
         apk update && apk upgrade && apk upgrade -U openssl && \
-        apk del openldap \
+        apk del openldap; \
       elif [ "$ID" == "amzn" ]; then \
         echo "Building for Amazon Linux" && \
         yum install -y tar;  \
