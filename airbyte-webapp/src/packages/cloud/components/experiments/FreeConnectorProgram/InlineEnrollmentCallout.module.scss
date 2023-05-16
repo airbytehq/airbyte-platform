@@ -2,11 +2,11 @@
 @use "scss/colors";
 
 .container {
-  margin-top: variables.$spacing-lg;
   width: 100%;
 }
 
-.withBottomMargin {
+.withMargin {
+  margin-top: variables.$spacing-lg;
   margin-bottom: variables.$spacing-lg;
 }
 

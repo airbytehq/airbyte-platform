@@ -214,7 +214,7 @@ export const CreateConnectionPage: React.FC = () => {
               }
             />
           )}
-          {fcpEnabled && <InlineEnrollmentCallout withBottomMargin />}
+          {fcpEnabled && <InlineEnrollmentCallout withMargin />}
           {renderStep()}
         </FormPageContent>
       </ConnectorDocumentationWrapper>
