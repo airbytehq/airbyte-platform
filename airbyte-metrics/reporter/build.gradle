@@ -8,8 +8,7 @@ configurations {
 
 configurations.all {
     resolutionStrategy {
-        force libs.jooq
-        force libs.jsonsmart
+        force libs.jooq, libs.jsonsmart
 
     }
 }
