@@ -12,33 +12,29 @@ interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   onUpload?: (value: string) => void;
 }
 
-export const TextArea: React.FC<React.PropsWithChildren<TextAreaProps>> = ({
-  error,
-  light,
-  onUpload,
-  disabled,
-  children,
-  className,
-  ...textAreaProps
-}) => {
-  return (
-    <FlexContainer className={styles.container}>
-      <TextInputContainer disabled={disabled} error={error} light={light}>
-        <textarea
-          {...textAreaProps}
-          className={classNames(
-            styles.textarea,
-            {
-              [styles.error]: error,
-              [styles.light]: light,
-            },
-            className
-          )}
-        >
-          {children}
-        </textarea>
-      </TextInputContainer>
-      {onUpload && <FileUpload onUpload={onUpload} />}
-    </FlexContainer>
-  );
-};
+export const TextArea = React.forwardRef<HTMLTextAreaElement, React.PropsWithChildren<TextAreaProps>>(
+  ({ error, light, onUpload, disabled, children, className, ...textAreaProps }, ref) => {
+    return (
+      <FlexContainer className={styles.container}>
+        <TextInputContainer disabled={disabled} error={error} light={light}>
+          <textarea
+            {...textAreaProps}
+            ref={ref}
+            className={classNames(
+              styles.textarea,
+              {
+                [styles.error]: error,
+                [styles.light]: light,
+              },
+              className
+            )}
+          >
+            {children}
+          </textarea>
+        </TextInputContainer>
+        {onUpload && <FileUpload onUpload={onUpload} />}
+      </FlexContainer>
+    );
+  }
+);
+TextArea.displayName = "TextArea";

@@ -1,6 +1,6 @@
 import classNames from "classnames";
-import { useField } from "formik";
 import React from "react";
+import { useFormContext } from "react-hook-form";
 
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { RadioButton } from "components/ui/RadioButton";
@@ -11,10 +11,9 @@ import { useSshSslImprovements } from "../../useSshSslImprovements";
 
 export const SshSslSwitcher: React.FC = () => {
   const { dbHostIsLocalhost } = useSshSslImprovements();
-  const [{ value: sslModeValue }, , sslHelper] = useField<string | undefined>("connectionConfiguration.ssl_mode.mode");
-  const [{ value: tunnelModeValue }, , tunnelHelper] = useField<string | undefined>(
-    "connectionConfiguration.tunnel_method.tunnel_method"
-  );
+  const { watch, setValue } = useFormContext();
+  const sslModeValue = watch("connectionConfiguration.ssl_mode.mode");
+  const tunnelModeValue = watch("connectionConfiguration.tunnel_method.tunnel_method");
   return (
     <FlexContainer>
       <label
@@ -33,9 +32,9 @@ export const SshSslSwitcher: React.FC = () => {
             checked={tunnelModeValue === "NO_TUNNEL"}
             onChange={() => {
               if (sslModeValue === "disable" || sslModeValue === "prefer" || sslModeValue === "allow") {
-                sslHelper.setValue("require");
+                setValue("connectionConfiguration.ssl_mode.mode", "require");
               }
-              tunnelHelper.setValue("NO_TUNNEL");
+              setValue("connectionConfiguration.tunnel_method.tunnel_method", "NO_TUNNEL");
             }}
           />
         </FlexItem>
@@ -63,10 +62,10 @@ export const SshSslSwitcher: React.FC = () => {
             checked={tunnelModeValue !== "NO_TUNNEL"}
             onChange={() => {
               if (sslModeValue === "require") {
-                sslHelper.setValue("prefer");
+                setValue("connectionConfiguration.ssl_mode.mode", "prefer");
               }
               if (tunnelModeValue === "NO_TUNNEL") {
-                tunnelHelper.setValue("SSH_KEY_AUTH");
+                setValue("connectionConfiguration.tunnel_method.tunnel_method", "SSH_KEY_AUTH");
               }
             }}
           />

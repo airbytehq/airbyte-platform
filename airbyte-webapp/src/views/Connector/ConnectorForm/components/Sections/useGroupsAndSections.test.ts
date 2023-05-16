@@ -1,5 +1,3 @@
-import { FieldMetaProps } from "formik";
-
 import { FormGroupItem, FormBaseItem, FormBlock, GroupDetails } from "core/form/types";
 
 import { DisplayType, generateGroupsAndSections, Section } from "./useGroupsAndSections";
@@ -62,15 +60,13 @@ function section(blocks: FormBlock[], displayType: DisplayType = "expanded"): Se
   return {
     blocks,
     displayType,
-    hasError: false,
   };
 }
 
 const isHiddenAuthField = jest.fn(() => false);
-const getFieldMeta = jest.fn(() => ({ error: false, touched: false } as unknown as FieldMetaProps<unknown>));
 
 function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = [], featureFlag = true) {
-  return generateGroupsAndSections(blocks, groups, featureFlag, true, isHiddenAuthField, getFieldMeta);
+  return generateGroupsAndSections(blocks, groups, featureFlag, true, isHiddenAuthField);
 }
 
 describe("useGroupsAndSections", () => {

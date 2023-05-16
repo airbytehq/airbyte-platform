@@ -1,7 +1,6 @@
-import { setIn, useFormikContext } from "formik";
 import { JSONSchema7Type } from "json-schema";
-import get from "lodash/get";
 import { useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 
 import { FormGroupItem } from "core/form/types";
 import { useExperiment } from "hooks/services/Experiment";
@@ -14,14 +13,24 @@ import { isLocalhost } from "./utils";
 const tunnelModePath = "connectionConfiguration.tunnel_method.tunnel_method";
 const sslModePath = "connectionConfiguration.ssl_mode.mode";
 
+interface SshSslFormValues {
+  host?: string;
+  tunnel_method: {
+    tunnel_method: string;
+  };
+  ssl_mode: {
+    mode: string;
+  };
+}
+
 export const useSshSslImprovements = (path?: string) => {
   const showSshSslExperiment = useExperiment("connector.form.sshSslImprovements", false);
   const showSimplifiedConfiguration = useExperiment("connector.form.simplifyConfiguration", false);
   const { selectedConnectorDefinition } = useConnectorForm();
-  const { values, setValues } = useFormikContext<ConnectorFormValues>();
-  const hostValue = get(values, "connectionConfiguration.host");
-  const tunnelModeValue = get(values, tunnelModePath);
-  const sslModeValue = get(values, sslModePath);
+  const { setValue, watch } = useFormContext<ConnectorFormValues<SshSslFormValues>>();
+  const hostValue = watch("connectionConfiguration.host");
+  const tunnelModeValue = watch(tunnelModePath);
+  const sslModeValue = watch(sslModePath);
 
   const isTunnelMethod = path === "connectionConfiguration.tunnel_method";
   const isSSLMode = path === "connectionConfiguration.ssl_mode";
@@ -39,13 +48,12 @@ export const useSshSslImprovements = (path?: string) => {
   // Automatically select tunnel mode if db host is localhost - behave as if the user clicked the "set up a tunnel" tile
   useEffect(() => {
     if (showSshSslImprovements && dbHostIsLocalhost && isTunnelMethod && tunnelModeValue === "NO_TUNNEL") {
-      let newFormValues = setIn(values, tunnelModePath, "SSH_KEY_AUTH");
+      setValue(tunnelModePath, "SSH_KEY_AUTH");
       if (sslModeValue === "require") {
-        newFormValues = setIn(newFormValues, sslModePath, "prefer");
+        setValue(sslModePath, "prefer");
       }
-      setValues(newFormValues);
     }
-  }, [dbHostIsLocalhost, isTunnelMethod, setValues, showSshSslImprovements, sslModeValue, tunnelModeValue, values]);
+  }, [dbHostIsLocalhost, isTunnelMethod, setValue, showSshSslImprovements, sslModeValue, tunnelModeValue]);
 
   return {
     showSshSslImprovements,

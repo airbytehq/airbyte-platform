@@ -108,6 +108,8 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                   />
                 )}
                 <ConnectorForm
+                  // re-mount the form when the form values change from the outside to avoid stale data in the form
+                  key={testInputJson === undefined ? "without-testinput" : "with-testinput"}
                   formType="source"
                   bodyClassName={styles.formContent}
                   selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
@@ -117,13 +119,12 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                     setIsOpen(false);
                   }}
                   isEditMode
-                  renderFooter={({ dirty, isSubmitting, resetConnectorForm }) => (
+                  renderFooter={({ dirty, isSubmitting }) => (
                     <div className={styles.inputFormModalFooter}>
                       <FlexContainer>
                         <FlexItem grow>
                           <Button
                             onClick={() => {
-                              resetConnectorForm();
                               setTestInputJson(undefined);
                             }}
                             type="button"

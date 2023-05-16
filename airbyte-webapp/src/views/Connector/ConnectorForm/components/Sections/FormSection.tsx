@@ -85,6 +85,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
         displayType={section.displayType}
         hasError={section.hasError}
         key={index}
+        initiallyOpen={section.initiallyOpen}
       >
         {section.blocks.map((formField) => {
           const sectionPath = path ? (skipAppend ? path : `${path}.${formField.fieldKey}`) : formField.path;
@@ -177,11 +178,18 @@ export const FormSection: React.FC<FormSectionProps> = ({
 
 interface SubSectionProps {
   displayType: DisplayType;
-  hasError: boolean;
+  hasError?: boolean;
   label?: string;
+  initiallyOpen?: boolean;
 }
 
-const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({ displayType, hasError, children, label }) => {
+const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({
+  displayType,
+  hasError,
+  children,
+  label,
+  initiallyOpen,
+}) => {
   const { formatMessage } = useIntl();
 
   if (displayType === "expanded") {
@@ -194,6 +202,7 @@ const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({ displa
       data-testid="optional-fields"
       showErrorIndicator={hasError}
       type={displayType === "collapsed-footer" ? "footer" : displayType === "collapsed-group" ? "section" : undefined}
+      initiallyOpen={initiallyOpen}
       hideWhenEmpty
     >
       {children}

@@ -228,7 +228,11 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       // Causes the whole ConnectorForm to be unmounted and a new instance mounted whenever the connector type changes.
       // That way we carry less state around inside it, preventing any state from one connector type from affecting another
       // connector type's form in any way.
-      key={selectedConnectorDefinition && Connector.id(selectedConnectorDefinition)}
+      // Also re-mount the connector form if the spec changes
+      key={
+        selectedConnectorDefinition &&
+        Connector.id(selectedConnectorDefinition) + (selectedConnectorDefinitionSpecification ? "true" : "false")
+      }
       {...props}
       selectedConnectorDefinition={selectedConnectorDefinition}
       selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}

@@ -1,5 +1,7 @@
-import { FieldMetaProps, useFormikContext } from "formik";
+import get from "lodash/get";
+import isEqual from "lodash/isEqual";
 import { useMemo } from "react";
+import { useFormContext } from "react-hook-form";
 
 import { FormBlock, GroupDetails } from "core/form/types";
 import { useExperiment } from "hooks/services/Experiment";
@@ -11,7 +13,8 @@ import { OrderComparator } from "../../utils";
 export interface Section {
   blocks: FormBlock[];
   displayType: DisplayType;
-  hasError: boolean;
+  hasError?: boolean;
+  initiallyOpen?: boolean;
 }
 
 interface SectionGroup {
@@ -38,14 +41,13 @@ export type DisplayType = "expanded" | "collapsed-inline" | "collapsed-footer" |
  *
  * Section algorithm:
  * * Order form blocks by the following rules:
- *   * If `order` is defined, respect it
- *   * If it's not defined, order required form blocks in front of optional form blocks
- *   * Use regular string sorting on the `fieldKey` of the form block as tie breaker
+ *   * Order required form blocks in front of optional form blocks
+ *   * Within required and optional sections, if `order` is defined, respect it
+ *   * Use regular string sorting on the `fieldKey` of the form block as tie breaker if order is not defined
  * * Step through the form blocks and determine the display type for each - if consecutive blocks have the same display type, they go into the same section:
  *   * If a block is required, it is of type `expanded`
- *   * If a block has `always_show` set, it is of type `expanded`
+ *   * If an optional block has `always_show` set, it is of type `expanded` and it is ordered along with required fields according to its `order`
  *   * If a block is a condition block, it is of type `expanded`
- *   * If a block has an explicit order, it is of type `collapsed-inline`
  *   * Otherwise it is `collapsed-footer`
  *   * If a `collapsed-footer` directly follows a `collapsed-inline`, the footer is merged into the inline section
  * * If there is just one section and it's not `expanded`, turn it into a `collapsed-group` section
@@ -60,22 +62,45 @@ export function useGroupsAndSections(
   groupStructure: GroupDetails[],
   rootLevel: boolean
 ) {
-  const { getFieldMeta } = useFormikContext();
+  const { formState } = useFormContext();
   const { isHiddenAuthField } = useAuthentication();
   const showSimplifiedConfiguration = useExperiment("connector.form.simplifyConfiguration", false);
 
-  return useMemo(
-    () =>
-      generateGroupsAndSections(
-        blocks,
-        groupStructure,
-        showSimplifiedConfiguration,
-        rootLevel,
-        isHiddenAuthField,
-        getFieldMeta
-      ),
-    [blocks, groupStructure, showSimplifiedConfiguration, rootLevel, isHiddenAuthField, getFieldMeta]
+  const sectionGroups = useMemo(
+    () => generateGroupsAndSections(blocks, groupStructure, showSimplifiedConfiguration, rootLevel, isHiddenAuthField),
+    [blocks, groupStructure, showSimplifiedConfiguration, rootLevel, isHiddenAuthField]
   );
+
+  const sectionGroupsWithMetadata = useMemo(() => {
+    return sectionGroups.map((sectionGroup) => {
+      const sections = sectionGroup.sections.map((section) => {
+        if (section.displayType === "expanded") {
+          return section;
+        }
+        const hasError = section.blocks.some(
+          (block) => Boolean(get(formState.errors, block.path)) && Boolean(get(formState.touchedFields, block.path))
+        );
+        const initiallyOpen = section.blocks
+          .filter((block) => block.const === undefined) // ignore const blocks because they are hidden
+          .some((block) => {
+            const initialValue = get(formState.defaultValues, block.path);
+            // check if both are empty first, because the "unchanged" value that gets saved for an optional field with no default can vary (undefined, false, [], etc.)
+            return isEmpty(block.default) && isEmpty(initialValue) ? false : !isEqual(block.default, initialValue);
+          });
+        return {
+          ...section,
+          hasError,
+          initiallyOpen,
+        };
+      });
+      return {
+        ...sectionGroup,
+        sections,
+      };
+    });
+  }, [formState, sectionGroups]); // have to depend on full formState object to get this to be recalculated when errors change
+
+  return sectionGroupsWithMetadata;
 }
 
 export function generateGroupsAndSections(
@@ -83,15 +108,14 @@ export function generateGroupsAndSections(
   groupStructure: GroupDetails[],
   showSimplifiedConfiguration: boolean,
   rootLevel: boolean,
-  isHiddenAuthField: (fieldPath: string) => boolean,
-  getFieldMeta: (name: string) => FieldMetaProps<unknown>
+  isHiddenAuthField: (fieldPath: string) => boolean
 ): SectionGroup[] {
   const blocksArray = [blocks].flat();
 
   const shouldSplitGroups = showSimplifiedConfiguration && rootLevel && blocksArray.length > 0;
   const blockGroups = shouldSplitGroups ? splitGroups(blocksArray, groupStructure) : [{ blocks: blocksArray }];
 
-  return blockGroups.map(splitSections(isHiddenAuthField, showSimplifiedConfiguration, getFieldMeta, rootLevel));
+  return blockGroups.map(splitSections(isHiddenAuthField, showSimplifiedConfiguration, rootLevel));
 }
 
 function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): BlockGroup[] {
@@ -140,7 +164,6 @@ function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): Block
 function splitSections(
   isHiddenAuthField: (fieldPath: string) => boolean,
   showSimplifiedConfiguration: boolean,
-  getFieldMeta: (name: string) => FieldMetaProps<unknown>,
   rootLevel: boolean
 ): (value: BlockGroup) => SectionGroup {
   return ({ blocks, title }) => {
@@ -155,8 +178,6 @@ function splitSections(
       // the Auth buttons are not hidden inside a collapsed optional section
       const displayType =
         block.const !== undefined || !showSimplifiedConfiguration ? "expanded" : getDisplayType(block, rootLevel);
-      const fieldMeta = getFieldMeta(block.path);
-      const blockHasError = Boolean(fieldMeta.error) && Boolean(fieldMeta.touched);
       if (
         currentSection &&
         (currentSection.displayType === displayType ||
@@ -165,7 +186,6 @@ function splitSections(
           (currentSection.displayType === "collapsed-inline" && displayType === "collapsed-footer"))
       ) {
         currentSection.blocks.push(block);
-        currentSection.hasError = currentSection.hasError || blockHasError;
       } else {
         if (currentSection) {
           sections.push(currentSection);
@@ -173,7 +193,6 @@ function splitSections(
         currentSection = {
           blocks: [block],
           displayType,
-          hasError: blockHasError,
         };
       }
     }
@@ -189,6 +208,7 @@ function splitSections(
       // Only do this at root level to avoid footers sections from showing in the middle of the form
       sections[sections.length - 1].displayType = "collapsed-footer";
     }
+
     return {
       sections,
       title,
@@ -204,4 +224,16 @@ const getDisplayType = (block: FormBlock, rootLevel: boolean) => {
     return "collapsed-inline";
   }
   return "collapsed-footer";
+};
+
+const isEmpty = (obj: unknown) => {
+  if (!Boolean(obj)) {
+    return true;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.length === 0;
+  }
+
+  return false;
 };

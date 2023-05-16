@@ -1,9 +1,10 @@
-import { setIn, useFormikContext } from "formik";
 import get from "lodash/get";
 import isEmpty from "lodash/isEmpty";
 import merge from "lodash/merge";
 import pick from "lodash/pick";
-import { useMemo, useState } from "react";
+import set from "lodash/set";
+import { useState } from "react";
+import { FieldPath, useFormContext } from "react-hook-form";
 
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AuthSpecification, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
@@ -27,7 +28,7 @@ function useFormikOauthAdapter(
   hasRun: boolean;
   run: () => Promise<void>;
 } {
-  const { values, setValues, errors, setFieldTouched } = useFormikContext<ConnectorFormValues<Credentials>>();
+  const { setValue, getValues: getRawValues, formState } = useFormContext<ConnectorFormValues<Credentials>>();
   const [hasRun, setHasRun] = useState(false);
 
   const { getValues } = useConnectorForm();
@@ -40,21 +41,22 @@ function useFormikOauthAdapter(
 
       newValues = Object.entries(oauthPaths).reduce(
         (acc, [key, { path_in_connector_config }]) =>
-          setIn(acc, makeConnectionConfigurationPath(path_in_connector_config), authPayload[key]),
-        values
+          set(acc, makeConnectionConfigurationPath(path_in_connector_config), authPayload[key]),
+        getRawValues()
       );
     } else {
-      newValues = merge({}, values, {
+      newValues = merge({}, getRawValues(), {
         connectionConfiguration: authPayload,
       });
     }
 
-    setValues(newValues);
+    Object.entries(newValues).forEach(([key, value]) => {
+      setValue(key as keyof ConnectorFormValues<Credentials>, value);
+    });
     setHasRun(true);
   };
 
   const { run, loading, done } = useRunOauthFlow({ connector, connectorDefinition, onDone });
-  const preparedValues = useMemo(() => getValues<Credentials>(values), [getValues, values]);
 
   const { hasAuthFieldValues } = useAuthentication();
 
@@ -76,15 +78,26 @@ function useFormikOauthAdapter(
             makeConnectionConfigurationPath(property.path_in_connector_config)
           ) ?? [];
 
-        oauthInputFields.forEach((path) => setFieldTouched(path, true, true));
+        oauthInputFields.forEach((path) =>
+          setValue(
+            path as FieldPath<ConnectorFormValues<Credentials>>,
+            getRawValues(path as FieldPath<ConnectorFormValues<Credentials>>),
+            {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            }
+          )
+        );
 
-        const oAuthErrors = pick(errors, oauthInputFields);
+        const oAuthErrors = pick(formState.errors, oauthInputFields);
 
         if (!isEmpty(oAuthErrors)) {
           return;
         }
       }
 
+      const preparedValues = getValues<Credentials>(getRawValues());
       const oauthInputParams = Object.entries(oauthInputProperties).reduce((acc, property) => {
         acc[property[0]] = get(preparedValues, makeConnectionConfigurationPath(property[1].path_in_connector_config));
         return acc;
