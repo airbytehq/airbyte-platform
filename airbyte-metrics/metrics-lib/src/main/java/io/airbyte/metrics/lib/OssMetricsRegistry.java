@@ -309,7 +309,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
       "inconsistent_activity_input",
-      "whenever we detect a mismatch between the input and the actual config");
+      "whenever we detect a mismatch between the input and the actual config"),
+
+  MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
+      "missing_apply_schema_change_input",
+      "one expected value for applying the schema change is missing",
+      MetricTags.SOURCE_ID);
 
   private final MetricEmittingApp application;
   private final String metricName;
