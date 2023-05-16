@@ -1,12 +1,25 @@
-FROM amazoncorretto:19.0.2-alpine3.17
+ARG BASE_IMAGE=airbyte/airbyte-base-java-image:2.0.2
+# Alpine amazoncorretto:19.0.2-alpine3.17
+FROM ${BASE_IMAGE}
 
 ARG DOCKER_BUILD_ARCH=amd64
 
 WORKDIR /app
 
-RUN apk add tar && \
-    apk update && apk upgrade && apk upgrade -U openssl && \
-    apk del openldap
+RUN if [ -f /etc/os-release ]; then \
+      . /etc/os-release && \
+      # if alpine then install via apk.
+      if [ "$ID" == "alpine" ];  \
+        echo "Building for Alpine" && \
+        apk add tar && \
+        apk update && apk upgrade && apk upgrade -U openssl && \
+        apk del openldap \
+      # for amazon linux keep using yum.
+      elif [ "$ID" == "amzn" ]; then \
+        echo "Building for Amazon Linux" && \
+        yum install -y tar;  \
+      fi \
+    fi
 
 # Add the Datadog Java APM agent
 ADD https://dtdg.co/latest-java-tracer dd-java-agent.jar
