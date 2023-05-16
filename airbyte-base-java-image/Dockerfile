@@ -8,13 +8,13 @@ WORKDIR /app
 
 RUN if [ -f /etc/os-release ]; then \
       . /etc/os-release && \
-      if [ "$ID" == "alpine" ];  \
+      echo $ID && \
+      if [[ "$ID" == "alpine" ]]; then \
         echo "Building for Alpine" && \
         apk add tar && \
         apk update && apk upgrade && apk upgrade -U openssl && \
         apk del openldap; \
-      elif [ "$ID" == "amzn" ]; then \
-        echo "Building for Amazon Linux" && \
+      elif [[ "$ID" == "amzn" ]]; then \
         yum install -y tar;  \
       fi \
     fi
