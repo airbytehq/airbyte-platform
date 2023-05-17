@@ -103,6 +103,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -221,14 +223,14 @@ class DefaultReplicationWorkerTest {
         new ConcurrentHashMap<>());
   }
 
-  @Test
-  void testWithFeatureFlag() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testWithStreamStatusFeatureFlag(final boolean isReset) throws Exception {
     when(featureFlagClient.boolVariation(HandleStreamStatus.INSTANCE, new Workspace(syncInput.getWorkspaceId()))).thenReturn(true);
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext =
-        new ReplicationContext(syncInput.getConnectionId(), syncInput.getSourceId(), syncInput.getDestinationId(), Long.valueOf(JOB_ID),
-            JOB_ATTEMPT, syncInput.getWorkspaceId());
     final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final ReplicationContext replicationContext = simpleContext(isReset);
+    syncInput = syncInput.withIsReset(isReset);
 
     worker.run(syncInput, jobRoot);
 
@@ -252,15 +254,15 @@ class DefaultReplicationWorkerTest {
         AirbyteMessageOrigin.INTERNAL);
   }
 
-  @Test
-  void testDestinationExceptionWithFeatureFlag() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testDestinationExceptionWithStreamStatusFeatureFlag(final boolean isReset) throws Exception {
     when(destination.getExitValue()).thenReturn(-1);
     when(featureFlagClient.boolVariation(HandleStreamStatus.INSTANCE, new Workspace(syncInput.getWorkspaceId()))).thenReturn(true);
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext =
-        new ReplicationContext(syncInput.getConnectionId(), syncInput.getSourceId(), syncInput.getDestinationId(), Long.valueOf(JOB_ID),
-            JOB_ATTEMPT, syncInput.getWorkspaceId());
     final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final ReplicationContext replicationContext = simpleContext(isReset);
+    syncInput = syncInput.withIsReset(isReset);
 
     worker.run(syncInput, jobRoot);
 
@@ -284,15 +286,15 @@ class DefaultReplicationWorkerTest {
         AirbyteMessageOrigin.DESTINATION);
   }
 
-  @Test
-  void testSourceExceptionWithFeatureFlag() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testSourceExceptionWithStreamStatusFeatureFlag(final boolean isReset) throws Exception {
     when(source.getExitValue()).thenReturn(-1);
     when(featureFlagClient.boolVariation(HandleStreamStatus.INSTANCE, new Workspace(syncInput.getWorkspaceId()))).thenReturn(true);
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext =
-        new ReplicationContext(syncInput.getConnectionId(), syncInput.getSourceId(), syncInput.getDestinationId(), Long.valueOf(JOB_ID),
-            JOB_ATTEMPT, syncInput.getWorkspaceId());
     final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final ReplicationContext replicationContext = simpleContext(isReset);
+    syncInput = syncInput.withIsReset(isReset);
 
     worker.run(syncInput, jobRoot);
 
@@ -316,15 +318,15 @@ class DefaultReplicationWorkerTest {
         AirbyteMessageOrigin.SOURCE);
   }
 
-  @Test
-  void testDestinationWriteExceptionWithFeatureFlag() throws Exception {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testDestinationWriteExceptionWithStreamStatusFeatureFlag(final boolean isReset) throws Exception {
     doThrow(new IllegalStateException("test")).when(destination).accept(RECORD_MESSAGE2);
     when(featureFlagClient.boolVariation(HandleStreamStatus.INSTANCE, new Workspace(syncInput.getWorkspaceId()))).thenReturn(true);
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-    final ReplicationContext replicationContext =
-        new ReplicationContext(syncInput.getConnectionId(), syncInput.getSourceId(), syncInput.getDestinationId(), Long.valueOf(JOB_ID),
-            JOB_ATTEMPT, syncInput.getWorkspaceId());
     final AirbyteStreamNameNamespacePair streamNameNamespacePair = AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE1.getRecord());
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+    final ReplicationContext replicationContext = simpleContext(isReset);
+    syncInput = syncInput.withIsReset(isReset);
 
     worker.run(syncInput, jobRoot);
 
@@ -944,6 +946,17 @@ class DefaultReplicationWorkerTest {
         new ReplicationFeatureFlagReader(featureFlagClient),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper);
+  }
+
+  private ReplicationContext simpleContext(final boolean isReset) {
+    return new ReplicationContext(
+        isReset,
+        syncInput.getConnectionId(),
+        syncInput.getSourceId(),
+        syncInput.getDestinationId(),
+        Long.valueOf(JOB_ID),
+        JOB_ATTEMPT,
+        syncInput.getWorkspaceId());
   }
 
 }

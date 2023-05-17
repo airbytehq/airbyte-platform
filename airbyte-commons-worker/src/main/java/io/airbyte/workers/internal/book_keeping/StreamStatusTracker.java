@@ -111,7 +111,7 @@ public class StreamStatusTracker {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(replicationContext.jobId())
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(mapIsResetToJobType(replicationContext.isReset()))
         .connectionId(replicationContext.connectionId())
         .attemptNumber(replicationContext.attempt())
         .runState(StreamStatusRunState.PENDING)
@@ -236,7 +236,7 @@ public class StreamStatusTracker {
           .streamName(streamName)
           .streamNamespace(streamNamespace)
           .jobId(replicationContext.jobId())
-          .jobType(StreamStatusJobType.SYNC)
+          .jobType(mapIsResetToJobType(replicationContext.isReset()))
           .connectionId(replicationContext.connectionId())
           .attemptNumber(replicationContext.attempt())
           .runState(streamStatusRunState)
@@ -320,7 +320,7 @@ public class StreamStatusTracker {
    * Represents the current status of a stream. It is used to track the transition through the various
    * status values.
    */
-  private class CurrentStreamStatus {
+  private static class CurrentStreamStatus {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CurrentStreamStatus.class);
 
@@ -408,6 +408,10 @@ public class StreamStatusTracker {
                   .getStatus()));
     }
 
+  }
+
+  StreamStatusJobType mapIsResetToJobType(final boolean isReset) {
+    return isReset ? StreamStatusJobType.RESET : StreamStatusJobType.SYNC;
   }
 
 }

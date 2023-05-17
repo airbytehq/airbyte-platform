@@ -38,6 +38,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -80,17 +82,19 @@ class StreamStatusTrackerTest {
     assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isEmpty());
   }
 
-  @Test
-  void testTrackingStartedStatus() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingStartedStatus(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage airbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent event = new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     final StreamStatusCreateRequestBody expected = new StreamStatusCreateRequestBody()
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.PENDING)
@@ -125,7 +129,8 @@ class StreamStatusTrackerTest {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -161,7 +166,8 @@ class StreamStatusTrackerTest {
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -188,7 +194,8 @@ class StreamStatusTrackerTest {
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -209,14 +216,16 @@ class StreamStatusTrackerTest {
     verify(streamStatusesApi, times(1)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
 
-  @Test
-  void testTrackingCompleteSourceAndCompleteDestination() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingCompleteSourceAndCompleteDestination(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
     final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -230,7 +239,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.COMPLETE)
@@ -255,14 +264,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingCompleteDestinationAndCompleteSource() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingCompleteDestinationAndCompleteSource(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
     final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -276,7 +287,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.COMPLETE)
@@ -302,13 +313,15 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingIncompleteSourceOnly() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteSourceOnly(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -320,7 +333,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -344,13 +357,15 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingIncompleteDestinationOnly() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteDestinationOnly(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -362,7 +377,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -386,14 +401,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingIncompleteSourceAndIncompleteDestination() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteSourceAndIncompleteDestination(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
     final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -407,7 +424,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -433,14 +450,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingIncompleteDestinationAndIncompleteSource() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteDestinationAndIncompleteSource(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
     final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -454,7 +473,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -480,14 +499,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingIncompleteSourceAndCompleteDestination() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteSourceAndCompleteDestination(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
     final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -501,7 +522,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -527,14 +548,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingCompleteDestinationAndIncompleteSource() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingCompleteDestinationAndIncompleteSource(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
     final AirbyteMessage sourceIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -548,7 +571,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -574,14 +597,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingCompleteSourceAndIncompleteDestination() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingCompleteSourceAndIncompleteDestination(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
     final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -595,7 +620,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -621,14 +646,16 @@ class StreamStatusTrackerTest {
     assertEquals(expected, result);
   }
 
-  @Test
-  void testTrackingIncompleteDestinationAndCompleteSource() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testTrackingIncompleteDestinationAndCompleteSource(final boolean isReset) throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
     final AirbyteMessage destinationIncompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
     final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -642,7 +669,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -672,7 +699,8 @@ class StreamStatusTrackerTest {
   void testTrackingOutOfOrderStartedStatus() throws ApiException {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage airbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent event = new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     final StreamStatusCreateRequestBody expected = new StreamStatusCreateRequestBody()
         .streamName(streamDescriptor.getName())
@@ -702,7 +730,8 @@ class StreamStatusTrackerTest {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent startedEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, startedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent runningEvent =
@@ -740,7 +769,8 @@ class StreamStatusTrackerTest {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage destinationStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
     final AirbyteMessage sourceStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent destinationEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, destinationStoppedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
@@ -761,7 +791,8 @@ class StreamStatusTrackerTest {
     final AirbyteMessageOrigin airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE;
     final AirbyteMessage destinationStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
     final AirbyteMessage sourceStoppedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.INCOMPLETE, TIMESTAMP);
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext =
+        new ReplicationContext(false, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationAirbyteMessageEvent destinationEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, destinationStoppedAirbyteMessage, replicationContext);
     final ReplicationAirbyteMessageEvent sourceEvent =
@@ -777,9 +808,11 @@ class StreamStatusTrackerTest {
     verify(streamStatusesApi, times(0)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
 
-  @Test
-  void testForceCompletionRunning() throws ApiException {
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testForceCompletionRunning(final boolean isReset) throws ApiException {
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -796,7 +829,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.COMPLETE)
@@ -816,9 +849,11 @@ class StreamStatusTrackerTest {
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
-  @Test
-  void testForceCompletionPartiallyComplete() throws ApiException {
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testForceCompletionPartiallyComplete(final boolean isReset) throws ApiException {
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -838,7 +873,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.COMPLETE)
@@ -859,56 +894,11 @@ class StreamStatusTrackerTest {
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
-  @Test
-  void testForceCompletionAlreadyComplete() throws ApiException {
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
-
-    final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
-    final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
-    final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-    final AirbyteMessage forceCompletionMessage = createAirbyteMessage(new StreamDescriptor(), AirbyteStreamStatus.COMPLETE, TIMESTAMP);
-
-    final ReplicationAirbyteMessageEvent startedEvent =
-        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, startedAirbyteMessage, replicationContext);
-    final ReplicationAirbyteMessageEvent runningEvent =
-        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, runningAirbyteMessage, replicationContext);
-    final ReplicationAirbyteMessageEvent sourceCompletedEvent =
-        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, sourceCompleteAirbyteMessage, replicationContext);
-    final ReplicationAirbyteMessageEvent destinationCompletedEvent =
-        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
-    final ReplicationAirbyteMessageEvent forceCompletionEvent =
-        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
-    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
-        .id(STREAM_ID)
-        .streamName(streamDescriptor.getName())
-        .streamNamespace(streamDescriptor.getNamespace())
-        .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
-        .connectionId(CONNECTION_ID)
-        .attemptNumber(ATTEMPT)
-        .runState(StreamStatusRunState.COMPLETE)
-        .transitionedAt(TIMESTAMP.toMillis())
-        .workspaceId(WORKSPACE_ID);
-    final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
-        replicationContext.connectionId(), replicationContext.jobId(), replicationContext.attempt());
-
-    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
-    when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
-
-    streamStatusTracker.track(startedEvent);
-    streamStatusTracker.track(runningEvent);
-    streamStatusTracker.track(sourceCompletedEvent);
-    streamStatusTracker.track(destinationCompletedEvent);
-    streamStatusTracker.track(forceCompletionEvent);
-
-    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
-    verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
-  }
-
-  @Test
-  void testForceCompletionAlreadyIncomplete() throws ApiException {
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testForceCompletionAlreadyIncomplete(final boolean isReset) throws ApiException {
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -931,7 +921,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.INCOMPLETE)
@@ -954,14 +944,65 @@ class StreamStatusTrackerTest {
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
-  @Test
-  void testForceCompletionDifferentConnectionId() throws ApiException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testForceCompletionAlreadyComplete(final boolean isReset) throws ApiException {
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+
+    final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
+    final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
+    final AirbyteMessage sourceCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
+    final AirbyteMessage destinationCompleteAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.COMPLETE, TIMESTAMP);
+    final AirbyteMessage forceCompletionMessage = createAirbyteMessage(new StreamDescriptor(), AirbyteStreamStatus.COMPLETE, TIMESTAMP);
+
+    final ReplicationAirbyteMessageEvent startedEvent =
+        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, startedAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent runningEvent =
+        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, runningAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent sourceCompletedEvent =
+        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, sourceCompleteAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent destinationCompletedEvent =
+        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, destinationCompleteAirbyteMessage, replicationContext);
+    final ReplicationAirbyteMessageEvent forceCompletionEvent =
+        new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.INTERNAL, forceCompletionMessage, replicationContext);
+    final StreamStatusUpdateRequestBody expected = new StreamStatusUpdateRequestBody()
+        .id(STREAM_ID)
+        .streamName(streamDescriptor.getName())
+        .streamNamespace(streamDescriptor.getNamespace())
+        .jobId(JOB_ID)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
+        .connectionId(CONNECTION_ID)
+        .attemptNumber(ATTEMPT)
+        .runState(StreamStatusRunState.COMPLETE)
+        .transitionedAt(TIMESTAMP.toMillis())
+        .workspaceId(WORKSPACE_ID);
+    final StreamStatusKey streamStatusKey = new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(),
+        replicationContext.connectionId(), replicationContext.jobId(), replicationContext.attempt());
+
+    when(streamStatusesApi.createStreamStatus(any())).thenReturn(new StreamStatusRead().id(STREAM_ID));
+    when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
+
+    streamStatusTracker.track(startedEvent);
+    streamStatusTracker.track(runningEvent);
+    streamStatusTracker.track(sourceCompletedEvent);
+    streamStatusTracker.track(destinationCompletedEvent);
+    streamStatusTracker.track(forceCompletionEvent);
+
+    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+    verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testForceCompletionDifferentConnectionId(final boolean isReset) throws ApiException {
     final Integer attempt = 2;
     final Long jobId = 2L;
     final UUID connectionId = UUID.randomUUID();
-    final ReplicationContext replicationContext1 = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+    final ReplicationContext replicationContext1 =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
     final ReplicationContext replicationContext2 =
-        new ReplicationContext(connectionId, UUID.randomUUID(), UUID.randomUUID(), jobId, attempt, WORKSPACE_ID);
+        new ReplicationContext(isReset, connectionId, UUID.randomUUID(), UUID.randomUUID(), jobId, attempt, WORKSPACE_ID);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage runningAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.RUNNING, TIMESTAMP);
@@ -978,7 +1019,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(jobId)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(connectionId)
         .attemptNumber(attempt)
         .runState(StreamStatusRunState.COMPLETE)
@@ -998,9 +1039,11 @@ class StreamStatusTrackerTest {
     verify(streamStatusesApi, times(0)).updateStreamStatus(expected);
   }
 
-  @Test
-  void testForceCompletionHandleException() throws ApiException {
-    final ReplicationContext replicationContext = new ReplicationContext(CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testForceCompletionHandleException(final boolean isReset) throws ApiException {
+    final ReplicationContext replicationContext =
+        new ReplicationContext(isReset, CONNECTION_ID, DESTINATION_ID, SOURCE_ID, JOB_ID, ATTEMPT, WORKSPACE_ID);
 
     final AirbyteMessage startedAirbyteMessage = createAirbyteMessage(streamDescriptor, AirbyteStreamStatus.STARTED, TIMESTAMP);
     final AirbyteMessage forceCompletionMessage = createAirbyteMessage(new StreamDescriptor(), AirbyteStreamStatus.COMPLETE, TIMESTAMP);
@@ -1014,7 +1057,7 @@ class StreamStatusTrackerTest {
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
         .jobId(JOB_ID)
-        .jobType(StreamStatusJobType.SYNC)
+        .jobType(streamStatusTracker.mapIsResetToJobType(isReset))
         .connectionId(CONNECTION_ID)
         .attemptNumber(ATTEMPT)
         .runState(StreamStatusRunState.COMPLETE)

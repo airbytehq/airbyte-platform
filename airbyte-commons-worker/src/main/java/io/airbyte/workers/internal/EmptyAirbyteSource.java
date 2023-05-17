@@ -19,6 +19,9 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
+import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
+import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
+import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -40,6 +43,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
 
   private final AtomicBoolean hasEmittedState;
   private final Queue<StreamDescriptor> streamsToReset = new LinkedList<>();
+  private final Queue<AirbyteMessage> perStreamMessages = new LinkedList<>();
   private final boolean useStreamCapableState;
   // TODO: Once we are sure that the legacy way of transmitting the state is not use anymore, we need
   // to remove this variable and the associated
@@ -130,15 +134,13 @@ public class EmptyAirbyteSource implements AirbyteSource {
 
     if (isResetBasedForConfig) {
       if (stateWrapper.get().getStateType() == StateType.STREAM) {
-        return emitStreamState();
+        return emitPerStreamState();
       } else if (stateWrapper.get().getStateType() == StateType.GLOBAL) {
         return emitGlobalState();
-      } else {
-        return emitLegacyState();
       }
-    } else {
-      return emitLegacyState();
     }
+
+    return emitLegacyState();
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -153,15 +155,23 @@ public class EmptyAirbyteSource implements AirbyteSource {
     // no op.
   }
 
-  private Optional<AirbyteMessage> emitStreamState() {
-    // Per stream, it will emit one message per stream being reset
-    if (!streamsToReset.isEmpty()) {
-      final StreamDescriptor streamDescriptor = streamsToReset.poll();
-      return Optional.of(getNullStreamStateMessage(streamDescriptor));
-    } else {
+  private Optional<AirbyteMessage> emitPerStreamState() {
+    if (streamsToReset.isEmpty() && perStreamMessages.isEmpty()) {
       hasEmittedState.compareAndSet(false, true);
       return Optional.empty();
     }
+
+    if (perStreamMessages.isEmpty()) {
+      // Per stream, we emit one 'started', one null state and one 'complete' message.
+      // Since there's only 1 state message we move directly from 'started' to 'complete'.
+      final StreamDescriptor s = streamsToReset.poll();
+      perStreamMessages.add(buildResetStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      perStreamMessages.add(buildNullStreamStateMessage(s));
+      perStreamMessages.add(buildResetStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+    }
+
+    final AirbyteMessage message = perStreamMessages.poll();
+    return Optional.of(message);
   }
 
   private Optional<AirbyteMessage> emitGlobalState() {
@@ -193,7 +203,21 @@ public class EmptyAirbyteSource implements AirbyteSource {
     return streamsToResetDescriptors.containsAll(catalogStreamDescriptors);
   }
 
-  private AirbyteMessage getNullStreamStateMessage(final StreamDescriptor streamsToReset) {
+  private AirbyteMessage buildResetStatusTraceMessage(final StreamDescriptor stream, final AirbyteStreamStatus status) {
+    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
+        .withStatus(status)
+        .withStreamDescriptor(stream);
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
+        .withStreamStatus(airbyteStreamStatusTraceMessage);
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
+  }
+
+  private AirbyteMessage buildNullStreamStateMessage(final StreamDescriptor stream) {
     return new AirbyteMessage()
         .withType(Type.STATE)
         .withState(
@@ -202,8 +226,8 @@ public class EmptyAirbyteSource implements AirbyteSource {
                 .withStream(
                     new AirbyteStreamState()
                         .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor()
-                            .withName(streamsToReset.getName())
-                            .withNamespace(streamsToReset.getNamespace()))
+                            .withName(stream.getName())
+                            .withNamespace(stream.getNamespace()))
                         .withStreamState(null)));
   }
 

@@ -86,3 +86,7 @@ properties:
     description: whether normalization should be run in the destination container
     type: boolean
     default: false
+  isReset:
+    description: whether this 'sync' is performing a logical reset
+    type: boolean
+    default: false

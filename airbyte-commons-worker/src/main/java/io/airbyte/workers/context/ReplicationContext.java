@@ -19,4 +19,10 @@ import java.util.UUID;
  * @param attempt The attempt number of the sync.
  * @param workspaceId The workspace ID associated with the sync.
  */
-public record ReplicationContext(UUID connectionId, UUID sourceId, UUID destinationId, Long jobId, Integer attempt, UUID workspaceId) {}
+public record ReplicationContext(boolean isReset,
+                                 UUID connectionId,
+                                 UUID sourceId,
+                                 UUID destinationId,
+                                 Long jobId,
+                                 Integer attempt,
+                                 UUID workspaceId) {}
