@@ -61,7 +61,7 @@ export const UpdateConnectionName: React.FC = () => {
           fieldType="input"
           name="connectionName"
         />
-        <FormSubmissionButtons submitKey="settings.accountSettings.updateName" />
+        <FormSubmissionButtons submitKey="connection.name.updateName" />
       </Form>
     </Card>
   );
