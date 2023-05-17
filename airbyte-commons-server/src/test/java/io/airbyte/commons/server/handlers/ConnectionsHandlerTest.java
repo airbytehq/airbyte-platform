@@ -125,6 +125,7 @@ class ConnectionsHandlerTest {
   private static final String AZKABAN_USERS = "azkaban_users";
   private static final String CRON_TIMEZONE_UTC = "UTC";
   private static final String CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String STREAM_SELECTION_DATA = "null/users-data0";
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -156,7 +157,7 @@ class ConnectionsHandlerTest {
         .withPrefix(PRESTO_TO_HUDI_PREFIX)
         .withStatus(StandardSync.Status.ACTIVE)
         .withCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog())
-        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", false))
+        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, false))
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
         .withOperationIds(List.of(operationId))
@@ -178,7 +179,7 @@ class ConnectionsHandlerTest {
         .withPrefix(PRESTO_TO_HUDI_PREFIX)
         .withStatus(StandardSync.Status.ACTIVE)
         .withCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog())
-        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", false))
+        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, false))
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
         .withOperationIds(List.of(operationId))
@@ -356,7 +357,7 @@ class ConnectionsHandlerTest {
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
-        standardSync.withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", true));
+        standardSync.withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true));
 
         verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
       }
@@ -384,7 +385,7 @@ class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
         standardSync
-            .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", true))
+            .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true))
             .getCatalog().getStreams().get(0).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH).withCursorField(null);
 
         verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
