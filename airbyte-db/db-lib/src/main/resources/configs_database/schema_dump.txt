@@ -214,6 +214,16 @@ create table "public"."operation" (
   constraint "operation_pkey"
     primary key ("id")
 );
+create table "public"."permission" (
+  "id" uuid not null,
+  "user_id" uuid not null,
+  "workspace_id" uuid,
+  "permission_type" "public"."permission_type" not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "permission_pkey"
+    primary key ("id")
+);
 create table "public"."schema_management" (
   "id" uuid not null,
   "auto_propagation_status" "public"."auto_propagation_status" not null,
@@ -246,6 +256,22 @@ create table "public"."stream_reset" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "stream_reset_connection_id_stream_name_stream_namespace_key"
     unique ("connection_id", "stream_name", "stream_namespace")
+);
+create table "public"."user" (
+  "id" uuid not null,
+  "name" varchar(256) not null,
+  "auth_user_id" varchar(256) not null,
+  "auth_provider" "public"."auth_provider" not null,
+  "default_workspace_id" uuid,
+  "status" "public"."status",
+  "company_name" varchar(256),
+  "email" varchar(256) not null,
+  "news" boolean,
+  "ui_metadata" jsonb,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "user_pkey"
+    primary key ("id")
 );
 create table "public"."workspace" (
   "id" uuid not null,
@@ -348,6 +374,14 @@ alter table "public"."operation"
   add constraint "operation_workspace_id_fkey"
     foreign key ("workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."permission"
+  add constraint "permission_user_id_fkey"
+    foreign key ("user_id")
+    references "public"."user" ("id");
+alter table "public"."permission"
+  add constraint "permission_workspace_id_fkey"
+    foreign key ("workspace_id")
+    references "public"."workspace" ("id");
 alter table "public"."schema_management"
   add constraint "schema_management_connection_id_fkey"
     foreign key ("connection_id")
@@ -356,6 +390,10 @@ alter table "public"."state"
   add constraint "state_connection_id_fkey"
     foreign key ("connection_id")
     references "public"."connection" ("id");
+alter table "public"."user"
+  add constraint "user_default_workspace_id_fkey"
+    foreign key ("default_workspace_id")
+    references "public"."workspace" ("id");
 alter table "public"."workspace_service_account"
   add constraint "workspace_service_account_workspace_id_fkey"
     foreign key ("workspace_id")
@@ -374,5 +412,9 @@ create index "connection_source_id_idx" on "public"."connection"("source_id" asc
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
+create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
+create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
 create index "connection_id_stream_name_namespace_idx" on "public"."stream_reset"("connection_id" asc, "stream_name" asc, "stream_namespace" asc);
+create index "user_auth_provider_auth_user_id_idx" on "public"."user"("auth_provider" asc, "auth_user_id" asc);
+create index "user_email_idx" on "public"."user"("email" asc);
