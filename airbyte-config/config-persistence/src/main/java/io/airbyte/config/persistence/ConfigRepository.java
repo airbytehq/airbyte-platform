@@ -1410,6 +1410,41 @@ public class ConfigRepository {
     return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
   }
 
+  /**
+   * List connections that use a particular actor definition.
+   *
+   * @param actorDefinitionId id of the source or destination definition.
+   * @param actorType either 'source' or 'destination' enum value.
+   * @param includeDeleted whether to include tombstoned records in the return value.
+   * @return List of connections that use the actor definition.
+   * @throws IOException you never know when you IO
+   */
+  public List<StandardSync> listConnectionsByActorDefinitionIdAndType(final UUID actorDefinitionId,
+                                                                      final io.airbyte.config.ActorType actorType,
+                                                                      final boolean includeDeleted)
+      throws IOException {
+    final ActorType dbActorType = Enums.convertTo(actorType, ActorType.class);
+    final Condition actorDefinitionJoinCondition = switch (dbActorType) {
+      case source -> ACTOR.ACTOR_TYPE.eq(ActorType.source).and(ACTOR.ID.eq(CONNECTION.SOURCE_ID));
+      case destination -> ACTOR.ACTOR_TYPE.eq(ActorType.destination).and(ACTOR.ID.eq(CONNECTION.DESTINATION_ID));
+    };
+
+    final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
+        .select(
+            CONNECTION.asterisk(),
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD))
+        .from(CONNECTION)
+        .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+        .leftJoin(ACTOR).on(actorDefinitionJoinCondition)
+        .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
+            .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
+        .groupBy(CONNECTION.ID)).fetch();
+
+    final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
+
+    return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds));
+  }
+
   private List<NotificationConfigurationRecord> getNotificationConfigurationByConnectionIds(final List<UUID> connnectionIds) throws IOException {
     return database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION)
         .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.in(connnectionIds))

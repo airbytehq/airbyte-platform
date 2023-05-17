@@ -1572,6 +1572,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connections/list_by_actor_definition:
+    post:
+      tags:
+        - connection
+      summary: List all connections that use the provided actor definition
+      operationId: listConnectionsByActorDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/state/get:
     post:
       tags:
@@ -5101,6 +5124,18 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/JobTypeResourceLimit"
+    ActorDefinitionRequestBody:
+      type: object
+      additionalProperties: false
+      required:
+        - actorDefinitionId
+        - actorType
+      properties:
+        actorDefinitionId:
+          type: string
+          format: uuid
+        actorType:
+          $ref: "#/components/schemas/ActorType"
     NormalizationDestinationDefinitionConfig:
       description: describes a normalization config for destination definition
       type: object

@@ -241,6 +241,8 @@ class BasicAcceptanceTests {
 
     testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
     sourcePsql = testHarness.getSourcePsql();
+
+    testHarness.ensureCleanSlate();
   }
 
   @AfterAll

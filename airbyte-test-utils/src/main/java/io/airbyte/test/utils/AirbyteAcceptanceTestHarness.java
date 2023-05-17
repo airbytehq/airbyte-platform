@@ -16,6 +16,8 @@ import com.google.common.io.Resources;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ActorDefinitionRequestBody;
+import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
@@ -311,28 +313,10 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   public void cleanup() {
     try {
       clearSourceDbData();
       clearDestinationDbData();
-
-      // wait until db data verified to be cleaned
-      int sourceTableCount = listAllTables(getSourceDatabase()).size();
-      int destinationTableCount = listAllTables(getDestinationDatabase()).size();
-      int iterations = 0;
-      while (sourceTableCount > 0 || destinationTableCount > 0) {
-        if (iterations > 100) {
-          throw new RuntimeException("databases tables aren't dropping after too long, exiting...");
-        }
-        iterations++;
-        LOGGER.warn("tableCount is still greater than 0! Source table count: {}. Destination table count: {}. iterations: {}", sourceTableCount,
-            destinationTableCount, iterations);
-        sleep(1000);
-        sourceTableCount = listAllTables(getSourceDatabase()).size();
-        destinationTableCount = listAllTables(getDestinationDatabase()).size();
-      }
-
       for (final UUID operationId : operationIds) {
         deleteOperation(operationId);
       }
@@ -357,9 +341,55 @@ public class AirbyteAcceptanceTestHarness {
         DataSourceFactory.close(destinationDataSource);
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
-
     } catch (final Exception e) {
       LOGGER.error("Error tearing down test fixtures: {}", e);
+    }
+  }
+
+  /**
+   * This method is intended to be called at the beginning of a new test run - it identifies and
+   * disables any pre-existing state that may interfere with a new test run. For example, scheduled
+   * syncs that weren't properly cleaned up from a previous run could interfere with a new test run if
+   * not properly cleaned.
+   */
+  public void ensureCleanSlate() {
+    if (this.defaultWorkspaceId == null) {
+      LOGGER.warn("no defaultWorkspace defined, skipping ensureCleanState...");
+      return;
+    }
+    try {
+      final UUID sourceDefinitionId = getPostgresSourceDefinitionId();
+      final UUID destinationDefinitionId = getPostgresDestinationDefinitionId();
+
+      final List<ConnectionRead> sourceDefinitionConnections = this.apiClient.getConnectionApi()
+          .listConnectionsByActorDefinition(
+              new ActorDefinitionRequestBody().actorDefinitionId(sourceDefinitionId).actorType(ActorType.SOURCE))
+          .getConnections();
+
+      final List<ConnectionRead> destinationDefinitionConnections = this.apiClient.getConnectionApi()
+          .listConnectionsByActorDefinition(
+              new ActorDefinitionRequestBody().actorDefinitionId(destinationDefinitionId).actorType(ActorType.DESTINATION))
+          .getConnections();
+
+      final Set<ConnectionRead> allConnections = Sets.newHashSet();
+      allConnections.addAll(sourceDefinitionConnections);
+      allConnections.addAll(destinationDefinitionConnections);
+
+      // filter out any connections that aren't active
+      final List<ConnectionRead> allConnectionsToDisable = allConnections.stream()
+          .filter(connection -> connection.getStatus().equals(ConnectionStatus.ACTIVE))
+          .toList();
+
+      LOGGER.info("Found {} existing connection(s) to clean up", allConnectionsToDisable.size());
+      if (!allConnectionsToDisable.isEmpty()) {
+        for (final ConnectionRead connection : allConnectionsToDisable) {
+          disableConnection(connection.getConnectionId());
+          LOGGER.info("disabled connection with ID {}", connection.getConnectionId());
+        }
+      }
+      LOGGER.info("ensureCleanSlate completed!");
+    } catch (final Exception e) {
+      LOGGER.warn("An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run.", e);
     }
   }
 
