@@ -23,6 +23,7 @@ import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessage
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,19 +105,18 @@ class ReplicationWorkerHelper {
     }
   }
 
-  public void handleSourceFailure() {
+  /**
+   * Handles the reporting of errors that occur during replication.
+   *
+   * @param failureOrigin The origin of the failure.
+   * @param streamSupplier A {@link Supplier} that provides the {@link StreamDescriptor} to be used in
+   *        the reported incomplete replication event.
+   */
+  public void handleReplicationFailure(final AirbyteMessageOrigin failureOrigin, final Supplier<StreamDescriptor> streamSupplier) {
     if (replicationFeatureFlags.shouldHandleStreamStatus()) {
-      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(getCurrentSourceStream(),
-          replicationContext, AirbyteMessageOrigin.SOURCE);
+      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(),
+          replicationContext, failureOrigin);
     }
-  }
-
-  public void handleDestinationFailure() {
-    if (replicationFeatureFlags.shouldHandleStreamStatus()) {
-      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(getCurrentSourceStream(),
-          replicationContext, AirbyteMessageOrigin.DESTINATION);
-    }
-
   }
 
   public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {

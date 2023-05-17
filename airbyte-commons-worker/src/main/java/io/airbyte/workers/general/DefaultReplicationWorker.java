@@ -39,6 +39,7 @@ import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
+import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.book_keeping.SyncStatsBuilder;
 import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
@@ -316,7 +317,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           // was not cancelled.
 
           if (e instanceof DestinationException) {
-            replicationWorkerHelper.handleDestinationFailure();
+            replicationWorkerHelper.handleReplicationFailure(AirbyteMessageOrigin.DESTINATION, replicationWorkerHelper::getCurrentDestinationStream);
             // Surface Destination exceptions directly so that they can be classified properly by the worker
             throw e;
           } else {
@@ -393,9 +394,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             // Surface Source and Destination exceptions directly so that they can be classified properly by the
             // worker
             if (e instanceof SourceException) {
-              replicationWorkerHelper.handleSourceFailure();
+              replicationWorkerHelper.handleReplicationFailure(AirbyteMessageOrigin.SOURCE, replicationWorkerHelper::getCurrentSourceStream);
             } else {
-              replicationWorkerHelper.handleDestinationFailure();
+              // Use the source current stream here, as it is the only one being tracked in this context
+              replicationWorkerHelper.handleReplicationFailure(AirbyteMessageOrigin.DESTINATION, replicationWorkerHelper::getCurrentSourceStream);
             }
             throw e;
           } else {
