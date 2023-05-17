@@ -2321,6 +2321,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/get_without_logs:
+    post:
+      tags:
+        - jobs
+      summary: Get information about a job excluding logs
+      operationId: getJobInfoWithoutLogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/jobs/get_light:
     post:
       tags:
