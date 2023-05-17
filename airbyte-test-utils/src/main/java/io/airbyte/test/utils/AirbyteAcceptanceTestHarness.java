@@ -175,6 +175,7 @@ public class AirbyteAcceptanceTestHarness {
   private static boolean isGke;
   private static boolean isMac;
   private static boolean useExternalDeployment;
+  private static boolean ensureCleanSlate;
 
   /**
    * When the acceptance tests are run against a local instance of docker-compose or KUBE then these
@@ -348,15 +349,15 @@ public class AirbyteAcceptanceTestHarness {
 
   /**
    * This method is intended to be called at the beginning of a new test run - it identifies and
-   * disables any pre-existing state that may interfere with a new test run. For example, scheduled
-   * syncs that weren't properly cleaned up from a previous run could interfere with a new test run if
-   * not properly cleaned.
+   * disables any pre-existing scheduled connections that could potentially interfere with a new test
+   * run.
    */
   public void ensureCleanSlate() {
-    if (this.defaultWorkspaceId == null) {
-      LOGGER.warn("no defaultWorkspace defined, skipping ensureCleanState...");
+    if (!ensureCleanSlate) {
+      LOGGER.info("proceeding without cleaning up pre-existing connections.");
       return;
     }
+    LOGGER.info("ENSURE_CLEAN_SLATE was true, disabling all scheduled connections using postgres source or postgres destination...");
     try {
       final UUID sourceDefinitionId = getPostgresSourceDefinitionId();
       final UUID destinationDefinitionId = getPostgresDestinationDefinitionId();
@@ -375,9 +376,11 @@ public class AirbyteAcceptanceTestHarness {
       allConnections.addAll(sourceDefinitionConnections);
       allConnections.addAll(destinationDefinitionConnections);
 
-      // filter out any connections that aren't active
       final List<ConnectionRead> allConnectionsToDisable = allConnections.stream()
+          // filter out any connections that aren't active
           .filter(connection -> connection.getStatus().equals(ConnectionStatus.ACTIVE))
+          // filter out any manual connections, since we only want to disable scheduled syncs
+          .filter(connection -> !connection.getScheduleType().equals(ConnectionScheduleType.MANUAL))
           .toList();
 
       LOGGER.info("Found {} existing connection(s) to clean up", allConnectionsToDisable.size());
@@ -393,6 +396,7 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
+  @SuppressWarnings("PMD.LiteralsFirstInComparisons")
   private void assignEnvVars() {
     isKube = System.getenv().containsKey("KUBE");
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
@@ -401,6 +405,8 @@ public class AirbyteAcceptanceTestHarness {
     useExternalDeployment =
         System.getenv("USE_EXTERNAL_DEPLOYMENT") != null
             && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
+    ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
+        && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
   }
 
   private WorkflowClient getWorkflowClient() {

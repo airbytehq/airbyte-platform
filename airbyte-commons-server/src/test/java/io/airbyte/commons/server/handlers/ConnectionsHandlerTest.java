@@ -866,10 +866,10 @@ class ConnectionsHandlerTest {
     }
 
     @Test
-    void testListConnectionsByActorDefinition() throws JsonValidationException, ConfigNotFoundException, IOException {
-      when(configRepository.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE, false))
+    void testListConnectionsByActorDefinition() throws IOException {
+      when(configRepository.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false))
           .thenReturn(Lists.newArrayList(standardSync));
-      when(configRepository.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION, false))
+      when(configRepository.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false))
           .thenReturn(Lists.newArrayList(standardSync2));
 
       final ConnectionReadList connectionReadListForSourceDefinitionId = connectionsHandler.listConnectionsForActorDefinition(

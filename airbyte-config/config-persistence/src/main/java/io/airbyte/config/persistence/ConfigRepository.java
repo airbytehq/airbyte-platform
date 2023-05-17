@@ -1414,17 +1414,17 @@ public class ConfigRepository {
    * List connections that use a particular actor definition.
    *
    * @param actorDefinitionId id of the source or destination definition.
-   * @param actorType either 'source' or 'destination' enum value.
+   * @param actorTypeValue either 'source' or 'destination' enum value.
    * @param includeDeleted whether to include tombstoned records in the return value.
    * @return List of connections that use the actor definition.
    * @throws IOException you never know when you IO
    */
   public List<StandardSync> listConnectionsByActorDefinitionIdAndType(final UUID actorDefinitionId,
-                                                                      final io.airbyte.config.ActorType actorType,
+                                                                      final String actorTypeValue,
                                                                       final boolean includeDeleted)
       throws IOException {
-    final ActorType dbActorType = Enums.convertTo(actorType, ActorType.class);
-    final Condition actorDefinitionJoinCondition = switch (dbActorType) {
+
+    final Condition actorDefinitionJoinCondition = switch (ActorType.valueOf(actorTypeValue)) {
       case source -> ACTOR.ACTOR_TYPE.eq(ActorType.source).and(ACTOR.ID.eq(CONNECTION.SOURCE_ID));
       case destination -> ACTOR.ACTOR_TYPE.eq(ActorType.destination).and(ACTOR.ID.eq(CONNECTION.DESTINATION_ID));
     };

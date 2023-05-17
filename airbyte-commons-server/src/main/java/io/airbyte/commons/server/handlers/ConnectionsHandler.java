@@ -39,7 +39,6 @@ import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
-import io.airbyte.config.ActorType;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
@@ -660,7 +659,7 @@ public class ConnectionsHandler {
 
     final List<StandardSync> standardSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
         actorDefinitionRequestBody.getActorDefinitionId(),
-        Enums.convertTo(actorDefinitionRequestBody.getActorType(), ActorType.class),
+        actorDefinitionRequestBody.getActorType().toString(),
         false);
 
     for (final StandardSync standardSync : standardSyncs) {
