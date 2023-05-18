@@ -1,10 +1,12 @@
-FROM amazoncorretto:19
+FROM amazoncorretto:19.0.2-alpine3.17
 
 ARG DOCKER_BUILD_ARCH=amd64
 
 WORKDIR /app
 
-RUN yum install -y tar
+RUN apk add tar && \
+    apk update && apk upgrade && apk upgrade -U openssl && \
+    apk del openldap
 
 # Add the Datadog Java APM agent
 ADD https://dtdg.co/latest-java-tracer dd-java-agent.jar

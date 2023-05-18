@@ -4,8 +4,7 @@ plugins {
 
 configurations.all {
     resolutionStrategy {
-        force libs.flyway.core, libs.jooq
-        force 'net.minidev:json-smart:2.4.10'
+        force libs.flyway.core, libs.jooq, libs.jsonsmart
     }
 }
 
