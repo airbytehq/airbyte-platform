@@ -44,7 +44,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
   const form = useFormContext<ConnectorFormValues>();
   const isSubmitting = form.formState.isSubmitting;
   const dirty = form.formState.isDirty;
-  const isValid = form.formState.isDirty;
+  const isValid = form.formState.isValid;
   const { resetConnectorForm, isEditMode, formType } = useConnectorForm();
 
   const formBody = (
