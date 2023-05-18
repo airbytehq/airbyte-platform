@@ -11,6 +11,7 @@ import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.RouterService;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -55,6 +56,9 @@ public class RouteToSyncTaskQueueActivityImpl implements RouteToSyncTaskQueueAct
       final String taskQueueForConnectionId = routerService.getTaskQueue(input.getConnectionId(), jobType);
 
       return new RouteToSyncTaskQueueOutput(taskQueueForConnectionId);
+    } catch (final ConfigNotFoundException e) {
+      log.warn("Unabled to find connectionId {}", input.getConnectionId(), e);
+      throw new RuntimeException(e);
     } catch (final IOException e) {
       log.warn("Encountered an error while attempting to route connection {} to a task queue: \n{}", input.getConnectionId(), e);
       throw new RetryableException(e);

@@ -12,6 +12,7 @@ import static org.mockito.Mock.Strictness.LENIENT;
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
@@ -52,7 +53,7 @@ class RouterServiceTest {
   private RouterService routerService;
 
   @BeforeEach
-  void init() {
+  void init() throws ConfigNotFoundException {
     mockFeatureFlagClient = Mockito.mock(TestClient.class);
     routerService = new RouterService(mConfigRepository, mTaskQueueMapper,
         mockFeatureFlagClient);
@@ -70,7 +71,7 @@ class RouterServiceTest {
   }
 
   @Test
-  void testGetTaskQueue() throws IOException {
+  void testGetTaskQueue() throws IOException, ConfigNotFoundException {
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
     assertEquals(US_TASK_QUEUE, routerService.getTaskQueue(CONNECTION_ID, TemporalJobType.SYNC));
@@ -83,7 +84,7 @@ class RouterServiceTest {
   }
 
   @Test
-  void testGetTaskQueueBehindFlag() throws IOException {
+  void testGetTaskQueueBehindFlag() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     Mockito.when(mConfigRepository.getGeographyForConnection(CONNECTION_ID)).thenReturn(Geography.AUTO);
@@ -97,7 +98,7 @@ class RouterServiceTest {
   }
 
   @Test
-  void testGetWorkspaceTaskQueue() throws IOException {
+  void testGetWorkspaceTaskQueue() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
 
     Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);
@@ -111,7 +112,7 @@ class RouterServiceTest {
   }
 
   @Test
-  void testGetWorkspaceTaskQueueBehindFlag() throws IOException {
+  void testGetWorkspaceTaskQueueBehindFlag() throws IOException, ConfigNotFoundException {
     Mockito.when(mockFeatureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     Mockito.when(mConfigRepository.getGeographyForWorkspace(WORKSPACE_ID)).thenReturn(Geography.AUTO);

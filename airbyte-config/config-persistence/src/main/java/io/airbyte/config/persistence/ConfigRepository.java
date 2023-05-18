@@ -443,11 +443,13 @@ public class ConfigRepository {
    * @param isTombstone include tombstoned workspaces
    * @return workspace to which the connection belongs
    */
-  public StandardWorkspace getStandardWorkspaceFromConnection(final UUID connectionId, final boolean isTombstone) {
+  public StandardWorkspace getStandardWorkspaceFromConnection(final UUID connectionId, final boolean isTombstone) throws ConfigNotFoundException {
     try {
       final StandardSync sync = getStandardSync(connectionId);
       final SourceConnection source = getSourceConnection(sync.getSourceId());
       return getStandardWorkspaceNoSecrets(source.getWorkspaceId(), isTombstone);
+    } catch (final ConfigNotFoundException e) {
+      throw e;
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }

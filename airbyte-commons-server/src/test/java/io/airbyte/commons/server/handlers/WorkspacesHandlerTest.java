@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -338,7 +339,7 @@ class WorkspacesHandlerTest {
   }
 
   @Test
-  void testGetWorkspaceByConnectionId() {
+  void testGetWorkspaceByConnectionId() throws ConfigNotFoundException {
     final UUID connectionId = UUID.randomUUID();
     when(configRepository.getStandardWorkspaceFromConnection(connectionId, false)).thenReturn(workspace);
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
@@ -357,6 +358,15 @@ class WorkspacesHandlerTest {
         .defaultGeography(GEOGRAPHY_AUTO);
 
     assertEquals(workspaceRead, workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
+  }
+
+  @Test
+  void testGetWorkspaceByConnectionIdOnConfigNotFound() throws ConfigNotFoundException {
+    final UUID connectionId = UUID.randomUUID();
+    when(configRepository.getStandardWorkspaceFromConnection(connectionId, false))
+        .thenThrow(new ConfigNotFoundException("something", connectionId.toString()));
+    final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
+    assertThrows(ConfigNotFoundException.class, () -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
   }
 
   @Test
