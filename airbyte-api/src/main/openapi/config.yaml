@@ -2643,6 +2643,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
         defaultGeography:
@@ -2663,6 +2665,34 @@ components:
         validationUrl:
           type: string
           description: if supplied, the webhook config will be validated by checking that this URL returns a 2xx response.
+    NotificationItem:
+      type: object
+      properties:
+        notificationType:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationType"
+        slackConfiguration:
+          $ref: "#/components/schemas/SlackNotificationConfiguration"
+        customerioConfiguration:
+          $ref: "#/components/schemas/CustomerioNotificationConfiguration"
+
+    NotificationSettings:
+      type: object
+      properties:
+        sendOnSuccess:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnFailure:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnSyncDisabled:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnSyncDisabledWarning:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionUpdate:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationItem"
+
     Notification:
       type: object
       required:
@@ -2793,6 +2823,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         firstCompletedSync:
           type: boolean
         feedbackDone:
@@ -2851,6 +2883,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         defaultGeography:
           $ref: "#/components/schemas/Geography"
         webhookConfigs:
