@@ -10,6 +10,7 @@ import {
   enterPassword,
   enterPokemonName,
   enterSchema,
+  openOptionalFields,
 } from "pages/createConnectorPage";
 
 export const fillPostgresForm = (
@@ -19,12 +20,16 @@ export const fillPostgresForm = (
   database: string,
   username: string,
   password: string,
-  schema: string
+  schema: string,
+  openOptional = false
 ) => {
   cy.intercept("/api/v1/source_definition_specifications/get").as("getSourceSpecifications");
 
   selectServiceType("Postgres");
 
+  if (openOptional) {
+    openOptionalFields();
+  }
   enterName(name);
   enterHost(host);
   enterPort(port);

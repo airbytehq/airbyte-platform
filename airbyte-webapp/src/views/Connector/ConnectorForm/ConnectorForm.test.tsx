@@ -223,16 +223,6 @@ jest.mock("hooks/services/useWorkspace", () => ({
   }),
 }));
 
-jest.mock("hooks/services/Experiment/ExperimentService", () => ({
-  useExperiment: (id: string) => {
-    if (id === "connector.form.simplifyConfiguration") {
-      return true;
-    }
-    return undefined;
-  },
-  ExperimentProvider: ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>,
-}));
-
 describe("Connector form", () => {
   let result: ConnectorFormValues | undefined;
 

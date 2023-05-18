@@ -9,12 +9,10 @@ import { StatusIcon } from "components/ui/StatusIcon";
 import { Text } from "components/ui/Text";
 
 import { FormBaseItem, FORM_PATTERN_ERROR } from "core/form/types";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./PropertySection.module.scss";
 import { ConnectorFormValues } from "../../types";
-import { useSshSslImprovements } from "../../useSshSslImprovements";
-import { getPatternDescriptor, isLocalhost } from "../../utils";
+import { getPatternDescriptor } from "../../utils";
 import { Control } from "../Property/Control";
 import { PropertyError } from "../Property/PropertyError";
 import { PropertyLabel } from "../Property/PropertyLabel";
@@ -26,8 +24,6 @@ interface PropertySectionProps {
 }
 
 const ErrorMessage = ({ error, property }: { error?: string; property: FormBaseItem }) => {
-  const showSimplifiedConfiguration = useExperiment("connector.form.simplifyConfiguration", false);
-
   if (!error) {
     return null;
   }
@@ -38,9 +34,7 @@ const ErrorMessage = ({ error, property }: { error?: string; property: FormBaseI
         values={
           error === FORM_PATTERN_ERROR
             ? {
-                pattern: showSimplifiedConfiguration
-                  ? getPatternDescriptor(property) ?? property.pattern
-                  : property.pattern,
+                pattern: getPatternDescriptor(property) ?? property.pattern,
               }
             : undefined
         }
@@ -58,11 +52,6 @@ const FormatBlock = ({
   fieldMeta: ReturnType<UseFormGetFieldState<ConnectorFormValues>>;
   value: unknown;
 }) => {
-  const showSimplifiedConfiguration = useExperiment("connector.form.simplifyConfiguration", false);
-  if (!showSimplifiedConfiguration) {
-    return null;
-  }
-
   const patternDescriptor = getPatternDescriptor(property);
   if (patternDescriptor === undefined) {
     return null;
@@ -90,16 +79,9 @@ const FormatBlock = ({
 export const PropertySection: React.FC<PropertySectionProps> = ({ property, path, disabled }) => {
   const { control, getFieldState, watch, formState } = useFormContext();
   const propertyPath = path ?? property.path;
-  const { showSshSslImprovements } = useSshSslImprovements();
   const { field } = useController({
     name: propertyPath,
     control,
-    rules: {
-      validate:
-        showSshSslImprovements && propertyPath === "connectionConfiguration.tunnel_method.tunnel_host"
-          ? (value: string | undefined) => (isLocalhost(value) ? "form.noLocalhost" : undefined)
-          : undefined,
-    },
   });
   const value = watch(propertyPath);
   const meta = getFieldState(propertyPath, formState);

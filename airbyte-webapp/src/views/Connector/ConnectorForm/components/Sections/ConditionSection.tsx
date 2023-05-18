@@ -12,7 +12,6 @@ import { FormSection } from "./FormSection";
 import { GroupLabel } from "./GroupLabel";
 import { SectionContainer } from "./SectionContainer";
 import { setDefaultValues } from "../../useBuildForm";
-import { useSshSslImprovements } from "../../useSshSslImprovements";
 
 interface ConditionSectionProps {
   formField: FormConditionItem;
@@ -27,10 +26,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
   const { setValue } = useFormContext();
   const value = useWatch({ name: path });
 
-  const { filterConditions, filterSelectionConstValues } = useSshSslImprovements(path);
-
-  const conditions = filterConditions(formField.conditions);
-  const selectionConstValues = filterSelectionConstValues(formField.selectionConstValues);
+  const { conditions, selectionConstValues } = formField;
 
   // the value at selectionPath determines which condition is selected
   const currentSelectionValue = useWatch({ name: formField.selectionPath });

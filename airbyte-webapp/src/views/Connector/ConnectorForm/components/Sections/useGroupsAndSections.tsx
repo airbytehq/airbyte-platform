@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 
 import { FormBlock, GroupDetails } from "core/form/types";
-import { useExperiment } from "hooks/services/Experiment";
 import { naturalComparator } from "utils/objects";
 
 import { useAuthentication } from "../../useAuthentication";
@@ -31,8 +30,7 @@ export type DisplayType = "expanded" | "collapsed-inline" | "collapsed-footer" |
 
 /**
  * Takes form blocks and splits them into groups with each group containing potentially multiple sections.
- * The grouping is only done in case `rootLevel` is true, the sections are always defined as long as the
- * `connector.form.simplifyConfiguration` experiment is active.
+ * The grouping is only done in case `rootLevel` is true, whereas the sections are always generated.
  *
  * Algorithm for determining groups (for root level form blocks):
  * * Group form blocks by the `group` attribute (undefined is treated as a separate group)
@@ -64,11 +62,10 @@ export function useGroupsAndSections(
 ) {
   const { formState } = useFormContext();
   const { isHiddenAuthField } = useAuthentication();
-  const showSimplifiedConfiguration = useExperiment("connector.form.simplifyConfiguration", false);
 
   const sectionGroups = useMemo(
-    () => generateGroupsAndSections(blocks, groupStructure, showSimplifiedConfiguration, rootLevel, isHiddenAuthField),
-    [blocks, groupStructure, showSimplifiedConfiguration, rootLevel, isHiddenAuthField]
+    () => generateGroupsAndSections(blocks, groupStructure, rootLevel, isHiddenAuthField),
+    [blocks, groupStructure, rootLevel, isHiddenAuthField]
   );
 
   const sectionGroupsWithMetadata = useMemo(() => {
@@ -106,16 +103,15 @@ export function useGroupsAndSections(
 export function generateGroupsAndSections(
   blocks: FormBlock | FormBlock[],
   groupStructure: GroupDetails[],
-  showSimplifiedConfiguration: boolean,
   rootLevel: boolean,
   isHiddenAuthField: (fieldPath: string) => boolean
 ): SectionGroup[] {
   const blocksArray = [blocks].flat();
 
-  const shouldSplitGroups = showSimplifiedConfiguration && rootLevel && blocksArray.length > 0;
+  const shouldSplitGroups = rootLevel && blocksArray.length > 0;
   const blockGroups = shouldSplitGroups ? splitGroups(blocksArray, groupStructure) : [{ blocks: blocksArray }];
 
-  return blockGroups.map(splitSections(isHiddenAuthField, showSimplifiedConfiguration, rootLevel));
+  return blockGroups.map(splitSections(isHiddenAuthField, rootLevel));
 }
 
 function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): BlockGroup[] {
@@ -163,12 +159,11 @@ function splitGroups(blocks: FormBlock[], groupStructure: GroupDetails[]): Block
 
 function splitSections(
   isHiddenAuthField: (fieldPath: string) => boolean,
-  showSimplifiedConfiguration: boolean,
   rootLevel: boolean
 ): (value: BlockGroup) => SectionGroup {
   return ({ blocks, title }) => {
     const sortedBlocks: FormBlock[] = blocks
-      .sort(OrderComparator(showSimplifiedConfiguration))
+      .sort(OrderComparator)
       .filter((formField) => !formField.airbyte_hidden && !isHiddenAuthField(formField.path));
 
     const sections: Section[] = [];
@@ -176,8 +171,7 @@ function splitSections(
     for (const block of sortedBlocks) {
       // const FormBlocks are used to render Auth buttons in cloud, so they must always be required so that
       // the Auth buttons are not hidden inside a collapsed optional section
-      const displayType =
-        block.const !== undefined || !showSimplifiedConfiguration ? "expanded" : getDisplayType(block, rootLevel);
+      const displayType = block.const !== undefined ? "expanded" : getDisplayType(block, rootLevel);
       if (
         currentSection &&
         (currentSection.displayType === displayType ||

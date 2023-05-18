@@ -30,8 +30,6 @@ export interface Experiments {
   "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
-  "connector.form.simplifyConfiguration": boolean;
-  "connector.form.sshSslImprovements": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connection.updatedConnectionFlow": boolean;

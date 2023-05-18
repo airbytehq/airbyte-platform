@@ -30,7 +30,7 @@ export const createPostgresDestination = (
 
   goToDestinationPage();
   openNewDestinationForm();
-  fillPostgresForm(name, host, port, database, username, password, schema);
+  fillPostgresForm(name, host, port, database, username, password, schema, true);
   submitButtonClick();
 
   cy.wait("@checkDestinationConnection", { requestTimeout: 8000 });
