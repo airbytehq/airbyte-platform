@@ -86,6 +86,7 @@ const SyncCatalogInternal: React.FC<React.PropsWithChildren<SyncCatalogProps>> =
             streams={filteredStreams}
             changedStreams={changedStreams}
             onStreamChanged={onSingleStreamChanged}
+            isFilterApplied={filteredStreams.length !== streams.length}
           />
         </div>
       </LoadingBackdrop>

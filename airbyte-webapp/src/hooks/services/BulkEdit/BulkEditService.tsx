@@ -59,7 +59,7 @@ export const BulkEditServiceProvider: React.FC<
     reset();
     resetBulk();
   };
-  const allChecked = selectedBatchNodes.size === nodes.length;
+  const allChecked = nodes.length !== 0 && selectedBatchNodes.size === nodes.length;
 
   const ctx: BulkEditServiceContext = {
     isActive,

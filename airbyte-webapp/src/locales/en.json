@@ -432,6 +432,8 @@
   "connection.catalogTree.sourceDefined": "'<source defined>",
   "connection.catalogTree.sourceSchema": "'<source schema>",
   "connection.catalogTree.destinationSchema": "'<destination schema>",
+  "connection.catalogTree.noStreams": "No streams",
+  "connection.catalogTree.noMatchingStreams": "No matching streams",
 
   "connection.schemaUpdateNotifications.title": "Schema update notifications",
   "connection.schemaUpdateNotifications.info": "Send webhook notifications when your source schema has changed",
