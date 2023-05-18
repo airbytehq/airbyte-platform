@@ -194,6 +194,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 
   return (
     <ConnectorForm
+      trackDirtyChanges
       headerBlock={
         <>
           <div className={styles.connectorSelectControl}>

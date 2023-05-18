@@ -27,6 +27,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   isEditMode?: boolean;
   formValues?: Partial<ConnectorFormValues>;
   connectorId?: string;
+  trackDirtyChanges?: boolean;
 }
 
 function removeEmptyStrings(obj: unknown) {
@@ -88,7 +89,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
 
   return (
     <Form
-      trackDirtyChanges
+      trackDirtyChanges={props.trackDirtyChanges}
       defaultValues={initialValues as ConnectorFormValues<object>}
       schema={validationSchema as AnyObjectSchema}
       onSubmit={onFormSubmit}
