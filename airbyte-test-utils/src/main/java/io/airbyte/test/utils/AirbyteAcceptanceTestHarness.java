@@ -169,6 +169,13 @@ public class AirbyteAcceptanceTestHarness {
 
   // Used for bypassing SSL modification for db configs
   private static final String IS_TEST = "is_test";
+  public static final int JITTER_MAX_INTERVAL_SECS = 10;
+  public static final int FINAL_INTERVAL_SECS = 60;
+  public static final int MAX_TRIES = 3;
+
+  // NOTE: we include `INCOMPLETE` here because the job may still retry; see
+  // https://docs.airbyte.com/understanding-airbyte/jobs/.
+  public static final Set<JobStatus> IN_PROGRESS_JOB_STATUSES = Set.of(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING);
 
   private static boolean isKube;
   private static boolean isMinikube;
@@ -478,18 +485,27 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void assertSourceAndDestinationDbInSync(final boolean withScdTable) throws Exception {
-    final Database source = getSourceDatabase();
-    final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
-    final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
-    final Database destination = getDestinationDatabase();
-    final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
-    assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
-        String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
+    // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
+    // the sync is marked complete but the destination tables aren't finalized yet.
+    AirbyteApiClient.retryWithJitterThrows(() -> {
+      try {
+        final Database source = getSourceDatabase();
+        final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
+        final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
+        final Database destination = getDestinationDatabase();
+        final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
+        assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
+            String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
 
-    for (final SchemaTableNamePair pair : sourceTables) {
-      final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-      assertRawDestinationContains(sourceRecords, pair);
-    }
+        for (final SchemaTableNamePair pair : sourceTables) {
+          final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
+          assertRawDestinationContains(sourceRecords, pair);
+        }
+      } catch (Exception e) {
+        return e;
+      }
+      return null;
+    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
   public Database getSourceDatabase() {
@@ -604,6 +620,7 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void runSqlScriptInSource(final String resourceName) throws URISyntaxException, SQLException, IOException {
+    LOGGER.debug("Running sql script in source: {}", resourceName);
     if (isGke) {
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(resourceName).toURI()), getSourceDatabase());
     } else {
@@ -964,6 +981,7 @@ public class AirbyteAcceptanceTestHarness {
     final Database database = getSourceDatabase();
     final Set<SchemaTableNamePair> pairs = listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
+      LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s", pair.schemaName(), pair.tableName())));
     }
   }
@@ -972,6 +990,7 @@ public class AirbyteAcceptanceTestHarness {
     final Database database = getDestinationDatabase();
     final Set<SchemaTableNamePair> pairs = listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
+      LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s CASCADE", pair.schemaName(), pair.tableName())));
     }
   }
@@ -1112,7 +1131,7 @@ public class AirbyteAcceptanceTestHarness {
         continue; // To the top of the loop.
       }
       try {
-        while (Set.of(JobStatus.PENDING, JobStatus.RUNNING).contains(job.getStatus())) {
+        while (IN_PROGRESS_JOB_STATUSES.contains(job.getStatus())) {
           job = this.apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(job.getId())).getJob();
           LOGGER.info("waiting: job id: {} config type: {} status: {}", job.getId(), job.getConfigType(), job.getStatus());
           sleep(3000);
