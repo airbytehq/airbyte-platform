@@ -89,7 +89,7 @@ public class ReplicationAirbyteMessageEventPublishingHelper {
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     LOGGER.debug("Publishing {} event for stream {}:{} -> {}",
-        airbyteMessageOrigin, stream.getNamespace(), stream.getName(), streamStatus);
+        airbyteMessageOrigin, stream != null ? stream.getNamespace() : null, stream != null ? stream.getName() : null, streamStatus);
     this.publishStatusEvent(replicationAirbyteMessageEvent);
   }
 
