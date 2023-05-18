@@ -110,7 +110,7 @@ class RefreshSchemaActivityTest {
         .catalog(catalog)
         .catalogDiff(catalogDiff)
         .catalogId(catalogId);
-    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(any())))
+    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)))
         .thenReturn(new WorkspaceRead().workspaceId(workspaceId));
     when(mSourceApi.discoverSchemaForSource(requestBody))
         .thenReturn(discoveryResult);

@@ -18,6 +18,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUI
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
@@ -1262,12 +1263,14 @@ public class ConfigRepository {
         // SELECT connection.* plus the connection's associated operationIds as a concatenated list
         .select(
             CONNECTION.asterisk(),
-            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD))
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
         .from(CONNECTION)
 
         // inner join with all connection_operation rows that match the connection's id
         .join(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
-
+        // The schema management can be non-existent for a connection id, thus we need to do a left join
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         // only keep rows for connections that have an operationId that matches the input.
         // needs to be a sub query because we want to keep all operationIds for matching connections
         // in the main query
@@ -1276,7 +1279,7 @@ public class ConfigRepository {
                 .where(CONNECTION_OPERATION.OPERATION_ID.eq(operationId))))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -1307,13 +1310,15 @@ public class ConfigRepository {
         // SELECT connection.* plus the connection's associated operationIds as a concatenated list
         .select(
             CONNECTION.asterisk(),
-            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD))
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
         // left join includes connections that don't have any connection_operations
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
-
+        // The schema management can be non-existent for a connection id, thus we need to do a left join
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         // join with source actors so that we can filter by workspaceId
         .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
         .where(ACTOR.WORKSPACE_ID.eq(standardSyncQuery.workspaceId)
@@ -1324,7 +1329,7 @@ public class ConfigRepository {
             .and(standardSyncQuery.includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
 
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
@@ -1363,7 +1368,8 @@ public class ConfigRepository {
         .select(
             CONNECTION.asterisk(),
             groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
-            ACTOR.WORKSPACE_ID)
+            ACTOR.WORKSPACE_ID,
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
         .from(CONNECTION)
 
         // left join with all connection_operation rows that match the connection's id.
@@ -1372,6 +1378,8 @@ public class ConfigRepository {
 
         // join with source actors so that we can filter by workspaceId
         .join(ACTOR).on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        // The schema management can be non-existent for a connection id, thus we need to do a left join
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         .where(ACTOR.WORKSPACE_ID.in(standardSyncsQueryPaginated.workspaceIds())
             .and(standardSyncsQueryPaginated.destinationId == null || standardSyncsQueryPaginated.destinationId.isEmpty() ? noCondition()
                 : CONNECTION.DESTINATION_ID.in(standardSyncsQueryPaginated.destinationId))
@@ -1379,7 +1387,7 @@ public class ConfigRepository {
                 : CONNECTION.SOURCE_ID.in(standardSyncsQueryPaginated.sourceId))
             .and(standardSyncsQueryPaginated.includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
         // group by connection.id so that the groupConcat above works
-        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID))
+        .groupBy(CONNECTION.ID, ACTOR.WORKSPACE_ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS))
         .limit(standardSyncsQueryPaginated.pageSize())
         .offset(standardSyncsQueryPaginated.rowOffset())
         .fetch();
@@ -1400,12 +1408,15 @@ public class ConfigRepository {
     final Result<Record> connectionAndOperationIdsResult = database.query(ctx -> ctx
         .select(
             CONNECTION.asterisk(),
-            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD))
+            groupConcat(CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).as(OPERATION_IDS_AGG_FIELD),
+            SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
         .from(CONNECTION)
         .leftJoin(CONNECTION_OPERATION).on(CONNECTION_OPERATION.CONNECTION_ID.eq(CONNECTION.ID))
+        // The schema management can be non-existent for a connection id, thus we need to do a left join
+        .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
         .where(CONNECTION.SOURCE_ID.eq(sourceId)
             .and(includeDeleted ? noCondition() : CONNECTION.STATUS.notEqual(StatusType.deprecated)))
-        .groupBy(CONNECTION.ID)).fetch();
+        .groupBy(CONNECTION.ID, SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).fetch();
 
     final List<UUID> connectionIds = connectionAndOperationIdsResult.map(record -> record.get(CONNECTION.ID));
 
