@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.internal.book_keeping;
 
+import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody;
@@ -410,6 +411,7 @@ public class StreamStatusTracker {
 
   }
 
+  @VisibleForTesting
   StreamStatusJobType mapIsResetToJobType(final boolean isReset) {
     return isReset ? StreamStatusJobType.RESET : StreamStatusJobType.SYNC;
   }

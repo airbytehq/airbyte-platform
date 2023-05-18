@@ -5,13 +5,11 @@
 package io.airbyte.workers.internal.book_keeping.events;
 
 import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
+import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.micronaut.context.event.ApplicationEventPublisher;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -86,16 +84,8 @@ public class ReplicationAirbyteMessageEventPublishingHelper {
                                  final AirbyteStreamStatus streamStatus,
                                  final ReplicationContext replicationContext,
                                  final AirbyteMessageOrigin airbyteMessageOrigin) {
-    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
-        .withStatus(streamStatus)
-        .withStreamDescriptor(stream);
-    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
-        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
-        .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
-        .withStreamStatus(airbyteStreamStatusTraceMessage);
-    final AirbyteMessage airbyteMessage = new AirbyteMessage()
-        .withType(Type.TRACE)
-        .withTrace(airbyteTraceMessage);
+    final AirbyteMessage airbyteMessage = AirbyteMessageUtils.createStatusTraceMessage(stream, streamStatus);
+
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
         new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
     LOGGER.debug("Publishing {} event for stream {}:{} -> {}",

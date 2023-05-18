@@ -19,10 +19,9 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -165,9 +164,9 @@ public class EmptyAirbyteSource implements AirbyteSource {
       // Per stream, we emit one 'started', one null state and one 'complete' message.
       // Since there's only 1 state message we move directly from 'started' to 'complete'.
       final StreamDescriptor s = streamsToReset.poll();
-      perStreamMessages.add(buildResetStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
       perStreamMessages.add(buildNullStreamStateMessage(s));
-      perStreamMessages.add(buildResetStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
     }
 
     final AirbyteMessage message = perStreamMessages.poll();
@@ -201,20 +200,6 @@ public class EmptyAirbyteSource implements AirbyteSource {
         .collect(Collectors.toSet());
     final Set<StreamDescriptor> streamsToResetDescriptors = new HashSet<>(streamsToReset);
     return streamsToResetDescriptors.containsAll(catalogStreamDescriptors);
-  }
-
-  private AirbyteMessage buildResetStatusTraceMessage(final StreamDescriptor stream, final AirbyteStreamStatus status) {
-    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
-        .withStatus(status)
-        .withStreamDescriptor(stream);
-    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
-        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
-        .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
-        .withStreamStatus(airbyteStreamStatusTraceMessage);
-
-    return new AirbyteMessage()
-        .withType(Type.TRACE)
-        .withTrace(airbyteTraceMessage);
   }
 
   private AirbyteMessage buildNullStreamStateMessage(final StreamDescriptor stream) {

@@ -38,7 +38,6 @@ import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.Worker;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.orchestrator.OrchestratorHandleFactory;
 import io.airbyte.workers.temporal.TemporalAttemptExecution;
 import io.micronaut.context.annotation.Value;
@@ -115,7 +114,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage());
     ApmTraceUtils
         .addTagsToTrace(traceAttributes);
-    if (isResetJob(sourceLauncherConfig.getDockerImage())) {
+    if (syncInput.getIsReset()) {
       MetricClientFactory.getMetricClient().count(OssMetricsRegistry.RESET_REQUEST, 1);
     }
     final ActivityExecutionContext context = Activity.getExecutionContext();
@@ -215,10 +214,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     if (!tags.isEmpty()) {
       ApmTraceUtils.addTagsToTrace(tags);
     }
-  }
-
-  private boolean isResetJob(final String dockerImage) {
-    return WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB.equalsIgnoreCase(dockerImage);
   }
 
 }

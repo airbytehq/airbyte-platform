@@ -30,6 +30,7 @@ import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
@@ -104,8 +105,11 @@ public class ReplicationWorkerFactory {
         featureFlagClient, syncInput);
 
     log.info("Setting up source...");
-    final var airbyteSource = airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
-        syncInput.getCatalog(), heartbeatMonitor);
+    // reset jobs use an empty source to induce resetting all data in destination.
+    final var airbyteSource = syncInput.getIsReset()
+        ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
+        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
+            syncInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
