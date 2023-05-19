@@ -42,6 +42,7 @@ public class StreamStatus {
 
   private Integer attemptNumber;
 
+  @Nullable
   private String streamNamespace;
 
   private String streamName;
@@ -69,7 +70,7 @@ public class StreamStatus {
                       final UUID connectionId,
                       final Long jobId,
                       final Integer attemptNumber,
-                      final String streamNamespace,
+                      final @Nullable String streamNamespace,
                       final String streamName,
                       final JobStreamStatusJobType jobType,
                       final OffsetDateTime createdAt,

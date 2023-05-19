@@ -5930,7 +5930,6 @@ components:
         - jobType
         - runState
         - streamName
-        - streamNamespace
         - transitionedAt
         - workspaceId
       properties:
