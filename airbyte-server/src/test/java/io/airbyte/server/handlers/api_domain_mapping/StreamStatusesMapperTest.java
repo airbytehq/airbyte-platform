@@ -103,7 +103,7 @@ public class StreamStatusesMapperTest {
           .workspaceId(workspaceId)
           .connectionId(connectionId)
           .jobId(jobId)
-          .jobType(mapper.map(jobType))
+          .jobType(jobType != null ? mapper.map(jobType) : null)
           .attemptNumber(attemptNumber)
           .streamNamespace(streamNamespace)
           .streamName(streamName)
@@ -330,11 +330,11 @@ public class StreamStatusesMapperTest {
           Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1, RESET),
           Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 0, "", Fixtures.testName3, SYNC),
           Arguments.of(Fixtures.workspaceId1, null, null, null, null, null, SYNC),
-          Arguments.of(Fixtures.workspaceId2, null, null, null, null, null, SYNC),
+          Arguments.of(Fixtures.workspaceId2, null, null, null, null, null, null),
           Arguments.of(Fixtures.workspaceId2, null, null, null, null, null, RESET),
           Arguments.of(Fixtures.workspaceId1, null, Fixtures.jobId3, null, null, null, SYNC),
           Arguments.of(Fixtures.workspaceId1, null, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, SYNC),
-          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, SYNC),
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, null),
           Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, RESET),
           Arguments.of(Fixtures.workspaceId3, Fixtures.connectionId2, null, null, null, Fixtures.testName1, SYNC),
           Arguments.of(Fixtures.workspaceId2, null, Fixtures.jobId2, null, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
