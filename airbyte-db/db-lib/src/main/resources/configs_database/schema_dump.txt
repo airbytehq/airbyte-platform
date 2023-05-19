@@ -292,6 +292,7 @@ create table "public"."workspace" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "geography" geography_type not null default cast('AUTO' as geography_type),
   "webhook_operation_configs" jsonb,
+  "notification_settings" jsonb,
   constraint "workspace_pkey"
     primary key ("id")
 );
