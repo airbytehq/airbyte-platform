@@ -94,6 +94,7 @@ public class StreamStatusesMapper {
         .workspaceId(api.getWorkspaceId())
         .connectionId(api.getConnectionId())
         .jobId(api.getJobId())
+        .jobType(map(api.getJobType()))
         .attemptNumber(api.getAttemptNumber())
         .streamName(api.getStreamName())
         .streamNamespace(api.getStreamNamespace());

@@ -87,12 +87,14 @@ public class StreamStatusesMapperTest {
                         final Long jobId,
                         final Integer attemptNumber,
                         final String streamNamespace,
-                        final String streamName) {
+                        final String streamName,
+                        final StreamStatusJobType jobType) {
       final var pagination = new Pagination().pageSize(10).rowOffset(0);
       final var api = new StreamStatusListRequestBody()
           .workspaceId(workspaceId)
           .connectionId(connectionId)
           .jobId(jobId)
+          .jobType(jobType)
           .attemptNumber(attemptNumber)
           .streamNamespace(streamNamespace)
           .streamName(streamName)
@@ -101,6 +103,7 @@ public class StreamStatusesMapperTest {
           .workspaceId(workspaceId)
           .connectionId(connectionId)
           .jobId(jobId)
+          .jobType(mapper.map(jobType))
           .attemptNumber(attemptNumber)
           .streamNamespace(streamNamespace)
           .streamName(streamName)
@@ -315,20 +318,29 @@ public class StreamStatusesMapperTest {
 
   static class FilterParamsMatrix implements ArgumentsProvider {
 
+    // shave some characters, so reformatting doesn't wrap lines below
+    static StreamStatusJobType SYNC = StreamStatusJobType.SYNC;
+    static StreamStatusJobType RESET = StreamStatusJobType.RESET;
+
     @Override
     public Stream<Arguments> provideArguments(final ExtensionContext unused) {
       return Stream.of(
-          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId1, 0, Fixtures.testNamespace1, Fixtures.testName1),
-          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1),
-          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 0, "", Fixtures.testName3),
-          Arguments.of(Fixtures.workspaceId1, null, null, null, null, null),
-          Arguments.of(Fixtures.workspaceId2, null, null, null, null, null),
-          Arguments.of(Fixtures.workspaceId1, null, Fixtures.jobId3, null, null, null),
-          Arguments.of(Fixtures.workspaceId1, null, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2),
-          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2),
-          Arguments.of(Fixtures.workspaceId3, Fixtures.connectionId2, null, null, null, Fixtures.testName1),
-          Arguments.of(Fixtures.workspaceId2, null, Fixtures.jobId2, null, Fixtures.testNamespace1, Fixtures.testName1),
-          Arguments.of(Fixtures.workspaceId2, Fixtures.connectionId3, null, null, Fixtures.testNamespace1, Fixtures.testName1));
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId1, 0, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1, RESET),
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 0, "", Fixtures.testName3, SYNC),
+          Arguments.of(Fixtures.workspaceId1, null, null, null, null, null, SYNC),
+          Arguments.of(Fixtures.workspaceId2, null, null, null, null, null, SYNC),
+          Arguments.of(Fixtures.workspaceId2, null, null, null, null, null, RESET),
+          Arguments.of(Fixtures.workspaceId1, null, Fixtures.jobId3, null, null, null, SYNC),
+          Arguments.of(Fixtures.workspaceId1, null, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, SYNC),
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, SYNC),
+          Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, null, Fixtures.testNamespace2, Fixtures.testName2, RESET),
+          Arguments.of(Fixtures.workspaceId3, Fixtures.connectionId2, null, null, null, Fixtures.testName1, SYNC),
+          Arguments.of(Fixtures.workspaceId2, null, Fixtures.jobId2, null, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
+          Arguments.of(Fixtures.workspaceId2, null, Fixtures.jobId2, null, Fixtures.testNamespace1, Fixtures.testName1, RESET),
+          Arguments.of(Fixtures.workspaceId2, Fixtures.connectionId3, null, null, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
+          Arguments.of(Fixtures.workspaceId2, Fixtures.connectionId3, null, null, Fixtures.testNamespace1, Fixtures.testName1, RESET));
     }
 
   }

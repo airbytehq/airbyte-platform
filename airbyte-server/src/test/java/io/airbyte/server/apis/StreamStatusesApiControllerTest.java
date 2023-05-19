@@ -142,7 +142,6 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
 
   private static Stream<Arguments> validPaginationMatrix() {
     return Stream.of(
-        Arguments.of((Pagination) null),
         Arguments.of(Fixtures.validPagination()),
         Arguments.of(Fixtures.validPagination().rowOffset(30)),
         Arguments.of(Fixtures.validPagination().pageSize(100).rowOffset(300)),
@@ -167,6 +166,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
 
   private static Stream<Arguments> invalidListPaginationMatrix() {
     return Stream.of(
+        Arguments.of((Pagination) null),
         Arguments.of(Fixtures.validPagination().pageSize(0)),
         Arguments.of(Fixtures.validPagination().pageSize(-1)),
         Arguments.of(Fixtures.validPagination().rowOffset(-1)),

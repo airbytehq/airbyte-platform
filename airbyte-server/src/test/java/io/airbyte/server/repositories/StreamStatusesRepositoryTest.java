@@ -234,7 +234,7 @@ class StreamStatusesRepositoryTest {
     final var inserted1 = repo.save(s1);
     final var inserted2 = repo.save(s2);
 
-    final var result = repo.findAllFiltered(new FilterParams(Fixtures.workspaceId1, null, null, null, null, null, null));
+    final var result = repo.findAllFiltered(new FilterParams(Fixtures.workspaceId1, null, null, null, null, null, null, null));
 
     Assertions.assertEquals(1, result.getContent().size());
     Assertions.assertEquals(inserted1.getId(), result.getContent().get(0).getId());
@@ -257,8 +257,10 @@ class StreamStatusesRepositoryTest {
     final var s11 = Fixtures.status().connectionId(Fixtures.connectionId2).build();
     final var s12 = Fixtures.status().connectionId(Fixtures.connectionId3).build();
     final var s13 = Fixtures.status().streamNamespace("").build();
+    final var s14 = Fixtures.status().jobType(JobStreamStatusJobType.reset).build();
+    final var s15 = Fixtures.statusFrom(s8).jobType(JobStreamStatusJobType.reset).build();
 
-    repo.saveAll(List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13));
+    repo.saveAll(List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15));
 
     // create some filter params on various properties
     final var f1 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).build();
@@ -276,20 +278,24 @@ class StreamStatusesRepositoryTest {
     final var f12 = Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.testNamespace).streamName(Fixtures.testName2).build();
     final var f13 =
         Fixtures.filters().jobId(Fixtures.jobId1).streamNamespace(Fixtures.testNamespace).streamName(Fixtures.testName1).attemptNumber(2).build();
+    final var f14 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).jobType(JobStreamStatusJobType.sync).build();
+    final var f15 = Fixtures.filters().workspaceId(Fixtures.workspaceId1).jobType(JobStreamStatusJobType.reset).build();
 
-    Assertions.assertEquals(repo.findAllFiltered(f1).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13));
+    Assertions.assertEquals(repo.findAllFiltered(f1).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15));
     Assertions.assertEquals(repo.findAllFiltered(f2).getContent(), List.of(s6));
     Assertions.assertEquals(repo.findAllFiltered(f3).getContent(), List.of(s7));
-    Assertions.assertEquals(repo.findAllFiltered(f4).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s13));
+    Assertions.assertEquals(repo.findAllFiltered(f4).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15));
     Assertions.assertEquals(repo.findAllFiltered(f5).getContent(), List.of(s11));
-    Assertions.assertEquals(repo.findAllFiltered(f6).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10));
-    Assertions.assertEquals(repo.findAllFiltered(f7).getContent(), List.of(s1, s2, s3, s8, s9));
-    Assertions.assertEquals(repo.findAllFiltered(f8).getContent(), List.of(s1, s2, s3, s4, s5, s11, s12, s13));
-    Assertions.assertEquals(repo.findAllFiltered(f9).getContent(), List.of(s8, s9, s10));
+    Assertions.assertEquals(repo.findAllFiltered(f6).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15));
+    Assertions.assertEquals(repo.findAllFiltered(f7).getContent(), List.of(s1, s2, s3, s8, s9, s14, s15));
+    Assertions.assertEquals(repo.findAllFiltered(f8).getContent(), List.of(s1, s2, s3, s4, s5, s11, s12, s13, s14));
+    Assertions.assertEquals(repo.findAllFiltered(f9).getContent(), List.of(s8, s9, s10, s15));
     Assertions.assertEquals(repo.findAllFiltered(f10).getContent(), List.of());
-    Assertions.assertEquals(repo.findAllFiltered(f11).getContent(), List.of(s1, s2, s3, s11, s12));
+    Assertions.assertEquals(repo.findAllFiltered(f11).getContent(), List.of(s1, s2, s3, s11, s12, s14));
     Assertions.assertEquals(repo.findAllFiltered(f12).getContent(), List.of(s4, s5));
     Assertions.assertEquals(repo.findAllFiltered(f13).getContent(), List.of(s3));
+    Assertions.assertEquals(repo.findAllFiltered(f14).getContent(), List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13));
+    Assertions.assertEquals(repo.findAllFiltered(f15).getContent(), List.of(s14, s15));
   }
 
   @Test

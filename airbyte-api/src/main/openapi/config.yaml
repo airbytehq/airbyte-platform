@@ -5905,6 +5905,7 @@ components:
     StreamStatusListRequestBody:
       type: object
       required:
+        - pagination
         - workspaceId
       properties:
         attemptNumber:
@@ -5913,6 +5914,8 @@ components:
           $ref: "#/components/schemas/ConnectionId"
         jobId:
           $ref: "#/components/schemas/JobId"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
         pagination:
           $ref: "#/components/schemas/Pagination"
         streamName:
