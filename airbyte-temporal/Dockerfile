@@ -1,5 +1,6 @@
 # A test describe in the README is available to test a version update
-FROM airbyte/temporal-auto-setup:1.20.3
+ARG TEMPORAL_AUTO_SETUP_IMAGE=airbyte/temporal-auto-setup:1.20.3
+FROM ${TEMPORAL_AUTO_SETUP_IMAGE}
 
 ENV TEMPORAL_HOME /etc/temporal
 
