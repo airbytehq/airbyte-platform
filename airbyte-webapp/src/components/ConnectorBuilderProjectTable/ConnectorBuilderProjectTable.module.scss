@@ -9,11 +9,11 @@
 }
 
 .draft {
-  color: colors.$grey-800;
+  padding-left: variables.$spacing-md;
 }
 
-.versionCell {
-  padding-left: variables.$spacing-sm;
+.draftInProgress {
+  padding: 0 variables.$spacing-md;
 }
 
 .versionItem {

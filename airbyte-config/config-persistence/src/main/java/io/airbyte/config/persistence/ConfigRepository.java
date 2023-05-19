@@ -2584,6 +2584,41 @@ public class ConfigRepository {
   }
 
   /**
+   * Nullify the manifest draft of a builder project.
+   *
+   * @param projectId the id of the project
+   * @throws IOException exception while interacting with db
+   */
+  public void deleteBuilderProjectDraft(final UUID projectId) throws IOException {
+    database.transaction(ctx -> {
+      ctx.update(CONNECTOR_BUILDER_PROJECT)
+          .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .where(CONNECTOR_BUILDER_PROJECT.ID.eq(projectId))
+          .execute();
+      return null;
+    });
+  }
+
+  /**
+   * Nullify the manifest draft of the builder project associated with the provided actor definition
+   * ID and workspace ID.
+   *
+   * @param actorDefinitionId the id of the actor definition to which the project is linked
+   * @param workspaceId the id of the workspace containing the project
+   * @throws IOException exception while interacting with db
+   */
+  public void deleteManifestDraftForActorDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+    database.transaction(ctx -> {
+      ctx.update(CONNECTOR_BUILDER_PROJECT)
+          .setNull(CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT)
+          .where(CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
+              .and(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)))
+          .execute();
+      return null;
+    });
+  }
+
+  /**
    * Write name and draft of a builder project. The actor_definition is also updated to match the new
    * builder project name.
    *

@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -241,6 +242,23 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(MANIFEST_VERSION, versionedConnectorBuilderProject.getManifestVersion());
     assertEquals(A_DESCRIPTION, versionedConnectorBuilderProject.getManifestDescription());
     assertEquals(A_MANIFEST, versionedConnectorBuilderProject.getManifest());
+  }
+
+  @Test
+  void testDeleteBuilderProjectDraft() throws IOException, ConfigNotFoundException {
+    createBaseObjects();
+    assertNotNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+    configRepository.deleteBuilderProjectDraft(project1.getBuilderProjectId());
+    assertNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+  }
+
+  @Test
+  void testDeleteManifestDraftForActorDefinitionId() throws IOException, ConfigNotFoundException, JsonValidationException {
+    createBaseObjects();
+    final StandardSourceDefinition sourceDefinition = linkSourceDefinition(project1.getBuilderProjectId());
+    assertNotNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+    configRepository.deleteManifestDraftForActorDefinition(sourceDefinition.getSourceDefinitionId(), project1.getWorkspaceId());
+    assertNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
   }
 
   private DeclarativeManifest anyDeclarativeManifest() {
