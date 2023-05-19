@@ -15,4 +15,4 @@ WORKDIR /app
 ADD bin/${APPLICATION}-${VERSION}.tar /app
 
 
-ENTRYPOINT ["/bin/bash", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
+ENTRYPOINT ["/bin/sh", "-c", "${APPLICATION}-${VERSION}/bin/${APPLICATION}"]
