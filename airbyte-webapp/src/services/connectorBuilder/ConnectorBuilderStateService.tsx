@@ -70,6 +70,9 @@ interface TestReadContext {
   testStreamIndex: number;
   streamRead: UseQueryResult<StreamRead, unknown>;
   isFetchingStreamList: boolean;
+  testInputJson: ConnectorConfig;
+  testInputJsonDirty: boolean;
+  setTestInputJson: (value: TestReadContext["testInputJson"] | undefined) => void;
 }
 
 interface FormManagementStateContext {
@@ -395,7 +398,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const manifest = lastValidJsonManifest ?? DEFAULT_JSON_MANIFEST_VALUES;
 
   // config
-  const { testInputJson } = useConnectorBuilderTestInputState();
+  const { testInputJson, setTestInputJson } = useConnectorBuilderTestInputState();
 
   const testInputWithDefaults = useTestInputDefaultValues(testInputJson, manifest.spec);
 
@@ -443,6 +446,9 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setTestStreamIndex,
     streamRead,
     isFetchingStreamList,
+    testInputJson: testInputWithDefaults,
+    testInputJsonDirty: Boolean(testInputJson),
+    setTestInputJson,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;
