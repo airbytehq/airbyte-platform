@@ -53,7 +53,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     if (streamCentricUIEnabled) {
-      tabs.push({
+      tabs.splice(1, 0, {
         id: ConnectionRoutePaths.JobHistory,
         name: <FormattedMessage id="connectionForm.jobHistory" />,
         to: `${basePath}/${ConnectionRoutePaths.JobHistory}`,
