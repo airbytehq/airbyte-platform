@@ -6,7 +6,6 @@ import LoadingPage from "components/LoadingPage";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useExperiment } from "hooks/services/Experiment";
-import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
@@ -90,7 +89,6 @@ const MainRoutes: React.FC = () => {
 };
 
 const CloudMainViewRoutes = () => {
-  useApiHealthPoll();
   const query = useQuery<{ from: string }>();
 
   return (
