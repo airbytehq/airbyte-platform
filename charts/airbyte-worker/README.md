@@ -1,6 +1,6 @@
 # worker
 
-![Version: 0.44.7](https://img.shields.io/badge/Version-0.44.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.2](https://img.shields.io/badge/AppVersion-0.44.2-informational?style=flat-square)
+![Version: 0.45.20](https://img.shields.io/badge/Version-0.45.20-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.50.0](https://img.shields.io/badge/AppVersion-0.50.0-informational?style=flat-square)
 
 Helm chart to deploy airbyte-worker
 
@@ -16,6 +16,8 @@ Helm chart to deploy airbyte-worker
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
 | containerSecurityContext | object | `{}` |  |
+| debug.enabled | bool | `false` |  |
+| debug.remoteDebugPort | int | `5005` |  |
 | enabled | bool | `true` |  |
 | env_vars | object | `{}` |  |
 | extraContainers | list | `[]` |  |
@@ -64,7 +66,7 @@ Helm chart to deploy airbyte-worker
 | image.repository | string | `"airbyte/worker"` |  |
 | livenessProbe.enabled | bool | `true` |  |
 | livenessProbe.failureThreshold | int | `3` |  |
-| livenessProbe.initialDelaySeconds | int | `30` |  |
+| livenessProbe.initialDelaySeconds | int | `50` |  |
 | livenessProbe.periodSeconds | int | `10` |  |
 | livenessProbe.successThreshold | int | `1` |  |
 | livenessProbe.timeoutSeconds | int | `1` |  |
