@@ -544,6 +544,7 @@ server:
   ## Configure extra options for the server containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
   ##  server.livenessProbe.enabled Enable livenessProbe on the server
+  ##  server.livenessProbe.httpPath HTTP Path used by for livenessProbe
   ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
   ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
   ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
@@ -552,6 +553,7 @@ server:
   ##
   livenessProbe:
     enabled: true
+    httpPath: "/api/v1/health"
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 1
@@ -559,6 +561,7 @@ server:
     successThreshold: 1
 
   ##  server.readinessProbe.enabled Enable readinessProbe on the server
+  ##  server.readinessProbe.httpPath HTTP Path used by for readinessProbe
   ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
   ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
   ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
@@ -567,6 +570,7 @@ server:
   ##
   readinessProbe:
     enabled: true
+    httpPath: "/api/v1/health"
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 1
