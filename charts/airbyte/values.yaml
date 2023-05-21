@@ -217,6 +217,7 @@ webapp:
     successThreshold: 1
 
   ##  webapp.readinessProbe.enabled Enable readinessProbe on the webapp
+  ##  webapp.readinessProbe.httpPath HTTP path used for readinessProbe
   ##  webapp.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
   ##  webapp.readinessProbe.periodSeconds Period seconds for readinessProbe
   ##  webapp.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
@@ -225,6 +226,7 @@ webapp:
   ##
   readinessProbe:
     enabled: true
+    httpPath: "/api/v1/health"
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 1

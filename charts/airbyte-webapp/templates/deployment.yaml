@@ -111,7 +111,7 @@ spec:
         {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
-            path: /api/v1/health
+            path: { .Values.readinessProbe.httpPath | default "/api/v1/health" }}
             port: http
           initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
