@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useField } from "formik";
+import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { Input } from "components/ui/Input";
@@ -15,8 +15,11 @@ interface BuilderTitleProps {
 }
 
 export const BuilderTitle: React.FC<BuilderTitleProps> = ({ path, label, size }) => {
-  const [field, meta] = useField(path);
-  const hasError = !!meta.error && meta.touched;
+  const {
+    field,
+    fieldState: { error },
+  } = useController({ name: path });
+  const hasError = !!error;
 
   return (
     <div className={styles.container}>
@@ -36,7 +39,7 @@ export const BuilderTitle: React.FC<BuilderTitleProps> = ({ path, label, size })
       />
       {hasError && (
         <Text size="xs" className={styles.error}>
-          <FormattedMessage id={meta.error} />
+          <FormattedMessage id={error.message} />
         </Text>
       )}
     </div>

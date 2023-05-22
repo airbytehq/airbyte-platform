@@ -1,4 +1,4 @@
-import { useField } from "formik";
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -14,10 +14,16 @@ import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { BuilderListPartitionRouter, BuilderStream, LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER } from "../types";
+import {
+  LIST_PARTITION_ROUTER,
+  SUBSTREAM_PARTITION_ROUTER,
+  StreamPathFn,
+  useBuilderWatch,
+  BuilderListPartitionRouter,
+} from "../types";
 
 interface PartitionSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
@@ -29,16 +35,18 @@ const EMPTY_LIST_PARTITION_ROUTER: BuilderListPartitionRouter = {
 
 export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderStream["partitionRouter"]>(streamFieldPath("partitionRouter"));
+  const paginatorPath = streamFieldPath("partitionRouter");
+  const value = useBuilderWatch(paginatorPath, { exact: true });
+  const { setValue } = useFormContext();
 
   const handleToggle = (newToggleValue: boolean) => {
     if (newToggleValue) {
-      helpers.setValue([EMPTY_LIST_PARTITION_ROUTER]);
+      setValue(paginatorPath, [EMPTY_LIST_PARTITION_ROUTER]);
     } else {
-      helpers.setValue(undefined);
+      setValue(paginatorPath, undefined, { shouldValidate: true });
     }
   };
-  const toggledOn = field.value !== undefined;
+  const toggledOn = value !== undefined;
 
   const getSlicingOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {

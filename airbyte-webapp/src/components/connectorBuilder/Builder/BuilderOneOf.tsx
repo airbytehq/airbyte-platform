@@ -1,5 +1,5 @@
-import { FastField, FastFieldProps } from "formik";
 import React from "react";
+import { useController, useFormContext } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
@@ -30,20 +30,19 @@ interface BuilderOneOfProps {
   onSelect?: (type: string) => void;
 }
 
-const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<{ type: string }>> = ({
+export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
   options,
   label,
   tooltip,
-  field: typePathField,
   path,
-  form,
   manifestPath,
   manifestOptionPaths,
   onSelect,
 }) => {
-  const value = typePathField.value.type;
+  const { setValue } = useFormContext();
+  const { field } = useController({ name: `${path}.type` });
 
-  const selectedOption = options.find((option) => option.typeValue === value);
+  const selectedOption = options.find((option) => option.typeValue === field.value);
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
     label,
     tooltip,
@@ -58,20 +57,24 @@ const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<{ type: str
       label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
         <DropDown
-          {...typePathField}
+          {...field}
           options={options.map((option) => {
             return { label: option.label, value: option.typeValue, default: option.default };
           })}
-          value={value ?? options[0].typeValue}
+          value={field.value ?? options[0].typeValue}
           onChange={(selectedOption: Option) => {
-            if (selectedOption.value === value) {
+            if (selectedOption.value === field.value) {
               return;
             }
             // clear all values for this oneOf and set selected option and default values
-            form.setFieldValue(path, {
-              type: selectedOption.value,
-              ...selectedOption.default,
-            });
+            setValue(
+              path,
+              {
+                type: selectedOption.value,
+                ...selectedOption.default,
+              },
+              { shouldValidate: true }
+            );
 
             onSelect?.(selectedOption.value);
           }}
@@ -80,12 +83,5 @@ const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<{ type: str
     >
       {selectedOption?.children}
     </GroupControls>
-  );
-};
-export const BuilderOneOf: React.FC<BuilderOneOfProps> = (props) => {
-  return (
-    <FastField name={props.path}>
-      {(fastFieldProps: FastFieldProps<{ type: string }>) => <InnerBuilderOneOf {...props} {...fastFieldProps} />}
-    </FastField>
   );
 };

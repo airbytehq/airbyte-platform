@@ -1,8 +1,8 @@
 import { faSliders, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
-import { useFormikContext } from "formik";
 import React from "react";
+import { useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import Indicator from "components/Indicator";
@@ -68,7 +68,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { yamlManifest, selectedView, setSelectedView, builderFormValues } = useConnectorBuilderFormState();
-  const { values } = useFormikContext<BuilderFormValues>();
+  const values = useWatch<BuilderFormValues>();
   const handleViewSelect = (selectedView: BuilderView) => {
     setSelectedView(selectedView);
   };
@@ -95,7 +95,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         <ViewSelectButton
           data-testid="navbutton-global"
           selected={selectedView === "global"}
-          showErrorIndicator={hasErrors(true, ["global"])}
+          showErrorIndicator={hasErrors(["global"])}
           onClick={() => {
             handleViewSelect("global");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.GLOBAL_CONFIGURATION_SELECT, {
@@ -125,7 +125,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: values.inputs.length + inferredInputsLength,
+                number: values.inputs?.length ?? 0 + inferredInputsLength,
               }}
             />
           </Text>
@@ -135,7 +135,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
         <div className={styles.streamsHeader}>
           <Text className={styles.streamsHeading} size="xs" bold>
-            <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams.length }} />
+            <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
           </Text>
 
           <AddStreamButton
@@ -145,12 +145,12 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         </div>
 
         <div className={styles.streamList}>
-          {values.streams.map(({ name, id }, num) => (
+          {values.streams?.map(({ name, id }, num) => (
             <ViewSelectButton
               key={num}
               data-testid={`navbutton-${String(num)}`}
               selected={selectedView === num}
-              showErrorIndicator={hasErrors(true, [num])}
+              showErrorIndicator={hasErrors([num])}
               onClick={() => {
                 handleViewSelect(num);
                 analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {

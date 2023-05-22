@@ -1,8 +1,8 @@
-import { FormikContextType } from "formik";
 import { Transition } from "history";
 import { dump } from "js-yaml";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { UseQueryResult } from "react-query";
 import { useParams } from "react-router-dom";
@@ -85,7 +85,9 @@ interface FormManagementStateContext {
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
 export const ConnectorBuilderTestReadContext = React.createContext<TestReadContext | null>(null);
 export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
-export const ConnectorBuilderMainFormikContext = React.createContext<FormikContextType<BuilderFormValues> | null>(null);
+export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<BuilderFormValues, unknown> | null>(
+  null
+);
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { projectId } = useParams<{

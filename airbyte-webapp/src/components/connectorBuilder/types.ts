@@ -1,5 +1,6 @@
 import { JSONSchema7 } from "json-schema";
 import merge from "lodash/merge";
+import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
 
@@ -171,7 +172,7 @@ export interface BuilderStream {
   partitionRouter?: Array<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>;
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
-  unsupportedFields?: Record<string, unknown>;
+  unsupportedFields?: Record<string, object>;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -448,6 +449,8 @@ const nonPathRequestOptionSchema = yup
 
 const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
 
+const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
     connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
@@ -519,8 +522,8 @@ export const builderFormValidationSchema = yup.object().shape({
               .object({
                 page_size: yup.mixed().when("type", {
                   is: (val: string) => ([OFFSET_INCREMENT, PAGE_INCREMENT] as string[]).includes(val),
-                  then: yup.number().required("form.empty.error"),
-                  otherwise: yup.number(),
+                  then: yupNumberOrEmptyString.required("form.empty.error"),
+                  otherwise: yupNumberOrEmptyString,
                 }),
                 cursor: yup.mixed().when("type", {
                   is: CURSOR_PAGINATION,
@@ -612,7 +615,7 @@ export const builderFormValidationSchema = yup.object().shape({
         errorHandler: yup
           .array(
             yup.object().shape({
-              max_retries: yup.number(),
+              max_retries: yupNumberOrEmptyString,
               backoff_strategy: yup
                 .object()
                 .shape({
@@ -979,3 +982,10 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
 };
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
+
+export const useBuilderWatch = <TPath extends FieldPath<BuilderFormValues>>(
+  path: TPath,
+  options?: { exact: boolean }
+) => useWatch<BuilderFormValues, TPath>({ name: path, ...options });
+
+export type StreamPathFn = <T extends string>(fieldPath: T) => `streams.${number}.${T}`;

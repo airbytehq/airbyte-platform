@@ -1,4 +1,4 @@
-import { useField } from "formik";
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -13,29 +13,31 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getOptionsByManifest } from "./manifestHelpers";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { BuilderStream } from "../types";
+import { StreamPathFn, useBuilderWatch } from "../types";
 
 interface PartitionSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
 export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderStream["errorHandler"]>(streamFieldPath("errorHandler"));
+  const { setValue } = useFormContext();
+  const path = streamFieldPath("errorHandler");
+  const value = useBuilderWatch(path, { exact: true });
 
   const handleToggle = (newToggleValue: boolean) => {
     if (newToggleValue) {
-      helpers.setValue([
+      setValue(path, [
         {
           type: "DefaultErrorHandler",
         },
       ]);
     } else {
-      helpers.setValue(undefined);
+      setValue(path, undefined, { shouldValidate: true });
     }
   };
-  const toggledOn = field.value !== undefined;
+  const toggledOn = value !== undefined;
 
   const getBackoffOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {

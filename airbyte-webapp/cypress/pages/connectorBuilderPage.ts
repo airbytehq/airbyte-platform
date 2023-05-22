@@ -6,15 +6,15 @@ const apiKeyInput = "input[name='connectionConfiguration.api_key']";
 const toggleInput = "input[data-testid='toggle']";
 const streamNameInput = "input[name='streamName']";
 const streamUrlPathFromModal = "input[name='urlPath']";
-const streamUrlPathFromForm = "input[name='streams[0].urlPath']";
+const streamUrlPathFromForm = "input[name='streams.0.urlPath']";
 const recordSelectorInput = "[data-testid='tag-input'] input";
-const authType = "[data-testid='global.authenticator']";
+const authType = "[data-testid='global.authenticator.type']";
 const testInputsButton = "[data-testid='test-inputs']";
-const limitInput = "[name='streams[0].paginator.strategy.page_size']";
+const limitInput = "[name='streams.0.paginator.strategy.page_size']";
 const injectLimitInto = "[data-testid$='paginator.pageSizeOption.inject_into']";
-const injectLimitFieldName = "[name='streams[0].paginator.pageSizeOption.field_name']";
+const injectLimitFieldName = "[name='streams.0.paginator.pageSizeOption.field_name']";
 const injectOffsetInto = "[data-testid$='paginator.pageTokenOption.inject_into']";
-const injectOffsetFieldName = "[name='streams[0].paginator.pageTokenOption.field_name']";
+const injectOffsetFieldName = "[name='streams.0.paginator.pageTokenOption.field_name']";
 const testPageItem = "[data-testid='test-pages'] li";
 const submit = "button[type='submit']";
 const testStreamButton = "button[data-testid='read-stream']";
@@ -120,10 +120,10 @@ export const disableStreamSlicer = () => {
 };
 
 export const configureListStreamSlicer = (values: string, cursor_field: string) => {
-  cy.get('[data-testid="tag-input-streams[0].partitionRouter[0].values.value"] input[type="text"]').type(values, {
+  cy.get('[data-testid="tag-input-streams.0.partitionRouter.0.values.value"] input[type="text"]').type(values, {
     force: true,
   });
-  cy.get("[name='streams[0].partitionRouter[0].cursor_field']").type(cursor_field, { force: true });
+  cy.get("[name='streams.0.partitionRouter.0.cursor_field']").type(cursor_field, { force: true });
 };
 
 export const getSlicesFromDropdown = () => {
@@ -160,9 +160,9 @@ export const getUrlPathInput = () => {
 };
 
 export const enterUrlPath = (urlPath: string) => {
-  cy.get('[name="streams[0].urlPath"]').focus();
-  cy.get('[name="streams[0].urlPath"]').clear();
-  cy.get('[name="streams[0].urlPath"]').type(urlPath, { force: true });
+  cy.get('[name="streams.0.urlPath"]').focus();
+  cy.get('[name="streams.0.urlPath"]').clear();
+  cy.get('[name="streams.0.urlPath"]').type(urlPath, { force: true });
 };
 
 export const submitForm = () => {

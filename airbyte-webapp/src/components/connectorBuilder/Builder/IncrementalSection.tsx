@@ -1,4 +1,5 @@
-import { useField } from "formik";
+import React from "react";
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -14,25 +15,28 @@ import { BuilderOptional } from "./BuilderOptional";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
-  BuilderIncrementalSync,
   DATETIME_FORMAT_OPTIONS,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   LARGE_DURATION_OPTIONS,
   SMALL_DURATION_OPTIONS,
+  StreamPathFn,
+  useBuilderWatch,
 } from "../types";
 
 interface IncrementalSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderIncrementalSync | undefined>(streamFieldPath("incrementalSync"));
+  const { setValue } = useFormContext();
+  const path = streamFieldPath("incrementalSync");
+  const value = useBuilderWatch(path, { exact: true });
 
   const handleToggle = (newToggleValue: boolean) => {
     if (newToggleValue) {
-      helpers.setValue({
+      setValue(path, {
         datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
         start_datetime: { type: "user_input" },
         end_datetime: { type: "now" },
@@ -51,10 +55,10 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         },
       });
     } else {
-      helpers.setValue(undefined);
+      setValue(path, undefined, { shouldValidate: true });
     }
   };
-  const toggledOn = field.value !== undefined;
+  const toggledOn = value !== undefined;
 
   return (
     <BuilderCard
