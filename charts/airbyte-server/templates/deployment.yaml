@@ -167,6 +167,20 @@ spec:
               name: {{ .Values.global.logs.secretKey.existingSecret }}
               key: {{ .Values.global.logs.secretKey.existingSecretKey }}
         {{- end }}
+        {{- if and .Values.global.logs.s3.enabled .Values.global.logs.accessKey.password }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-airbyte-secrets
+              key: AWS_ACCESS_KEY_ID
+        {{- end }}
+        {{- if and .Values.global.logs.s3.enabled .Values.global.logs.secretKey.password }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-airbyte-secrets
+              key: AWS_SECRET_ACCESS_KEY
+        {{- end }}
         {{- if or .Values.global.logs.minio.enabled .Values.global.logs.externalMinio.enabled }}
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
