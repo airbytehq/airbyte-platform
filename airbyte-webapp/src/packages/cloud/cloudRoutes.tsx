@@ -1,5 +1,5 @@
 import React, { Suspense, useMemo } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
@@ -16,11 +16,14 @@ import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
-import { VerifyEmailAction } from "./views/FirebaseActionRoute";
+import { FirebaseActionRoute } from "./views/FirebaseActionRoute";
 
+const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
+const ResetPasswordPage = React.lazy(() => import("./views/auth/ResetPasswordPage"));
+const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const WorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
-const Auth = React.lazy(() => import("packages/cloud/views/auth"));
+const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
 const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
 const SpeakeasyRedirectPage = React.lazy(() => import("pages/SpeakeasyRedirectPage"));
@@ -113,7 +116,8 @@ const CloudMainViewRoutes = () => {
 };
 
 export const Routing: React.FC = () => {
-  const { user, inited, providers, hasCorporateEmail } = useAuthService();
+  const { user, inited, providers, hasCorporateEmail, loggedOut } = useAuthService();
+  const { pathname } = useLocation();
 
   useBuildUpdateCheck();
 
@@ -143,14 +147,45 @@ export const Routing: React.FC = () => {
     <WorkspaceServiceProvider>
       <LDExperimentServiceProvider>
         <Suspense fallback={<LoadingPage />}>
-          {/* Allow email verification no matter whether the user is logged in or not */}
           <Routes>
-            <Route path={CloudRoutes.FirebaseAction} element={<VerifyEmailAction />} />
+            {/*
+              The firebase callback action route is available no matter wheter a user is logged in or not, since
+              the verify email action need to work in both cases.
+            */}
+            <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  {/* All routes for non logged in users */}
+                  {!user && (
+                    <AuthLayout>
+                      <Suspense fallback={<LoadingPage />}>
+                        <Routes>
+                          <Route path={CloudRoutes.Login} element={<LoginPage />} />
+                          <Route path={CloudRoutes.Signup} element={<SignupPage />} />
+                          <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
+                          {/* In case a not logged in user tries to access anything else navigate them to login */}
+                          <Route
+                            path="*"
+                            element={
+                              <Navigate
+                                to={`${CloudRoutes.Login}${
+                                  loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
+                                }`}
+                              />
+                            }
+                          />
+                        </Routes>
+                      </Suspense>
+                    </AuthLayout>
+                  )}
+                  {/* Allow all regular routes if the user is logged in */}
+                  {user && <CloudMainViewRoutes />}
+                </>
+              }
+            />
           </Routes>
-          {/* Show the login screen if the user is not logged in */}
-          {!user && <Auth />}
-          {/* Allow all regular routes if the user is logged in */}
-          {user && <CloudMainViewRoutes />}
         </Suspense>
       </LDExperimentServiceProvider>
     </WorkspaceServiceProvider>

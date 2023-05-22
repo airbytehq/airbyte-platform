@@ -1,23 +1,15 @@
-import React, { Suspense, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useIntl } from "react-intl";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useConfig } from "config";
 import { useExperiment } from "hooks/services/Experiment";
-import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { FirebaseActionRoute } from "packages/cloud/views/FirebaseActionRoute";
 import { loadFathom } from "utils/fathom";
 
 import styles from "./Auth.module.scss";
 
 const PersonQuoteCover = React.lazy(() => import("./components/PersonQuoteCover"));
-const LoginPage = React.lazy(() => import("./LoginPage"));
-const ResetPasswordPage = React.lazy(() => import("./ResetPasswordPage"));
-const SignupPage = React.lazy(() => import("./SignupPage"));
 
 const hasValidRightSideUrl = (url?: string): boolean => {
   if (url) {
@@ -36,10 +28,8 @@ const hasValidRightSideUrl = (url?: string): boolean => {
   return false;
 };
 
-export const Auth: React.FC = () => {
-  const { pathname } = useLocation();
+export const AuthLayout: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const { formatMessage } = useIntl();
-  const { loggedOut } = useAuthService();
   const rightSideUrl = useExperiment("authPage.rightSideUrl", undefined);
 
   const config = useConfig();
@@ -55,24 +45,7 @@ export const Auth: React.FC = () => {
         justifyContent="center"
         className={styles["container__left-side"]}
       >
-        <Suspense fallback={<LoadingPage />}>
-          <Routes>
-            <Route path={CloudRoutes.Login} element={<LoginPage />} />
-            <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-            <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
-            <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
-            <Route
-              path="*"
-              element={
-                <Navigate
-                  to={`${CloudRoutes.Login}${
-                    loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
-                  }`}
-                />
-              }
-            />
-          </Routes>
-        </Suspense>
+        {children}
       </FlexContainer>
       <FlexContainer direction="column" className={styles["container__right-side"]}>
         {hasValidRightSideUrl(rightSideUrl) ? (
