@@ -63,8 +63,8 @@ class DefaultAirbyteDestinationTest {
       WorkerUtils.syncToWorkerDestinationConfig(TestConfigHelpers.createSyncConfig().getValue());
 
   private static final List<AirbyteMessage> MESSAGES = Lists.newArrayList(
-      AirbyteMessageUtils.createStateMessage("checkpoint", "1"),
-      AirbyteMessageUtils.createStateMessage("checkpoint", "2"));
+      AirbyteMessageUtils.createStateMessage(STREAM_NAME, "checkpoint", "1"),
+      AirbyteMessageUtils.createStateMessage(STREAM_NAME, "checkpoint", "2"));
 
   private static Path logJobRoot;
 
