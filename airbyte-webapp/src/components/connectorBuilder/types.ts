@@ -284,84 +284,96 @@ export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", Bu
   },
 };
 
-export const authTypeToKeyToInferredInput: Record<string, Record<string, BuilderFormInput>> = {
-  NoAuth: {},
-  ApiKeyAuthenticator: {
-    api_token: {
-      key: "api_key",
-      required: true,
-      definition: {
-        type: "string",
-        title: "API Key",
-        airbyte_secret: true,
-      },
-    },
-  },
-  BearerAuthenticator: {
-    api_token: {
-      key: "api_key",
-      required: true,
-      definition: {
-        type: "string",
-        title: "API Key",
-        airbyte_secret: true,
-      },
-    },
-  },
-  BasicHttpAuthenticator: {
-    username: {
-      key: "username",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Username",
-      },
-    },
-    password: {
-      key: "password",
-      required: false,
-      definition: {
-        type: "string",
-        title: "Password",
-        always_show: true,
-        airbyte_secret: true,
-      },
-    },
-  },
-  OAuthAuthenticator: {
-    client_id: {
-      key: "client_id",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Client ID",
-        airbyte_secret: true,
-      },
-    },
-    client_secret: {
-      key: "client_secret",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Client secret",
-        airbyte_secret: true,
-      },
-    },
-    refresh_token: {
-      key: "client_refresh_token",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Refresh token",
-        airbyte_secret: true,
-      },
-    },
-  },
+export const authTypeToKeyToInferredInput = (
+  authenticator: BuilderFormAuthenticator | { type: BuilderFormAuthenticator["type"] }
+): Record<string, BuilderFormInput> => {
+  switch (authenticator.type) {
+    case "NoAuth":
+      return {};
+    case API_KEY_AUTHENTICATOR:
+      return {
+        api_token: {
+          key: "api_key",
+          required: true,
+          definition: {
+            type: "string",
+            title: "API Key",
+            airbyte_secret: true,
+          },
+        },
+      };
+    case BEARER_AUTHENTICATOR:
+      return {
+        api_token: {
+          key: "api_key",
+          required: true,
+          definition: {
+            type: "string",
+            title: "API Key",
+            airbyte_secret: true,
+          },
+        },
+      };
+    case BASIC_AUTHENTICATOR:
+      return {
+        username: {
+          key: "username",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Username",
+          },
+        },
+        password: {
+          key: "password",
+          required: false,
+          definition: {
+            type: "string",
+            title: "Password",
+            always_show: true,
+            airbyte_secret: true,
+          },
+        },
+      };
+    case OAUTH_AUTHENTICATOR:
+      const baseInputs: Record<string, BuilderFormInput> = {
+        client_id: {
+          key: "client_id",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Client ID",
+            airbyte_secret: true,
+          },
+        },
+        client_secret: {
+          key: "client_secret",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Client secret",
+            airbyte_secret: true,
+          },
+        },
+      };
+      if (!("grant_type" in authenticator) || authenticator.grant_type === "refresh_token") {
+        baseInputs.refresh_token = {
+          key: "client_refresh_token",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Refresh token",
+            airbyte_secret: true,
+          },
+        };
+      }
+      return baseInputs;
+  }
 };
 
 export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Record<string, string> => {
   return Object.fromEntries(
-    Object.entries(authTypeToKeyToInferredInput[type]).map(([authKey, inferredInput]) => {
+    Object.entries(authTypeToKeyToInferredInput({ type })).map(([authKey, inferredInput]) => {
       return [authKey, interpolateConfigKey(inferredInput.key)];
     })
   );
@@ -380,7 +392,7 @@ export function getInferredInputList(
   startDateInput: boolean,
   endDateInput: boolean
 ): BuilderFormInput[] {
-  const authKeyToInferredInput = authTypeToKeyToInferredInput[global.authenticator.type];
+  const authKeyToInferredInput = authTypeToKeyToInferredInput(global.authenticator);
   const authKeys = Object.keys(authKeyToInferredInput);
   const inputs = authKeys.flatMap((authKey) => {
     if (
@@ -698,6 +710,10 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
   if (globalSettings.authenticator.type === "OAuthAuthenticator") {
     return {
       ...globalSettings.authenticator,
+      refresh_token:
+        globalSettings.authenticator.grant_type === "client_credentials"
+          ? undefined
+          : globalSettings.authenticator.refresh_token,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
     };
   }

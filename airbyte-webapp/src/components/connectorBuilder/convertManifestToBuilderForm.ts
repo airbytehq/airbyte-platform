@@ -557,13 +557,18 @@ function manifestAuthenticatorToBuilder(
       );
     }
 
-    if (manifestAuthenticator.grant_type && manifestAuthenticator.grant_type !== "refresh_token") {
+    if (
+      manifestAuthenticator.grant_type &&
+      manifestAuthenticator.grant_type !== "refresh_token" &&
+      manifestAuthenticator.grant_type !== "client_credentials"
+    ) {
       throw new ManifestCompatibilityError(streamName, "OAuthAuthenticator sets custom grant_type");
     }
 
     builderAuthenticator = {
       ...manifestAuthenticator,
       refresh_request_body: Object.entries(manifestAuthenticator.refresh_request_body ?? {}),
+      grant_type: manifestAuthenticator.grant_type ?? "refresh_token",
     };
   } else {
     builderAuthenticator = manifestAuthenticator;
@@ -571,7 +576,7 @@ function manifestAuthenticatorToBuilder(
 
   // verify that all auth keys which require a user input have a {{config[]}} value
 
-  const userInputAuthKeys = Object.keys(authTypeToKeyToInferredInput[builderAuthenticator.type]);
+  const userInputAuthKeys = Object.keys(authTypeToKeyToInferredInput(builderAuthenticator));
 
   for (const userInputAuthKey of userInputAuthKeys) {
     if (!isInterpolatedConfigKey(Reflect.get(builderAuthenticator, userInputAuthKey))) {
@@ -608,7 +613,7 @@ function manifestSpecAndAuthToBuilder(
 
   Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>).forEach(
     ([specKey, specDefinition]) => {
-      const matchingInferredInput = getMatchingInferredInput(result.auth.type, streams, specKey);
+      const matchingInferredInput = getMatchingInferredInput(result.auth, streams, specKey);
       if (matchingInferredInput) {
         result.inferredInputOverrides[matchingInferredInput.key] = specDefinition;
       } else {
@@ -625,7 +630,7 @@ function manifestSpecAndAuthToBuilder(
 }
 
 function getMatchingInferredInput(
-  authType: BuilderFormAuthenticator["type"],
+  auth: BuilderFormAuthenticator,
   streams: BuilderStream[] | undefined,
   specKey: string
 ) {
@@ -635,7 +640,7 @@ function getMatchingInferredInput(
   if (streams && specKey === "end_date" && hasIncrementalSyncUserInput(streams, "end_datetime")) {
     return incrementalSyncInferredInputs.end_date;
   }
-  return Object.values(authTypeToKeyToInferredInput[authType]).find((input) => input.key === specKey);
+  return Object.values(authTypeToKeyToInferredInput(auth)).find((input) => input.key === specKey);
 }
 
 function assertType<T extends { type: string }>(
