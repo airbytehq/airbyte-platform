@@ -2,6 +2,7 @@ import java.util.concurrent.TimeUnit
 
 plugins {
     id 'java-library'
+    id "de.undercouch.download" version "5.4.0"
 }
 
 dependencies {
@@ -14,43 +15,12 @@ dependencies {
     implementation project(':airbyte-json-validation')
 }
 
-task downloadConnectorRegistry(type: JavaExec, dependsOn: compileJava) {
-    /**
-     * run this once a day or if the file doesn't exist. if you want to force this task to run
-     * do so with --rerun  e.g. ./gradlew :airbyte-config:specs:downloadConnectorRegistry --info --rerun
-     */
-    def outputFile = file(rootProject.project(':airbyte-config:init').projectDir.path + '/src/main/resources/seed/oss_registry.json')
-    outputs.upToDateWhen { outputFile.exists() &&
-            System.currentTimeMillis() - outputFile.lastModified() < TimeUnit.DAYS.toMillis(1) }
-    classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'io.airbyte.config.specs.ConnectorRegistryDownloader'
-    args project(":airbyte-config:init").projectDir
+task downloadConnectorRegistry(type: Download) {
+    src 'https://connectors.airbyte.com/files/registries/v0/oss_registry.json'
+    dest new File(project(":airbyte-config:init").projectDir, 'src/main/resources/seed/oss_registry.json')
+    overwrite true
 }
 
-project(":airbyte-config:init").tasks.processResources.dependsOn(downloadConnectorRegistry)
-project(":airbyte-config:init").tasks.processTestResources.dependsOn(downloadConnectorRegistry)
-project(":airbyte-config:init").tasks.test.dependsOn(downloadConnectorRegistry)
-
-
-task generateConnectorSpecsMask(type: JavaExec, dependsOn: downloadConnectorRegistry) {
-    classpath = sourceSets.main.runtimeClasspath
-
-    mainClass = 'io.airbyte.config.specs.ConnectorSpecMaskGenerator'
-
-    args '--resource-root'
-    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources')
-}
-
-// TODO (ben): Remove once cloud is no longer depenedant on this.
-task generateSeedConnectorSpecs(type: JavaExec, dependsOn: generateConnectorSpecsMask) {
-    classpath = sourceSets.main.runtimeClasspath
-
-    mainClass = 'io.airbyte.config.specs.SeedConnectorSpecGenerator'
-
-    args '--seed-root'
-    args new File(project(":airbyte-config:init").projectDir, '/src/main/resources/seed')
-}
-
-project(":airbyte-config:init").tasks.processResources.dependsOn(generateConnectorSpecsMask)
+project(":airbyte-config:init").processResources.dependsOn(downloadConnectorRegistry)
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
