@@ -111,6 +111,7 @@ export class StreamRowPageObject {
   }
 
   selectSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
+    cy.get(this.stream).scrollIntoView();
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
       cy.get(`.react-select__option`).contains(`${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`).click();
