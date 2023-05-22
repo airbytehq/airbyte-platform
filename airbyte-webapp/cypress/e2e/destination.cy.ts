@@ -1,4 +1,4 @@
-import { appendRandomString } from "commands/common";
+import { createJsonDestinationViaApi } from "@cy/commands/connection";
 import { createLocalJsonDestination, deleteDestination, updateDestination } from "commands/destination";
 
 describe("Destination main actions", () => {
@@ -9,20 +9,20 @@ describe("Destination main actions", () => {
   });
 
   it("Update destination", () => {
-    const destName = appendRandomString("Test destination cypress for update");
-    createLocalJsonDestination(destName, "/local");
-    updateDestination(destName, "connectionConfiguration.destination_path", "/local/my-json");
+    createJsonDestinationViaApi().then((jsonDestination) => {
+      updateDestination(jsonDestination.name, "connectionConfiguration.destination_path", "/local/my-json");
 
-    cy.get("div[data-id='success-result']").should("exist");
-    cy.get("input[value='/local/my-json']").should("exist");
+      cy.get("div[data-id='success-result']").should("exist");
+      cy.get("input[value='/local/my-json']").should("exist");
+    });
   });
 
   it("Delete destination", () => {
-    const destName = appendRandomString("Test destination cypress for delete");
-    createLocalJsonDestination(destName, "/local");
-    deleteDestination(destName);
+    createJsonDestinationViaApi().then((jsonDestination) => {
+      deleteDestination(jsonDestination.name);
 
-    cy.visit("/destination");
-    cy.get("div").contains(destName).should("not.exist");
+      cy.visit("/destination");
+      cy.get("div").contains(jsonDestination.name).should("not.exist");
+    });
   });
 });

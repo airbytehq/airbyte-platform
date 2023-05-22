@@ -8,6 +8,7 @@ import {
   dropUsersTableQuery,
   insertCitiesTableQuery,
   insertUsersTableQuery,
+  reverseAlterCitiesTableQuery,
 } from "./queries";
 
 /**
@@ -28,6 +29,12 @@ export const makeChangesInDBSource = () => {
   runDbQuery(dropUsersTableQuery);
   runDbQuery(alterCitiesTableQuery);
   runDbQuery(createCarsTableQuery);
+};
+
+export const reverseChangesInDBSource = () => {
+  runDbQuery(createUsersTableQuery);
+  runDbQuery(reverseAlterCitiesTableQuery);
+  runDbQuery(dropCarsTableQuery);
 };
 
 export const cleanDBSource = () => {

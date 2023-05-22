@@ -125,6 +125,13 @@ export class StreamRowPageObject {
     this.selectFieldOption("primary-key", primaryKeyValues);
   }
 
+  hasSelectedSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
+    cy.get(this.stream).within(() => {
+      cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[source]}`);
+      cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[dest]}`);
+    });
+  }
+
   hasSelectedCursorField(expectedValue: string): void {
     this.checkFieldSelectedValue("cursor", expectedValue);
   }

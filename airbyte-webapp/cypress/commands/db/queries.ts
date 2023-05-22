@@ -88,6 +88,11 @@ export const alterCitiesTableQuery = alterTable("public.cities", {
   add: ["state TEXT", "country TEXT"],
   drop: ["city_code"],
 });
+
+export const reverseAlterCitiesTableQuery = alterTable("public.cities", {
+  drop: ["state", "country"],
+  add: ["city_code VARCHAR(8)"],
+});
 export const dropCitiesTableQuery = dropTable("public.cities");
 
 // Cars table

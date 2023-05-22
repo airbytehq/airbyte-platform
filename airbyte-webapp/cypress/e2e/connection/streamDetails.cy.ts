@@ -1,18 +1,10 @@
 import {
-  getConnectionCreateRequest,
-  getPostgresCreateDestinationBody,
-  getPostgresCreateSourceBody,
-  requestCreateConnection,
-  requestCreateDestination,
-  requestCreateSource,
-  requestDeleteConnection,
-  requestDeleteDestination,
-  requestDeleteSource,
-  requestSourceDiscoverSchema,
-  requestWorkspaceId,
-} from "commands/api";
+  createPostgresDestinationViaApi,
+  createPostgresSourceViaApi,
+  createNewConnectionViaApi,
+} from "@cy/commands/connection";
+import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
 import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } from "commands/api/types";
-import { appendRandomString } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createTableWithLotsOfColumnsQuery,
@@ -43,30 +35,19 @@ describe("Connection - Stream details", () => {
 
     runDbQuery(getCreateUsersTableQuery("users"), createUserCarsTableQuery, createTableWithLotsOfColumnsQuery);
 
-    requestWorkspaceId().then(() => {
-      const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Sync Mode Test Source"));
-      const destinationRequestBody = getPostgresCreateDestinationBody(appendRandomString("Sync Mode Test Destination"));
-
-      return requestCreateSource(sourceRequestBody).then((sourceResponse) => {
-        source = sourceResponse;
-        requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
-          destination = destinationResponse;
-        });
-
-        return requestSourceDiscoverSchema(source.sourceId).then(({ catalog, catalogId }) => {
-          const connectionRequestBody = getConnectionCreateRequest({
-            name: appendRandomString("Sync Mode Test connection"),
-            sourceId: source.sourceId,
-            destinationId: destination.destinationId,
-            syncCatalog: catalog,
-            sourceCatalogId: catalogId,
-          });
-          return requestCreateConnection(connectionRequestBody).then((connectionResponse) => {
-            connection = connectionResponse;
-          });
+    createPostgresSourceViaApi().then((pgSource) => {
+      source = pgSource;
+      createPostgresDestinationViaApi().then((pgDestination) => {
+        destination = pgDestination;
+        createNewConnectionViaApi(source, destination).then((connectionResponse) => {
+          connection = connectionResponse;
         });
       });
     });
+  });
+
+  beforeEach(() => {
+    connectionPage.visit(connection, "replication");
   });
 
   after(() => {
@@ -81,10 +62,6 @@ describe("Connection - Stream details", () => {
     }
 
     dropTables();
-  });
-
-  beforeEach(() => {
-    connectionPage.visit(connection, "replication");
   });
 
   describe("basics", () => {
@@ -136,6 +113,11 @@ describe("Connection - Stream details", () => {
 
       streamDetails.selectCursor(cursor);
       streamDetails.selectPrimaryKeys(primaryKeys);
+
+      streamDetails.close();
+
+      userCarsStreamRow.hasSelectedPrimaryKeys(primaryKeys);
+      userCarsStreamRow.hasSelectedCursorField(cursor);
     });
   });
 
@@ -147,7 +129,9 @@ describe("Connection - Stream details", () => {
       columnsStreamRow.showStreamDetails();
 
       streamDetails.selectCursor("field_49");
-      streamDetails.selectCursor("field_0");
+      streamDetails.selectCursor("field_0"); // todo: is this correct?  there cannot be a composite cursor... so we end up with `field_` as the cursor?
+      streamDetails.close();
+      columnsStreamRow.hasSelectedCursorField("field_0");
     });
   });
 });
