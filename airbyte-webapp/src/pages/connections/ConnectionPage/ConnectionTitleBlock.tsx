@@ -1,3 +1,4 @@
+import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
@@ -6,9 +7,10 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { ReleaseStage } from "core/request/AirbyteClient";
+import { ConnectionStatus, ReleaseStage } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
@@ -45,7 +47,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, type })
 
 export const ConnectionTitleBlock = () => {
   const {
-    connection: { name, source, destination, schemaChange },
+    connection: { name, source, destination, schemaChange, status },
   } = useConnectionEditService();
   const { sourceDefinition, destDefinition } = useConnectionFormService();
   const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
@@ -57,7 +59,7 @@ export const ConnectionTitleBlock = () => {
         <Heading as="h1" size="md">
           {name}
         </Heading>
-        <EnabledControl disabled={hasBreakingSchemaChange} />
+        <EnabledControl disabled={hasBreakingSchemaChange || status === ConnectionStatus.deprecated} />
       </FlexContainer>
       <FlexContainer>
         <FlexContainer alignItems="center" gap="sm">
@@ -71,7 +73,15 @@ export const ConnectionTitleBlock = () => {
           />
         </FlexContainer>
       </FlexContainer>
+      {status === ConnectionStatus.deprecated && (
+        <Message
+          className={styles.connectionDeleted}
+          type="warning"
+          text={<FormattedMessage id="connection.connectionDeletedView" />}
+        />
+      )}
       {fcpEnabled &&
+        status !== ConnectionStatus.deprecated &&
         (sourceDefinition.releaseStage !== ReleaseStage.generally_available ||
           destDefinition.releaseStage !== ReleaseStage.generally_available) && <InlineEnrollmentCallout />}
     </FlexContainer>
