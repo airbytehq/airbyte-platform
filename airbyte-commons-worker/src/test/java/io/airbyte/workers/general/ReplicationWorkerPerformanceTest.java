@@ -143,7 +143,6 @@ public class ReplicationWorkerPerformanceTest {
         syncPersistence,
         validator,
         fieldSelector,
-        metricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient),

@@ -210,7 +210,6 @@ public class ReplicationWorkerFactory {
         syncPersistence,
         new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
         new FieldSelector(recordSchemaValidator, metricReporter, fieldSelectionEnabled, removeValidationLimit),
-        metricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient),

@@ -727,7 +727,6 @@ class DefaultReplicationWorkerTest {
     worker.cancel();
     Assertions.assertTimeout(Duration.ofSeconds(5), (Executable) workerThread::join);
     assertNotNull(output.get());
-    assertEquals(output.get().getState().getState(), STATE_MESSAGE.getState().getData());
   }
 
   @Test
@@ -781,8 +780,7 @@ class DefaultReplicationWorkerTest {
                         .withMeanSecondsBeforeSourceStateMessageEmitted(null)
                         .withMaxSecondsBetweenStateMessageEmittedandCommitted(null)
                         .withMeanSecondsBetweenStateMessageEmittedandCommitted(null)))))
-        .withOutputCatalog(syncInput.getCatalog())
-        .withState(new State().withState(expectedState));
+        .withOutputCatalog(syncInput.getCatalog());
 
     // good enough to verify that times are present.
     assertNotNull(actual.getReplicationAttemptSummary().getStartTime());
@@ -801,30 +799,6 @@ class DefaultReplicationWorkerTest {
         .withDestinationWriteStartTime(null).withDestinationWriteEndTime(null);
 
     assertEquals(replicationOutput, actual);
-  }
-
-  @Test
-  void testPopulatesStateOnFailureIfAvailable() throws Exception {
-    doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
-    when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(STATE_MESSAGE.getState().getData())));
-
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-
-    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
-    assertNotNull(actual);
-    assertEquals(STATE_MESSAGE.getState().getData(), actual.getState().getState());
-  }
-
-  @Test
-  void testRetainsStateOnFailureIfNewStateNotAvailable() throws Exception {
-    doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
-
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-
-    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
-
-    assertNotNull(actual);
-    assertEquals(syncInput.getState().getState(), actual.getState().getState());
   }
 
   @Test
@@ -936,14 +910,14 @@ class DefaultReplicationWorkerTest {
   void testGetFailureReason() {
     final long jobId = 1;
     final int attempt = 1;
-    FailureReason failureReason = DefaultReplicationWorker.getFailureReason(new SourceException(""), jobId, attempt);
+    FailureReason failureReason = ReplicationWorkerHelper.getFailureReason(new SourceException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
-    failureReason = DefaultReplicationWorker.getFailureReason(new DestinationException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new DestinationException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
-    failureReason = DefaultReplicationWorker.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
     assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
-    failureReason = DefaultReplicationWorker.getFailureReason(new RuntimeException(), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
   }
 
@@ -963,7 +937,6 @@ class DefaultReplicationWorkerTest {
         syncPersistence,
         recordSchemaValidator,
         fieldSelector,
-        workerMetricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient),
