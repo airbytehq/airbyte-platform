@@ -179,7 +179,7 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
-	serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin}
+        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin}
         sidecar:
           container:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}

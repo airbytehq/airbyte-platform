@@ -550,7 +550,7 @@ public class KubePodProcess implements KubePod {
           .withAnnotations(annotations)
           .endMetadata()
           .withNewSpec()
-          .withServiceAccount(isOrchestrator ? "airbyte-admin" : serviceAccount)
+          .withServiceAccount(serviceAccount)
           .withAutomountServiceAccountToken(true);
 
       final List<LocalObjectReference> pullSecrets = imagePullSecrets

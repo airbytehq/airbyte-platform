@@ -31,8 +31,8 @@ class CloudLogsClientTest {
   void createCloudLogClientTestAws() {
     final var configs = new LogConfigs(Optional.of(CloudStorageConfigs.s3(new S3Config(
         "test-bucket",
-        null,
-        null,
+        "access-key",
+        "access-key-secret",
         "us-east-1"))));
 
     assertEquals(S3Logs.class, CloudLogs.createCloudLogClient(configs).getClass());

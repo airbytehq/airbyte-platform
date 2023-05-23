@@ -49,7 +49,6 @@ apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
 appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
-aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.6"}
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
@@ -117,11 +116,7 @@ postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" 
 quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
-aws-bom = "software.amazon.awssdk:bom:2.16.84"
-aws-s3 = { module = "software.amazon.awssdk:s3" }
-aws-sts = { module = "software.amazon.awssdk:sts" }
-aws-auth = { module = "software.amazon.awssdk:auth" }
-aws-iam = { module = "software.amazon.awssdk:iam" }
+s3 = { module = "software.amazon.awssdk:s3", version = "2.16.84" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
@@ -174,7 +169,6 @@ micronaut-validation = { module = "io.micronaut:micronaut-validation", version.r
 
 [bundles]
 apache = ["apache-commons", "apache-commons-lang"]
-aws = ["aws-s3","aws-sts","aws-auth","aws-iam"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jackson-datatype"]
 junit = ["junit-jupiter-api", "junit-jupiter-params", "mockito-junit-jupiter"]
