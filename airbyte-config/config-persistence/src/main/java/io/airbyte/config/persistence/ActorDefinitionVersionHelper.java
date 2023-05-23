@@ -9,7 +9,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefaultDefinitionVersionOverrideProvider;
 import io.airbyte.config.persistence.version_overrides.LocalDefinitionVersionOverrideProvider;
-import io.airbyte.config.persistence.version_overrides.OverrideTargetType;
 import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseActorDefinitionVersionTableDefaults;
@@ -95,19 +94,13 @@ public class ActorDefinitionVersionHelper {
       return defaultVersion;
     }
 
-    Optional<ActorDefinitionVersion> localOverride = Optional.empty();
-
-    if (actorId != null) {
-      localOverride = localOverrideProvider.getOverride(sourceDefinition.getSourceDefinitionId(), actorId, OverrideTargetType.ACTOR, defaultVersion);
-    }
-
-    if (localOverride.isEmpty()) {
-      localOverride =
-          localOverrideProvider.getOverride(sourceDefinition.getSourceDefinitionId(), workspaceId, OverrideTargetType.WORKSPACE, defaultVersion);
-    }
+    final Optional<ActorDefinitionVersion> localOverride = localOverrideProvider.getOverride(
+        sourceDefinition.getSourceDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
     return localOverride.orElse(defaultVersion);
-
   }
 
   /**
@@ -140,17 +133,11 @@ public class ActorDefinitionVersionHelper {
       return defaultVersion;
     }
 
-    Optional<ActorDefinitionVersion> localOverride = Optional.empty();
-
-    if (actorId != null) {
-      localOverride =
-          localOverrideProvider.getOverride(destinationDefinition.getDestinationDefinitionId(), actorId, OverrideTargetType.ACTOR, defaultVersion);
-    }
-
-    if (localOverride.isEmpty()) {
-      localOverride = localOverrideProvider.getOverride(destinationDefinition.getDestinationDefinitionId(), workspaceId, OverrideTargetType.WORKSPACE,
-          defaultVersion);
-    }
+    final Optional<ActorDefinitionVersion> localOverride = localOverrideProvider.getOverride(
+        destinationDefinition.getDestinationDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
     return localOverride.orElse(defaultVersion);
   }

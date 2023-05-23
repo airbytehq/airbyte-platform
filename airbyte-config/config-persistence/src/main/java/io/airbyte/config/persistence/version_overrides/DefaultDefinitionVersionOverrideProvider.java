@@ -16,6 +16,7 @@ import io.airbyte.config.VersionOverride;
 import io.airbyte.config.specs.GcsBucketSpecFetcher;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.core.annotation.Creator;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 import java.util.List;
@@ -74,15 +75,37 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
 
   @Override
   public Optional<ActorDefinitionVersion> getOverride(final UUID actorDefinitionId,
-                                                      final UUID targetId,
-                                                      final OverrideTargetType targetType,
+                                                      final UUID workspaceId,
+                                                      @Nullable final UUID actorId,
                                                       final ActorDefinitionVersion defaultVersion) {
+    Optional<ActorDefinitionVersion> localOverride = Optional.empty();
+
+    if (actorId != null) {
+      localOverride = getOverrideForTarget(actorDefinitionId, actorId, OverrideTargetType.ACTOR, defaultVersion);
+    }
+
+    if (localOverride.isEmpty()) {
+      localOverride = getOverrideForTarget(actorDefinitionId, workspaceId, OverrideTargetType.WORKSPACE, defaultVersion);
+    }
+
+    return localOverride;
+  }
+
+  /**
+   * Returns the overridden ActorDefinitionVersion for a given target, if one exists. Otherwise, an
+   * empty optional is returned.
+   */
+  public Optional<ActorDefinitionVersion> getOverrideForTarget(final UUID actorDefinitionId,
+                                                               final UUID targetId,
+                                                               final OverrideTargetType targetType,
+                                                               final ActorDefinitionVersion defaultVersion) {
     if (overrideMap.containsKey(actorDefinitionId)) {
       final ActorDefinitionVersionOverride override = overrideMap.get(actorDefinitionId);
       for (final VersionOverride versionOverride : override.getVersionOverrides()) {
         final List<UUID> targetIds = switch (targetType) {
           case ACTOR -> versionOverride.getActorIds();
           case WORKSPACE -> versionOverride.getWorkspaceIds();
+          case WORKSPACE_CREATOR -> versionOverride.getWorkspaceCreatorUserIds();
         };
 
         if (targetIds != null && targetIds.contains(targetId)) {
