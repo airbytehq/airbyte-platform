@@ -5781,6 +5781,8 @@ components:
       enum:
         - ignore # do nothing if we detect a schema change
         - disable # disable the connection, pausing the sync
+        - propagate_columns # automatically propagate the changes on selected streams and continue syncing
+        - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
     WebBackendConnectionReadList:
       type: object
