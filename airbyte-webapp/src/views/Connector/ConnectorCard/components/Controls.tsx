@@ -1,4 +1,5 @@
 import React from "react";
+import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -36,6 +37,8 @@ export const Controls: React.FC<IProps> = ({
   onCancelClick,
   ...restProps
 }) => {
+  const { isValid } = useFormState();
+
   const showTestCard =
     hasDefinition &&
     (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
@@ -63,7 +66,7 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="form.cancel" />
           </Button>
         )}
-        <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || (isEditMode && !dirty)}>
+        <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || (isEditMode && !dirty) || !isValid}>
           {isEditMode ? (
             <FormattedMessage id="form.saveChangesAndTest" />
           ) : (
