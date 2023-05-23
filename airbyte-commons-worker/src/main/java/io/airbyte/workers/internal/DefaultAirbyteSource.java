@@ -73,7 +73,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     this.featureFlagLogConnectorMsgs = featureFlags.logConnectorMessages();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void start(final WorkerSourceConfig sourceConfig, final Path jobRoot) throws Exception {
     Preconditions.checkState(sourceProcess == null);
@@ -98,7 +97,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
         .iterator();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public boolean isFinished() {
     Preconditions.checkState(sourceProcess != null);
@@ -110,7 +108,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return !messageIterator.hasNext() && !sourceProcess.isAlive();
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public int getExitValue() throws IllegalStateException {
     Preconditions.checkState(sourceProcess != null, "Source process is null, cannot retrieve exit value.");
@@ -123,7 +120,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return exitValue;
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public Optional<AirbyteMessage> attemptRead() {
     Preconditions.checkState(sourceProcess != null);
@@ -131,7 +127,6 @@ public class DefaultAirbyteSource implements AirbyteSource {
     return Optional.ofNullable(messageIterator.hasNext() ? messageIterator.next() : null);
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void close() throws Exception {
     if (sourceProcess == null) {

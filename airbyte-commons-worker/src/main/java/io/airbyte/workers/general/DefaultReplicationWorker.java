@@ -358,7 +358,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     };
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void cancel() {
     // Resources are closed in the opposite order they are declared.

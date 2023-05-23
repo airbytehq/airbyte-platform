@@ -5,7 +5,6 @@
 package io.airbyte.workers.internal.book_keeping;
 
 import com.google.common.annotations.VisibleForTesting;
-import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
@@ -54,7 +53,6 @@ public class StreamStatusTracker {
    *
    * @param event The {@link ReplicationAirbyteMessageEvent} that contains a stram status message.
    */
-  @Trace
   public void track(final ReplicationAirbyteMessageEvent event) {
     try {
       LOGGER.debug("Received message from {} for stream {}:{} -> {}",

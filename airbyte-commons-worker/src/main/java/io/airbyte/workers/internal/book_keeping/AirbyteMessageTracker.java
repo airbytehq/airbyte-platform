@@ -4,10 +4,7 @@
 
 package io.airbyte.workers.internal.book_keeping;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
-
 import com.google.common.annotations.VisibleForTesting;
-import datadog.trace.api.Trace;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.FailureReason;
@@ -72,7 +69,6 @@ public class AirbyteMessageTracker implements MessageTracker {
     this(stateAggregator, new DefaultSyncStatsTracker(stateDeltaTracker, stateMetricsTracker), featureFlags);
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void acceptFromSource(final AirbyteMessage message) {
     logMessageAsJSON("source", message);
@@ -86,7 +82,6 @@ public class AirbyteMessageTracker implements MessageTracker {
     }
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void acceptFromDestination(final AirbyteMessage message) {
     logMessageAsJSON("destination", message);
