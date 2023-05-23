@@ -27,7 +27,6 @@ export interface Experiments {
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
   "connection.updatedConnectionFlow.selectConnectors": boolean;
-  "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
   "upcomingFeaturesPage.url": string;
