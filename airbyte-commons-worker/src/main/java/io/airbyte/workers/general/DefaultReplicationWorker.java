@@ -12,13 +12,10 @@ import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.config.WorkerDestinationConfig;
-import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.RecordSchemaValidator;
-import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
@@ -72,7 +69,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final int attempt;
   private final ReplicationWorkerHelper replicationWorkerHelper;
   private final AirbyteSource source;
-  private final AirbyteMapper mapper;
   private final AirbyteDestination destination;
   private final SyncPersistence syncPersistence;
   private final ExecutorService executors;
@@ -99,9 +95,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.jobId = jobId;
     this.attempt = attempt;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        connectorConfigUpdater, replicationAirbyteMessageEventPublishingHelper);
+        connectorConfigUpdater, replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
     this.source = source;
-    this.mapper = mapper;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
     this.executors = Executors.newFixedThreadPool(2);
@@ -132,24 +127,15 @@ public class DefaultReplicationWorker implements ReplicationWorker {
 
     LineGobbler.startSection("REPLICATION");
 
-    // todo (cgardens) - this should not be happening in the worker. this is configuration information
-    // that is independent of workflow executions.
-    final WorkerDestinationConfig destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(syncInput);
-    destinationConfig.setCatalog(mapper.mapCatalog(destinationConfig.getCatalog()));
-
-    final ThreadedTimeTracker timeTracker = new ThreadedTimeTracker();
-    timeTracker.trackReplicationStartTime();
-
     try {
       LOGGER.info("configured sync modes: {}", syncInput.getCatalog().getStreams()
           .stream()
           .collect(Collectors.toMap(s -> s.getStream().getNamespace() + "." + s.getStream().getName(),
               s -> String.format("%s - %s", s.getSyncMode(), s.getDestinationSyncMode()))));
-      final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
 
       final ReplicationContext replicationContext =
-          new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), sourceConfig.getSourceId(),
-              destinationConfig.getDestinationId(), Long.parseLong(jobId),
+          new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
+              syncInput.getDestinationId(), Long.parseLong(jobId),
               attempt, syncInput.getWorkspaceId());
       ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
@@ -160,10 +146,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       }
       replicationWorkerHelper.initialize(replicationContext, flags);
 
-      replicate(jobRoot, destinationConfig, timeTracker, sourceConfig);
-      timeTracker.trackReplicationEndTime();
+      replicate(jobRoot, syncInput);
 
-      return replicationWorkerHelper.getReplicationOutput(destinationConfig, timeTracker);
+      return replicationWorkerHelper.getReplicationOutput();
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       throw new WorkerException("Sync failed", e);
@@ -172,24 +157,19 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private void replicate(final Path jobRoot,
-                         final WorkerDestinationConfig destinationConfig,
-                         final ThreadedTimeTracker timeTracker,
-                         final WorkerSourceConfig sourceConfig) {
+                         final StandardSyncInput syncInput) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
     try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
-      destination.start(destinationConfig, jobRoot);
-      timeTracker.trackSourceReadStartTime();
-      source.start(sourceConfig, jobRoot);
-      timeTracker.trackDestinationWriteStartTime();
-      replicationWorkerHelper.beforeReplication(sourceConfig.getCatalog());
+      replicationWorkerHelper.startDestination(destination, syncInput, jobRoot);
+      replicationWorkerHelper.startSource(source, syncInput, jobRoot);
 
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, mdc, timeTracker),
+          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, mdc),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
@@ -203,8 +183,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           destination,
           replicationWorkerHelper,
           cancelled,
-          mdc,
-          timeTracker), executors)
+          mdc), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
@@ -243,8 +222,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
                                               final AtomicBoolean cancelled,
                                               final ReplicationWorkerHelper replicationWorkerHelper,
-                                              final Map<String, String> mdc,
-                                              final ThreadedTimeTracker timeHolder) {
+                                              final Map<String, String> mdc) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
@@ -260,7 +238,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             replicationWorkerHelper.processMessageFromDestination(messageOptional.get());
           }
         }
-        timeHolder.trackDestinationWriteEndTime();
         if (!cancelled.get() && destination.getExitValue() != 0) {
           throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
         } else {
@@ -289,8 +266,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                                            final AirbyteDestination destination,
                                                            final ReplicationWorkerHelper replicationWorkerHelper,
                                                            final AtomicBoolean cancelled,
-                                                           final Map<String, String> mdc,
-                                                           final ThreadedTimeTracker timeHolder) {
+                                                           final Map<String, String> mdc) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
@@ -328,7 +304,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           }
         }
-        timeHolder.trackSourceReadEndTime();
         replicationWorkerHelper.endOfSource();
 
         try {

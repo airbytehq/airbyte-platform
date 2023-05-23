@@ -14,21 +14,26 @@ import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
+import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
+import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
@@ -39,6 +44,7 @@ import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessage
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -71,11 +77,13 @@ class ReplicationWorkerHelper {
   private final SyncPersistence syncPersistence;
   private final ConnectorConfigUpdater connectorConfigUpdater;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
+  private final ThreadedTimeTracker timeTracker;
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private StreamDescriptor currentSourceStream = null;
   private ReplicationContext replicationContext = null;
   private ReplicationFeatureFlags replicationFeatureFlags = null;
+  private WorkerDestinationConfig destinationConfig = null;
 
   // We expect the number of operations on failures to be low, so synchronizedList should be
   // performant enough.
@@ -90,7 +98,8 @@ class ReplicationWorkerHelper {
                                  final MessageTracker messageTracker,
                                  final SyncPersistence syncPersistence,
                                  final ConnectorConfigUpdater connectorConfigUpdater,
-                                 final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
+                                 final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
+                                 final ThreadedTimeTracker timeTracker) {
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
     this.fieldSelector = fieldSelector;
     this.mapper = mapper;
@@ -98,6 +107,7 @@ class ReplicationWorkerHelper {
     this.syncPersistence = syncPersistence;
     this.connectorConfigUpdater = connectorConfigUpdater;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
+    this.timeTracker = timeTracker;
 
     this.recordsRead = 0L;
   }
@@ -113,10 +123,34 @@ class ReplicationWorkerHelper {
   public void initialize(final ReplicationContext replicationContext, final ReplicationFeatureFlags replicationFeatureFlags) {
     this.replicationContext = replicationContext;
     this.replicationFeatureFlags = replicationFeatureFlags;
+    this.timeTracker.trackReplicationStartTime();
   }
 
   public void beforeReplication(final ConfiguredAirbyteCatalog catalog) {
     fieldSelector.populateFields(catalog);
+  }
+
+  public void startDestination(final AirbyteDestination destination, final StandardSyncInput syncInput, final Path jobRoot) {
+    destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(syncInput);
+    destinationConfig.setCatalog(mapper.mapCatalog(destinationConfig.getCatalog()));
+    timeTracker.getDestinationWriteStartTime();
+
+    try {
+      destination.start(destinationConfig, jobRoot);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void startSource(final AirbyteSource source, final StandardSyncInput syncInput, final Path jobRoot) {
+    final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
+    try {
+      fieldSelector.populateFields(sourceConfig.getCatalog());
+      timeTracker.getSourceReadStartTime();
+      source.start(sourceConfig, jobRoot);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void endOfReplication() {
@@ -125,6 +159,7 @@ class ReplicationWorkerHelper {
     // connections with destinations that do not emit messages to trigger the completion.
     replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
         AirbyteMessageOrigin.INTERNAL);
+    timeTracker.trackReplicationEndTime();
   }
 
   public void endOfSource() {
@@ -132,6 +167,7 @@ class ReplicationWorkerHelper {
         FileUtils.byteCountToDisplaySize(messageTracker.getSyncStatsTracker().getTotalBytesEmitted()));
 
     fieldSelector.reportMetrics(replicationContext.sourceId());
+    timeTracker.trackSourceReadEndTime();
   }
 
   public void endOfDestination() {
@@ -141,6 +177,7 @@ class ReplicationWorkerHelper {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentStream, replicationContext,
           AirbyteMessageOrigin.DESTINATION);
     }
+    timeTracker.trackDestinationWriteEndTime();
   }
 
   public void trackFailure(final Throwable t) {
@@ -276,8 +313,7 @@ class ReplicationWorkerHelper {
     return currentSourceStream;
   }
 
-  public ReplicationOutput getReplicationOutput(final WorkerDestinationConfig destinationConfig,
-                                                final ThreadedTimeTracker timeTracker)
+  public ReplicationOutput getReplicationOutput()
       throws JsonProcessingException {
     final ReplicationStatus outputStatus;
     // First check if the process was cancelled. Cancellation takes precedence over failures.
