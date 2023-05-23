@@ -585,6 +585,11 @@ public class EnvConfigs implements Configs {
     return Integer.parseInt(getEnvOrDefault(SYNC_JOB_MAX_TIMEOUT_DAYS, "3"));
   }
 
+   @Override
+  public int getJobInitRetryTimeoutMinutes() {
+    return Integer.parseInt(getEnvOrDefault(SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES, "5"));
+  }
+
   @Override
   public boolean connectorSpecificResourceDefaultsEnabled() {
     return getEnvOrDefault(CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED, false);
