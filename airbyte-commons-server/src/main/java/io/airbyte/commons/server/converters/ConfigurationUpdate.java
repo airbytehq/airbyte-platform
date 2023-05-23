@@ -101,7 +101,7 @@ public class ConfigurationUpdate {
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
 
     // Merge update configuration into the persisted configuration
-    JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedSource.getConfiguration());
+    final JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedSource.getConfiguration());
     final JsonNode updatedConfiguration = Jsons.mergeNodes(persistedSource.getConfiguration(), mergeConfiguration);
 
     return Jsons.clone(persistedSource).withConfiguration(updatedConfiguration);
@@ -134,6 +134,30 @@ public class ConfigurationUpdate {
         persistedDestination.getConfiguration(),
         newConfiguration,
         spec.getConnectionSpecification());
+
+    return Jsons.clone(persistedDestination).withConfiguration(updatedConfiguration);
+  }
+
+  /**
+   * Partially update the configuration object for a destination.
+   *
+   * @param destinationId destination id
+   * @param destinationName name of destination
+   * @param newConfiguration new configuration
+   * @return updated destination configuration
+   * @throws ConfigNotFoundException thrown if the destination does not exist
+   * @throws IOException thrown if exception while interacting with the db
+   * @throws JsonValidationException thrown if newConfiguration is invalid json
+   */
+  public DestinationConnection partialDestination(final UUID destinationId, final String destinationName, final JsonNode newConfiguration)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    // get existing destination
+    final DestinationConnection persistedDestination = secretsRepositoryReader.getDestinationConnectionWithSecrets(destinationId);
+    persistedDestination.setName(Optional.ofNullable(destinationName).orElse(persistedDestination.getName()));
+
+    // Merge update configuration into the persisted configuration
+    final JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedDestination.getConfiguration());
+    final JsonNode updatedConfiguration = Jsons.mergeNodes(persistedDestination.getConfiguration(), mergeConfiguration);
 
     return Jsons.clone(persistedDestination).withConfiguration(updatedConfiguration);
   }

@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationReadList;
 import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationUpdate;
+import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.DestinationHandler;
@@ -122,6 +123,15 @@ public class DestinationApiController implements DestinationApi {
   @Override
   public DestinationRead updateDestination(@Body final DestinationUpdate destinationUpdate) {
     return ApiHelper.execute(() -> destinationHandler.updateDestination(destinationUpdate));
+  }
+
+  @Post(uri = "/partial_update")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public DestinationRead partialUpdateDestination(@Body final PartialDestinationUpdate partialDestinationUpdate) {
+    return ApiHelper.execute(() -> destinationHandler.partialDestinationUpdate(partialDestinationUpdate));
   }
 
 }

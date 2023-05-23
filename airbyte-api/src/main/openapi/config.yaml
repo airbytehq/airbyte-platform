@@ -1322,6 +1322,27 @@ paths:
                 $ref: "#/components/schemas/DestinationRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/partial_update:
+    post:
+      tags:
+        - destination
+      summary: Update a destination partially
+      operationId: partialUpdateDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialDestinationUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/destinations/list:
     post:
       tags:
@@ -3827,6 +3848,15 @@ components:
         - destinationId
         - connectionConfiguration
         - name
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectionConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        name:
+          type: string
+    PartialDestinationUpdate:
+      type: object
       properties:
         destinationId:
           $ref: "#/components/schemas/DestinationId"
