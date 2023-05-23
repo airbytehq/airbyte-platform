@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { EnabledControl } from "components/connection/ConnectionInfoCard/EnabledControl";
+import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -25,10 +26,11 @@ interface ConnectorBlockProps {
   name: string;
   icon?: string;
   id: string;
+  stage?: ReleaseStage;
   type: "source" | "destination";
 }
 
-const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, type }) => {
+const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, stage, type }) => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}`;
   const connectorTypePath = type === "source" ? RoutePaths.Source : RoutePaths.Destination;
@@ -40,6 +42,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, type })
         <Text color="grey" size="lg">
           {name}
         </Text>
+        <ReleaseStageBadge stage={stage} />
       </FlexContainer>
     </Link>
   );
@@ -63,12 +66,19 @@ export const ConnectionTitleBlock = () => {
       </FlexContainer>
       <FlexContainer>
         <FlexContainer alignItems="center" gap="sm">
-          <ConnectorBlock name={source.name} icon={source.icon} id={source.sourceId} type="source" />
+          <ConnectorBlock
+            name={source.name}
+            icon={source.icon}
+            id={source.sourceId}
+            stage={sourceDefinition.releaseStage}
+            type="source"
+          />
           <Icon type="arrowRight" />
           <ConnectorBlock
             name={destination.name}
             icon={destination.icon}
             id={destination.destinationId}
+            stage={destDefinition.releaseStage}
             type="destination"
           />
         </FlexContainer>
