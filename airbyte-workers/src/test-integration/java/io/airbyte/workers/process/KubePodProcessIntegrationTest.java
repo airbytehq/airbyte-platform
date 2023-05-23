@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +20,8 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -100,10 +104,7 @@ class KubePodProcessIntegrationTest {
 
     fabricClient = new DefaultKubernetesClient();
 
-    final WorkerConfigs workerConfigs = spy(new WorkerConfigs(new EnvConfigs()));
-    when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
-
-    processFactory = new KubeProcessFactory(workerConfigs, "default", fabricClient, heartbeatUrl, getHost(), false);
+    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), "default", fabricClient, heartbeatUrl, getHost());
   }
 
   @RetryingTest(3)
@@ -349,10 +350,7 @@ class KubePodProcessIntegrationTest {
 
     fabricClient = new DefaultKubernetesClient();
 
-    final WorkerConfigs workerConfigs = spy(new WorkerConfigs(new EnvConfigs()));
-    when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
-
-    processFactory = new KubeProcessFactory(workerConfigs, "default", fabricClient, heartbeatUrl, getHost(), false);
+    processFactory = new KubeProcessFactory(getWorkerConfigProviderStub(), "default", fabricClient, heartbeatUrl, getHost());
 
     // start an infinite process
     final var availablePortsBefore = KubePortManagerSingleton.getInstance().getNumAvailablePorts();
@@ -430,8 +428,18 @@ class KubePodProcessIntegrationTest {
 
   private Process getProcess(final Map<String, String> customLabels, final String entrypoint, final Map<String, String> files)
       throws WorkerException {
-    return processFactory.create("tester", "some-id", 0, Path.of("/tmp/job-root"), "busybox:latest", false, false, files, entrypoint,
-        DEFAULT_RESOURCE_REQUIREMENTS, null, customLabels, Collections.emptyMap(), Collections.emptyMap());
+    return processFactory.create(ResourceType.DEFAULT, "tester", "some-id", 0, Path.of("/tmp/job-root"), "busybox:latest", false, false, files,
+        entrypoint,
+        DEFAULT_RESOURCE_REQUIREMENTS, null, customLabels, Collections.emptyMap(), Collections.emptyMap(),
+        Collections.emptyMap());
+  }
+
+  private WorkerConfigsProvider getWorkerConfigProviderStub() {
+    final WorkerConfigs workerConfigs = spy(new WorkerConfigs(new EnvConfigs()));
+    when(workerConfigs.getEnvMap()).thenReturn(Map.of("ENV_VAR_1", "ENV_VALUE_1"));
+    final WorkerConfigsProvider workerConfigsProvider = mock(WorkerConfigsProvider.class);
+    when(workerConfigsProvider.getConfig(any())).thenReturn(workerConfigs);
+    return workerConfigsProvider;
   }
 
   private static Set<Integer> getOpenPorts(final int count) {

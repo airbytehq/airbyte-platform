@@ -21,7 +21,6 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { useAvailableConnectorDefinitions } from "hooks/domain/connector/useAvailableConnectorDefinitions";
 import { useExperiment } from "hooks/services/Experiment";
 import { useFeature, FeatureItem } from "hooks/services/Feature";
 import { useModalService } from "hooks/services/Modal";
@@ -40,7 +39,7 @@ import { WarningMessage } from "../../WarningMessage";
 type MenuWithRequestButtonProps = MenuListProps<DropDownOptionDataItem, false> & { selectProps: any };
 
 const ConnectorList: React.FC<React.PropsWithChildren<MenuWithRequestButtonProps>> = ({ children, ...props }) => {
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   return (
     <>
@@ -143,10 +142,9 @@ export const ConnectorDefinitionTypeControl: React.FC<ConnectorDefinitionTypeCon
 
   const workspace = useCurrentWorkspace();
   const orderOverwrite = useExperiment("connector.orderOverwrite", {});
-  const connectorDefinitions = useAvailableConnectorDefinitions(availableConnectorDefinitions, workspace);
   const sortedDropDownData = useMemo(
-    () => getSortedDropdownDataUsingExperiment(connectorDefinitions, orderOverwrite),
-    [connectorDefinitions, orderOverwrite]
+    () => getSortedDropdownDataUsingExperiment(availableConnectorDefinitions, orderOverwrite),
+    [availableConnectorDefinitions, orderOverwrite]
   );
 
   const { setDocumentationUrl } = useDocumentationPanelContext();

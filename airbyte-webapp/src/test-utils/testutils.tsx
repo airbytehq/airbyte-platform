@@ -13,13 +13,13 @@ import {
   SourceRead,
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
+import { AnalyticsProvider } from "core/services/analytics";
 import { ServicesProvider } from "core/servicesProvider";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "hooks/services/Feature";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import en from "locales/en.json";
-import { AnalyticsProvider } from "views/common/AnalyticsProvider";
 
 interface WrapperProps {
   children?: React.ReactElement;
@@ -28,10 +28,14 @@ interface WrapperProps {
 export async function render<
   Q extends Queries = typeof queries,
   Container extends Element | DocumentFragment = HTMLElement
->(ui: React.ReactNode, renderOptions?: RenderOptions<Q, Container>): Promise<RenderResult<Q, Container>> {
+>(
+  ui: React.ReactNode,
+  renderOptions?: RenderOptions<Q, Container>,
+  features?: FeatureItem[]
+): Promise<RenderResult<Q, Container>> {
   const Wrapper = ({ children }: WrapperProps) => {
     return (
-      <TestWrapper>
+      <TestWrapper features={features}>
         <Suspense fallback={<div>testutils render fallback content</div>}>{children}</Suspense>
       </TestWrapper>
     );
@@ -126,5 +130,6 @@ export const mockConnection: WebBackendConnectionRead = {
   isSyncing: false,
   schemaChange: "no_change",
   notifySchemaChanges: true,
+  notifySchemaChangesByEmail: false,
   nonBreakingChangesPreference: "ignore",
 };

@@ -13,7 +13,7 @@ required:
   - namespaceDefinition
   - geography
   - breakingChange
-additionalProperties: false
+additionalProperties: true
 properties:
   namespaceDefinition:
     "$ref": NamespaceDefinitionType.yaml
@@ -59,7 +59,7 @@ properties:
     required:
       - timeUnit
       - units
-    additionalProperties: false
+    additionalProperties: true
     properties:
       timeUnit:
         type: string
@@ -85,7 +85,7 @@ properties:
       - Cron
   scheduleData:
     type: object
-    additionalProperties: false
+    additionalProperties: true
     # Ideally basicSchedule and cron should be a union, but java codegen does not handle the union type properly.
     properties:
       # This should be populated when scheduleType is BasicSchedule.
@@ -127,8 +127,10 @@ properties:
     type: boolean
   notifySchemaChanges:
     type: boolean
+  notifySchemaChangesByEmail:
+    type: boolean
   nonBreakingChangesPreference:
     type: string
     enum:
-      - ignore
-      - disable
+      - ignore # do nothing if we detect a schema change
+      - disable # disable the connection, pausing the sync

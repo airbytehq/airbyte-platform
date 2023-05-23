@@ -1,10 +1,9 @@
 import React, { useMemo } from "react";
 
+import { LabelInfo } from "components/Label";
 import { ControlLabels } from "components/LabeledControl";
 
 import { FormBlock } from "core/form/types";
-
-import { LabelInfo } from "./LabelInfo";
 
 interface PropertyLabelProps {
   property: FormBlock;
@@ -13,6 +12,7 @@ interface PropertyLabelProps {
   optional?: boolean;
   className?: string;
   htmlFor?: string;
+  format?: React.ReactNode;
 }
 
 export const PropertyLabel: React.FC<React.PropsWithChildren<PropertyLabelProps>> = ({
@@ -23,6 +23,7 @@ export const PropertyLabel: React.FC<React.PropsWithChildren<PropertyLabelProps>
   className,
   children,
   htmlFor,
+  format,
 }) => {
   const examples = property._type === "formItem" || property._type === "formGroup" ? property.examples : undefined;
   const descriptionToDisplay = description ?? property.description;
@@ -53,6 +54,7 @@ export const PropertyLabel: React.FC<React.PropsWithChildren<PropertyLabelProps>
       }
       optional={optional ?? !property.isRequired}
       htmlFor={htmlFor}
+      format={format}
     >
       {children}
     </ControlLabels>

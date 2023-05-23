@@ -7,11 +7,13 @@ package io.airbyte.commons.server.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.io.Resources;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.UUID;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -22,6 +24,7 @@ class AirbyteRemoteOssCatalogTest {
 
   private MockWebServer webServer;
   private MockResponse validCatalogResponse;
+  private MockResponse invalidCatalogResponse;
   private String catalogUrl;
 
   @BeforeEach
@@ -35,6 +38,11 @@ class AirbyteRemoteOssCatalogTest {
         .addHeader("Content-Type", "application/json; charset=utf-8")
         .addHeader("Cache-Control", "no-cache")
         .setBody(jsonBody);
+
+    invalidCatalogResponse = new MockResponse().setResponseCode(404)
+        .addHeader("Content-Type", "application/json; charset=utf-8")
+        .addHeader("Cache-Control", "no-cache")
+        .setBody("not found");
   }
 
   @Test
@@ -44,7 +52,7 @@ class AirbyteRemoteOssCatalogTest {
 
     final AirbyteRemoteOssCatalog remoteDefinitionsProvider = new AirbyteRemoteOssCatalog(catalogUrl);
     final UUID stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de");
-    final StandardSourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
+    final ConnectorRegistrySourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
     assertEquals(stripeSourceId, stripeSource.getSourceDefinitionId());
     assertEquals("Stripe", stripeSource.getName());
     assertEquals("airbyte/source-stripe", stripeSource.getDockerRepository());
@@ -65,11 +73,26 @@ class AirbyteRemoteOssCatalogTest {
 
     assertEquals(0, webServer.getRequestCount());
 
-    remoteDefinitionsProvider.getRemoteDefinitionCatalog();
+    remoteDefinitionsProvider.getRemoteConnectorRegistry();
     assertEquals(1, webServer.getRequestCount());
 
-    remoteDefinitionsProvider.getRemoteDefinitionCatalog();
+    remoteDefinitionsProvider.getRemoteConnectorRegistry();
     assertEquals(2, webServer.getRequestCount());
+  }
+
+  @Test
+  @SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
+  void testHandlesNotAvailable() throws Exception {
+    webServer.enqueue(invalidCatalogResponse);
+    webServer.enqueue(invalidCatalogResponse);
+
+    final AirbyteRemoteOssCatalog remoteDefinitionsProvider = new AirbyteRemoteOssCatalog(catalogUrl);
+    final List<ConnectorRegistryDestinationDefinition> definitions = remoteDefinitionsProvider.getDestinationDefinitions();
+    assertEquals(0, definitions.size());
+
+    final List<ConnectorRegistrySourceDefinition> sources = remoteDefinitionsProvider.getSourceDefinitions();
+    assertEquals(0, sources.size());
+
   }
 
 }

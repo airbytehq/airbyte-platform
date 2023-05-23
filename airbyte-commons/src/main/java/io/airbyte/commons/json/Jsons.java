@@ -16,11 +16,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.jackson.MoreMappers;
-import io.airbyte.commons.stream.MoreStreams;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -33,8 +31,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Shared code for operating on JSON in java.
@@ -44,8 +44,6 @@ public class Jsons {
 
   // Object Mapper is thread-safe
   private static final ObjectMapper OBJECT_MAPPER = MoreMappers.initMapper();
-
-  private static final ObjectMapper YAML_OBJECT_MAPPER = MoreMappers.initYamlMapper(new YAMLFactory());
   private static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer(new JsonPrettyPrinter());
 
   /**
@@ -142,23 +140,6 @@ public class Jsons {
   }
 
   /**
-   * Deserialize a JSON string to a type object. If not possible, return empty optional.
-   *
-   * @param jsonString to deserialize
-   * @param klass type of object
-   * @param <T> type of object
-   * @return JSON as type class wrapped in an Optional. If deserialization fails, returns an empty
-   *         optional.
-   */
-  public static <T> Optional<T> tryDeserialize(final String jsonString, final Class<T> klass) {
-    try {
-      return Optional.of(OBJECT_MAPPER.readValue(jsonString, klass));
-    } catch (final Throwable e) {
-      return Optional.empty();
-    }
-  }
-
-  /**
    * Deserialize a JSON string to a {@link JsonNode}. If not possible, return empty optional.
    *
    * @param jsonString to deserialize
@@ -174,6 +155,22 @@ public class Jsons {
   }
 
   /**
+   * Deserialize a string to a JSON object.
+   *
+   * @param jsonString to deserialize.
+   * @param klass to deserialize to.
+   * @param <T> type of input object.
+   * @return optional as type T.
+   */
+  public static <T> Optional<T> tryDeserialize(final String jsonString, final Class<T> klass) {
+    try {
+      return Optional.of(OBJECT_MAPPER.readValue(jsonString, klass));
+    } catch (final Throwable e) {
+      return Optional.empty();
+    }
+  }
+
+  /**
    * Convert an object to {@link JsonNode}.
    *
    * @param object to convert
@@ -182,17 +179,6 @@ public class Jsons {
    */
   public static <T> JsonNode jsonNode(final T object) {
     return OBJECT_MAPPER.valueToTree(object);
-  }
-
-  /**
-   * Read a yaml file as {@link JsonNode}.
-   *
-   * @param file whose contents to read as JsonNode
-   * @return file as JsonNode
-   * @throws IOException exception while reading file
-   */
-  public static JsonNode jsonNodeFromYamlFile(final File file) throws IOException {
-    return YAML_OBJECT_MAPPER.readTree(file);
   }
 
   /**
@@ -335,7 +321,8 @@ public class Jsons {
    * @return children of top-level object
    */
   public static List<JsonNode> children(final JsonNode jsonNode) {
-    return MoreStreams.toStream(jsonNode.elements()).collect(Collectors.toList());
+    return StreamSupport.stream(Spliterators.spliteratorUnknownSize(jsonNode.elements(), Spliterator.ORDERED), false)
+        .toList();
   }
 
   /**
@@ -361,6 +348,9 @@ public class Jsons {
    */
   public static JsonNode navigateTo(JsonNode json, final List<String> keys) {
     for (final String key : keys) {
+      if (json == null) {
+        return null;
+      }
       json = json.get(key);
     }
     return json;
@@ -606,6 +596,68 @@ public class Jsons {
       return this;
     }
 
+  }
+
+  /**
+   * Merge updateNode into mainNode Stolen from
+   * https://stackoverflow.com/questions/9895041/merging-two-json-documents-using-jackson
+   */
+  public static JsonNode mergeNodes(JsonNode mainNode, JsonNode updateNode) {
+
+    Iterator<String> fieldNames = updateNode.fieldNames();
+    while (fieldNames.hasNext()) {
+
+      String fieldName = fieldNames.next();
+      JsonNode jsonNode = mainNode.get(fieldName);
+      // if field exists and is an embedded object
+      if (jsonNode != null && jsonNode.isObject()) {
+        mergeNodes(jsonNode, updateNode.get(fieldName));
+      } else {
+        if (mainNode instanceof ObjectNode) {
+          // Overwrite field
+          JsonNode value = updateNode.get(fieldName);
+          ((ObjectNode) mainNode).replace(fieldName, value);
+        }
+      }
+
+    }
+
+    return mainNode;
+  }
+
+  /**
+   * Sets a nested node to the passed value. Creates nodes on the way if necessary.
+   */
+  private static void setNested(final JsonNode json, final List<String> keys, final BiConsumer<ObjectNode, String> typedValue) {
+    Preconditions.checkArgument(!keys.isEmpty(), "Must pass at least one key");
+    final JsonNode nodeContainingFinalKey = navigateToAndCreate(json, keys.subList(0, keys.size() - 1));
+    typedValue.accept((ObjectNode) nodeContainingFinalKey, keys.get(keys.size() - 1));
+  }
+
+  /**
+   * Navigates to a node based on provided nested keys. Creates necessary parent nodes.
+   */
+  public static JsonNode navigateToAndCreate(JsonNode node, final List<String> keys) {
+    for (final String key : keys) {
+      ObjectNode currentNode = (ObjectNode) node;
+      node = node.get(key);
+      if (node == null || node.isNull()) {
+        node = emptyObject();
+        currentNode.set(key, node);
+      }
+    }
+    return node;
+  }
+
+  /**
+   * Set nested value and create parent keys on the way. Copied from our other replaceNestedValue.
+   *
+   * @param json node
+   * @param keys list of keys that you want to nest into
+   * @param value node value to set
+   */
+  public static void setNestedValue(final JsonNode json, final List<String> keys, final JsonNode value) {
+    setNested(json, keys, (node, finalKey) -> node.set(finalKey, value));
   }
 
 }

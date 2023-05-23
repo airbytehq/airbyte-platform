@@ -5,10 +5,13 @@
 package io.airbyte.commons.server.handlers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SourceCloneConfiguration;
 import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
@@ -21,15 +24,21 @@ import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.JsonSecretsProcessor;
+import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -59,17 +68,19 @@ public class SourceHandler {
   private final ConfigurationUpdate configurationUpdate;
   private final JsonSecretsProcessor secretsProcessor;
   private final OAuthConfigSupplier oAuthConfigSupplier;
+  private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @Inject
-  SourceHandler(final ConfigRepository configRepository,
-                final SecretsRepositoryReader secretsRepositoryReader,
-                final SecretsRepositoryWriter secretsRepositoryWriter,
-                final JsonSchemaValidator integrationSchemaValidation,
-                final ConnectionsHandler connectionsHandler,
-                final Supplier<UUID> uuidGenerator,
-                final JsonSecretsProcessor secretsProcessor,
-                final ConfigurationUpdate configurationUpdate,
-                final OAuthConfigSupplier oAuthConfigSupplier) {
+  public SourceHandler(final ConfigRepository configRepository,
+                       final SecretsRepositoryReader secretsRepositoryReader,
+                       final SecretsRepositoryWriter secretsRepositoryWriter,
+                       final JsonSchemaValidator integrationSchemaValidation,
+                       final ConnectionsHandler connectionsHandler,
+                       final Supplier<UUID> uuidGenerator,
+                       final JsonSecretsProcessor secretsProcessor,
+                       final ConfigurationUpdate configurationUpdate,
+                       final OAuthConfigSupplier oAuthConfigSupplier,
+                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this.configRepository = configRepository;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
@@ -79,6 +90,7 @@ public class SourceHandler {
     this.configurationUpdate = configurationUpdate;
     this.secretsProcessor = secretsProcessor;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
+    this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
   }
 
   public SourceHandler(final ConfigRepository configRepository,
@@ -86,7 +98,8 @@ public class SourceHandler {
                        final SecretsRepositoryWriter secretsRepositoryWriter,
                        final JsonSchemaValidator integrationSchemaValidation,
                        final ConnectionsHandler connectionsHandler,
-                       final OAuthConfigSupplier oAuthConfigSupplier) {
+                       final OAuthConfigSupplier oAuthConfigSupplier,
+                       final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
     this(
         configRepository,
         secretsRepositoryReader,
@@ -97,15 +110,31 @@ public class SourceHandler {
         JsonSecretsProcessor.builder()
             .copySecrets(true)
             .build(),
-        new ConfigurationUpdate(configRepository, secretsRepositoryReader),
-        oAuthConfigSupplier);
+        new ConfigurationUpdate(configRepository, secretsRepositoryReader, actorDefinitionVersionHelper),
+        oAuthConfigSupplier,
+        actorDefinitionVersionHelper);
   }
 
+  public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    if (sourceCreate.getSecretId() != null && !sourceCreate.getSecretId().isBlank()) {
+      final JsonNode hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.getSecretId());
+      final ConnectorSpecification spec =
+          getSpecFromSourceDefinitionIdForWorkspace(sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId());
+      // add OAuth Response data to connection configuration
+      sourceCreate.setConnectionConfiguration(
+          OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret,
+              sourceCreate.getConnectionConfiguration()));
+    }
+    return createSource(sourceCreate);
+  }
+
+  @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // validate configuration
-    final ConnectorSpecification spec = getSpecFromSourceDefinitionId(
-        sourceCreate.getSourceDefinitionId());
+    final ConnectorSpecification spec = getSpecFromSourceDefinitionIdForWorkspace(
+        sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId());
     validateSource(spec, sourceCreate.getConnectionConfiguration());
 
     // persist
@@ -154,7 +183,7 @@ public class SourceHandler {
 
   public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalogWithUpdatedAt(final SourceIdRequestBody sourceIdRequestBody)
       throws IOException {
-    Optional<io.airbyte.config.ActorCatalogWithUpdatedAt> actorCatalog =
+    final Optional<io.airbyte.config.ActorCatalogWithUpdatedAt> actorCatalog =
         configRepository.getMostRecentSourceActorCatalog(sourceIdRequestBody.getSourceId());
     if (actorCatalog.isEmpty()) {
       return new ActorCatalogWithUpdatedAt();
@@ -195,6 +224,23 @@ public class SourceHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final List<SourceConnection> sourceConnections = configRepository.listWorkspaceSourceConnection(workspaceIdRequestBody.getWorkspaceId());
+
+    final List<SourceRead> reads = Lists.newArrayList();
+    for (final SourceConnection sc : sourceConnections) {
+      reads.add(buildSourceRead(sc));
+    }
+
+    return new SourceReadList().sources(reads);
+  }
+
+  public SourceReadList listSourcesForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final List<SourceConnection> sourceConnections =
+        configRepository.listWorkspacesSourceConnections(new ResourcesQueryPaginated(
+            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnection sc : sourceConnections) {
@@ -272,7 +318,7 @@ public class SourceHandler {
   public DiscoverCatalogResult writeDiscoverCatalogResult(final SourceDiscoverSchemaWriteRequestBody request)
       throws JsonValidationException, IOException {
     final AirbyteCatalog persistenceCatalog = CatalogConverter.toProtocol(request.getCatalog());
-    UUID catalogId = configRepository.writeActorCatalogFetchEvent(
+    final UUID catalogId = configRepository.writeActorCatalogFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
         request.getConnectorVersion(),
@@ -290,7 +336,9 @@ public class SourceHandler {
   private SourceRead buildSourceRead(final SourceConnection sourceConnection)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = configRepository.getSourceDefinitionFromSource(sourceConnection.getSourceId());
-    final ConnectorSpecification spec = sourceDef.getSpec();
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
+    final ConnectorSpecification spec = sourceVersion.getSpec();
     return buildSourceRead(sourceConnection, spec);
   }
 
@@ -321,13 +369,16 @@ public class SourceHandler {
   private ConnectorSpecification getSpecFromSourceId(final UUID sourceId)
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
-    return getSpecFromSourceDefinitionId(source.getSourceDefinitionId());
+    final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
+    return sourceVersion.getSpec();
   }
 
-  private ConnectorSpecification getSpecFromSourceDefinitionId(final UUID sourceDefId)
+  private ConnectorSpecification getSpecFromSourceDefinitionIdForWorkspace(final UUID sourceDefId, final UUID workspaceId)
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(sourceDefId);
-    return sourceDef.getSpec();
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
+    return sourceVersion.getSpec();
   }
 
   private void persistSourceConnection(final String name,
@@ -338,7 +389,8 @@ public class SourceHandler {
                                        final JsonNode configurationJson,
                                        final ConnectorSpecification spec)
       throws JsonValidationException, IOException {
-    final JsonNode oAuthMaskedConfigurationJson = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson);
+    final JsonNode oAuthMaskedConfigurationJson =
+        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, configurationJson);
     final SourceConnection sourceConnection = new SourceConnection()
         .withName(name)
         .withSourceDefinitionId(sourceDefinitionId)
@@ -369,6 +421,14 @@ public class SourceHandler {
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
         .sourceName(sourceDefinition.getName())
         .icon(SourceDefinitionsHandler.loadIcon(sourceDefinition.getIcon()));
+  }
+
+  @VisibleForTesting
+  JsonNode hydrateOAuthResponseSecret(final String secretId) {
+    final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
+    JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
+    CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
+    return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }
 
 }

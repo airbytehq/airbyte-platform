@@ -33,6 +33,55 @@ import java.util.List;
  */
 public enum OssMetricsRegistry implements MetricsRegistry {
 
+  ACTIVITY_DBT_TRANSFORMATION(
+      MetricEmittingApps.WORKER,
+      "activity_dbt_transformation",
+      "increments when we start a dbt transformation activity"),
+  ACTIVITY_CHECK_CONNECTION(
+      MetricEmittingApps.WORKER,
+      "activity_check_connection",
+      "increments when we start a check connection activity"),
+  ACTIVITY_DISCOVER_CATALOG(
+      MetricEmittingApps.WORKER,
+      "activity_discover_catalog",
+      "increments when we start a discover catalog activity"),
+  ACTIVITY_NORMALIZATION(
+      MetricEmittingApps.WORKER,
+      "activity_normalization",
+      "increments when we start a normalization activity"),
+  ACTIVITY_NORMALIZATION_SUMMARY_CHECK(
+      MetricEmittingApps.WORKER,
+      "activity_normalization_summary_check",
+      "increments when we start a normalization summary check activity"),
+  ACTIVITY_PERSIST_STATE(
+      MetricEmittingApps.WORKER,
+      "activity_persist_state",
+      "increments when we start a persist state activtiy"),
+  ACTIVITY_REFRESH_SCHEMA(
+      MetricEmittingApps.WORKER,
+      "activity_refresh_schema",
+      "increments when we start a refresh schema activity"),
+  ACTIVITY_REPLICATION(
+      MetricEmittingApps.WORKER,
+      "activity_replication",
+      "increments when we start a replication activity"),
+  ACTIVITY_SPEC(
+      MetricEmittingApps.WORKER,
+      "activity_spec",
+      "increments when we start a spec activity"),
+  ACTIVITY_SUBMIT_CHECK_DESTINATION_CONNECTION(
+      MetricEmittingApps.WORKER,
+      "activity_submit_check_destination_connection",
+      "increments when we start a submit check connection activity"),
+  ACTIVITY_SUBMIT_CHECK_SOURCE_CONNECTION(
+      MetricEmittingApps.WORKER,
+      "activity_submit_check_source_connection",
+      "increments when we start a submit check connection activity"),
+  ACTIVITY_WEBHOOK_OPERATION(
+      MetricEmittingApps.WORKER,
+      "activity_webhook_operation",
+      "increments when we start a webhook operation activity"),
+
   ATTEMPT_CREATED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "attempt_created_by_release_stage",
@@ -50,6 +99,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "attempt_succeeded_by_release_stage",
       "increments when an attempts succeeds. attempts are double counted as this is tagged by release stage."),
+  AUTHENTICATION_REQUEST(
+      MetricEmittingApps.SERVER,
+      "authentication_request",
+      "increments when an authentication request is attempted."),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -78,6 +131,17 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
       "time taken to create a new kube pod process"),
+
+  NORMALIZATION_IN_DESTINATION_CONTAINER(
+      MetricEmittingApps.WORKER,
+      "normalization_in_destination_container",
+      "increments when normalization is run in the destination container",
+      MetricTags.CONNECTION_ID),
+  NORMALIZATION_IN_NORMALIZATION_CONTAINER(
+      MetricEmittingApps.WORKER,
+      "normalization_in_normalization_container",
+      "increments when normalization is run in the normalization container",
+      MetricTags.CONNECTION_ID),
   NUM_ABNORMAL_SCHEDULED_SYNCS_IN_LAST_DAY(
       MetricEmittingApps.METRICS_REPORTER,
       "num_abnormal_scheduled_syncs_last_day",
@@ -98,19 +162,20 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.METRICS_REPORTER,
       "num_running_jobs",
       "number of running jobs"),
-  NUM_SOURCE_STREAMS_WITH_RECORD_SCHEMA_VALIDATION_ERRORS(MetricEmittingApps.WORKER,
+  NUM_DISTINCT_SCHEMA_VALIDATION_ERRORS_IN_STREAMS(MetricEmittingApps.WORKER,
       "record_schema_validation_error",
-      "number of record schema validation errors"),
+      "number of validation errors for a given stream"),
+  NUM_UNEXPECTED_FIELDS_IN_STREAMS(MetricEmittingApps.WORKER,
+      "schemas_unexpected_fields",
+      "number of unexpected (top level) fields for a given stream"),
   NUM_TOTAL_SCHEDULED_SYNCS_IN_LAST_DAY(
       MetricEmittingApps.METRICS_REPORTER,
       "num_total_scheduled_syncs_last_day",
       "number of total syncs runs in last day."),
-
   NUM_UNUSUALLY_LONG_SYNCS(
       MetricEmittingApps.METRICS_REPORTER,
       "num_unusually_long_syncs",
       "number of unusual long syncs compared to their historic performance."),
-
   OLDEST_PENDING_JOB_AGE_SECS(MetricEmittingApps.METRICS_REPORTER,
       "oldest_pending_job_age_secs",
       "oldest pending job in seconds"),
@@ -121,6 +186,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
           + "tagged by terminal states."),
+  SOURCE_HEARTBEAT_FAILURE(MetricEmittingApps.ORCHESTRATOR,
+      "source_hearbeat_failure",
+      "Fail a replication because the source missed an heartbeat",
+      MetricTags.CONNECTION_ID),
+  SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
+      "source_time_since_last_heartbeat_millis",
+      "Time since last heartbeat (message from a source) for a connection.",
+      MetricTags.CONNECTION_ID),
   STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
       "state_timestamp_metric_tracker_error",
       "number of syncs where the state timestamp metric tracker ran out of memory or "
@@ -143,6 +216,60 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),
+  STATE_BUFFERING(MetricEmittingApps.WORKER,
+      "state_buffering",
+      "number of state messages being buffered before a flush",
+      MetricTags.GEOGRAPHY),
+  STATE_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
+      "state_commit_attempt",
+      "number of attempts to commit states from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+  STATE_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
+      "state_commit_attempt_failed",
+      "number of failed attempts to commit states from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+  STATE_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "state_commit_attempt_successful",
+      "number of successful attempts to commit states from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+  STATE_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
+      "state_commit_not_attempted",
+      "number of attempts to commit states dropped due to an early termination",
+      MetricTags.GEOGRAPHY),
+  STATE_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "state_commit_close_successful",
+      "number of final to connection exiting with the a successful final state flush",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
+      "stats_commit_attempt",
+      "number of attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
+      "stats_commit_attempt_failed",
+      "number of failed attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "stats_commit_attempt_successful",
+      "number of successful attempts to commit stats from the orchestrator/workers",
+      MetricTags.GEOGRAPHY),
+
+  STATS_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
+      "stats_commit_not_attempted",
+      "number of attempts to commit stats dropped due to an early termination",
+      MetricTags.GEOGRAPHY),
+  STATS_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
+      "stats_commit_close_successful",
+      "number of final to connection exiting with the a successful final stats flush",
+      MetricTags.GEOGRAPHY),
+  @Deprecated
+  // To be deleted along with PersistStateActivity
+  STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
+      "state_commit_attempt_from_persist_state",
+      "number of attempts to commit states from the PersistState activity",
+      MetricTags.GEOGRAPHY),
 
   ATTEMPTS_CREATED(
       MetricEmittingApps.WORKER,
@@ -163,7 +290,31 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricTags.ATTEMPT_QUEUE,
       MetricTags.ATTEMPT_OUTCOME,
       MetricTags.FAILURE_ORIGIN, // only includes the first failure origin
-      MetricTags.FAILURE_TYPE); // only includes the first failure type
+      MetricTags.FAILURE_TYPE), // only includes the first failure type
+
+  BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
+      "breaking_change_detected",
+      "a breaking schema change has been detected",
+      MetricTags.CONNECTION_ID),
+
+  NON_BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
+      "non_breaking_change_detected",
+      "a non breaking schema change has been detected",
+      MetricTags.CONNECTION_ID),
+
+  SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
+      "schema_change_auto_propagated",
+      "a schema change have been propagated",
+      MetricTags.CONNECTION_ID),
+
+  INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
+      "inconsistent_activity_input",
+      "whenever we detect a mismatch between the input and the actual config"),
+
+  MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
+      "missing_apply_schema_change_input",
+      "one expected value for applying the schema change is missing",
+      MetricTags.SOURCE_ID);
 
   private final MetricEmittingApp application;
   private final String metricName;

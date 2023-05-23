@@ -1,0 +1,23 @@
+@use "scss/variables";
+@forward "src/components/ui/Button/Button.module.scss";
+
+.content {
+  min-width: variables.$min-width-wide-table-container;
+}
+
+.creditUsageLoading {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  justify-content: center;
+  align-items: center;
+  margin: variables.$spacing-2xl auto;
+}
+
+.stripePortalLink {
+  text-decoration: none;
+}
+
+.filesIcon {
+  max-height: 100%;
+}

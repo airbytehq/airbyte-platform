@@ -1,9 +1,10 @@
-@use "../../../../../../scss/colors";
+@use "scss/colors";
+@use "scss/variables";
 
 .text {
   font-weight: 500;
-  font-size: 14px;
-  line-height: 17px;
+  font-size: variables.$font-size-lg;
+  line-height: 1.2;
   margin: 0;
 
   .launch {

@@ -30,6 +30,7 @@ import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.process.ProcessFactory;
 import java.io.InputStream;
@@ -128,6 +129,7 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
     try {
       LOGGER.info("Running with normalization version: {}", normalizationImageName);
       process = processFactory.create(
+          ResourceType.NORMALIZATION,
           NORMALIZE_STEP,
           jobId,
           attempt,
@@ -142,7 +144,7 @@ public class DefaultNormalizationRunner implements NormalizationRunner {
           Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, NORMALIZE_STEP),
           Collections.emptyMap(),
           Collections.emptyMap(),
-          args);
+          Collections.emptyMap(), args);
 
       try (final InputStream stdout = process.getInputStream()) {
         // finds and collects any AirbyteMessages from stdout

@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.Geography;
+import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceCreate;
@@ -31,6 +32,7 @@ import io.airbyte.commons.server.errors.ValueConflictKnownException;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.persistence.ConfigRepository.ResourcesQueryPaginated;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
@@ -141,13 +143,27 @@ public class WorkspacesHandler {
     for (final SourceRead sourceRead : sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody).getSources()) {
       sourceHandler.deleteSource(sourceRead);
     }
-
     persistedWorkspace.withTombstone(true);
     persistStandardWorkspace(persistedWorkspace);
   }
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
     final List<WorkspaceRead> reads = configRepository.listStandardWorkspaces(false).stream()
+        .map(WorkspacesHandler::buildWorkspaceRead)
+        .collect(Collectors.toList());
+    return new WorkspaceReadList().workspaces(reads);
+  }
+
+  public WorkspaceReadList listWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
+      throws IOException {
+    final List<StandardWorkspace> standardWorkspaces = configRepository.listStandardWorkspacesPaginated(new ResourcesQueryPaginated(
+        listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
+        listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
+        listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
+        listResourcesForWorkspacesRequestBody.getPagination().getRowOffset()));
+
+    final List<WorkspaceRead> reads = standardWorkspaces
+        .stream()
         .map(WorkspacesHandler::buildWorkspaceRead)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
@@ -168,7 +184,7 @@ public class WorkspacesHandler {
     return buildWorkspaceRead(workspace);
   }
 
-  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody) {
+  public WorkspaceRead getWorkspaceByConnectionId(final ConnectionIdRequestBody connectionIdRequestBody) throws ConfigNotFoundException {
     final StandardWorkspace workspace = configRepository.getStandardWorkspaceFromConnection(connectionIdRequestBody.getConnectionId(), false);
     return buildWorkspaceRead(workspace);
   }

@@ -13,6 +13,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.workers.helper.ConnectorDatadogSupportHelper;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPort;
@@ -34,7 +35,7 @@ import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
-import io.fabric8.kubernetes.client.internal.readiness.Readiness;
+import io.fabric8.kubernetes.client.readiness.Readiness;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -45,6 +46,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +118,7 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
+  private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
 
   private static final String PIPES_DIR = "/pipes";
   private static final String STDIN_PIPE_FILE = PIPES_DIR + "/stdin";
@@ -144,6 +147,7 @@ public class KubePodProcess implements KubePod {
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 
+  private static final ConnectorDatadogSupportHelper CONNECTOR_DATADOG_SUPPORT_HELPER = new ConnectorDatadogSupportHelper();
   private final KubernetesClient fabricClient;
   private final Pod podDefinition;
 
@@ -232,6 +236,11 @@ public class KubePodProcess implements KubePod {
         .map(entry -> new EnvVar(entry.getKey(), entry.getValue(), null))
         .collect(Collectors.toList());
 
+    if (System.getenv(DD_SUPPORT_CONNECTOR_NAMES) != null && isSupportDatadog(image)) {
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addDatadogVars(envVars);
+      CONNECTOR_DATADOG_SUPPORT_HELPER.addServerNameAndVersionToEnvVars(image, envVars);
+    }
+
     final ContainerBuilder containerBuilder = new ContainerBuilder()
         .withName(MAIN_CONTAINER_NAME)
         .withPorts(containerPorts)
@@ -247,6 +256,11 @@ public class KubePodProcess implements KubePod {
       containerBuilder.withResources(resourceRequirementsBuilder.build());
     }
     return containerBuilder.build();
+  }
+
+  private static boolean isSupportDatadog(final String image) {
+    return Arrays.stream(System.getenv(DD_SUPPORT_CONNECTOR_NAMES).split(","))
+        .anyMatch(connectorNameAndVersion -> CONNECTOR_DATADOG_SUPPORT_HELPER.connectorVersionCompare(connectorNameAndVersion, image));
   }
 
   /**
@@ -336,7 +350,7 @@ public class KubePodProcess implements KubePod {
   private static void waitForInitPodToRun(final KubernetesClient client, final Pod podDefinition) throws InterruptedException {
     // todo: this could use the watcher instead of waitUntilConditions
     LOGGER.info("Waiting for init container to be ready before copying files...");
-    final PodResource<Pod> pod =
+    final PodResource pod =
         client.pods().inNamespace(podDefinition.getMetadata().getNamespace()).withName(podDefinition.getMetadata().getName());
     pod.waitUntilCondition(p -> p.getStatus().getInitContainerStatuses().size() != 0, 5, TimeUnit.MINUTES);
     LOGGER.info("Init container present..");
@@ -376,8 +390,7 @@ public class KubePodProcess implements KubePod {
   }
 
   @SuppressWarnings({"PMD.InvalidLogMessageFormat", "VariableDeclarationUsageDistance"})
-  public KubePodProcess(final boolean isOrchestrator,
-                        final String processRunnerHost,
+  public KubePodProcess(final String processRunnerHost,
                         final KubernetesClient fabricClient,
                         final String podName,
                         final String namespace,
@@ -404,217 +417,223 @@ public class KubePodProcess implements KubePod {
                         final Map<Integer, Integer> internalToExternalPorts,
                         final String... args)
       throws IOException, InterruptedException {
-    this.fabricClient = fabricClient;
-    this.stdoutLocalPort = stdoutLocalPort;
-    this.stderrLocalPort = stderrLocalPort;
-    this.stdoutServerSocket = new ServerSocket(stdoutLocalPort);
-    this.stderrServerSocket = new ServerSocket(stderrLocalPort);
-    this.executorService = Executors.newFixedThreadPool(2);
-    setupStdOutAndStdErrListeners();
+    try {
+      this.fabricClient = fabricClient;
+      this.stdoutLocalPort = stdoutLocalPort;
+      this.stderrLocalPort = stderrLocalPort;
+      this.stdoutServerSocket = new ServerSocket(stdoutLocalPort);
+      this.stderrServerSocket = new ServerSocket(stderrLocalPort);
+      this.executorService = Executors.newFixedThreadPool(2);
+      setupStdOutAndStdErrListeners();
 
-    if (entrypointOverride != null) {
-      LOGGER.info("Found entrypoint override: {}", entrypointOverride);
-    }
+      if (entrypointOverride != null) {
+        LOGGER.info("Found entrypoint override: {}", entrypointOverride);
+      }
 
-    final Volume pipeVolume = new VolumeBuilder()
-        .withName("airbyte-pipes")
-        .withNewEmptyDir()
-        .endEmptyDir()
-        .build();
+      final Volume pipeVolume = new VolumeBuilder()
+          .withName("airbyte-pipes")
+          .withNewEmptyDir()
+          .endEmptyDir()
+          .build();
 
-    final VolumeMount pipeVolumeMount = new VolumeMountBuilder()
-        .withName("airbyte-pipes")
-        .withMountPath(PIPES_DIR)
-        .build();
+      final VolumeMount pipeVolumeMount = new VolumeMountBuilder()
+          .withName("airbyte-pipes")
+          .withMountPath(PIPES_DIR)
+          .build();
 
-    final Volume configVolume = new VolumeBuilder()
-        .withName("airbyte-config")
-        .withNewEmptyDir()
-        .withMedium("Memory")
-        .endEmptyDir()
-        .build();
+      final Volume configVolume = new VolumeBuilder()
+          .withName("airbyte-config")
+          .withNewEmptyDir()
+          .withMedium("Memory")
+          .endEmptyDir()
+          .build();
 
-    final VolumeMount configVolumeMount = new VolumeMountBuilder()
-        .withName("airbyte-config")
-        .withMountPath(CONFIG_DIR)
-        .build();
+      final VolumeMount configVolumeMount = new VolumeMountBuilder()
+          .withName("airbyte-config")
+          .withMountPath(CONFIG_DIR)
+          .build();
 
-    final Volume terminationVolume = new VolumeBuilder()
-        .withName("airbyte-termination")
-        .withNewEmptyDir()
-        .endEmptyDir()
-        .build();
+      final Volume terminationVolume = new VolumeBuilder()
+          .withName("airbyte-termination")
+          .withNewEmptyDir()
+          .endEmptyDir()
+          .build();
 
-    final VolumeMount terminationVolumeMount = new VolumeMountBuilder()
-        .withName("airbyte-termination")
-        .withMountPath(TERMINATION_DIR)
-        .build();
+      final VolumeMount terminationVolumeMount = new VolumeMountBuilder()
+          .withName("airbyte-termination")
+          .withMountPath(TERMINATION_DIR)
+          .build();
 
-    final Volume tmpVolume = new VolumeBuilder()
-        .withName("tmp")
-        .withNewEmptyDir()
-        .endEmptyDir()
-        .build();
+      final Volume tmpVolume = new VolumeBuilder()
+          .withName("tmp")
+          .withNewEmptyDir()
+          .endEmptyDir()
+          .build();
 
-    final VolumeMount tmpVolumeMount = new VolumeMountBuilder()
-        .withName("tmp")
-        .withMountPath(TMP_DIR)
-        .build();
+      final VolumeMount tmpVolumeMount = new VolumeMountBuilder()
+          .withName("tmp")
+          .withMountPath(TMP_DIR)
+          .build();
 
-    final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage);
-    final Container main = getMain(
-        image,
-        imagePullPolicy,
-        usesStdin,
-        entrypointOverride,
-        List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
-        resourceRequirements,
-        internalToExternalPorts,
-        envMap,
-        args);
+      final Container init = getInit(usesStdin, List.of(pipeVolumeMount, configVolumeMount), busyboxImage);
+      final Container main = getMain(
+          image,
+          imagePullPolicy,
+          usesStdin,
+          entrypointOverride,
+          List.of(pipeVolumeMount, configVolumeMount, terminationVolumeMount, tmpVolumeMount),
+          resourceRequirements,
+          internalToExternalPorts,
+          envMap,
+          args);
 
-    // Printing socat notice logs with socat -d -d
-    // To print info logs as well use socat -d -d -d
-    // more info: https://linux.die.net/man/1/socat
-    final io.fabric8.kubernetes.api.model.ResourceRequirements heartbeatSidecarResources =
-        getResourceRequirementsBuilder(DEFAULT_SIDECAR_RESOURCES).build();
-    final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarResources =
-        getResourceRequirementsBuilder(DEFAULT_SOCAT_RESOURCES).build();
+      // Printing socat notice logs with socat -d -d
+      // To print info logs as well use socat -d -d -d
+      // more info: https://linux.die.net/man/1/socat
+      final io.fabric8.kubernetes.api.model.ResourceRequirements heartbeatSidecarResources =
+          getResourceRequirementsBuilder(DEFAULT_SIDECAR_RESOURCES).build();
+      final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarResources =
+          getResourceRequirementsBuilder(DEFAULT_SOCAT_RESOURCES).build();
 
-    final Container remoteStdin = new ContainerBuilder()
-        .withName("remote-stdin")
-        .withImage(socatImage)
-        .withCommand("sh", "-c", "socat -d -d TCP-L:9001 STDOUT > " + STDIN_PIPE_FILE)
-        .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-        .withResources(socatSidecarResources)
-        .withImagePullPolicy(sidecarImagePullPolicy)
-        .build();
+      final Container remoteStdin = new ContainerBuilder()
+          .withName("remote-stdin")
+          .withImage(socatImage)
+          .withCommand("sh", "-c", "socat -d -d TCP-L:9001 STDOUT > " + STDIN_PIPE_FILE)
+          .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
+          .withResources(socatSidecarResources)
+          .withImagePullPolicy(sidecarImagePullPolicy)
+          .build();
 
-    final Container relayStdout = new ContainerBuilder()
-        .withName("relay-stdout")
-        .withImage(socatImage)
-        .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort))
-        .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-        .withResources(socatSidecarResources)
-        .withImagePullPolicy(sidecarImagePullPolicy)
-        .build();
+      final Container relayStdout = new ContainerBuilder()
+          .withName("relay-stdout")
+          .withImage(socatImage)
+          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDOUT_PIPE_FILE, processRunnerHost, stdoutLocalPort))
+          .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
+          .withResources(socatSidecarResources)
+          .withImagePullPolicy(sidecarImagePullPolicy)
+          .build();
 
-    final Container relayStderr = new ContainerBuilder()
-        .withName("relay-stderr")
-        .withImage(socatImage)
-        .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
-        .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-        .withResources(socatSidecarResources)
-        .withImagePullPolicy(sidecarImagePullPolicy)
-        .build();
+      final Container relayStderr = new ContainerBuilder()
+          .withName("relay-stderr")
+          .withImage(socatImage)
+          .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
+          .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
+          .withResources(socatSidecarResources)
+          .withImagePullPolicy(sidecarImagePullPolicy)
+          .build();
 
-    // communicates via a file if it isn't able to reach the heartbeating server and succeeds if the
-    // main container completes
-    final String heartbeatCommand = MoreResources.readResource("entrypoints/sync/check.sh")
-        .replaceAll("TERMINATION_FILE_CHECK", TERMINATION_FILE_CHECK)
-        .replaceAll("TERMINATION_FILE_MAIN", TERMINATION_FILE_MAIN)
-        .replaceAll("HEARTBEAT_URL", kubeHeartbeatUrl);
+      // communicates via a file if it isn't able to reach the heartbeating server and succeeds if the
+      // main container completes
+      final String heartbeatCommand = MoreResources.readResource("entrypoints/sync/check.sh")
+          .replaceAll("TERMINATION_FILE_CHECK", TERMINATION_FILE_CHECK)
+          .replaceAll("TERMINATION_FILE_MAIN", TERMINATION_FILE_MAIN)
+          .replaceAll("HEARTBEAT_URL", kubeHeartbeatUrl);
 
-    final Container callHeartbeatServer = new ContainerBuilder()
-        .withName("call-heartbeat-server")
-        .withImage(curlImage)
-        .withCommand("sh")
-        .withArgs("-c", heartbeatCommand)
-        .withVolumeMounts(terminationVolumeMount)
-        .withResources(heartbeatSidecarResources)
-        .withImagePullPolicy(sidecarImagePullPolicy)
-        .build();
+      final Container callHeartbeatServer = new ContainerBuilder()
+          .withName("call-heartbeat-server")
+          .withImage(curlImage)
+          .withCommand("sh")
+          .withArgs("-c", heartbeatCommand)
+          .withVolumeMounts(terminationVolumeMount)
+          .withResources(heartbeatSidecarResources)
+          .withImagePullPolicy(sidecarImagePullPolicy)
+          .build();
 
-    final List<Container> containers = usesStdin ? List.of(main, remoteStdin, relayStdout, relayStderr, callHeartbeatServer)
-        : List.of(main, relayStdout, relayStderr, callHeartbeatServer);
+      final List<Container> containers = usesStdin ? List.of(main, remoteStdin, relayStdout, relayStderr, callHeartbeatServer)
+          : List.of(main, relayStdout, relayStderr, callHeartbeatServer);
 
-    PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
-        .withApiVersion("v1")
-        .withNewMetadata()
-        .withName(podName)
-        .withLabels(labels)
-        .withAnnotations(annotations)
-        .endMetadata()
-        .withNewSpec()
-        .withServiceAccount(isOrchestrator ? "airbyte-admin" : serviceAccount)
-        .withAutomountServiceAccountToken(true);
+      PodFluent.SpecNested<PodBuilder> podBuilder = new PodBuilder()
+          .withApiVersion("v1")
+          .withNewMetadata()
+          .withName(podName)
+          .withLabels(labels)
+          .withAnnotations(annotations)
+          .endMetadata()
+          .withNewSpec()
+          .withServiceAccount(isOrchestrator ? "airbyte-admin" : serviceAccount)
+          .withAutomountServiceAccountToken(true);
 
-    List<LocalObjectReference> pullSecrets = imagePullSecrets
-        .stream()
-        .map(imagePullSecret -> new LocalObjectReference(imagePullSecret))
-        .collect(Collectors.toList());
+      final List<LocalObjectReference> pullSecrets = imagePullSecrets
+          .stream()
+          .map(imagePullSecret -> new LocalObjectReference(imagePullSecret))
+          .collect(Collectors.toList());
 
-    final Pod pod = podBuilder.withTolerations(buildPodTolerations(tolerations))
-        .withImagePullSecrets(pullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
-        .withNodeSelector(nodeSelectors)
-        .withRestartPolicy("Never")
-        .withInitContainers(init)
-        .withContainers(containers)
-        .withVolumes(pipeVolume, configVolume, terminationVolume, tmpVolume)
-        .endSpec()
-        .build();
+      final Pod pod = podBuilder.withTolerations(buildPodTolerations(tolerations))
+          .withImagePullSecrets(pullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
+          .withNodeSelector(nodeSelectors)
+          .withRestartPolicy("Never")
+          .withInitContainers(init)
+          .withContainers(containers)
+          .withVolumes(pipeVolume, configVolume, terminationVolume, tmpVolume)
+          .endSpec()
+          .build();
 
-    LOGGER.info("Creating pod {}...", pod.getMetadata().getName());
-    val start = System.currentTimeMillis();
+      LOGGER.info("Creating pod {}...", pod.getMetadata().getName());
+      val start = System.currentTimeMillis();
 
-    this.podDefinition = fabricClient.pods().inNamespace(namespace).createOrReplace(pod);
+      this.podDefinition = fabricClient.pods().inNamespace(namespace).createOrReplace(pod);
 
-    // We want to create a watch before the init container runs. Then we can guarantee
-    // that we're checking for updates across the full lifecycle of the main container.
-    // This is safe only because we are blocking the init pod until we copy files onto it.
-    // See the ExitCodeWatcher comments for more info.
-    exitCodeFuture = new CompletableFuture<>();
-    podInformer = fabricClient.pods()
-        .inNamespace(namespace)
-        .withName(pod.getMetadata().getName())
-        .inform();
-    podInformer.addEventHandler(new ExitCodeWatcher(
-        pod.getMetadata().getName(),
-        namespace,
-        exitCodeFuture::complete,
-        () -> {
-          LOGGER.info(prependPodInfo(
-              String.format(
-                  "Exit code watcher failed to retrieve the exit code. Defaulting to %s. This is expected if the job was cancelled.",
-                  KILLED_EXIT_CODE),
-              namespace,
-              podName));
+      // We want to create a watch before the init container runs. Then we can guarantee
+      // that we're checking for updates across the full lifecycle of the main container.
+      // This is safe only because we are blocking the init pod until we copy files onto it.
+      // See the ExitCodeWatcher comments for more info.
+      exitCodeFuture = new CompletableFuture<>();
+      podInformer = fabricClient.pods()
+          .inNamespace(namespace)
+          .withName(pod.getMetadata().getName())
+          .inform();
+      podInformer.addEventHandler(new ExitCodeWatcher(
+          pod.getMetadata().getName(),
+          namespace,
+          exitCodeFuture::complete,
+          () -> {
+            LOGGER.info(prependPodInfo(
+                String.format(
+                    "Exit code watcher failed to retrieve the exit code. Defaulting to %s. This is expected if the job was cancelled.",
+                    KILLED_EXIT_CODE),
+                namespace,
+                podName));
 
-          exitCodeFuture.complete(KILLED_EXIT_CODE);
-        }));
+            exitCodeFuture.complete(KILLED_EXIT_CODE);
+          }));
 
-    waitForInitPodToRun(fabricClient, podDefinition);
+      waitForInitPodToRun(fabricClient, podDefinition);
 
-    LOGGER.info("Copying files...");
-    copyFilesToKubeConfigVolume(fabricClient, podDefinition, files);
+      LOGGER.info("Copying files...");
+      copyFilesToKubeConfigVolume(fabricClient, podDefinition, files);
 
-    LOGGER.info("Waiting until pod is ready...");
-    // If a pod gets into a non-terminal error state it should be automatically killed by our
-    // heartbeating mechanism.
-    // This also handles the case where a very short pod already completes before this check completes
-    // the first time.
-    // This doesn't manage things like pods that are blocked from running for some cluster reason or if
-    // the init
-    // container got stuck somehow.
-    fabricClient.resource(podDefinition).waitUntilCondition(p -> {
-      final boolean isReady = Objects.nonNull(p) && Readiness.getInstance().isReady(p);
-      return isReady || KubePodResourceHelper.isTerminal(p);
-    }, 20, TimeUnit.MINUTES);
-    MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS,
-        System.currentTimeMillis() - start);
+      LOGGER.info("Waiting until pod is ready...");
+      // If a pod gets into a non-terminal error state it should be automatically killed by our
+      // heartbeating mechanism.
+      // This also handles the case where a very short pod already completes before this check completes
+      // the first time.
+      // This doesn't manage things like pods that are blocked from running for some cluster reason or if
+      // the init
+      // container got stuck somehow.
+      fabricClient.resource(podDefinition).waitUntilCondition(p -> {
+        final boolean isReady = Objects.nonNull(p) && Readiness.getInstance().isReady(p);
+        return isReady || KubePodResourceHelper.isTerminal(p);
+      }, 20, TimeUnit.MINUTES);
+      MetricClientFactory.getMetricClient().distribution(OssMetricsRegistry.KUBE_POD_PROCESS_CREATE_TIME_MILLISECS,
+          System.currentTimeMillis() - start);
 
-    // allow writing stdin to pod
-    LOGGER.info("Reading pod IP...");
-    final var podIp = getPodIP(fabricClient, podName, namespace);
-    LOGGER.info("Pod IP: {}", podIp);
+      // allow writing stdin to pod
+      LOGGER.info("Reading pod IP...");
+      final var podIp = getPodIP(fabricClient, podName, namespace);
+      LOGGER.info("Pod IP: {}", podIp);
 
-    if (usesStdin) {
-      LOGGER.info("Creating stdin socket...");
-      final var socketToDestStdIo = new Socket(podIp, STDIN_REMOTE_PORT);
-      this.stdin = socketToDestStdIo.getOutputStream();
-    } else {
-      LOGGER.info("Using null stdin output stream...");
-      this.stdin = NullOutputStream.NULL_OUTPUT_STREAM;
+      if (usesStdin) {
+        LOGGER.info("Creating stdin socket...");
+        final var socketToDestStdIo = new Socket(podIp, STDIN_REMOTE_PORT);
+        this.stdin = socketToDestStdIo.getOutputStream();
+      } else {
+        LOGGER.info("Using null stdin output stream...");
+        this.stdin = NullOutputStream.NULL_OUTPUT_STREAM;
+      }
+    } catch (Exception e) {
+      // We need to make sure the ports are offered back
+      cleanup();
+      throw e; // Throw the exception again to inform the caller
     }
   }
 
@@ -671,6 +690,19 @@ public class KubePodProcess implements KubePod {
    */
   @Override
   public void destroy() {
+    cleanup();
+  }
+
+  /**
+   * cleanup destroys and returns any resources it has consumed this is a private method so that the
+   * constructor may call it.
+   */
+  private void cleanup() {
+    if (this.podDefinition == null) {
+      // no pod to destroy; just close resources
+      close();
+      return;
+    }
     final String podName = podDefinition.getMetadata().getName();
     final String podNamespace = podDefinition.getMetadata().getNamespace();
 
@@ -734,10 +766,18 @@ public class KubePodProcess implements KubePod {
       Exceptions.swallow(this.stderr::close);
     }
 
-    Exceptions.swallow(this.stdoutServerSocket::close);
-    Exceptions.swallow(this.stderrServerSocket::close);
-    Exceptions.swallow(this.podInformer::close);
-    Exceptions.swallow(this.executorService::shutdownNow);
+    if (this.stdoutServerSocket != null) {
+      Exceptions.swallow(this.stdoutServerSocket::close);
+    }
+    if (this.stderrServerSocket != null) {
+      Exceptions.swallow(this.stderrServerSocket::close);
+    }
+    if (this.podInformer != null) {
+      Exceptions.swallow(this.podInformer::close);
+    }
+    if (this.executorService != null) {
+      Exceptions.swallow(this.executorService::shutdownNow);
+    }
 
     KubePortManagerSingleton.getInstance().offer(stdoutLocalPort);
     KubePortManagerSingleton.getInstance().offer(stderrLocalPort);

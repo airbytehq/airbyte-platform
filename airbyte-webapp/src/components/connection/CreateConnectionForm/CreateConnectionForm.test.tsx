@@ -3,13 +3,14 @@ import { act, render as tlr } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import selectEvent from "react-select-event";
+
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
-import { TestWrapper } from "test-utils/testutils";
+import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { defaultOssFeatures, FeatureItem } from "hooks/services/Feature";
 import * as sourceHook from "hooks/services/useSourceHook";
@@ -35,6 +36,7 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
 jest.mock("services/workspaces/WorkspacesService", () => ({
   useCurrentWorkspace: () => ({}),
   useCurrentWorkspaceId: () => "workspace-id",
+  useInvalidateWorkspaceStateQuery: () => () => null,
 }));
 
 jest.setTimeout(20000);
@@ -61,6 +63,10 @@ describe("CreateConnectionForm", () => {
     catalogId: "",
     onDiscoverSchema: () => Promise.resolve(),
   };
+
+  beforeEach(() => {
+    useMockIntersectionObserver();
+  });
 
   it("should render", async () => {
     jest.spyOn(sourceHook, "useDiscoverSchema").mockImplementationOnce(() => baseUseDiscoverSchema);

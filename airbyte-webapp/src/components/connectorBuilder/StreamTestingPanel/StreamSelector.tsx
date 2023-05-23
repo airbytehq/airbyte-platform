@@ -2,13 +2,14 @@ import classNames from "classnames";
 import capitalize from "lodash/capitalize";
 import { useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import {
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -22,9 +23,11 @@ interface StreamSelectorProps {
 const ControlButton: React.FC<ListBoxControlButtonProps<string>> = ({ selectedOption }) => {
   return (
     <>
-      <Heading className={styles.label} as="h1" size="sm">
-        {selectedOption.label}
-      </Heading>
+      {selectedOption && (
+        <Heading className={styles.label} as="h1" size="sm">
+          {selectedOption.label}
+        </Heading>
+      )}
       <CaretDownIcon className={styles.arrow} />
     </>
   );
@@ -34,9 +37,19 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { selectedView, setSelectedView } = useConnectorBuilderFormState();
-  const { testStreamIndex, setTestStreamIndex } = useConnectorBuilderTestState();
+  const { testStreamIndex, setTestStreamIndex } = useConnectorBuilderTestRead();
 
   const streams = useStreamNames();
+
+  if (streams.length === 0) {
+    return (
+      <Box py="md">
+        <Heading className={styles.label} as="h1" size="sm">
+          -
+        </Heading>
+      </Box>
+    );
+  }
 
   const options = streams.map((stream) => {
     const label =
@@ -73,7 +86,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
 function useStreamNames() {
   const { builderFormValues, editorView, formValuesValid } = useConnectorBuilderFormState();
-  const { streams: testStreams, isFetchingStreamList, streamListErrorMessage } = useConnectorBuilderTestState();
+  const { streams: testStreams, isFetchingStreamList, streamListErrorMessage } = useConnectorBuilderTestRead();
 
   let streams: Array<{ name: string }> = editorView === "ui" ? builderFormValues.streams : testStreams;
 

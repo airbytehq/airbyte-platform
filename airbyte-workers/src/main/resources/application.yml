@@ -3,6 +3,18 @@ micronaut:
     name: airbyte-workers
   server:
     port: 9000
+  caches:
+    # used by RecordMetricActivity to cache repeated calls to workspaceApi.getWorkspaceByConnectionId.
+    # entries are UUID connectionIds, so 100,000 entries should be roughly 1.6MB
+    connection-workspace-id:
+      maximumSize: 100_000
+  executors:
+    control-message:
+      type: fixed
+      n-threads: ${CONTROL_MESSAGE_EXECUTOR_THREADS:1}
+    stream-status:
+      type: fixed
+      n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
 
 airbyte:
   activity:
@@ -10,6 +22,7 @@ airbyte:
     max-attempts: ${ACTIVITY_MAX_ATTEMPT:5}
     max-delay: ${ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS:600}
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
+    check-timeout: ${ACTIVITY_CHECK_TIMEOUT:5}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -30,6 +43,9 @@ airbyte:
           bucket: ${S3_LOG_BUCKET:}
           region: ${S3_LOG_BUCKET_REGION:}
           secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      specs:
+        gcs:
+          bucket: ${SPEC_CACHE_BUCKET:io-airbyte-cloud-spec-cache}
       state:
         type: ${WORKER_STATE_STORAGE_TYPE:}
         gcs:
@@ -47,6 +63,7 @@ airbyte:
           secret-access-key: ${STATE_STORAGE_S3_SECRET_ACCESS_KEY:}
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
+    datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
   container:
     orchestrator:
       enabled: ${CONTAINER_ORCHESTRATOR_ENABLED:false}
@@ -72,6 +89,10 @@ airbyte:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}
@@ -91,21 +112,46 @@ airbyte:
   metric:
     client: ${METRIC_CLIENT:}
     should-publish: ${PUBLISH_METRICS:false}
+  notification:
+    customerio:
+      apikey: ${CUSTOMERIO_API_KEY:}
   worker:
-    check:
-      enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}
-      kube:
+    kube-job-configs:
+      default:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      check:
         annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      discover:
+        annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
+      normalization:
+        cpu-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
+        memory-limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
+      replication:
+        annotations: ${JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+        cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
+        cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
+        memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
+        memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
+      spec:
+        annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
+        node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
+    check:
+      enabled: ${SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS:true}
       max-workers: ${MAX_CHECK_WORKERS:5}
-      main:
-        container:
-          cpu:
-            limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-            request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-          memory:
-            limit: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-            request: ${CHECK_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     isolated:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
@@ -114,9 +160,6 @@ airbyte:
       enabled: ${SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS:true}
     discover:
       enabled: ${SHOULD_RUN_DISCOVER_WORKFLOWS:true}
-      kube:
-        annotations: ${DISCOVER_JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${DISCOVER_JOB_KUBE_NODE_SELECTORS:}
       max-workers: ${MAX_DISCOVER_WORKERS:5}
     job:
       error-reporting:
@@ -127,7 +170,6 @@ airbyte:
         max-days: ${MAX_DAYS_OF_ONLY_FAILED_JOBS_BEFORE_CONNECTION_DISABLE:14}
         max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:100}
       kube:
-        annotations: ${JOB_KUBE_ANNOTATIONS:}
         images:
           busybox: ${JOB_KUBE_BUSYBOX_IMAGE:`busybox:1.28`}
           curl: ${JOB_KUBE_CURL_IMAGE:`curlimages/curl:7.83.1`}
@@ -137,7 +179,7 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
-        node-selectors: ${JOB_KUBE_NODE_SELECTORS:}
+	serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin}
         sidecar:
           container:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
@@ -150,28 +192,10 @@ airbyte:
           memory:
             limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
             request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
-    normalization:
-      main:
-        container:
-          cpu:
-            limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_LIMIT:}
-            request: ${NORMALIZATION_JOB_MAIN_CONTAINER_CPU_REQUEST:}
-          memory:
-            limit: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_LIMIT:}
-            request: ${NORMALIZATION_JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
     replication:
-      orchestrator:
-        cpu:
-          limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:}
-          request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
-        memory:
-          limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
-          request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
+      persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:60}
     spec:
       enabled: ${SHOULD_RUN_GET_SPEC_WORKFLOWS:true}
-      kube:
-        annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
-        node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
       max-workers: ${MAX_SPEC_WORKERS:5}
     sync:
       enabled: ${SHOULD_RUN_SYNC_WORKFLOWS:true}
@@ -179,7 +203,7 @@ airbyte:
       max-attempts: ${SYNC_JOB_MAX_ATTEMPTS:3}
       max-timeout: ${SYNC_JOB_MAX_TIMEOUT_DAYS:3}
     notify:
-      enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:false}
+      enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
   role: ${AIRBYTE_ROLE:}
   secret:
@@ -213,6 +237,9 @@ datadog:
   agent:
     host: ${DD_AGENT_HOST:}
     port: ${DD_DOGSTATSD_PORT:}
+  orchestrator:
+    disabled:
+      integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
 
 docker:
   network: ${DOCKER_NETWORK:host}
@@ -225,7 +252,9 @@ endpoints:
     enabled: true
     sensitive: false
   health:
-    enabled: true
+    enabled: false
+    jdbc:
+      enabled: false
     sensitive: false
   info:
     enabled: true

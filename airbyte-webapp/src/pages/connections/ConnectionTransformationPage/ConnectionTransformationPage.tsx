@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 
 import { NormalizationType } from "core/domain/connection";
 import { OperationCreate, OperationRead, OperatorType } from "core/request/AirbyteClient";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
@@ -67,7 +67,7 @@ export const ConnectionTransformationPage: React.FC = () => {
         {supportsCloudDbtIntegration && <DbtCloudTransformationsCard connection={connection} />}
         {noSupportedTransformations && (
           <Card className={styles.customCard}>
-            <Text size="lg" centered>
+            <Text size="lg" align="center">
               <FormattedMessage id="connectionForm.operations.notSupported" />
             </Text>
           </Card>

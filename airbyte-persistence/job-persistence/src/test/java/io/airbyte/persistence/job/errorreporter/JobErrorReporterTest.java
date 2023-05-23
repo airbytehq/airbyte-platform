@@ -13,6 +13,7 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
@@ -45,12 +46,12 @@ class JobErrorReporterTest {
   private static final String SOURCE_DEFINITION_NAME = "stripe";
   private static final String SOURCE_DOCKER_REPOSITORY = "airbyte/source-stripe";
   private static final String SOURCE_DOCKER_IMAGE = "airbyte/source-stripe:1.2.3";
-  private static final StandardSourceDefinition.ReleaseStage SOURCE_RELEASE_STAGE = StandardSourceDefinition.ReleaseStage.BETA;
+  private static final ReleaseStage SOURCE_RELEASE_STAGE = ReleaseStage.BETA;
   private static final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
   private static final String DESTINATION_DEFINITION_NAME = "snowflake";
   private static final String DESTINATION_DOCKER_REPOSITORY = "airbyte/destination-snowflake";
   private static final String DESTINATION_DOCKER_IMAGE = "airbyte/destination-snowflake:1.2.3";
-  private static final StandardDestinationDefinition.ReleaseStage DESTINATION_RELEASE_STAGE = StandardDestinationDefinition.ReleaseStage.BETA;
+  private static final ReleaseStage DESTINATION_RELEASE_STAGE = ReleaseStage.BETA;
   private static final String FROM_TRACE_MESSAGE = "from_trace_message";
   private static final String JOB_ID_KEY = "job_id";
   private static final String WORKSPACE_ID_KEY = "workspace_id";
@@ -94,7 +95,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailure() {
+  void testReportSyncJobFailure() throws ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
 
     final FailureReason sourceFailureReason = new FailureReason()
@@ -213,7 +214,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
     final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DOCKER_IMAGE, DESTINATION_DOCKER_IMAGE);
 

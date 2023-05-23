@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { Children } from "react";
 
+import { Text } from "components/ui/Text";
+
 import styles from "./PillButton.module.scss";
-import { Text } from "../Text";
 
 export type PillButtonVariant = "grey" | "blue" | "green" | "red" | "strong-red" | "strong-blue";
 
@@ -43,11 +44,11 @@ export const PillButton: React.FC<PillButtonProps> = ({
   );
 
   return (
-    <button type="button" {...buttonProps} className={buttonClassName}>
+    <button type="button" {...buttonProps} className={buttonClassName} data-error={hasError}>
       {Children.map(arrayChildren, (child, index) => (
         <>
           <div key={index} className={styles.labelContainer}>
-            <Text as="span" size="xs" className={styles.text}>
+            <Text size="xs" className={styles.text}>
               {child}
             </Text>
           </div>

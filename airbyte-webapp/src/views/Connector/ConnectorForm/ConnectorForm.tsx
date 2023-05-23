@@ -1,22 +1,21 @@
-import { Formik } from "formik";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
+import { AnyObjectSchema } from "yup";
 
-import { FormChangeTracker } from "components/common/FormChangeTracker";
+import { Form } from "components/forms";
 
 import {
   ConnectorDefinition,
   ConnectorDefinitionSpecification,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
-import { FormikPatch } from "core/form/FormikPatch";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
-import { BaseFormRootProps, FormRoot } from "./FormRoot";
+import { FormRootProps, FormRoot } from "./FormRoot";
 import { ConnectorFormValues } from "./types";
 import { useBuildForm } from "./useBuildForm";
 
-interface BaseConnectorFormProps extends Omit<BaseFormRootProps, "formFields" | "castValues"> {
+export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure"> {
   formType: "source" | "destination";
   formId?: string;
   /**
@@ -30,18 +29,22 @@ interface BaseConnectorFormProps extends Omit<BaseFormRootProps, "formFields" | 
   connectorId?: string;
 }
 
-interface CardConnectorFormProps extends BaseConnectorFormProps {
-  renderWithCard: true;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  full?: boolean;
+function removeEmptyStrings(obj: unknown) {
+  if (typeof obj !== "object" || obj === null) {
+    return obj;
+  }
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const val = (obj as Record<string, unknown>)[key];
+      if (typeof val === "string" && val.trim() === "") {
+        delete (obj as Record<string, unknown>)[key];
+      } else if (typeof val === "object") {
+        removeEmptyStrings(val);
+      }
+    }
+  }
+  return obj;
 }
-
-interface BareConnectorFormProps extends BaseConnectorFormProps {
-  renderWithCard?: false;
-}
-
-export type ConnectorFormProps = CardConnectorFormProps | BareConnectorFormProps;
 
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
@@ -57,7 +60,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     connectorId,
   } = props;
 
-  const { formFields, initialValues, validationSchema } = useBuildForm(
+  const { formFields, initialValues, validationSchema, groups } = useBuildForm(
     Boolean(isEditMode),
     formType,
     selectedConnectorDefinitionSpecification,
@@ -66,7 +69,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
 
   const castValues = useCallback(
     (values: ConnectorFormValues) =>
-      validationSchema.cast(values, {
+      validationSchema.cast(removeEmptyStrings(values), {
         stripUnknown: true,
       }),
     [validationSchema]
@@ -77,40 +80,30 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
       const valuesToSend = castValues(values);
       await onSubmit(valuesToSend);
       clearFormChange(formId);
+      // do not reset form values to avoid casting oddities
+      return { keepValues: true };
     },
-    [clearFormChange, formId, castValues, onSubmit]
-  );
-
-  const isInitialValid = useMemo(
-    () => Boolean(validationSchema.isValidSync(initialValues)),
-    [initialValues, validationSchema]
+    [castValues, onSubmit, clearFormChange, formId]
   );
 
   return (
-    <Formik
-      validateOnBlur
-      validateOnChange
-      initialValues={initialValues}
-      isInitialValid={isInitialValid}
-      validationSchema={validationSchema}
+    <Form
+      trackDirtyChanges
+      defaultValues={initialValues as ConnectorFormValues<object>}
+      schema={validationSchema as AnyObjectSchema}
       onSubmit={onFormSubmit}
-      enableReinitialize
     >
-      {({ dirty }) => (
-        <ConnectorFormContextProvider
-          formType={formType}
-          getValues={castValues}
-          selectedConnectorDefinition={selectedConnectorDefinition}
-          selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
-          isEditMode={isEditMode}
-          validationSchema={validationSchema}
-          connectorId={connectorId}
-        >
-          <FormikPatch />
-          <FormChangeTracker changed={dirty} formId={formId} />
-          <FormRoot {...props} formFields={formFields} castValues={castValues} />
-        </ConnectorFormContextProvider>
-      )}
-    </Formik>
+      <ConnectorFormContextProvider
+        formType={formType}
+        getValues={castValues}
+        selectedConnectorDefinition={selectedConnectorDefinition}
+        selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
+        isEditMode={isEditMode}
+        validationSchema={validationSchema}
+        connectorId={connectorId}
+      >
+        <FormRoot {...props} formFields={formFields} castValues={castValues} groupStructure={groups} />
+      </ConnectorFormContextProvider>
+    </Form>
   );
 };

@@ -10,9 +10,15 @@ task prepareBuild(type: Copy) {
 tasks.named("buildDockerImage") {
     dependsOn prepareBuild
     dependsOn copyDocker
+    inputs.file "../.env"
 }
 
 task bashTest(type: Exec) {
+    inputs.file(layout.projectDirectory.file("nginx-auth.conf.template"))
+    inputs.file(layout.projectDirectory.file("nginx-no-auth.conf.template"))
+    inputs.file(layout.projectDirectory.file("run.sh"))
+    inputs.file(layout.projectDirectory.file("401.html"))
+    outputs.upToDateWhen { true }
     dependsOn buildDockerImage
     commandLine "./test.sh"
 }

@@ -42,9 +42,11 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -109,7 +111,7 @@ class SourceDefinitionsHandlerTest {
         .withIcon("rss.svg")
         .withSpec(spec)
         .withTombstone(false)
-        .withReleaseStage(StandardSourceDefinition.ReleaseStage.ALPHA)
+        .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
 
@@ -359,7 +361,7 @@ class SourceDefinitionsHandlerTest {
         .writeStandardSourceDefinition(
             sourceDefinition
                 .withReleaseDate(null)
-                .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+                .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
                 .withProtocolVersion(DEFAULT_PROTOCOL_VERSION));
   }
 
@@ -410,7 +412,7 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository).writeCustomSourceDefinition(
         sourceDefinition
             .withReleaseDate(null)
-            .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withCustom(true),
         workspaceId);
@@ -450,7 +452,7 @@ class SourceDefinitionsHandlerTest {
     verify(configRepository, never()).writeCustomSourceDefinition(
         sourceDefinition
             .withReleaseDate(null)
-            .withReleaseStage(StandardSourceDefinition.ReleaseStage.CUSTOM)
+            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withProtocolVersion(invalidVersion)
             .withCustom(true),
         workspaceId);
@@ -593,15 +595,29 @@ class SourceDefinitionsHandlerTest {
 
     @Test
     @DisplayName("should return the latest list")
-    void testCorrect() throws IOException, InterruptedException {
-      final StandardSourceDefinition sourceDefinition = generateSourceDefinition();
-      when(githubStore.getSourceDefinitions()).thenReturn(Collections.singletonList(sourceDefinition));
+    void testCorrect() {
+      final ConnectorRegistrySourceDefinition registrySourceDefinition = new ConnectorRegistrySourceDefinition()
+          .withSourceDefinitionId(UUID.randomUUID())
+          .withName("some-source")
+          .withDocumentationUrl("https://airbyte.com")
+          .withDockerRepository("dockerrepo")
+          .withDockerImageTag("1.2.4")
+          .withIcon("source.svg")
+          .withSpec(new ConnectorSpecification().withConnectionSpecification(
+              Jsons.jsonNode(ImmutableMap.of("key", "val"))))
+          .withTombstone(false)
+          .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
+          .withReleaseDate(TODAY_DATE_STRING)
+          .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+      when(githubStore.getSourceDefinitions()).thenReturn(Collections.singletonList(registrySourceDefinition));
 
       final var sourceDefinitionReadList = sourceDefinitionsHandler.listLatestSourceDefinitions().getSourceDefinitions();
       assertEquals(1, sourceDefinitionReadList.size());
 
       final var sourceDefinitionRead = sourceDefinitionReadList.get(0);
-      assertEquals(SourceDefinitionsHandler.buildSourceDefinitionRead(sourceDefinition), sourceDefinitionRead);
+      assertEquals(
+          SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition)),
+          sourceDefinitionRead);
     }
 
     @Test

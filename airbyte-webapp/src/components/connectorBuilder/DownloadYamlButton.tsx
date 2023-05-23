@@ -1,4 +1,4 @@
-import { faDownload, faWarning } from "@fortawesome/free-solid-svg-icons";
+import { faWarning } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useField } from "formik";
 import snakeCase from "lodash/snakeCase";
@@ -7,8 +7,8 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { downloadFile } from "utils/file";
 
@@ -58,7 +58,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlDownload" />;
   }
 
-  if (editorView === "ui" && hasErrors(true)) {
+  if (editorView === "ui" && hasErrors(false)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsDownload" />;
   }
@@ -66,9 +66,11 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
   const downloadButton = (
     <Button
       full
+      variant="secondary"
       onClick={handleClick}
       disabled={buttonDisabled}
-      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : <FontAwesomeIcon icon={faDownload} />}
+      icon={showWarningIcon ? <FontAwesomeIcon icon={faWarning} /> : undefined}
+      data-testid="download-yaml-button"
     >
       <FormattedMessage id="connectorBuilder.downloadYaml" />
     </Button>

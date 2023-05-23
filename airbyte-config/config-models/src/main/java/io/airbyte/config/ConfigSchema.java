@@ -34,6 +34,13 @@ public enum ConfigSchema implements AirbyteConfig {
       ConnectorBuilderProject.class,
       project -> project.getBuilderProjectId().toString(),
       "builderProjectId"),
+
+  // actor definition version
+  ACTOR_DEFINITION_VERSION("ActorDefinitionVersion.yaml",
+      ActorDefinitionVersion.class,
+      actorDefinitionVersion -> actorDefinitionVersion.getVersionId().toString(),
+      "versionId"),
+
   // source
   STANDARD_SOURCE_DEFINITION("StandardSourceDefinition.yaml",
       StandardSourceDefinition.class,
@@ -43,6 +50,8 @@ public enum ConfigSchema implements AirbyteConfig {
       SourceConnection.class,
       sourceConnection -> sourceConnection.getSourceId().toString(),
       "sourceId"),
+  ACTIVE_DECLARATIVE_MANIFEST("ActiveDeclarativeManifest.yaml", ActiveDeclarativeManifest.class),
+  DECLARATIVE_MANIFEST("DeclarativeManifest.yaml", ActiveDeclarativeManifest.class),
 
   // destination
   STANDARD_DESTINATION_DEFINITION("StandardDestinationDefinition.yaml",

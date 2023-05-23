@@ -1,0 +1,119 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+$sm-width: 12px;
+$md-width: 20px;
+$lg-width: 40px;
+
+// sizes
+
+.sm {
+  font-size: 7px;
+
+  & .icon {
+    padding: variables.$spacing-xs;
+    width: $sm-width;
+    height: $sm-width;
+  }
+
+  & .value {
+    padding-right: variables.$spacing-xs;
+  }
+
+  &.loading {
+    gap: variables.$spacing-xs;
+  }
+
+  &.withValue {
+    padding: 0 2px;
+  }
+}
+
+.md {
+  font-size: 12px;
+
+  & .icon {
+    width: $md-width;
+    padding: variables.$spacing-sm;
+    height: $md-width;
+  }
+
+  & .value {
+    padding-right: variables.$spacing-sm;
+  }
+
+  &.loading {
+    gap: variables.$spacing-sm;
+  }
+
+  &.withValue {
+    padding: 0 variables.$spacing-xs;
+  }
+}
+
+.lg {
+  font-size: 24px;
+
+  & .icon {
+    padding: variables.$spacing-md;
+    width: $lg-width;
+    height: $lg-width;
+  }
+
+  & .value {
+    padding-right: variables.$spacing-md;
+  }
+
+  &.loading {
+    gap: variables.$spacing-md;
+  }
+
+  &.withValue {
+    padding: 0 variables.$spacing-sm;
+  }
+}
+
+.container {
+  border-radius: variables.$border-radius-pill;
+  background-color: colors.$red;
+  color: colors.$white;
+  width: fit-content;
+
+  & .value {
+    color: inherit;
+    font-size: inherit;
+  }
+
+  &.loading {
+    & .icon {
+      padding: 0;
+    }
+
+    & .value {
+      color: colors.$blue;
+    }
+  }
+}
+
+// backgrounds
+
+.success {
+  background-color: colors.$green;
+}
+
+.warning {
+  background-color: colors.$yellow;
+}
+
+.error {
+  background-color: colors.$red;
+}
+
+.default {
+  background-color: colors.$grey;
+}
+
+.none {
+  background: none;
+}

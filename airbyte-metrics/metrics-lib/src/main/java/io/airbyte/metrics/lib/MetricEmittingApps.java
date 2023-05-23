@@ -22,6 +22,8 @@ import lombok.AllArgsConstructor;
 public enum MetricEmittingApps implements MetricEmittingApp {
 
   METRICS_REPORTER("metrics-reporter"),
+  ORCHESTRATOR("orchestrator"),
+  SERVER("server"),
   WORKER("worker");
 
   private String applicationName;

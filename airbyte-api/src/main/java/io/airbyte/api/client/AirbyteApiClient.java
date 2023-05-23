@@ -7,6 +7,7 @@ package io.airbyte.api.client;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.generated.AttemptApi;
 import io.airbyte.api.client.generated.ConnectionApi;
+import io.airbyte.api.client.generated.ConnectorBuilderProjectApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi;
@@ -17,6 +18,7 @@ import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.StateApi;
+import io.airbyte.api.client.generated.StreamStatusesApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import java.util.Random;
@@ -46,6 +48,7 @@ public class AirbyteApiClient {
   public static final int DEFAULT_FINAL_INTERVAL_SECS = 10 * 60;
 
   private final ConnectionApi connectionApi;
+  private final ConnectorBuilderProjectApi connectorBuilderProjectApi;
   private final DestinationDefinitionApi destinationDefinitionApi;
   private final DestinationApi destinationApi;
   private final DestinationDefinitionSpecificationApi destinationSpecificationApi;
@@ -59,9 +62,11 @@ public class AirbyteApiClient {
   private final HealthApi healthApi;
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
+  private final StreamStatusesApi streamStatusesApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
     connectionApi = new ConnectionApi(apiClient);
+    connectorBuilderProjectApi = new ConnectorBuilderProjectApi(apiClient);
     destinationDefinitionApi = new DestinationDefinitionApi(apiClient);
     destinationApi = new DestinationApi(apiClient);
     destinationSpecificationApi = new DestinationDefinitionSpecificationApi(apiClient);
@@ -75,10 +80,15 @@ public class AirbyteApiClient {
     healthApi = new HealthApi(apiClient);
     attemptApi = new AttemptApi(apiClient);
     stateApi = new StateApi(apiClient);
+    streamStatusesApi = new StreamStatusesApi(apiClient);
   }
 
   public ConnectionApi getConnectionApi() {
     return connectionApi;
+  }
+
+  public ConnectorBuilderProjectApi getConnectorBuilderProjectApi() {
+    return connectorBuilderProjectApi;
   }
 
   public DestinationDefinitionApi getDestinationDefinitionApi() {
@@ -133,12 +143,58 @@ public class AirbyteApiClient {
     return stateApi;
   }
 
+  public StreamStatusesApi getStreamStatusesApi() {
+    return streamStatusesApi;
+  }
+
+  /**
+   * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
+   * an 10-minute wait for the last retry.
+   * <p>
+   * Exceptions will be swallowed.
+   */
+  public static <T> T retryWithJitter(final Callable<T> call, final String desc) {
+    return retryWithJitter(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
+  }
+
+  /**
+   * Provides a simple retry wrapper for api calls. This retry behaviour is slightly different from
+   * generally available retries libraries - the last retry is able to wait an interval inconsistent
+   * with regular intervals/exponential backoff.
+   * <p>
+   * Since the primary retries use case is long-running workflows, the benefit of waiting a couple of
+   * minutes as a last ditch effort to outlast networking disruption outweighs the cost of slightly
+   * longer jobs.
+   * <p>
+   * Exceptions will be swallowed.
+   *
+   * @param call method to execute
+   * @param desc short readable explanation of why this method is executed
+   * @param jitterMaxIntervalSecs upper limit of the randomised retry interval. Minimum value is 1.
+   * @param finalIntervalSecs retry interval before the last retry.
+   */
+  @VisibleForTesting
+  // This is okay since we are logging the stack trace, which PMD is not detecting.
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  public static <T> T retryWithJitter(final Callable<T> call,
+                                      final String desc,
+                                      final int jitterMaxIntervalSecs,
+                                      final int finalIntervalSecs,
+                                      final int maxTries) {
+    try {
+      return retryWithJitterThrows(call, desc, jitterMaxIntervalSecs, finalIntervalSecs, maxTries);
+    } catch (Exception e) {
+      // Swallowing exception on purpose
+      return null;
+    }
+  }
+
   /**
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
    */
-  public static <T> T retryWithJitter(final Callable<T> call, final String desc) {
-    return retryWithJitter(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
+  public static <T> T retryWithJitterThrows(final Callable<T> call, final String desc) throws Exception {
+    return retryWithJitterThrows(call, desc, DEFAULT_RETRY_INTERVAL_SECS, DEFAULT_FINAL_INTERVAL_SECS, DEFAULT_MAX_RETRIES);
   }
 
   /**
@@ -158,11 +214,12 @@ public class AirbyteApiClient {
   @VisibleForTesting
   // This is okay since we are logging the stack trace, which PMD is not detecting.
   @SuppressWarnings("PMD.PreserveStackTrace")
-  public static <T> T retryWithJitter(final Callable<T> call,
-                                      final String desc,
-                                      final int jitterMaxIntervalSecs,
-                                      final int finalIntervalSecs,
-                                      final int maxTries) {
+  public static <T> T retryWithJitterThrows(final Callable<T> call,
+                                            final String desc,
+                                            final int jitterMaxIntervalSecs,
+                                            final int finalIntervalSecs,
+                                            final int maxTries)
+      throws Exception {
     int currRetries = 0;
     boolean keepTrying = true;
 
@@ -184,6 +241,11 @@ public class AirbyteApiClient {
         if (currRetries == maxTries - 1) {
           // sleep for finalIntervalMins on the last attempt.
           backoffTimeMs = finalIntervalSecs * 1000;
+        }
+
+        // We exceeded our retries, throw the last error to avoid silent failures
+        if (currRetries >= maxTries) {
+          throw e;
         }
 
         try {

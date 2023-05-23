@@ -9,10 +9,11 @@ import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import io.airbyte.api.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
+import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
@@ -31,10 +32,18 @@ public class SourceDefinitionSpecificationApiController implements SourceDefinit
   @SuppressWarnings("LineLength")
   @Post("/get")
   @Secured({AUTHENTICATED_USER})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public SourceDefinitionSpecificationRead getSourceDefinitionSpecification(final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId) {
     return ApiHelper.execute(() -> schedulerHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId));
+  }
+
+  @Post("/get_for_source")
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public SourceDefinitionSpecificationRead getSpecificationForSourceId(final SourceIdRequestBody sourceIdRequestBody) {
+    return ApiHelper.execute(() -> schedulerHandler.getSpecificationForSourceId(sourceIdRequestBody));
   }
 
 }

@@ -1,5 +1,6 @@
 import classnames from "classnames";
 import { Formik } from "formik";
+import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
 
@@ -10,13 +11,15 @@ import { builderFormValidationSchema, BuilderFormValues } from "components/conne
 import { YamlEditor } from "components/connectorBuilder/YamlEditor";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
-  ConnectorBuilderTestStateProvider,
+  ConnectorBuilderTestReadProvider,
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
+  ConnectorBuilderFormManagementStateProvider,
+  ConnectorBuilderMainFormikContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
@@ -45,18 +48,20 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
         initialValues={initialFormValues.current}
         validateOnBlur
         validateOnChange={false}
-        validateOnMount={false}
+        validateOnMount
         onSubmit={noop}
         validationSchema={builderFormValidationSchema}
       >
         {(props) => (
-          <Panels
-            editorView={editorView}
-            validateForm={props.validateForm}
-            switchToUI={switchToUI}
-            values={props.values}
-            switchToYaml={switchToYaml}
-          />
+          <ConnectorBuilderMainFormikContext.Provider value={props}>
+            <Panels
+              editorView={editorView}
+              validateForm={props.validateForm}
+              switchToUI={switchToUI}
+              values={props.values}
+              switchToYaml={switchToYaml}
+            />
+          </ConnectorBuilderMainFormikContext.Provider>
         )}
       </Formik>
     ),
@@ -65,15 +70,18 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
 });
 
 export const ConnectorBuilderEditPage: React.FC = () => (
-  <ConnectorBuilderLocalStorageProvider>
-    <ConnectorBuilderFormStateProvider>
-      <ConnectorBuilderTestStateProvider>
-        <HeadTitle titles={[{ id: "connectorBuilder.editPage.title" }]} />
-        <ConnectorBuilderEditPageInner />
-      </ConnectorBuilderTestStateProvider>
-    </ConnectorBuilderFormStateProvider>
-  </ConnectorBuilderLocalStorageProvider>
+  <ConnectorBuilderFormManagementStateProvider>
+    <ConnectorBuilderLocalStorageProvider>
+      <ConnectorBuilderFormStateProvider>
+        <ConnectorBuilderTestReadProvider>
+          <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+          <ConnectorBuilderEditPageInner />
+        </ConnectorBuilderTestReadProvider>
+      </ConnectorBuilderFormStateProvider>
+    </ConnectorBuilderLocalStorageProvider>
+  </ConnectorBuilderFormManagementStateProvider>
 );
+ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
 const Panels = React.memo(
   ({
@@ -90,6 +98,22 @@ const Panels = React.memo(
     validateForm: () => void;
   }) => {
     const { formatMessage } = useIntl();
+    const { setBuilderFormValues } = useConnectorBuilderFormState();
+
+    const debouncedSetBuilderFormValues = useMemo(
+      () =>
+        debounce((values) => {
+          // kick off formik validation
+          validateForm();
+          // update upstream state
+          setBuilderFormValues(values, builderFormValidationSchema.isValidSync(values));
+        }, 200),
+      [setBuilderFormValues, validateForm]
+    );
+    useEffect(() => {
+      debouncedSetBuilderFormValues(values);
+    }, [values, debouncedSetBuilderFormValues]);
+
     return (
       <ResizablePanels
         className={classnames({ [styles.gradientBg]: editorView === "yaml", [styles.solidBg]: editorView === "ui" })}
@@ -121,3 +145,4 @@ const Panels = React.memo(
     );
   }
 );
+Panels.displayName = "Panels";

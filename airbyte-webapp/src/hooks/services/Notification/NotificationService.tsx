@@ -51,6 +51,7 @@ export const NotificationService = React.memo(({ children }: { children: React.R
     </>
   );
 });
+NotificationService.displayName = "NotificationService";
 
 interface NotificationServiceHook {
   registerNotification: (notification: Notification) => void;

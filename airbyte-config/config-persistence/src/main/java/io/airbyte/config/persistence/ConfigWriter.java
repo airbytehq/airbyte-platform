@@ -78,6 +78,13 @@ public class ConfigWriter {
         .stream();
   }
 
+  static int writeSourceDefinitionImageTag(final List<UUID> sourceDefinitionIds, final String targetImageTag, final DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+
+    return ctx.update(ACTOR_DEFINITION).set(ACTOR_DEFINITION.DOCKER_IMAGE_TAG, targetImageTag).set(ACTOR_DEFINITION.UPDATED_AT, timestamp)
+        .where(ACTOR_DEFINITION.ID.in(sourceDefinitionIds).andNot(ACTOR_DEFINITION.DOCKER_IMAGE_TAG.eq(targetImageTag))).execute();
+  }
+
   static void writeStandardSourceDefinition(final List<StandardSourceDefinition> configs, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     configs.forEach((standardSourceDefinition) -> {
@@ -116,6 +123,9 @@ public class ConfigWriter {
             .set(ACTOR_DEFINITION.SUGGESTED_STREAMS, standardSourceDefinition.getSuggestedStreams() == null ? null
                 : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getSuggestedStreams())))
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+            .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
+                standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
+                    : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
             .where(Tables.ACTOR_DEFINITION.ID.eq(standardSourceDefinition.getSourceDefinitionId()))
             .execute();
 
@@ -152,6 +162,9 @@ public class ConfigWriter {
                 : JSONB.valueOf(Jsons.serialize(standardSourceDefinition.getSuggestedStreams())))
             .set(Tables.ACTOR_DEFINITION.CREATED_AT, timestamp)
             .set(Tables.ACTOR_DEFINITION.UPDATED_AT, timestamp)
+            .set(Tables.ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES,
+                standardSourceDefinition.getMaxSecondsBetweenMessages() == null ? null
+                    : standardSourceDefinition.getMaxSecondsBetweenMessages().intValue())
             .execute();
       }
     });

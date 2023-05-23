@@ -1,3 +1,15 @@
+# Find the airbyte-webapp folder (which might be either inside oss/ or on the root)
+if [ -d "./oss/airbyte-webapp" ]; then
+  webappDir="./oss/airbyte-webapp"
+else
+  webappDir="./airbyte-webapp"
+fi
+
+if [ -z "$(git diff --stat --staged "$webappDir")" ]; then
+  # There are no staged changes in the webapp folder, so we can skip the rest of this hook
+  exit 0
+fi
+
 # Only run this pre-commit hook when npx is actually in the path.
 # Since CI will fail on linting issues anyway we consider this hook optional
 # and don't want to fail commits if the system doesn't have the requirements to run it.
@@ -6,6 +18,6 @@ if command -v npx &> /dev/null; then
   npxMajorVersion=$(npx --version | cut -d. -f1)
   if [ "$npxMajorVersion" -ge "8" ]; then
     # Find the path to the webapp by looking for the airbyte-webapp/package.json file and cd into the webapp folder
-    cd "$(dirname "$(find . -wholename '*/airbyte-webapp/package.json')")" && npx --no lint-staged
+    cd "$webappDir" && npx --no lint-staged
   fi
 fi

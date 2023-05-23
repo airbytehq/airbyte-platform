@@ -14,6 +14,7 @@ import io.airbyte.api.client.generated.ConnectionApi;
 import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.StateApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
@@ -52,13 +53,14 @@ public class ApiClientBeanFactory {
                              @Named("internalApiAuthToken") final BeanProvider<String> internalApiAuthToken,
                              @Named("internalApiScheme") final String internalApiScheme) {
     return new ApiClient()
+        .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setScheme(internalApiScheme)
         .setHost(parseHostName(airbyteApiHost))
         .setPort(parsePort(airbyteApiHost))
         .setBasePath("/api")
         .setHttpClientBuilder(HttpClient.newBuilder().version(Version.HTTP_1_1))
         .setConnectTimeout(Duration.ofSeconds(30))
-        .setReadTimeout(Duration.ofSeconds(30))
+        .setReadTimeout(Duration.ofSeconds(300))
         .setRequestInterceptor(builder -> {
           builder.setHeader("User-Agent", "WorkerApp");
           // internalApiAuthToken is in BeanProvider because we want to create a new token each
@@ -107,6 +109,11 @@ public class ApiClientBeanFactory {
   @Singleton
   public StateApi stateApi(final ApiClient apiClient) {
     return new StateApi(apiClient);
+  }
+
+  @Singleton
+  public SourceDefinitionApi sourceDefinitionApi(final ApiClient apiClient) {
+    return new SourceDefinitionApi(apiClient);
   }
 
   @Singleton

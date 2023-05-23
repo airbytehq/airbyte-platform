@@ -16,6 +16,9 @@ properties:
   destinationDefinitionId:
     type: string
     format: uuid
+  defaultVersionId:
+    type: string
+    format: uuid
   name:
     type: string
   dockerRepository:
@@ -44,11 +47,7 @@ properties:
     default: false
   releaseStage:
     type: string
-    enum:
-      - alpha
-      - beta
-      - generally_available
-      - custom
+    existingJavaType: io.airbyte.config.ReleaseStage
   releaseDate:
     description: The date when this connector was first released, in yyyy-mm-dd format.
     type: string

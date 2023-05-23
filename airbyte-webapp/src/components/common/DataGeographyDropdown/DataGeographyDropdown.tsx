@@ -1,12 +1,9 @@
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { FormattedMessage, useIntl } from "react-intl";
-import { components, MenuListProps } from "react-select";
+import * as Flags from "country-flag-icons/react/3x2";
+import { useIntl } from "react-intl";
 
-import { DropDown } from "components/ui/DropDown";
+import { ListBox } from "components/ui/ListBox";
 
 import { Geography } from "core/request/AirbyteClient";
-import { links } from "utils/links";
 
 import styles from "./DataGeographyDropdown.module.scss";
 
@@ -17,20 +14,6 @@ interface DataGeographyDropdownProps {
   value: Geography;
 }
 
-const CustomMenuList: React.FC<MenuListProps> = ({ children, ...rest }) => {
-  return (
-    <components.MenuList {...rest}>
-      {children}
-      <a href={links.dataResidencySurvey} target="_blank" rel="noreferrer" className={styles.requestLink}>
-        <FontAwesomeIcon icon={faPlus} />
-        <span className={styles.linkText}>
-          <FormattedMessage id="connection.requestNewGeography" />
-        </span>
-      </a>
-    </components.MenuList>
-  );
-};
-
 export const DataGeographyDropdown: React.FC<DataGeographyDropdownProps> = ({
   geographies,
   isDisabled = false,
@@ -40,20 +23,22 @@ export const DataGeographyDropdown: React.FC<DataGeographyDropdownProps> = ({
   const { formatMessage } = useIntl();
 
   return (
-    <DropDown
+    <ListBox
+      options={geographies.map((geography) => {
+        const Flag =
+          geography === "auto" ? Flags.US : Flags[geography.toUpperCase() as Uppercase<Exclude<Geography, "auto">>];
+        return {
+          label: formatMessage({
+            id: `connection.geography.${geography}`,
+            defaultMessage: geography.toUpperCase(),
+          }),
+          value: geography,
+          icon: <Flag className={styles.flag} />,
+        };
+      })}
+      onSelect={onChange}
+      selectedValue={value}
       isDisabled={isDisabled}
-      options={geographies.map((geography) => ({
-        label: formatMessage({
-          id: `connection.geography.${geography}`,
-          defaultMessage: geography.toUpperCase(),
-        }),
-        value: geography,
-      }))}
-      value={value}
-      onChange={(option) => onChange(option.value)}
-      components={{
-        MenuList: CustomMenuList,
-      }}
     />
   );
 };

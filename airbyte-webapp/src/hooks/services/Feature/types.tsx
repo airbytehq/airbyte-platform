@@ -12,6 +12,7 @@ export enum FeatureItem {
   AllowOAuthConnector = "ALLOW_OAUTH_CONNECTOR",
   AllowChangeDataGeographies = "ALLOW_CHANGE_DATA_GEOGRAPHIES",
   AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
+  ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   FreeConnectorProgram = "FREE_CONNECTOR_PROGRAM",
 }
 

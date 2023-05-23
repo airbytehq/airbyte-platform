@@ -10,7 +10,7 @@ required:
   - slug
   - initialSetupComplete
   - defaultGeography
-additionalProperties: false
+additionalProperties: true
 properties:
   workspaceId:
     type: string

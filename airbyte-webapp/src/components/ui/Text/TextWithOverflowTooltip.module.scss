@@ -1,0 +1,15 @@
+.overflowText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overflowTooltipContainer {
+  min-width: 0;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.tooltip {
+  word-break: break-word;
+}

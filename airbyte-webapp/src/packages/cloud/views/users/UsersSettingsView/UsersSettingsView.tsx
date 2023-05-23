@@ -6,9 +6,9 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
-import { NextTable } from "components/ui/NextTable";
+import { Table } from "components/ui/Table";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { User } from "packages/cloud/lib/domain/users";
@@ -109,7 +109,7 @@ export const UsersTable: React.FC = () => {
     [columnHelper, user?.userId, workspaceId]
   );
 
-  return <NextTable data={users ?? []} columns={columns} />;
+  return <Table data={users ?? []} columns={columns} />;
 };
 
 export const UsersSettingsView: React.VFC = () => {

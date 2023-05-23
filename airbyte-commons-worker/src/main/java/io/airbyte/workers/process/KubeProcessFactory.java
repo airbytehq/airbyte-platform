@@ -4,12 +4,15 @@
 
 package io.airbyte.workers.process;
 
+import autovalue.shaded.org.jetbrains.annotations.NotNull;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.net.InetAddress;
@@ -29,31 +32,28 @@ public class KubeProcessFactory implements ProcessFactory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(KubeProcessFactory.class);
 
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final String namespace;
   private final String serviceAccount;
   private final KubernetesClient fabricClient;
   private final String kubeHeartbeatUrl;
   private final String processRunnerHost;
-  private final boolean isOrchestrator;
 
   /**
    * Sets up a process factory with the default processRunnerHost.
    */
-  public KubeProcessFactory(final WorkerConfigs workerConfigs,
+  public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                             final String namespace,
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
-                            final String kubeHeartbeatUrl,
-                            final boolean isOrchestrator) {
+                            final String kubeHeartbeatUrl) {
     this(
-        workerConfigs,
+        workerConfigsProvider,
         namespace,
         serviceAccount,
         fabricClient,
         kubeHeartbeatUrl,
-        Exceptions.toRuntime(() -> InetAddress.getLocalHost().getHostAddress()),
-        isOrchestrator);
+        Exceptions.toRuntime(() -> InetAddress.getLocalHost().getHostAddress()));
   }
 
   /**
@@ -65,27 +65,25 @@ public class KubeProcessFactory implements ProcessFactory {
    *        itself
    * @param processRunnerHost is the local host or ip of the machine running the process factory.
    *        injectable for testing.
-   * @param isOrchestrator determines if this should run as airbyte-admin
    */
   @VisibleForTesting
-  public KubeProcessFactory(final WorkerConfigs workerConfigs,
+  public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                             final String namespace,
                             final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl,
-                            final String processRunnerHost,
-                            final boolean isOrchestrator) {
-    this.workerConfigs = workerConfigs;
+                            final String processRunnerHost) {
+    this.workerConfigsProvider = workerConfigsProvider;
     this.namespace = namespace;
     this.serviceAccount = serviceAccount;
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
     this.processRunnerHost = processRunnerHost;
-    this.isOrchestrator = isOrchestrator;
   }
 
   @Override
   public Process create(
+                        final ResourceType resourceType,
                         final String jobType,
                         final String jobId,
                         final int attempt,
@@ -100,6 +98,7 @@ public class KubeProcessFactory implements ProcessFactory {
                         final Map<String, String> customLabels,
                         final Map<String, String> jobMetadata,
                         final Map<Integer, Integer> internalToExternalPorts,
+                        @NotNull final Map<String, String> additionalEnvironmentVariables,
                         final String... args)
       throws WorkerException {
     try {
@@ -116,6 +115,8 @@ public class KubeProcessFactory implements ProcessFactory {
 
       final var allLabels = getLabels(jobId, attempt, customLabels);
 
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
+
       // If using isolated pool, check workerConfigs has isolated pool set. If not set, fall back to use
       // regular node pool.
       final var nodeSelectors =
@@ -123,7 +124,6 @@ public class KubeProcessFactory implements ProcessFactory {
               : workerConfigs.getworkerKubeNodeSelectors();
 
       return new KubePodProcess(
-          isOrchestrator,
           processRunnerHost,
           fabricClient,
           podName,
@@ -147,7 +147,7 @@ public class KubeProcessFactory implements ProcessFactory {
           workerConfigs.getJobSocatImage(),
           workerConfigs.getJobBusyboxImage(),
           workerConfigs.getJobCurlImage(),
-          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap()),
+          MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap(), additionalEnvironmentVariables),
           internalToExternalPorts,
           args).toProcess();
     } catch (final Exception e) {

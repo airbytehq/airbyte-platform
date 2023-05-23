@@ -1,11 +1,42 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id "java-library"
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.kotlin.jvm)
 }
 
 dependencies {
+    kapt(libs.bundles.micronaut.annotation.processor)
+
+    implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-json-validation')
+    implementation libs.okhttp
+
+    testImplementation(libs.mockk)
+    testImplementation libs.mockito.inline
 }
 
 Task publishArtifactsTask = getPublishArtifactsTask("$rootProject.ext.version", project)
+
+tasks.getByName('compileKotlin') {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+tasks.getByName('compileTestKotlin') {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.internal.KaptGenerateStubsTask).configureEach {
+    kotlinOptions.jvmTarget = '17'
+}
+
+kapt {
+    keepJavacAnnotationProcessors = true
+}

@@ -11,7 +11,7 @@ import { InfoTooltip } from "components/ui/Tooltip";
 import { StreamReadInferredSchema, StreamReadSlicesItemPagesItem } from "core/request/ConnectorBuilderClient";
 import {
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PageDisplay.module.scss";
@@ -35,7 +35,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const { formatMessage } = useIntl();
 
   const { editorView } = useConnectorBuilderFormState();
-  const { testStreamIndex, streamRead } = useConnectorBuilderTestState();
+  const { testStreamIndex, streamRead } = useConnectorBuilderTestRead();
   const [field] = useField(`streams[${testStreamIndex}].schema`);
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
@@ -104,14 +104,14 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           {tabs.map((tab) => (
             <Tab className={styles.tab} key={tab.key}>
               {({ selected }) => (
-                <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} size="xs">
+                <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} size="xs" align="center">
                   {tab.title}
                 </Text>
               )}
             </Tab>
           ))}
           {inferredSchema && (
-            <Tab className={styles.tab}>
+            <Tab className={styles.tab} data-testid="tag-tab-detected-schema">
               {({ selected }) => (
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">

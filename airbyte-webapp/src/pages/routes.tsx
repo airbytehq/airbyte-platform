@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
-import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "hooks/services/Analytics";
+import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
@@ -22,7 +22,7 @@ const CreateDestinationPage = React.lazy(() => import("./destination/CreateDesti
 const DestinationItemPage = React.lazy(() => import("./destination/DestinationItemPage"));
 const DestinationOverviewPage = React.lazy(() => import("./destination/DestinationOverviewPage"));
 const DestinationSettingsPage = React.lazy(() => import("./destination/DestinationSettingsPage"));
-const PreferencesPage = React.lazy(() => import("./PreferencesPage"));
+const SetupPage = React.lazy(() => import("./SetupPage"));
 const SettingsPage = React.lazy(() => import("./SettingsPage"));
 
 const AllSourcesPage = React.lazy(() => import("./source/AllSourcesPage"));
@@ -77,8 +77,8 @@ const MainViewRoutes: React.FC = () => {
 
 const PreferencesRoutes = () => (
   <Routes>
-    <Route path={RoutePaths.Preferences} element={<PreferencesPage />} />
-    <Route path="*" element={<Navigate to={RoutePaths.Preferences} />} />
+    <Route path={RoutePaths.Setup} element={<SetupPage />} />
+    <Route path="*" element={<Navigate to={RoutePaths.Setup} />} />
   </Routes>
 );
 

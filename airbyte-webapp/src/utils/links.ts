@@ -6,12 +6,12 @@ const BASE_DOCS_LINK = "https://docs.airbyte.com";
 
 export const links = {
   dbtCommandsReference: "https://docs.getdbt.com/reference/dbt-commands",
+  dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
-  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting/on-deploying`,
+  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting`,
   termsLink: "https://airbyte.com/terms",
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
-  gitLink: `${BASE_DOCS_LINK}/quickstart/deploy-airbyte`,
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
   productReleaseStages: `${BASE_DOCS_LINK}/project-overview/product-release-stages`,
   slackLink: "https://slack.airbyte.com",
@@ -37,7 +37,18 @@ export const links = {
   connectionDataResidency:
     "https://docs.airbyte.com/cloud/managing-airbyte-cloud/#choose-the-data-residency-for-a-connection",
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
-  newTableFeedbackUrl: "https://forms.gle/5wDQHf6hL5sCvLgK7",
+  upcomingFeaturesPage: "https://embedded.airbyte.com/upcoming-releases",
+  stripeCustomerPortal: "https://billing.stripe.com/p/login/5kAbJs2Gy83H2YwdQQ",
+  iso8601Duration: "https://en.wikipedia.org/wiki/ISO_8601#Durations",
+  ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
+  connectorBuilderAuthentication: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/authentication`,
+  connectorBuilderPagination: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/pagination`,
+  connectorBuilderIncrementalSync: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/incremental-sync`,
+  connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,
+  connectorBuilderPartitioning: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning`,
+  connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
+  interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
+  creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
 } as const;
 
 export type OutboundLinks = typeof links;

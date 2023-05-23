@@ -5,13 +5,12 @@ import { DataGeographyDropdown } from "components/common/DataGeographyDropdown";
 import { ControlLabels } from "components/LabeledControl";
 import { Card } from "components/ui/Card";
 import { Spinner } from "components/ui/Spinner";
-import { ToastType } from "components/ui/Toast";
 import { TooltipLearnMoreLink } from "components/ui/Tooltip";
 
+import { useAvailableGeographies } from "core/api";
 import { Geography } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useAvailableGeographies } from "packages/cloud/services/geographies/GeographiesService";
 import { links } from "utils/links";
 
 import styles from "./UpdateConnectionDataResidency.module.scss";
@@ -35,7 +34,7 @@ export const UpdateConnectionDataResidency: React.FC = () => {
       registerNotification({
         id: "connection.geographyUpdateError",
         text: formatMessage({ id: "connection.geographyUpdateError" }),
-        type: ToastType.ERROR,
+        type: "error",
       });
     }
     setSelectedValue(undefined);
@@ -57,17 +56,17 @@ export const UpdateConnectionDataResidency: React.FC = () => {
                       {node}
                     </a>
                   ),
-                  docLink: () => <TooltipLearnMoreLink url={links.connectionDataResidency} />,
+                  docLink: <TooltipLearnMoreLink url={links.connectionDataResidency} />,
                 }}
               />
             }
           />
         </div>
         <div className={styles.dropdownWrapper}>
-          <div className={styles.spinner}>{connectionUpdating && <Spinner small />}</div>
+          <div className={styles.spinner}>{connectionUpdating && <Spinner size="sm" />}</div>
           <div className={styles.dropdown}>
             <DataGeographyDropdown
-              isDisabled={connectionUpdating}
+              isDisabled={connectionUpdating || connection.status === "deprecated"}
               geographies={geographies}
               value={selectedValue || connection.geography || geographies[0]}
               onChange={handleSubmit}

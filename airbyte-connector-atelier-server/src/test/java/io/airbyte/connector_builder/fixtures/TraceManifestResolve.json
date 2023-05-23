@@ -1,0 +1,13 @@
+{
+  "type": "TRACE",
+  "trace": {
+    "type": "ERROR",
+    "emitted_at": 1679054961405.2788,
+    "error": {
+      "message": "Error handling request.",
+      "internal_message": "1 validation error for ConfiguredAirbyteCatalog\nstreams\n  field required (type=value_error.missing)",
+      "stack_trace": "Traceback (most recent call last):\n  File \"/Users/catherine/airbyte_repos/airbyte/airbyte-cdk/python/connector_builder/main.py\", line 60, in <module>\n    print(handle_request(sys.argv[1:]))\n  File \"/Users/catherine/airbyte_repos/airbyte/airbyte-cdk/python/connector_builder/main.py\", line 50, in handle_request\n    config, catalog = get_config_and_catalog_from_args(args)\n  File \"/Users/catherine/airbyte_repos/airbyte/airbyte-cdk/python/connector_builder/main.py\", line 29, in get_config_and_catalog_from_args\n    catalog = ConfiguredAirbyteCatalog.parse_obj(BaseConnector.read_config(catalog_path))\n  File \"pydantic/main.py\", line 521, in pydantic.main.BaseModel.parse_obj\n  File \"pydantic/main.py\", line 341, in pydantic.main.BaseModel.__init__\npydantic.error_wrappers.ValidationError: 1 validation error for ConfiguredAirbyteCatalog\nstreams\n  field required (type=value_error.missing)\n",
+      "failure_type": "system_error"
+    }
+  }
+}

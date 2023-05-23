@@ -17,13 +17,12 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.db.check.DatabaseCheckException;
 import io.airbyte.db.check.DatabaseMigrationCheck;
 import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck;
-import io.airbyte.metrics.lib.MetricClientFactory;
-import io.airbyte.metrics.lib.MetricEmittingApps;
 import io.airbyte.workers.process.KubePortManagerSingleton;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionNotificationWorkflowImpl;
+import io.airbyte.workers.temporal.scheduling.NotificationWorkflowImpl;
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl;
 import io.airbyte.workers.temporal.support.TemporalProxyHelper;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
@@ -82,6 +81,10 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   @Inject
   @Named("notifyActivities")
   private Optional<List<Object>> notifyActivities;
+
+  @Inject
+  @Named("notificationActivities")
+  private Optional<List<Object>> notificationActivities;
 
   @Inject
   @Named(TaskExecutors.IO)
@@ -187,9 +190,6 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
       throws ExecutionException, InterruptedException, TimeoutException {
     log.info("Initializing common worker dependencies.");
 
-    // Initialize the metric client
-    MetricClientFactory.initialize(MetricEmittingApps.WORKER);
-
     // Configure logging client
     LogClientSingleton.getInstance().setWorkspaceMdc(workerEnvironment, logConfigs.orElseThrow(),
         LogClientSingleton.getInstance().getSchedulerLogsRoot(Path.of(workspaceRoot)));
@@ -240,6 +240,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
     if (shouldRunNotifyWorkflows) {
       registerConnectionNotification(workerFactory, maxWorkersConfiguration);
+      registerNotification(workerFactory, maxWorkersConfiguration);
     }
   }
 
@@ -249,6 +250,15 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
         WorkflowImplementationOptions.newBuilder().setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
     notifyWorker.registerWorkflowImplementationTypes(options, temporalProxyHelper.proxyWorkflowClass(ConnectionNotificationWorkflowImpl.class));
     notifyWorker.registerActivitiesImplementations(notifyActivities.orElseThrow().toArray(new Object[] {}));
+  }
+
+  private void registerNotification(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfig) {
+    log.info("registering new notification workflow");
+    final Worker notificationWorker = factory.newWorker(TemporalJobType.NOTIFY.name(), getWorkerOptions(maxWorkersConfig.getMaxNotifyWorkers()));
+    final WorkflowImplementationOptions options =
+        WorkflowImplementationOptions.newBuilder().setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
+    notificationWorker.registerWorkflowImplementationTypes(options, temporalProxyHelper.proxyWorkflowClass(NotificationWorkflowImpl.class));
+    notificationWorker.registerActivitiesImplementations(notificationActivities.orElseThrow().toArray(new Object[] {}));
   }
 
   private void registerCheckConnection(final WorkerFactory factory,

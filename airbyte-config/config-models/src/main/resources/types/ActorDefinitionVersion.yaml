@@ -1,0 +1,25 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte-platform/blob/main/airbyte-config/models/src/main/resources/types/ActorDefinitionVersion.yaml
+title: ActorDefinitionVersion
+description: describes an actor definition version
+type: object
+required:
+  - dockerRepository
+  - dockerImageTag
+  - spec
+additionalProperties: true
+properties:
+  versionId:
+    type: string
+    format: uuid
+  actorDefinitionId:
+    type: string
+    format: uuid
+  dockerRepository:
+    type: string
+  dockerImageTag:
+    type: string
+  spec:
+    type: object
+    existingJavaType: io.airbyte.protocol.models.ConnectorSpecification

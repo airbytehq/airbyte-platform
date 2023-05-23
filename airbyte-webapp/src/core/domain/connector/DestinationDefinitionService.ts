@@ -17,7 +17,11 @@ export class DestinationDefinitionService extends AirbyteRequestService {
   }
 
   public list(workspaceId: string) {
-    return listDestinationDefinitionsForWorkspace({ workspaceId }, this.requestOptions);
+    return listDestinationDefinitionsForWorkspace({ workspaceId }, this.requestOptions).then(
+      ({ destinationDefinitions }) => ({
+        destinationDefinitions: destinationDefinitions.sort((a, b) => a.name.localeCompare(b.name)),
+      })
+    );
   }
 
   public listLatest() {

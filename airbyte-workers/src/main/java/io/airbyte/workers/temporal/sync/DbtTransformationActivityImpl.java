@@ -11,7 +11,6 @@ import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 
 import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
-import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.CancellationHandler;
@@ -24,11 +23,15 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.general.DbtTransformationRunner;
 import io.airbyte.workers.general.DbtTransformationWorker;
 import io.airbyte.workers.normalization.DefaultNormalizationRunner;
@@ -53,7 +56,7 @@ import java.util.function.Supplier;
 public class DbtTransformationActivityImpl implements DbtTransformationActivity {
 
   private final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig;
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final ProcessFactory processFactory;
   private final SecretsHydrator secretsHydrator;
   private final Path workspaceRoot;
@@ -66,8 +69,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final AirbyteApiClient airbyteApiClient;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
-                                       @Named("defaultWorkerConfigs") final WorkerConfigs workerConfigs,
-                                       @Named("defaultProcessFactory") final ProcessFactory processFactory,
+                                       final WorkerConfigsProvider workerConfigsProvider,
+                                       final ProcessFactory processFactory,
                                        final SecretsHydrator secretsHydrator,
                                        @Named("workspaceRoot") final Path workspaceRoot,
                                        final WorkerEnvironment workerEnvironment,
@@ -78,7 +81,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        final TemporalUtils temporalUtils,
                                        final AirbyteApiClient airbyteApiClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
@@ -97,6 +100,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                   final IntegrationLauncherConfig destinationLauncherConfig,
                   final ResourceRequirements resourceRequirements,
                   final OperatorDbtInput input) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_DBT_TRANSFORMATION, 1);
+
     ApmTraceUtils.addTagsToTrace(
         Map.of(ATTEMPT_NUMBER_KEY, jobRunConfig.getAttemptId(), JOB_ID_KEY, jobRunConfig.getJobId(), DESTINATION_DOCKER_IMAGE_KEY,
             destinationLauncherConfig.getDockerImage()));
@@ -114,9 +119,10 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
           final CheckedSupplier<Worker<OperatorDbtInput, Void>, Exception> workerFactory;
 
           if (containerOrchestratorConfig.isPresent()) {
+            final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
             workerFactory =
                 getContainerLauncherWorkerFactory(workerConfigs, destinationLauncherConfig, jobRunConfig,
-                    () -> context);
+                    () -> context, input.getConnectionId());
           } else {
             workerFactory = getLegacyWorkerFactory(destinationLauncherConfig, jobRunConfig, resourceRequirements);
           }
@@ -156,14 +162,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                                                                                        final WorkerConfigs workerConfigs,
                                                                                                        final IntegrationLauncherConfig destinationLauncherConfig,
                                                                                                        final JobRunConfig jobRunConfig,
-                                                                                                       final Supplier<ActivityExecutionContext> activityContext) {
-    final JobIdRequestBody id = new JobIdRequestBody();
-    id.setId(Long.valueOf(jobRunConfig.getJobId()));
-
-    final var jobScope = AirbyteApiClient.retryWithJitter(
-        () -> airbyteApiClient.getJobsApi().getJobInfo(id).getJob().getConfigId(),
-        "get job scope");
-    final var connectionId = UUID.fromString(jobScope);
+                                                                                                       final Supplier<ActivityExecutionContext> activityContext,
+                                                                                                       final UUID connectionId) {
 
     return () -> new DbtLauncherWorker(
         connectionId,

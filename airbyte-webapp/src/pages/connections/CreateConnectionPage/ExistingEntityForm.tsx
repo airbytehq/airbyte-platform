@@ -8,7 +8,6 @@ import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { DropDown } from "components/ui/DropDown";
-import { Text } from "components/ui/Text";
 
 import { useDestinationList } from "hooks/services/useDestinationHook";
 import { useSourceList } from "hooks/services/useSourceHook";
@@ -66,52 +65,47 @@ const ExistingEntityForm: React.FC<IProps> = ({ type, onSubmit }) => {
 
   const initialValues = { entityId: "" };
   return (
-    <>
-      <Card title={<FormattedMessage id={`connectionForm.${type}Existing`} />}>
-        <Formik
-          initialValues={initialValues}
-          validationSchema={existingEntityValidationSchema}
-          onSubmit={async (values: { entityId: string }, { resetForm }) => {
-            onSubmit(values.entityId);
-            resetForm({});
-          }}
-        >
-          {({ isSubmitting, setFieldValue }) => (
-            <Form className={styles.form}>
-              <Field name="entityId">
-                {({ field }: FieldProps<string>) => (
-                  <ControlLabels
-                    label={formatMessage({
-                      id: `connectionForm.${type}Title`,
-                    })}
-                  >
-                    <DropDown
-                      {...field}
-                      options={dropDownData}
-                      isSearchable
-                      onChange={(item: { value: string }) => {
-                        setFieldValue(field.name, item.value);
-                      }}
-                    />
-                  </ControlLabels>
-                )}
-              </Field>
-              <Button
-                className={styles.submitButton}
-                disabled={isSubmitting}
-                type="submit"
-                data-testid={`use-existing-${type}-button`}
-              >
-                <FormattedMessage id={`connectionForm.${type}Use`} />
-              </Button>
-            </Form>
-          )}
-        </Formik>
-      </Card>
-      <Text centered size="lg">
-        <FormattedMessage id="onboarding.or" />
-      </Text>
-    </>
+    <Card title={<FormattedMessage id={`connectionForm.${type}Existing`} />}>
+      <Formik
+        initialValues={initialValues}
+        validationSchema={existingEntityValidationSchema}
+        onSubmit={async (values: { entityId: string }, { resetForm }) => {
+          onSubmit(values.entityId);
+          resetForm({});
+        }}
+      >
+        {({ isSubmitting, setFieldValue }) => (
+          <Form className={styles.form}>
+            <Field name="entityId">
+              {({ field }: FieldProps<string>) => (
+                <ControlLabels
+                  label={formatMessage({
+                    id: `connectionForm.${type}Title`,
+                  })}
+                >
+                  <DropDown
+                    {...field}
+                    options={dropDownData}
+                    isSearchable
+                    onChange={(item: { value: string }) => {
+                      setFieldValue(field.name, item.value);
+                    }}
+                  />
+                </ControlLabels>
+              )}
+            </Field>
+            <Button
+              className={styles.submitButton}
+              disabled={isSubmitting}
+              type="submit"
+              data-testid={`use-existing-${type}-button`}
+            >
+              <FormattedMessage id={`connectionForm.${type}Use`} />
+            </Button>
+          </Form>
+        )}
+      </Formik>
+    </Card>
   );
 };
 

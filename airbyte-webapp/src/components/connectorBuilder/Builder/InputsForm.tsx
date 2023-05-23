@@ -1,26 +1,40 @@
-import { Form, Formik, useField, useFormikContext } from "formik";
-import { useMemo } from "react";
+import { Form, Formik, useFormikContext } from "formik";
+import { useContext, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/analytics";
 import { FormikPatch } from "core/form/FormikPatch";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
+import { ConnectorBuilderMainFormikContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
-import { BuilderFormInput, BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormInput } from "../types";
+import { useInferredInputs } from "../useInferredInputs";
 
-const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
+const supportedTypes = [
+  "string",
+  "integer",
+  "number",
+  "array",
+  "boolean",
+  "enum",
+  "unknown",
+  "date",
+  "date-time",
+] as const;
 
 export interface InputInEditing {
   key: string;
+  // the old key of the input if it was edited
+  previousKey?: string;
   definition: AirbyteJSONSchema;
   required: boolean;
   isNew?: boolean;
@@ -37,13 +51,16 @@ export function newInputInEditing(): InputInEditing {
   return {
     key: "",
     definition: {},
-    required: false,
+    required: true,
     isNew: true,
     showDefaultValueField: false,
     type: "string",
     isInferredInputOverride: false,
   };
 }
+
+const DATE_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}$";
+const DATE_TIME_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$";
 
 function inputInEditingToFormInput({
   type,
@@ -55,10 +72,17 @@ function inputInEditingToFormInput({
     ...values,
     definition: {
       ...values.definition,
-      type: type === "enum" ? "string" : type === "unknown" ? values.definition.type : type,
+      type:
+        type === "enum" || type === "date" || type === "date-time"
+          ? "string"
+          : type === "unknown"
+          ? values.definition.type
+          : type,
       // only respect the enum values if the user explicitly selected enum as type
       enum: type === "enum" && values.definition.enum?.length ? values.definition.enum : undefined,
       default: showDefaultValueField ? values.definition.default : undefined,
+      format: type === "date" ? "date" : type === "date-time" ? "date-time" : values.definition.format,
+      pattern: type === "date" ? DATE_PATTERN : type === "date-time" ? DATE_TIME_PATTERN : values.definition.pattern,
     },
   };
 }
@@ -71,15 +95,14 @@ export const InputForm = ({
   onClose: (newInput?: BuilderFormInput) => void;
 }) => {
   const analyticsService = useAnalyticsService();
-  const { values, setFieldValue } = useFormikContext<BuilderFormValues>();
-  const [inputs, , helpers] = useField<BuilderFormInput[]>("inputs");
-  const inferredInputs = useMemo(
-    () => getInferredInputs(values.global, values.inferredInputOverrides),
-    [values.global, values.inferredInputOverrides]
-  );
+  const { values, setFieldValue } = useContext(ConnectorBuilderMainFormikContext) || {};
+  if (!values || !setFieldValue) {
+    throw new Error("formik context not available");
+  }
+  const inferredInputs = useInferredInputs();
   const usedKeys = useMemo(
-    () => [...inputs.value, ...inferredInputs].map((input) => input.key),
-    [inputs.value, inferredInputs]
+    () => [...values.inputs, ...inferredInputs].map((input) => input.key),
+    [values.inputs, inferredInputs]
   );
   const inputInEditValidation = useMemo(
     () =>
@@ -102,33 +125,34 @@ export const InputForm = ({
     <Formik
       initialValues={inputInEditing}
       validationSchema={inputInEditValidation}
-      onSubmit={(values: InputInEditing) => {
-        if (values.isInferredInputOverride) {
-          setFieldValue(`inferredInputOverrides.${values.key}`, values.definition);
+      onSubmit={(inputInEditing: InputInEditing) => {
+        if (inputInEditing.isInferredInputOverride) {
+          setFieldValue(`inferredInputOverrides.${inputInEditing.key}`, inputInEditing.definition);
           onClose();
         } else {
-          const newInput = inputInEditingToFormInput(values);
-          helpers.setValue(
+          const newInput = inputInEditingToFormInput(inputInEditing);
+          setFieldValue(
+            "inputs",
             inputInEditing.isNew
-              ? [...inputs.value, newInput]
-              : inputs.value.map((input) => (input.key === inputInEditing.key ? newInput : input))
+              ? [...values.inputs, newInput]
+              : values.inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
           );
           onClose(newInput);
         }
         analyticsService.track(
           Namespace.CONNECTOR_BUILDER,
-          values.isNew ? Action.USER_INPUT_CREATE : Action.USER_INPUT_EDIT,
+          inputInEditing.isNew ? Action.USER_INPUT_CREATE : Action.USER_INPUT_EDIT,
           {
-            actionDescription: values.isNew ? "New user input created" : "Existing user input edited",
-            user_input_id: values.key,
-            user_input_name: values.definition.title,
-            hint: values.definition.description,
-            type: values.type,
-            allowed_enum_values: values.definition.enum,
-            secret_field: values.definition.airbyte_secret,
-            required_field: values.definition.required,
-            enable_default_value: values.showDefaultValueField,
-            default_value: values.definition.default,
+            actionDescription: inputInEditing.isNew ? "New user input created" : "Existing user input edited",
+            user_input_id: inputInEditing.key,
+            user_input_name: inputInEditing.definition.title,
+            hint: inputInEditing.definition.description,
+            type: inputInEditing.type,
+            allowed_enum_values: inputInEditing.definition.enum,
+            secret_field: inputInEditing.definition.airbyte_secret,
+            required_field: inputInEditing.definition.required,
+            enable_default_value: inputInEditing.showDefaultValueField,
+            default_value: inputInEditing.definition.default,
           }
         );
       }}
@@ -138,7 +162,10 @@ export const InputForm = ({
         <InputModal
           inputInEditing={inputInEditing}
           onDelete={() => {
-            helpers.setValue(inputs.value.filter((input) => input.key !== inputInEditing.key));
+            setFieldValue(
+              "inputs",
+              values.inputs.filter((input) => input.key !== inputInEditing.key)
+            );
             onClose();
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUT_DELETE, {
               actionDescription: "User input deleted",
@@ -220,9 +247,11 @@ const InputModal = ({
             <BuilderField
               path="type"
               type="enum"
-              options={["string", "number", "integer", "array", "boolean", "enum"]}
+              options={["string", "number", "integer", "array", "boolean", "enum", "date", "date-time"]}
               onChange={() => {
                 setFieldValue("definition.default", undefined);
+                setFieldValue("definition.pattern", undefined);
+                setFieldValue("definition.format", undefined);
               }}
               label={formatMessage({ id: "connectorBuilder.inputModal.type" })}
               tooltip={formatMessage({ id: "connectorBuilder.inputModal.typeTooltip" })}
@@ -268,13 +297,16 @@ const InputModal = ({
             )}
           </>
         ) : (
-          <Callout className={styles.calloutContainer}>
-            {isInferredInputOverride ? (
-              <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
-            ) : (
-              <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
-            )}
-          </Callout>
+          <Message
+            type="info"
+            text={
+              isInferredInputOverride ? (
+                <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
+              ) : (
+                <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
+              )
+            }
+          />
         )}
       </ModalBody>
       <ModalFooter>

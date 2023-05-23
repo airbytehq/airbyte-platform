@@ -34,7 +34,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
 
   componentDidCatch(error: Error) {
     const { trackError, workspaceId } = this.props;
-    trackError(error, { workspaceId });
+    trackError(error, { workspaceId, errorBoundary: this.constructor.name });
   }
 
   render() {
@@ -48,7 +48,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
             </span>
           }
         >
-          <Text centered className={styles.cardBodyContainer}>
+          <Text align="center" className={styles.cardBodyContainer}>
             {displayMessage ? (
               <FormattedMessage id="connection.dbtCloudJobs.dbtError" values={{ displayMessage }} />
             ) : (

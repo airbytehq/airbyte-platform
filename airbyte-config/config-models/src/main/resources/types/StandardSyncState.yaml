@@ -4,7 +4,7 @@
 title: StandardSyncState
 description: The current state of a connection (i.e. StandardSync).
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - connectionId
 properties:

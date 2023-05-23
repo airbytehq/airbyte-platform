@@ -1,7 +1,8 @@
+import classNames from "classnames";
 import React, { PropsWithChildren } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useShowEnrollmentModal } from "./EnrollmentModal";
@@ -17,30 +18,33 @@ export const EnrollLink: React.FC<PropsWithChildren<unknown>> = ({ children }) =
     </button>
   );
 };
-export const InlineEnrollmentCallout: React.FC = () => {
+
+interface InlineEnrollmentCalloutProps {
+  withMargin?: boolean;
+}
+
+export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = ({ withMargin }) => {
   const { userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
   const { showEnrollmentUi } = enrollmentStatusQuery.data || {};
 
   if (userDidEnroll || !showEnrollmentUi) {
     return null;
   }
-
   return (
-    <Callout variant="info" className={styles.container}>
-      <Text size="sm">
-        <FormattedMessage
-          id="freeConnectorProgram.youCanEnroll"
-          values={{
-            enrollLink: (content: React.ReactNode) => <EnrollLink>{content}</EnrollLink>,
-            freeText: (content: React.ReactNode) => (
-              <Text as="span" size="sm" bold className={styles.freeText}>
-                {content}
-              </Text>
-            ),
-          }}
-        />
-      </Text>
-    </Callout>
+    <Message
+      type="info"
+      text={
+        <Text size="sm">
+          <FormattedMessage
+            id="freeConnectorProgram.joinTheFreeConnectorProgram"
+            values={{
+              enrollLink: (content: React.ReactNode) => <EnrollLink>{content}</EnrollLink>,
+            }}
+          />
+        </Text>
+      }
+      className={classNames(styles.container, { [styles.withMargin]: withMargin })}
+    />
   );
 };
 

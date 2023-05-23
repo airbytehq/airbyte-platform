@@ -10,12 +10,21 @@ spec:
   selector:
     matchLabels:
       {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
   strategy:
     type: Recreate # Needed due to volume claims
   template:
     metadata:
       labels:
         {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.podLabels }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
       {{- if .Values.podAnnotations }}
       annotations:
         {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
@@ -42,8 +51,8 @@ spec:
       {{- toYaml .Values.extraInitContainers | nindent 6 }}
       {{- end }}
       containers:
-      - name: airbyte-server-container
-        image: {{ printf "%s:%s" .Values.image.repository (include "connectorBuilderServer.imageTag" .) }}
+      - name: airbyte-connector-builder-server
+        image: {{ printf "%s:%s" .Values.image.repository (include "connector-builder-server.imageTag" .) }}
         imagePullPolicy: "{{ .Values.image.pullPolicy }}"
         env:
         {{- if eq .Values.global.deploymentMode "oss"  }}
@@ -78,29 +87,28 @@ spec:
         {{- toYaml .Values.extraEnv | nindent 8 }}
         {{- end }}
 
-        # TODO: add a health check endpoint to connector builder server
-        # {{- if .Values.livenessProbe.enabled }}
-        # livenessProbe:
-        #   httpGet:
-        #     path: /api/v1/health
-        #     port: http
-        #   initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
-        #   periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
-        #   timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
-        #   successThreshold: {{ .Values.livenessProbe.successThreshold }}
-        #   failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
-        # {{- end }}
-        # {{- if .Values.readinessProbe.enabled }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: /api/v1/health
-        #     port: http
-        #   initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-        #   periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-        #   timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-        #   successThreshold: {{ .Values.readinessProbe.successThreshold }}
-        #   failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
-        # {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: http
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
 
         ports:
         - name: http

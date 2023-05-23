@@ -1,6 +1,6 @@
 # worker
 
-![Version: 0.39.36](https://img.shields.io/badge/Version-0.39.36-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.4](https://img.shields.io/badge/AppVersion-0.40.4-informational?style=flat-square)
+![Version: 0.44.7](https://img.shields.io/badge/Version-0.44.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.2](https://img.shields.io/badge/AppVersion-0.44.2-informational?style=flat-square)
 
 Helm chart to deploy airbyte-worker
 
@@ -21,6 +21,8 @@ Helm chart to deploy airbyte-worker
 | extraContainers | list | `[]` |  |
 | extraEnv | list | `[]` |  |
 | extraInitContainers | list | `[]` |  |
+| extraLabels | object | `{}` |  |
+| extraSelectorLabels | object | `{}` |  |
 | extraVolumeMounts | list | `[]` |  |
 | extraVolumes | list | `[]` |  |
 | global.credVolumeOverride | string | `""` |  |
@@ -29,7 +31,12 @@ Helm chart to deploy airbyte-worker
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
 | global.extraContainers | list | `[]` |  |
+| global.extraLabels | object | `{}` |  |
+| global.extraSelectorLabels | object | `{}` |  |
 | global.jobs.kube.annotations | object | `{}` |  |
+| global.jobs.kube.images.busybox | string | `""` |  |
+| global.jobs.kube.images.curl | string | `""` |  |
+| global.jobs.kube.images.socat | string | `""` |  |
 | global.jobs.kube.main_container_image_pull_secret | string | `""` |  |
 | global.jobs.kube.nodeSelector | object | `{}` |  |
 | global.jobs.kube.tolerations | list | `[]` |  |
@@ -64,6 +71,7 @@ Helm chart to deploy airbyte-worker
 | log.level | string | `"INFO"` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
 | readinessProbe.enabled | bool | `true` |  |
 | readinessProbe.failureThreshold | int | `3` |  |
 | readinessProbe.initialDelaySeconds | int | `10` |  |

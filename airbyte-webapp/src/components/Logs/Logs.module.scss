@@ -1,0 +1,33 @@
+@use "../../scss/colors";
+
+.container {
+  font-size: 12px;
+  line-height: 18px;
+  color: colors.$dark-blue;
+  word-wrap: break-word;
+}
+
+.empty {
+  padding: 11px 42px 20px;
+}
+
+.logLine {
+  font-size: 10px;
+  color: colors.$dark-blue;
+
+  &:hover {
+    // set important to override default styles in all situations
+    background: colors.$grey-200 !important;
+  }
+
+  & > a {
+    margin-left: 5px;
+    margin-right: 10px;
+    width: 45px;
+  }
+}
+
+.highlightLogLine {
+  // set important to override default styles in all situations
+  background: colors.$grey-300 !important;
+}

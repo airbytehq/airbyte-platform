@@ -8,7 +8,7 @@ required:
   - oauthParameterId
   - destinationDefinitionId
   - configuration
-additionalProperties: false
+additionalProperties: true
 properties:
   oauthParameterId:
     type: string

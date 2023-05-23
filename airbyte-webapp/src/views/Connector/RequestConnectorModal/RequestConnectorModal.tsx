@@ -1,5 +1,5 @@
 import { Field, FieldProps, Form, Formik, FormikProps } from "formik";
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
@@ -9,6 +9,7 @@ import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
+import { useNotificationService } from "hooks/services/Notification";
 import useRequestConnector from "hooks/services/useRequestConnector";
 
 import styles from "./RequestConnectorModal.module.scss";
@@ -34,8 +35,9 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
   searchedConnectorName,
   workspaceEmail,
 }) => {
-  const [hasFeedback, setHasFeedback] = useState(false);
+  const { formatMessage } = useIntl();
   const formRef = useRef<FormikProps<Values>>(null);
+  const notificationService = useNotificationService();
   const { requestConnector } = useRequestConnector();
 
   // since we heed to handle onSubmit outside the <Formik> context
@@ -47,15 +49,14 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
 
   const onSubmit = (values: Values) => {
     requestConnector(values);
-    setHasFeedback(true);
-
-    setTimeout(() => {
-      setHasFeedback(false);
-      onClose();
-    }, 2000);
+    notificationService.registerNotification({
+      id: "connector.requestConnector.success",
+      text: formatMessage({ id: "connector.request.success" }),
+      type: "success",
+    });
+    onClose();
   };
 
-  const { formatMessage } = useIntl();
   const dropdownData = [
     { value: "source", label: <FormattedMessage id="connector.source" /> },
     {
@@ -160,15 +161,11 @@ const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
       </ModalBody>
 
       <ModalFooter>
-        <Button type="button" variant="secondary" onClick={onClose} disabled={hasFeedback}>
+        <Button type="button" variant="secondary" onClick={onClose}>
           <FormattedMessage id="form.cancel" />
         </Button>
-        <Button
-          className={styles.requestButton}
-          // type="submit"
-          onClick={handleSubmit}
-        >
-          {hasFeedback ? <FormattedMessage id="connector.requested" /> : <FormattedMessage id="connector.request" />}
+        <Button onClick={handleSubmit}>
+          <FormattedMessage id="connector.request" />
         </Button>
       </ModalFooter>
     </>

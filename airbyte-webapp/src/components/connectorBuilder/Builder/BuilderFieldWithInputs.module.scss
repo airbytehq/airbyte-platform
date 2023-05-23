@@ -16,18 +16,10 @@
 }
 
 .selectedOption {
-  margin-top: variables.$spacing-lg;
   background: none;
-  font-size: 12px;
-  color: colors.$blue-500;
 
   &:hover {
-    color: colors.$blue-900;
-  }
-
-  & > span {
-    padding-top: 0;
-    padding-bottom: 0;
+    background-color: colors.$grey-50;
   }
 }
 
@@ -60,4 +52,21 @@
 
 .inputWithHelper {
   padding-right: 55px;
+}
+
+.newInput {
+  background-color: transparent;
+  border: none;
+  color: colors.$blue-500;
+  padding: variables.$spacing-md;
+  cursor: pointer;
+  width: 100%;
+
+  &:hover {
+    color: colors.$blue-900;
+  }
+
+  & > div {
+    color: inherit;
+  }
 }

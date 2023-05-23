@@ -1,115 +1,132 @@
+import { ColumnDef, flexRender, useReactTable, getCoreRowModel, VisibilityState, Row } from "@tanstack/react-table";
 import classNames from "classnames";
-import React, { memo, useMemo } from "react";
-import { Cell, Column, ColumnInstance, SortingRule, useSortBy, useTable } from "react-table";
+import { Fragment, PropsWithChildren } from "react";
 
 import styles from "./Table.module.scss";
+import { ColumnMeta } from "./types";
 
-interface HeaderProps extends ColumnInstance<Record<string, unknown>> {
-  headerHighlighted?: boolean;
-  collapse?: boolean;
-  customWidth?: number;
-  responsive?: boolean;
-}
+// We can leave type any here since useReactTable options.columns itself is waiting for Array<ColumnDef<T, any>>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TableColumns<T> = Array<ColumnDef<T, any>>;
 
-interface CellProps extends Cell {
-  column: HeaderProps;
-}
-
-interface TableProps {
-  light?: boolean;
-  columns: Array<HeaderProps | Column<Record<string, unknown>>>;
-  erroredRows?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onClickRow?: (data: any) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  sortBy?: Array<SortingRule<any>>;
+export interface TableProps<T> {
+  className?: string;
+  columns: TableColumns<T>;
+  /**
+   * If the table data is sorted outside this component you can pass the id of the column by which its sorted
+   * to apply the correct sorting style to that column.
+   */
+  sortedByColumn?: string;
+  data: T[];
+  variant?: "default" | "light" | "white";
+  onClickRow?: (data: T) => void;
+  getRowCanExpand?: (data: Row<T>) => boolean;
+  getIsRowExpanded?: (data: Row<T>) => boolean;
+  expandedRow?: (props: { row: Row<T> }) => React.ReactElement;
   testId?: string;
+  columnVisibility?: VisibilityState;
+  getRowClassName?: (data: T) => string | undefined;
 }
 
-export const Table: React.FC<TableProps> = memo(({ columns, data, onClickRow, erroredRows, sortBy, light, testId }) => {
-  const [plugins, config] = useMemo(() => {
-    const pl = [];
-    const plConfig: Record<string, unknown> = {};
-
-    if (sortBy) {
-      pl.push(useSortBy);
-      plConfig.initialState = { sortBy };
-    }
-    return [pl, plConfig];
-  }, [sortBy]);
-  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = useTable(
-    {
-      ...config,
-      columns,
-      data,
+export const Table = <T,>({
+  testId,
+  className,
+  columns,
+  data,
+  variant = "default",
+  onClickRow,
+  getRowCanExpand,
+  getIsRowExpanded,
+  expandedRow,
+  columnVisibility,
+  sortedByColumn,
+  getRowClassName,
+}: PropsWithChildren<TableProps<T>>) => {
+  const table = useReactTable({
+    columns,
+    data,
+    initialState: {
+      columnVisibility,
     },
-    ...plugins
-  );
+    getCoreRowModel: getCoreRowModel<T>(),
+    getRowCanExpand,
+    getIsRowExpanded,
+  });
 
   return (
     <table
-      className={classNames(styles.tableView, { [styles.light]: light })}
-      {...getTableProps()}
+      className={classNames(styles.table, className, {
+        [styles["table--default"]]: variant === "default",
+      })}
       data-testid={testId}
     >
-      <thead>
-        {headerGroups.map((headerGroup, key) => (
-          <tr {...headerGroup.getHeaderGroupProps()} key={`table-header-${key}`}>
-            {headerGroup.headers.map((column: HeaderProps, columnKey) => (
-              <th
-                className={classNames(styles.tableHeader, {
-                  [styles.light]: light,
-                  [styles.highlighted]: column.headerHighlighted,
-                })}
-                {...column.getHeaderProps()}
-                style={{
-                  width: column.customWidth ? `${column.customWidth}%` : column.collapse ? "0.0000000001%" : "auto",
-                }}
-                key={`table-column-${key}-${columnKey}`}
-              >
-                {column.render("Header")}
-              </th>
-            ))}
+      <thead className={styles.thead}>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <tr key={`table-header-${headerGroup.id}}`}>
+            {headerGroup.headers.map((header) => {
+              const meta = header.column.columnDef.meta as ColumnMeta | undefined;
+              const isSorted = (sortedByColumn && sortedByColumn === header.column.id) || header.column.getIsSorted();
+              return (
+                <th
+                  colSpan={header.colSpan}
+                  className={classNames(
+                    styles.th,
+                    {
+                      [styles["th--default"]]: variant === "default",
+                      [styles["th--light"]]: variant === "light",
+                      [styles["th--white"]]: variant === "white",
+                      [styles["th--sorted"]]: isSorted,
+                    },
+                    meta?.thClassName
+                  )}
+                  key={`table-column-${headerGroup.id}-${header.id}`}
+                >
+                  {flexRender(header.column.columnDef.header, header.getContext())}
+                </th>
+              );
+            })}
           </tr>
         ))}
       </thead>
-      <tbody {...getTableBodyProps()}>
-        {rows.map((row) => {
-          prepareRow(row);
+      <tbody>
+        {table.getRowModel().rows.map((row) => {
           return (
-            <tr
-              className={classNames(styles.tableRow, {
-                [styles.hasClick]: !!onClickRow,
-                [styles.erroredRows]: erroredRows && !!row.original.error,
-              })}
-              {...row.getRowProps()}
-              onClick={() => onClickRow?.(row.original)}
-              key={`table-row-${row.id}`}
-            >
-              {row.cells.map((cell: CellProps, key) => {
-                return (
-                  <td
-                    className={classNames(styles.tableData, { [styles.responsive]: cell.column.responsive })}
-                    {...cell.getCellProps()}
-                    style={{
-                      width: cell.column.customWidth
-                        ? `${cell.column.customWidth}%`
-                        : cell.column.collapse
-                        ? "0.0000000001%"
-                        : "auto",
-                    }}
-                    key={`table-cell-${row.id}-${key}`}
-                  >
-                    {cell.render("Cell")}
-                  </td>
-                );
-              })}
-            </tr>
+            <Fragment key={`table-row-${row.id}`}>
+              <tr
+                className={classNames(
+                  styles.tr,
+                  {
+                    [styles["tr--clickable"]]: !!onClickRow,
+                  },
+                  getRowClassName?.(row.original)
+                )}
+                data-testid={`table-row-${row.id}`}
+                onClick={() => onClickRow?.(row.original)}
+              >
+                {row.getVisibleCells().map((cell) => {
+                  const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                  return (
+                    <td
+                      className={classNames(styles.td, meta?.tdClassName, {
+                        [styles["td--responsive"]]: meta?.responsive,
+                      })}
+                      key={`table-cell-${row.id}-${cell.id}`}
+                      data-testid={`table-cell-${row.id}-${cell.id}`}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
+              </tr>
+              {row.getIsExpanded() && expandedRow ? (
+                <tr>
+                  <td colSpan={row.getVisibleCells().length}>{expandedRow({ row })}</td>
+                </tr>
+              ) : null}
+            </Fragment>
           );
         })}
       </tbody>
     </table>
   );
-});
+};

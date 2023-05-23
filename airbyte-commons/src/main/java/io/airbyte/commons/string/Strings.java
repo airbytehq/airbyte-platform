@@ -38,14 +38,4 @@ public class Strings {
     return base + separator + RandomStringUtils.randomAlphabetic(suffixLength).toLowerCase();
   }
 
-  /**
-   * Trim a string. If it is null, return null.
-   *
-   * @param string to return
-   * @return returns trimmed string. if null, returns null.
-   */
-  public static String safeTrim(final String string) {
-    return string == null ? null : string.trim();
-  }
-
 }

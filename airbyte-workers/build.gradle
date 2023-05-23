@@ -11,32 +11,24 @@ configurations {
     airbyteProtocol
 }
 
+configurations.all {
+    resolutionStrategy {
+        // Ensure that the versions defined in deps.toml are used
+        // instead of versions from transitive dependencies
+        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3
+    }
+}
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
-
-    // Ensure that the versions defined in deps.toml are used
-    // instead of versions from transitive dependencies
-    implementation(libs.flyway.core) {
-        force = true
-    }
-    implementation(libs.jooq) {
-        force = true
-    }
-    implementation(libs.s3) {
-        // Force to avoid updated version brought in transitively from Micronaut 3.8+
-        // that is incompatible with our current Helm setup
-        force = true
-    }
-    implementation(libs.aws.java.sdk.s3) {
-        // Force to avoid updated version brought in transitively from Micronaut 3.8+
-        // that is incompatible with our current Helm setup
-        force = true
-    }
-
+    implementation libs.micronaut.cache.caffeine
+    implementation libs.flyway.core
+    implementation libs.jooq
+    implementation libs.s3
+    implementation libs.aws.java.sdk.s3
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.4.0'
     implementation 'com.auth0:java-jwt:3.19.2'
     implementation libs.kubernetes.client
@@ -58,12 +50,14 @@ dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
+    implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-worker')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:specs')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-db:jooq')
     implementation project(':airbyte-db:db-lib')
@@ -81,6 +75,8 @@ dependencies {
         exclude group: 'io.micronaut.sql'
     }
     implementation project(':airbyte-worker-models')
+
+    runtimeOnly libs.javax.databind
 
     testAnnotationProcessor platform(libs.micronaut.bom)
     testAnnotationProcessor libs.bundles.micronaut.test.annotation.processor
@@ -108,11 +104,9 @@ dependencies {
     }
 }
 
-mainClassName = 'io.airbyte.workers.Application'
-
 application {
     applicationName = project.name
-    mainClass = mainClassName
+    mainClass = 'io.airbyte.workers.Application'
     applicationDefaultJvmArgs = ['-XX:+ExitOnOutOfMemoryError', '-XX:MaxRAMPercentage=75.0']
 }
 

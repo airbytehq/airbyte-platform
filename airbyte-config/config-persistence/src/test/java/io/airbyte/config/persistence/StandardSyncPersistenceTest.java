@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -20,16 +21,18 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -79,7 +82,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     standardSyncPersistence = new StandardSyncPersistence(database);
 
     // only used for creating records that sync depends on.
-    configRepository = new ConfigRepository(database);
+    configRepository = new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
   }
 
   @Test
@@ -89,7 +92,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     standardSyncPersistence.writeStandardSync(sync);
 
     final StandardSync expectedSync = Jsons.clone(sync)
-        .withNotifySchemaChanges(true)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE);
     assertEquals(expectedSync, standardSyncPersistence.getStandardSync(sync.getConnectionId()));
   }
@@ -109,10 +111,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<StandardSync> expected = List.of(
         Jsons.clone(sync1)
-            .withNotifySchemaChanges(true)
             .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE),
         Jsons.clone(sync2)
-            .withNotifySchemaChanges(true)
             .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE));
 
     assertEquals(expected, standardSyncPersistence.listStandardSync());
@@ -255,6 +255,68 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertTrue(configRepository.getConnectionHasAlphaOrBetaConnector(syncBeta.getConnectionId()));
   }
 
+  @Test
+  void testWriteNotificationConfigurationIfNeeded() throws JsonValidationException, IOException, SQLException {
+    createBaseObjects();
+
+    final StandardSync syncGa = createStandardSync(source1, destination1);
+    syncGa.setNotifySchemaChangesByEmail(true);
+    standardSyncPersistence.writeStandardSync(syncGa);
+
+    List<NotificationConfigurationRecord> notificationConfigurations = getNotificationConfigurations();
+    assertEquals(1, notificationConfigurations.size());
+    assertEquals(syncGa.getConnectionId(), notificationConfigurations.get(0).getConnectionId());
+    assertEquals(NotificationType.email, notificationConfigurations.get(0).getNotificationType());
+    assertEquals(true, notificationConfigurations.get(0).getEnabled());
+
+    syncGa.setNotifySchemaChanges(true);
+    standardSyncPersistence.writeStandardSync(syncGa);
+    notificationConfigurations = getNotificationConfigurations();
+
+    assertEquals(2, notificationConfigurations.size());
+  }
+
+  @Test
+  void testDontUpdateIfNotNeeded() throws JsonValidationException, IOException, SQLException {
+    createBaseObjects();
+
+    final StandardSync syncGa = createStandardSync(source1, destination1);
+    syncGa.setNotifySchemaChangesByEmail(true);
+    standardSyncPersistence.writeStandardSync(syncGa);
+    final StandardSync syncGa2 = createStandardSync(source2, destination2);
+    syncGa2.setNotifySchemaChangesByEmail(true);
+    standardSyncPersistence.writeStandardSync(syncGa2);
+
+    syncGa.setNotifySchemaChangesByEmail(false);
+    standardSyncPersistence.writeStandardSync(syncGa);
+    final List<NotificationConfigurationRecord> notificationConfigurations = getNotificationConfigurations();
+
+    assertEquals(2, notificationConfigurations.size());
+    assertEquals(NotificationType.email,
+        notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
+            .equals(syncGa.getConnectionId())).map(record -> record.getNotificationType()).findFirst().get());
+    assertFalse(notificationConfigurations.stream().filter(notificationConfigurationRecord -> notificationConfigurationRecord.getConnectionId()
+        .equals(syncGa.getConnectionId())).map(record -> record.getEnabled()).findFirst().get());
+  }
+
+  private List<NotificationConfigurationRecord> getNotificationConfigurations() throws SQLException {
+    return database.query(ctx -> ctx.selectFrom(NOTIFICATION_CONFIGURATION).fetch());
+  }
+
+  @Test
+  void testGetNotificationEnable() {
+    final StandardSync standardSync = new StandardSync();
+    assertFalse(StandardSyncPersistence.getNotificationEnabled(standardSync, NotificationType.webhook));
+    assertFalse(StandardSyncPersistence.getNotificationEnabled(standardSync, NotificationType.email));
+
+    standardSync.setNotifySchemaChanges(true);
+    assertTrue(StandardSyncPersistence.getNotificationEnabled(standardSync, NotificationType.webhook));
+
+    standardSync.setNotifySchemaChanges(false);
+    standardSync.setNotifySchemaChangesByEmail(true);
+    assertTrue(StandardSyncPersistence.getNotificationEnabled(standardSync, NotificationType.email));
+  }
+
   private Set<StandardSyncProtocolVersionFlag> getProtocolVersionFlagForSyncs(final List<StandardSync> standardSync) throws SQLException {
     return database.query(ctx -> ctx
         .select(CONNECTION.ID, CONNECTION.UNSUPPORTED_PROTOCOL_VERSION)
@@ -308,13 +370,13 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     sourceDefAlpha = createStandardSourceDefinition("1.0.0", ReleaseStage.ALPHA);
     sourceAlpha = createSourceConnection(workspaceId, sourceDefAlpha);
 
-    destDef1 = createStandardDestDefinition("0.2.3", StandardDestinationDefinition.ReleaseStage.GENERALLY_AVAILABLE);
+    destDef1 = createStandardDestDefinition("0.2.3", ReleaseStage.GENERALLY_AVAILABLE);
     destination1 = createDestinationConnection(workspaceId, destDef1);
 
-    destDef2 = createStandardDestDefinition("1.3.0", StandardDestinationDefinition.ReleaseStage.GENERALLY_AVAILABLE);
+    destDef2 = createStandardDestDefinition("1.3.0", ReleaseStage.GENERALLY_AVAILABLE);
     destination2 = createDestinationConnection(workspaceId, destDef2);
 
-    destDefBeta = createStandardDestDefinition("1.3.0", StandardDestinationDefinition.ReleaseStage.BETA);
+    destDefBeta = createStandardDestDefinition("1.3.0", ReleaseStage.BETA);
     destinationBeta = createDestinationConnection(workspaceId, destDefBeta);
   }
 
@@ -340,8 +402,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     return sourceDef;
   }
 
-  private StandardDestinationDefinition createStandardDestDefinition(final String protocolVersion,
-                                                                     final StandardDestinationDefinition.ReleaseStage releaseStage)
+  private StandardDestinationDefinition createStandardDestDefinition(final String protocolVersion, final ReleaseStage releaseStage)
       throws JsonValidationException, IOException {
     final UUID destDefId = UUID.randomUUID();
     final StandardDestinationDefinition destDef = new StandardDestinationDefinition()
@@ -403,7 +464,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withStatus(Status.ACTIVE)
         .withGeography(Geography.AUTO)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
-        .withNotifySchemaChanges(true)
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false)
         .withBreakingChange(false);
     standardSyncPersistence.writeStandardSync(sync);
     return sync;

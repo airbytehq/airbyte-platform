@@ -1,36 +1,30 @@
 import React from "react";
-import styled from "styled-components";
 
-import {
-  useCreateCloudWorkspace,
-  useListCloudWorkspaces,
-} from "packages/cloud/services/workspaces/CloudWorkspacesService";
-import { useWorkspaceService } from "services/workspaces/WorkspacesService";
+import { useListCloudWorkspaces } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 
-import WorkspaceItem from "./WorkspaceItem";
-import WorkspacesControl from "./WorkspacesControl";
-
-const Content = styled.div`
-  width: 100%;
-  max-width: 550px;
-  margin: 0 auto;
-  padding-bottom: 26px;
-`;
+import { WorkspaceItem } from "./WorkspaceItem";
+import styles from "./WorkspacesList.module.scss";
 
 const WorkspacesList: React.FC = () => {
   const workspaces = useListCloudWorkspaces();
-  const { selectWorkspace } = useWorkspaceService();
-  const { mutateAsync: createCloudWorkspace } = useCreateCloudWorkspace();
 
   return (
-    <Content>
-      {workspaces.map((workspace) => (
-        <WorkspaceItem key={workspace.workspaceId} id={workspace.workspaceId} onClick={selectWorkspace}>
-          {workspace.name}
-        </WorkspaceItem>
-      ))}
-      <WorkspacesControl onSubmit={createCloudWorkspace} />
-    </Content>
+    <>
+      {workspaces.length && (
+        <ul className={styles.container}>
+          {workspaces.map((workspace, index) => (
+            <li>
+              <WorkspaceItem
+                key={workspace.workspaceId}
+                workspaceId={workspace.workspaceId}
+                workspaceName={workspace.name}
+                testId={`select-workspace-${index}`}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 };
 

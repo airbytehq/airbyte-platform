@@ -6,8 +6,9 @@ import { ThemeProvider } from "styled-components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { config } from "config";
-import { ApiServices } from "core/ApiServices";
+import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
+import { AnalyticsProvider } from "core/services/analytics";
 import { ServicesProvider } from "core/servicesProvider";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -15,8 +16,7 @@ import { defaultOssFeatures, FeatureService } from "hooks/services/Feature";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
-import { AnalyticsProvider } from "views/common/AnalyticsProvider";
-import { StoreProvider } from "views/common/StoreProvider";
+import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";
@@ -39,9 +39,9 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
               <ConfirmationModalService>
                 <ModalServiceProvider>
                   <FormChangeTrackerService>
-                    <HelmetProvider>
-                      <ApiServices>{children}</ApiServices>
-                    </HelmetProvider>
+                    <ConnectorBuilderTestInputProvider>
+                      <HelmetProvider>{children}</HelmetProvider>
+                    </ConnectorBuilderTestInputProvider>
                   </FormChangeTrackerService>
                 </ModalServiceProvider>
               </ConfirmationModalService>
@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <React.StrictMode>
       <StyleProvider>
         <I18nProvider locale="en" messages={en}>
-          <StoreProvider>
+          <QueryProvider>
             <ServicesProvider>
               <Suspense fallback={<LoadingPage />}>
                 <ConfigServiceProvider config={config}>
@@ -70,7 +70,7 @@ const App: React.FC = () => {
                 </ConfigServiceProvider>
               </Suspense>
             </ServicesProvider>
-          </StoreProvider>
+          </QueryProvider>
         </I18nProvider>
       </StyleProvider>
     </React.StrictMode>

@@ -16,6 +16,9 @@ properties:
   sourceDefinitionId:
     type: string
     format: uuid
+  defaultVersionId:
+    type: string
+    format: uuid
   name:
     type: string
   dockerRepository:
@@ -51,11 +54,7 @@ properties:
     default: false
   releaseStage:
     type: string
-    enum:
-      - alpha
-      - beta
-      - generally_available
-      - custom
+    existingJavaType: io.airbyte.config.ReleaseStage
   releaseDate:
     description: The date when this connector was first released, in yyyy-mm-dd format.
     type: string
@@ -69,3 +68,6 @@ properties:
     "$ref": AllowedHosts.yaml
   suggestedStreams:
     "$ref": SuggestedStreams.yaml
+  maxSecondsBetweenMessages:
+    description: Number of seconds allowed between 2 airbyte protocol messages. The source will timeout if this delay is reach
+    type: integer

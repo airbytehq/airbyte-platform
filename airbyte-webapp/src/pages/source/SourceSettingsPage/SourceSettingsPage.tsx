@@ -1,43 +1,37 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionConfiguration } from "core/domain/connection";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { Box } from "components/ui/Box";
+import { Text } from "components/ui/Text";
+
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
+import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
 import { useDeleteModal } from "hooks/useDeleteModal";
+import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useGetSourceDefinitionSpecification } from "services/connector/SourceDefinitionSpecificationService";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
+import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
 import styles from "./SourceSettingsPage.module.scss";
-import { useSourceOverviewContext } from "../SourceOverviewPage/sourceOverviewContext";
+import { useGetSourceFromParams } from "../SourceOverviewPage/useGetSourceFromParams";
 
 export const SourceSettingsPage: React.FC = () => {
+  const source = useGetSourceFromParams();
+  const { connections: connectionsWithSource } = useConnectionList({ sourceId: [source.sourceId] });
+  const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
+  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId, source.sourceId);
+
+  const reloadSource = useInvalidateSource(source.sourceId);
   const { mutateAsync: updateSource } = useUpdateSource();
   const { mutateAsync: deleteSource } = useDeleteSource();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
   const formId = useUniqueFormId();
   const { clearFormChange } = useFormChangeTrackerService();
 
-  const { source, sourceDefinition, connections } = useSourceOverviewContext();
-
   useTrackPage(PageTrackingCodes.SOURCE_ITEM_SETTINGS);
-  useEffect(() => {
-    return () => {
-      setDocumentationPanelOpen(false);
-    };
-  }, [setDocumentationPanelOpen]);
 
-  const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceDefinitionId);
-
-  const reloadSource = useInvalidateSource(source.sourceId);
-
-  const onSubmit = async (values: {
-    name: string;
-    serviceType: string;
-    connectionConfiguration?: ConnectionConfiguration;
-  }) => {
+  const onSubmit = async (values: ConnectorCardValues) => {
     await updateSource({
       values,
       sourceId: source.sourceId,
@@ -46,24 +40,31 @@ export const SourceSettingsPage: React.FC = () => {
 
   const onDelete = useCallback(async () => {
     clearFormChange(formId);
-    await deleteSource({ connectionsWithSource: connections, source });
-  }, [clearFormChange, connections, source, deleteSource, formId]);
+    await deleteSource({ connectionsWithSource, source });
+  }, [clearFormChange, formId, deleteSource, connectionsWithSource, source]);
 
   const modalAdditionalContent = useMemo<React.ReactNode>(() => {
-    if (connections.length === 0) {
+    if (connectionsWithSource.length === 0) {
       return null;
     }
+
     return (
-      <p>
-        <FormattedMessage id="tables.affectedConnectionsOnDeletion" values={{ count: connections.length }} />
-        {connections.map((connection) => (
-          <React.Fragment key={connection.connectionId}>
-            - <strong>{`${connection.name}\n`}</strong>
-          </React.Fragment>
-        ))}
-      </p>
+      <Box pt="lg">
+        <Text size="lg">
+          <FormattedMessage
+            id="tables.affectedConnectionsOnDeletion"
+            values={{ count: connectionsWithSource.length }}
+          />
+        </Text>
+
+        <ul>
+          {connectionsWithSource.map((connection) => (
+            <li key={connection.connectionId}>{`${connection.name}`}</li>
+          ))}
+        </ul>
+      </Box>
     );
-  }, [connections]);
+  }, [connectionsWithSource]);
 
   const onDeleteClick = useDeleteModal("source", onDelete, modalAdditionalContent);
 

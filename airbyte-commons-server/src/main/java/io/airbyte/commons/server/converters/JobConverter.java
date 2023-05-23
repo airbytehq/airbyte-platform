@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.ResetConfig;
 import io.airbyte.api.model.generated.SourceDefinitionRead;
+import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.commons.converters.ProtocolConverters;
 import io.airbyte.commons.enums.Enums;
@@ -51,6 +52,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /**
  * Convert between API and internal versions of job models.
@@ -71,6 +73,12 @@ public class JobConverter {
     return new JobInfoRead()
         .job(getJobWithAttemptsRead(job).getJob())
         .attempts(job.getAttempts().stream().map(this::getAttemptInfoRead).collect(Collectors.toList()));
+  }
+
+  public JobInfoRead getJobInfoWithoutLogsRead(final Job job) {
+    return new JobInfoRead()
+        .job(getJobWithAttemptsRead(job).getJob())
+        .attempts(job.getAttempts().stream().map(this::getAttemptInfoWithoutLogsRead).collect(Collectors.toList()));
   }
 
   public JobInfoLightRead getJobInfoLightRead(final Job job) {
@@ -109,6 +117,7 @@ public class JobConverter {
         .id(job.getId())
         .configId(configId)
         .configType(configType)
+        .enabledStreams(extractEnabledStreams(job))
         .resetConfig(extractResetConfigIfReset(job).orElse(null))
         .createdAt(job.getCreatedAtInSecond())
         .updatedAt(job.getUpdatedAtInSecond())
@@ -143,6 +152,11 @@ public class JobConverter {
     return new AttemptInfoRead()
         .attempt(getAttemptRead(attempt))
         .logs(getLogRead(attempt.getLogPath()));
+  }
+
+  public AttemptInfoRead getAttemptInfoWithoutLogsRead(final Attempt attempt) {
+    return new AttemptInfoRead()
+        .attempt(getAttemptRead(attempt));
   }
 
   public static AttemptRead getAttemptRead(final Attempt attempt) {
@@ -215,15 +229,7 @@ public class JobConverter {
     }
 
     return new AttemptFailureSummary()
-        .failures(failureSummary.getFailures().stream().map(failure -> new FailureReason()
-            .failureOrigin(Enums.convertTo(failure.getFailureOrigin(), FailureOrigin.class))
-            .failureType(Enums.convertTo(failure.getFailureType(), FailureType.class))
-            .externalMessage(failure.getExternalMessage())
-            .internalMessage(failure.getInternalMessage())
-            .stacktrace(failure.getStacktrace())
-            .timestamp(failure.getTimestamp())
-            .retryable(failure.getRetryable()))
-            .collect(Collectors.toList()))
+        .failures(failureSummary.getFailures().stream().map(JobConverter::getFailureReason).collect(Collectors.toList()))
         .partialSuccess(failureSummary.getPartialSuccess());
   }
 
@@ -233,6 +239,20 @@ public class JobConverter {
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public static FailureReason getFailureReason(final @Nullable io.airbyte.config.FailureReason failureReason) {
+    if (failureReason == null) {
+      return null;
+    }
+    return new FailureReason()
+        .failureOrigin(Enums.convertTo(failureReason.getFailureOrigin(), FailureOrigin.class))
+        .failureType(Enums.convertTo(failureReason.getFailureType(), FailureType.class))
+        .externalMessage(failureReason.getExternalMessage())
+        .internalMessage(failureReason.getInternalMessage())
+        .stacktrace(failureReason.getStacktrace())
+        .timestamp(failureReason.getTimestamp())
+        .retryable(failureReason.getRetryable());
   }
 
   public SynchronousJobRead getSynchronousJobRead(final SynchronousResponse<?> response) {
@@ -250,7 +270,8 @@ public class JobConverter {
         .endedAt(metadata.getEndedAt())
         .succeeded(metadata.isSucceeded())
         .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated())
-        .logs(getLogRead(metadata.getLogPath()));
+        .logs(getLogRead(metadata.getLogPath()))
+        .failureReason(getFailureReason(metadata.getFailureReason()));
   }
 
   public static AttemptNormalizationStatusRead convertAttemptNormalizationStatus(
@@ -260,6 +281,13 @@ public class JobConverter {
         .hasRecordsCommitted(!databaseStatus.recordsCommitted().isEmpty())
         .recordsCommitted(databaseStatus.recordsCommitted().orElse(0L))
         .hasNormalizationFailed(databaseStatus.normalizationFailed());
+  }
+
+  private static List<StreamDescriptor> extractEnabledStreams(final Job job) {
+    return job.getConfig().getSync() != null
+        ? job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams().stream()
+            .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())
+        : List.of();
   }
 
 }

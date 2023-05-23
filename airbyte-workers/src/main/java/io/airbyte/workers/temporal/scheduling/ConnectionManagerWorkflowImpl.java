@@ -6,13 +6,13 @@ package io.airbyte.workers.temporal.scheduling;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY;
-import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
@@ -29,7 +29,8 @@ import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.featureflag.CheckInputGeneration;
+import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
+import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
@@ -39,6 +40,7 @@ import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity.CheckConnectionInput;
+import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput;
@@ -84,6 +86,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -100,7 +103,13 @@ import lombok.extern.slf4j.Slf4j;
 public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow {
 
   private static final String GENERATE_CHECK_INPUT_TAG = "generate_check_input";
+  private static final String CHECK_WITH_API_TAG = "check_with_api";
+  private static final String CHECK_WITH_CHILD_WORKFLOW_TAG = "check_with_child_workflow";
+  private static final String SYNC_TASK_QUEUE_ROUTE_RENAME_TAG = "sync_task_queue_route_rename";
   private static final int GENERATE_CHECK_INPUT_CURRENT_VERSION = 1;
+  private static final int CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION = 1;
+
+  private static final int SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION = 1;
 
   private WorkflowState workflowState = new WorkflowState(UUID.randomUUID(), new NoopStateListener());
 
@@ -108,6 +117,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private static final String GET_FEATURE_FLAGS_TAG = "get_feature_flags";
   private static final int GET_FEATURE_FLAGS_CURRENT_VERSION = 1;
+  private static final int CHECK_WITH_API_CURRENT_VERSION = 1;
 
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private GenerateInputActivity getSyncInputActivity;
@@ -119,6 +129,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   private AutoDisableConnectionActivity autoDisableConnectionActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private CheckConnectionActivity checkActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private SubmitCheckConnectionActivity submitCheckActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private StreamResetActivity streamResetActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -140,7 +152,13 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
   @Override
   public void run(final ConnectionUpdaterInput connectionUpdaterInput) throws RetryableException {
     try {
-      ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionUpdaterInput.getConnectionId()));
+      /*
+       * Always ensure that the connection ID is set from the input before performing any additional work.
+       * Failure to set the connection ID before performing any work in this workflow could result in
+       * additional failures when attempting to handle a failed workflow AND/OR the inability to identify
+       * impacted connections when errors do occur.
+       */
+      setConnectionId(connectionUpdaterInput);
 
       // Fetch workflow delay first so that it is set if any subsequent activities fail and need to be
       // re-attempted.
@@ -163,7 +181,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         if (workflowState.isRunning()) {
           log.info("Cancelling the current running job because a connection deletion was requested");
           // This call is not needed anymore since this will be cancel using the the cancellation state
-          reportCancelled(connectionUpdaterInput.getConnectionId());
+          reportCancelled(connectionId);
         }
 
         return;
@@ -186,10 +204,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
+  @SuppressWarnings("PMD.UnusedLocalVariable")
   private CancellationScope generateSyncWorkflowRunnable(final ConnectionUpdaterInput connectionUpdaterInput) {
     return Workflow.newCancellationScope(() -> {
-      connectionId = connectionUpdaterInput.getConnectionId();
-
       // workflow state is only ever set in test cases. for production cases, it will always be null.
       if (connectionUpdaterInput.getWorkflowState() != null) {
         workflowState = connectionUpdaterInput.getWorkflowState();
@@ -221,14 +238,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         prepareForNextRunAndContinueAsNew(connectionUpdaterInput);
       }
 
+      // This var is unused since not feature flags are currently required in this workflow
+      // We keep the activity around to get any feature flags that might be needed in the future
       final Map<String, Boolean> featureFlags = getFeatureFlags(connectionUpdaterInput.getConnectionId());
-      final boolean featureFlagCheckInputGeneration = featureFlags.getOrDefault(CheckInputGeneration.INSTANCE.getKey(), false);
 
       workflowInternalState.setJobId(getOrCreateJobId(connectionUpdaterInput));
       workflowInternalState.setAttemptNumber(createAttempt(workflowInternalState.getJobId()));
 
       GeneratedJobInput jobInputs = null;
-      final boolean shouldRunCheckInputGeneration = shouldRunCheckInputGeneration(featureFlagCheckInputGeneration);
+      final boolean shouldRunCheckInputGeneration = shouldRunCheckInputGeneration();
       if (!shouldRunCheckInputGeneration) {
         jobInputs = getJobInput();
       }
@@ -237,7 +255,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       StandardSyncOutput standardSyncOutput = null;
 
       try {
-        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs, featureFlagCheckInputGeneration);
+        final SyncCheckConnectionResult syncCheckConnectionResult = checkConnections(getJobRunConfig(), jobInputs, featureFlags);
         if (syncCheckConnectionResult.isFailed()) {
           final StandardSyncOutput checkFailureOutput = syncCheckConnectionResult.buildFailureOutput();
           workflowState.setFailed(getFailStatus(checkFailureOutput));
@@ -361,14 +379,10 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   /**
    * Returns whether the new check input generation activity should be called, depending on the
-   * presence of a feature flag and workflow versioning. This should be removed once the new activity
-   * is fully rolled out.
+   * presence of workflow versioning. This should be removed once the new activity is fully rolled
+   * out.
    */
-  private boolean shouldRunCheckInputGeneration(final boolean featureFlagEnabled) {
-    if (!featureFlagEnabled) {
-      return false;
-    }
-
+  private boolean shouldRunCheckInputGeneration() {
     final int generateCheckInputVersion =
         Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION);
     return generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION;
@@ -404,7 +418,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private SyncCheckConnectionResult checkConnections(final JobRunConfig jobRunConfig,
                                                      @Nullable final GenerateInputActivity.GeneratedJobInput jobInputs,
-                                                     final boolean checkInputGenerationFeatureFlagEnabled) {
+                                                     final Map<String, Boolean> featureFlags) {
     final SyncCheckConnectionResult checkConnectionResult = new SyncCheckConnectionResult(jobRunConfig);
 
     final JobCheckFailureInput jobStateInput =
@@ -419,24 +433,41 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
 
     final SyncJobCheckConnectionInputs checkInputs;
-    if (!shouldRunCheckInputGeneration(checkInputGenerationFeatureFlagEnabled) && jobInputs != null) {
+    if (!shouldRunCheckInputGeneration() && jobInputs != null) {
       checkInputs = getCheckConnectionInputFromSync(jobInputs);
     } else {
       checkInputs = getCheckConnectionInput();
     }
 
     final IntegrationLauncherConfig sourceLauncherConfig = checkInputs.getSourceLauncherConfig();
-    final CheckConnectionInput checkSourceInput = new CheckConnectionInput(
-        jobRunConfig,
-        sourceLauncherConfig,
-        checkInputs.getSourceCheckConnectionInput());
 
     if (isResetJob(sourceLauncherConfig) || checkConnectionResult.isFailed()) {
       // reset jobs don't need to connect to any external source, so check connection is unnecessary
       log.info("SOURCE CHECK: Skipped, reset job");
     } else {
       log.info("SOURCE CHECK: Starting");
-      final ConnectorJobOutput sourceCheckResponse = getCheckResponse(checkSourceInput);
+      final ConnectorJobOutput sourceCheckResponse;
+      final int checkWithApiVersion =
+          Workflow.getVersion(CHECK_WITH_API_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_API_CURRENT_VERSION);
+      final int checkWithChildWorkflowVersion =
+          Workflow.getVersion(CHECK_WITH_CHILD_WORKFLOW_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION);
+      if (checkWithApiVersion >= CHECK_WITH_API_CURRENT_VERSION && featureFlags.get(CheckConnectionUseApiEnabled.INSTANCE.getKey())) {
+        sourceCheckResponse = runMandatoryActivityWithOutput(submitCheckActivity::submitCheckConnectionToSource,
+            checkInputs.getSourceCheckConnectionInput().getActorId());
+      } else if (checkWithChildWorkflowVersion >= CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION
+          && featureFlags.get(CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey())) {
+        sourceCheckResponse = runCheckInChildWorkflow(jobRunConfig, sourceLauncherConfig, new StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withActorId(checkInputs.getSourceCheckConnectionInput().getActorId())
+            .withConnectionConfiguration(checkInputs.getSourceCheckConnectionInput().getConnectionConfiguration()));
+      } else {
+        final CheckConnectionInput checkSourceInput = new CheckConnectionInput(
+            jobRunConfig,
+            sourceLauncherConfig,
+            checkInputs.getSourceCheckConnectionInput());
+        sourceCheckResponse = getCheckResponse(checkSourceInput);
+      }
+
       if (SyncCheckConnectionResult.isOutputFailed(sourceCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE);
         checkConnectionResult.setFailureOutput(sourceCheckResponse);
@@ -446,16 +477,32 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       }
     }
 
-    final CheckConnectionInput checkDestinationInput = new CheckConnectionInput(
-        jobRunConfig,
-        checkInputs.getDestinationLauncherConfig(),
-        checkInputs.getDestinationCheckConnectionInput());
-
     if (checkConnectionResult.isFailed()) {
       log.info("DESTINATION CHECK: Skipped, source check failed");
     } else {
       log.info("DESTINATION CHECK: Starting");
-      final ConnectorJobOutput destinationCheckResponse = getCheckResponse(checkDestinationInput);
+      final ConnectorJobOutput destinationCheckResponse;
+      final int checkWithApiVersion =
+          Workflow.getVersion(CHECK_WITH_API_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_API_CURRENT_VERSION);
+      final int checkWithChildWorkflowVersion =
+          Workflow.getVersion(CHECK_WITH_CHILD_WORKFLOW_TAG, Workflow.DEFAULT_VERSION, CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION);
+      if (checkWithApiVersion >= CHECK_WITH_API_CURRENT_VERSION && featureFlags.get(CheckConnectionUseApiEnabled.INSTANCE.getKey())) {
+        destinationCheckResponse = runMandatoryActivityWithOutput(submitCheckActivity::submitCheckConnectionToDestination,
+            checkInputs.getDestinationCheckConnectionInput().getActorId());
+      } else if (checkWithChildWorkflowVersion >= CHECK_WITH_CHILD_WORKFLOW_CURRENT_VERSION
+          && featureFlags.get(CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey())) {
+        destinationCheckResponse = runCheckInChildWorkflow(jobRunConfig, checkInputs.getDestinationLauncherConfig(),
+            new StandardCheckConnectionInput()
+                .withActorType(ActorType.DESTINATION)
+                .withActorId(checkInputs.getDestinationCheckConnectionInput().getActorId())
+                .withConnectionConfiguration(checkInputs.getDestinationCheckConnectionInput().getConnectionConfiguration()));
+      } else {
+        final CheckConnectionInput checkDestinationInput = new CheckConnectionInput(
+            jobRunConfig,
+            checkInputs.getDestinationLauncherConfig(),
+            checkInputs.getDestinationCheckConnectionInput());
+        destinationCheckResponse = getCheckResponse(checkDestinationInput);
+      }
       if (SyncCheckConnectionResult.isOutputFailed(destinationCheckResponse)) {
         checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION);
         checkConnectionResult.setFailureOutput(destinationCheckResponse);
@@ -480,10 +527,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     connectionUpdaterInput.setSkipScheduling(false);
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public void submitManualSync() {
-    traceConnectionId();
     if (workflowState.isRunning()) {
       log.info("Can't schedule a manual workflow if a sync is running for connection {}", connectionId);
       return;
@@ -513,10 +558,8 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     cancelJob();
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public void connectionUpdated() {
-    traceConnectionId();
     workflowState.setUpdated(true);
   }
 
@@ -550,20 +593,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     }
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public WorkflowState getState() {
-    traceConnectionId();
     return workflowState;
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public JobInformation getJobInformation() {
-    traceConnectionId();
     final Long jobId = workflowInternalState.getJobId() != null ? workflowInternalState.getJobId() : NON_RUNNING_JOB_ID;
     final Integer attemptNumber = workflowInternalState.getAttemptNumber();
-    ApmTraceUtils.addTagsToTrace(Map.of(JOB_ID_KEY, jobId));
     return new JobInformation(
         jobId,
         attemptNumber == null ? NON_RUNNING_ATTEMPT_ID : attemptNumber);
@@ -786,12 +824,31 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private String getSyncTaskQueue() {
 
-    final RouteToSyncTaskQueueInput routeToSyncTaskQueueInput = new RouteToSyncTaskQueueInput(connectionId);
-    final RouteToSyncTaskQueueOutput routeToSyncTaskQueueOutput = runMandatoryActivityWithOutput(
-        routeToSyncTaskQueueActivity::route,
-        routeToSyncTaskQueueInput);
+    final RouteToSyncTaskQueueInput RouteToSyncTaskQueueInput = new RouteToSyncTaskQueueInput(connectionId);
+    final int checkWithApiVersion =
+        Workflow.getVersion(SYNC_TASK_QUEUE_ROUTE_RENAME_TAG, Workflow.DEFAULT_VERSION, SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION);
+
+    final RouteToSyncTaskQueueOutput routeToSyncTaskQueueOutput;
+    if (checkWithApiVersion >= SYNC_TASK_QUEUE_ROUTE_RENAME_CURRENT_VERSION) {
+      routeToSyncTaskQueueOutput = runMandatoryActivityWithOutput(
+          routeToSyncTaskQueueActivity::routeToSync,
+          RouteToSyncTaskQueueInput);
+    } else {
+      routeToSyncTaskQueueOutput = runMandatoryActivityWithOutput(
+          routeToSyncTaskQueueActivity::route,
+          RouteToSyncTaskQueueInput);
+    }
 
     return routeToSyncTaskQueueOutput.getTaskQueue();
+  }
+
+  private String getCheckTaskQueue() {
+    final RouteToSyncTaskQueueInput routeToCheckTaskQueueInput = new RouteToSyncTaskQueueInput(connectionId);
+    final RouteToSyncTaskQueueOutput routeToCheckTaskQueueOutput = runMandatoryActivityWithOutput(
+        routeToSyncTaskQueueActivity::routeToCheckConnection,
+        routeToCheckTaskQueueInput);
+
+    return routeToCheckTaskQueueOutput.getTaskQueue();
   }
 
   /**
@@ -837,6 +894,24 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         jobInputs.getDestinationLauncherConfig(),
         jobInputs.getSyncInput(),
         connectionId);
+  }
+
+  private ConnectorJobOutput runCheckInChildWorkflow(final JobRunConfig jobRunConfig,
+                                                     final IntegrationLauncherConfig launcherConfig,
+                                                     final StandardCheckConnectionInput checkInput) {
+    final String taskQueue = getCheckTaskQueue();
+
+    final CheckConnectionWorkflow childCheck = Workflow.newChildWorkflowStub(CheckConnectionWorkflow.class,
+        ChildWorkflowOptions.newBuilder()
+            .setWorkflowId("check_" + workflowInternalState.getJobId() + "_" + checkInput.getActorType().value())
+            .setTaskQueue(taskQueue)
+            // This will cancel the child workflow when the parent is terminated
+            .setParentClosePolicy(ParentClosePolicy.PARENT_CLOSE_POLICY_REQUEST_CANCEL)
+            .build());
+
+    return childCheck.run(
+        jobRunConfig, launcherConfig,
+        checkInput);
   }
 
   /**
@@ -903,6 +978,11 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     if (connectionId != null) {
       ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
     }
+  }
+
+  private void setConnectionId(final ConnectionUpdaterInput connectionUpdaterInput) {
+    connectionId = Objects.requireNonNull(connectionUpdaterInput.getConnectionId());
+    ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId));
   }
 
 }

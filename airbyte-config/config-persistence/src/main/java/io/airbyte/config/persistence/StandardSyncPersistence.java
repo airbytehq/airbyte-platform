@@ -8,10 +8,12 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -25,8 +27,10 @@ import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.Actor;
 import io.airbyte.db.instance.configs.jooq.generated.tables.ActorDefinition;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
@@ -134,13 +138,16 @@ public class StandardSyncPersistence {
           .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
               io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
           .set(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, standardSync.getNonBreakingChangesPreference().value())
-          .set(CONNECTION.NOTIFY_SCHEMA_CHANGES, standardSync.getNotifySchemaChanges())
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
           .execute();
+
+      // TODO: update the notif conf table
+      updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
 
       ctx.deleteFrom(CONNECTION_OPERATION)
           .where(CONNECTION_OPERATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
           .execute();
+
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
         ctx.insertInto(CONNECTION_OPERATION)
             .set(CONNECTION_OPERATION.ID, UUID.randomUUID())
@@ -185,6 +192,9 @@ public class StandardSyncPersistence {
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)
           .execute();
+
+      updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
+
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
         ctx.insertInto(CONNECTION_OPERATION)
             .set(CONNECTION_OPERATION.ID, UUID.randomUUID())
@@ -198,6 +208,70 @@ public class StandardSyncPersistence {
   }
 
   /**
+   * Update the notification configuration for a give connection (StandardSync). It needs to have the
+   * standard sync to be persisted before being called because one column of the configuration is a
+   * foreign key on the Connection Table.
+   */
+  private void updateOrCreateNotificationConfiguration(final StandardSync standardSync, final OffsetDateTime timestamp, final DSLContext ctx) {
+    final List<NotificationConfigurationRecord> notificationConfigurations = ctx.selectFrom(NOTIFICATION_CONFIGURATION)
+        .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
+        .fetch();
+    updateNotificationConfigurationIfNeeded(notificationConfigurations, NotificationType.webhook, standardSync, timestamp, ctx);
+    updateNotificationConfigurationIfNeeded(notificationConfigurations, NotificationType.email, standardSync, timestamp, ctx);
+  }
+
+  /**
+   * Check if an update has been made to an existing configuration and update the entry accordingly.
+   * If no configuration exists, this will create an entry if the targetted notification type is being
+   * enabled.
+   */
+  private void updateNotificationConfigurationIfNeeded(final List<NotificationConfigurationRecord> notificationConfigurations,
+                                                       final NotificationType notificationType,
+                                                       final StandardSync standardSync,
+                                                       final OffsetDateTime timestamp,
+                                                       final DSLContext ctx) {
+    final Optional<NotificationConfigurationRecord> maybeConfiguration = notificationConfigurations.stream()
+        .filter(notificationConfiguration -> notificationConfiguration.getNotificationType() == notificationType)
+        .findFirst();
+
+    if (maybeConfiguration.isPresent()) {
+      if ((maybeConfiguration.get().getEnabled() && !standardSync.getNotifySchemaChanges())
+          || (!maybeConfiguration.get().getEnabled() && standardSync.getNotifySchemaChanges())) {
+        ctx.update(NOTIFICATION_CONFIGURATION)
+            .set(NOTIFICATION_CONFIGURATION.ENABLED, getNotificationEnabled(standardSync, notificationType))
+            .set(NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
+            .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
+            .and(NOTIFICATION_CONFIGURATION.NOTIFICATION_TYPE.eq(notificationType))
+            .execute();
+      }
+    } else if (getNotificationEnabled(standardSync, notificationType)) {
+      ctx.insertInto(NOTIFICATION_CONFIGURATION)
+          .set(NOTIFICATION_CONFIGURATION.ID, UUID.randomUUID())
+          .set(NOTIFICATION_CONFIGURATION.CONNECTION_ID, standardSync.getConnectionId())
+          .set(NOTIFICATION_CONFIGURATION.NOTIFICATION_TYPE, notificationType)
+          .set(NOTIFICATION_CONFIGURATION.ENABLED, true)
+          .set(NOTIFICATION_CONFIGURATION.CREATED_AT, timestamp)
+          .set(NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
+          .execute();
+    }
+  }
+
+  /**
+   * Fetch if a notification is enabled in a standard sync based on the notification type.
+   */
+  @VisibleForTesting
+  static boolean getNotificationEnabled(final StandardSync standardSync, final NotificationType notificationType) {
+    switch (notificationType) {
+      case webhook:
+        return standardSync.getNotifySchemaChanges() == null ? false : standardSync.getNotifySchemaChanges();
+      case email:
+        return standardSync.getNotifySchemaChangesByEmail() == null ? false : standardSync.getNotifySchemaChangesByEmail();
+      default:
+        throw new IllegalStateException("Notification type unsupported");
+    }
+  }
+
+  /**
    * Deletes a connection (sync) and all of dependent resources (state and connection_operations).
    *
    * @param standardSyncId - id of the sync (a.k.a. connection_id)
@@ -205,6 +279,7 @@ public class StandardSyncPersistence {
    */
   public void deleteStandardSync(final UUID standardSyncId) throws IOException {
     database.transaction(ctx -> {
+      PersistenceHelpers.deleteConfig(NOTIFICATION_CONFIGURATION, NOTIFICATION_CONFIGURATION.CONNECTION_ID, standardSyncId, ctx);
       PersistenceHelpers.deleteConfig(CONNECTION_OPERATION, CONNECTION_OPERATION.CONNECTION_ID, standardSyncId, ctx);
       PersistenceHelpers.deleteConfig(STATE, STATE.CONNECTION_ID, standardSyncId, ctx);
       PersistenceHelpers.deleteConfig(CONNECTION, CONNECTION.ID, standardSyncId, ctx);
@@ -251,7 +326,19 @@ public class StandardSyncPersistence {
 
     final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
     for (final Record record : result) {
-      final StandardSync standardSync = DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)));
+      final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> {
+        if (configId.isPresent()) {
+          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
+              .where(NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
+              .fetch();
+        } else {
+          return ctx.selectFrom(NOTIFICATION_CONFIGURATION)
+              .fetch();
+        }
+      });
+
+      final StandardSync standardSync =
+          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords);
       if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
         throw new RuntimeException("unexpected schedule type mismatch");
       }

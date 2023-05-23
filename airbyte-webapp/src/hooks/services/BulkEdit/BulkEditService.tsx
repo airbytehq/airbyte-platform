@@ -24,10 +24,6 @@ export interface BulkEditServiceContext {
   onCancel: () => void;
 }
 
-const defaultOptions: Partial<AirbyteStreamConfiguration> = {
-  selected: false,
-};
-
 export const BulkEditServiceProvider: React.FC<
   React.PropsWithChildren<{
     nodes: SyncSchemaStream[];
@@ -36,7 +32,7 @@ export const BulkEditServiceProvider: React.FC<
 > = ({ children, nodes, update }) => {
   const { setStatus, status } = useFormikContext();
   const [selectedBatchNodes, { reset, toggle, add }] = useSet<string | undefined>(new Set());
-  const [options, setOptions] = useState<Partial<AirbyteStreamConfiguration>>(defaultOptions);
+  const [options, setOptions] = useState<Partial<AirbyteStreamConfiguration>>({});
 
   const isActive = selectedBatchNodes.size > 0;
   useEffect(() => {
@@ -47,7 +43,7 @@ export const BulkEditServiceProvider: React.FC<
 
   const resetBulk = () => {
     reset();
-    setOptions(defaultOptions);
+    setOptions({});
   };
 
   const onApply = () => {
@@ -63,7 +59,7 @@ export const BulkEditServiceProvider: React.FC<
     reset();
     resetBulk();
   };
-  const allChecked = selectedBatchNodes.size === nodes.length;
+  const allChecked = nodes.length !== 0 && selectedBatchNodes.size === nodes.length;
 
   const ctx: BulkEditServiceContext = {
     isActive,

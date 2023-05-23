@@ -1,16 +1,18 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect } from "react";
 import { useIntl } from "react-intl";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { LoadingPage } from "components";
+import { FlexContainer } from "components/ui/Flex";
 
+import { useConfig } from "config";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { FirebaseActionRoute } from "packages/cloud/views/FirebaseActionRoute";
+import { loadFathom } from "utils/fathom";
 
 import styles from "./Auth.module.scss";
-import FormContent from "./components/FormContent";
 
 const PersonQuoteCover = React.lazy(() => import("./components/PersonQuoteCover"));
 const LoginPage = React.lazy(() => import("./LoginPage"));
@@ -40,44 +42,49 @@ export const Auth: React.FC = () => {
   const { loggedOut } = useAuthService();
   const rightSideUrl = useExperiment("authPage.rightSideUrl", undefined);
 
-  const toLogin = pathname === CloudRoutes.Signup || pathname === CloudRoutes.FirebaseAction;
+  const config = useConfig();
+  useEffect(() => {
+    loadFathom(config.fathomSiteId);
+  }, [config.fathomSiteId]);
 
   return (
-    <div className={styles.container}>
-      <div className={styles.leftSide}>
-        <FormContent toLogin={toLogin}>
-          <Suspense fallback={<LoadingPage />}>
-            <Routes>
-              <Route path={CloudRoutes.Login} element={<LoginPage />} />
-              <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-              <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
-              <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
-              <Route
-                path="*"
-                element={
-                  <Navigate
-                    to={`${CloudRoutes.Login}${
-                      loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
-                    }`}
-                  />
-                }
-              />
-            </Routes>
-          </Suspense>
-        </FormContent>
-      </div>
-      <div className={styles.rightSide}>
+    <FlexContainer className={styles.container}>
+      <FlexContainer
+        direction="column"
+        alignItems="center"
+        justifyContent="center"
+        className={styles["container__left-side"]}
+      >
+        <Suspense fallback={<LoadingPage />}>
+          <Routes>
+            <Route path={CloudRoutes.Login} element={<LoginPage />} />
+            <Route path={CloudRoutes.Signup} element={<SignupPage />} />
+            <Route path={CloudRoutes.ResetPassword} element={<ResetPasswordPage />} />
+            <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
+            <Route
+              path="*"
+              element={
+                <Navigate
+                  to={`${CloudRoutes.Login}${
+                    loggedOut && pathname.includes("/settings/account") ? "" : `?from=${pathname}`
+                  }`}
+                />
+              }
+            />
+          </Routes>
+        </Suspense>
+      </FlexContainer>
+      <FlexContainer direction="column" className={styles["container__right-side"]}>
         {hasValidRightSideUrl(rightSideUrl) ? (
           <iframe
-            className={styles.rightSideFrame}
+            className={styles.container__iframe}
             src={rightSideUrl}
-            scrolling="no"
             title={formatMessage({ id: "login.rightSideFrameTitle" })}
           />
         ) : (
           <PersonQuoteCover />
         )}
-      </div>
-    </div>
+      </FlexContainer>
+    </FlexContainer>
   );
 };

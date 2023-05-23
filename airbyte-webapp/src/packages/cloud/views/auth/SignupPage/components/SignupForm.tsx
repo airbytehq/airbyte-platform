@@ -1,29 +1,19 @@
-import { faCheckCircle, faXmarkCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import classNames from "classnames";
-import { Field, FieldProps, Formik, Form } from "formik";
+import { Formik, Form } from "formik";
 import React, { useMemo } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
-import styled from "styled-components";
 import * as yup from "yup";
 
-import { LabeledInput } from "components";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
-import { ExternalLink } from "components/ui/Link";
-import { Text } from "components/ui/Text";
 
 import { useExperiment } from "hooks/services/Experiment";
 import { FieldError } from "packages/cloud/lib/errors/FieldError";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { FREE_EMAIL_SERVICE_PROVIDERS } from "packages/cloud/services/auth/freeEmailProviders";
 import { isGdprCountry } from "utils/dataPrivacy";
-import { links } from "utils/links";
 
 import styles from "./SignupForm.module.scss";
-import CheckBoxControl from "../../components/CheckBoxControl";
 import { BottomBlock, FieldItem, RowFieldItem } from "../../components/FormComponents";
+import { CompanyNameField, EmailField, NameField, PasswordField } from "../../components/FormFields/FormFields";
 
 interface FormValues {
   name: string;
@@ -32,158 +22,6 @@ interface FormValues {
   password: string;
   news: boolean;
 }
-
-const MarginBlock = styled.div`
-  margin-bottom: 15px;
-`;
-
-export const NameField: React.FC = () => {
-  const { formatMessage } = useIntl();
-
-  return (
-    <Field name="name">
-      {({ field, meta }: FieldProps<string>) => (
-        <LabeledInput
-          {...field}
-          label={<FormattedMessage id="login.fullName" />}
-          placeholder={formatMessage({
-            id: "login.fullName.placeholder",
-          })}
-          type="text"
-          error={!!meta.error && meta.touched}
-          message={meta.touched && meta.error && formatMessage({ id: meta.error })}
-        />
-      )}
-    </Field>
-  );
-};
-
-export const CompanyNameField: React.FC = () => {
-  const { formatMessage } = useIntl();
-
-  return (
-    <Field name="companyName">
-      {({ field, meta }: FieldProps<string>) => (
-        <LabeledInput
-          {...field}
-          label={<FormattedMessage id="login.companyName" />}
-          placeholder={formatMessage({
-            id: "login.companyName.placeholder",
-          })}
-          type="text"
-          error={!!meta.error && meta.touched}
-          message={meta.touched && meta.error && formatMessage({ id: meta.error })}
-        />
-      )}
-    </Field>
-  );
-};
-
-export const EmailField: React.FC<{ label?: React.ReactNode }> = ({ label }) => {
-  const { formatMessage } = useIntl();
-
-  const isCorporateEmail = (email?: string) =>
-    !FREE_EMAIL_SERVICE_PROVIDERS.some((provider) => email?.endsWith(`@${provider}`));
-
-  const getMessage = ({ touched, error, value }: { touched: boolean; error?: string; value?: string }) => {
-    if (touched && error) {
-      return formatMessage({ id: error });
-    }
-    if (touched && !isCorporateEmail(value)) {
-      return formatMessage({ id: "form.workEmail.error" });
-    }
-    return null;
-  };
-  return (
-    <Field name="email">
-      {({ field, meta }: FieldProps<string>) => (
-        <LabeledInput
-          {...field}
-          label={label || <FormattedMessage id="login.yourEmail" />}
-          placeholder={formatMessage({
-            id: "login.yourEmail.placeholder",
-          })}
-          type="text"
-          error={(!!meta.error && meta.touched) || (meta.touched && !isCorporateEmail(field.value))}
-          message={getMessage({ touched: meta.touched, error: meta.error, value: field.value })}
-        />
-      )}
-    </Field>
-  );
-};
-
-export const PasswordField: React.FC<{ label?: React.ReactNode }> = ({ label }) => {
-  const { formatMessage } = useIntl();
-
-  return (
-    <Field name="password">
-      {({ field, meta }: FieldProps<string>) => (
-        <>
-          <LabeledInput
-            {...field}
-            label={label || <FormattedMessage id="login.password" />}
-            placeholder={formatMessage({
-              id: "login.password.placeholder",
-            })}
-            type="password"
-            error={!!meta.error && meta.touched}
-          />
-
-          <FlexContainer gap="sm" alignItems="center" className={styles.passwordCheckContainer}>
-            <FontAwesomeIcon
-              icon={Boolean(meta.error) && meta.touched ? faXmarkCircle : faCheckCircle}
-              className={classNames(styles.checkIcon, {
-                [styles.error]: Boolean(meta.error) && meta.touched,
-                [styles.valid]: meta.touched && !meta.error,
-              })}
-            />
-
-            <Text
-              size="sm"
-              className={classNames({
-                [styles.error]: Boolean(meta.error) && meta.touched,
-              })}
-            >
-              <FormattedMessage id="signup.password.minLength" />
-            </Text>
-          </FlexContainer>
-        </>
-      )}
-    </Field>
-  );
-};
-
-export const NewsField: React.FC = () => (
-  <Field name="news">
-    {({ field }: FieldProps<string>) => (
-      <MarginBlock>
-        <CheckBoxControl {...field} checked={!!field.value} label={<FormattedMessage id="login.subscribe" />} />
-      </MarginBlock>
-    )}
-  </Field>
-);
-
-export const Disclaimer: React.FC = () => {
-  return (
-    <div className={styles.disclaimer}>
-      <FormattedMessage
-        id="login.disclaimer"
-        values={{
-          terms: (terms: React.ReactNode) => (
-            <ExternalLink href={links.termsLink} variant="primary">
-              {terms}
-            </ExternalLink>
-          ),
-          privacy: (privacy: React.ReactNode) => (
-            <ExternalLink href={links.privacyLink} variant="primary">
-              {privacy}
-            </ExternalLink>
-          ),
-        }}
-      />
-    </div>
-  );
-};
 
 interface SignupButtonProps {
   isLoading: boolean;
@@ -266,9 +104,6 @@ export const SignupForm: React.FC = () => {
           </FieldItem>
           <FieldItem>
             <PasswordField />
-          </FieldItem>
-          <FieldItem>
-            <NewsField />
           </FieldItem>
           <BottomBlock>
             <SignupButton isLoading={isSubmitting} disabled={!isValid} />

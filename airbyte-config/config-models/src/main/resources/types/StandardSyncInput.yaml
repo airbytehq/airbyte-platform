@@ -4,7 +4,7 @@
 title: StandardSyncInput
 description: job sync config
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - sourceId
   - sourceConfiguration
@@ -74,3 +74,19 @@ properties:
     description: The id of the connection associated with this sync
     type: string
     format: uuid
+  commitStateAsap:
+    description: whether we want to commit states during the replication activity, defaults to false
+    type: boolean
+    default: false
+  commitStatsAsap:
+    description: whether we want to commit stats during the replication activity, defaults to false
+    type: boolean
+    default: false
+  normalizeInDestinationContainer:
+    description: whether normalization should be run in the destination container
+    type: boolean
+    default: false
+  isReset:
+    description: whether this 'sync' is performing a logical reset
+    type: boolean
+    default: false

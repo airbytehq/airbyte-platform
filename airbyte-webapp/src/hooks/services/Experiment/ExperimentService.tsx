@@ -5,7 +5,7 @@ import { useObservable } from "react-use";
 import { EMPTY, Observable } from "rxjs";
 
 const devOverwrites = process.env.REACT_APP_EXPERIMENT_OVERWRITES
-  ? (JSON.parse(process.env.REACT_APP_EXPERIMENT_OVERWRITES) as Record<string, unknown>)
+  ? (process.env.REACT_APP_EXPERIMENT_OVERWRITES as unknown as Record<string, unknown>)
   : {};
 
 const experimentContext = createContext<ExperimentService | null>(null);

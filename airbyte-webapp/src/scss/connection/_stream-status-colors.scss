@@ -1,0 +1,21 @@
+@use "../colors";
+
+$action-required: colors.$dark-blue;
+$disabled: colors.$grey;
+$error: colors.$red;
+$late: colors.$blue-400;
+$pending: colors.$grey-400;
+$up-to-date: colors.$green;
+$cancelled: colors.$grey-400;
+
+$action-required-light: colors.$dark-blue-40;
+$disabled-light: colors.$grey-40;
+$error-light: colors.$red-40;
+$late-light: colors.$blue-40;
+$pending-light: colors.$grey-40;
+$up-to-date-light: colors.$green-40;
+$cancelled-light: colors.$grey-40;
+
+$by-stream-status: "actionRequired" $action-required $action-required-light, "disabled" $disabled $disabled-light,
+  "error" $error $error-light, "late" $late $late-light, "pending" $pending $pending-light,
+  "upToDate" $up-to-date $up-to-date-light, "cancelled" $cancelled $cancelled-light;

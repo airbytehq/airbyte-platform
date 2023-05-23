@@ -15,6 +15,8 @@ import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import jakarta.inject.Singleton;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -47,6 +49,8 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public boolean invokeWebhook(final OperatorWebhookInput input) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_WEBHOOK_OPERATION, 1);
+
     LOGGER.debug("Webhook operation input: {}", input);
     LOGGER.debug("Found webhook config: {}", input.getWorkspaceWebhookConfigs());
     final JsonNode fullWebhookConfigJson = secretsHydrator.hydrate(input.getWorkspaceWebhookConfigs());

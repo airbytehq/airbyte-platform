@@ -23,11 +23,11 @@ import io.airbyte.config.StateType;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.protocol.models.CatalogHelpers;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceImpl;
 import jakarta.inject.Singleton;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,13 +49,23 @@ public class PersistStateActivityImpl implements PersistStateActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   @Override
   public boolean persist(final UUID connectionId, final StandardSyncOutput syncOutput, final ConfiguredAirbyteCatalog configuredCatalog) {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_PERSIST_STATE, 1);
+
     ApmTraceUtils.addTagsToTrace(Map.of(CONNECTION_ID_KEY, connectionId.toString()));
+
+    if (syncOutput.getCommitStateAsap() != null && syncOutput.getCommitStateAsap()) {
+      // CommitStateAsap feature flag is true, states have been persisted during the replication activity.
+      return false;
+    }
+
     final State state = syncOutput.getState();
     if (state != null) {
       // todo: these validation logic should happen on server side.
       try {
         final Optional<StateWrapper> maybeStateWrapper = StateMessageHelper.getTypedState(state.getState(), featureFlags.useStreamCapableState());
         if (maybeStateWrapper.isPresent()) {
+          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE, 1);
+
           final ConnectionState previousState =
               AirbyteApiClient.retryWithJitter(
                   () -> airbyteApiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)),
@@ -98,7 +108,7 @@ public class PersistStateActivityImpl implements PersistStateActivity {
      *
      * Otherwise, it is okay to update if the previous state is missing or empty.
      */
-    if (featureFlags.needStateValidation() && !isStateEmpty(previousState)) {
+    if (featureFlags.needStateValidation() && !SyncPersistenceImpl.isStateEmpty(previousState)) {
       final StateType newStateType = newState.get().getStateType();
       final StateType prevStateType = convertClientStateTypeToInternal(previousState.getStateType());
 
@@ -108,28 +118,9 @@ public class PersistStateActivityImpl implements PersistStateActivity {
     }
   }
 
-  /**
-   * Test whether the connection state is empty.
-   *
-   * @param connectionState The connection state.
-   * @return {@code true} if the connection state is null or empty, {@code false} otherwise.
-   */
-  private boolean isStateEmpty(final ConnectionState connectionState) {
-    return connectionState == null || connectionState.getState() == null || connectionState.getState().isEmpty();
-  }
-
   @VisibleForTesting
   void validateStreamStates(final StateWrapper state, final ConfiguredAirbyteCatalog configuredCatalog) {
-    final List<StreamDescriptor> stateStreamDescriptors =
-        state.getStateMessages().stream().map(stateMessage -> stateMessage.getStream().getStreamDescriptor()).toList();
-    final List<StreamDescriptor> catalogStreamDescriptors = CatalogHelpers.extractIncrementalStreamDescriptors(configuredCatalog);
-    catalogStreamDescriptors.forEach(streamDescriptor -> {
-      if (!stateStreamDescriptors.contains(streamDescriptor)) {
-        throw new IllegalStateException(
-            "Job ran during migration from Legacy State to Per Stream State. One of the streams that did not have state is: " + streamDescriptor
-                + ". Job must be retried in order to properly store state.");
-      }
-    });
+    SyncPersistenceImpl.validateStreamStates(state, configuredCatalog);
   }
 
 }

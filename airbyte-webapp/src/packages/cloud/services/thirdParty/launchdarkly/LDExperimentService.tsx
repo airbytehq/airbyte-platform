@@ -8,15 +8,17 @@ import { LoadingPage } from "components";
 
 import { useConfig } from "config";
 import { useI18nContext } from "core/i18n";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { useAnalyticsService } from "core/services/analytics";
+import { useDebugVariable } from "core/utils/debug";
 import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
 import { ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
 import { FeatureSet, FeatureItem, useFeatureService } from "hooks/services/Feature";
-import { User } from "packages/cloud/lib/domain/users";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { rejectAfter } from "utils/promises";
+
+import { createMultiContext, createUserContext, createWorkspaceContext } from "./contexts";
 
 /**
  * This service hardcodes two conventions about the format of the LaunchDarkly feature
@@ -51,31 +53,6 @@ type LDInitState = "initializing" | "failed" | "initialized";
  * before running disabling it.
  */
 const INITIALIZATION_TIMEOUT = 5000;
-
-function mapUserToLDUser(user: User | null, locale: string, workspaceId: string | null): LDClient.LDUser {
-  if (!user) {
-    return {
-      anonymous: true,
-      custom: { locale },
-    };
-  }
-  /**
-   * Currently we can identify that a user is in a workspace with an optional workspaceId custom attribute.
-   * Once the LD Contexts feature is GA, we can upgrade the SDK and refactor this to support contexts:
-   * https://docs.launchdarkly.com/sdk/client-side/javascript/migration-2-to-3
-   */
-  const custom: Record<string, string> = { intercomHash: user.intercomHash, locale };
-  if (workspaceId) {
-    custom.workspace = workspaceId;
-  }
-  return {
-    key: user.userId,
-    email: user.email,
-    name: user.name,
-    custom,
-    anonymous: false,
-  };
-}
 
 const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string }>> = ({ children, apiKey }) => {
   const { setFeatureOverwrites } = useFeatureService();
@@ -123,7 +100,12 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   };
 
   if (!ldClient.current) {
-    ldClient.current = LDClient.initialize(apiKey, mapUserToLDUser(user, locale, null));
+    const userContext = createUserContext(user, locale);
+    const contexts = workspaceId
+      ? createMultiContext(userContext, createWorkspaceContext(workspaceId))
+      : createMultiContext(userContext);
+    ldClient.current = LDClient.initialize(apiKey, contexts);
+
     // Wait for either LaunchDarkly to initialize or a specific timeout to pass first
     Promise.race([
       ldClient.current.waitForInitialization(),
@@ -150,6 +132,11 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
       });
   }
 
+  useDebugVariable("_EXPERIMENTS", () => ({
+    ...ldClient.current?.allFlags(),
+    ...((process.env.REACT_APP_EXPERIMENT_OVERWRITES as unknown as Record<string, unknown>) ?? {}),
+  }));
+
   useEffectOnce(() => {
     const onFeatureFlagsChanged = () => {
       // Update analytics context whenever a flag changes
@@ -164,7 +151,11 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
 
   // Whenever the user, locale or workspaceId changes, we need to re-identify with launchdarkly
   useEffect(() => {
-    ldClient.current?.identify(mapUserToLDUser(user, locale, workspaceId || null));
+    const userContext = createUserContext(user, locale);
+    const contexts = workspaceId
+      ? createMultiContext(userContext, createWorkspaceContext(workspaceId))
+      : createMultiContext(userContext);
+    ldClient.current?.identify(contexts);
   }, [workspaceId, locale, user]);
 
   // Show the loading page while we're still waiting for the initial set of feature flags (or them to time out)

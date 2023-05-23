@@ -5,7 +5,6 @@ import { useAsyncFn } from "react-use";
 import { ControlLabels } from "components";
 import { Card } from "components/ui/Card";
 import { Switch } from "components/ui/Switch";
-import { ToastType } from "components/ui/Toast";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -26,7 +25,7 @@ export const SchemaUpdateNotifications: React.FC = () => {
       registerNotification({
         id: "connection.schemaUpdateNotifications.error",
         text: formatMessage({ id: "connection.schemaUpdateNotifications.error" }),
-        type: ToastType.ERROR,
+        type: "error",
       });
     }
   });
@@ -41,7 +40,7 @@ export const SchemaUpdateNotifications: React.FC = () => {
       <Switch
         checked={connection.notifySchemaChanges}
         onChange={(event) => onChange(event.target.checked)}
-        disabled={connectionUpdating}
+        disabled={connectionUpdating || connection.status === "deprecated"}
         loading={loading}
       />
     </Card>

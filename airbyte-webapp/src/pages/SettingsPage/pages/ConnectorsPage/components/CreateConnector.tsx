@@ -9,6 +9,7 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
 import { useExperiment } from "hooks/services/Experiment";
+import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths } from "pages/routePaths";
 import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useCreateSourceDefinition } from "services/connector/SourceDefinitionService";
@@ -37,7 +38,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     setIsModalOpen(!isModalOpen);
     setErrorMessage("");
   };
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
 
   const { formatMessage } = useIntl();
 
@@ -88,7 +89,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
           options={[
             {
               as: "a",
-              href: `../../${RoutePaths.ConnectorBuilder}`,
+              href: `../../${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Create}`,
               icon: <BuilderIcon />,
               displayName: formatMessage({ id: "admin.newConnector.build" }),
               internal: true,

@@ -3,13 +3,18 @@ import { FormikErrors, useFormikContext } from "formik";
 import intersection from "lodash/intersection";
 import { useCallback } from "react";
 
-import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  BuilderView,
+  useConnectorBuilderFormManagementState,
+  useConnectorBuilderFormState,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderFormValues } from "./types";
 
 export const useBuilderErrors = () => {
   const { touched, errors, validateForm, setFieldTouched } = useFormikContext<BuilderFormValues>();
   const { setSelectedView } = useConnectorBuilderFormState();
+  const { setScrollToField } = useConnectorBuilderFormManagementState();
 
   const invalidViews = useCallback(
     (ignoreUntouched: boolean, limitToViews?: BuilderView[], inputErrors?: FormikErrors<BuilderFormValues>) => {
@@ -34,7 +39,7 @@ export const useBuilderErrors = () => {
         }
       }
 
-      if (errorKeys.includes("streams")) {
+      if (errorKeys.includes("streams") && typeof errorsToCheck.streams === "object") {
         const errorStreamNums = Object.keys(errorsToCheck.streams ?? {}).filter((errorKey) =>
           Boolean(errorsToCheck.streams?.[Number(errorKey)])
         );
@@ -75,9 +80,10 @@ export const useBuilderErrors = () => {
   );
 
   const validateAndTouch = useCallback(
-    (callback: () => void, limitToViews?: BuilderView[]) => {
+    (callback?: () => void, limitToViews?: BuilderView[]) => {
       validateForm().then((errors) => {
-        for (const path of Object.keys(flatten(errors))) {
+        const errorPaths = Object.keys(flatten(errors));
+        for (const path of errorPaths) {
           setFieldTouched(path);
         }
 
@@ -87,17 +93,18 @@ export const useBuilderErrors = () => {
         const invalidBuilderViews = invalidViews(false, limitToViews, errors);
 
         if (invalidBuilderViews.length > 0) {
+          setScrollToField(errorPaths[0]);
           if (invalidBuilderViews.includes("global")) {
             setSelectedView("global");
           } else {
             setSelectedView(invalidBuilderViews[0]);
           }
         } else {
-          callback();
+          callback?.();
         }
       });
     },
-    [invalidViews, setFieldTouched, setSelectedView, validateForm]
+    [invalidViews, setFieldTouched, setScrollToField, setSelectedView, validateForm]
   );
 
   return { hasErrors, validateAndTouch };

@@ -19,8 +19,10 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.AttemptSyncConfig;
+import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -40,6 +42,7 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SyncStats;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobPersistence;
@@ -81,6 +84,8 @@ class JobTrackerTest {
   private static final UUID UUID1 = UUID.randomUUID();
   private static final UUID UUID2 = UUID.randomUUID();
   private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_ID = UUID.randomUUID();
   private static final String SOURCE_DEF_NAME = "postgres";
   private static final String DESTINATION_DEF_NAME = "bigquery";
   private static final String CONNECTOR_REPOSITORY = "test/test";
@@ -185,6 +190,7 @@ class JobTrackerTest {
   private JobPersistence jobPersistence;
   private TrackingClient trackingClient;
   private WorkspaceHelper workspaceHelper;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private JobTracker jobTracker;
 
   @BeforeEach
@@ -193,7 +199,8 @@ class JobTrackerTest {
     jobPersistence = mock(JobPersistence.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
-    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    jobTracker = new JobTracker(configRepository, jobPersistence, workspaceHelper, trackingClient, actorDefinitionVersionHelper);
   }
 
   @Test
@@ -208,20 +215,24 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
         .build();
 
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID1)
+        .withName(SOURCE_DEF_NAME);
+    final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION);
     when(configRepository.getStandardSourceDefinition(UUID1))
-        .thenReturn(new StandardSourceDefinition()
-            .withSourceDefinitionId(UUID1)
-            .withName(SOURCE_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION));
+        .thenReturn(sourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     assertCheckConnCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, WORKSPACE_ID, jobState, output),
+        (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
         metadata,
         true);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
     assertCheckConnCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, null, jobState, output),
+        (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, null, null, jobState, output),
         metadata,
         false);
   }
@@ -238,20 +249,24 @@ class JobTrackerTest {
         .put("connector_destination_version", CONNECTOR_VERSION)
         .build();
 
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID2)
+        .withName(DESTINATION_DEF_NAME);
+    final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION);
     when(configRepository.getStandardDestinationDefinition(UUID2))
-        .thenReturn(new StandardDestinationDefinition()
-            .withDestinationDefinitionId(UUID2)
-            .withName(DESTINATION_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION));
+        .thenReturn(destinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(destinationVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     assertCheckConnCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, WORKSPACE_ID, jobState, output),
+        (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, WORKSPACE_ID, DESTINATION_ID, jobState, output),
         metadata,
         true);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, null, null)).thenReturn(destinationVersion);
     assertCheckConnCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, null, jobState, output),
+        (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, null, null, jobState, output),
         metadata,
         false);
   }
@@ -268,16 +283,26 @@ class JobTrackerTest {
         .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
         .build();
 
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID1)
+        .withName(SOURCE_DEF_NAME);
+    final ActorDefinitionVersion sourceVersion = new ActorDefinitionVersion()
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION);
     when(configRepository.getStandardSourceDefinition(UUID1))
-        .thenReturn(new StandardSourceDefinition()
-            .withSourceDefinitionId(UUID1)
-            .withName(SOURCE_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION));
+        .thenReturn(sourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(sourceVersion);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    assertCorrectMessageForEachState((jobState) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, jobState), metadata);
-    assertCorrectMessageForEachState((jobState) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, jobState), metadata);
+    assertDiscoverCorrectMessageForEachState(
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
+        metadata,
+        true);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
+    assertDiscoverCorrectMessageForEachState(
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, null, jobState, output),
+        metadata,
+        false);
   }
 
   @Test
@@ -294,37 +319,38 @@ class JobTrackerTest {
 
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID);
     when(configRepository.getStandardSync(CONNECTION_ID))
-        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(true).withCatalog(CATALOG));
+        .thenReturn(new StandardSync()
+            .withConnectionId(CONNECTION_ID).withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID).withCatalog(CATALOG)
+            .withManual(true));
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     when(configRepository.getStandardSync(CONNECTION_ID))
-        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(false).withCatalog(CATALOG)
-            .withSchedule(new Schedule().withUnits(1L).withTimeUnit(TimeUnit.MINUTES)));
+        .thenReturn(new StandardSync()
+            .withConnectionId(CONNECTION_ID).withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID).withCatalog(CATALOG)
+            .withManual(false).withSchedule(new Schedule().withUnits(1L).withTimeUnit(TimeUnit.MINUTES)));
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID1)
+        .withName(SOURCE_DEF_NAME);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID2)
+        .withName(DESTINATION_DEF_NAME);
+
     when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
-        .thenReturn(new StandardSourceDefinition()
-            .withSourceDefinitionId(UUID1)
-            .withName(SOURCE_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION)
-            .withSpec(SOURCE_SPEC));
+        .thenReturn(sourceDefinition);
     when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
-        .thenReturn(new StandardDestinationDefinition()
-            .withDestinationDefinitionId(UUID2)
-            .withName(DESTINATION_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION)
-            .withSpec(DESTINATION_SPEC));
+        .thenReturn(destinationDefinition);
     when(configRepository.getStandardSourceDefinition(UUID1))
-        .thenReturn(new StandardSourceDefinition()
-            .withSourceDefinitionId(UUID1)
-            .withName(SOURCE_DEF_NAME)
+        .thenReturn(sourceDefinition);
+    when(configRepository.getStandardDestinationDefinition(UUID2))
+        .thenReturn(destinationDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
+        .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(CONNECTOR_REPOSITORY)
             .withDockerImageTag(CONNECTOR_VERSION)
             .withSpec(SOURCE_SPEC));
-    when(configRepository.getStandardDestinationDefinition(UUID2))
-        .thenReturn(new StandardDestinationDefinition()
-            .withDestinationDefinitionId(UUID2)
-            .withName(DESTINATION_DEF_NAME)
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
+        .thenReturn(new ActorDefinitionVersion()
             .withDockerRepository(CONNECTOR_REPOSITORY)
             .withDockerImageTag(CONNECTOR_VERSION)
             .withSpec(DESTINATION_SPEC));
@@ -378,7 +404,12 @@ class JobTrackerTest {
     // test when frequency is manual.
 
     when(configRepository.getStandardSync(CONNECTION_ID))
-        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(true).withCatalog(CATALOG));
+        .thenReturn(new StandardSync()
+            .withConnectionId(CONNECTION_ID)
+            .withSourceId(SOURCE_ID)
+            .withDestinationId(DESTINATION_ID)
+            .withCatalog(CATALOG)
+            .withManual(true));
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
     final Map<String, Object> manualMetadata = MoreMaps.merge(
@@ -389,7 +420,12 @@ class JobTrackerTest {
 
     // test when frequency is scheduled.
     when(configRepository.getStandardSync(CONNECTION_ID))
-        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(false).withCatalog(CATALOG)
+        .thenReturn(new StandardSync()
+            .withConnectionId(CONNECTION_ID)
+            .withSourceId(SOURCE_ID)
+            .withDestinationId(DESTINATION_ID)
+            .withCatalog(CATALOG)
+            .withManual(false)
             .withSchedule(new Schedule().withUnits(1L).withTimeUnit(TimeUnit.MINUTES)));
     final Map<String, Object> scheduledMetadata = MoreMaps.merge(
         metadata,
@@ -458,7 +494,12 @@ class JobTrackerTest {
     final Map<String, Object> metadata = getJobMetadata(configType, LONG_JOB_ID);
     // test when frequency is manual.
     when(configRepository.getStandardSync(CONNECTION_ID))
-        .thenReturn(new StandardSync().withConnectionId(CONNECTION_ID).withManual(true).withCatalog(CATALOG));
+        .thenReturn(new StandardSync()
+            .withConnectionId(CONNECTION_ID)
+            .withSourceId(SOURCE_ID)
+            .withDestinationId(DESTINATION_ID)
+            .withManual(true)
+            .withCatalog(CATALOG));
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID)).thenReturn(WORKSPACE_ID);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
@@ -475,8 +516,7 @@ class JobTrackerTest {
     assertCorrectMessageForFailedState(manualMetadata);
   }
 
-  void testAsynchronousAttemptWithFailures(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
-      throws ConfigNotFoundException, IOException, JsonValidationException {
+  private JsonNode configFailureJson() {
     final LinkedHashMap<String, Object> linkedHashMap = new LinkedHashMap<>();
     linkedHashMap.put("failureOrigin", "source");
     linkedHashMap.put("failureType", "config_error");
@@ -485,8 +525,10 @@ class JobTrackerTest {
     linkedHashMap.put(METADATA, ImmutableMap.of(SOME, METADATA));
     linkedHashMap.put("retryable", true);
     linkedHashMap.put("timestamp", 1010);
-    final JsonNode configFailureJson = Jsons.jsonNode(linkedHashMap);
+    return Jsons.jsonNode(linkedHashMap);
+  }
 
+  private JsonNode systemFailureJson() {
     final LinkedHashMap<String, Object> linkedHashMap1 = new LinkedHashMap<>();
     linkedHashMap1.put("failureOrigin", "replication");
     linkedHashMap1.put("failureType", "system_error");
@@ -495,8 +537,10 @@ class JobTrackerTest {
     linkedHashMap1.put(METADATA, ImmutableMap.of(SOME, METADATA));
     linkedHashMap1.put("retryable", true);
     linkedHashMap1.put("timestamp", 1100);
-    final JsonNode systemFailureJson = Jsons.jsonNode(linkedHashMap1);
+    return Jsons.jsonNode(linkedHashMap1);
+  }
 
+  private JsonNode unknownFailureJson() {
     final LinkedHashMap<String, Object> linkedHashMap2 = new LinkedHashMap<>();
     linkedHashMap2.put("failureOrigin", null);
     linkedHashMap2.put("failureType", null);
@@ -505,45 +549,47 @@ class JobTrackerTest {
     linkedHashMap2.put(METADATA, ImmutableMap.of(SOME, METADATA));
     linkedHashMap2.put("retryable", true);
     linkedHashMap2.put("timestamp", 1110);
-    final JsonNode unknownFailureJson = Jsons.jsonNode(linkedHashMap2);
+    return Jsons.jsonNode(linkedHashMap2);
+  }
+
+  void testAsynchronousAttemptWithFailures(final ConfigType configType, final Map<String, Object> additionalExpectedMetadata)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final Map<String, Object> failureMetadata = ImmutableMap.of(
-        "failure_reasons", Jsons.arrayNode().addAll(Arrays.asList(configFailureJson, systemFailureJson, unknownFailureJson)).toString(),
-        "main_failure_reason", configFailureJson.toString());
+        "failure_reasons", Jsons.arrayNode().addAll(Arrays.asList(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
+        "main_failure_reason", configFailureJson().toString());
     testAsynchronousAttempt(configType, getJobWithFailuresMock(configType, LONG_JOB_ID),
         MoreMaps.merge(additionalExpectedMetadata, failureMetadata));
   }
 
   private Job getJobMock(final ConfigType configType, final long jobId) throws ConfigNotFoundException, IOException, JsonValidationException {
-    when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
-        .thenReturn(new StandardSourceDefinition()
-            .withSourceDefinitionId(UUID1)
-            .withName(SOURCE_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION)
-            .withSpec(SOURCE_SPEC));
-    when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
-        .thenReturn(new StandardDestinationDefinition()
-            .withDestinationDefinitionId(UUID2)
-            .withName(DESTINATION_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION)
-            .withSpec(DESTINATION_SPEC));
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID1)
+        .withName(SOURCE_DEF_NAME);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID2)
+        .withName(DESTINATION_DEF_NAME);
 
+    when(configRepository.getSourceDefinitionFromConnection(CONNECTION_ID))
+        .thenReturn(sourceDefinition);
+    when(configRepository.getDestinationDefinitionFromConnection(CONNECTION_ID))
+        .thenReturn(destinationDefinition);
     when(configRepository.getStandardSourceDefinition(UUID1))
-        .thenReturn(new StandardSourceDefinition()
-            .withSourceDefinitionId(UUID1)
-            .withName(SOURCE_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
-            .withDockerImageTag(CONNECTOR_VERSION)
-            .withSpec(SOURCE_SPEC));
+        .thenReturn(sourceDefinition);
     when(configRepository.getStandardDestinationDefinition(UUID2))
-        .thenReturn(new StandardDestinationDefinition()
-            .withDestinationDefinitionId(UUID2)
-            .withName(DESTINATION_DEF_NAME)
-            .withDockerRepository(CONNECTOR_REPOSITORY)
+        .thenReturn(destinationDefinition);
+
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
+        .thenReturn(new ActorDefinitionVersion()
+            .withSpec(SOURCE_SPEC)
             .withDockerImageTag(CONNECTOR_VERSION)
-            .withSpec(DESTINATION_SPEC));
+            .withDockerRepository(CONNECTOR_REPOSITORY));
+
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
+        .thenReturn(new ActorDefinitionVersion()
+            .withSpec(DESTINATION_SPEC)
+            .withDockerImageTag(CONNECTOR_VERSION)
+            .withDockerRepository(CONNECTOR_REPOSITORY));
 
     final ConfiguredAirbyteCatalog catalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream()
@@ -625,10 +671,8 @@ class JobTrackerTest {
     return job;
   }
 
-  private List<Attempt> getAttemptsWithFailuresMock() {
-    final Attempt attemptWithSingleFailure = getAttemptMock();
-    final AttemptFailureSummary singleFailureSummary = mock(AttemptFailureSummary.class);
-    final FailureReason configFailureReason = new FailureReason()
+  private FailureReason getConfigFailureReasonMock() {
+    return new FailureReason()
         .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
         .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
         .withRetryable(true)
@@ -637,12 +681,10 @@ class JobTrackerTest {
         .withInternalMessage("Internal config error error msg")
         .withStacktrace("Don't include stacktrace in call to track")
         .withTimestamp(SYNC_START_TIME + 10);
-    when(singleFailureSummary.getFailures()).thenReturn(List.of(configFailureReason));
-    when(attemptWithSingleFailure.getFailureSummary()).thenReturn(Optional.of(singleFailureSummary));
+  }
 
-    final Attempt attemptWithMultipleFailures = getAttemptMock();
-    final AttemptFailureSummary multipleFailuresSummary = mock(AttemptFailureSummary.class);
-    final FailureReason systemFailureReason = new FailureReason()
+  private FailureReason getSystemFailureReasonMock() {
+    return new FailureReason()
         .withFailureOrigin(FailureReason.FailureOrigin.REPLICATION)
         .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
         .withRetryable(true)
@@ -651,14 +693,27 @@ class JobTrackerTest {
         .withInternalMessage("Internal system error error msg")
         .withStacktrace("Don't include stacktrace in call to track")
         .withTimestamp(SYNC_START_TIME + 100);
-    final FailureReason unknownFailureReason = new FailureReason()
+  }
+
+  private FailureReason getUnknownFailureReasonMock() {
+    return new FailureReason()
         .withRetryable(true)
         .withMetadata(new Metadata().withAdditionalProperty(SOME, METADATA))
         .withExternalMessage("Unknown error related msg")
         .withInternalMessage("Internal unknown error error msg")
         .withStacktrace("Don't include stacktrace in call to track")
         .withTimestamp(SYNC_START_TIME + 110);
-    when(multipleFailuresSummary.getFailures()).thenReturn(List.of(systemFailureReason, unknownFailureReason));
+  }
+
+  private List<Attempt> getAttemptsWithFailuresMock() {
+    final Attempt attemptWithSingleFailure = getAttemptMock();
+    final AttemptFailureSummary singleFailureSummary = mock(AttemptFailureSummary.class);
+    when(singleFailureSummary.getFailures()).thenReturn(List.of(getConfigFailureReasonMock()));
+    when(attemptWithSingleFailure.getFailureSummary()).thenReturn(Optional.of(singleFailureSummary));
+
+    final Attempt attemptWithMultipleFailures = getAttemptMock();
+    final AttemptFailureSummary multipleFailuresSummary = mock(AttemptFailureSummary.class);
+    when(multipleFailuresSummary.getFailures()).thenReturn(List.of(getSystemFailureReasonMock(), getUnknownFailureReasonMock()));
     when(attemptWithMultipleFailures.getFailureSummary()).thenReturn(Optional.of(multipleFailuresSummary));
 
     final Attempt attemptWithNoFailures = getAttemptMock();
@@ -695,7 +750,7 @@ class JobTrackerTest {
         .build();
   }
 
-  private void assertCheckConnCorrectMessageForEachState(final BiConsumer<JobState, StandardCheckConnectionOutput> jobStateConsumer,
+  private void assertCheckConnCorrectMessageForEachState(final BiConsumer<JobState, ConnectorJobOutput> jobStateConsumer,
                                                          final Map<String, Object> metadata,
                                                          final boolean workspaceSet) {
     reset(trackingClient);
@@ -703,23 +758,60 @@ class JobTrackerTest {
     // Output does not exist when job has started.
     jobStateConsumer.accept(JobState.STARTED, null);
 
-    final var successOutput = new StandardCheckConnectionOutput();
-    successOutput.setStatus(Status.SUCCEEDED);
-    jobStateConsumer.accept(JobState.SUCCEEDED, successOutput);
+    final var connectionCheckSuccessOutput = new StandardCheckConnectionOutput();
+    connectionCheckSuccessOutput.setStatus(Status.SUCCEEDED);
+    final var checkConnectionSuccessJobOutput = new ConnectorJobOutput().withCheckConnection(connectionCheckSuccessOutput);
+    jobStateConsumer.accept(JobState.SUCCEEDED, checkConnectionSuccessJobOutput);
     final ImmutableMap<String, Object> checkConnSuccessMetadata = ImmutableMap.of("check_connection_outcome", "succeeded");
 
-    final var failureOutput = new StandardCheckConnectionOutput();
-    failureOutput.setStatus(Status.FAILED);
-    jobStateConsumer.accept(JobState.SUCCEEDED, failureOutput);
-    final ImmutableMap<String, Object> checkConnFailureMetadata = ImmutableMap.of("check_connection_outcome", "failed");
+    final var connectionCheckFailureOutput = new StandardCheckConnectionOutput();
+    connectionCheckFailureOutput.setStatus(Status.FAILED);
+    connectionCheckFailureOutput.setMessage("Please check your Personal Access Token.");
+    final var checkConnectionFailureJobOutput = new ConnectorJobOutput().withCheckConnection(connectionCheckFailureOutput);
+    jobStateConsumer.accept(JobState.SUCCEEDED, checkConnectionFailureJobOutput); // The job still succeeded, only the connection check failed
+    final ImmutableMap<String, Object> checkConnFailureMetadata = ImmutableMap.of(
+        "check_connection_outcome", "failed",
+        "check_connection_message", "Please check your Personal Access Token.");
 
     // Failure implies the job threw an exception which almost always meant no output.
-    jobStateConsumer.accept(JobState.FAILED, null);
+    final var failedCheckJobOutput = new ConnectorJobOutput();
+    failedCheckJobOutput.setFailureReason(getConfigFailureReasonMock());
+    jobStateConsumer.accept(JobState.FAILED, failedCheckJobOutput);
+    final ImmutableMap<String, Object> failedCheckJobMetadata = ImmutableMap.of("failure_reason", configFailureJson().toString());
+
     if (workspaceSet) {
       assertCorrectMessageForStartedState(metadata);
       assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnSuccessMetadata));
       assertCorrectMessageForSucceededState(MoreMaps.merge(metadata, checkConnFailureMetadata));
-      assertCorrectMessageForFailedState(metadata);
+      assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedCheckJobMetadata));
+    } else {
+      verifyNoInteractions(trackingClient);
+    }
+  }
+
+  private void assertDiscoverCorrectMessageForEachState(final BiConsumer<JobState, ConnectorJobOutput> jobStateConsumer,
+                                                        final Map<String, Object> metadata,
+                                                        final boolean workspaceSet) {
+    reset(trackingClient);
+
+    // Output does not exist when job has started.
+    jobStateConsumer.accept(JobState.STARTED, null);
+
+    final UUID discoverCatalogID = UUID.randomUUID();
+    final var discoverSuccessJobOutput = new ConnectorJobOutput().withDiscoverCatalogId(discoverCatalogID);
+    jobStateConsumer.accept(JobState.SUCCEEDED, discoverSuccessJobOutput);
+
+    // Failure implies the job threw an exception which almost always meant no output.
+    final var failedDiscoverOutput = new ConnectorJobOutput();
+    failedDiscoverOutput.setFailureReason(getSystemFailureReasonMock());
+    jobStateConsumer.accept(JobState.FAILED, failedDiscoverOutput);
+
+    final ImmutableMap<String, Object> failedDiscoverMetadata = ImmutableMap.of("failure_reason", systemFailureJson().toString());
+
+    if (workspaceSet) {
+      assertCorrectMessageForStartedState(metadata);
+      assertCorrectMessageForSucceededState(metadata);
+      assertCorrectMessageForFailedState(MoreMaps.merge(metadata, failedDiscoverMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }

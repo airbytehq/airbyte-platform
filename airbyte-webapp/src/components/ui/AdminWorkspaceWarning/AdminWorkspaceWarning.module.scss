@@ -1,0 +1,25 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.adminWorkspaceWarning {
+  width: 100%;
+  background-color: colors.$red-400;
+  border-radius: variables.$border-radius-pill;
+  cursor: help;
+
+  /** Hard coded values to match WorkspaceSelector :-( **/
+  flex: 0 0 21px;
+
+  &__pill {
+    height: 100%;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    p {
+      font-size: 9px;
+      line-height: 9px;
+    }
+  }
+}

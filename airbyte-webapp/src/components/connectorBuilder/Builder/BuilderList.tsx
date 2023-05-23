@@ -2,7 +2,6 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useField } from "formik";
 import React, { ReactElement, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 
@@ -13,9 +12,10 @@ interface BuilderListProps {
   children: (props: { buildPath: (path: string) => string }) => ReactElement;
   basePath: string;
   emptyItem: object;
+  addButtonLabel: string;
 }
 
-export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, basePath }) => {
+export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, basePath, addButtonLabel }) => {
   const [list, , helpers] = useField<object[]>(basePath);
 
   const buildPathFunctions = useMemo(
@@ -41,13 +41,14 @@ export const BuilderList: React.FC<BuilderListProps> = ({ children, emptyItem, b
       ))}
       <div>
         <Button
+          type="button"
           variant="secondary"
           icon={<FontAwesomeIcon icon={faPlus} />}
           onClick={() => {
             helpers.setValue([...list.value, { ...emptyItem }]);
           }}
         >
-          <FormattedMessage id="connectorBuilder.addNewPartitionRouter" />
+          {addButtonLabel}
         </Button>
       </div>
     </>

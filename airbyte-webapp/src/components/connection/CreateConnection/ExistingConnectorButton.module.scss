@@ -1,0 +1,18 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.existingConnectorButton {
+  background-color: transparent;
+  display: grid;
+  align-items: center;
+  grid-template-columns: 2fr 2fr 120px 20px;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: variables.$spacing-lg variables.$spacing-xl;
+  color: colors.$dark-blue;
+
+  &:hover {
+    cursor: pointer;
+  }
+}

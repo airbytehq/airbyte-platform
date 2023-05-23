@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { ExternalLink } from "components/ui/Link";
 
+import { isCloudApp } from "utils/app";
 import { links } from "utils/links";
 
 interface ShowLoadingMessageProps {
@@ -24,7 +25,9 @@ const ShowLoadingMessage: React.FC<ShowLoadingMessageProps> = ({ connector }) =>
     <FormattedMessage
       id="form.tooLong"
       values={{
-        lnk: (...lnk: React.ReactNode[]) => <ExternalLink href={links.technicalSupport}>{lnk}</ExternalLink>,
+        lnk: (...lnk: React.ReactNode[]) => (
+          <ExternalLink href={isCloudApp() ? links.supportTicketLink : links.technicalSupport}>{lnk}</ExternalLink>
+        ),
       }}
     />
   ) : (

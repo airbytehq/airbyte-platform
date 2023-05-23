@@ -21,10 +21,10 @@ import io.airbyte.api.model.generated.JobReadList;
 import io.airbyte.commons.auth.SecuredWorkspace;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
 import io.micronaut.context.annotation.Context;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
@@ -46,7 +46,7 @@ public class JobsApiController implements JobsApi {
   @Post("/cancel")
   @Secured({EDITOR})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.cancelJob(jobIdRequestBody));
@@ -54,7 +54,7 @@ public class JobsApiController implements JobsApi {
 
   @Post("/get_normalization_status")
   @Secured({ADMIN})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public AttemptNormalizationStatusReadList getAttemptNormalizationStatusesForJob(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getAttemptNormalizationStatuses(jobIdRequestBody));
@@ -63,7 +63,7 @@ public class JobsApiController implements JobsApi {
   @Post("/get_debug_info")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public JobDebugInfoRead getJobDebugInfo(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobDebugInfo(jobIdRequestBody));
@@ -72,16 +72,25 @@ public class JobsApiController implements JobsApi {
   @Post("/get")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public JobInfoRead getJobInfo(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfo(jobIdRequestBody));
   }
 
+  @Post("/get_without_logs")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) {
+    return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody));
+  }
+
   @Post("/get_light")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoLight(jobIdRequestBody));
@@ -89,7 +98,7 @@ public class JobsApiController implements JobsApi {
 
   @Post("/get_last_replication_job")
   @Secured({READER})
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public JobOptionalRead getLastReplicationJob(final ConnectionIdRequestBody connectionIdRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody));
@@ -98,7 +107,7 @@ public class JobsApiController implements JobsApi {
   @Post("/list")
   @Secured({READER})
   @SecuredWorkspace
-  @ExecuteOn(TaskExecutors.IO)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public JobReadList listJobsFor(final JobListRequestBody jobListRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsFor(jobListRequestBody));

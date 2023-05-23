@@ -1,0 +1,13 @@
+@use "scss/colors";
+
+.error {
+  background-color: colors.$red-100;
+}
+
+.warning {
+  background-color: colors.$yellow-100;
+}
+
+.info {
+  background-color: colors.$blue-100;
+}

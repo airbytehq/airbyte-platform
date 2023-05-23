@@ -5,6 +5,8 @@ import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
 import { DropDown } from "components/ui/DropDown";
 
+import { getLabelAndTooltip } from "./manifestHelpers";
+
 interface Option {
   label: string;
   value: string;
@@ -21,27 +23,39 @@ export interface OneOfOption {
 interface BuilderOneOfProps {
   options: OneOfOption[];
   path: string; // path to the oneOf component in the json schema
-  label: string;
-  tooltip: string;
+  label?: string;
+  tooltip?: string;
+  manifestPath?: string;
+  manifestOptionPaths?: string[];
   onSelect?: (type: string) => void;
 }
 
-const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<string>> = ({
+const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<{ type: string }>> = ({
   options,
   label,
   tooltip,
   field: typePathField,
   path,
   form,
+  manifestPath,
+  manifestOptionPaths,
   onSelect,
 }) => {
-  const value = typePathField.value;
+  const value = typePathField.value.type;
 
   const selectedOption = options.find((option) => option.typeValue === value);
+  const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(
+    label,
+    tooltip,
+    manifestPath,
+    path,
+    false,
+    manifestOptionPaths
+  );
 
   return (
     <GroupControls
-      label={<ControlLabels label={label} infoTooltipContent={tooltip} />}
+      label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
         <DropDown
           {...typePathField}
@@ -70,8 +84,8 @@ const InnerBuilderOneOf: React.FC<BuilderOneOfProps & FastFieldProps<string>> = 
 };
 export const BuilderOneOf: React.FC<BuilderOneOfProps> = (props) => {
   return (
-    <FastField name={`${props.path}.type`}>
-      {(fastFieldProps: FastFieldProps<string>) => <InnerBuilderOneOf {...props} {...fastFieldProps} />}
+    <FastField name={props.path}>
+      {(fastFieldProps: FastFieldProps<{ type: string }>) => <InnerBuilderOneOf {...props} {...fastFieldProps} />}
     </FastField>
   );
 };

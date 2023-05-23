@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.Notification;
@@ -21,7 +22,9 @@ import io.airbyte.config.Notification.NotificationType;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.notification.NotificationClient;
@@ -47,6 +50,8 @@ class JobNotifierTest {
   private static final String TEST_DOCKER_REPO = "airbyte/test-image";
   private static final String TEST_DOCKER_TAG = "0.1.0";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID DESTINATION_ID = UUID.randomUUID();
 
   private final WebUrlHelper webUrlHelper = new WebUrlHelper(WEBAPP_URL);
 
@@ -55,14 +60,16 @@ class JobNotifierTest {
   private JobNotifier jobNotifier;
   private NotificationClient notificationClient;
   private TrackingClient trackingClient;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @BeforeEach
   void setup() {
     configRepository = mock(ConfigRepository.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
 
-    jobNotifier = Mockito.spy(new JobNotifier(webUrlHelper, configRepository, workspaceHelper, trackingClient));
+    jobNotifier = Mockito.spy(new JobNotifier(webUrlHelper, configRepository, workspaceHelper, trackingClient, actorDefinitionVersionHelper));
     notificationClient = mock(NotificationClient.class);
     when(jobNotifier.getNotificationClient(getSlackNotification())).thenReturn(notificationClient);
   }
@@ -72,14 +79,15 @@ class JobNotifierTest {
     final Job job = createJob();
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName("source-test")
-        .withDockerRepository(TEST_DOCKER_REPO)
-        .withDockerImageTag(TEST_DOCKER_TAG)
         .withSourceDefinitionId(UUID.randomUUID());
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName("destination-test")
-        .withDockerRepository(TEST_DOCKER_REPO)
-        .withDockerImageTag(TEST_DOCKER_TAG)
         .withDestinationDefinitionId(UUID.randomUUID());
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withDockerImageTag(TEST_DOCKER_TAG)
+        .withDockerRepository(TEST_DOCKER_REPO);
+    when(configRepository.getStandardSync(UUID.fromString(job.getScope())))
+        .thenReturn(new StandardSync().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID));
     when(configRepository.getSourceDefinitionFromConnection(any())).thenReturn(sourceDefinition);
     when(configRepository.getDestinationDefinitionFromConnection(any())).thenReturn(destinationDefinition);
     when(configRepository.getStandardSourceDefinition(any())).thenReturn(sourceDefinition);
@@ -87,6 +95,8 @@ class JobNotifierTest {
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(getWorkspace());
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId())).thenReturn(WORKSPACE_ID);
     when(notificationClient.notifyJobFailure(anyString(), anyString(), anyString(), anyString(), anyLong())).thenReturn(true);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(actorDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(actorDefinitionVersion);
 
     jobNotifier.failJob("JobNotifierTest was running", job);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
@@ -103,11 +113,11 @@ class JobNotifierTest {
     metadata.put("connector_source_definition_id", sourceDefinition.getSourceDefinitionId());
     metadata.put("connector_source", "source-test");
     metadata.put("connector_source_version", TEST_DOCKER_TAG);
-    metadata.put("connector_source_docker_repository", sourceDefinition.getDockerRepository());
+    metadata.put("connector_source_docker_repository", actorDefinitionVersion.getDockerRepository());
     metadata.put("connector_destination_definition_id", destinationDefinition.getDestinationDefinitionId());
     metadata.put("connector_destination", "destination-test");
     metadata.put("connector_destination_version", TEST_DOCKER_TAG);
-    metadata.put("connector_destination_docker_repository", destinationDefinition.getDockerRepository());
+    metadata.put("connector_destination_docker_repository", actorDefinitionVersion.getDockerRepository());
     metadata.put("notification_type", NotificationType.SLACK);
     verify(trackingClient).track(WORKSPACE_ID, JobNotifier.FAILURE_NOTIFICATION, metadata.build());
   }

@@ -10,15 +10,14 @@ import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { Text } from "components/ui/Text";
-import { TextWithHTML } from "components/ui/TextWithHTML";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   BuilderView,
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -27,13 +26,16 @@ import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
+import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
 import { KeyValueListField } from "./KeyValueListField";
+import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { PartitionSection } from "./PartitionSection";
 import styles from "./StreamConfigView.module.scss";
+import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { BuilderStream } from "../types";
+import { BuilderStream, isEmptyOrDefault } from "../types";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
@@ -67,50 +69,47 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <BuilderFieldWithInputs
               type="string"
               path={streamFieldPath("urlPath")}
-              label="Path URL"
-              tooltip={
-                <TextWithHTML text="Path of the API endpoint that this stream represents.<br><br>Do not put sensitive information (e.g. API tokens) into this field - use the Authentication component in the Global Configuration section for this." />
-              }
+              manifestPath="HttpRequester.properties.path"
             />
             <BuilderField
               type="enum"
               path={streamFieldPath("httpMethod")}
-              options={["GET", "POST"]}
-              label="HTTP Method"
-              tooltip="HTTP method to use for requests sent to the API"
+              options={getOptionsByManifest("HttpRequester.properties.http_method.anyOf.1")}
+              manifestPath="HttpRequester.properties.http_method"
             />
             <BuilderField
               type="array"
               path={streamFieldPath("fieldPointer")}
-              label="Record selector"
-              tooltip="Pointer into the response that should be extracted as the final record"
-            />
-            <BuilderField
-              type="array"
-              path={streamFieldPath("primaryKey")}
-              label="Primary key"
-              tooltip="Pointer into the response that should be used as the primary key when deduplicating records in the destination"
+              label="Record Selector"
+              manifestPath="DpathExtractor.properties.field_path"
               optional
             />
+            <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
           </BuilderCard>
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <BuilderCard>
+          <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <BuilderCard
+            copyConfig={{
+              path: "requestOptions",
+              currentStreamIndex: streamNum,
+              copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromRequestOptionsTitle" }),
+              copyToLabel: formatMessage({ id: "connectorBuilder.copyToRequestOptionsTitle" }),
+            }}
+          >
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestParameters")}
-              label="Request Parameters"
-              tooltip="Parameters to attach to API requests"
+              manifestPath="HttpRequester.properties.request_parameters"
             />
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestHeaders")}
-              label="Request Headers"
-              tooltip="Headers to attach to API requests"
+              manifestPath="HttpRequester.properties.request_headers"
             />
             <KeyValueListField
               path={streamFieldPath("requestOptions.requestBody")}
-              label="Request Body"
-              tooltip="Body to attach to API requests as url-encoded form values"
+              manifestPath="HttpRequester.properties.request_body_json"
             />
           </BuilderCard>
         </>
@@ -122,6 +121,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     </BuilderConfigView>
   );
 });
+
+StreamConfigView.displayName = "StreamConfigView";
 
 const StreamControls = ({
   streamNum,
@@ -139,7 +140,7 @@ const StreamControls = ({
   const [field, , helpers] = useField<BuilderStream[]>("streams");
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setSelectedView } = useConnectorBuilderFormState();
-  const { streamRead: readStream } = useConnectorBuilderTestState();
+  const { streamRead: readStream } = useConnectorBuilderTestRead();
   const [schema, meta] = useField<string | undefined>(streamFieldPath("schema"));
   const formattedDetectedSchema = useMemo(
     () => readStream.data?.inferred_schema && formatJson(readStream.data?.inferred_schema, true),
@@ -170,11 +171,13 @@ const StreamControls = ({
   return (
     <div className={styles.controls}>
       <StreamTab
+        data-testid="tag-tab-stream-configuration"
         label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
         selected={selectedTab === "configuration"}
         onSelect={() => setSelectedTab("configuration")}
       />
       <StreamTab
+        data-testid="tag-tab-stream-schema"
         label={formatMessage({ id: "connectorBuilder.streamSchema" })}
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
@@ -191,6 +194,10 @@ const StreamControls = ({
             <FontAwesomeIcon icon={faCopy} />
           </button>
         }
+        modalTitle={formatMessage(
+          { id: "connectorBuilder.copyStreamModal.title" },
+          { name: field.value[streamNum].name }
+        )}
       />
       <button className={classNames(styles.deleteButton, styles.controlButton)} type="button" onClick={handleDelete}>
         <FontAwesomeIcon icon={faTrashCan} />
@@ -205,15 +212,22 @@ const StreamTab = ({
   onSelect,
   showErrorIndicator,
   showSchemaConflictIndicator,
+  "data-testid": testId,
 }: {
   selected: boolean;
   label: string;
   onSelect: () => void;
   showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
+  "data-testid": string;
 }) => (
-  <button type="button" className={classNames(styles.tab, { [styles.selectedTab]: selected })} onClick={onSelect}>
-    {label}
+  <button
+    data-testid={testId}
+    type="button"
+    className={classNames(styles.tab, { [styles.selectedTab]: selected })}
+    onClick={onSelect}
+  >
+    <Text>{label}</Text>
     {showErrorIndicator && <Indicator />}
     {showSchemaConflictIndicator && <SchemaConflictIndicator />}
   </button>
@@ -221,10 +235,11 @@ const StreamTab = ({
 
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string) => string }) => {
   const analyticsService = useAnalyticsService();
-  const [field, meta, helpers] = useField<string | undefined>(streamFieldPath("schema"));
-  const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestState();
+  const schemaFieldPath = streamFieldPath("schema");
+  const [field, meta, helpers] = useField<string | undefined>(schemaFieldPath);
+  const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
 
-  const showImportButton = !field.value && streamRead.data?.inferred_schema;
+  const showImportButton = isEmptyOrDefault(field.value) && streamRead.data?.inferred_schema;
 
   return (
     <>
@@ -246,6 +261,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath: string
       )}
       <div className={styles.editorContainer}>
         <CodeEditor
+          key={schemaFieldPath}
           value={field.value || ""}
           language="json"
           theme="airbyte-light"

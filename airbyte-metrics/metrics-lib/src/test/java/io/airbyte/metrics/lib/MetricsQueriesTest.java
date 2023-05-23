@@ -90,7 +90,7 @@ class MetricsQueriesTest {
     @AfterEach
     void tearDown() throws SQLException {
       configDb.transaction(ctx -> ctx.truncate(ACTOR).execute());
-      configDb.transaction(ctx -> ctx.truncate(JOBS).execute());
+      configDb.transaction(ctx -> ctx.truncate(JOBS).cascade().execute());
     }
 
     @Test
@@ -124,7 +124,7 @@ class MetricsQueriesTest {
     @AfterEach
     void tearDown() throws SQLException {
       configDb.transaction(ctx -> ctx.truncate(ACTOR).execute());
-      configDb.transaction(ctx -> ctx.truncate(JOBS).execute());
+      configDb.transaction(ctx -> ctx.truncate(JOBS).cascade().execute());
     }
 
     @Test

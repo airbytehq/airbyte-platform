@@ -1,0 +1,93 @@
+import { appendRandomString, submitButtonClick } from "commands/common";
+import { fillPokeAPIForm } from "commands/connector";
+import { createPostgresSource, deleteSource, updateSource } from "commands/source";
+
+import { selectServiceType } from "pages/createConnectorPage";
+import { openHomepage } from "pages/sidebar";
+import { goToSourcePage, openNewSourcePage } from "pages/sourcePage";
+
+describe("Source main actions", () => {
+  it("Create new source", () => {
+    cy.intercept("/api/v1/sources/create").as("createSource");
+    createPostgresSource("Test source cypress");
+
+    cy.wait("@createSource", { timeout: 30000 }).then((interception) => {
+      assert("include", `/source/${interception.response?.body.Id}`);
+    });
+  });
+
+  // TODO: add update source on some other connector or create 1 more user for pg
+  it.skip("Update source", () => {
+    const sourceName = appendRandomString("Test source cypress for update");
+    createPostgresSource(sourceName);
+    updateSource(sourceName, "connectionConfiguration.start_date", "2020-11-11");
+
+    cy.get("div[data-id='success-result']").should("exist");
+    cy.get("input[value='2020-11-11']").should("exist");
+  });
+
+  it("Delete source", () => {
+    const sourceName = appendRandomString("Test source cypress for delete");
+    createPostgresSource(sourceName);
+    deleteSource(sourceName);
+
+    cy.visit("/");
+    cy.get("div").contains(sourceName).should("not.exist");
+  });
+});
+
+describe("Unsaved changes modal", () => {
+  it("Check leaving Source page without any changes", () => {
+    goToSourcePage();
+    openNewSourcePage();
+
+    openHomepage();
+
+    cy.url().should("include", "/connections");
+    cy.get("[data-testid='confirmationModal']").should("not.exist");
+  });
+
+  it("Check leaving Source page without any changes after selection type", () => {
+    goToSourcePage();
+    openNewSourcePage();
+    selectServiceType("PokeAPI");
+
+    openHomepage();
+
+    cy.url().should("include", "/connections");
+    cy.get("[data-testid='confirmationModal']").should("not.exist");
+  });
+
+  it("Check leaving Source page without any changes", () => {
+    goToSourcePage();
+    openNewSourcePage();
+    fillPokeAPIForm("testName", "ditto");
+
+    openHomepage();
+
+    cy.get("[data-testid='confirmationModal']").should("exist");
+    cy.get("[data-testid='confirmationModal']").contains("Discard changes");
+    cy.get("[data-testid='confirmationModal']").contains(
+      "There are unsaved changes. Are you sure you want to discard your changes?"
+    );
+  });
+
+  it("Check leaving Source page after failing testing", () => {
+    cy.intercept("/api/v1/scheduler/sources/check_connection").as("checkSourceUpdateConnection");
+
+    goToSourcePage();
+    openNewSourcePage();
+    fillPokeAPIForm("testName", "name");
+    submitButtonClick();
+
+    cy.wait("@checkSourceUpdateConnection", { timeout: 5000 });
+
+    openHomepage();
+
+    cy.get("[data-testid='confirmationModal']").should("exist");
+    cy.get("[data-testid='confirmationModal']").contains("Discard changes");
+    cy.get("[data-testid='confirmationModal']").contains(
+      "There are unsaved changes. Are you sure you want to discard your changes?"
+    );
+  });
+});

@@ -5,7 +5,7 @@ export enum RoutePaths {
   SpeakeasyRedirect = "speakeasy-redirect",
 
   Workspaces = "workspaces",
-  Preferences = "preferences",
+  Setup = "setup",
   Connections = "connections",
   Destination = "destination",
   Source = "source",
@@ -20,13 +20,13 @@ export enum RoutePaths {
 }
 
 export enum DestinationPaths {
-  Root = ":id/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
+  Root = ":destinationId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Settings = "settings",
   NewDestination = "new-destination",
 }
 
 export enum SourcePaths {
-  Root = ":id/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
+  Root = ":sourceId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Settings = "settings",
   NewSource = "new-source",
 }

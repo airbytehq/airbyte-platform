@@ -3,7 +3,6 @@ import React, { useMemo } from "react";
 import { LoadingPage } from "components";
 
 import { MissingConfigError, useConfig } from "config";
-import { ApiServices } from "core/ApiServices";
 import { RequestMiddleware } from "core/request/RequestMiddleware";
 import { ServicesProvider, useGetService, useInjectServices } from "core/servicesProvider";
 import { RequestAuthMiddleware } from "packages/cloud/lib/auth/RequestAuthMiddleware";
@@ -59,7 +58,8 @@ const ServiceOverrides: React.FC<React.PropsWithChildren<unknown>> = React.memo(
 
   const registeredMiddlewares = useGetService("DefaultRequestMiddlewares");
 
-  return <ApiServices>{registeredMiddlewares ? <>{children}</> : <LoadingPage />}</ApiServices>;
+  return registeredMiddlewares ? <>{children}</> : <LoadingPage />;
 });
+ServiceOverrides.displayName = "ServiceOverrides";
 
 export { AppServicesProvider };

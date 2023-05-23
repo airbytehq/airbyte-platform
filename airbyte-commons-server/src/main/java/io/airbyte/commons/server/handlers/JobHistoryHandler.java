@@ -195,6 +195,11 @@ public class JobHistoryHandler {
     return jobConverter.getJobInfoRead(job);
   }
 
+  public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) throws IOException {
+    final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
+    return jobConverter.getJobInfoWithoutLogsRead(job);
+  }
+
   public JobInfoLightRead getJobInfoLight(final JobIdRequestBody jobIdRequestBody) throws IOException {
     final Job job = jobPersistence.getJob(jobIdRequestBody.getId());
     return jobConverter.getJobInfoLightRead(job);

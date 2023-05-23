@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tracking client that logs to STDOUT. Mainly used for local deveolpment.
+ * Tracking client that logs to STDOUT. Mainly used for local development.
  */
 public class LoggingTrackingClient implements TrackingClient {
 
@@ -44,11 +44,13 @@ public class LoggingTrackingClient implements TrackingClient {
 
   @Override
   public void track(@Nullable final UUID workspaceId, final String action, final Map<String, Object> metadata) {
+    TrackingIdentity trackingIdentity = identityFetcher.apply(workspaceId);
+
     String version = null;
     UUID userId = null;
-    if (workspaceId != null) {
-      version = Optional.ofNullable(identityFetcher.apply(workspaceId).getAirbyteVersion()).map(AirbyteVersion::serialize).orElse(null);
-      userId = identityFetcher.apply(workspaceId).getCustomerId();
+    if (identityFetcher.apply(workspaceId) != null) {
+      version = Optional.ofNullable(trackingIdentity.getAirbyteVersion()).map(AirbyteVersion::serialize).orElse(null);
+      userId = trackingIdentity.getCustomerId();
     }
     LOGGER.info("track. version: {}, userId: {}, action: {}, metadata: {}",
         version,

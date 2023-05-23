@@ -4,11 +4,15 @@
 title: Operator Dbt Input
 description: Input configuration for DBT Transformation operator
 type: object
-additionalProperties: false
+additionalProperties: true
 required:
   - destinationConfiguration
   - operatorDbt
 properties:
+  connectionId:
+    description: The id of the connection associated with the dbt transformation.
+    type: string
+    format: uuid
   destinationConfiguration:
     description: Integration specific blob. Must be a valid JSON string.
     type: object

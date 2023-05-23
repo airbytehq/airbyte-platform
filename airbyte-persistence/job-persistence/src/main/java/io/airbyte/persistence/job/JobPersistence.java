@@ -180,10 +180,12 @@ public interface JobPersistence {
 
   void writeStats(long jobId,
                   int attemptNumber,
-                  long estimatedRecords,
-                  long estimatedBytes,
-                  long recordsEmitted,
-                  long bytesEmitted,
+                  Long estimatedRecords,
+                  Long estimatedBytes,
+                  Long recordsEmitted,
+                  Long bytesEmitted,
+                  Long recordsCommitted,
+                  Long bytesCommitted,
                   List<StreamSyncStats> streamStats)
       throws IOException;
 
@@ -297,7 +299,7 @@ public interface JobPersistence {
    *         attempts' endedAt in ascending order
    * @throws IOException while interacting with the db.
    */
-  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
+  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp, final int limit) throws IOException;
   /// ARCHIVE
 
   /**

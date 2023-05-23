@@ -12,10 +12,9 @@ import { Button } from "components/ui/Button";
 import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { Modal } from "components/ui/Modal";
-import { ToastType } from "components/ui/Toast";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useUserHook } from "packages/cloud/services/users/UseUserHook";
@@ -91,7 +90,7 @@ export const InviteUsersModal: React.FC<{
                 registerNotification({
                   text: formatMessage({ id: "addUsers.success.title" }),
                   id: "invite-users-success",
-                  type: ToastType.SUCCESS,
+                  type: "success",
                 });
                 props.onClose();
               },

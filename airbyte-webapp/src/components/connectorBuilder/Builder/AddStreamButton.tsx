@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import { Form, Formik, useField } from "formik";
 import merge from "lodash/merge";
 import { useState } from "react";
@@ -9,14 +10,17 @@ import * as yup from "yup";
 import { Button } from "components/ui/Button";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/analytics";
 import { FormikPatch } from "core/form/FormikPatch";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
+import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
 import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES } from "../types";
+import { useBuilderErrors } from "../useBuilderErrors";
 
 interface AddStreamValues {
   streamName: string;
@@ -28,6 +32,7 @@ interface AddStreamButtonProps {
   button?: React.ReactElement;
   initialValues?: Partial<BuilderStream>;
   "data-testid"?: string;
+  modalTitle?: string;
 }
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
@@ -35,8 +40,11 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   button,
   initialValues,
   "data-testid": testId,
+  modalTitle,
 }) => {
   const analyticsService = useAnalyticsService();
+  const { hasErrors } = useBuilderErrors();
+  const { builderFormValues } = useConnectorBuilderFormState();
   const { formatMessage } = useIntl();
   const [isOpen, setIsOpen] = useState(false);
   const [streamsField, , helpers] = useField<BuilderStream[]>("streams");
@@ -46,6 +54,9 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     setIsOpen(true);
   };
 
+  const shouldPulse =
+    numStreams === 0 && !hasErrors(false, ["global"]) && builderFormValues.global.authenticator.type !== "NoAuth";
+
   return (
     <>
       {button ? (
@@ -54,7 +65,9 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           "data-testid": testId,
         })
       ) : (
-        <Button className={styles.addButton} onClick={buttonClickHandler} icon={<PlusIcon />} data-testid={testId} />
+        <div className={classNames(styles.buttonContainer, { [styles["buttonContainer--pulse"]]: shouldPulse })}>
+          <Button className={styles.addButton} onClick={buttonClickHandler} icon={<PlusIcon />} data-testid={testId} />
+        </div>
       )}
       {isOpen && (
         <Formik
@@ -99,7 +112,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             <FormikPatch />
             <Modal
               size="sm"
-              title={<FormattedMessage id="connectorBuilder.addStreamModal.title" />}
+              title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
               onClose={() => {
                 setIsOpen(false);
               }}
@@ -112,7 +125,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
                     label={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameLabel" })}
                     tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameTooltip" })}
                   />
-                  <BuilderField
+                  <BuilderFieldWithInputs
                     path="urlPath"
                     type="string"
                     label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}

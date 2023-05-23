@@ -1,28 +1,29 @@
 import React, { Suspense, useMemo } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { useEffectOnce } from "react-use";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
-import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "hooks/services/Analytics/useAnalyticsService";
+import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
+import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
+import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
 import { useCurrentWorkspace, WorkspaceServiceProvider } from "services/workspaces/WorkspacesService";
-import { setSegmentAnonymousId, useGetSegmentAnonymousId } from "utils/crossDomainUtils";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { VerifyEmailAction } from "./views/FirebaseActionRoute";
-import { RoutePaths, DestinationPaths, SourcePaths } from "../../pages/routePaths";
 
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const WorkspacesPage = React.lazy(() => import("packages/cloud/views/workspaces"));
 const Auth = React.lazy(() => import("packages/cloud/views/auth"));
-const CreditsPage = React.lazy(() => import("packages/cloud/views/credits"));
+const BillingPage = React.lazy(() => import("packages/cloud/views/billing"));
+const UpcomingFeaturesPage = React.lazy(() => import("packages/cloud/views/UpcomingFeaturesPage"));
 const SpeakeasyRedirectPage = React.lazy(() => import("pages/SpeakeasyRedirectPage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
@@ -54,6 +55,8 @@ const MainRoutes: React.FC = () => {
   );
   useAnalyticsRegisterValues(analyticsContext);
 
+  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
+
   return (
     <ApiErrorBoundary>
       <Routes>
@@ -75,7 +78,11 @@ const MainRoutes: React.FC = () => {
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />} />
-        <Route path={CloudRoutes.Credits} element={<CreditsPage />} />
+        <Route path={CloudRoutes.Billing} element={<BillingPage />} />
+        <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
+        {showBuilderNavigationLinks && (
+          <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
+        )}
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
     </ApiErrorBoundary>
@@ -110,13 +117,7 @@ const CloudMainViewRoutes = () => {
 export const Routing: React.FC = () => {
   const { user, inited, providers, hasCorporateEmail } = useAuthService();
 
-  const { search } = useLocation();
-
   useBuildUpdateCheck();
-
-  useEffectOnce(() => {
-    setSegmentAnonymousId(search);
-  });
 
   const analyticsContext = useMemo(
     () =>
@@ -133,7 +134,6 @@ export const Routing: React.FC = () => {
     [hasCorporateEmail, providers, user]
   );
 
-  useGetSegmentAnonymousId();
   useAnalyticsRegisterValues(analyticsContext);
   useAnalyticsIdentifyUser(user?.userId, userTraits);
 
@@ -148,11 +148,18 @@ export const Routing: React.FC = () => {
           {/* Allow email verification no matter whether the user is logged in or not */}
           <Routes>
             <Route path={CloudRoutes.FirebaseAction} element={<VerifyEmailAction />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  {/* Show the login screen if the user is not logged in */}
+                  {!user && <Auth />}
+                  {/* Allow all regular routes if the user is logged in */}
+                  {user && <CloudMainViewRoutes />}
+                </>
+              }
+            />
           </Routes>
-          {/* Show the login screen if the user is not logged in */}
-          {!user && <Auth />}
-          {/* Allow all regular routes if the user is logged in */}
-          {user && <CloudMainViewRoutes />}
         </Suspense>
       </LDExperimentServiceProvider>
     </WorkspaceServiceProvider>

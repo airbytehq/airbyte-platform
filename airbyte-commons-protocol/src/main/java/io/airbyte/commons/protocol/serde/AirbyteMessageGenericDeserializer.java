@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.protocol.serde;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
+import java.util.Optional;
 import lombok.Getter;
 
 /**
@@ -26,8 +26,8 @@ public class AirbyteMessageGenericDeserializer<T> implements AirbyteMessageDeser
   }
 
   @Override
-  public T deserialize(JsonNode json) {
-    return Jsons.object(json, typeClass);
+  public Optional<T> deserialize(String json) {
+    return Jsons.tryDeserialize(json, typeClass);
   }
 
 }

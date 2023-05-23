@@ -1,0 +1,6 @@
+@use "scss/colors";
+@forward "./ButtonTab.module.scss";
+
+.link {
+  text-decoration: none;
+}
