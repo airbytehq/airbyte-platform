@@ -15,7 +15,6 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
-  updateEmail,
   AuthErrorCodes,
   signInWithPopup,
   GoogleAuthProvider,
@@ -102,27 +101,6 @@ export class GoogleAuthService {
       throw new Error("You must log in first to update password!");
     }
     return updatePassword(this.auth.currentUser, newPassword);
-  }
-
-  async updateEmail(email: string, password: string): Promise<void> {
-    const user = this.getCurrentUser();
-
-    if (user) {
-      await this.reauthenticate(email, password);
-
-      try {
-        await updateEmail(user, email);
-      } catch (e) {
-        switch (e.code) {
-          case AuthErrorCodes.INVALID_EMAIL:
-            throw new FieldError("email", ErrorCodes.Invalid);
-          case AuthErrorCodes.EMAIL_EXISTS:
-            throw new FieldError("email", ErrorCodes.Duplicate);
-          case AuthErrorCodes.CREDENTIAL_TOO_OLD_LOGIN_AGAIN:
-            throw new Error("auth/requires-recent-login");
-        }
-      }
-    }
   }
 
   async resetPassword(email: string): Promise<void> {
