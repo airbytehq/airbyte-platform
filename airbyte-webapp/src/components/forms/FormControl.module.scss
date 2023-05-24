@@ -40,3 +40,8 @@
     bottom: 0;
   }
 }
+
+.inline {
+  display: flex;
+  justify-content: space-between;
+}

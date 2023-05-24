@@ -39,6 +39,7 @@
   "form.noResult": "No result",
   "form.noConnectorFound": "No matching connector found",
   "form.connectionName": "Connection name",
+  "form.connectionName.minLength": "Connection name must be at least 1 character",
   "form.connectionName.placeholder": "Name",
   "form.sourceName": "Source name",
   "form.destinationName": "Destination name",
@@ -137,6 +138,7 @@
   "setupForm.check.failed": "The security of your Airbyte installation couldn't be checked. Please ensure your installation is <lnk>secured</lnk>. It should use strong authentication and/or not be accessible from the internet.",
   "setupForm.submit": "Get started",
 
+  "connectionForm.connectionSettings": "Connection settings",
   "connectionForm.settings.advancedButton": "Advanced",
   "connectionForm.validation.error": "The form is invalid. Please make sure that all fields are correct.",
   "connectionForm.normalization.title": "Normalization",
