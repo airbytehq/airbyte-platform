@@ -7,6 +7,7 @@ package io.airbyte.workers.general;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -222,6 +223,21 @@ class DefaultReplicationWorkerTest {
         RECORD_MESSAGE2.getRecord(),
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
+  }
+
+  @Test
+  void testReplicationTimesAreUpdated() throws Exception {
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    final ReplicationOutput output = worker.run(syncInput, jobRoot);
+
+    final SyncStats syncStats = output.getReplicationAttemptSummary().getTotalStats();
+    assertNotEquals(0, syncStats.getReplicationStartTime());
+    assertNotEquals(0, syncStats.getReplicationEndTime());
+    assertNotEquals(0, syncStats.getSourceReadStartTime());
+    assertNotEquals(0, syncStats.getSourceReadEndTime());
+    assertNotEquals(0, syncStats.getDestinationWriteStartTime());
+    assertNotEquals(0, syncStats.getDestinationWriteEndTime());
   }
 
   @ParameterizedTest

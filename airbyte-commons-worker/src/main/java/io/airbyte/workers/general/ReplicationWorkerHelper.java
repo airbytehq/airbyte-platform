@@ -23,7 +23,6 @@ import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.context.ReplicationContext;
@@ -122,14 +121,10 @@ class ReplicationWorkerHelper {
     this.timeTracker.trackReplicationStartTime();
   }
 
-  public void beforeReplication(final ConfiguredAirbyteCatalog catalog) {
-    fieldSelector.populateFields(catalog);
-  }
-
   public void startDestination(final AirbyteDestination destination, final StandardSyncInput syncInput, final Path jobRoot) {
     destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(syncInput);
     destinationConfig.setCatalog(mapper.mapCatalog(destinationConfig.getCatalog()));
-    timeTracker.getDestinationWriteStartTime();
+    timeTracker.trackDestinationWriteStartTime();
 
     try {
       destination.start(destinationConfig, jobRoot);
@@ -142,7 +137,7 @@ class ReplicationWorkerHelper {
     final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
     try {
       fieldSelector.populateFields(sourceConfig.getCatalog());
-      timeTracker.getSourceReadStartTime();
+      timeTracker.trackSourceReadStartTime();
       source.start(sourceConfig, jobRoot);
     } catch (Exception e) {
       throw new RuntimeException(e);
