@@ -509,7 +509,7 @@ public class ConfigRepository {
     return database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR_DEFINITION)
         .where(ACTOR_DEFINITION.RELEASE_STAGE.isNull()
-            .or(ACTOR_DEFINITION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM)))
+            .or(ACTOR_DEFINITION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM.isFalse())))
         .fetch())
         .stream()
         .map(row -> {
@@ -607,7 +607,7 @@ public class ConfigRepository {
 
     database.transaction(ctx -> {
       ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(stdSourceDef), ctx);
-      ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+      final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
       setSourceDefinitionDefaultVersion(stdSourceDef, actorDefinitionVersionWithID, ctx);
       return null;
     });
@@ -821,7 +821,7 @@ public class ConfigRepository {
       throws IOException {
     database.transaction(ctx -> {
       ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
-      ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+      final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
       setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
       return null;
     });
@@ -3131,7 +3131,7 @@ public class ConfigRepository {
    * @returns the POJO associated with the actor definition version inserted/updated. Contains the
    *          versionId field from the DB.
    */
-  public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, DSLContext ctx) {
+  public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
 
     // These 2 fields together identify a distinct ActorDefinitionVersion

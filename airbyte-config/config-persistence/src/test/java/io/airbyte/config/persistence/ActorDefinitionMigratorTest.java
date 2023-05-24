@@ -9,6 +9,7 @@ import static io.airbyte.config.ConfigSchema.STANDARD_SOURCE_DEFINITION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.json.Jsons;
@@ -96,12 +97,24 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
         .withName("source-2")
         .withDockerRepository(connectorRepository)
         .withDockerImageTag(newVersion);
+
+    final String customConnectorRepository = "airbyte/custom";
+    final StandardSourceDefinition customSource = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("source-3")
+        .withDockerRepository(customConnectorRepository)
+        .withDockerImageTag(newVersion)
+        .withReleaseStage(ReleaseStage.CUSTOM)
+        .withCustom(true);
     writeSource(source1);
     writeSource(source2);
+    writeSource(customSource);
     final Map<String, ConnectorInfo> result = migrator.getConnectorRepositoryToInfoMap();
     // when there are duplicated connector definitions, the one with the latest version should be
     // retrieved
     assertEquals(newVersion, result.get(connectorRepository).dockerImageTag);
+    // custom connectors are excluded
+    assertNull(result.get(customConnectorRepository));
   }
 
   @Test
