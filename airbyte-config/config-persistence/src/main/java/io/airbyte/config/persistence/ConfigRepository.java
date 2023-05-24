@@ -10,6 +10,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_CONFIG_INJECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
@@ -181,22 +182,19 @@ public class ConfigRepository {
   private static final UUID VOID_UUID = new UUID(0, 0);
 
   private final ExceptionWrappingDatabase database;
-  private final ActorDefinitionMigrator actorDefinitionMigrator;
   private final StandardSyncPersistence standardSyncPersistence;
 
   private final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier;
 
   public ConfigRepository(final Database database, final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
-    this(database, new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)), new StandardSyncPersistence(database),
-        heartbeatMaxSecondBetweenMessageSupplier);
+    this(database, new StandardSyncPersistence(database), heartbeatMaxSecondBetweenMessageSupplier);
   }
 
+  @VisibleForTesting
   ConfigRepository(final Database database,
-                   final ActorDefinitionMigrator actorDefinitionMigrator,
                    final StandardSyncPersistence standardSyncPersistence,
                    final Supplier<Long> heartbeatMaxSecondBetweenMessageSupplier) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.actorDefinitionMigrator = actorDefinitionMigrator;
     this.standardSyncPersistence = standardSyncPersistence;
     this.heartbeatMaxSecondBetweenMessageSupplier = heartbeatMaxSecondBetweenMessageSupplier;
   }
@@ -493,6 +491,42 @@ public class ConfigRepository {
   }
 
   /**
+   * Get actor definition ids to pair of actor type and protocol version.
+   *
+   * @return map of definition id to pair of actor type and protocol version.
+   * @throws IOException - you never know when you IO
+   */
+  public Set<String> getConnectorRepositoriesInUse() throws IOException {
+    return database.query(ConfigWriter::getConnectorRepositoriesInUse);
+  }
+
+  /**
+   * Get connector definition info.
+   *
+   * @return A list of information about current connectors (both sources and destinations).
+   **/
+  public List<ActorDefinitionMigrator.ConnectorInfo> getCurrentConnectorInfo() throws IOException {
+    return database.query(ctx -> ctx.select(asterisk())
+        .from(ACTOR_DEFINITION)
+        .where(ACTOR_DEFINITION.RELEASE_STAGE.isNull()
+            .or(ACTOR_DEFINITION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM)))
+        .fetch())
+        .stream()
+        .map(row -> {
+          final JsonNode jsonNode;
+          if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source) {
+            jsonNode = Jsons.jsonNode(DbConverter.buildStandardSourceDefinition(row, 10800L));
+          } else if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.destination) {
+            jsonNode = Jsons.jsonNode(DbConverter.buildStandardDestinationDefinition(row));
+          } else {
+            throw new RuntimeException("Unknown Actor Type " + row.get(ACTOR_DEFINITION.ACTOR_TYPE));
+          }
+          return new ActorDefinitionMigrator.ConnectorInfo(row.getValue(ACTOR_DEFINITION.ID).toString(), jsonNode);
+        })
+        .collect(Collectors.toList());
+  }
+
+  /**
    * List public source definitions.
    *
    * @param includeTombstone include tombstoned source
@@ -561,6 +595,46 @@ public class ConfigRepository {
   }
 
   /**
+   * Write a StandardSourceDefinition and the ActorDefinitionVersion associated with it to the DB,
+   * setting the default version on the StandardSourceDefinition.
+   *
+   * @param stdSourceDef standard source definition
+   * @param actorDefinitionVersion actor definition version
+   * @throws IOException - you never know when you IO
+   */
+  public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition stdSourceDef, final ActorDefinitionVersion actorDefinitionVersion)
+      throws IOException {
+
+    database.transaction(ctx -> {
+      ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(stdSourceDef), ctx);
+      ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+      setSourceDefinitionDefaultVersion(stdSourceDef, actorDefinitionVersionWithID, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Set the default_version_id column of the ACTOR_DEFINITION table. The actor definition version
+   * must contain a versionId - obtain a version ID by updating or creating the ADV table with
+   * writeActorDefinitionVersion().
+   *
+   * @param sourceDefinition source definition
+   * @param actorDefinitionVersion actor definition version to set as default
+   */
+  private static void setSourceDefinitionDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                        final ActorDefinitionVersion actorDefinitionVersion,
+                                                        final DSLContext ctx) {
+    if (actorDefinitionVersion.getVersionId() == null) {
+      throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
+    }
+
+    ctx.update(ACTOR_DEFINITION)
+        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
+        .where(ACTOR_DEFINITION.ID.eq(sourceDefinition.getSourceDefinitionId()))
+        .execute();
+  }
+
+  /**
    * Update the docker image tag for multiple actor definitions at once.
    *
    * @param actorDefinitionIds the list of actor definition ids to update
@@ -572,7 +646,7 @@ public class ConfigRepository {
   }
 
   /**
-   * Wirte custom source definition.
+   * Write custom source definition.
    *
    * @param sourceDefinition source definition
    * @param workspaceId workspace id
@@ -732,6 +806,46 @@ public class ConfigRepository {
       ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
       return null;
     });
+  }
+
+  /**
+   * Write a StandardDestinationDefinition and the ActorDefinitionVersion associated with it to the
+   * DB, setting the default version on the StandardDestinationDefinition.
+   *
+   * @param stdDestDef standard destination definition
+   * @param actorDefinitionVersion actor definition version
+   * @throws IOException - you never know when you IO
+   */
+  public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition stdDestDef,
+                                                          final ActorDefinitionVersion actorDefinitionVersion)
+      throws IOException {
+    database.transaction(ctx -> {
+      ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
+      ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+      setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
+      return null;
+    });
+  }
+
+  /**
+   * Set the default_version_id column of the ACTOR_DEFINITION table. The actor definition version
+   * must contain a versionId - obtain a version ID by updating or creating the ADV table with
+   * writeActorDefinitionVersion().
+   *
+   * @param destinationDefinition destination definition
+   * @param actorDefinitionVersion actor definition version to set as default
+   */
+  private static void setDestinationDefinitionDefaultVersion(final StandardDestinationDefinition destinationDefinition,
+                                                             final ActorDefinitionVersion actorDefinitionVersion,
+                                                             final DSLContext ctx) {
+    if (actorDefinitionVersion.getVersionId() == null) {
+      throw new RuntimeException("Can't set an actorDefinitionVersion as default without it having a versionId.");
+    }
+
+    ctx.update(ACTOR_DEFINITION)
+        .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, actorDefinitionVersion.getVersionId())
+        .where(ACTOR_DEFINITION.ID.eq(destinationDefinition.getDestinationDefinitionId()))
+        .execute();
   }
 
   /**
@@ -1875,19 +1989,6 @@ public class ConfigRepository {
   }
 
   /**
-   * Updates the database with the most up-to-date source and destination definitions in the connector
-   * catalog.
-   *
-   * @param seedSourceDefs - most up-to-date source definitions
-   * @param seedDestDefs - most up-to-date destination definitions
-   * @throws IOException - throws if exception when interacting with db
-   */
-  public void seedActorDefinitions(final List<StandardSourceDefinition> seedSourceDefs, final List<StandardDestinationDefinition> seedDestDefs)
-      throws IOException {
-    actorDefinitionMigrator.migrate(seedSourceDefs, seedDestDefs);
-  }
-
-  /**
    * Pair of source and its associated definition.
    *
    * Data-carrier records to hold combined result of query for a Source or Destination and its
@@ -3013,26 +3114,78 @@ public class ConfigRepository {
    *
    * @param actorDefinitionVersion - actor definition version to insert
    * @throws IOException - you never know when you io
+   * @returns the POJO associated with the actor definition version inserted/updated. Contains the
+   *          versionId field from the DB.
    */
-  public void writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
-    database.transaction(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION))
-        .set(Tables.ACTOR_DEFINITION_VERSION.ID, actorDefinitionVersion.getVersionId())
-        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
-        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-        // TODO (Ella): Replace the below null values with values from
-        // actorDefinitionVersion once the POJO has these fields defined
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
-        .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
-        .execute();
+  @VisibleForTesting
+  public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
+    return database.transaction(ctx -> writeActorDefinitionVersion(actorDefinitionVersion, ctx));
+  }
+
+  /**
+   * Insert an actor definition version.
+   *
+   * @param actorDefinitionVersion - actor definition version to insert
+   * @param ctx database context
+   * @throws IOException - you never know when you io
+   * @returns the POJO associated with the actor definition version inserted/updated. Contains the
+   *          versionId field from the DB.
+   */
+  public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, DSLContext ctx) {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+
+    // These 2 fields together identify a distinct ActorDefinitionVersion
+    final UUID actorDefinitionID = actorDefinitionVersion.getActorDefinitionId();
+    final String dockerImageTag = actorDefinitionVersion.getDockerImageTag();
+
+    final Optional<ActorDefinitionVersion> existingADV = getActorDefinitionVersion(actorDefinitionID, dockerImageTag, ctx);
+    if (existingADV.isPresent()) {
+      ctx.update(ACTOR_DEFINITION_VERSION)
+          .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+          // TODO (Ella): Replace the below null values with values from
+          // actorDefinitionVersion once the POJO has these fields defined
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
+          .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionID)).and(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag))
+          .execute();
+    } else {
+      ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ID, UUID.randomUUID())
+          .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
+          .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
+          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+          // TODO (Ella): Replace the below null values with values from
+          // actorDefinitionVersion once the POJO has these fields defined
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
+          .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
+          .execute();
+    }
+    final Optional<ActorDefinitionVersion> updatedOrInsertedADV = getActorDefinitionVersion(actorDefinitionID, dockerImageTag, ctx);
+    if (updatedOrInsertedADV.isEmpty()) {
+      throw new RuntimeException(
+          "Could not retrieve an actor definition version, although one should have already existed or just been inserted. "
+              + "Actor def: " + actorDefinitionID + " Docker image tag: " + dockerImageTag);
+    }
+    return updatedOrInsertedADV.get();
   }
 
   /**
@@ -3044,9 +3197,24 @@ public class ConfigRepository {
    *         otherwise an empty optional
    * @throws IOException - you never know when you io
    */
+  @VisibleForTesting
   public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId, final String dockerImageTag)
       throws IOException {
-    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+    return database.query(ctx -> getActorDefinitionVersion(actorDefinitionId, dockerImageTag, ctx));
+  }
+
+  /**
+   * Get the actor definition version associated with an actor definition and a docker image tag.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @param dockerImageTag - docker image tag
+   * @param ctx database context
+   * @return actor definition version if there is an entry in the DB already for this version,
+   *         otherwise an empty optional
+   * @throws IOException - you never know when you io
+   */
+  public Optional<ActorDefinitionVersion> getActorDefinitionVersion(final UUID actorDefinitionId, final String dockerImageTag, final DSLContext ctx) {
+    return ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
         .stream()

@@ -17,7 +17,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.persistence.ActorDefinitionMigrator.ConnectorInfo;
-import io.airbyte.db.ExceptionWrappingDatabase;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,8 +73,8 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException {
     truncateAllTables();
 
-    migrator = new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database));
-    configRepository = new ConfigRepository(database, migrator, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
+    configRepository = new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
+    migrator = new ActorDefinitionMigrator(configRepository);
   }
 
   private void writeSource(final StandardSourceDefinition source) throws Exception {
@@ -99,7 +98,7 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
         .withDockerImageTag(newVersion);
     writeSource(source1);
     writeSource(source2);
-    final Map<String, ConnectorInfo> result = database.query(ctx -> migrator.getConnectorRepositoryToInfoMap(ctx));
+    final Map<String, ConnectorInfo> result = migrator.getConnectorRepositoryToInfoMap();
     // when there are duplicated connector definitions, the one with the latest version should be
     // retrieved
     assertEquals(newVersion, result.get(connectorRepository).dockerImageTag);
@@ -134,6 +133,7 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
     writeSource(sourceDef);
     assertEquals(sourceDef, configRepository.getStandardSourceDefinition(sourceDef.getSourceDefinitionId()));
+    // TODO assertions on ADVs
   }
 
   @Test

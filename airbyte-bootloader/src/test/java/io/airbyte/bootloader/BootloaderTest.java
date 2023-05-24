@@ -26,13 +26,13 @@ import io.airbyte.config.Configs;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.init.DeclarativeSourceUpdater;
 import io.airbyte.config.init.DefinitionsProvider;
 import io.airbyte.config.init.LocalDefinitionsProvider;
 import io.airbyte.config.init.PostLoadExecutor;
+import io.airbyte.config.persistence.ActorDefinitionMigrator;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
@@ -149,7 +149,8 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, definitionsProvider, jobsPersistence);
+    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -216,8 +217,8 @@ class BootloaderTest {
 
     val spiedSecretMigrator =
         spy(new SecretMigrator(secretsReader, secretsWriter, configRepository, jobsPersistence, Optional.of(secretPersistence)));
-
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, definitionsProvider, jobsPersistence);
+    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);
@@ -231,9 +232,7 @@ class BootloaderTest {
     initBootloader.load();
 
     final DefinitionsProvider localDefinitions = new LocalDefinitionsProvider();
-    configRepository.seedActorDefinitions(
-        localDefinitions.getSourceDefinitions().stream().map(ConnectorRegistryConverters::toStandardSourceDefinition).toList(),
-        localDefinitions.getDestinationDefinitions().stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList());
+    actorDefinitionMigrator.migrate(localDefinitions.getSourceDefinitions(), localDefinitions.getDestinationDefinitions(), true);
 
     final String sourceSpecs = """
                                {
@@ -343,7 +342,8 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, definitionsProvider, jobsPersistence);
+    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository);
+    val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
     val declarativeSourceUpdater = new DeclarativeSourceUpdater(configRepository, cdkVersionProvider);

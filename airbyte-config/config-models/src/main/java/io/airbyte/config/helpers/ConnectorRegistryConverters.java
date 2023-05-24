@@ -4,6 +4,7 @@
 
 package io.airbyte.config.helpers;
 
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -71,6 +72,38 @@ public class ConnectorRegistryConverters {
         .withAllowedHosts(def.getAllowedHosts())
         .withNormalizationConfig(def.getNormalizationConfig())
         .withSupportsDbt(def.getSupportsDbt());
+  }
+
+  /**
+   * Convert the version-related fields of the ConnectorRegistrySourceDefinition into an
+   * ActorDefinitionVersion.
+   */
+  public static ActorDefinitionVersion toActorDefinitionVersion(@Nullable final ConnectorRegistrySourceDefinition def) {
+    if (def == null) {
+      return null;
+    }
+
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(def.getSourceDefinitionId())
+        .withDockerRepository(def.getDockerRepository())
+        .withDockerImageTag(def.getDockerImageTag())
+        .withSpec(def.getSpec());
+  }
+
+  /**
+   * Convert the version-related fields of the ConnectorRegistrySourceDefinition into an
+   * ActorDefinitionVersion.
+   */
+  public static ActorDefinitionVersion toActorDefinitionVersion(@Nullable final ConnectorRegistryDestinationDefinition def) {
+    if (def == null) {
+      return null;
+    }
+
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(def.getDestinationDefinitionId())
+        .withDockerRepository(def.getDockerRepository())
+        .withDockerImageTag(def.getDockerImageTag())
+        .withSpec(def.getSpec());
   }
 
   private static SourceType toStandardSourceType(@Nullable final ConnectorRegistrySourceDefinition.SourceType sourceType) {
