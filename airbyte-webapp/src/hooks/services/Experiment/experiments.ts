@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  "autopropagation.enabled": boolean;
   "connector.inviteUsersHint.visible": boolean;
   "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;

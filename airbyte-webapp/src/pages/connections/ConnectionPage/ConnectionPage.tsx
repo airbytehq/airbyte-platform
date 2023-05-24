@@ -22,6 +22,7 @@ import { ConnectionRoutePaths } from "../types";
 const ConnectionHeadTitle: React.FC = () => {
   const { connection } = useConnectionEditService();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
+  useExperimentContext("connection", connection.connectionId);
 
   return (
     <HeadTitle

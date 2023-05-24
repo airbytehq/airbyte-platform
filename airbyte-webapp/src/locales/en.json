@@ -184,9 +184,13 @@
   "connectionForm.bulkEdit.apply": "Apply",
   "connectionForm.bulkEdit.pillButtonLabel.notAvailable": "Not available",
   "connectionForm.nonBreakingChangesPreference.label": "Non-breaking schema updates detected",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.label": "Detect and propagate schema changes",
   "connectionForm.nonBreakingChangesPreference.message": "Set how Airbyte handles syncs when it detects a non-breaking schema change in the source",
   "connectionForm.nonBreakingChangesPreference.ignore": "Ignore",
   "connectionForm.nonBreakingChangesPreference.disable": "Disable connection",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Auto-propagate stream changes",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns": "Auto-propagate column changes",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.ignore": "Detect and ignore",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
   "connectionForm.jobHistory": "Job History",
 
