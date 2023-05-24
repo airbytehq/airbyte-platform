@@ -125,7 +125,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: values.inputs?.length ?? 0 + inferredInputsLength,
+                number: (values.inputs?.length ?? 0) + inferredInputsLength,
               }}
             />
           </Text>
