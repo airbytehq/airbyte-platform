@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useParams } from "react-router-dom";
 
+import { ChangesStatusIcon } from "components/EntityTable/components/ChangesStatusIcon";
+import { FlexContainer } from "components/ui/Flex";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 import { Tabs } from "components/ui/Tabs";
 import { LinkTab } from "components/ui/Tabs/LinkTab";
@@ -40,7 +42,12 @@ export const ConnectionPageHeader = () => {
       },
       {
         id: ConnectionRoutePaths.Replication,
-        name: <FormattedMessage id="connection.replication" />,
+        name: (
+          <FlexContainer gap="sm">
+            <FormattedMessage id="connection.replication" />
+            <ChangesStatusIcon schemaChange={connection.schemaChange} />
+          </FlexContainer>
+        ),
         to: `${basePath}/${ConnectionRoutePaths.Replication}`,
         disabled: schemaRefreshing,
       },
@@ -69,7 +76,7 @@ export const ConnectionPageHeader = () => {
     });
 
     return tabs;
-  }, [basePath, schemaRefreshing, streamCentricUIEnabled]);
+  }, [basePath, connection.schemaChange, schemaRefreshing, streamCentricUIEnabled]);
 
   return (
     <NextPageHeaderWithNavigation breadCrumbsData={breadcrumbsData}>
