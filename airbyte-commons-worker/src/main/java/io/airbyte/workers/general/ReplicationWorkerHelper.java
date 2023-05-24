@@ -7,7 +7,6 @@ package io.airbyte.workers.general;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
@@ -49,11 +48,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +77,6 @@ class ReplicationWorkerHelper {
   private final ThreadedTimeTracker timeTracker;
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
-  private StreamDescriptor currentSourceStream = null;
   private ReplicationContext replicationContext = null;
   private ReplicationFeatureFlags replicationFeatureFlags = null;
   private WorkerDestinationConfig destinationConfig = null;
@@ -182,7 +178,7 @@ class ReplicationWorkerHelper {
 
   public void trackFailure(final Throwable t) {
     replicationFailures.add(getFailureReason(t, replicationContext.jobId(), replicationContext.attempt()));
-    this.handleStreamFailure(t);
+    this.handleStreamStatusFailure();
   }
 
   /**
@@ -203,42 +199,12 @@ class ReplicationWorkerHelper {
    * Handles a failure by associating it with the appropriate {@link AirbyteMessageOrigin} and active
    * stream.
    *
-   * @param t The {@link Throwable} that represents the failure.
    */
-  private void handleStreamFailure(final Throwable t) {
-    // Find all types in the throwable's cause chain to see if the source or destination connector is
-    // the source of the failure
-    final Set<Class<? extends Throwable>> chainTypes = Throwables.getCausalChain(t).stream().map(c -> c.getClass()).collect(Collectors.toSet());
-
-    if (chainTypes.contains(SourceException.class)) {
-      handleReplicationFailure(AirbyteMessageOrigin.SOURCE, this::getCurrentSourceStream);
-    } else if (chainTypes.contains(DestinationException.class)) {
-      /*
-       * A destination error can occur while reading from the destination or writing to the destination.
-       * Therefore, the current stream may be tracked either from the destination or the source, depending
-       * on which context caused the error.
-       */
-      final Supplier<StreamDescriptor> streamDescriptorSupplier = getCurrentDestinationStream() != null
-          ? this::getCurrentDestinationStream
-          : this::getCurrentSourceStream;
-      handleReplicationFailure(AirbyteMessageOrigin.DESTINATION, streamDescriptorSupplier);
-    } else {
-      /*
-       * Handle a platform-level failure while attempting to perform the sync. Use the source stream as
-       * the identifier, as that is the most likely to have been discovered if a platform-level failure
-       * occurs.
-       */
-      handleReplicationFailure(AirbyteMessageOrigin.INTERNAL, this::getCurrentSourceStream);
-    }
+  private void handleStreamStatusFailure() {
+    handleReplicationFailure(AirbyteMessageOrigin.INTERNAL, () -> null);
   }
 
   public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {
-    final StreamDescriptor previousStream = currentSourceStream;
-    currentSourceStream = airbyteMessageDataExtractor.extractStreamDescriptor(airbyteMessage, previousStream);
-    if (currentSourceStream != null) {
-      LOGGER.debug("SOURCE > The current stream is {}:{}", currentSourceStream.getNamespace(), currentSourceStream.getName());
-    }
-
     fieldSelector.filterSelectedFields(airbyteMessage);
     fieldSelector.validateSchema(airbyteMessage);
 
@@ -247,7 +213,6 @@ class ReplicationWorkerHelper {
     messageTracker.acceptFromSource(message);
 
     if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(airbyteMessage)) {
-      LOGGER.debug("Publishing source event for stream {}:{}...", currentSourceStream.getNamespace(), currentSourceStream.getName());
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, message, replicationContext));
     } else {
@@ -307,10 +272,6 @@ class ReplicationWorkerHelper {
 
   private StreamDescriptor getCurrentDestinationStream() {
     return currentDestinationStream;
-  }
-
-  private StreamDescriptor getCurrentSourceStream() {
-    return currentSourceStream;
   }
 
   public ReplicationOutput getReplicationOutput()

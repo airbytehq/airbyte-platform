@@ -282,9 +282,9 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor().withName(streamNameNamespacePair.getName()).withNamespace(streamNameNamespacePair.getNamespace()),
+        null,
         replicationContext,
-        AirbyteMessageOrigin.DESTINATION);
+        AirbyteMessageOrigin.INTERNAL);
   }
 
   @ParameterizedTest
@@ -314,9 +314,9 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor().withNamespace(streamNameNamespacePair.getNamespace()).withName(streamNameNamespacePair.getName()),
+        null,
         replicationContext,
-        AirbyteMessageOrigin.SOURCE);
+        AirbyteMessageOrigin.INTERNAL);
   }
 
   @ParameterizedTest
@@ -335,8 +335,12 @@ class DefaultReplicationWorkerTest {
     verify(destination).start(destinationConfig, jobRoot);
     verify(source, atLeastOnce()).close();
     verify(destination).close();
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
+    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishCompleteStatusEvent(
         new StreamDescriptor().withName(streamNameNamespacePair.getName()).withNamespace(streamNameNamespacePair.getNamespace()),
+        replicationContext,
+        AirbyteMessageOrigin.DESTINATION);
+    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
+        null,
         replicationContext,
         AirbyteMessageOrigin.INTERNAL);
   }
@@ -368,9 +372,9 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor().withNamespace(streamNameNamespacePair.getNamespace()).withName(streamNameNamespacePair.getName()),
+        null,
         replicationContext,
-        AirbyteMessageOrigin.DESTINATION);
+        AirbyteMessageOrigin.INTERNAL);
   }
 
   @Test
