@@ -54,6 +54,8 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
 
   return (
     <GroupControls
+      /* Make sure the sub-form re-renders when switching  */
+      key={field.value}
       label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
         <DropDown
