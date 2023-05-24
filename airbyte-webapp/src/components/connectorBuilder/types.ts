@@ -582,7 +582,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 then: yup.object().shape({
                   value: yup.mixed().when("type", {
                     is: "list",
-                    then: yup.array().of(yup.string()),
+                    then: yup.array().of(yup.string()).min(1, "form.empty.error"),
                     otherwise: yup
                       .string()
                       .required("form.empty.error")
