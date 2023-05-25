@@ -107,7 +107,6 @@ public class DefaultLocalDefinitionVersionOverrideProvider implements LocalDefin
         final List<UUID> targetIds = switch (targetType) {
           case ACTOR -> versionOverride.getActorIds();
           case WORKSPACE -> versionOverride.getWorkspaceIds();
-          case WORKSPACE_CREATOR -> versionOverride.getWorkspaceCreatorUserIds();
         };
 
         if (targetIds != null && targetIds.contains(targetId)) {

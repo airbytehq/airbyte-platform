@@ -33,8 +33,3 @@ properties:
           items:
             type: string
             format: uuid
-        workspaceCreatorUserIds:
-          type: array
-          items:
-            type: string
-            format: uuid
