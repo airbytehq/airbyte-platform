@@ -2,7 +2,7 @@
 airbyte-protocol = "0.3.6"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
-datadog-version = "1.11.2"
+datadog-version = "1.14.0"
 docker-java = "3.2.8"
 fasterxml_version = "2.14.2"
 flyway = "7.14.0"
