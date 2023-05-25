@@ -133,6 +133,7 @@ public class AirbyteMessageTracker implements MessageTracker {
     switch (traceMessage.getType()) {
       case ESTIMATE -> handleEmittedEstimateTrace(traceMessage.getEstimate());
       case ERROR -> handleEmittedErrorTrace(traceMessage, airbyteMessageOrigin);
+      case STREAM_STATUS -> log.debug("Stream status trace message not handled by message tracker: {}", traceMessage);
       default -> log.warn("Invalid message type for trace message: {}", traceMessage);
     }
   }
