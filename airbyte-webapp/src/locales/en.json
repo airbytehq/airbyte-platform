@@ -903,7 +903,6 @@
   "connectorBuilder.forkPage.copyName": "{oldName} - copy",
   "connectorBuilder.forkPage.createLabel": "Create",
   "connectorBuilder.backButtonLabel": "Back",
-  "connectorBuilder.cdkVersion": "CDK version: {version}",
   "connectorBuilder.draft": "Draft",
   "connectorBuilder.draftInProgressLabel": "draft in progress",
   "connectorBuilder.changeVersionModal.title": "Change active version for {name}",
@@ -928,6 +927,7 @@
   "connectorBuilder.resetTestingValues.title": "Reset testing values",
   "connectorBuilder.resetTestingValues.text": "The testing values form will be reset back to its default values, so any changes you made to the testing values will be lost. Are you sure you want to continue?",
   "connectorBuilder.resetTestingValues.submit": "Reset",
+  "connectorBuilder.createPage.tutorialPrompt": "Check out the tutorial",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

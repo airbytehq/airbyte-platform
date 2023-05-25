@@ -14,6 +14,8 @@ import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { ConnectorManifest } from "core/request/ConnectorManifest";
@@ -22,6 +24,7 @@ import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
+import { links } from "utils/links";
 
 import styles from "./ConnectorBuilderCreatePage.module.scss";
 import { ReactComponent as ImportYamlImage } from "./import-yaml.svg";
@@ -175,6 +178,12 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
           dataTestId="start-from-scratch"
         />
       </FlexContainer>
+      <ExternalLink href={links.connectorBuilderTutorial}>
+        <FlexContainer alignItems="center" gap="sm">
+          <Icon type="docs" size="lg" />
+          <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
+        </FlexContainer>
+      </ExternalLink>
     </FlexContainer>
   );
 };
