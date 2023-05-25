@@ -5,6 +5,8 @@ import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 
+import { FormDevTools } from "./FormDevTools";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FormValues = Record<string, any>;
 
@@ -72,6 +74,7 @@ export const Form = <T extends FormValues>({
 
   return (
     <FormProvider {...methods}>
+      <FormDevTools />
       {trackDirtyChanges && <HookFormDirtyTracker />}
       <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>{children}</form>
     </FormProvider>
