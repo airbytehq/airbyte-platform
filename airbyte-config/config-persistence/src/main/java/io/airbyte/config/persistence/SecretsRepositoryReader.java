@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 
 /**
  * This class is responsible for fetching both connectors and their secrets (from separate secrets
@@ -168,6 +169,19 @@ public class SecretsRepositoryReader {
     ObjectNode node = JsonNodeFactory.instance.objectNode();
     node.put("_secret", secretCoordinate.getFullCoordinate());
     return secretsHydrator.hydrateSecretCoordinate(node);
+  }
+
+  /**
+   * Given a config with _secrets in it, hydrate that config and return the hydrated version.
+   *
+   * @param configWithSecrets Config with _secrets in it.
+   * @return Config with _secrets hydrated.
+   */
+  public JsonNode hydrateConfig(@Nullable JsonNode configWithSecrets) {
+    if (configWithSecrets != null) {
+      return secretsHydrator.hydrate(configWithSecrets);
+    }
+    return null;
   }
 
 }

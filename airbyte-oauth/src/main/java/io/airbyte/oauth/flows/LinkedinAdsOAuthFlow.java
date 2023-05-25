@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -26,13 +25,13 @@ public class LinkedinAdsOAuthFlow extends BaseOAuth2Flow {
   private static final String ACCESS_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
   private static final String SCOPES = "r_ads_reporting r_emailaddress r_liteprofile r_ads r_basicprofile r_organization_social";
 
-  public LinkedinAdsOAuthFlow(ConfigRepository configRepository, HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public LinkedinAdsOAuthFlow(HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  public LinkedinAdsOAuthFlow(ConfigRepository configRepository, final HttpClient httpClient, Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public LinkedinAdsOAuthFlow(final HttpClient httpClient, Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

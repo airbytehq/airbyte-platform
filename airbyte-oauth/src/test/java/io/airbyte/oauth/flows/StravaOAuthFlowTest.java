@@ -11,7 +11,7 @@ public class StravaOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new StravaOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new StravaOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

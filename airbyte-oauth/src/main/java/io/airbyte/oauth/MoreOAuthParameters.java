@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Strings;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -55,7 +56,7 @@ public class MoreOAuthParameters {
 
     if (throwIfOverridePresent) {
       if (sourceOAuthParameter.filter(param -> param.getWorkspaceId() != null).isPresent()) {
-        throw new ConfigNotFoundException("OAuthParamOverride", String.format("[%s] [%s]", workspaceId, sourceDefinitionId));
+        throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, String.format("[%s] [%s]", workspaceId, sourceDefinitionId));
       }
     }
     return sourceOAuthParameter;
@@ -86,7 +87,7 @@ public class MoreOAuthParameters {
 
     if (throwIfOverridePresent) {
       if (destinationOAuthParameter.filter(param -> param.getWorkspaceId() != null).isPresent()) {
-        throw new ConfigNotFoundException("OAuthParamOverride", String.format("[%s] [%s]", workspaceId, destinationDefinitionId));
+        throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM, String.format("[%s] [%s]", workspaceId, destinationDefinitionId));
       }
     }
     return destinationOAuthParameter;
@@ -140,7 +141,8 @@ public class MoreOAuthParameters {
    */
   public static JsonNode mergeJsons(final ObjectNode mainConfig, final ObjectNode fromConfig) {
     for (final String key : Jsons.keys(fromConfig)) {
-      if (fromConfig.get(key).getNodeType() == OBJECT) {
+      // keys with _secret Jsons are objects but we still want to merge those
+      if (fromConfig.get(key).getNodeType() == OBJECT && !isSecretNode(fromConfig.get(key))) {
         // nested objects are merged rather than overwrite the contents of the equivalent object in config
         if (mainConfig.get(key) == null) {
           mergeJsons(mainConfig.putObject(key), (ObjectNode) fromConfig.get(key));

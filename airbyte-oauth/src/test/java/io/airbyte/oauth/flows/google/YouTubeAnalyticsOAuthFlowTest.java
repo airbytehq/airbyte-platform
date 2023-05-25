@@ -12,7 +12,7 @@ public class YouTubeAnalyticsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new YouTubeAnalyticsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new YouTubeAnalyticsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

@@ -20,7 +20,7 @@ class GitlabOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
     final Clock clock = Clock.fixed(Instant.ofEpochSecond(1673464409), ZoneId.of("UTC"));
-    return new GitlabOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState, clock);
+    return new GitlabOAuthFlow(getHttpClient(), this::getConstantState, clock);
   }
 
   @Override

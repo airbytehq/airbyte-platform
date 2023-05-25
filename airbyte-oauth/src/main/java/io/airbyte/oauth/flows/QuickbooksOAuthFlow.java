@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -35,20 +34,15 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
   private static final String TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
   private final Clock clock;
 
-  public QuickbooksOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public QuickbooksOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
     this.clock = Clock.systemUTC();
   }
 
-  public QuickbooksOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    this(configRepository, httpClient, stateSupplier, Clock.systemUTC());
-  }
-
-  public QuickbooksOAuthFlow(final ConfigRepository configRepository,
-                             final HttpClient httpClient,
+  public QuickbooksOAuthFlow(final HttpClient httpClient,
                              final Supplier<String> stateSupplier,
                              final Clock clock) {
-    super(configRepository, httpClient, stateSupplier);
+    super(httpClient, stateSupplier);
     this.clock = clock;
   }
 
@@ -113,22 +107,22 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
-                                                 final String redirectUrl)
+                                                 final String redirectUrl,
+                                                 JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException {
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             extractRealmIdParameter(queryParams),
             redirectUrl,
             Jsons.emptyObject(),
-            oAuthParamConfig),
+            oauthParamConfig),
         getDefaultOAuthOutputPath());
 
   }
@@ -139,23 +133,23 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  final JsonNode inputOAuthConfiguration,
-                                                 final OAuthConfigSpecification oauthConfigSpecification)
+                                                 final OAuthConfigSpecification oauthConfigSpecification,
+                                                 final JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             extractRealmIdParameter(queryParams),
             redirectUrl,
             inputOAuthConfiguration,
-            oAuthParamConfig),
+            oauthParamConfig),
         oauthConfigSpecification);
 
   }

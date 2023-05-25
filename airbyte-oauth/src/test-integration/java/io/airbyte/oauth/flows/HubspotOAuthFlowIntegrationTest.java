@@ -32,13 +32,13 @@ public class HubspotOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
     return Path.of("secrets/hubspot.json");
   }
 
-  protected OAuthFlowImplementation getFlowObject(final ConfigRepository configRepository) {
-    return new HubspotOAuthFlow(configRepository, httpClient);
+  protected OAuthFlowImplementation getFlowObject() {
+    return new HubspotOAuthFlow(httpClient);
   }
 
   @Override
   protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
-    return new HubspotOAuthFlow(configRepository, httpClient);
+    return new HubspotOAuthFlow(httpClient);
   }
 
   @Test
@@ -48,16 +48,18 @@ public class HubspotOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
     final UUID definitionId = UUID.randomUUID();
     final String fullConfigAsString = Files.readString(getCredentialsPath());
     final JsonNode credentialsJson = Jsons.deserialize(fullConfigAsString);
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(ImmutableMap.builder()
             .put("client_id", credentialsJson.get("credentials").get("client_id").asText())
             .put("client_secret", credentialsJson.get("credentials").get("client_secret").asText())
-            .build()))));
+            .build()));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
     final var flowObject = getFlowImplementation(configRepository, httpClient);
-    final String url = flowObject.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
+    final String url = flowObject.getSourceConsentUrl(
+        workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
@@ -67,7 +69,7 @@ public class HubspotOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
     }
     assertTrue(serverHandler.isSucceeded(), "Failed to get User consent on time");
     final Map<String, Object> params = flowObject.completeSourceOAuth(workspaceId, definitionId,
-        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL);
+        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Response from completing OAuth Flow is: {}", params.toString());
     assertTrue(params.containsKey("credentials"));
     final Map<String, Object> credentials = (Map<String, Object>) params.get("credentials");
