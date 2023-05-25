@@ -22,7 +22,7 @@ const AllSourcesPage: React.FC = () => {
   const navigate = useNavigate();
   const { sources } = useSourceList();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
-  const onCreateSource = () => navigate(`${RoutePaths.SourceNew}`);
+  const onCreateSource = () => navigate(`${RoutePaths.SelectSourceNew}`);
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
   return sources.length ? (
