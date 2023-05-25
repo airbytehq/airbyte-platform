@@ -121,7 +121,7 @@ public class StreamStatusTracker {
             "stream status started " + streamDescriptor.getNamespace() + ":" + streamDescriptor.getName());
     currentStreamStatus.setStatusId(streamStatusRead.getId());
 
-    LOGGER.debug("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
+    LOGGER.info("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
         streamDescriptor.getNamespace(), streamDescriptor.getName(), streamStatusRead.getId(), replicationContext);
   }
 
@@ -136,7 +136,7 @@ public class StreamStatusTracker {
       existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, streamStatusTraceMessage);
       sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(), transitionTimestamp.toMillis(),
           replicationContext, StreamStatusRunState.RUNNING, Optional.empty());
-      LOGGER.debug("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
+      LOGGER.info("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
           streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
     } else {
       throw new StreamStatusException("Invalid stream status transition to RUNNING.", streamDescriptor);
@@ -161,10 +161,10 @@ public class StreamStatusTracker {
         if (existingStreamStatus.isComplete()) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.COMPLETE, Optional.empty());
-          LOGGER.debug("Stream status for stream {}:{} set to COMPLETE (id = {}, context = {}).", streamDescriptor.getNamespace(),
+          LOGGER.info("Stream status for stream {}:{} set to COMPLETE (id = {}, context = {}).", streamDescriptor.getNamespace(),
               streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         } else {
-          LOGGER.debug("Stream status for stream {}:{} set to partially COMPLETE (id = {}, context = {}).",
+          LOGGER.info("Stream status for stream {}:{} set to partially COMPLETE (id = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         }
 
@@ -193,10 +193,10 @@ public class StreamStatusTracker {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.INCOMPLETE,
               Optional.of(StreamStatusIncompleteRunCause.FAILED));
-          LOGGER.debug("Stream status for stream {}:{} set to INCOMPLETE (id = {}, context = {}).",
+          LOGGER.info("Stream status for stream {}:{} set to INCOMPLETE (id = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         } else {
-          LOGGER.debug("Stream {}:{} is already in an INCOMPLETE state.", streamDescriptor.getNamespace(), streamDescriptor.getName());
+          LOGGER.info("Stream {}:{} is already in an INCOMPLETE state.", streamDescriptor.getNamespace(), streamDescriptor.getName());
         }
 
         // Update the cached entry to reflect the current status of the incoming status message
@@ -318,6 +318,8 @@ public class StreamStatusTracker {
           if (!e.getValue().isTerminated()) {
             sendUpdate(e.getValue().getStatusId(), e.getKey().streamName(), e.getKey().streamNamespace(), transitionTimestamp.toMillis(),
                 replicationContext, streamStatusRunState, streamStatusIncompleteRunCause);
+            LOGGER.info("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
+                e.getKey().streamNamespace(), e.getKey().streamName(), streamStatusRunState.name(), e.getValue().getStatusId(), replicationContext);
           }
         }
       }
