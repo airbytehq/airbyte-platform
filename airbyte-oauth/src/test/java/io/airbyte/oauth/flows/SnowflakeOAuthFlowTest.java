@@ -20,7 +20,7 @@ class SnowflakeOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new SourceSnowflakeOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new SourceSnowflakeOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

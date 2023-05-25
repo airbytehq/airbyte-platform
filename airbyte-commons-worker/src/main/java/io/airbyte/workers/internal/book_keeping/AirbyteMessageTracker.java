@@ -4,10 +4,7 @@
 
 package io.airbyte.workers.internal.book_keeping;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
-
 import com.google.common.annotations.VisibleForTesting;
-import datadog.trace.api.Trace;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.FailureReason;
@@ -72,7 +69,6 @@ public class AirbyteMessageTracker implements MessageTracker {
     this(stateAggregator, new DefaultSyncStatsTracker(stateDeltaTracker, stateMetricsTracker), featureFlags);
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void acceptFromSource(final AirbyteMessage message) {
     logMessageAsJSON("source", message);
@@ -86,7 +82,6 @@ public class AirbyteMessageTracker implements MessageTracker {
     }
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void acceptFromDestination(final AirbyteMessage message) {
     logMessageAsJSON("destination", message);
@@ -138,6 +133,7 @@ public class AirbyteMessageTracker implements MessageTracker {
     switch (traceMessage.getType()) {
       case ESTIMATE -> handleEmittedEstimateTrace(traceMessage.getEstimate());
       case ERROR -> handleEmittedErrorTrace(traceMessage, airbyteMessageOrigin);
+      case STREAM_STATUS -> log.debug("Stream status trace message not handled by message tracker: {}", traceMessage);
       default -> log.warn("Invalid message type for trace message: {}", traceMessage);
     }
   }

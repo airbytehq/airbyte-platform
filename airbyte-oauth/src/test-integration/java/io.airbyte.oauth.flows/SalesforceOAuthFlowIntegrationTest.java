@@ -57,7 +57,7 @@ public class SalesforceOAuthFlowIntegrationTest {
     }
     configRepository = mock(ConfigRepository.class);
     httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
-    salesforceOAuthFlow = new SalesforceOAuthFlow(configRepository, httpClient);
+    salesforceOAuthFlow = new SalesforceOAuthFlow(httpClient);
 
     server = HttpServer.create(new InetSocketAddress(8000), 0);
     server.setExecutor(null); // creates a default executor
@@ -79,15 +79,17 @@ public class SalesforceOAuthFlowIntegrationTest {
     final String fullConfigAsString = Files.readString(CREDENTIALS_PATH);
     final JsonNode credentialsJson = Jsons.deserialize(fullConfigAsString);
     final String clientId = credentialsJson.get("client_id").asText();
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(ImmutableMap.builder()
             .put("client_id", clientId)
             .put("client_secret", credentialsJson.get("client_secret").asText())
-            .build()))));
-    final String url = salesforceOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
+            .build()));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    final String url = salesforceOAuthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+        sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
@@ -97,7 +99,7 @@ public class SalesforceOAuthFlowIntegrationTest {
     }
     assertTrue(serverHandler.isSucceeded(), "Failed to get User consent on time");
     final Map<String, Object> params = salesforceOAuthFlow.completeSourceOAuth(workspaceId, definitionId,
-        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL);
+        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Response from completing OAuth Flow is: {}", params.toString());
     assertTrue(params.containsKey("refresh_token"));
     assertTrue(params.get("refresh_token").toString().length() > 0);

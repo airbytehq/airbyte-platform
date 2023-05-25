@@ -55,6 +55,9 @@ export const NameSection: React.FC = () => {
           label={formatMessage({ id: "settings.accountSettings.name" })}
           fieldType="input"
           name="name"
+          placeholder={formatMessage({
+            id: "settings.accountSettings.name.placeholder",
+          })}
         />
         <FormSubmissionButtons submitKey="settings.accountSettings.updateName" />
       </Form>

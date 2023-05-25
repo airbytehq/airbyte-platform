@@ -5,11 +5,13 @@
 package io.airbyte.config.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
@@ -17,13 +19,13 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,11 +43,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   void setup() throws SQLException {
     truncateAllTables();
 
-    configRepository = spy(new ConfigRepository(
-        database,
-        new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
-        mock(StandardSyncPersistence.class),
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    configRepository = spy(new ConfigRepository(database, mock(StandardSyncPersistence.class), MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
   }
 
   @Test
@@ -286,6 +284,45 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(DOCKER_IMAGE_TAG, configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId()).getDockerImageTag());
   }
 
+  @Test
+  void testWriteSourceDefinitionAndDefaultVersion() throws JsonValidationException, IOException, ConfigNotFoundException {
+    StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromSourceDef(sourceDefinition);
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
+
+    StandardSourceDefinition sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
+    Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
+        configRepository.getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag());
+
+    assertTrue(actorDefinitionVersionFromDB.isPresent());
+    UUID actualVersionID = actorDefinitionVersionFromDB.get().getVersionId();
+
+    assertEquals(actorDefinitionVersion.withVersionId(actualVersionID), actorDefinitionVersionFromDB.get());
+    assertEquals(actualVersionID, sourceDefinitionFromDB.getDefaultVersionId());
+    assertEquals(sourceDefinition.withDefaultVersionId(actualVersionID), sourceDefinitionFromDB);
+  }
+
+  @Test
+  void testWriteDestinationDefinitionAndDefaultVersion() throws JsonValidationException, IOException, ConfigNotFoundException {
+    StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromDestDef(destinationDefinition);
+
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
+
+    StandardDestinationDefinition destinationDefinitionFromDB =
+        configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
+    Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
+        configRepository.getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag());
+
+    assertTrue(actorDefinitionVersionFromDB.isPresent());
+    UUID actualVersionID = actorDefinitionVersionFromDB.get().getVersionId();
+
+    assertEquals(actorDefinitionVersion.withVersionId(actualVersionID), actorDefinitionVersionFromDB.get());
+    assertEquals(actualVersionID, destinationDefinitionFromDB.getDefaultVersionId());
+    assertEquals(destinationDefinition.withDefaultVersionId(actualVersionID), destinationDefinitionFromDB);
+  }
+
   @SuppressWarnings("SameParameterValue")
   private static SourceConnection createSource(final UUID sourceDefId, final UUID workspaceId) {
     return new SourceConnection()
@@ -349,6 +386,24 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withInitialSetupComplete(false)
         .withTombstone(false)
         .withDefaultGeography(Geography.AUTO);
+  }
+
+  private static ActorDefinitionVersion createActorDefinitionFromSourceDef(final StandardSourceDefinition sourceDef) {
+    // TODO: This method will go away once we move the version-related objects to the ADV.
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDef.getSourceDefinitionId())
+        .withDockerRepository(sourceDef.getDockerRepository())
+        .withDockerImageTag(sourceDef.getDockerImageTag())
+        .withSpec(sourceDef.getSpec());
+  }
+
+  private static ActorDefinitionVersion createActorDefinitionFromDestDef(final StandardDestinationDefinition destDef) {
+    // TODO: This method will go away once we move the version-related objects to the ADV.
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(destDef.getDestinationDefinitionId())
+        .withDockerRepository(destDef.getDockerRepository())
+        .withDockerImageTag(destDef.getDockerImageTag())
+        .withSpec(destDef.getSpec());
   }
 
 }

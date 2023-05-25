@@ -39,13 +39,11 @@ import { WarningMessage } from "../../WarningMessage";
 type MenuWithRequestButtonProps = MenuListProps<DropDownOptionDataItem, false> & { selectProps: any };
 
 const ConnectorList: React.FC<React.PropsWithChildren<MenuWithRequestButtonProps>> = ({ children, ...props }) => {
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
-
   return (
     <>
       <components.MenuList {...props}>{children}</components.MenuList>
       <div className={styles.connectorListFooter}>
-        {props.selectProps.selectProps.formType === "source" && showBuilderNavigationLinks && (
+        {props.selectProps.selectProps.formType === "source" && (
           <div className={styles.builderPromptContainer}>
             <BuilderPrompt builderRoutePath={`../../${RoutePaths.ConnectorBuilder}`} />
           </div>

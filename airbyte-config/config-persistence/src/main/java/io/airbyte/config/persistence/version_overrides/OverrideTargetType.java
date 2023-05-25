@@ -10,6 +10,7 @@ package io.airbyte.config.persistence.version_overrides;
 public enum OverrideTargetType {
 
   ACTOR("actor"),
+  WORKSPACE_CREATOR("workspace_creator"),
   WORKSPACE("workspace");
 
   private final String name;

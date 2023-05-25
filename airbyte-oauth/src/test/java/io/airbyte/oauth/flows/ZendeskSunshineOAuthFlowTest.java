@@ -16,7 +16,7 @@ class ZendeskSunshineOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new ZendeskSunshineOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new ZendeskSunshineOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

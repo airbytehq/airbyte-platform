@@ -1322,6 +1322,27 @@ paths:
                 $ref: "#/components/schemas/DestinationRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/partial_update:
+    post:
+      tags:
+        - destination
+      summary: Update a destination partially
+      operationId: partialUpdateDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialDestinationUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/destinations/list:
     post:
       tags:
@@ -3834,6 +3855,15 @@ components:
           $ref: "#/components/schemas/DestinationConfiguration"
         name:
           type: string
+    PartialDestinationUpdate:
+      type: object
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectionConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        name:
+          type: string
     DestinationCloneRequestBody:
       description: The values required to configure the destination. The schema for this should have an id of the existing destination along with the configuration you want to change in case.
       type: object
@@ -5751,6 +5781,8 @@ components:
       enum:
         - ignore # do nothing if we detect a schema change
         - disable # disable the connection, pausing the sync
+        - propagate_columns # automatically propagate the changes on selected streams and continue syncing
+        - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
     WebBackendConnectionReadList:
       type: object

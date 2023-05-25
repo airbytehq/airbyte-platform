@@ -13,8 +13,8 @@ interface FreeTagProps {
 // A tag labeling a release stage pill as free. Defined here for easy reuse between the
 // two release stage pill implementations (which should likely be refactored!)
 export const FreeTag: React.FC<FreeTagProps> = ({ releaseStage }) => {
-  const { enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { isEnrolled } = enrollmentStatusQuery.data || {};
+  const { programStatusQuery } = useFreeConnectorProgram();
+  const { isEnrolled } = programStatusQuery.data || {};
   const { formatMessage } = useIntl();
 
   return isEnrolled && freeReleaseStages.includes(releaseStage) ? (

@@ -16,7 +16,7 @@ public class FacebookPagesOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new FacebookPagesOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new FacebookPagesOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

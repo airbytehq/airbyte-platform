@@ -39,6 +39,7 @@
   "form.noResult": "No result",
   "form.noConnectorFound": "No matching connector found",
   "form.connectionName": "Connection name",
+  "form.connectionName.minLength": "Connection name must be at least 1 character",
   "form.connectionName.placeholder": "Name",
   "form.sourceName": "Source name",
   "form.destinationName": "Destination name",
@@ -137,6 +138,7 @@
   "setupForm.check.failed": "The security of your Airbyte installation couldn't be checked. Please ensure your installation is <lnk>secured</lnk>. It should use strong authentication and/or not be accessible from the internet.",
   "setupForm.submit": "Get started",
 
+  "connectionForm.connectionSettings": "Connection settings",
   "connectionForm.settings.advancedButton": "Advanced",
   "connectionForm.validation.error": "The form is invalid. Please make sure that all fields are correct.",
   "connectionForm.normalization.title": "Normalization",
@@ -182,9 +184,13 @@
   "connectionForm.bulkEdit.apply": "Apply",
   "connectionForm.bulkEdit.pillButtonLabel.notAvailable": "Not available",
   "connectionForm.nonBreakingChangesPreference.label": "Non-breaking schema updates detected",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.label": "Detect and propagate schema changes",
   "connectionForm.nonBreakingChangesPreference.message": "Set how Airbyte handles syncs when it detects a non-breaking schema change in the source",
   "connectionForm.nonBreakingChangesPreference.ignore": "Ignore",
   "connectionForm.nonBreakingChangesPreference.disable": "Disable connection",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Auto-propagate stream changes",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns": "Auto-propagate column changes",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.ignore": "Detect and ignore",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
   "connectionForm.jobHistory": "Job History",
 
@@ -224,6 +230,7 @@
   "connectorForm.error.oneOfWithNonObjects": "Spec uses oneOf without using object types for all conditions",
   "connectorForm.error.oneOfWithoutConst": "Spec uses oneOf without a shared const property",
   "connectorForm.error.topLevelNonObject": "Top level configuration has to be an object",
+  "connectorForm.allowlistIp": "Allowlist Airbyte's IPs: Please allow inbound traffic from the <a>following</a> Airbyte IPs in your firewall whether connecting directly or via SSH Tunnel.",
 
   "form.rawData": "Raw data (JSON)",
   "form.basicNormalization": "Normalized tabular data",
@@ -897,7 +904,6 @@
   "connectorBuilder.forkPage.copyName": "{oldName} - copy",
   "connectorBuilder.forkPage.createLabel": "Create",
   "connectorBuilder.backButtonLabel": "Back",
-  "connectorBuilder.cdkVersion": "CDK version: {version}",
   "connectorBuilder.draft": "Draft",
   "connectorBuilder.draftInProgressLabel": "draft in progress",
   "connectorBuilder.changeVersionModal.title": "Change active version for {name}",
@@ -919,9 +925,12 @@
   "connectorBuilder.maxLength": "Must be at most 256 characters",
   "connectorBuilder.slackChannel": "#help-connector-development",
   "connectorBuilder.slackChannelTooltip": "Ask any questions or provide feedback in our public slack channel",
+  "connectorBuilder.addStreamModal.copyOtherStreamLabel": "Use an existing stream configuration",
+  "connectorBuilder.addStreamModal.streamLabel": "Stream to copy settings from",
   "connectorBuilder.resetTestingValues.title": "Reset testing values",
   "connectorBuilder.resetTestingValues.text": "The testing values form will be reset back to its default values, so any changes you made to the testing values will be lost. Are you sure you want to continue?",
   "connectorBuilder.resetTestingValues.submit": "Reset",
+  "connectorBuilder.createPage.tutorialPrompt": "Check out the tutorial",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

@@ -25,6 +25,8 @@ import { useBuilderErrors } from "../useBuilderErrors";
 interface AddStreamValues {
   streamName: string;
   urlPath: string;
+  copyOtherStream?: boolean;
+  streamToCopy?: string;
 }
 
 interface AddStreamButtonProps {
@@ -59,11 +61,15 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     numStreams === 0 && !hasErrors(["global"]) && builderFormValues.global.authenticator.type !== "NoAuth";
 
   const handleSubmit = (values: AddStreamValues) => {
+    const otherStreamValues = values.copyOtherStream
+      ? streams.find((stream) => stream.name === values.streamToCopy)
+      : undefined;
     const id = uuid();
     setValue("streams", [
       ...streams,
       merge({}, DEFAULT_BUILDER_STREAM_VALUES, {
         ...initialValues,
+        ...otherStreamValues,
         name: values.streamName,
         urlPath: values.urlPath,
         id,
@@ -116,7 +122,12 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
             setIsOpen(false);
           }}
         >
-          <AddStreamForm onSubmit={handleSubmit} onCancel={() => setIsOpen(false)} />
+          <AddStreamForm
+            onSubmit={handleSubmit}
+            onCancel={() => setIsOpen(false)}
+            showCopyFromStream={!initialValues && numStreams > 0}
+            streams={streams}
+          />
         </Modal>
       )}
     </>
@@ -126,13 +137,17 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
 const AddStreamForm = ({
   onSubmit,
   onCancel,
+  showCopyFromStream,
+  streams,
 }: {
   onSubmit: (values: AddStreamValues) => void;
   onCancel: () => void;
+  showCopyFromStream: boolean;
+  streams: BuilderStream[];
 }) => {
   const { formatMessage } = useIntl();
   const methods = useForm({
-    defaultValues: { streamName: "", urlPath: "" },
+    defaultValues: { streamName: "", urlPath: "", copyOtherStream: false, streamToCopy: streams[0]?.name },
     resolver: yupResolver(
       yup.object().shape({
         streamName: yup.string().required("form.empty.error"),
@@ -141,6 +156,8 @@ const AddStreamForm = ({
     ),
     mode: "onChange",
   });
+
+  const useOtherStream = methods.watch("copyOtherStream");
 
   return (
     <FormProvider {...methods}>
@@ -158,6 +175,24 @@ const AddStreamForm = ({
             label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
             tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
           />
+          {/* Only allow to copy from another stream within the modal if there aren't initial values set already and there are other streams */}
+          {showCopyFromStream && (
+            <>
+              <BuilderField
+                path="copyOtherStream"
+                type="boolean"
+                label={formatMessage({ id: "connectorBuilder.addStreamModal.copyOtherStreamLabel" })}
+              />
+              {useOtherStream && (
+                <BuilderField
+                  label={formatMessage({ id: "connectorBuilder.addStreamModal.streamLabel" })}
+                  path="streamToCopy"
+                  type="enum"
+                  options={streams.map((stream) => stream.name)}
+                />
+              )}
+            </>
+          )}
         </ModalBody>
         <ModalFooter>
           <Button

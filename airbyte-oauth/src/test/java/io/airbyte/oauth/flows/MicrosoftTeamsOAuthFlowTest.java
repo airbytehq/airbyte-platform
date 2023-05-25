@@ -15,7 +15,7 @@ class MicrosoftTeamsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new MicrosoftTeamsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new MicrosoftTeamsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

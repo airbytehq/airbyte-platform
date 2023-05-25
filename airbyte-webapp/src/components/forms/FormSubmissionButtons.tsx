@@ -16,14 +16,14 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   // get isDirty and isSubmitting from useFormState to avoid re-rendering of whole form if they change
   // reset is a stable function so it's fine to get it from useFormContext
   const { reset } = useFormContext();
-  const { isDirty, isSubmitting } = useFormState();
+  const { isDirty, isSubmitting, isValid } = useFormState();
 
   return (
     <FlexContainer justifyContent="flex-end">
       <Button type="button" variant="secondary" disabled={isSubmitting || !isDirty} onClick={() => reset()}>
         <FormattedMessage id={cancelKey} />
       </Button>
-      <Button type="submit" disabled={!isDirty} isLoading={isSubmitting}>
+      <Button type="submit" disabled={!isDirty || !isValid} isLoading={isSubmitting}>
         <FormattedMessage id={submitKey} />
       </Button>
     </FlexContainer>

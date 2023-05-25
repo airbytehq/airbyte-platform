@@ -11,7 +11,7 @@ public class AsanaOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new AsanaOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new AsanaOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

@@ -66,7 +66,11 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
       await onSubmit(valuesToSend);
       clearFormChange(formId);
       // do not reset form values to avoid casting oddities
-      return { keepValues: true };
+      return {
+        keepStateOptions: {
+          keepValues: true,
+        },
+      };
     },
     [castValues, onSubmit, clearFormChange, formId]
   );

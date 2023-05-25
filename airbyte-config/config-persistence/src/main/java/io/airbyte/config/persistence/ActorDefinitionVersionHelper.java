@@ -5,11 +5,11 @@
 package io.airbyte.config.persistence;
 
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.persistence.version_overrides.DefaultDefinitionVersionOverrideProvider;
+import io.airbyte.config.persistence.version_overrides.FeatureFlagDefinitionVersionOverrideProvider;
 import io.airbyte.config.persistence.version_overrides.LocalDefinitionVersionOverrideProvider;
-import io.airbyte.config.persistence.version_overrides.OverrideTargetType;
 import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseActorDefinitionVersionTableDefaults;
@@ -30,19 +30,23 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class ActorDefinitionVersionHelper {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionVersionHelper.class);
 
   private final ConfigRepository configRepository;
   private final LocalDefinitionVersionOverrideProvider localOverrideProvider;
+  private final FeatureFlagDefinitionVersionOverrideProvider ffOverrideProvider;
   private final FeatureFlagClient featureFlagClient;
 
   public ActorDefinitionVersionHelper(final ConfigRepository configRepository,
                                       final LocalDefinitionVersionOverrideProvider localOverrideProvider,
+                                      final FeatureFlagDefinitionVersionOverrideProvider ffOverrideProvider,
                                       final FeatureFlagClient featureFlagClient) {
     this.localOverrideProvider = localOverrideProvider;
+    this.ffOverrideProvider = ffOverrideProvider;
     this.featureFlagClient = featureFlagClient;
     this.configRepository = configRepository;
-    LOGGER.info("ActorDefinitionVersionHelper initialized with {}", localOverrideProvider.getClass().getSimpleName());
+    LOGGER.info("ActorDefinitionVersionHelper initialized with override providers: {}, {}", localOverrideProvider.getClass().getSimpleName(),
+        ffOverrideProvider.getClass().getSimpleName());
   }
 
   private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition, final UUID workspaceId)
@@ -56,6 +60,7 @@ public class ActorDefinitionVersionHelper {
     }
 
     return new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withDockerRepository(sourceDefinition.getDockerRepository())
         .withDockerImageTag(sourceDefinition.getDockerImageTag())
         .withSpec(sourceDefinition.getSpec());
@@ -72,6 +77,7 @@ public class ActorDefinitionVersionHelper {
     }
 
     return new ActorDefinitionVersion()
+        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
         .withDockerRepository(destinationDefinition.getDockerRepository())
         .withDockerImageTag(destinationDefinition.getDockerImageTag())
         .withSpec(destinationDefinition.getSpec());
@@ -95,19 +101,25 @@ public class ActorDefinitionVersionHelper {
       return defaultVersion;
     }
 
-    Optional<ActorDefinitionVersion> localOverride = Optional.empty();
+    final Optional<ActorDefinitionVersion> ffOverride = ffOverrideProvider.getOverride(
+        ActorType.SOURCE,
+        sourceDefinition.getSourceDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
-    if (actorId != null) {
-      localOverride = localOverrideProvider.getOverride(sourceDefinition.getSourceDefinitionId(), actorId, OverrideTargetType.ACTOR, defaultVersion);
+    if (ffOverride.isPresent()) {
+      return ffOverride.get();
     }
 
-    if (localOverride.isEmpty()) {
-      localOverride =
-          localOverrideProvider.getOverride(sourceDefinition.getSourceDefinitionId(), workspaceId, OverrideTargetType.WORKSPACE, defaultVersion);
-    }
+    final Optional<ActorDefinitionVersion> localOverride = localOverrideProvider.getOverride(
+        ActorType.SOURCE,
+        sourceDefinition.getSourceDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
     return localOverride.orElse(defaultVersion);
-
   }
 
   /**
@@ -140,17 +152,23 @@ public class ActorDefinitionVersionHelper {
       return defaultVersion;
     }
 
-    Optional<ActorDefinitionVersion> localOverride = Optional.empty();
+    final Optional<ActorDefinitionVersion> ffOverride = ffOverrideProvider.getOverride(
+        ActorType.DESTINATION,
+        destinationDefinition.getDestinationDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
-    if (actorId != null) {
-      localOverride =
-          localOverrideProvider.getOverride(destinationDefinition.getDestinationDefinitionId(), actorId, OverrideTargetType.ACTOR, defaultVersion);
+    if (ffOverride.isPresent()) {
+      return ffOverride.get();
     }
 
-    if (localOverride.isEmpty()) {
-      localOverride = localOverrideProvider.getOverride(destinationDefinition.getDestinationDefinitionId(), workspaceId, OverrideTargetType.WORKSPACE,
-          defaultVersion);
-    }
+    final Optional<ActorDefinitionVersion> localOverride = localOverrideProvider.getOverride(
+        ActorType.DESTINATION,
+        destinationDefinition.getDestinationDefinitionId(),
+        workspaceId,
+        actorId,
+        defaultVersion);
 
     return localOverride.orElse(defaultVersion);
   }

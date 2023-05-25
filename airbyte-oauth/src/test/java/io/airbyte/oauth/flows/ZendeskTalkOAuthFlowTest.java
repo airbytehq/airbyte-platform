@@ -16,7 +16,7 @@ class ZendeskTalkOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new ZendeskTalkOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new ZendeskTalkOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

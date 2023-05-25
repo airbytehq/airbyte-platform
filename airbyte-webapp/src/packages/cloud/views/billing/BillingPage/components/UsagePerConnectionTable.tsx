@@ -83,7 +83,7 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   const columnHelper = useMemo(() => createColumnHelper<ConnectionFreeAndPaidUsage>(), []);
 
-  const billingInsightsColumns = React.useMemo(() => {
+  const columns = React.useMemo(() => {
     return [
       columnHelper.accessor("connection.connectionName", {
         header: () => (
@@ -275,7 +275,7 @@ export const UsagePerConnectionTable: React.FC = () => {
     <div className={styles.content}>
       <Table
         variant="white"
-        columns={billingInsightsColumns}
+        columns={columns}
         sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
         data={sortingData}
       />

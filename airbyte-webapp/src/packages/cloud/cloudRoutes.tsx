@@ -5,7 +5,6 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
@@ -57,8 +56,6 @@ const MainRoutes: React.FC = () => {
   );
   useAnalyticsRegisterValues(analyticsContext);
 
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
-
   return (
     <ApiErrorBoundary>
       <Routes>
@@ -82,9 +79,7 @@ const MainRoutes: React.FC = () => {
         <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />} />
         <Route path={CloudRoutes.Billing} element={<BillingPage />} />
         <Route path={CloudRoutes.UpcomingFeatures} element={<UpcomingFeaturesPage />} />
-        {showBuilderNavigationLinks && (
-          <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
-        )}
+        <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
     </ApiErrorBoundary>

@@ -4,21 +4,9 @@
 
 package io.airbyte.config.persistence.version_overrides;
 
-import io.airbyte.config.ActorDefinitionVersion;
-import java.util.Optional;
-import java.util.UUID;
-
 /**
  * Defines the interface for a class that can provide static overrides for actor definition
  * versions. This is used to allow for a different implementation of the override provider in Cloud
- * and OSS.
+ * and OSS, namely for changing the file path that the overrides are stored in.
  */
-public interface LocalDefinitionVersionOverrideProvider {
-
-  Optional<ActorDefinitionVersion> getOverride(
-                                               final UUID actorDefinitionId,
-                                               final UUID targetId,
-                                               final OverrideTargetType targetType,
-                                               final ActorDefinitionVersion defaultVersion);
-
-}
+public interface LocalDefinitionVersionOverrideProvider extends DefinitionVersionOverrideProvider {}

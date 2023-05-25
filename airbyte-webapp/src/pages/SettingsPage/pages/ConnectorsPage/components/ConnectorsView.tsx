@@ -214,7 +214,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </FlexItem>
                 {index === 0 && (
                   <FlexContainer>
-                    {allowUploadCustomImage && <CreateConnector type={type} />}
+                    <CreateConnector type={type} />
                     {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
                   </FlexContainer>
                 )}

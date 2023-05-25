@@ -39,7 +39,7 @@ public class SlackOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
 
   @Override
   protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
-    return new SlackOAuthFlow(configRepository, httpClient);
+    return new SlackOAuthFlow(httpClient);
   }
 
   @Test
@@ -49,16 +49,17 @@ public class SlackOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
     final UUID definitionId = UUID.randomUUID();
     final String fullConfigAsString = Files.readString(getCredentialsPath());
     final JsonNode credentialsJson = Jsons.deserialize(fullConfigAsString).get("credentials");
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(ImmutableMap.builder()
             .put("client_id", credentialsJson.get("client_id").asText())
             .put("client_secret", credentialsJson.get("client_secret").asText())
-            .build()))));
+            .build()));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
     final String url = getFlowImplementation(configRepository, httpClient).getSourceConsentUrl(workspaceId, definitionId, getRedirectUrl(),
-        Jsons.emptyObject(), null);
+        Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
@@ -68,7 +69,7 @@ public class SlackOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest {
     }
     assertTrue(serverHandler.isSucceeded(), "Failed to get User consent on time");
     final Map<String, Object> params = flow.completeSourceOAuth(workspaceId, definitionId,
-        Map.of("code", serverHandler.getParamValue()), getRedirectUrl());
+        Map.of("code", serverHandler.getParamValue()), getRedirectUrl(), sourceOAuthParameter.getConfiguration());
     LOGGER.info("Response from completing OAuth Flow is: {}", params.toString());
     assertTrue(params.containsKey("credentials"));
     assertTrue(((Map<String, Object>) params.get("credentials")).containsKey("access_token"));

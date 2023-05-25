@@ -24,8 +24,8 @@ interface InlineEnrollmentCalloutProps {
 }
 
 export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = ({ withMargin }) => {
-  const { userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { showEnrollmentUi } = enrollmentStatusQuery.data || {};
+  const { userDidEnroll, programStatusQuery } = useFreeConnectorProgram();
+  const { showEnrollmentUi } = programStatusQuery.data || {};
 
   if (userDidEnroll || !showEnrollmentUi) {
     return null;

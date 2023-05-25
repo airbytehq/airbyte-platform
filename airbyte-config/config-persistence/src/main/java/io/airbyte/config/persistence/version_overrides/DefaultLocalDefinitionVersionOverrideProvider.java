@@ -12,10 +12,12 @@ import io.airbyte.commons.util.MoreIterators;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersionOverride;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.VersionOverride;
 import io.airbyte.config.specs.GcsBucketSpecFetcher;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.micronaut.core.annotation.Creator;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 import java.util.List;
@@ -27,34 +29,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Default implementation of {@link LocalDefinitionVersionOverrideProvider} that reads the overrides
- * from a YAML file in the classpath.
+ * Default implementation of {@link DefinitionVersionOverrideProvider} that reads the overrides from
+ * a YAML file in the classpath.
  */
 @Singleton
-public class DefaultDefinitionVersionOverrideProvider implements LocalDefinitionVersionOverrideProvider {
+public class DefaultLocalDefinitionVersionOverrideProvider implements LocalDefinitionVersionOverrideProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultLocalDefinitionVersionOverrideProvider.class);
 
   private final GcsBucketSpecFetcher gcsBucketSpecFetcher;
 
   private final Map<UUID, ActorDefinitionVersionOverride> overrideMap;
 
   @Creator
-  public DefaultDefinitionVersionOverrideProvider(final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
-    this(DefaultDefinitionVersionOverrideProvider.class, "version_overrides.yml", gcsBucketSpecFetcher);
+  public DefaultLocalDefinitionVersionOverrideProvider(final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
+    this(DefaultLocalDefinitionVersionOverrideProvider.class, "version_overrides.yml", gcsBucketSpecFetcher);
     LOGGER.info("Initialized default definition version overrides");
   }
 
-  public DefaultDefinitionVersionOverrideProvider(final Class<?> resourceClass,
-                                                  final String resourceName,
-                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
+  public DefaultLocalDefinitionVersionOverrideProvider(final Class<?> resourceClass,
+                                                       final String resourceName,
+                                                       final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
     this.overrideMap = getLocalOverrides(resourceClass, resourceName);
     this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
   }
 
   @VisibleForTesting
-  public DefaultDefinitionVersionOverrideProvider(final Map<UUID, ActorDefinitionVersionOverride> overrideMap,
-                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
+  public DefaultLocalDefinitionVersionOverrideProvider(final Map<UUID, ActorDefinitionVersionOverride> overrideMap,
+                                                       final GcsBucketSpecFetcher gcsBucketSpecFetcher) {
     this.overrideMap = overrideMap;
     this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
   }
@@ -73,16 +75,39 @@ public class DefaultDefinitionVersionOverrideProvider implements LocalDefinition
   }
 
   @Override
-  public Optional<ActorDefinitionVersion> getOverride(final UUID actorDefinitionId,
-                                                      final UUID targetId,
-                                                      final OverrideTargetType targetType,
+  public Optional<ActorDefinitionVersion> getOverride(final ActorType actorType,
+                                                      final UUID actorDefinitionId,
+                                                      final UUID workspaceId,
+                                                      @Nullable final UUID actorId,
                                                       final ActorDefinitionVersion defaultVersion) {
+    Optional<ActorDefinitionVersion> localOverride = Optional.empty();
+
+    if (actorId != null) {
+      localOverride = getOverrideForTarget(actorDefinitionId, actorId, OverrideTargetType.ACTOR, defaultVersion);
+    }
+
+    if (localOverride.isEmpty()) {
+      localOverride = getOverrideForTarget(actorDefinitionId, workspaceId, OverrideTargetType.WORKSPACE, defaultVersion);
+    }
+
+    return localOverride;
+  }
+
+  /**
+   * Returns the overridden ActorDefinitionVersion for a given target, if one exists. Otherwise, an
+   * empty optional is returned.
+   */
+  public Optional<ActorDefinitionVersion> getOverrideForTarget(final UUID actorDefinitionId,
+                                                               final UUID targetId,
+                                                               final OverrideTargetType targetType,
+                                                               final ActorDefinitionVersion defaultVersion) {
     if (overrideMap.containsKey(actorDefinitionId)) {
       final ActorDefinitionVersionOverride override = overrideMap.get(actorDefinitionId);
       for (final VersionOverride versionOverride : override.getVersionOverrides()) {
         final List<UUID> targetIds = switch (targetType) {
           case ACTOR -> versionOverride.getActorIds();
           case WORKSPACE -> versionOverride.getWorkspaceIds();
+          case WORKSPACE_CREATOR -> versionOverride.getWorkspaceCreatorUserIds();
         };
 
         if (targetIds != null && targetIds.contains(targetId)) {

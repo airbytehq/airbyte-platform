@@ -14,7 +14,7 @@ public class DriftOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new DriftOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new DriftOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

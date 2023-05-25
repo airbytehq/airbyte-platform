@@ -560,7 +560,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 }),
                 start_from_page: yup.mixed().when("type", {
                   is: PAGE_INCREMENT,
-                  then: yup.string(),
+                  then: yupNumberOrEmptyString,
                   otherwise: (schema) => schema.strip(),
                 }),
               })
@@ -582,7 +582,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 then: yup.object().shape({
                   value: yup.mixed().when("type", {
                     is: "list",
-                    then: yup.array().of(yup.string()),
+                    then: yup.array().of(yup.string()).min(1, "form.empty.error"),
                     otherwise: yup
                       .string()
                       .required("form.empty.error")
@@ -633,12 +633,12 @@ export const builderFormValidationSchema = yup.object().shape({
                 .shape({
                   backoff_time_in_seconds: yup.mixed().when("type", {
                     is: (val: string) => val === "ConstantBackoffStrategy",
-                    then: yup.string().required("form.empty.error"),
+                    then: yupNumberOrEmptyString.required("form.empty.error"),
                     otherwise: (schema) => schema.strip(),
                   }),
                   factor: yup.mixed().when("type", {
                     is: (val: string) => val === "ExponentialBackoffStrategy",
-                    then: yup.string(),
+                    then: yupNumberOrEmptyString,
                     otherwise: (schema) => schema.strip(),
                   }),
                   header: yup.mixed().when("type", {

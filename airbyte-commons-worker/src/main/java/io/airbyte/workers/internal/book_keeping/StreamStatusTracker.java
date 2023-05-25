@@ -5,7 +5,6 @@
 package io.airbyte.workers.internal.book_keeping;
 
 import com.google.common.annotations.VisibleForTesting;
-import datadog.trace.api.Trace;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
@@ -54,7 +53,6 @@ public class StreamStatusTracker {
    *
    * @param event The {@link ReplicationAirbyteMessageEvent} that contains a stram status message.
    */
-  @Trace
   public void track(final ReplicationAirbyteMessageEvent event) {
     try {
       LOGGER.debug("Received message from {} for stream {}:{} -> {}",
@@ -123,7 +121,7 @@ public class StreamStatusTracker {
             "stream status started " + streamDescriptor.getNamespace() + ":" + streamDescriptor.getName());
     currentStreamStatus.setStatusId(streamStatusRead.getId());
 
-    LOGGER.debug("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
+    LOGGER.info("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
         streamDescriptor.getNamespace(), streamDescriptor.getName(), streamStatusRead.getId(), replicationContext);
   }
 
@@ -138,7 +136,7 @@ public class StreamStatusTracker {
       existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, streamStatusTraceMessage);
       sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(), transitionTimestamp.toMillis(),
           replicationContext, StreamStatusRunState.RUNNING, Optional.empty());
-      LOGGER.debug("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
+      LOGGER.info("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
           streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
     } else {
       throw new StreamStatusException("Invalid stream status transition to RUNNING.", streamDescriptor);
@@ -163,10 +161,10 @@ public class StreamStatusTracker {
         if (existingStreamStatus.isComplete()) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.COMPLETE, Optional.empty());
-          LOGGER.debug("Stream status for stream {}:{} set to COMPLETE (id = {}, context = {}).", streamDescriptor.getNamespace(),
+          LOGGER.info("Stream status for stream {}:{} set to COMPLETE (id = {}, context = {}).", streamDescriptor.getNamespace(),
               streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         } else {
-          LOGGER.debug("Stream status for stream {}:{} set to partially COMPLETE (id = {}, context = {}).",
+          LOGGER.info("Stream status for stream {}:{} set to partially COMPLETE (id = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         }
 
@@ -184,29 +182,34 @@ public class StreamStatusTracker {
                                       final ReplicationContext replicationContext,
                                       final Duration transitionTimestamp)
       throws StreamStatusException {
-    final StreamDescriptor streamDescriptor = streamStatusTraceMessage.getStreamDescriptor();
-    final StreamStatusKey streamStatusKey = generateStreamStatusKey(replicationContext, streamDescriptor);
-    final CurrentStreamStatus existingStreamStatus = currentStreamStatuses.get(streamStatusKey);
-    if (existingStreamStatus != null) {
-      if (existingStreamStatus.getCurrentStatus() != AirbyteStreamStatus.INCOMPLETE) {
-        sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
-            transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.INCOMPLETE, Optional.of(StreamStatusIncompleteRunCause.FAILED));
-        LOGGER.debug("Stream status for stream {}:{} set to INCOMPLETE (id = {}, context = {}).",
-            streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
-      } else {
-        LOGGER.debug("Stream {}:{} is already in an INCOMPLETE state.", streamDescriptor.getNamespace(), streamDescriptor.getName());
-      }
-
-      // Update the cached entry to reflect the current status of the incoming status message
-      // Do this after making the API call to ensure that we only make the call to the API once
-      // when the first INCOMPLETE message is handled
-      existingStreamStatus.setStatus(airbyteMessageOrigin, streamStatusTraceMessage);
-
-      if (existingStreamStatus.isTerminated()) {
-        currentStreamStatuses.remove(streamStatusKey);
-      }
+    if (AirbyteMessageOrigin.INTERNAL == airbyteMessageOrigin) {
+      forceIncompleteForConnection(replicationContext, transitionTimestamp);
     } else {
-      throw new StreamStatusException("Invalid stream status transition to INCOMPLETE.", streamDescriptor);
+      final StreamDescriptor streamDescriptor = streamStatusTraceMessage.getStreamDescriptor();
+      final StreamStatusKey streamStatusKey = generateStreamStatusKey(replicationContext, streamDescriptor);
+      final CurrentStreamStatus existingStreamStatus = currentStreamStatuses.get(streamStatusKey);
+      if (existingStreamStatus != null) {
+        if (existingStreamStatus.getCurrentStatus() != AirbyteStreamStatus.INCOMPLETE) {
+          sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
+              transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.INCOMPLETE,
+              Optional.of(StreamStatusIncompleteRunCause.FAILED));
+          LOGGER.info("Stream status for stream {}:{} set to INCOMPLETE (id = {}, context = {}).",
+              streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
+        } else {
+          LOGGER.info("Stream {}:{} is already in an INCOMPLETE state.", streamDescriptor.getNamespace(), streamDescriptor.getName());
+        }
+
+        // Update the cached entry to reflect the current status of the incoming status message
+        // Do this after making the API call to ensure that we only make the call to the API once
+        // when the first INCOMPLETE message is handled
+        existingStreamStatus.setStatus(airbyteMessageOrigin, streamStatusTraceMessage);
+
+        if (existingStreamStatus.isTerminated()) {
+          currentStreamStatuses.remove(streamStatusKey);
+        }
+      } else {
+        throw new StreamStatusException("Invalid stream status transition to INCOMPLETE.", streamDescriptor);
+      }
     }
   }
 
@@ -266,18 +269,57 @@ public class StreamStatusTracker {
    * @param transitionTimestamp The timestamp of the force status change.
    */
   private void forceCompleteForConnection(final ReplicationContext replicationContext, final Duration transitionTimestamp) {
+    forceStatusForConnection(replicationContext, transitionTimestamp, StreamStatusRunState.COMPLETE, Optional.empty());
+  }
+
+  /**
+   * This method moves any streams associated with the connection ID present in the replication
+   * context into an incomplete state. This is to ensure that all streams eventually are moved to a
+   * final status. If a stream is already in a complete or incomplete state, it will be ignored from
+   * the forced update. All streams associated with the connection ID are removed from the internal
+   * tracking map once they are transitioned to the incomplete state.
+   *
+   * @param replicationContext The {@link ReplicationContext} used to identify tracked streams
+   *        associated with a connection ID.
+   * @param transitionTimestamp The timestamp of the force status change.
+   */
+  private void forceIncompleteForConnection(final ReplicationContext replicationContext, final Duration transitionTimestamp) {
+    forceStatusForConnection(replicationContext, transitionTimestamp, StreamStatusRunState.INCOMPLETE,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
+  }
+
+  /**
+   * This methods moves any streams associated with the connection ID present in the replication
+   * context into a terminal status state. This is to ensure that all streams eventually are moved to
+   * a final status. If the stream is already in a terminal status state (complete or incomplete), it
+   * will be ignored from the forced update. All streams associated with the connection ID are removed
+   * from the internal tracking map once they are transitioned to the terminal state provided to this
+   * method.
+   *
+   * @param replicationContext The {@link ReplicationContext} used to identify tracked streams
+   *        associated with a connection ID.
+   * @param transitionTimestamp The timestamp of the force status change.
+   * @param streamStatusRunState The desired terminal status state.
+   * @param streamStatusIncompleteRunCause The optional incomplete cause if the desired terminal state
+   *        is {@link StreamStatusRunState#INCOMPLETE}.
+   */
+  private void forceStatusForConnection(final ReplicationContext replicationContext,
+                                        final Duration transitionTimestamp,
+                                        final StreamStatusRunState streamStatusRunState,
+                                        final Optional streamStatusIncompleteRunCause) {
     try {
       for (final Map.Entry<StreamStatusKey, CurrentStreamStatus> e : currentStreamStatuses.entrySet()) {
         if (e.getKey().connectionId.equals(replicationContext.connectionId())) {
           /*
            * If the current stream is terminated, that means it is already in an incomplete or fully complete
-           * state. If that is the case, there is nothing to do. Otherwise, force the stream to a completed
-           * state.
+           * state. If that is the case, there is nothing to do. Otherwise, force the stream to the provided
+           * status.
            */
           if (!e.getValue().isTerminated()) {
             sendUpdate(e.getValue().getStatusId(), e.getKey().streamName(), e.getKey().streamNamespace(), transitionTimestamp.toMillis(),
-                replicationContext, StreamStatusRunState.COMPLETE, Optional.empty());
-
+                replicationContext, streamStatusRunState, streamStatusIncompleteRunCause);
+            LOGGER.info("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
+                e.getKey().streamNamespace(), e.getKey().streamName(), streamStatusRunState.name(), e.getValue().getStatusId(), replicationContext);
           }
         }
       }
@@ -288,7 +330,7 @@ public class StreamStatusTracker {
               Collectors.toSet());
       toBeRemoved.forEach(r -> currentStreamStatuses.remove(r));
     } catch (final StreamStatusException ex) {
-      LOGGER.error("Unable to force complete streams for connection {}.", replicationContext.connectionId(), ex);
+      LOGGER.error("Unable to force streams for connection {} to status {}.", replicationContext.connectionId(), streamStatusRunState, ex);
     }
   }
 

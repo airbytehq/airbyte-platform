@@ -29,6 +29,8 @@ interface SignupButtonProps {
   buttonMessageId?: string;
 }
 
+export const passwordSchema = yup.string().required("form.empty.error").min(12, "signup.password.minLength");
+
 export const SignupButton: React.FC<SignupButtonProps> = ({
   isLoading,
   disabled,
@@ -52,7 +54,7 @@ export const SignupForm: React.FC = () => {
   const validationSchema = useMemo(() => {
     const shape = {
       email: yup.string().email("form.email.error").required("form.empty.error"),
-      password: yup.string().min(12, "signup.password.minLength").required("form.empty.error"),
+      password: passwordSchema,
       name: yup.string(),
       companyName: yup.string(),
     };

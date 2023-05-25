@@ -7,6 +7,7 @@ package io.airbyte.workers.general;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -224,6 +225,21 @@ class DefaultReplicationWorkerTest {
         new ConcurrentHashMap<>());
   }
 
+  @Test
+  void testReplicationTimesAreUpdated() throws Exception {
+    final ReplicationWorker worker = getDefaultReplicationWorker();
+
+    final ReplicationOutput output = worker.run(syncInput, jobRoot);
+
+    final SyncStats syncStats = output.getReplicationAttemptSummary().getTotalStats();
+    assertNotEquals(0, syncStats.getReplicationStartTime());
+    assertNotEquals(0, syncStats.getReplicationEndTime());
+    assertNotEquals(0, syncStats.getSourceReadStartTime());
+    assertNotEquals(0, syncStats.getSourceReadEndTime());
+    assertNotEquals(0, syncStats.getDestinationWriteStartTime());
+    assertNotEquals(0, syncStats.getDestinationWriteEndTime());
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testWithStreamStatusFeatureFlag(final boolean isReset) throws Exception {
@@ -282,9 +298,9 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor().withName(streamNameNamespacePair.getName()).withNamespace(streamNameNamespacePair.getNamespace()),
+        null,
         replicationContext,
-        AirbyteMessageOrigin.DESTINATION);
+        AirbyteMessageOrigin.INTERNAL);
   }
 
   @ParameterizedTest
@@ -314,9 +330,9 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor().withNamespace(streamNameNamespacePair.getNamespace()).withName(streamNameNamespacePair.getName()),
+        null,
         replicationContext,
-        AirbyteMessageOrigin.SOURCE);
+        AirbyteMessageOrigin.INTERNAL);
   }
 
   @ParameterizedTest
@@ -335,8 +351,12 @@ class DefaultReplicationWorkerTest {
     verify(destination).start(destinationConfig, jobRoot);
     verify(source, atLeastOnce()).close();
     verify(destination).close();
-    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
+    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishCompleteStatusEvent(
         new StreamDescriptor().withName(streamNameNamespacePair.getName()).withNamespace(streamNameNamespacePair.getNamespace()),
+        replicationContext,
+        AirbyteMessageOrigin.DESTINATION);
+    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
+        null,
         replicationContext,
         AirbyteMessageOrigin.INTERNAL);
   }
@@ -368,9 +388,9 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        new StreamDescriptor().withNamespace(streamNameNamespacePair.getNamespace()).withName(streamNameNamespacePair.getName()),
+        null,
         replicationContext,
-        AirbyteMessageOrigin.DESTINATION);
+        AirbyteMessageOrigin.INTERNAL);
   }
 
   @Test
@@ -727,7 +747,6 @@ class DefaultReplicationWorkerTest {
     worker.cancel();
     Assertions.assertTimeout(Duration.ofSeconds(5), (Executable) workerThread::join);
     assertNotNull(output.get());
-    assertEquals(output.get().getState().getState(), STATE_MESSAGE.getState().getData());
   }
 
   @Test
@@ -781,8 +800,7 @@ class DefaultReplicationWorkerTest {
                         .withMeanSecondsBeforeSourceStateMessageEmitted(null)
                         .withMaxSecondsBetweenStateMessageEmittedandCommitted(null)
                         .withMeanSecondsBetweenStateMessageEmittedandCommitted(null)))))
-        .withOutputCatalog(syncInput.getCatalog())
-        .withState(new State().withState(expectedState));
+        .withOutputCatalog(syncInput.getCatalog());
 
     // good enough to verify that times are present.
     assertNotNull(actual.getReplicationAttemptSummary().getStartTime());
@@ -801,30 +819,6 @@ class DefaultReplicationWorkerTest {
         .withDestinationWriteStartTime(null).withDestinationWriteEndTime(null);
 
     assertEquals(replicationOutput, actual);
-  }
-
-  @Test
-  void testPopulatesStateOnFailureIfAvailable() throws Exception {
-    doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
-    when(messageTracker.getDestinationOutputState()).thenReturn(Optional.of(new State().withState(STATE_MESSAGE.getState().getData())));
-
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-
-    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
-    assertNotNull(actual);
-    assertEquals(STATE_MESSAGE.getState().getData(), actual.getState().getState());
-  }
-
-  @Test
-  void testRetainsStateOnFailureIfNewStateNotAvailable() throws Exception {
-    doThrow(new IllegalStateException(INDUCED_EXCEPTION)).when(source).close();
-
-    final ReplicationWorker worker = getDefaultReplicationWorker();
-
-    final ReplicationOutput actual = worker.run(syncInput, jobRoot);
-
-    assertNotNull(actual);
-    assertEquals(syncInput.getState().getState(), actual.getState().getState());
   }
 
   @Test
@@ -936,14 +930,14 @@ class DefaultReplicationWorkerTest {
   void testGetFailureReason() {
     final long jobId = 1;
     final int attempt = 1;
-    FailureReason failureReason = DefaultReplicationWorker.getFailureReason(new SourceException(""), jobId, attempt);
+    FailureReason failureReason = ReplicationWorkerHelper.getFailureReason(new SourceException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
-    failureReason = DefaultReplicationWorker.getFailureReason(new DestinationException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new DestinationException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.DESTINATION);
-    failureReason = DefaultReplicationWorker.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new HeartbeatTimeoutChaperone.HeartbeatTimeoutException(""), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.SOURCE);
     assertEquals(failureReason.getFailureType(), FailureReason.FailureType.HEARTBEAT_TIMEOUT);
-    failureReason = DefaultReplicationWorker.getFailureReason(new RuntimeException(), jobId, attempt);
+    failureReason = ReplicationWorkerHelper.getFailureReason(new RuntimeException(), jobId, attempt);
     assertEquals(failureReason.getFailureOrigin(), FailureOrigin.REPLICATION);
   }
 
@@ -963,7 +957,6 @@ class DefaultReplicationWorkerTest {
         syncPersistence,
         recordSchemaValidator,
         fieldSelector,
-        workerMetricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient),

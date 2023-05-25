@@ -1,5 +1,6 @@
 import { StoryObj } from "@storybook/react";
 import * as yup from "yup";
+import { SchemaOf } from "yup";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -7,9 +8,19 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 
 import { Form, FormControl, Option } from "./index";
 
-const schema = yup.object({
+interface MyFormValues {
+  some_input: string;
+  some_password: string;
+  some_date: string;
+  some_select: string;
+}
+
+const schema: SchemaOf<MyFormValues> = yup.object({
   some_input: yup.string().required("This is a required field."),
-  some_password: yup.string().min(5, "The password needs to be at least 5 characters long."),
+  some_password: yup
+    .string()
+    .min(5, "The password needs to be at least 5 characters long.")
+    .required("This is a required field."),
   some_date: yup.string().required("This is a required field."),
   some_select: yup.string().required("This is a required field."),
 });
@@ -19,13 +30,6 @@ export default {
   component: Form,
   parameters: { actions: { argTypesRegex: "^on.*" } },
 } as StoryObj<typeof Form>;
-
-interface MyFormValues {
-  some_input: string;
-  some_password: string;
-  some_date: string;
-  some_select: string;
-}
 
 const defaultValues: MyFormValues = {
   some_input: "",
@@ -40,8 +44,8 @@ const MyFormControl = FormControl<MyFormValues>;
 
 export const Primary: StoryObj<typeof Form> = {
   render: (props) => (
-    <Form {...props} schema={schema} defaultValues={defaultValues}>
-      <Card withPadding>
+    <Card withPadding>
+      <Form {...props} schema={schema} defaultValues={defaultValues}>
         <MyFormControl
           fieldType="input"
           name="some_input"
@@ -71,7 +75,7 @@ export const Primary: StoryObj<typeof Form> = {
             <Button type="submit">Submit</Button>
           </FlexItem>
         </FlexContainer>
-      </Card>
-    </Form>
+      </Form>
+    </Card>
   ),
 };
