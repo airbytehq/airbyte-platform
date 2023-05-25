@@ -32,4 +32,5 @@ export interface Experiments {
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connection.updatedConnectionFlow": boolean;
+  "connector.allowlistIpBanner": boolean;
 }
