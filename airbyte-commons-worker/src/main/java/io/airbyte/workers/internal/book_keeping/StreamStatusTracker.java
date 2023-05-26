@@ -40,6 +40,12 @@ public class StreamStatusTracker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(StreamStatusTracker.class);
 
+  /**
+   * Empty {@link AirbyteStreamStatusTraceMessage} that represents a missing stream status in the
+   * cache.
+   */
+  private static final AirbyteStreamStatusTraceMessage MISSING_STATUS_MESSAGE = new AirbyteStreamStatusTraceMessage();
+
   private final Map<StreamStatusKey, CurrentStreamStatus> currentStreamStatuses = new ConcurrentHashMap<>();
 
   private final AirbyteApiClient airbyteApiClient;
@@ -169,10 +175,6 @@ public class StreamStatusTracker {
           LOGGER.info("Stream status for stream {}:{} set to partially COMPLETE (id = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         }
-
-        if (existingStreamStatus.isTerminated()) {
-          currentStreamStatuses.remove(streamStatusKey);
-        }
       } else {
         throw new StreamStatusException("Invalid stream status transition to COMPLETE.", airbyteMessageOrigin, replicationContext, streamDescriptor);
       }
@@ -205,10 +207,6 @@ public class StreamStatusTracker {
         // Do this after making the API call to ensure that we only make the call to the API once
         // when the first INCOMPLETE message is handled
         existingStreamStatus.setStatus(airbyteMessageOrigin, streamStatusTraceMessage);
-
-        if (existingStreamStatus.isTerminated()) {
-          currentStreamStatuses.remove(streamStatusKey);
-        }
       } else {
         throw new StreamStatusException("Invalid stream status transition to INCOMPLETE.", airbyteMessageOrigin, replicationContext,
             streamDescriptor);
@@ -432,8 +430,25 @@ public class StreamStatusTracker {
      * @return {@code True} if the stream status is considered to be complete, {@code false} otherwise.
      */
     boolean isComplete() {
-      return sourceStatus.isPresent() && AirbyteStreamStatus.COMPLETE == sourceStatus.get().getStatus()
-          && destinationStatus.isPresent() && AirbyteStreamStatus.COMPLETE == destinationStatus.get().getStatus();
+      return AirbyteStreamStatus.COMPLETE.equals(sourceStatus.orElse(MISSING_STATUS_MESSAGE).getStatus())
+          && AirbyteStreamStatus.COMPLETE.equals(destinationStatus.orElse(MISSING_STATUS_MESSAGE).getStatus());
+    }
+
+    /**
+     * Tests whether the stream is incomplete based on the status of either the source and destination
+     * connectors that are part of the sync.
+     * <p>
+     * </p>
+     * If the source status is present and is equal to {@link AirbyteStreamStatus#INCOMPLETE} <b>OR</b>
+     * the destination status is present and is equal to {@link AirbyteStreamStatus#INCOMPLETE}, then
+     * the status is considered to be incomplete.
+     *
+     * @return {@code True} if the stream status is considered to be incomplete, {@code false}
+     *         otherwise.
+     */
+    boolean isIncomplete() {
+      return AirbyteStreamStatus.INCOMPLETE.equals(sourceStatus.orElse(MISSING_STATUS_MESSAGE).getStatus())
+          || AirbyteStreamStatus.INCOMPLETE.equals(destinationStatus.orElse(MISSING_STATUS_MESSAGE).getStatus());
     }
 
     /**
@@ -450,12 +465,7 @@ public class StreamStatusTracker {
      *         otherwise.
      */
     boolean isTerminated() {
-      return (sourceStatus.isPresent()
-          && (AirbyteStreamStatus.INCOMPLETE == sourceStatus.get().getStatus() || AirbyteStreamStatus.COMPLETE == sourceStatus.get()
-              .getStatus()))
-          && (destinationStatus.isPresent()
-              && (AirbyteStreamStatus.INCOMPLETE == destinationStatus.get().getStatus() || AirbyteStreamStatus.COMPLETE == destinationStatus.get()
-                  .getStatus()));
+      return isIncomplete() || isComplete();
     }
 
   }
