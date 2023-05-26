@@ -39,7 +39,7 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
   manifestOptionPaths,
   onSelect,
 }) => {
-  const { setValue } = useFormContext();
+  const { setValue, clearErrors } = useFormContext();
   const { field } = useController({ name: `${path}.type` });
 
   const selectedOption = options.find((option) => option.typeValue === field.value);
@@ -69,14 +69,12 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
               return;
             }
             // clear all values for this oneOf and set selected option and default values
-            setValue(
-              path,
-              {
-                type: selectedOption.value,
-                ...selectedOption.default,
-              },
-              { shouldValidate: true }
-            );
+            setValue(path, {
+              type: selectedOption.value,
+              ...selectedOption.default,
+            });
+            // clear errors at the path so that the fields for the newly selected option are treated as "fresh"
+            clearErrors(path);
 
             onSelect?.(selectedOption.value);
           }}

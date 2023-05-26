@@ -22,34 +22,9 @@ interface PaginationSectionProps {
 
 export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const paginatorPath = streamFieldPath("paginator");
-  const value = useBuilderWatch(paginatorPath, { exact: true });
   const { setValue } = useFormContext();
   const pageSize = useBuilderWatch(streamFieldPath("paginator.strategy.page_size"));
   const pageSizeOptionPath = streamFieldPath("paginator.pageSizeOption");
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      setValue(paginatorPath, {
-        strategy: {
-          type: OFFSET_INCREMENT,
-          page_size: "",
-        },
-        pageSizeOption: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-        pageTokenOption: {
-          inject_into: "request_parameter",
-          field_name: "",
-        },
-      });
-    } else {
-      setValue(paginatorPath, undefined, { shouldValidate: true });
-    }
-  };
-  const toggledOn = value !== undefined;
 
   return (
     <BuilderCard
@@ -58,8 +33,22 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         <ControlLabels label="Pagination" infoTooltipContent="Configure how pagination is handled by your connector" />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("paginator"),
+        defaultValue: {
+          strategy: {
+            type: OFFSET_INCREMENT,
+            page_size: "",
+          },
+          pageSizeOption: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+          pageTokenOption: {
+            inject_into: "request_parameter",
+            field_name: "",
+          },
+        },
       }}
       copyConfig={{
         path: "paginator",

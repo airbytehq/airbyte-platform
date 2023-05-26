@@ -1,4 +1,3 @@
-import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -14,13 +13,7 @@ import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
-import {
-  LIST_PARTITION_ROUTER,
-  SUBSTREAM_PARTITION_ROUTER,
-  StreamPathFn,
-  useBuilderWatch,
-  BuilderListPartitionRouter,
-} from "../types";
+import { LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER, StreamPathFn, BuilderListPartitionRouter } from "../types";
 
 interface PartitionSectionProps {
   streamFieldPath: StreamPathFn;
@@ -35,18 +28,6 @@ const EMPTY_LIST_PARTITION_ROUTER: BuilderListPartitionRouter = {
 
 export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const paginatorPath = streamFieldPath("partitionRouter");
-  const value = useBuilderWatch(paginatorPath, { exact: true });
-  const { setValue } = useFormContext();
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      setValue(paginatorPath, [EMPTY_LIST_PARTITION_ROUTER]);
-    } else {
-      setValue(paginatorPath, undefined, { shouldValidate: true });
-    }
-  };
-  const toggledOn = value !== undefined;
 
   const getSlicingOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {
@@ -145,8 +126,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
         />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("partitionRouter"),
+        defaultValue: [EMPTY_LIST_PARTITION_ROUTER],
       }}
       copyConfig={{
         path: "partitionRouter",

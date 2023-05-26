@@ -1,5 +1,4 @@
 import React from "react";
-import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -20,7 +19,6 @@ import {
   LARGE_DURATION_OPTIONS,
   SMALL_DURATION_OPTIONS,
   StreamPathFn,
-  useBuilderWatch,
 } from "../types";
 
 interface IncrementalSectionProps {
@@ -30,35 +28,6 @@ interface IncrementalSectionProps {
 
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const { setValue } = useFormContext();
-  const path = streamFieldPath("incrementalSync");
-  const value = useBuilderWatch(path, { exact: true });
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      setValue(path, {
-        datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
-        start_datetime: { type: "user_input" },
-        end_datetime: { type: "now" },
-        step: "P1M",
-        cursor_field: "",
-        cursor_granularity: "",
-        start_time_option: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-        end_time_option: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-      });
-    } else {
-      setValue(path, undefined, { shouldValidate: true });
-    }
-  };
-  const toggledOn = value !== undefined;
 
   return (
     <BuilderCard
@@ -70,8 +39,25 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("incrementalSync"),
+        defaultValue: {
+          datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
+          start_datetime: { type: "user_input" },
+          end_datetime: { type: "now" },
+          step: "P1M",
+          cursor_field: "",
+          cursor_granularity: "",
+          start_time_option: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+          end_time_option: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+        },
       }}
       copyConfig={{
         path: "incrementalSync",
