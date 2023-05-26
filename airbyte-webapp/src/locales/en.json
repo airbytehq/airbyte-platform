@@ -658,6 +658,7 @@
   "settings.defaultGeography": "Geography",
   "settings.defaultDataResidencyDescription": "Choose the default preferred data processing location for all of your connections. The default data residency setting only affects new connections. Existing connections will retain their data residency setting. <lnk>Learn more</lnk>.",
   "settings.defaultDataResidencyUpdateError": "There was an error updating the default data residency for this workspace.",
+  "settings.defaultDataResidencyUpdateSuccess": "Data residency preference has been updated!",
 
   "connector.noSearchResults": "No connectors match your search.",
   "connector.requestConnectorBlock": "Request a new connector",
