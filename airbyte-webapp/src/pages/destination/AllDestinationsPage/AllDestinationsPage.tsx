@@ -24,7 +24,7 @@ export const AllDestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_LIST);
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
-  const onCreateDestination = () => navigate(`${RoutePaths.SelectDestinationNew}`);
+  const onCreateDestination = () => navigate(`${RoutePaths.DestinationNew}`);
 
   return destinations.length ? (
     <MainPageWithScroll
