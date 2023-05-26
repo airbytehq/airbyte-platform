@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.37.0
+airbyte-cdk==0.38.0
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -61,7 +61,7 @@ pytzdata==2020.1
     # via pendulum
 pyyaml==5.4.1
     # via airbyte-cdk
-requests==2.30.0
+requests==2.31.0
     # via
     #   airbyte-cdk
     #   requests-cache
@@ -73,7 +73,7 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.5.0
+typing-extensions==4.6.2
     # via pydantic
 url-normalize==1.4.3
     # via requests-cache
