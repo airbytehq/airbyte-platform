@@ -501,7 +501,7 @@ public class AirbyteAcceptanceTestHarness {
           final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
           assertRawDestinationContains(sourceRecords, pair);
         }
-      } catch (Exception e) {
+      } catch (final Exception e) {
         return e;
       }
       return null;
@@ -871,7 +871,9 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public String getEchoServerUrl() {
-    if (isGke) {
+    if (isKube && isGke) {
+      return "http://acceptance-test-echo-server-source-svc.acceptance-tests.svc.cluster.local:8080";
+    } else if (isGke) {
       return "http://localhost:6000";
     }
     return String.format("http://%s:%s/", getHostname(), echoServer.getFirstMappedPort());
