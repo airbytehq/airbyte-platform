@@ -37,7 +37,6 @@ public class AirbyteMessageDataExtractor {
   private StreamDescriptor getStreamFromMessage(final AirbyteMessage airbyteMessage) {
     switch (airbyteMessage.getType()) {
       case RECORD:
-        LOGGER.info("Extracting stream from record message: {}", airbyteMessage.getRecord().getStream());
         return new StreamDescriptor().withName(airbyteMessage.getRecord().getStream()).withNamespace(airbyteMessage.getRecord().getNamespace());
       case STATE:
         LOGGER.info("Extracting stream from state message: {}", airbyteMessage.getState().getStream());
