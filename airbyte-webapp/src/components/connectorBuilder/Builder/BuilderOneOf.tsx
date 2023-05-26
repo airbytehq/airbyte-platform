@@ -16,7 +16,7 @@ interface Option {
 export interface OneOfOption {
   label: string; // label shown in the dropdown menu
   typeValue: string; // value to set on the `type` field for this component - should match the oneOf type definition
-  default?: object; // default values for the path
+  default: object; // default values for the path
   children?: React.ReactNode;
 }
 

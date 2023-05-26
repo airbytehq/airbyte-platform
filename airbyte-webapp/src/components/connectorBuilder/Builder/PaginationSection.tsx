@@ -66,6 +66,9 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           {
             label: "Offset Increment",
             typeValue: OFFSET_INCREMENT,
+            default: {
+              page_size: "",
+            },
             children: (
               <>
                 <BuilderField
@@ -81,6 +84,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           {
             label: "Page Increment",
             typeValue: PAGE_INCREMENT,
+            default: {
+              page_size: "",
+              start_from_page: "",
+            },
             children: (
               <>
                 <BuilderField
@@ -103,6 +110,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
             label: "Cursor Pagination",
             typeValue: CURSOR_PAGINATION,
             default: {
+              page_size: "",
               cursor: {
                 type: "response",
                 path: [],
@@ -148,6 +156,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     {
                       label: "Custom",
                       typeValue: "custom",
+                      default: {
+                        cursor_value: "",
+                        stop_condition: "",
+                      },
                       children: (
                         <>
                           <BuilderFieldWithInputs

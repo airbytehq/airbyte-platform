@@ -40,7 +40,9 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     {
       label: "Exponential",
       typeValue: "ExponentialBackoffStrategy",
-      default: {},
+      default: {
+        factor: "",
+      },
       children: (
         <BuilderField
           type="number"
@@ -53,7 +55,10 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     {
       label: "Wait time from header",
       typeValue: "WaitTimeFromHeader",
-      default: {},
+      default: {
+        header: "",
+        regex: "",
+      },
       children: (
         <>
           <BuilderField
@@ -73,7 +78,11 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     {
       label: "Wait until time from header",
       typeValue: "WaitUntilTimeFromHeader",
-      default: {},
+      default: {
+        header: "",
+        regex: "",
+        min_wait: "",
+      },
       children: (
         <>
           <BuilderField
