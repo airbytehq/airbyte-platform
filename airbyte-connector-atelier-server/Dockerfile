@@ -3,12 +3,12 @@ FROM ${JDK_IMAGE} AS connector-atelier-server
 
 RUN apk add --update \
     build-base \
-    openssl-devel \
-    bzip2-devel \
-    libffi-devel \
-    zlib-devel \
-    sqlite-devel \
-    xz-devel
+    openssl-dev \
+    bzip2-dev \
+    libffi-dev \
+    zlib-dev \
+    sqlite-dev \
+    xz-dev
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11
