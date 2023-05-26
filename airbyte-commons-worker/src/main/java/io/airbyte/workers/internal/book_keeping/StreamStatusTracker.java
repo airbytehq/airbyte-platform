@@ -51,7 +51,7 @@ public class StreamStatusTracker {
   /**
    * Tracks the stream status represented by the event.
    *
-   * @param event The {@link ReplicationAirbyteMessageEvent} that contains a stram status message.
+   * @param event The {@link ReplicationAirbyteMessageEvent} that contains a stream status message.
    */
   public void track(final ReplicationAirbyteMessageEvent event) {
     try {
@@ -100,7 +100,8 @@ public class StreamStatusTracker {
 
     // If the stream already has a status, then there is an invalid transition
     if (currentStreamStatuses.containsKey(streamStatusKey)) {
-      throw new StreamStatusException("Invalid stream status transition to STARTED.", streamDescriptor);
+      throw new StreamStatusException("Invalid stream status transition to STARTED.", AirbyteMessageOrigin.SOURCE, replicationContext,
+          streamDescriptor);
     }
 
     final CurrentStreamStatus currentStreamStatus = new CurrentStreamStatus(Optional.of(streamStatusTraceMessage), Optional.empty());
@@ -135,11 +136,12 @@ public class StreamStatusTracker {
     if (existingStreamStatus != null && AirbyteStreamStatus.STARTED == existingStreamStatus.getCurrentStatus()) {
       existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, streamStatusTraceMessage);
       sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(), transitionTimestamp.toMillis(),
-          replicationContext, StreamStatusRunState.RUNNING, Optional.empty());
+          replicationContext, StreamStatusRunState.RUNNING, Optional.empty(), AirbyteMessageOrigin.SOURCE);
       LOGGER.info("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
           streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
     } else {
-      throw new StreamStatusException("Invalid stream status transition to RUNNING.", streamDescriptor);
+      throw new StreamStatusException("Invalid stream status transition to RUNNING.", AirbyteMessageOrigin.SOURCE, replicationContext,
+          streamDescriptor);
     }
   }
 
@@ -160,7 +162,7 @@ public class StreamStatusTracker {
 
         if (existingStreamStatus.isComplete()) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
-              transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.COMPLETE, Optional.empty());
+              transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.COMPLETE, Optional.empty(), airbyteMessageOrigin);
           LOGGER.info("Stream status for stream {}:{} set to COMPLETE (id = {}, context = {}).", streamDescriptor.getNamespace(),
               streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         } else {
@@ -172,7 +174,7 @@ public class StreamStatusTracker {
           currentStreamStatuses.remove(streamStatusKey);
         }
       } else {
-        throw new StreamStatusException("Invalid stream status transition to COMPLETE.", streamDescriptor);
+        throw new StreamStatusException("Invalid stream status transition to COMPLETE.", airbyteMessageOrigin, replicationContext, streamDescriptor);
       }
     }
   }
@@ -192,7 +194,7 @@ public class StreamStatusTracker {
         if (existingStreamStatus.getCurrentStatus() != AirbyteStreamStatus.INCOMPLETE) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.INCOMPLETE,
-              Optional.of(StreamStatusIncompleteRunCause.FAILED));
+              Optional.of(StreamStatusIncompleteRunCause.FAILED), airbyteMessageOrigin);
           LOGGER.info("Stream status for stream {}:{} set to INCOMPLETE (id = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         } else {
@@ -208,7 +210,8 @@ public class StreamStatusTracker {
           currentStreamStatuses.remove(streamStatusKey);
         }
       } else {
-        throw new StreamStatusException("Invalid stream status transition to INCOMPLETE.", streamDescriptor);
+        throw new StreamStatusException("Invalid stream status transition to INCOMPLETE.", airbyteMessageOrigin, replicationContext,
+            streamDescriptor);
       }
     }
   }
@@ -224,6 +227,7 @@ public class StreamStatusTracker {
    *        the sync associated with the stream.
    * @param streamStatusRunState The new stream status.
    * @param incompleteRunCause The option reason for an incomplete status.
+   * @param airbyteMessageOrigin The origin of the message being handled.
    * @throws StreamStatusException if unable to perform the update due to a missing stream status ID.
    * @throws Exception if unable to call the Airbyte API to update the stream status.
    */
@@ -233,7 +237,8 @@ public class StreamStatusTracker {
                           final Long transitionedAtMs,
                           final ReplicationContext replicationContext,
                           final StreamStatusRunState streamStatusRunState,
-                          final Optional<StreamStatusIncompleteRunCause> incompleteRunCause)
+                          final Optional<StreamStatusIncompleteRunCause> incompleteRunCause,
+                          final AirbyteMessageOrigin airbyteMessageOrigin)
       throws Exception {
     if (statusId.isPresent()) {
       final StreamStatusUpdateRequestBody streamStatusUpdateRequestBody = new StreamStatusUpdateRequestBody()
@@ -253,7 +258,8 @@ public class StreamStatusTracker {
       AirbyteApiClient.retryWithJitterThrows(() -> airbyteApiClient.getStreamStatusesApi().updateStreamStatus(streamStatusUpdateRequestBody),
           "update stream status " + streamStatusRunState.name().toLowerCase(Locale.getDefault()) + " " + streamNamespace + ":" + streamName);
     } else {
-      throw new StreamStatusException("Stream status ID not present to perform update.", streamName, streamNamespace);
+      throw new StreamStatusException("Stream status ID not present to perform update.", airbyteMessageOrigin, replicationContext, streamName,
+          streamNamespace);
     }
   }
 
@@ -318,7 +324,7 @@ public class StreamStatusTracker {
            */
           if (!e.getValue().isTerminated()) {
             sendUpdate(e.getValue().getStatusId(), e.getKey().streamName(), e.getKey().streamNamespace(), transitionTimestamp.toMillis(),
-                replicationContext, streamStatusRunState, streamStatusIncompleteRunCause);
+                replicationContext, streamStatusRunState, streamStatusIncompleteRunCause, AirbyteMessageOrigin.INTERNAL);
             LOGGER.info("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
                 e.getKey().streamNamespace(), e.getKey().streamName(), streamStatusRunState.name(), e.getValue().getStatusId(), replicationContext);
           }
