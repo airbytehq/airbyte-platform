@@ -9,7 +9,8 @@ RUN apk add --update \
     zlib-dev \
     sqlite-dev \
     xz-dev \
-    git
+    git \
+    bash
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11
