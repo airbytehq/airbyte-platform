@@ -96,10 +96,11 @@ public class StreamStatusesMapper {
         .jobId(api.getJobId())
         .attemptNumber(api.getAttemptNumber())
         .streamName(api.getStreamName())
-        .streamNamespace(api.getStreamNamespace());
+        .streamNamespace(api.getStreamNamespace())
+        .pagination(map(api.getPagination()));
 
-    if (null != api.getPagination()) {
-      domain.pagination(map(api.getPagination()));
+    if (null != api.getJobType()) {
+      domain.jobType(map(api.getJobType()));
     }
 
     return domain.build();

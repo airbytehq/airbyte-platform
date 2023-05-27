@@ -1,4 +1,3 @@
-import { useField } from "formik";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -14,10 +13,10 @@ import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { BuilderListPartitionRouter, BuilderStream, LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER } from "../types";
+import { LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER, StreamPathFn, BuilderListPartitionRouter } from "../types";
 
 interface PartitionSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
@@ -29,16 +28,6 @@ const EMPTY_LIST_PARTITION_ROUTER: BuilderListPartitionRouter = {
 
 export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderStream["partitionRouter"]>(streamFieldPath("partitionRouter"));
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      helpers.setValue([EMPTY_LIST_PARTITION_ROUTER]);
-    } else {
-      helpers.setValue(undefined);
-    }
-  };
-  const toggledOn = field.value !== undefined;
 
   const getSlicingOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {
@@ -137,8 +126,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
         />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("partitionRouter"),
+        defaultValue: [EMPTY_LIST_PARTITION_ROUTER],
       }}
       copyConfig={{
         path: "partitionRouter",

@@ -150,6 +150,20 @@ class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
+  void whenCreateDeclarativeSourceDefinitionManifestThenManifestDraftDeleted() throws IOException {
+    givenSourceDefinitionAvailableInWorkspace();
+    givenSourceIsDeclarative();
+
+    handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
+        .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .workspaceId(A_WORKSPACE_ID)
+        .setAsActiveManifest(false)
+        .declarativeManifest(anyDeclarativeManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
+
+    verify(configRepository, times(1)).deleteManifestDraftForActorDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID);
+  }
+
+  @Test
   void givenSourceNotAvailableInWorkspaceWhenUpdateDeclarativeManifestVersionThenThrowException() throws IOException {
     when(configRepository.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false);
     assertThrows(DeclarativeSourceNotFoundException.class, () -> handler.updateDeclarativeManifestVersion(

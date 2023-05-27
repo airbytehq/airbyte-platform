@@ -11,7 +11,7 @@ public class AmazonAdsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new AmazonAdsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new AmazonAdsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

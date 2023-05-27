@@ -1,15 +1,7 @@
-import {
-  getPostgresCreateDestinationBody,
-  getPostgresCreateSourceBody,
-  requestCreateDestination,
-  requestCreateSource,
-  requestDeleteConnection,
-  requestDeleteDestination,
-  requestDeleteSource,
-  requestWorkspaceId,
-} from "commands/api";
+import { createPostgresDestinationViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
+import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
 import { Connection, Destination, Source } from "commands/api/types";
-import { appendRandomString, submitButtonClick } from "commands/common";
+import { submitButtonClick } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createUsersTableQuery,
@@ -47,17 +39,11 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   before(() => {
     dropTables();
     runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
-
-    requestWorkspaceId().then(() => {
-      const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Stream table Source"));
-      const destinationRequestBody = getPostgresCreateDestinationBody(appendRandomString("Stream table Destination"));
-
-      requestCreateSource(sourceRequestBody).then((sourceResponse) => {
-        source = sourceResponse;
-        requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
-          destination = destinationResponse;
-        });
-      });
+    createPostgresSourceViaApi().then((pgSource) => {
+      source = pgSource;
+    });
+    createPostgresDestinationViaApi().then((pgDestination) => {
+      destination = pgDestination;
     });
   });
 

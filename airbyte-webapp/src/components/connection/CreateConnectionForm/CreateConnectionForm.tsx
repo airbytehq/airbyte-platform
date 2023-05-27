@@ -17,6 +17,7 @@ import {
   tidyConnectionFormValues,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperimentContext } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateConnection } from "hooks/services/useConnectionHook";
@@ -49,6 +50,7 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
   const { connection, initialValues, mode, formId, getErrorMessage, setSubmitError } = useConnectionFormService();
   const [editingTransformation, setEditingTransformation] = useState(false);
   const validationSchema = useConnectionValidationSchema({ mode });
+  useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
 
   const onFormSubmit = useCallback(
     async (formValues: FormikConnectionFormValues, formikHelpers: FormikHelpers<FormikConnectionFormValues>) => {

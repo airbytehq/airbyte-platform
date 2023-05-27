@@ -195,6 +195,7 @@ public class ConnectorBuilderProjectsHandler {
         .withSpec(spec);
     configRepository.insertActiveDeclarativeManifest(declarativeManifest);
     configRepository.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(), actorDefinitionId);
+    configRepository.deleteBuilderProjectDraft(connectorBuilderPublishRequestBody.getBuilderProjectId());
 
     return new SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId);
   }

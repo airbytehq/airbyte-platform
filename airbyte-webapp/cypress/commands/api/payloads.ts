@@ -1,3 +1,4 @@
+import { WebBackendConnectionUpdate } from "@cy/../src/core/api/types/AirbyteClient";
 import { ConnectorIds } from "@src/utils/connectors";
 
 import { ConnectionCreateRequestBody } from "./types";
@@ -65,4 +66,28 @@ export const getPostgresCreateDestinationBody = (name: string) => ({
     username: "postgres",
     password: "secret_password",
   },
+});
+
+export const getPokeApiCreateSourceBody = (sourceName: string, pokeName: string) => ({
+  name: sourceName,
+  workspaceId: getWorkspaceId(),
+  sourceDefinitionId: ConnectorIds.Sources.PokeApi,
+  connectionConfiguration: { pokemon_name: pokeName },
+});
+
+export const getLocalJSONCreateDestinationBody = (name: string) => ({
+  name,
+  destinationDefinitionId: ConnectorIds.Destinations.LocalJson,
+  workspaceId: getWorkspaceId(),
+  connectionConfiguration: {
+    destination_path: "/local",
+  },
+});
+
+export const getPostgresToPostgresUpdateConnectionBody = (
+  connectionId: string,
+  updateParams: Partial<WebBackendConnectionUpdate>
+) => ({
+  ...updateParams,
+  connectionId,
 });

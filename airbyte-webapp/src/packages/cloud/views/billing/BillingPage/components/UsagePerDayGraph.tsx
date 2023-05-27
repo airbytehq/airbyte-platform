@@ -28,7 +28,7 @@ interface UsagePerDayGraphProps {
 }
 export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, minimized }) => {
   const {
-    enrollmentStatusQuery: { data: freeConnectorEnrollment },
+    programStatusQuery: { data: freeConnectorEnrollment },
   } = useFreeConnectorProgram();
   const isEnrolledInFreeConnectorProgram = freeConnectorEnrollment?.isEnrolled;
   const { formatMessage } = useIntl();

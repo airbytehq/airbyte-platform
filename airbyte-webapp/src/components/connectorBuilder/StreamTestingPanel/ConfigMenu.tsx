@@ -14,8 +14,11 @@ import { Tooltip } from "components/ui/Tooltip";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { useConnectorBuilderTestInputState } from "services/connectorBuilder/ConnectorBuilderTestInputService";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./ConfigMenu.module.scss";
@@ -29,8 +32,9 @@ interface ConfigMenuProps {
 
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
-  const { testInputJson, setTestInputJson } = useConnectorBuilderTestInputState();
+  const { testInputJson, setTestInputJson, testInputJsonDirty } = useConnectorBuilderTestRead();
   const { trackError } = useAppMonitoringService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
 
@@ -109,7 +113,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                 )}
                 <ConnectorForm
                   // re-mount the form when the form values change from the outside to avoid stale data in the form
-                  key={testInputJson === undefined ? "without-testinput" : "with-testinput"}
+                  key={testInputJsonDirty ? "with-testinput" : "without-testinput"}
                   formType="source"
                   bodyClassName={styles.formContent}
                   selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
@@ -119,13 +123,22 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                     setIsOpen(false);
                   }}
                   isEditMode
-                  renderFooter={({ dirty, isSubmitting }) => (
+                  renderFooter={({ dirty, isSubmitting, resetConnectorForm }) => (
                     <div className={styles.inputFormModalFooter}>
                       <FlexContainer>
                         <FlexItem grow>
                           <Button
                             onClick={() => {
-                              setTestInputJson(undefined);
+                              openConfirmationModal({
+                                title: "connectorBuilder.resetTestingValues.title",
+                                text: "connectorBuilder.resetTestingValues.text",
+                                submitButtonText: "connectorBuilder.resetTestingValues.submit",
+                                onSubmit: () => {
+                                  closeConfirmationModal();
+                                  setTestInputJson(undefined);
+                                  resetConnectorForm();
+                                },
+                              });
                             }}
                             type="button"
                             variant="danger"

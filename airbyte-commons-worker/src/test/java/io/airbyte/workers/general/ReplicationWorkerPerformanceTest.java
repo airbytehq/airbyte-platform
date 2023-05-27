@@ -143,7 +143,6 @@ public class ReplicationWorkerPerformanceTest {
         syncPersistence,
         validator,
         fieldSelector,
-        metricReporter,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient),
@@ -157,7 +156,8 @@ public class ReplicationWorkerPerformanceTest {
             // The stream fields here are intended to match the records emitted by the
             // LimitedFatRecordSourceProcess
             // class.
-            CatalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)));
+            CatalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)))
+            .withWorkspaceId(UUID.randomUUID());
         output.set(worker.run(testInput, ignoredPath));
       } catch (final WorkerException e) {
         throw new RuntimeException(e);

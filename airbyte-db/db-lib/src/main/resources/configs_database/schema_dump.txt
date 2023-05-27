@@ -226,10 +226,10 @@ create table "public"."permission" (
 );
 create table "public"."schema_management" (
   "id" uuid not null,
-  "auto_propagation_status" "public"."auto_propagation_status" not null,
   "connection_id" uuid not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "auto_propagation_status" "public"."auto_propagation_status" not null default cast('ignore' as auto_propagation_status),
   constraint "schema_management_pkey"
     primary key ("id")
 );
@@ -292,6 +292,7 @@ create table "public"."workspace" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "geography" geography_type not null default cast('AUTO' as geography_type),
   "webhook_operation_configs" jsonb,
+  "notification_settings" jsonb,
   constraint "workspace_pkey"
     primary key ("id")
 );

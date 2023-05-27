@@ -17,6 +17,7 @@ const nonBreakingChangesPreferenceValue = (value: string) => `div[data-testid='n
 const noDiffToast = "[data-testid='notification-connection.noDiff']";
 const cancelButton = getTestId("cancel-edit-button", "button");
 const saveButton = getTestId("save-edit-button", "button");
+const refreshSourceSchemaBtn = getTestId("refresh-source-schema-btn", "button");
 
 export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) => {
   cy.get(schemaChangesDetectedBanner).should("exist");
@@ -27,22 +28,23 @@ export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) 
 };
 
 interface ClickSaveButtonParams {
-  reset?: boolean;
-  confirm?: boolean;
+  expectModal?: boolean;
+  shouldReset?: boolean;
   interceptUpdateHandler?: RouteHandler;
 }
 
-export const clickSaveButton = ({
-  reset = false,
-  confirm = true,
+export const saveChangesAndHandleResetModal = ({
+  expectModal = true,
+  shouldReset = false,
   interceptUpdateHandler,
 }: ClickSaveButtonParams = {}) => {
   interceptUpdateConnectionRequest(interceptUpdateHandler);
+  // todo: should we assert status code here?
 
   submitButtonClick();
 
-  if (confirm) {
-    confirmStreamConfigurationChangedPopup({ reset });
+  if (expectModal) {
+    confirmStreamConfigurationChangedPopup({ reset: shouldReset });
   }
 
   return waitForUpdateConnectionRequest().then((interception) => {
@@ -90,4 +92,8 @@ export const clickCancelEditButton = () => {
 
 export const getSaveButton = () => {
   return cy.get(saveButton);
+};
+
+export const clickRefreshSourceSchemaButton = () => {
+  cy.get(refreshSourceSchemaBtn).click({ force: true });
 };

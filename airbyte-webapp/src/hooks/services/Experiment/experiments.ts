@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  "autopropagation.enabled": boolean;
   "connector.inviteUsersHint.visible": boolean;
   "connector.inviteUsersHint.linkToUsersPage": boolean;
   "connector.orderOverwrite": Record<string, number>;
@@ -20,17 +21,16 @@ export interface Experiments {
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connectorBuilder.showNavigationLinks": boolean;
   "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.errorMultiplier": number;
   "connection.streamCentricUI.numberOfLogsToLoad": number;
   "connection.updatedConnectionFlow.selectConnectors": boolean;
-  "billing.billingInsights": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connection.updatedConnectionFlow": boolean;
+  "connector.allowlistIpBanner": boolean;
 }

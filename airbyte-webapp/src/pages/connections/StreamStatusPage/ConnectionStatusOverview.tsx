@@ -102,6 +102,8 @@ export const useConnectionStatus = () => {
   // The `late` value is based on the `connection.streamCentricUI.late` experiment
   if (isConnectionLate(connection, lastSuccessfulSync, lateMultiplier)) {
     return ConnectionStatusIndicatorStatus.Late;
+  } else if (isConnectionLate(connection, lastSuccessfulSync, 1)) {
+    return ConnectionStatusIndicatorStatus.OnTrack;
   }
 
   if (connectionStatus === ConnectionSyncStatus.FAILED) {
@@ -117,6 +119,7 @@ export const ConnectionStatusOverview: React.FC = () => {
   const isLoading = jobSyncRunning || jobResetRunning;
 
   const status = useConnectionStatus();
+  const { connectionStatus } = useConnectionSyncContext();
 
   return (
     <FlexContainer alignItems="center" gap="sm">
@@ -125,7 +128,13 @@ export const ConnectionStatusOverview: React.FC = () => {
         <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
         {status === ConnectionStatusIndicatorStatus.OnTrack && (
           <Tooltip control={<Icon type="info" color="action" className={styles.onTrackInfo} />} placement="top">
-            <FormattedMessage id="connection.status.onTrack.description" />
+            <FormattedMessage
+              id={
+                connectionStatus === ConnectionSyncStatus.FAILED
+                  ? "connection.status.onTrack.failureDescription"
+                  : "connection.status.onTrack.delayedDescription"
+              }
+            />
           </Tooltip>
         )}
         <Box as="span" ml="md">

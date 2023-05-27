@@ -661,11 +661,13 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       ApmTraceUtils.addExceptionToTrace(e);
 
       // If a jobId exist set the failure reason
-      if (workflowInternalState.getJobId() != null) {
+      if (workflowInternalState.getJobId() != null && workflowInternalState.getAttemptNumber() != null) {
         final ConnectionUpdaterInput connectionUpdaterInput = connectionUpdaterInputFromState();
         final FailureReason failureReason =
             FailureHelper.platformFailure(e, workflowInternalState.getJobId(), workflowInternalState.getAttemptNumber());
         reportFailure(connectionUpdaterInput, null, FailureCause.ACTIVITY, Set.of(failureReason));
+      } else {
+        log.warn("Can't properly fail the job, the next run will clean the state in the EnsureCleanJobStateActivity");
       }
 
       log.info("Finished wait for connection {}, restarting connection manager workflow", connectionId);

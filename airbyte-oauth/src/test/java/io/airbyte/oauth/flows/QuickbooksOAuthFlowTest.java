@@ -19,7 +19,7 @@ class QuickbooksOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
     final Clock clock = Clock.fixed(Instant.ofEpochSecond(1673464409), ZoneId.of("UTC"));
-    return new QuickbooksOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState, clock);
+    return new QuickbooksOAuthFlow(getHttpClient(), this::getConstantState, clock);
   }
 
   @Override

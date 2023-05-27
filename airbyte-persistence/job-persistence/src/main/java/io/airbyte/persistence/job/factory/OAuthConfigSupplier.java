@@ -67,6 +67,16 @@ public class OAuthConfigSupplier {
   }
 
   /**
+   * Test if a connector spec has legacy oauth configuration.
+   *
+   * @param spec to check
+   * @return true if it has a legacy oauth config. otherwise, false.
+   */
+  public static boolean hasLegacyOAuthConfigSpecification(final ConnectorSpecification spec) {
+    return spec != null && spec.getAuthSpecification() != null && spec.getAuthSpecification().getOauth2Specification() != null;
+  }
+
+  /**
    * Mask secrets in OAuth params.
    *
    * @param sourceDefinitionId source definition id

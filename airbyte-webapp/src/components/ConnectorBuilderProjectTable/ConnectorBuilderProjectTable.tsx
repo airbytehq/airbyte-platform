@@ -146,11 +146,9 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
     return (
       <Tooltip
         control={
-          <Button variant="clear" disabled>
-            <Text className={classNames(styles.versionCell, styles.draft)}>
-              <FormattedMessage id="connectorBuilder.draft" />
-            </Text>
-          </Button>
+          <Text color="grey" className={styles.draft}>
+            <FormattedMessage id="connectorBuilder.draft" />
+          </Text>
         }
       >
         <FormattedMessage id="connectorBuilder.listPage.draftTooltip" />
@@ -168,7 +166,7 @@ const VersionChanger = ({ project }: { project: BuilderProject }) => {
         iconPosition="right"
         data-testid={`version-changer-${project.name}`}
       >
-        <Text className={styles.versionCell}>v{project.version}</Text>
+        <Text>v{project.version}</Text>
       </Button>
       {changeInProgress && <VersionChangeModal onClose={() => setChangeInProgress(false)} project={project} />}
     </>
@@ -226,7 +224,10 @@ export const ConnectorBuilderProjectTable = ({
         id: "actions",
         header: () => null,
         cell: (props) => (
-          <FlexContainer justifyContent="flex-end" gap="sm">
+          <FlexContainer justifyContent="flex-end" gap="sm" alignItems="center">
+            <Text className={styles.draftInProgress} color="grey">
+              {props.row.original.hasDraft && <FormattedMessage id="connectorBuilder.draftInProgressLabel" />}
+            </Text>
             <Button
               variant="clear"
               data-testid={`edit-project-button-${props.row.original.name}`}

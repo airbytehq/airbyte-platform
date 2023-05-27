@@ -752,6 +752,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sources/partial_update:
+    post:
+      tags:
+        - source
+      summary: Partially update a source
+      operationId: partialUpdateSource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialSourceUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/list:
     post:
       tags:
@@ -1289,6 +1312,27 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DestinationUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/partial_update:
+    post:
+      tags:
+        - destination
+      summary: Update a destination partially
+      operationId: partialUpdateDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialDestinationUpdate"
         required: true
       responses:
         "200":
@@ -2643,6 +2687,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
         defaultGeography:
@@ -2663,6 +2709,34 @@ components:
         validationUrl:
           type: string
           description: if supplied, the webhook config will be validated by checking that this URL returns a 2xx response.
+    NotificationItem:
+      type: object
+      properties:
+        notificationType:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationType"
+        slackConfiguration:
+          $ref: "#/components/schemas/SlackNotificationConfiguration"
+        customerioConfiguration:
+          $ref: "#/components/schemas/CustomerioNotificationConfiguration"
+
+    NotificationSettings:
+      type: object
+      properties:
+        sendOnSuccess:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnFailure:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnSyncDisabled:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnSyncDisabledWarning:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionUpdate:
+          $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionUpdateActionRequired:
+          $ref: "#/components/schemas/NotificationItem"
+
     Notification:
       type: object
       required:
@@ -2793,6 +2867,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         firstCompletedSync:
           type: boolean
         feedbackDone:
@@ -2851,6 +2927,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Notification"
+        notificationSettings:
+          $ref: "#/components/schemas/NotificationSettings"
         defaultGeography:
           $ref: "#/components/schemas/Geography"
         webhookConfigs:
@@ -3405,6 +3483,20 @@ components:
           type: boolean
         notifySchemaChange:
           type: boolean
+    PartialSourceUpdate:
+      type: object
+      required:
+        - sourceId
+      properties:
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
+        connectionConfiguration:
+          $ref: "#/components/schemas/SourceConfiguration"
+        name:
+          type: string
+        secretId:
+          example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
+          type: string
     SourceUpdate:
       type: object
       required:
@@ -3417,6 +3509,9 @@ components:
         connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
         name:
+          type: string
+        secretId:
+          example: "airbyte_oauth_workspace_0509f049-d671-48cb-8105-0a23d47e6db6_secret_e0d38206-034e-4d75-9d21-da5a99b02826_v1"
           type: string
     SourceRead:
       type: object
@@ -3753,6 +3848,15 @@ components:
         - destinationId
         - connectionConfiguration
         - name
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectionConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        name:
+          type: string
+    PartialDestinationUpdate:
+      type: object
       properties:
         destinationId:
           $ref: "#/components/schemas/DestinationId"
@@ -5677,6 +5781,8 @@ components:
       enum:
         - ignore # do nothing if we detect a schema change
         - disable # disable the connection, pausing the sync
+        - propagate_columns # automatically propagate the changes on selected streams and continue syncing
+        - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
     WebBackendConnectionReadList:
       type: object
@@ -5871,6 +5977,7 @@ components:
     StreamStatusListRequestBody:
       type: object
       required:
+        - pagination
         - workspaceId
       properties:
         attemptNumber:
@@ -5879,6 +5986,8 @@ components:
           $ref: "#/components/schemas/ConnectionId"
         jobId:
           $ref: "#/components/schemas/JobId"
+        jobType:
+          $ref: "#/components/schemas/StreamStatusJobType"
         pagination:
           $ref: "#/components/schemas/Pagination"
         streamName:
@@ -5896,7 +6005,6 @@ components:
         - jobType
         - runState
         - streamName
-        - streamNamespace
         - transitionedAt
         - workspaceId
       properties:

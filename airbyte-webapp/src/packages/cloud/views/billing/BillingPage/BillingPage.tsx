@@ -48,6 +48,7 @@ export const BillingPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CREDITS);
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
+
   return (
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "credits.billing" }]} />}

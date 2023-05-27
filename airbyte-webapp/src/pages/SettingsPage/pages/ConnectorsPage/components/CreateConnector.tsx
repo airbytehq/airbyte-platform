@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
-import { useExperiment } from "hooks/services/Experiment";
+import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths } from "pages/routePaths";
 import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
@@ -38,7 +38,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     setIsModalOpen(!isModalOpen);
     setErrorMessage("");
   };
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
+  const allowUploadCustomImage = useFeature(FeatureItem.AllowUploadCustomImage);
 
   const { formatMessage } = useIntl();
 
@@ -81,11 +81,17 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
   const onSubmit = (values: ICreateProps) =>
     type === "sources" ? onSubmitSource(values) : onSubmitDestination(values);
 
+  if (type === "destinations" && !allowUploadCustomImage) {
+    return null;
+  }
+
   return (
     <>
-      {type === "sources" && showBuilderNavigationLinks ? (
+      {type === "destinations" && allowUploadCustomImage ? (
+        <NewConnectorButton onClick={onChangeModalState} />
+      ) : (
         <DropdownMenu
-          placement="bottom"
+          placement="bottom-end"
           options={[
             {
               as: "a",
@@ -94,19 +100,21 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
               displayName: formatMessage({ id: "admin.newConnector.build" }),
               internal: true,
             },
-            {
-              as: "button",
-              icon: <FontAwesomeIcon icon={faDocker} color="#0091E2" size="xs" />,
-              value: "docker",
-              displayName: formatMessage({ id: "admin.newConnector.docker" }),
-            },
+            ...(allowUploadCustomImage
+              ? [
+                  {
+                    as: "button" as const,
+                    icon: <FontAwesomeIcon icon={faDocker} color="#0091E2" size="xs" />,
+                    value: "docker",
+                    displayName: formatMessage({ id: "admin.newConnector.docker" }),
+                  },
+                ]
+              : []),
           ]}
           onChange={(data: DropdownMenuOptionType) => data.value === "docker" && onChangeModalState()}
         >
           {() => <NewConnectorButton />}
         </DropdownMenu>
-      ) : (
-        <NewConnectorButton onClick={onChangeModalState} />
       )}
 
       {isModalOpen && (

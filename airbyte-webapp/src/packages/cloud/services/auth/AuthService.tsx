@@ -37,7 +37,6 @@ export type AuthSignUp = (form: {
   news: boolean;
 }) => Promise<void>;
 
-export type AuthChangeEmail = (email: string, password: string) => Promise<void>;
 export type AuthChangeName = (name: string) => Promise<void>;
 
 export type AuthSendEmailVerification = () => Promise<void>;
@@ -46,9 +45,10 @@ export type AuthLogout = () => Promise<void>;
 
 type OAuthLoginState = "waiting" | "loading" | "done";
 
-enum FirebaseAuthMessageId {
+export enum FirebaseAuthMessageId {
   NetworkFailure = "firebase.auth.error.networkRequestFailed",
   TooManyRequests = "firebase.auth.error.tooManyRequests",
+  InvalidPassword = "firebase.auth.error.invalidPassword",
   DefaultError = "firebase.auth.error.default",
 }
 
@@ -66,7 +66,6 @@ interface AuthContextApi {
   signUpWithEmailLink: (form: { name: string; email: string; password: string; news: boolean }) => Promise<void>;
   signUp: AuthSignUp;
   updatePassword: AuthUpdatePassword;
-  updateEmail: AuthChangeEmail;
   updateName: AuthChangeName;
   requirePasswordReset: AuthRequirePasswordReset;
   confirmPasswordReset: AuthConfirmPasswordReset;
@@ -231,10 +230,6 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
         await userService.changeName(state.currentUser.authUserId, state.currentUser.userId, name);
         await authService.updateProfile(name);
         updateUserName({ value: name });
-      },
-      async updateEmail(email, password): Promise<void> {
-        await userService.changeEmail(email);
-        return authService.updateEmail(email, password);
       },
       async updatePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
         // re-authentication may be needed before updating password

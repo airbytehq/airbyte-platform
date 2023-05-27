@@ -13,7 +13,11 @@ import {
 } from "core/domain/connector";
 import { DestinationRead, SourceRead, SynchronousJobRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
+import { useExperiment } from "hooks/services/Experiment";
+import { isCloudApp } from "utils/app";
+import { ConnectorIds } from "utils/connectors";
 import { generateMessageFromError } from "utils/errorStatusMessage";
+import { links } from "utils/links";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -79,6 +83,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
+  const showAllowlistIpBanner = useExperiment("connector.allowlistIpBanner", false) && isCloudApp();
 
   const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
     useDocumentationPanelContext();
@@ -194,6 +199,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 
   return (
     <ConnectorForm
+      trackDirtyChanges
       headerBlock={
         <>
           <div className={styles.connectorSelectControl}>
@@ -243,31 +249,52 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       connectorId={isEditMode ? getConnectorId(props.connector) : undefined}
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
         selectedConnectorDefinitionSpecification && (
-          <Controls
-            isEditMode={Boolean(isEditMode)}
-            isTestConnectionInProgress={isTestConnectionInProgress}
-            onCancelTesting={onStopTesting}
-            isSubmitting={isSubmitting || isTestConnectionInProgress}
-            errorMessage={error && generateMessageFromError(error)}
-            formType={props.formType}
-            hasDefinition={Boolean(selectedConnectorDefinitionId)}
-            onRetestClick={() => {
-              if (!selectedConnectorDefinitionId) {
-                return;
-              }
-              handleTestConnector(
-                isEditMode ? undefined : { ...getValues(), serviceType: selectedConnectorDefinitionId }
-              );
-            }}
-            onDeleteClick={onDeleteClick}
-            isValid={isValid}
-            dirty={dirty}
-            job={job ? job : undefined}
-            onCancelClick={() => {
-              resetConnectorForm();
-            }}
-            connectionTestSuccess={connectionTestSuccess}
-          />
+          <>
+            {(selectedConnectorDefinitionId === ConnectorIds.Sources.Postgres ||
+              selectedConnectorDefinitionId === ConnectorIds.Destinations.Postgres) &&
+              showAllowlistIpBanner && (
+                <Message
+                  type="info"
+                  text={
+                    <FormattedMessage
+                      id="connectorForm.allowlistIp"
+                      values={{
+                        a: (node: React.ReactNode) => (
+                          <a href={links.cloudAllowlistIPsLink} target="_blank" rel="noreferrer">
+                            {node}
+                          </a>
+                        ),
+                      }}
+                    />
+                  }
+                />
+              )}
+            <Controls
+              isEditMode={Boolean(isEditMode)}
+              isTestConnectionInProgress={isTestConnectionInProgress}
+              onCancelTesting={onStopTesting}
+              isSubmitting={isSubmitting || isTestConnectionInProgress}
+              errorMessage={error && generateMessageFromError(error)}
+              formType={props.formType}
+              hasDefinition={Boolean(selectedConnectorDefinitionId)}
+              onRetestClick={() => {
+                if (!selectedConnectorDefinitionId) {
+                  return;
+                }
+                handleTestConnector(
+                  isEditMode ? undefined : { ...getValues(), serviceType: selectedConnectorDefinitionId }
+                );
+              }}
+              onDeleteClick={onDeleteClick}
+              isValid={isValid}
+              dirty={dirty}
+              job={job ? job : undefined}
+              onCancelClick={() => {
+                resetConnectorForm();
+              }}
+              connectionTestSuccess={connectionTestSuccess}
+            />
+          </>
         )
       }
     />

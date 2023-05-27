@@ -134,3 +134,5 @@ properties:
     enum:
       - ignore # do nothing if we detect a schema change
       - disable # disable the connection, pausing the sync
+      - propagate_columns # Auto propagate schema change for existing streams
+      - propagate_fully # Auto propagate schema change for all streams including the new ones

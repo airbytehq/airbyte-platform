@@ -5,17 +5,19 @@ import { SchemaOf } from "yup";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 
+import { FormDevTools } from "./FormDevTools";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FormValues = Record<string, any>;
 
 interface FormProps<T extends FormValues> {
-  onError?: (e: Error, values: T) => void;
   /**
    * The function that will be called when the form is submitted. This function should return a promise that only resolves after the submission has been handled by the upstream service.
    * The return value of this function will be used to determine which parts of the form should be reset.
    */
-  onSubmit: (values: T) => Promise<void | KeepStateOptions>;
+  onSubmit?: (values: T) => Promise<void | { keepStateOptions?: KeepStateOptions; resetValues?: T }>;
   onSuccess?: (values: T) => void;
+  onError?: (e: Error, values: T) => void;
   schema: SchemaOf<T>;
   defaultValues: DeepPartial<T>;
   children?: ReactNode | undefined;
@@ -53,18 +55,28 @@ export const Form = <T extends FormValues>({
     }
   }, [reinitializeDefaultValues, defaultValues, methods]);
 
-  const processSubmission = (values: T) =>
-    onSubmit(values)
-      .then((keepStateOptions) => {
+  const processSubmission = (values: T) => {
+    if (!onSubmit) {
+      return;
+    }
+
+    return onSubmit(values)
+      .then((submissionResult) => {
         onSuccess?.(values);
-        methods.reset(values, keepStateOptions ?? undefined);
+        if (submissionResult) {
+          methods.reset(submissionResult.resetValues ?? values, submissionResult.keepStateOptions ?? undefined);
+        } else {
+          methods.reset(values);
+        }
       })
       .catch((e) => {
         onError?.(e, values);
       });
+  };
 
   return (
     <FormProvider {...methods}>
+      <FormDevTools />
       {trackDirtyChanges && <HookFormDirtyTracker />}
       <form onSubmit={methods.handleSubmit((values) => processSubmission(values))}>{children}</form>
     </FormProvider>

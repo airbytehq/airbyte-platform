@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -28,18 +27,13 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
   private static final String ACCESS_TOKEN_URL = "https://%s/oauth/token";
   private final Clock clock;
 
-  public GitlabOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public GitlabOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
     this.clock = Clock.systemUTC();
   }
 
-  public GitlabOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
-    this.clock = Clock.systemUTC();
-  }
-
-  public GitlabOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
-    super(configRepository, httpClient, stateSupplier);
+  public GitlabOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
+    super(httpClient, stateSupplier);
     this.clock = clock;
   }
 
@@ -117,7 +111,8 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
-                                                 final String redirectUrl)
+                                                 final String redirectUrl,
+                                                 JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException {
     throw new IOException("Deprecated API not supported by this connector");
   }

@@ -47,6 +47,7 @@ export const links = {
   connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,
   connectorBuilderPartitioning: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
+  connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
 } as const;

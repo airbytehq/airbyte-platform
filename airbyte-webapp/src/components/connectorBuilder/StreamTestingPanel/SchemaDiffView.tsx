@@ -1,8 +1,8 @@
 import classNames from "classnames";
 import { diffJson, Change } from "diff";
-import { useField } from "formik";
 import merge from "lodash/merge";
 import React, { useMemo, useState } from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useDebounce } from "react-use";
 
@@ -20,7 +20,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
-import { isEmptyOrDefault } from "../types";
+import { isEmptyOrDefault, useBuilderWatch } from "../types";
 import { formatJson } from "../utils";
 
 interface SchemaDiffViewProps {
@@ -66,26 +66,28 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
   const analyticsService = useAnalyticsService();
   const { streams, testStreamIndex } = useConnectorBuilderTestRead();
   const { editorView } = useConnectorBuilderFormState();
-  const [field, , helpers] = useField(`streams[${testStreamIndex}].schema`);
+  const { setValue } = useFormContext();
+  const path = `streams.${testStreamIndex}.schema` as const;
+  const value = useBuilderWatch(path);
   const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);
 
   const [schemaDiff, setSchemaDiff] = useState<Diff>(() =>
-    editorView === "ui" ? getDiff(field.value, inferredSchema) : { changes: [], lossyOverride: false }
+    editorView === "ui" ? getDiff(value, inferredSchema) : { changes: [], lossyOverride: false }
   );
 
   useDebounce(
     () => {
       if (editorView === "ui") {
-        setSchemaDiff(getDiff(field.value, inferredSchema));
+        setSchemaDiff(getDiff(value, inferredSchema));
       }
     },
     250,
-    [field.value, inferredSchema, editorView]
+    [value, inferredSchema, editorView]
   );
 
   return (
     <FlexContainer direction="column">
-      {editorView === "ui" && !isEmptyOrDefault(field.value) && field.value !== formattedSchema && (
+      {editorView === "ui" && !isEmptyOrDefault(value) && value !== formattedSchema && (
         <Message type="warning" text={<FormattedMessage id="connectorBuilder.differentSchemaDescription" />}>
           <FlexItem grow className={styles.mergeButtons}>
             <FlexContainer direction="column">
@@ -93,10 +95,11 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
                 <FlexItem grow>
                   <Button
                     full
+                    type="button"
                     variant="dark"
-                    disabled={field.value === formattedSchema}
+                    disabled={value === formattedSchema}
                     onClick={() => {
-                      helpers.setValue(formattedSchema);
+                      setValue(path, formattedSchema);
                       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
                         actionDescription: "Declared schema overwritten by detected schema",
                         stream_name: streams[testStreamIndex]?.name,
@@ -119,8 +122,9 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
                         <Button
                           full
                           variant="dark"
+                          type="button"
                           onClick={() => {
-                            helpers.setValue(schemaDiff.mergedSchema);
+                            setValue(path, schemaDiff.mergedSchema);
                             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.MERGE_SCHEMA, {
                               actionDescription: "Detected and Declared schemas merged to update declared schema",
                               stream_name: streams[testStreamIndex]?.name,
@@ -140,12 +144,13 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
           </FlexItem>
         </Message>
       )}
-      {editorView === "ui" && isEmptyOrDefault(field.value) && (
+      {editorView === "ui" && isEmptyOrDefault(value) && (
         <Button
           full
           variant="secondary"
+          type="button"
           onClick={() => {
-            helpers.setValue(formattedSchema);
+            setValue(path, formattedSchema);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
               stream_name: streams[testStreamIndex]?.name,
@@ -157,7 +162,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
         </Button>
       )}
       <FlexItem>
-        {editorView === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(field.value) ? (
+        {editorView === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(value) ? (
           <pre className={styles.diffLine}>
             {formattedSchema
               .split("\n")

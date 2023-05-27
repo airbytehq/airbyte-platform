@@ -1,6 +1,5 @@
 import { Tab } from "@headlessui/react";
 import classNames from "classnames";
-import { useField } from "formik";
 import React, { ReactNode, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -17,6 +16,7 @@ import {
 import styles from "./PageDisplay.module.scss";
 import { SchemaDiffView } from "./SchemaDiffView";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
+import { useBuilderWatch } from "../types";
 import { formatJson } from "../utils";
 
 interface PageDisplayProps {
@@ -36,7 +36,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
 
   const { editorView } = useConnectorBuilderFormState();
   const { testStreamIndex, streamRead } = useConnectorBuilderTestRead();
-  const [field] = useField(`streams[${testStreamIndex}].schema`);
+  const value = useBuilderWatch(`streams.${testStreamIndex}.schema`);
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
   const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
@@ -116,7 +116,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">
                     {formatMessage({ id: "connectorBuilder.schemaTab" })}
-                    {editorView === "ui" && field.value !== formattedSchema && <SchemaConflictIndicator />}
+                    {editorView === "ui" && value !== formattedSchema && <SchemaConflictIndicator />}
                   </FlexContainer>
                 </Text>
               )}

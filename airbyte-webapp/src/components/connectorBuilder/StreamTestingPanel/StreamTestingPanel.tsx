@@ -12,8 +12,8 @@ import { Spec } from "core/request/ConnectorManifest";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderFormManagementState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { useConnectorBuilderTestInputState } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import addButtonScreenshot from "./add-button.png";
 import { ConfigMenu } from "./ConfigMenu";
@@ -43,7 +43,7 @@ function useTestInputJsonErrors(testInputJson: ConnectorConfig | undefined, spec
 export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestInputOpen, setTestInputOpen } = useConnectorBuilderFormManagementState();
   const { jsonManifest, yamlEditorIsMounted, editorView } = useConnectorBuilderFormState();
-  const { testInputJson } = useConnectorBuilderTestInputState();
+  const { testInputJson } = useConnectorBuilderTestRead();
 
   const testInputJsonErrors = useTestInputJsonErrors(testInputJson, jsonManifest.spec);
 

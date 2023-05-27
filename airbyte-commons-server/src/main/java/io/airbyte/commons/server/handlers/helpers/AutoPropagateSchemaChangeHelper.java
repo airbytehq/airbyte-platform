@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers.helpers;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.commons.json.Jsons;
@@ -30,22 +31,32 @@ public class AutoPropagateSchemaChangeHelper {
    * @param oldCatalog the currently saved catalog
    * @param newCatalog the new catalog, which contains all the stream even the unselected ones
    * @param transformations list of transformation per stream
+   * @param nonBreakingChangesPreference User preference for the auto propagation
    * @return an Airbyte catalog the changes being auto propagated
    */
   public static AirbyteCatalog getUpdatedSchema(final AirbyteCatalog oldCatalog,
                                                 final AirbyteCatalog newCatalog,
-                                                final List<StreamTransform> transformations) {
-    AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
-    Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
-    Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
+                                                final List<StreamTransform> transformations,
+                                                final NonBreakingChangesPreference nonBreakingChangesPreference) {
+    final AirbyteCatalog copiedOldCatalog = Jsons.clone(oldCatalog);
+    final Map<StreamDescriptor, AirbyteStreamAndConfiguration> oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog);
+    final Map<StreamDescriptor, AirbyteStreamAndConfiguration> newCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(newCatalog);
 
     transformations.forEach(transformation -> {
-      StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
+      final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
       switch (transformation.getTransformType()) {
         case UPDATE_STREAM -> oldCatalogPerStream.get(streamDescriptor)
             .stream(newCatalogPerStream.get(streamDescriptor).getStream());
-        case ADD_STREAM -> oldCatalogPerStream.put(streamDescriptor, newCatalogPerStream.get(streamDescriptor));
-        case REMOVE_STREAM -> oldCatalogPerStream.remove(streamDescriptor);
+        case ADD_STREAM -> {
+          if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
+            oldCatalogPerStream.put(streamDescriptor, newCatalogPerStream.get(streamDescriptor));
+          }
+        }
+        case REMOVE_STREAM -> {
+          if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
+            oldCatalogPerStream.remove(streamDescriptor);
+          }
+        }
         default -> throw new NotSupportedException("Not supported transformation.");
       }
     });
@@ -54,7 +65,7 @@ public class AutoPropagateSchemaChangeHelper {
   }
 
   @VisibleForTesting
-  static Map<StreamDescriptor, AirbyteStreamAndConfiguration> extractStreamAndConfigPerStreamDescriptor(AirbyteCatalog catalog) {
+  static Map<StreamDescriptor, AirbyteStreamAndConfiguration> extractStreamAndConfigPerStreamDescriptor(final AirbyteCatalog catalog) {
     return catalog.getStreams().stream().collect(Collectors.toMap(
         airbyteStreamAndConfiguration -> new StreamDescriptor().name(airbyteStreamAndConfiguration.getStream().getName())
             .namespace(airbyteStreamAndConfiguration.getStream().getNamespace()),

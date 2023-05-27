@@ -1,8 +1,10 @@
+import { yupResolver } from "@hookform/resolvers/yup";
 import classnames from "classnames";
-import { Formik } from "formik";
 import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
+import { AnyObjectSchema } from "yup";
 
 import { HeadTitle } from "components/common/HeadTitle";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
@@ -19,13 +21,11 @@ import {
   ConnectorBuilderFormStateProvider,
   useConnectorBuilderFormState,
   ConnectorBuilderFormManagementStateProvider,
-  ConnectorBuilderMainFormikContext,
+  ConnectorBuilderMainRHFContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { removeEmptyStrings } from "utils/form";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const noop = function () {};
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const { builderFormValues, editorView, setEditorView } = useConnectorBuilderFormState();
@@ -42,30 +42,13 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
 
   const initialFormValues = useRef(builderFormValues);
 
-  return useMemo(
-    () => (
-      <Formik
-        initialValues={initialFormValues.current}
-        validateOnBlur
-        validateOnChange={false}
-        validateOnMount
-        onSubmit={noop}
-        validationSchema={builderFormValidationSchema}
-      >
-        {(props) => (
-          <ConnectorBuilderMainFormikContext.Provider value={props}>
-            <Panels
-              editorView={editorView}
-              validateForm={props.validateForm}
-              switchToUI={switchToUI}
-              values={props.values}
-              switchToYaml={switchToYaml}
-            />
-          </ConnectorBuilderMainFormikContext.Provider>
-        )}
-      </Formik>
-    ),
-    [editorView, switchToUI, switchToYaml]
+  return (
+    <BaseForm
+      editorView={editorView}
+      switchToUI={switchToUI}
+      switchToYaml={switchToYaml}
+      defaultValues={initialFormValues.current}
+    />
   );
 });
 
@@ -83,65 +66,99 @@ export const ConnectorBuilderEditPage: React.FC = () => (
 );
 ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
+const BaseForm = React.memo(
+  ({
+    editorView,
+    switchToUI,
+    switchToYaml,
+    defaultValues,
+  }: {
+    editorView: string;
+    switchToUI: () => void;
+    switchToYaml: () => void;
+    defaultValues: BuilderFormValues;
+  }) => {
+    // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
+    // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
+    const methods = useForm({
+      defaultValues,
+      mode: "onChange",
+      resolver: yupResolver<AnyObjectSchema>(builderFormValidationSchema),
+    });
+
+    return (
+      <FormProvider {...methods}>
+        <ConnectorBuilderMainRHFContext.Provider value={methods}>
+          <Panels editorView={editorView} switchToUI={switchToUI} switchToYaml={switchToYaml} />
+        </ConnectorBuilderMainRHFContext.Provider>
+      </FormProvider>
+    );
+  }
+);
+
+BaseForm.displayName = "BaseForm";
+
 const Panels = React.memo(
   ({
     editorView,
     switchToUI,
     switchToYaml,
-    values,
-    validateForm,
   }: {
     editorView: string;
     switchToUI: () => void;
-    values: BuilderFormValues;
     switchToYaml: () => void;
-    validateForm: () => void;
   }) => {
     const { formatMessage } = useIntl();
     const { setBuilderFormValues } = useConnectorBuilderFormState();
 
+    const values = useWatch();
+
     const debouncedSetBuilderFormValues = useMemo(
       () =>
         debounce((values) => {
-          // kick off formik validation
-          validateForm();
           // update upstream state
-          setBuilderFormValues(values, builderFormValidationSchema.isValidSync(values));
+          setBuilderFormValues(
+            builderFormValidationSchema.cast(removeEmptyStrings(values)) as unknown as BuilderFormValues,
+            builderFormValidationSchema.isValidSync(values)
+          );
         }, 200),
-      [setBuilderFormValues, validateForm]
+      [setBuilderFormValues]
     );
     useEffect(() => {
       debouncedSetBuilderFormValues(values);
     }, [values, debouncedSetBuilderFormValues]);
 
-    return (
-      <ResizablePanels
-        className={classnames({ [styles.gradientBg]: editorView === "yaml", [styles.solidBg]: editorView === "ui" })}
-        firstPanel={{
-          children: (
-            <>
-              {editorView === "yaml" ? (
-                <YamlEditor toggleYamlEditor={switchToUI} />
-              ) : (
-                <Builder values={values} validateForm={validateForm} toggleYamlEditor={switchToYaml} />
-              )}
-            </>
-          ),
-          className: styles.leftPanel,
-          minWidth: 550,
-        }}
-        secondPanel={{
-          children: <StreamTestingPanel />,
-          className: styles.rightPanel,
-          flex: 0.33,
-          minWidth: 60,
-          overlay: {
-            displayThreshold: 325,
-            header: formatMessage({ id: "connectorBuilder.testConnector" }),
-            rotation: "counter-clockwise",
-          },
-        }}
-      />
+    return useMemo(
+      () => (
+        <ResizablePanels
+          className={classnames({ [styles.gradientBg]: editorView === "yaml", [styles.solidBg]: editorView === "ui" })}
+          firstPanel={{
+            children: (
+              <>
+                {editorView === "yaml" ? (
+                  <YamlEditor toggleYamlEditor={switchToUI} />
+                ) : (
+                  <Builder hasMultipleStreams={values.streams.length > 1} toggleYamlEditor={switchToYaml} />
+                )}
+              </>
+            ),
+            className: styles.leftPanel,
+            minWidth: 550,
+          }}
+          secondPanel={{
+            children: <StreamTestingPanel />,
+            className: styles.rightPanel,
+            flex: 0.33,
+            minWidth: 60,
+            overlay: {
+              displayThreshold: 325,
+              header: formatMessage({ id: "connectorBuilder.testConnector" }),
+              rotation: "counter-clockwise",
+            },
+          }}
+        />
+      ),
+      [editorView, formatMessage, switchToUI, switchToYaml, values.streams.length]
     );
   }
 );

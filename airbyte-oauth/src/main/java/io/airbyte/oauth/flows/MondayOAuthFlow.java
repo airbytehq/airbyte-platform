@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -25,13 +24,13 @@ public class MondayOAuthFlow extends BaseOAuth2Flow {
 
   private static final String ACCESS_TOKEN_URL = "https://auth.monday.com/oauth2/token";
 
-  public MondayOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public MondayOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  public MondayOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public MondayOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

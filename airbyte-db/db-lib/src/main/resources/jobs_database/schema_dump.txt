@@ -85,7 +85,7 @@ create table "public"."stream_statuses" (
   "workspace_id" uuid not null,
   "connection_id" uuid not null,
   "job_id" bigint not null,
-  "stream_namespace" varchar(2147483647) not null,
+  "stream_namespace" varchar(2147483647),
   "stream_name" varchar(2147483647) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,

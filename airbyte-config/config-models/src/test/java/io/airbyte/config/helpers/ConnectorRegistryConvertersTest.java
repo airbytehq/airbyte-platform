@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -78,7 +79,14 @@ class ConnectorRegistryConvertersTest {
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withMaxSecondsBetweenMessages(10L);
 
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(DEF_ID)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_TAG)
+        .withSpec(SPEC);
+
     assertEquals(stdSourceDef, ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDef));
+    assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef));
   }
 
   @Test
@@ -124,7 +132,14 @@ class ConnectorRegistryConvertersTest {
         .withNormalizationConfig(normalizationConfig)
         .withSupportsDbt(true);
 
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(DEF_ID)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_TAG)
+        .withSpec(SPEC);
+
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
+    assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
   }
 
 }

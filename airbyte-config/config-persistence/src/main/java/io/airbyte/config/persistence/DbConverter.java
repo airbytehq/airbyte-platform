@@ -15,6 +15,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_P
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
@@ -53,6 +54,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -63,6 +65,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.jooq.Record;
 
@@ -122,7 +125,8 @@ public class DbConverter {
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
         .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withNonBreakingChangesPreference(
-            Enums.toEnum(record.get(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, String.class), NonBreakingChangesPreference.class).orElseThrow())
+            Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
+                .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
         .withNotifySchemaChanges(isWebhookNotificationEnabled)
         .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
   }

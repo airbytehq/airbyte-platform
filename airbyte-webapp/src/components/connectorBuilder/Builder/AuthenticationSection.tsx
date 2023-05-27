@@ -17,10 +17,13 @@ import {
   BEARER_AUTHENTICATOR,
   inferredAuthValues,
   OAUTH_AUTHENTICATOR,
+  useBuilderWatch,
 } from "../types";
 
 export const AuthenticationSection: React.FC = () => {
   const analyticsService = useAnalyticsService();
+
+  const grantType = useBuilderWatch("global.authenticator.grant_type");
 
   return (
     <BuilderCard docLink={links.connectorBuilderAuthentication} label={<ControlLabels label="Authentication" />}>
@@ -41,7 +44,7 @@ export const AuthenticationSection: React.FC = () => {
           })
         }
         options={[
-          { label: "No Auth", typeValue: "NoAuth" },
+          { label: "No Auth", typeValue: "NoAuth", default: {} },
           {
             label: "API Key",
             typeValue: API_KEY_AUTHENTICATOR,
@@ -88,6 +91,7 @@ export const AuthenticationSection: React.FC = () => {
               ...inferredAuthValues("OAuthAuthenticator"),
               refresh_request_body: [],
               token_refresh_endpoint: "",
+              grant_type: "refresh_token",
             },
             children: (
               <>
@@ -96,9 +100,17 @@ export const AuthenticationSection: React.FC = () => {
                   path="global.authenticator.token_refresh_endpoint"
                   manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
                 />
+                <BuilderField
+                  type="enum"
+                  path="global.authenticator.grant_type"
+                  options={["refresh_token", "client_credentials"]}
+                  manifestPath="OAuthAuthenticator.properties.grant_type"
+                />
                 <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_id" />
                 <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
-                <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
+                {grantType === "refresh_token" && (
+                  <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.refresh_token" />
+                )}
                 <BuilderOptional>
                   <BuilderField
                     type="array"

@@ -1,4 +1,5 @@
-import { appendRandomString, submitButtonClick } from "commands/common";
+import { createPokeApiSourceViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
+import { submitButtonClick } from "commands/common";
 import { fillPokeAPIForm } from "commands/connector";
 import { createPostgresSource, deleteSource, updateSource } from "commands/source";
 
@@ -16,27 +17,26 @@ describe("Source main actions", () => {
     });
   });
 
-  // TODO: add update source on some other connector or create 1 more user for pg
-  it.skip("Update source", () => {
-    const sourceName = appendRandomString("Test source cypress for update");
-    createPostgresSource(sourceName);
-    updateSource(sourceName, "connectionConfiguration.start_date", "2020-11-11");
+  it("Update source", () => {
+    createPokeApiSourceViaApi().then((pokeApiSource) => {
+      updateSource(pokeApiSource.name, "connectionConfiguration.pokemon_name", "rattata");
+    });
 
     cy.get("div[data-id='success-result']").should("exist");
-    cy.get("input[value='2020-11-11']").should("exist");
+    cy.get("input[value='rattata']").should("exist");
   });
 
   it("Delete source", () => {
-    const sourceName = appendRandomString("Test source cypress for delete");
-    createPostgresSource(sourceName);
-    deleteSource(sourceName);
+    createPostgresSourceViaApi().then((postgresSource) => {
+      deleteSource(postgresSource.sourceName);
 
-    cy.visit("/");
-    cy.get("div").contains(sourceName).should("not.exist");
+      cy.visit("/source");
+      cy.get("div").contains(postgresSource.sourceName).should("not.exist");
+    });
   });
 });
 
-describe("Unsaved changes modal", () => {
+describe("Unsaved changes modal on create source page", () => {
   it("Check leaving Source page without any changes", () => {
     goToSourcePage();
     openNewSourcePage();

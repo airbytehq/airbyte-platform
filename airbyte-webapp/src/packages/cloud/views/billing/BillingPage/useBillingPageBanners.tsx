@@ -9,9 +9,9 @@ import { LOW_BALANCE_CREDIT_THRESHOLD } from "./components/LowCreditBalanceHint/
 export const useBillingPageBanners = () => {
   const currentWorkspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
-  const { connectionStatusQuery, userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { hasEligibleConnections, hasNonEligibleConnections } = connectionStatusQuery.data || {};
-  const { isEnrolled, showEnrollmentUi } = enrollmentStatusQuery.data || {};
+  const { programStatusQuery, userDidEnroll } = useFreeConnectorProgram();
+  const { hasEligibleConnections, hasNonEligibleConnections, isEnrolled, showEnrollmentUi } =
+    programStatusQuery.data || {};
   const isNewTrialPolicyEnabled = useExperiment("billing.newTrialPolicy", false);
 
   const isPreTrial = isNewTrialPolicyEnabled

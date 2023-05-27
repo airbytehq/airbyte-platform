@@ -388,9 +388,10 @@ public class SchedulerHandler {
             currentAirbyteCatalog,
             sourceAutoPropagateChange.getCatalog(),
             diff.getTransforms(),
-            sourceAutoPropagateChange.getCatalogId());
+            sourceAutoPropagateChange.getCatalogId(),
+            connectionRead.getNonBreakingChangesPreference());
+        connectionsHandler.updateConnection(updateObject);
       }
-      connectionsHandler.updateConnection(updateObject);
     }
   }
 
@@ -597,7 +598,9 @@ public class SchedulerHandler {
     final boolean nonBreakingChange = !containsBreakingChange(diff);
     final boolean autoPropagationIsEnabledForWorkspace = featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId));
     final boolean autoPropagationIsEnabledForConnection =
-        connectionRead.getNonBreakingChangesPreference() != null;
+        connectionRead.getNonBreakingChangesPreference() != null
+            && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_COLUMNS)
+                || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.PROPAGATE_FULLY));
     return hasDiff && nonBreakingChange && autoPropagationIsEnabledForWorkspace && autoPropagationIsEnabledForConnection;
   }
 
@@ -606,13 +609,15 @@ public class SchedulerHandler {
                                  final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
                                  final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
                                  final List<StreamTransform> transformations,
-                                 final UUID sourceCatalogId) {
+                                 final UUID sourceCatalogId,
+                                 final NonBreakingChangesPreference nonBreakingChangesPreference) {
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     final io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
         currentAirbyteCatalog,
         newCatalog,
-        transformations);
+        transformations,
+        nonBreakingChangesPreference);
     updateObject.setSyncCatalog(catalog);
     updateObject.setSourceCatalogId(sourceCatalogId);
   }

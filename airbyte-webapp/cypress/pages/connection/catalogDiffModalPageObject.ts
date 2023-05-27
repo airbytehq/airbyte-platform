@@ -11,6 +11,10 @@ export const shouldExist = () => {
   cy.get(catalogDiffModal).should("exist");
 };
 
+export const shouldNotExist = () => {
+  cy.get(catalogDiffModal).should("not.exist");
+};
+
 export const toggleStreamWithChangesAccordion = (streamName: string) => {
   cy.get(streamWithChangesToggleBtn(streamName)).click();
 };

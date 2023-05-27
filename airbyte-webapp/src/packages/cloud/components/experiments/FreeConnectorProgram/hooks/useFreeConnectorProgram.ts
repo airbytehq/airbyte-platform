@@ -58,25 +58,14 @@ export const useFreeConnectorProgram = () => {
     }
   });
 
-  const enrollmentStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
+  const programStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
     webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions).then(
-      ({ hasPaymentAccountSaved }) => {
+      ({ hasPaymentAccountSaved, hasEligibleConnections, hasNonEligibleConnections }) => {
         const userIsEligibleToEnroll = !hasPaymentAccountSaved;
 
         return {
           showEnrollmentUi: freeConnectorProgramEnabled && userIsEligibleToEnroll,
           isEnrolled: freeConnectorProgramEnabled && hasPaymentAccountSaved,
-        };
-      }
-    )
-  );
-
-  // similar to the one above, but only returns eligible and non-eligible connection counts as this
-  // is used separately in the app
-  const connectionStatusQuery = useQuery(["freeConnectorProgramInfo", workspaceId], () =>
-    webBackendGetFreeConnectorProgramInfoForWorkspace({ workspaceId }, requestOptions).then(
-      ({ hasEligibleConnections, hasNonEligibleConnections }) => {
-        return {
           hasEligibleConnections: freeConnectorProgramEnabled && hasEligibleConnections,
           hasNonEligibleConnections: freeConnectorProgramEnabled && hasNonEligibleConnections,
         };
@@ -85,8 +74,7 @@ export const useFreeConnectorProgram = () => {
   );
 
   return {
-    enrollmentStatusQuery,
+    programStatusQuery,
     userDidEnroll,
-    connectionStatusQuery,
   };
 };

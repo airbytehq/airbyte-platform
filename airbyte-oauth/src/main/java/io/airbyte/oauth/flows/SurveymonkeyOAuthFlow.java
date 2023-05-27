@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -38,13 +37,13 @@ public class SurveymonkeyOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTHORIZE_URL = "oauth/authorize";
   private static final String ACCESS_TOKEN_URL = "oauth/token";
 
-  public SurveymonkeyOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public SurveymonkeyOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  SurveymonkeyOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  SurveymonkeyOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   protected String getBaseURLByOrigin(final JsonNode inputOAuthConfiguration) throws Error {

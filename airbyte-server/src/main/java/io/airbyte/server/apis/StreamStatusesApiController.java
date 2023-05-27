@@ -90,9 +90,8 @@ public class StreamStatusesApiController implements StreamStatusesApi {
 
     static void validate(final Pagination pagination) {
       if (pagination == null) {
-        return;
+        throw new BadRequestException("Pagination params must be provided.");
       }
-
       if (pagination.getPageSize() < PAGE_MIN) {
         throw new BadRequestException("Page size must be at least 1.");
       }

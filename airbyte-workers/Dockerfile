@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.3
 FROM ${JDK_IMAGE} AS worker
 
 ARG DOCKER_BUILD_ARCH=amd64

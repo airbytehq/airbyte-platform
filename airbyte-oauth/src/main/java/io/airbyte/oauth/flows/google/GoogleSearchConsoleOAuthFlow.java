@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows.google;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.List;
 import java.util.function.Supplier;
@@ -18,13 +17,13 @@ public class GoogleSearchConsoleOAuthFlow extends GoogleOAuthFlow {
   @VisibleForTesting
   static final String SCOPE_URL = "https://www.googleapis.com/auth/webmasters.readonly";
 
-  public GoogleSearchConsoleOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public GoogleSearchConsoleOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  GoogleSearchConsoleOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  GoogleSearchConsoleOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

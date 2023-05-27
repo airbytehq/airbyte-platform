@@ -9,6 +9,7 @@ import {
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
+import { removeEmptyStrings } from "utils/form";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
 import { FormRootProps, FormRoot } from "./FormRoot";
@@ -27,23 +28,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   isEditMode?: boolean;
   formValues?: Partial<ConnectorFormValues>;
   connectorId?: string;
-}
-
-function removeEmptyStrings(obj: unknown) {
-  if (typeof obj !== "object" || obj === null) {
-    return obj;
-  }
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      const val = (obj as Record<string, unknown>)[key];
-      if (typeof val === "string" && val.trim() === "") {
-        delete (obj as Record<string, unknown>)[key];
-      } else if (typeof val === "object") {
-        removeEmptyStrings(val);
-      }
-    }
-  }
-  return obj;
+  trackDirtyChanges?: boolean;
 }
 
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
@@ -81,14 +66,18 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
       await onSubmit(valuesToSend);
       clearFormChange(formId);
       // do not reset form values to avoid casting oddities
-      return { keepValues: true };
+      return {
+        keepStateOptions: {
+          keepValues: true,
+        },
+      };
     },
     [castValues, onSubmit, clearFormChange, formId]
   );
 
   return (
     <Form
-      trackDirtyChanges
+      trackDirtyChanges={props.trackDirtyChanges}
       defaultValues={initialValues as ConnectorFormValues<object>}
       schema={validationSchema as AnyObjectSchema}
       onSubmit={onFormSubmit}

@@ -6,6 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleType, NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import styles from "./ConnectionConfigurationFormPreview.module.scss";
@@ -94,14 +95,21 @@ const NonBreakingChanges: React.FC<{
   const {
     values: { nonBreakingChangesPreference },
   } = useFormikContext<FormikConnectionFormValues>();
+  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
+  const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
+  const labelKey = autoPropagationEnabled
+    ? "connectionForm.nonBreakingChangesPreference.autopropagation.label"
+    : "connectionForm.nonBreakingChangesPreference.label";
 
   return allowAutoDetectSchema ? (
     <div>
       <Text size="xs" color="grey">
-        <FormattedMessage id="connectionForm.nonBreakingChangesPreference.label" />:
+        <FormattedMessage id={labelKey} />:
       </Text>
       <Text size="md" color="grey">
-        <FormattedMessage id={`connectionForm.nonBreakingChangesPreference.${nonBreakingChangesPreference}`} />
+        <FormattedMessage
+          id={`connectionForm.nonBreakingChangesPreference.${autoPropagationPrefix}${nonBreakingChangesPreference}`}
+        />
       </Text>
     </div>
   ) : null;

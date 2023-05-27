@@ -7,6 +7,7 @@ package io.airbyte.server.repositories;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATUSES;
 
 import com.google.common.base.CaseFormat;
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.server.repositories.domain.StreamStatus;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.Page;
@@ -53,6 +54,10 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
       spec = spec.and(Predicates.columnEquals(Columns.ATTEMPT_NUMBER, params.attemptNumber()));
     }
 
+    if (null != params.jobType()) {
+      spec = spec.and(Predicates.columnEquals(Columns.JOB_TYPE, params.jobType()));
+    }
+
     if (null != params.pagination()) {
       final var offset = params.pagination().offset();
       final var size = params.pagination().size();
@@ -78,6 +83,7 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
                       String streamNamespace,
                       String streamName,
                       Integer attemptNumber,
+                      JobStreamStatusJobType jobType,
                       Pagination pagination) {}
 
   /**
@@ -111,6 +117,7 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
     static String STREAM_NAMESPACE = Predicates.formatJooqColumnName(STREAM_STATUSES.STREAM_NAMESPACE);
     static String STREAM_NAME = Predicates.formatJooqColumnName(STREAM_STATUSES.STREAM_NAME);
     static String ATTEMPT_NUMBER = Predicates.formatJooqColumnName(STREAM_STATUSES.ATTEMPT_NUMBER);
+    static String JOB_TYPE = Predicates.formatJooqColumnName(STREAM_STATUSES.JOB_TYPE);
 
   }
 
