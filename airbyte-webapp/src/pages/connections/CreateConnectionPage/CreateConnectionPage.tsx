@@ -16,9 +16,9 @@ import { StepsIndicator } from "components/ui/StepsIndicator";
 import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 import { useSourceList } from "hooks/services/useSourceHook";

@@ -6,8 +6,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectionScheduleType, NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import styles from "./ConnectionConfigurationFormPreview.module.scss";
 import { FormikConnectionFormValues } from "./formConfig";

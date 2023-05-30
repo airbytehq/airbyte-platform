@@ -14,9 +14,9 @@ import {
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
 import { AnalyticsProvider } from "core/services/analytics";
+import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
 import { ServicesProvider } from "core/servicesProvider";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { defaultOssFeatures, FeatureItem, FeatureService } from "hooks/services/Feature";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
 import en from "locales/en.json";

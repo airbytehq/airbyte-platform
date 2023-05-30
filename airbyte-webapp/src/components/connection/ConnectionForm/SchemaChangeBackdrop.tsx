@@ -2,9 +2,9 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import { OctaviaRedFlag } from "./OctaviaRedFlag";
 import { OctaviaYellowFlag } from "./OctaviaYellowFlag";

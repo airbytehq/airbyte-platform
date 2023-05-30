@@ -8,7 +8,7 @@ import { QueryClientProvider, QueryClient } from "react-query";
 // TODO: theme was not working correctly so imported directly
 import { theme } from "../src/theme";
 import messages from "../src/locales/en.json";
-import { FeatureService } from "../src/hooks/services/Feature";
+import { FeatureService } from "../src/core/services/features";
 import { ConfigServiceProvider, config } from "../src/config";
 import { DocumentationPanelProvider } from "../src/views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 import { ServicesProvider } from "../src/core/servicesProvider";

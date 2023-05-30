@@ -13,8 +13,8 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import LargeEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
 import { links } from "utils/links";
 

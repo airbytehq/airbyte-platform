@@ -12,7 +12,7 @@ import {
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { defaultOssFeatures, FeatureItem } from "hooks/services/Feature";
+import { defaultOssFeatures, FeatureItem } from "core/services/features";
 import * as sourceHook from "hooks/services/useSourceHook";
 
 import { CreateConnectionForm } from "./CreateConnectionForm";

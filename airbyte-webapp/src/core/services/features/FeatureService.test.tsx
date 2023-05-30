@@ -12,8 +12,6 @@ const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
 type FeatureOverwrite = FeatureItem[] | FeatureSet | undefined;
 
 interface FeatureOverwrites {
-  workspace?: FeatureOverwrite;
-  user?: FeatureOverwrite;
   overwrite?: FeatureOverwrite;
 }
 
@@ -23,14 +21,8 @@ interface FeatureOverwrites {
  */
 const getFeatures = (initialProps: FeatureOverwrites) => {
   return renderHook(
-    ({ overwrite, user, workspace }: React.PropsWithChildren<FeatureOverwrites>) => {
-      const { features, setWorkspaceFeatures, setUserFeatures, setFeatureOverwrites } = useFeatureService();
-      useEffect(() => {
-        setWorkspaceFeatures(workspace);
-      }, [setWorkspaceFeatures, workspace]);
-      useEffect(() => {
-        setUserFeatures(user);
-      }, [setUserFeatures, user]);
+    ({ overwrite }: React.PropsWithChildren<FeatureOverwrites>) => {
+      const { features, setFeatureOverwrites } = useFeatureService();
       useEffect(() => {
         setFeatureOverwrites(overwrite);
       }, [overwrite, setFeatureOverwrites]);
@@ -49,95 +41,12 @@ describe("Feature Service", () => {
       expect(getFeature(FeatureItem.AllowUpdateConnectors)).toBe(false);
     });
 
-    it("workspace features should merge correctly with default features", () => {
+    it("overwrite features can overwrite default features", () => {
       expect(
         getFeatures({
-          workspace: [FeatureItem.AllowCustomDBT, FeatureItem.AllowUploadCustomImage],
+          overwrite: { [FeatureItem.AllowUploadCustomImage]: true, [FeatureItem.AllowDBTCloudIntegration]: false },
         }).result.current.sort()
-      ).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowDBTCloudIntegration, FeatureItem.AllowUploadCustomImage]);
-    });
-
-    it("workspace features can disable default features", () => {
-      expect(
-        getFeatures({
-          workspace: {
-            [FeatureItem.AllowCustomDBT]: true,
-            [FeatureItem.AllowDBTCloudIntegration]: false,
-          } as FeatureSet,
-        }).result.current.sort()
-      ).toEqual([FeatureItem.AllowCustomDBT]);
-    });
-
-    it("user features should merge correctly with workspace and default features", () => {
-      expect(
-        getFeatures({
-          workspace: [FeatureItem.AllowCustomDBT, FeatureItem.AllowUploadCustomImage],
-          user: [FeatureItem.AllowOAuthConnector],
-        }).result.current.sort()
-      ).toEqual([
-        FeatureItem.AllowCustomDBT,
-        FeatureItem.AllowDBTCloudIntegration,
-        FeatureItem.AllowOAuthConnector,
-        FeatureItem.AllowUploadCustomImage,
-      ]);
-    });
-
-    it("user features can disable workspace and default features", () => {
-      expect(
-        getFeatures({
-          workspace: [FeatureItem.AllowCustomDBT, FeatureItem.AllowUploadCustomImage],
-          user: {
-            [FeatureItem.AllowOAuthConnector]: true,
-            [FeatureItem.AllowUploadCustomImage]: false,
-            [FeatureItem.AllowDBTCloudIntegration]: false,
-          } as FeatureSet,
-        }).result.current.sort()
-      ).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowOAuthConnector]);
-    });
-
-    it("user features can re-enable feature that are disabled per workspace", () => {
-      expect(
-        getFeatures({
-          workspace: { [FeatureItem.AllowCustomDBT]: true } as FeatureSet,
-          user: [FeatureItem.AllowOAuthConnector],
-        }).result.current.sort()
-      ).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowDBTCloudIntegration, FeatureItem.AllowOAuthConnector]);
-    });
-
-    it("overwrite features can overwrite workspace and user features", () => {
-      expect(
-        getFeatures({
-          workspace: { [FeatureItem.AllowCustomDBT]: true } as FeatureSet,
-          user: {
-            [FeatureItem.AllowOAuthConnector]: true,
-            [FeatureItem.AllowDBTCloudIntegration]: false,
-          } as FeatureSet,
-          overwrite: [FeatureItem.AllowUploadCustomImage, FeatureItem.AllowDBTCloudIntegration],
-        }).result.current.sort()
-      ).toEqual([
-        FeatureItem.AllowCustomDBT,
-        FeatureItem.AllowDBTCloudIntegration,
-        FeatureItem.AllowOAuthConnector,
-        FeatureItem.AllowUploadCustomImage,
-      ]);
-    });
-
-    it("workspace features can be cleared again", () => {
-      const { result, rerender } = getFeatures({
-        workspace: { [FeatureItem.AllowCustomDBT]: true } as FeatureSet,
-      });
-      expect(result.current.sort()).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowDBTCloudIntegration]);
-      rerender({ workspace: undefined });
-      expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
-    });
-
-    it("user features can be cleared again", () => {
-      const { result, rerender } = getFeatures({
-        user: { [FeatureItem.AllowCustomDBT]: true } as FeatureSet,
-      });
-      expect(result.current.sort()).toEqual([FeatureItem.AllowCustomDBT, FeatureItem.AllowDBTCloudIntegration]);
-      rerender({ user: undefined });
-      expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
+      ).toEqual([FeatureItem.AllowUploadCustomImage]);
     });
 
     it("overwritten features can be cleared again", () => {
