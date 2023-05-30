@@ -14,7 +14,7 @@ public class MailchimpOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new MailchimpOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new MailchimpOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

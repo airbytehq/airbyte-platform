@@ -78,6 +78,15 @@ public class JobsApiController implements JobsApi {
     return ApiHelper.execute(() -> jobHistoryHandler.getJobInfo(jobIdRequestBody));
   }
 
+  @Post("/get_without_logs")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public JobInfoRead getJobInfoWithoutLogs(final JobIdRequestBody jobIdRequestBody) {
+    return ApiHelper.execute(() -> jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody));
+  }
+
   @Post("/get_light")
   @Secured({READER})
   @SecuredWorkspace

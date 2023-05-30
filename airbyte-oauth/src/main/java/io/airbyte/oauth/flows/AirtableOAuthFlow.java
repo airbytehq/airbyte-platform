@@ -5,11 +5,9 @@
 package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.persistence.ConfigNotFoundException;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import io.airbyte.protocol.models.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -31,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -86,16 +83,9 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
     }
   }
 
-  public AirtableOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public AirtableOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
     this.clock = Clock.systemUTC();
-    this.secureRandom = new SecureRandom();
-  }
-
-  @VisibleForTesting
-  public AirtableOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
-    super(configRepository, httpClient, stateSupplier);
-    this.clock = clock;
     this.secureRandom = new SecureRandom();
   }
 
@@ -155,23 +145,23 @@ public class AirtableOAuthFlow extends BaseOAuth2Flow {
                                                  final Map<String, Object> queryParams,
                                                  final String redirectUrl,
                                                  final JsonNode inputOAuthConfiguration,
-                                                 final OAuthConfigSpecification oauthConfigSpecification)
+                                                 final OAuthConfigSpecification oauthConfigSpecification,
+                                                 final JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration);
-    final JsonNode oAuthParamConfig = getSourceOAuthParamConfig(workspaceId, sourceDefinitionId);
     if (containsIgnoredOAuthError(queryParams)) {
       return buildRequestError(queryParams);
     }
     return formatOAuthOutput(
-        oAuthParamConfig,
+        oauthParamConfig,
         completeOAuthFlow(
-            getClientIdUnsafe(oAuthParamConfig),
-            getClientSecretUnsafe(oAuthParamConfig),
+            getClientIdUnsafe(oauthParamConfig),
+            getClientSecretUnsafe(oauthParamConfig),
             extractCodeParameter(queryParams),
             extractStateParameter(queryParams),
             redirectUrl,
             inputOAuthConfiguration,
-            oAuthParamConfig),
+            oauthParamConfig),
         oauthConfigSpecification);
 
   }

@@ -65,6 +65,7 @@ interface TagInputProps {
   fieldValue: string[];
   itemType?: string;
   onChange: (value: string[]) => void;
+  onBlur?: () => void;
   error?: boolean;
   disabled?: boolean;
   id?: string;
@@ -79,7 +80,16 @@ const generateStringFromTag = (tag: Tag): string => tag.label;
 
 const delimiters = [",", ";"];
 
-export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, disabled, id, error, itemType }) => {
+export const TagInput: React.FC<TagInputProps> = ({
+  onChange,
+  fieldValue,
+  name,
+  disabled,
+  id,
+  error,
+  itemType,
+  onBlur,
+}) => {
   const [draftValue, setDraftValue] = useState("");
   const draftExists = draftValue.length > 0;
 
@@ -191,6 +201,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
    */
   const onBlurControl = () => {
     setDraftValue("");
+    onBlur?.();
   };
 
   const overwrittenComponents = useMemo(

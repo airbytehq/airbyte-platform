@@ -177,4 +177,115 @@ describe(`${Form.name}`, () => {
       await waitFor(() => expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue(NEW_FIRST_NAME));
     });
   });
+
+  describe("resetValues", () => {
+    interface TestFormValues {
+      firstName: string;
+      lastName: string;
+    }
+
+    const defaultValues = {
+      firstName: "",
+      lastName: "",
+    };
+
+    const TestForm: React.FC<{ onSubmit: (values: TestFormValues) => Promise<{ resetValues: TestFormValues }> }> = ({
+      onSubmit,
+    }) => {
+      return (
+        <Form<TestFormValues> schema={mockSchema} defaultValues={defaultValues} onSubmit={onSubmit}>
+          <FormControl name={FIRST_NAME.name} label={FIRST_NAME.label} fieldType="input" />
+          <FormControl name={LAST_NAME.name} label={LAST_NAME.label} fieldType="input" />
+          <FormSubmissionButtons />
+        </Form>
+      );
+    };
+
+    it("should reset form with empty field values(default values) after submission", async () => {
+      const onSubmit = async (values: TestFormValues) => {
+        await Promise.resolve(values);
+        return {
+          resetValues: defaultValues,
+        };
+      };
+
+      await render(<TestForm onSubmit={onSubmit} />);
+
+      userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+      userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
+        expect(screen.getByLabelText(LAST_NAME.label)).toHaveValue("Doe");
+      });
+
+      const submitButton = screen
+        .getAllByRole("button")
+        .filter((button) => button.getAttribute("type") === "submit")[0];
+      userEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("");
+        expect(screen.getByLabelText(LAST_NAME.label)).toHaveValue("");
+      });
+    });
+
+    it("should reset form with desired field values after submission", async () => {
+      const onSubmit = async (values: TestFormValues) => {
+        await Promise.resolve(values);
+        return {
+          resetValues: { firstName: "Jane", lastName: "Smith" },
+        };
+      };
+
+      await render(<TestForm onSubmit={onSubmit} />);
+
+      userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+      userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
+        expect(screen.getByLabelText(LAST_NAME.label)).toHaveValue("Doe");
+      });
+
+      const submitButton = screen
+        .getAllByRole("button")
+        .filter((button) => button.getAttribute("type") === "submit")[0];
+      userEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("Jane");
+        expect(screen.getByLabelText(LAST_NAME.label)).toHaveValue("Smith");
+      });
+    });
+
+    it("should NOT reset form with empty field values(default values) after unsuccessful submission", async () => {
+      const onSubmit = async (values: TestFormValues) => {
+        await Promise.reject(values);
+        return {
+          resetValues: defaultValues,
+        };
+      };
+
+      await render(<TestForm onSubmit={onSubmit} />);
+
+      userEvent.type(screen.getByLabelText(FIRST_NAME.label), "John");
+      userEvent.type(screen.getByLabelText(LAST_NAME.label), "Doe");
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
+        expect(screen.getByLabelText(LAST_NAME.label)).toHaveValue("Doe");
+      });
+
+      const submitButton = screen
+        .getAllByRole("button")
+        .filter((button) => button.getAttribute("type") === "submit")[0];
+      userEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(FIRST_NAME.label)).toHaveValue("John");
+        expect(screen.getByLabelText(LAST_NAME.label)).toHaveValue("Doe");
+      });
+    });
+  });
 });

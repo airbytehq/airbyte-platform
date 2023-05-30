@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -26,13 +25,13 @@ public class IntercomOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTHORIZE_URL = "https://app.intercom.com/a/oauth/connect";
   private static final String ACCESS_TOKEN_URL = "https://api.intercom.io/auth/eagle/token";
 
-  public IntercomOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public IntercomOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  public IntercomOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public IntercomOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

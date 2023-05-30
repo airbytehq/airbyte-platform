@@ -223,16 +223,6 @@ jest.mock("hooks/services/useWorkspace", () => ({
   }),
 }));
 
-jest.mock("hooks/services/Experiment/ExperimentService", () => ({
-  useExperiment: (id: string) => {
-    if (id === "connector.form.simplifyConfiguration") {
-      return true;
-    }
-    return undefined;
-  },
-  ExperimentProvider: ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>,
-}));
-
 describe("Connector form", () => {
   let result: ConnectorFormValues | undefined;
 
@@ -523,16 +513,34 @@ describe("Connector form", () => {
       });
     });
 
-    it("should load existing values in collapsed fields", async () => {
+    it("should load optional fields' default values in collapsed fields", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, additional_separate_group: "additional_separate_group_default" },
+        propertiesOverride: {
+          additional_same_group: { type: "string" },
+          additional_separate_group: { type: "string", group: "abc", default: "additional_separate_group_default" },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")?.getAttribute("value")).toEqual(
+        ""
+      );
+      expect(
+        getInputByName(container, "connectionConfiguration.additional_separate_group")?.getAttribute("value")
+      ).toEqual("additional_separate_group_default");
+    });
+
+    it("should auto-expand optional sections containing a field with an existing non-default value", async () => {
       const container = await renderForm({
         formValuesOverride: { ...filledForm, additional_same_group: "input1", additional_separate_group: "input2" },
         propertiesOverride: {
-          additional_separate_group: { type: "string", group: "abc" },
           additional_same_group: { type: "string" },
+          additional_separate_group: { type: "string", group: "abc", default: "additional_separate_group_default" },
         },
       });
-      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
-      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).toBeVisible();
       expect(getInputByName(container, "connectionConfiguration.additional_same_group")?.getAttribute("value")).toEqual(
         "input1"
       );
@@ -638,11 +646,13 @@ describe("Connector form", () => {
 
     it("should not submit with failed validation", async () => {
       const container = await renderForm({
-        formValuesOverride: { ...filledForm, additional_same_group: "inp" },
+        formValuesOverride: { ...filledForm },
         propertiesOverride: {
           additional_same_group: { type: "string", pattern: "input" },
         },
       });
+
+      userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "inp");
 
       await submitForm(container);
 
@@ -651,8 +661,7 @@ describe("Connector form", () => {
 
       expect(screen.getByText("The value must match the pattern input")).toBeInTheDocument();
 
-      const input = getInputByName(container, "connectionConfiguration.additional_same_group");
-      userEvent.type(input!, "ut");
+      userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "ut");
 
       await waitFor(() => userEvent.click(getSubmitButton(container)!));
 

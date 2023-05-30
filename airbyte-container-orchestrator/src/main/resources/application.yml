@@ -1,6 +1,15 @@
 micronaut:
+  application:
+    name: airbyte-container-orchestrator
   server:
     port: 9000
+  executors:
+    control-message:
+      type: fixed
+      n-threads: ${CONTROL_MESSAGE_EXECUTOR_THREADS:1}
+    stream-status:
+      type: fixed
+      n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
 
 airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}

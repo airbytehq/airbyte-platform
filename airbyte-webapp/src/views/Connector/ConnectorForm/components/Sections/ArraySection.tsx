@@ -1,5 +1,5 @@
-import { FieldArray, useField } from "formik";
 import React, { useMemo, useState } from "react";
+import { useFieldArray, useFormContext } from "react-hook-form";
 
 import { ArrayOfObjectsEditor } from "components";
 import GroupControls from "components/GroupControls";
@@ -42,17 +42,19 @@ const getItemDescription = (item: Record<string, string>, properties: FormBlock[
 };
 
 export const ArraySection: React.FC<ArraySectionProps> = ({ formField, path, disabled }) => {
-  const [field, , fieldHelper] = useField<Array<Record<string, string>>>(path);
+  const { watch, setValue } = useFormContext();
+  const value = watch(path);
+  // const [field, , fieldHelper] = useField<Array<Record<string, string>>>(path);
   const [editIndex, setEditIndex] = useState<number | undefined>();
   // keep the previous state of the currently edited item around so it can be restored on cancelling the form
   const [originalItem, setOriginalItem] = useState<Record<string, string> | undefined>();
 
   const items: Array<Record<string, string>> = useMemo(() => {
-    if (field.value === undefined || !Array.isArray(field.value)) {
+    if (value === undefined || !Array.isArray(value)) {
       return [];
     }
-    return field.value;
-  }, [field.value]);
+    return value;
+  }, [value]);
 
   // keep the list of rendered items stable as long as editing is in progress
   const itemsWithOverride = useMemo(() => {
@@ -86,16 +88,20 @@ export const ArraySection: React.FC<ArraySectionProps> = ({ formField, path, dis
 
   // on cancelling editing, either remove the item if it has been a new one or put back the old value in the form
   const onCancel = () => {
-    const newList = [...field.value];
+    const newList = [...value];
     if (!originalItem) {
       newList.pop();
     } else if (editIndex !== undefined && originalItem) {
       newList.splice(editIndex, 1, originalItem);
     }
 
-    fieldHelper.setValue(newList);
+    setValue(path, newList, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     clearEditIndex();
   };
+
+  const { remove } = useFieldArray({
+    name: path,
+  });
 
   return (
     <SectionContainer>
@@ -104,32 +110,27 @@ export const ArraySection: React.FC<ArraySectionProps> = ({ formField, path, dis
         key={`form-variable-fields-${formField?.fieldKey}`}
         label={<GroupLabel formField={formField} />}
       >
-        <FieldArray
-          name={path}
-          render={(arrayHelpers) => (
-            <ArrayOfObjectsEditor
-              editableItemIndex={editIndex}
-              onStartEdit={(n) => {
-                setEditIndex(n);
-                setOriginalItem(items[n]);
-              }}
-              onRemove={arrayHelpers.remove}
-              onCancel={onCancel}
-              items={itemsWithOverride}
-              renderItemName={renderItemName}
-              renderItemDescription={renderItemDescription}
+        <ArrayOfObjectsEditor
+          editableItemIndex={editIndex}
+          onStartEdit={(n) => {
+            setEditIndex(n);
+            setOriginalItem(items[n]);
+          }}
+          onRemove={remove}
+          onCancel={onCancel}
+          items={itemsWithOverride}
+          renderItemName={renderItemName}
+          renderItemDescription={renderItemDescription}
+          disabled={disabled}
+          editModalSize="sm"
+          renderItemEditorForm={(item) => (
+            <VariableInputFieldForm
+              formField={formField}
+              path={`${path}[${editIndex ?? 0}]`}
               disabled={disabled}
-              editModalSize="sm"
-              renderItemEditorForm={(item) => (
-                <VariableInputFieldForm
-                  formField={formField}
-                  path={`${path}[${editIndex ?? 0}]`}
-                  disabled={disabled}
-                  item={item}
-                  onDone={clearEditIndex}
-                  onCancel={onCancel}
-                />
-              )}
+              item={item}
+              onDone={clearEditIndex}
+              onCancel={onCancel}
             />
           )}
         />

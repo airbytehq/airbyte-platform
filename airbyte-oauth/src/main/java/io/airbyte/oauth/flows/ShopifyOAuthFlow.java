@@ -5,9 +5,7 @@
 package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -17,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -46,13 +43,8 @@ public class ShopifyOAuthFlow extends BaseOAuth2Flow {
     return String.join(",", SCOPES);
   }
 
-  public ShopifyOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
-  }
-
-  @VisibleForTesting
-  public ShopifyOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public ShopifyOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @Override

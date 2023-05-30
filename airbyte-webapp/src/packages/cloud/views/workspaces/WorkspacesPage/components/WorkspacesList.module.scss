@@ -1,0 +1,13 @@
+@use "scss/variables";
+
+.container {
+  max-width: variables.$width-connection-header;
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  padding: 0;
+
+  li {
+    list-style: none;
+  }
+}

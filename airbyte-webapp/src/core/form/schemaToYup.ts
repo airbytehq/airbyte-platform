@@ -2,7 +2,6 @@ import { JSONSchema7, JSONSchema7Type } from "json-schema";
 import * as yup from "yup";
 
 import { FormBlock, FormGroupItem, FormObjectArrayItem, FormConditionItem, FORM_PATTERN_ERROR } from "core/form/types";
-import { isDefined } from "utils/common";
 
 import { FormBuildError } from "./FormBuildError";
 
@@ -194,25 +193,12 @@ export const buildYupFormForJsonSchema = (
   }
 
   if (schema) {
-    const hasDefault = isDefined(jsonSchema.default);
-
-    if (hasDefault) {
-      // @ts-expect-error can't infer correct type here so lets just use default from json_schema
-      schema = schema.default(jsonSchema.default);
-    }
-
-    if (!hasDefault && jsonSchema.const) {
-      // @ts-expect-error can't infer correct type here so lets just use default from json_schema
-      schema = schema.oneOf([jsonSchema.const]).default(jsonSchema.const);
-    }
-
     if (jsonSchema.enum) {
       // @ts-expect-error as enum is array we are going to use it as oneOf for yup
       schema = schema.oneOf(jsonSchema.enum);
     }
 
     const isRequired =
-      !hasDefault &&
       parentSchema &&
       Array.isArray(parentSchema?.required) &&
       parentSchema.required.find((item) => item === propertyKey);

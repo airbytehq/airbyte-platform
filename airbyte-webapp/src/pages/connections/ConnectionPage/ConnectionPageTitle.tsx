@@ -17,8 +17,8 @@ import { useFeature, FeatureItem } from "hooks/services/Feature";
 import styles from "./ConnectionPageTitle.module.scss";
 import { ConnectionRoutePaths } from "../types";
 
-const LargeEnrollmentCallout = React.lazy(
-  () => import("packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout")
+const InlineEnrollmentCallout = React.lazy(
+  () => import("packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout")
 );
 
 export const ConnectionPageTitle: React.FC = () => {
@@ -92,9 +92,9 @@ export const ConnectionPageTitle: React.FC = () => {
         </Text>
         <ConnectionName />
         <div className={styles.statusContainer}>
-          <FlexContainer direction="column" gap="none">
+          <FlexContainer direction="column" gap="lg">
             <ConnectionInfoCard />
-            {fcpEnabled && <LargeEnrollmentCallout />}
+            {fcpEnabled && <InlineEnrollmentCallout />}
           </FlexContainer>
         </div>
       </div>

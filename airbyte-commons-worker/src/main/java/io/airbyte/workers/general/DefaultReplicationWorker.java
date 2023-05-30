@@ -6,54 +6,38 @@ package io.airbyte.workers.general;
 
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
-import io.airbyte.config.FailureReason;
-import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
-import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
-import io.airbyte.config.State;
-import io.airbyte.config.StreamSyncStats;
-import io.airbyte.config.SyncStats;
-import io.airbyte.config.WorkerDestinationConfig;
-import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.workers.RecordSchemaValidator;
-import io.airbyte.workers.WorkerMetricReporter;
-import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.context.ReplicationContext;
+import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.helper.FailureHelper;
+import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
-import io.airbyte.workers.internal.book_keeping.SyncStatsBuilder;
+import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,18 +69,14 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private final int attempt;
   private final ReplicationWorkerHelper replicationWorkerHelper;
   private final AirbyteSource source;
-  private final AirbyteMapper mapper;
   private final AirbyteDestination destination;
-  private final MessageTracker messageTracker;
   private final SyncPersistence syncPersistence;
-
   private final ExecutorService executors;
   private final AtomicBoolean cancelled;
   private final AtomicBoolean hasFailed;
   private final RecordSchemaValidator recordSchemaValidator;
-  private final WorkerMetricReporter metricReporter;
-  private final boolean fieldSelectionEnabled;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
+  private final ReplicationFeatureFlagReader replicationFeatureFlagReader;
 
   public DefaultReplicationWorker(final String jobId,
                                   final int attempt,
@@ -107,23 +87,22 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final SyncPersistence syncPersistence,
                                   final RecordSchemaValidator recordSchemaValidator,
                                   final FieldSelector fieldSelector,
-                                  final WorkerMetricReporter metricReporter,
                                   final ConnectorConfigUpdater connectorConfigUpdater,
-                                  final boolean fieldSelectionEnabled,
-                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone) {
+                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
+                                  final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
+                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
     this.jobId = jobId;
     this.attempt = attempt;
-    this.replicationWorkerHelper = new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence, connectorConfigUpdater);
+    this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
+        connectorConfigUpdater, replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
     this.source = source;
-    this.mapper = mapper;
     this.destination = destination;
-    this.messageTracker = messageTracker;
     this.syncPersistence = syncPersistence;
     this.executors = Executors.newFixedThreadPool(2);
     this.recordSchemaValidator = recordSchemaValidator;
-    this.metricReporter = metricReporter;
-    this.fieldSelectionEnabled = fieldSelectionEnabled;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
+    this.replicationFeatureFlagReader = replicationFeatureFlagReader;
 
     this.cancelled = new AtomicBoolean(false);
     this.hasFailed = new AtomicBoolean(false);
@@ -145,39 +124,31 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   @Override
   public final ReplicationOutput run(final StandardSyncInput syncInput, final Path jobRoot) throws WorkerException {
     LOGGER.info("start sync worker. job id: {} attempt id: {}", jobId, attempt);
-    LOGGER
-        .info("Committing states from " + (shouldCommitStateAsap(syncInput) ? "replication" : "persistState")
-            + " activity");
-    if (shouldCommitStatsAsap(syncInput)) {
-      LOGGER.info("Committing stats from replication activity");
-    }
+
     LineGobbler.startSection("REPLICATION");
-
-    // todo (cgardens) - this should not be happening in the worker. this is configuration information
-    // that is independent of workflow executions.
-    final WorkerDestinationConfig destinationConfig = WorkerUtils.syncToWorkerDestinationConfig(syncInput);
-    destinationConfig.setCatalog(mapper.mapCatalog(destinationConfig.getCatalog()));
-
-    final ThreadedTimeTracker timeTracker = new ThreadedTimeTracker();
-    timeTracker.trackReplicationStartTime();
-
-    final AtomicReference<FailureReason> replicationRunnableFailureRef = new AtomicReference<>();
-    final AtomicReference<FailureReason> destinationRunnableFailureRef = new AtomicReference<>();
 
     try {
       LOGGER.info("configured sync modes: {}", syncInput.getCatalog().getStreams()
           .stream()
           .collect(Collectors.toMap(s -> s.getStream().getNamespace() + "." + s.getStream().getName(),
               s -> String.format("%s - %s", s.getSyncMode(), s.getDestinationSyncMode()))));
-      LOGGER.debug("field selection enabled: {}", fieldSelectionEnabled);
-      final WorkerSourceConfig sourceConfig = WorkerUtils.syncToWorkerSourceConfig(syncInput);
 
-      ApmTraceUtils.addTagsToTrace(destinationConfig.getConnectionId(), jobId, jobRoot);
-      replicate(jobRoot, destinationConfig, timeTracker, replicationRunnableFailureRef, destinationRunnableFailureRef, sourceConfig,
-          syncInput.getConnectionId(), shouldCommitStateAsap(syncInput));
-      timeTracker.trackReplicationEndTime();
+      final ReplicationContext replicationContext =
+          new ReplicationContext(syncInput.getIsReset(), syncInput.getConnectionId(), syncInput.getSourceId(),
+              syncInput.getDestinationId(), Long.parseLong(jobId),
+              attempt, syncInput.getWorkspaceId());
+      ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
-      return getReplicationOutput(syncInput, destinationConfig, replicationRunnableFailureRef, destinationRunnableFailureRef, timeTracker);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationContext, syncInput);
+      LOGGER.info("Committing states from " + (flags.shouldCommitStateAsap() ? "replication" : "persistState") + " activity");
+      if (flags.shouldCommitStatsAsap()) {
+        LOGGER.info("Committing stats from replication activity");
+      }
+      replicationWorkerHelper.initialize(replicationContext, flags);
+
+      replicate(jobRoot, syncInput);
+
+      return replicationWorkerHelper.getReplicationOutput();
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       throw new WorkerException("Sync failed", e);
@@ -186,40 +157,24 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   }
 
   private void replicate(final Path jobRoot,
-                         final WorkerDestinationConfig destinationConfig,
-                         final ThreadedTimeTracker timeTracker,
-                         final AtomicReference<FailureReason> replicationRunnableFailureRef,
-                         final AtomicReference<FailureReason> destinationRunnableFailureRef,
-                         final WorkerSourceConfig sourceConfig,
-                         final UUID connectionId,
-                         final boolean commitStatesAsap) {
+                         final StandardSyncInput syncInput) {
     final Map<String, String> mdc = MDC.getCopyOfContextMap();
 
     // note: resources are closed in the opposite order in which they are declared. thus source will be
     // closed first (which is what we want).
     try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; destination; source) {
-      destination.start(destinationConfig, jobRoot);
-      timeTracker.trackSourceReadStartTime();
-      source.start(sourceConfig, jobRoot);
-      timeTracker.trackDestinationWriteStartTime();
-
-      final ReplicationContext replicationContext = new ReplicationContext(connectionId, sourceConfig.getSourceId(),
-          destinationConfig.getDestinationId());
-      replicationWorkerHelper.beforeReplication(sourceConfig.getCatalog());
+      replicationWorkerHelper.startDestination(destination, syncInput, jobRoot);
+      replicationWorkerHelper.startSource(source, syncInput, jobRoot);
 
       // note: `whenComplete` is used instead of `exceptionally` so that the original exception is still
       // thrown
       final CompletableFuture<?> readFromDstThread = CompletableFuture.runAsync(
-          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, replicationContext, mdc, timeTracker, commitStatesAsap),
+          readFromDstRunnable(destination, cancelled, replicationWorkerHelper, mdc),
           executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
-              if (ex.getCause() instanceof DestinationException) {
-                destinationRunnableFailureRef.set(FailureHelper.destinationFailure(ex, Long.valueOf(jobId), attempt));
-              } else {
-                destinationRunnableFailureRef.set(FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt));
-              }
+              replicationWorkerHelper.trackFailure(ex.getCause());
             }
           });
 
@@ -227,14 +182,12 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           source,
           destination,
           replicationWorkerHelper,
-          replicationContext,
           cancelled,
-          mdc,
-          timeTracker), executors)
+          mdc), executors)
           .whenComplete((msg, ex) -> {
             if (ex != null) {
               ApmTraceUtils.addExceptionToTrace(ex);
-              replicationRunnableFailureRef.set(getFailureReason(ex.getCause(), Long.parseLong(jobId), attempt));
+              replicationWorkerHelper.trackFailure(ex.getCause());
             }
           });
 
@@ -242,7 +195,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
         srcHeartbeatTimeoutChaperone.runWithHeartbeatThread(readSrcAndWriteDstThread);
       } catch (final HeartbeatTimeoutChaperone.HeartbeatTimeoutException ex) {
         ApmTraceUtils.addExceptionToTrace(ex);
-        replicationRunnableFailureRef.set(getFailureReason(ex, Long.parseLong(jobId), attempt));
+        replicationWorkerHelper.trackFailure(ex);
       }
 
       LOGGER.info("Waiting for source and destination threads to complete.");
@@ -254,8 +207,10 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       CompletableFuture.allOf(readSrcAndWriteDstThread, readFromDstThread).get();
       LOGGER.info("Source and destination threads complete.");
 
+      replicationWorkerHelper.endOfReplication();
     } catch (final Exception e) {
       hasFailed.set(true);
+      replicationWorkerHelper.markFailed();
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.error("Sync worker failed.", e);
     } finally {
@@ -263,27 +218,11 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     }
   }
 
-  @VisibleForTesting
-  static FailureReason getFailureReason(final Throwable ex, final long jobId, final int attempt) {
-    if (ex instanceof SourceException) {
-      return FailureHelper.sourceFailure(ex, Long.valueOf(jobId), attempt);
-    } else if (ex instanceof DestinationException) {
-      return FailureHelper.destinationFailure(ex, Long.valueOf(jobId), attempt);
-    } else if (ex instanceof HeartbeatTimeoutChaperone.HeartbeatTimeoutException) {
-      return FailureHelper.sourceHeartbeatFailure(ex, Long.valueOf(jobId), attempt);
-    } else {
-      return FailureHelper.replicationFailure(ex, Long.valueOf(jobId), attempt);
-    }
-  }
-
   @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   private static Runnable readFromDstRunnable(final AirbyteDestination destination,
                                               final AtomicBoolean cancelled,
                                               final ReplicationWorkerHelper replicationWorkerHelper,
-                                              final ReplicationContext replicationContext,
-                                              final Map<String, String> mdc,
-                                              final ThreadedTimeTracker timeHolder,
-                                              final boolean commitStatesAsap) {
+                                              final Map<String, String> mdc) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Destination output thread started.");
@@ -296,12 +235,13 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             throw new DestinationException("Destination process read attempt failed", e);
           }
           if (messageOptional.isPresent()) {
-            replicationWorkerHelper.processMessageFromDestination(messageOptional.get(), commitStatesAsap, replicationContext);
+            replicationWorkerHelper.processMessageFromDestination(messageOptional.get());
           }
         }
-        timeHolder.trackDestinationWriteEndTime();
         if (!cancelled.get() && destination.getExitValue() != 0) {
           throw new DestinationException("Destination process exited with non-zero exit code " + destination.getExitValue());
+        } else {
+          replicationWorkerHelper.endOfDestination();
         }
       } catch (final Exception e) {
         if (!cancelled.get()) {
@@ -325,10 +265,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
   private static Runnable readFromSrcAndWriteToDstRunnable(final AirbyteSource source,
                                                            final AirbyteDestination destination,
                                                            final ReplicationWorkerHelper replicationWorkerHelper,
-                                                           final ReplicationContext replicationContext,
                                                            final AtomicBoolean cancelled,
-                                                           final Map<String, String> mdc,
-                                                           final ThreadedTimeTracker timeHolder) {
+                                                           final Map<String, String> mdc) {
     return () -> {
       MDC.setContextMap(mdc);
       LOGGER.info("Replication thread started.");
@@ -345,7 +283,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
           if (messageOptional.isPresent()) {
             final AirbyteMessage airbyteMessage = messageOptional.get();
             final Optional<AirbyteMessage> processedAirbyteMessage =
-                replicationWorkerHelper.processMessageFromSource(airbyteMessage, replicationContext);
+                replicationWorkerHelper.processMessageFromSource(airbyteMessage);
 
             if (processedAirbyteMessage.isPresent()) {
               final AirbyteMessage message = processedAirbyteMessage.get();
@@ -366,9 +304,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
             }
           }
         }
-        timeHolder.trackSourceReadEndTime();
-
-        replicationWorkerHelper.endOfSource(replicationContext);
+        replicationWorkerHelper.endOfSource();
 
         try {
           destination.notifyEndOfInput();
@@ -397,131 +333,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     };
   }
 
-  private ReplicationOutput getReplicationOutput(final StandardSyncInput syncInput,
-                                                 final WorkerDestinationConfig destinationConfig,
-                                                 final AtomicReference<FailureReason> replicationRunnableFailureRef,
-                                                 final AtomicReference<FailureReason> destinationRunnableFailureRef,
-                                                 final ThreadedTimeTracker timeTracker)
-      throws JsonProcessingException {
-    final ReplicationStatus outputStatus;
-    // First check if the process was cancelled. Cancellation takes precedence over failures.
-    if (cancelled.get()) {
-      outputStatus = ReplicationStatus.CANCELLED;
-      // if the process was not cancelled but still failed, then it's an actual failure
-    } else if (hasFailed.get()) {
-      outputStatus = ReplicationStatus.FAILED;
-    } else {
-      outputStatus = ReplicationStatus.COMPLETED;
-    }
-
-    final boolean hasReplicationCompleted = outputStatus == ReplicationStatus.COMPLETED;
-    final SyncStats totalSyncStats = getTotalStats(timeTracker, hasReplicationCompleted);
-    final List<StreamSyncStats> streamSyncStats = SyncStatsBuilder.getPerStreamStats(messageTracker.getSyncStatsTracker(),
-        hasReplicationCompleted);
-
-    if (!hasReplicationCompleted && messageTracker.getSyncStatsTracker().getUnreliableStateTimingMetrics()) {
-      LOGGER.warn("Could not reliably determine committed record counts, committed record stats will be set to null");
-    }
-
-    final ReplicationAttemptSummary summary = new ReplicationAttemptSummary()
-        .withStatus(outputStatus)
-        // TODO records and bytes synced should no longer be used as we are consuming total stats, we should
-        // make a pass to remove them.
-        .withRecordsSynced(messageTracker.getSyncStatsTracker().getTotalRecordsEmitted())
-        .withBytesSynced(messageTracker.getSyncStatsTracker().getTotalBytesEmitted())
-        .withTotalStats(totalSyncStats)
-        .withStreamStats(streamSyncStats)
-        .withStartTime(timeTracker.getReplicationStartTime())
-        .withEndTime(System.currentTimeMillis());
-
-    final ReplicationOutput output = new ReplicationOutput()
-        .withReplicationAttemptSummary(summary)
-        .withOutputCatalog(destinationConfig.getCatalog());
-
-    final List<FailureReason> failures = getFailureReasons(replicationRunnableFailureRef, destinationRunnableFailureRef,
-        output);
-
-    if (!shouldCommitStateAsap(syncInput)) {
-      prepStateForLaterSaving(syncInput, output);
-    }
-
-    final ObjectMapper mapper = new ObjectMapper();
-    LOGGER.info("sync summary: {}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(summary));
-    LOGGER.info("failures: {}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(failures));
-    LineGobbler.endSection("REPLICATION");
-
-    return output;
-  }
-
-  private SyncStats getTotalStats(final ThreadedTimeTracker timeTracker, final boolean hasReplicationCompleted) {
-    final SyncStats totalSyncStats = SyncStatsBuilder.getTotalStats(messageTracker.getSyncStatsTracker(), hasReplicationCompleted);
-    totalSyncStats.setReplicationStartTime(timeTracker.getReplicationStartTime());
-    totalSyncStats.setReplicationEndTime(timeTracker.getReplicationEndTime());
-    totalSyncStats.setSourceReadStartTime(timeTracker.getSourceReadStartTime());
-    totalSyncStats.setSourceReadEndTime(timeTracker.getSourceReadEndTime());
-    totalSyncStats.setDestinationWriteStartTime(timeTracker.getDestinationWriteStartTime());
-    totalSyncStats.setDestinationWriteEndTime(timeTracker.getDestinationWriteEndTime());
-
-    return totalSyncStats;
-  }
-
-  /**
-   * Extracts state out to the {@link ReplicationOutput} so it can be later saved in the
-   * PersistStateActivity - State is NOT SAVED here.
-   *
-   * @param syncInput sync input
-   * @param output sync output
-   */
-  private void prepStateForLaterSaving(final StandardSyncInput syncInput, final ReplicationOutput output) {
-    if (messageTracker.getSourceOutputState().isPresent()) {
-      LOGGER.info("Source output at least one state message");
-    } else {
-      LOGGER.info("Source did not output any state messages");
-    }
-
-    if (messageTracker.getDestinationOutputState().isPresent()) {
-      LOGGER.info("State capture: Updated state to: {}", messageTracker.getDestinationOutputState());
-      final State state = messageTracker.getDestinationOutputState().get();
-      output.withState(state);
-    } else if (syncInput.getState() != null) {
-      LOGGER.warn("State capture: No new state, falling back on input state: {}", syncInput.getState());
-      output.withState(syncInput.getState());
-    } else {
-      LOGGER.warn("State capture: No state retained.");
-    }
-
-    if (messageTracker.getSyncStatsTracker().getUnreliableStateTimingMetrics()) {
-      metricReporter.trackStateMetricTrackerError();
-    }
-  }
-
-  private List<FailureReason> getFailureReasons(final AtomicReference<FailureReason> replicationRunnableFailureRef,
-                                                final AtomicReference<FailureReason> destinationRunnableFailureRef,
-                                                final ReplicationOutput output) {
-    // only .setFailures() if a failure occurred or if there is an AirbyteErrorTraceMessage
-    final FailureReason sourceFailure = replicationRunnableFailureRef.get();
-    final FailureReason destinationFailure = destinationRunnableFailureRef.get();
-    final FailureReason traceMessageFailure = messageTracker.errorTraceMessageFailure(Long.valueOf(jobId), attempt);
-
-    final List<FailureReason> failures = new ArrayList<>();
-
-    if (traceMessageFailure != null) {
-      failures.add(traceMessageFailure);
-    }
-
-    if (sourceFailure != null) {
-      failures.add(sourceFailure);
-    }
-    if (destinationFailure != null) {
-      failures.add(destinationFailure);
-    }
-    if (!failures.isEmpty()) {
-      output.setFailures(failures);
-    }
-    return failures;
-  }
-
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public void cancel() {
     // Resources are closed in the opposite order they are declared.
@@ -533,6 +344,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       LOGGER.error("Unable to cancel due to interruption.", e);
     }
     cancelled.set(true);
+    replicationWorkerHelper.markCancelled();
 
     LOGGER.info("Cancelling destination...");
     try {
@@ -549,24 +361,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.info("Error cancelling source: ", e);
     }
-
-  }
-
-  /**
-   * Helper function to read the shouldCommitStateAsap feature flag.
-   */
-  public static boolean shouldCommitStateAsap(final StandardSyncInput syncInput) {
-    return syncInput.getCommitStateAsap() != null && syncInput.getCommitStateAsap();
-  }
-
-  /**
-   * Helper function to read the shouldCommitStatsAsap feature flag.
-   */
-  public static boolean shouldCommitStatsAsap(final StandardSyncInput syncInput) {
-    // For consistency, we should only be committing stats early if we are committing states early.
-    // Otherwise, we are risking stats discrepancy as we are committing stats for states that haven't
-    // been persisted yet.
-    return shouldCommitStateAsap(syncInput) && syncInput.getCommitStatsAsap() != null && syncInput.getCommitStatsAsap();
   }
 
 }

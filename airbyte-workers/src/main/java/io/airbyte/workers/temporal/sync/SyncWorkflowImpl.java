@@ -116,7 +116,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
       final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
       if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
-        LOGGER.info("Connection is disabled. Cancelling run.");
+        LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
         final StandardSyncOutput output =
             new StandardSyncOutput()
                 .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
@@ -196,7 +196,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
     } else {
-      int withConnectionVersion =
+      final int withConnectionVersion =
           Workflow.getVersion(USE_NORMALIZATION_WITH_CONNECTION, Workflow.DEFAULT_VERSION, USE_NORMALIZATION_WITH_CONNECTION_VERSION);
       if (withConnectionVersion == Workflow.DEFAULT_VERSION) {
         return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),

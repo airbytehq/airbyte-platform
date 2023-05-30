@@ -23,7 +23,7 @@ class SurveymonkeyOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new SurveymonkeyOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new SurveymonkeyOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

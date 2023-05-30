@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -37,8 +36,8 @@ public class LeverOAuthFlow extends BaseOAuth2Flow {
       "users:read:admin",
       "offline_access");
 
-  public LeverOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public LeverOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   private String getAudience(final JsonNode inputOAuthConfiguration) {

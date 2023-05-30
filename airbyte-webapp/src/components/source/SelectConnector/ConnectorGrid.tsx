@@ -4,7 +4,6 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { BuilderConnectorButton, ConnectorButton } from "./ConnectorButton";
 import styles from "./ConnectorGrid.module.scss";
@@ -23,8 +22,6 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
   onOpenRequestConnectorModal,
   showConnectorBuilderButton = false,
 }: ConnectorGridProps<T>) => {
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", true);
-
   return (
     <>
       {connectorDefinitions.length === 0 && (
@@ -41,7 +38,7 @@ export const ConnectorGrid = <T extends ConnectorDefinition>({
             : definition.destinationDefinitionId;
           return <ConnectorButton definition={definition} onClick={onConnectorButtonClick} key={key} />;
         })}
-        {showBuilderNavigationLinks && showConnectorBuilderButton && <BuilderConnectorButton />}
+        {showConnectorBuilderButton && <BuilderConnectorButton />}
         <RequestNewConnectorButton onClick={onOpenRequestConnectorModal} />
       </div>
     </>

@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 import { Outlet } from "react-router-dom";
@@ -86,11 +85,7 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
             </MenuContent>
           </MenuContent>
         </SideBar>
-        <div
-          className={classNames(styles.content, {
-            [styles.speedyConnectionBanner]: showExperimentBanner,
-          })}
-        >
+        <div className={styles.content}>
           {showExperimentBanner ? <SpeedyConnectionBanner /> : <WorkspaceStatusBanner />}
           <div className={styles.dataBlock}>
             <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>

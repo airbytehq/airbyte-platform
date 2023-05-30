@@ -4,12 +4,9 @@
 
 package io.airbyte.workers.internal;
 
-import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.MdcScope;
 import io.airbyte.commons.protocol.AirbyteMessageMigrator;
@@ -173,7 +170,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
    * If detectVersion is set to true, it will decide which protocol version to use from the content of
    * the stream rather than the one passed from the constructor.
    */
-  @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public Stream<AirbyteMessage> create(final BufferedReader bufferedReader) {
     detectAndInitialiseMigrators(bufferedReader);
@@ -205,7 +201,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     }
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
   private Stream<AirbyteMessage> addLineReadLogic(final BufferedReader bufferedReader) {
     final var metricClient = MetricClientFactory.getMetricClient();
     return bufferedReader

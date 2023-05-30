@@ -5,8 +5,6 @@ import { NavigateFunction, useNavigate } from "react-router-dom";
 import { useLocation } from "react-use";
 import { LocationSensorState } from "react-use/lib/useLocation";
 
-import LoadingPage from "components/LoadingPage";
-
 import { isFormBuildError } from "core/form/FormBuildError";
 import { CommonRequestError } from "core/request/CommonRequestError";
 import { isVersionError } from "core/request/VersionError";
@@ -22,14 +20,12 @@ interface ApiErrorBoundaryState {
   message?: string;
   didRetry?: boolean;
   retryDelay?: number;
-  waitForRetry?: boolean;
 }
 
 enum ErrorId {
   VersionMismatch = "version.mismatch",
   FormBuild = "form.build",
   ServerUnavailable = "server.unavailable",
-  FetchModuleError = "module.fetch",
   UnknownError = "unknown",
 }
 
@@ -44,7 +40,6 @@ interface ApiErrorBoundaryProps {
   onError?: (errorId?: string) => void;
 }
 
-const MODULE_FETCH_ERROR_KEY = "airbyte:lastModuleFetchError";
 const RETRY_DELAY = 2500;
 
 class ApiErrorBoundaryComponent extends React.Component<
@@ -56,21 +51,6 @@ class ApiErrorBoundaryComponent extends React.Component<
   };
 
   static getDerivedStateFromError(error: { message: string; status?: number; __type?: string }): ApiErrorBoundaryState {
-    if (error.message.includes("Failed to fetch dynamically imported module")) {
-      const lastModuleFetchError = Number(sessionStorage.getItem(MODULE_FETCH_ERROR_KEY) || "0");
-      if (!lastModuleFetchError || Date.now() - lastModuleFetchError >= 10_000) {
-        // The last module fetch error is more than 10s ago, i.e. we assume we're not in the direct reload of the previous module fetch error
-        // thus we're trying to reload the page, since likely the webapp was just updated.
-        console.warn("Reloading the webapp due to a failed module fetch.");
-        sessionStorage.setItem(MODULE_FETCH_ERROR_KEY, String(Date.now()));
-        window.location.reload();
-        return { waitForRetry: true };
-      }
-
-      console.error("Got a module fetch error but retried recently, so going to show it.");
-      return { errorId: ErrorId.FetchModuleError, message: "An error occured loading parts of the webapp." };
-    }
-
     // Update state so the next render will show the fallback UI.
     if (isVersionError(error)) {
       return { errorId: ErrorId.VersionMismatch, message: error.message };
@@ -121,11 +101,7 @@ class ApiErrorBoundaryComponent extends React.Component<
 
   render(): React.ReactNode {
     const { navigate, children } = this.props;
-    const { errorId, didRetry, message, retryDelay, waitForRetry } = this.state;
-
-    if (waitForRetry) {
-      return <LoadingPage />;
-    }
+    const { errorId, didRetry, message, retryDelay } = this.state;
 
     if (errorId === ErrorId.VersionMismatch) {
       return <ErrorOccurredView message={message} />;

@@ -1,4 +1,3 @@
-import { useField } from "formik";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -14,31 +13,21 @@ import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { BuilderStream, LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER } from "../types";
+import { LIST_PARTITION_ROUTER, SUBSTREAM_PARTITION_ROUTER, StreamPathFn, BuilderListPartitionRouter } from "../types";
 
 interface PartitionSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
+const EMPTY_LIST_PARTITION_ROUTER: BuilderListPartitionRouter = {
+  type: LIST_PARTITION_ROUTER,
+  values: { type: "list", value: [] },
+  cursor_field: "",
+};
+
 export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderStream["partitionRouter"]>(streamFieldPath("partitionRouter"));
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      helpers.setValue([
-        {
-          type: LIST_PARTITION_ROUTER,
-          values: { type: "list", value: [] },
-          cursor_field: "",
-        },
-      ]);
-    } else {
-      helpers.setValue(undefined);
-    }
-  };
-  const toggledOn = field.value !== undefined;
 
   const getSlicingOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {
@@ -58,7 +47,7 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
                 label: "Value List",
                 typeValue: "list",
                 default: { value: [] },
-                children: <BuilderField type="array" path={buildPath("values.value")} label="Value list" />,
+                children: <BuilderField type="array" path={buildPath("values.value")} label="Value List" />,
               },
               {
                 label: "User Input",
@@ -137,8 +126,8 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
         />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("partitionRouter"),
+        defaultValue: [EMPTY_LIST_PARTITION_ROUTER],
       }}
       copyConfig={{
         path: "partitionRouter",
@@ -150,16 +139,12 @@ export const PartitionSection: React.FC<PartitionSectionProps> = ({ streamFieldP
       <BuilderList
         addButtonLabel={formatMessage({ id: "connectorBuilder.addNewPartitionRouter" })}
         basePath={streamFieldPath("partitionRouter")}
-        emptyItem={{
-          type: LIST_PARTITION_ROUTER,
-          values: [],
-          cursor_field: "",
-        }}
+        emptyItem={EMPTY_LIST_PARTITION_ROUTER}
       >
         {({ buildPath }) => (
           <BuilderOneOf
             path={buildPath("")}
-            label="Partition router"
+            label="Partition Router"
             manifestOptionPaths={["ListPartitionRouter", "ParentStreamConfig"]}
             tooltip="Method to use on this router"
             options={getSlicingOptions(buildPath)}

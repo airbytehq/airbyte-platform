@@ -12,7 +12,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,11 +20,11 @@ class HealthHandlerTest {
 
   private static final String CDK_VERSION = "0.0.0";
   private HealthHandler healthHandler;
-  private CdkVersionProvider cdkVersionProvider;
+  private CachedCdkVersionProviderDecorator cdkVersionProvider;
 
   @BeforeEach
   void setup() {
-    cdkVersionProvider = mock(CdkVersionProvider.class);
+    cdkVersionProvider = mock(CachedCdkVersionProviderDecorator.class);
     healthHandler = new HealthHandler(cdkVersionProvider);
   }
 

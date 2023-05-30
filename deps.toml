@@ -1,8 +1,8 @@
 [versions]
-airbyte-protocol = "1.0.0"
+airbyte-protocol = "0.3.6"
 commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
-datadog-version = "1.11.2"
+datadog-version = "1.14.0"
 docker-java = "3.2.8"
 fasterxml_version = "2.14.2"
 flyway = "7.14.0"
@@ -18,16 +18,16 @@ kotlin = "1.8.20"
 kubernetes-client = "6.5.1"
 log4j = "2.17.2"
 lombok = "1.18.24"
-micronaut = "3.9.1"
+micronaut = "3.9.2"
 micronaut-data = "3.10.0"
 micronaut-email = "1.5.0"
 micronaut-jaxrs = "3.4.0"
 micronaut-jdbc = "4.8.0"
 micronaut-micrometer = "4.8.3"
 micronaut-security = "3.11.0"
+micronaut-test = "3.8.2"
 mockito = "4.11.0"
 okhttp3 = "4.10.0"
-micronaut-test = "3.8.2"
 platform-testcontainers = "1.17.6"
 postgresql = "42.5.4"
 reactor = "3.5.5"
@@ -147,15 +147,20 @@ micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "mi
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut" }
 micronaut-http-server-netty = { module = "io.micronaut:micronaut-http-server-netty", version.ref = "micronaut" }
+micronaut-http-validation = { module = "io.micronaut:micronaut-http-validation", version.ref = "micronaut" }
 micronaut-inject-java = { module = "io.micronaut:micronaut-inject-java", version.ref = "micronaut" }
+micronaut-jackson-databind = { module = "io.micronaut:micronaut-jackson-databind", version.ref = "micronaut-jaxrs" }
 micronaut-jaxrs-processor = { module = "io.micronaut.jaxrs:micronaut-jaxrs-processor", version.ref = "micronaut-jaxrs" }
 micronaut-jaxrs-server = { module = "io.micronaut.jaxrs:micronaut-jaxrs-server", version.ref = "micronaut-jaxrs" }
+micronaut-jaxrs-server-security = { module = "io.micronaut.jaxrs:micronaut-jaxrs-server-security", version.ref = "micronaut-jaxrs" }
 micronaut-jdbc = { module = "io.micronaut.sql:micronaut-jdbc", version.ref = "micronaut-jdbc" }
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari", version.ref = "micronaut-jdbc" }
 micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq", version.ref = "micronaut-jdbc" }
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
+micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "2.6.0" }
+micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "5.3.2" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
@@ -169,9 +174,9 @@ jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat", "jac
 junit = ["junit-jupiter-api", "junit-jupiter-params", "mockito-junit-jupiter"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client"]
 log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
-micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-security", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
+micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
 micronaut-annotation = ["jakarta-inject", "micronaut-inject-java"]
-micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor"]
+micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
 micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]
@@ -185,7 +190,6 @@ temporal = ["temporal-sdk", "temporal-serviceclient"]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 js2p = { id = "com.github.eirnym.js2p", version = "1.0" }
-micronaut-minimal-application = { id = "io.micronaut.minimal.application", version = "3.7.9" }
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "8.1" }
 openapi-generator = { id = "org.openapi.generator", version = "6.2.1" }

@@ -20,17 +20,16 @@ export const EnrollLink: React.FC<PropsWithChildren<unknown>> = ({ children }) =
 };
 
 interface InlineEnrollmentCalloutProps {
-  withBottomMargin?: boolean;
+  withMargin?: boolean;
 }
 
-export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = ({ withBottomMargin }) => {
-  const { userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { showEnrollmentUi } = enrollmentStatusQuery.data || {};
+export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = ({ withMargin }) => {
+  const { userDidEnroll, programStatusQuery } = useFreeConnectorProgram();
+  const { showEnrollmentUi } = programStatusQuery.data || {};
 
   if (userDidEnroll || !showEnrollmentUi) {
     return null;
   }
-
   return (
     <Message
       type="info"
@@ -44,7 +43,7 @@ export const InlineEnrollmentCallout: React.FC<InlineEnrollmentCalloutProps> = (
           />
         </Text>
       }
-      className={classNames(styles.container, { [styles.withBottomMargin]: withBottomMargin })}
+      className={classNames(styles.container, { [styles.withMargin]: withMargin })}
     />
   );
 };

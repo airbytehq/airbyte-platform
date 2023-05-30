@@ -5,9 +5,7 @@
 package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -15,7 +13,6 @@ import java.net.http.HttpClient;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -25,13 +22,8 @@ public class ZendeskChatOAuthFlow extends BaseOAuth2Flow {
 
   private static final String ACCESS_TOKEN_URL = "https://www.zopim.com/oauth2/token";
 
-  public ZendeskChatOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
-  }
-
-  @VisibleForTesting
-  public ZendeskChatOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public ZendeskChatOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @Override

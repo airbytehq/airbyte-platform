@@ -10,20 +10,26 @@ import {
   FormikConnectionFormValues,
   useConnectionValidationSchema,
 } from "components/connection/ConnectionForm/formConfig";
+import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
 import { SchemaError } from "components/connection/CreateConnectionForm/SchemaError";
 import LoadingSchema from "components/LoadingSchema";
+import { FlexContainer } from "components/ui/Flex";
+import { Message } from "components/ui/Message/Message";
 
 import { toWebBackendConnectionUpdate } from "core/domain/connection";
+import { SchemaChange } from "core/request/AirbyteClient";
 import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
+import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import {
   tidyConnectionFormValues,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useConnectionService, ValuesProps } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -42,6 +48,40 @@ const ValidateFormOnSchemaRefresh: React.FC = () => {
     }
   }, [setTouched, schemaHasBeenRefreshed]);
 
+  return null;
+};
+
+const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange }> = ({ dirty, schemaChange }) => {
+  const { hasNonBreakingSchemaChange, hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
+  const { refreshSchema } = useConnectionFormService();
+  const isNewConnectionFlow = useExperiment("connection.updatedConnectionFlow", false);
+
+  const refreshWithConfirm = useRefreshSourceSchemaWithConfirmationOnDirty(dirty);
+  if (!isNewConnectionFlow) {
+    return null;
+  }
+
+  if (hasNonBreakingSchemaChange) {
+    return (
+      <Message
+        type="warning"
+        text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
+        actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
+        onAction={refreshSchema}
+      />
+    );
+  }
+
+  if (hasBreakingSchemaChange) {
+    return (
+      <Message
+        type="error"
+        text={<FormattedMessage id="connection.schemaChange.breaking" />}
+        actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
+        onAction={refreshWithConfirm}
+      />
+    );
+  }
   return null;
 };
 
@@ -188,27 +228,30 @@ export const ConnectionReplicationPage: React.FC = () => {
           enableReinitialize
         >
           {({ isSubmitting, isValid, dirty, resetForm, status, errors }) => (
-            <SchemaChangeBackdrop>
-              <Form>
-                <ValidateFormOnSchemaRefresh />
-                <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty || schemaHasBeenRefreshed} />
-                <div className={styles.editControlsContainer}>
-                  <EditControls
-                    hidden={!status.editControlsVisible}
-                    isSubmitting={isSubmitting}
-                    submitDisabled={!isValid}
-                    dirty={dirty}
-                    resetForm={async () => {
-                      resetForm();
-                      discardRefreshedSchema();
-                    }}
-                    successMessage={saved && !dirty && <FormattedMessage id="form.changesSaved" />}
-                    errorMessage={getErrorMessage(isValid, dirty, errors)}
-                    enableControls={schemaHasBeenRefreshed || dirty}
-                  />
-                </div>
-              </Form>
-            </SchemaChangeBackdrop>
+            <FlexContainer direction="column">
+              <SchemaChangeMessage dirty={dirty} schemaChange={connection.schemaChange} />
+              <SchemaChangeBackdrop>
+                <Form>
+                  <ValidateFormOnSchemaRefresh />
+                  <ConnectionFormFields isSubmitting={isSubmitting} dirty={dirty || schemaHasBeenRefreshed} />
+                  <div className={styles.editControlsContainer}>
+                    <EditControls
+                      hidden={!status.editControlsVisible}
+                      isSubmitting={isSubmitting}
+                      submitDisabled={!isValid}
+                      dirty={dirty}
+                      resetForm={async () => {
+                        resetForm();
+                        discardRefreshedSchema();
+                      }}
+                      successMessage={saved && !dirty && <FormattedMessage id="form.changesSaved" />}
+                      errorMessage={getErrorMessage(isValid, dirty, errors)}
+                      enableControls={schemaHasBeenRefreshed || dirty}
+                    />
+                  </div>
+                </Form>
+              </SchemaChangeBackdrop>
+            </FlexContainer>
           )}
         </Formik>
       ) : (

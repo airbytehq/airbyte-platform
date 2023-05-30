@@ -3,6 +3,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useUnmount } from "react-use";
 import { Subscription } from "rxjs";
 
+import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 
 import { OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
@@ -82,9 +83,9 @@ export const OAuthLogin: React.FC = () => {
   return (
     <div>
       {isLoading && (
-        <div className={styles.spinner}>
+        <FlexContainer justifyContent="center" alignItems="center" className={styles.spinner}>
           <Spinner />
-        </div>
+        </FlexContainer>
       )}
       {!isLoading && (
         <div className={styles.buttons}>

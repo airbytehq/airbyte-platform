@@ -18,12 +18,17 @@ const getExperiment: ExperimentService["getExperiment"] = (key): any => {
   throw new Error(`${key} not mocked for testing`);
 };
 
+const addContext = jest.fn();
+const removeContext = jest.fn();
+
 describe("ExperimentService", () => {
   describe("useExperiment", () => {
     it("should return the value from the ExperimentService if provided", () => {
       const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <ExperimentProvider
           value={{
+            addContext,
+            removeContext,
             getExperiment,
             getExperimentChanges$: () => EMPTY,
           }}
@@ -37,8 +42,15 @@ describe("ExperimentService", () => {
 
     it("should return the defaultValue if ExperimentService provides undefined", () => {
       const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <ExperimentProvider value={{ getExperiment: () => undefined as any, getExperimentChanges$: () => EMPTY }}>
+        <ExperimentProvider
+          value={{
+            addContext,
+            removeContext,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            getExperiment: () => undefined as any,
+            getExperimentChanges$: () => EMPTY,
+          }}
+        >
           {children}
         </ExperimentProvider>
       );
@@ -54,8 +66,15 @@ describe("ExperimentService", () => {
     it("should rerender whenever the ExperimentService emits a new value", () => {
       const subject = new Subject<TestExperimentValueType>();
       const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <ExperimentProvider value={{ getExperiment, getExperimentChanges$: () => subject.asObservable() as any }}>
+        <ExperimentProvider
+          value={{
+            addContext,
+            removeContext,
+            getExperiment,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            getExperimentChanges$: () => subject.asObservable() as any,
+          }}
+        >
           {children}
         </ExperimentProvider>
       );

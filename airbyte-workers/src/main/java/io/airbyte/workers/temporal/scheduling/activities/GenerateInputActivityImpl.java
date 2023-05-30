@@ -397,7 +397,8 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withWorkspaceId(config.getWorkspaceId())
           .withCommitStateAsap(true)
           .withCommitStatsAsap(featureFlagClient.boolVariation(CommitStatsAsap.INSTANCE, new Multi(featureFlagContext)))
-          .withNormalizeInDestinationContainer(shouldNormalizeInDestination);
+          .withNormalizeInDestinationContainer(shouldNormalizeInDestination)
+          .withIsReset(ConfigType.RESET_CONNECTION.equals(jobConfigType));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
 

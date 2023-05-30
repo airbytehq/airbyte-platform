@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -25,6 +24,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.model.generated.AirbyteStream;
+import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -42,12 +43,14 @@ import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.FailureOrigin;
 import io.airbyte.api.model.generated.FailureReason;
 import io.airbyte.api.model.generated.FailureType;
+import io.airbyte.api.model.generated.FieldAdd;
 import io.airbyte.api.model.generated.FieldTransform;
 import io.airbyte.api.model.generated.JobConfigType;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.LogRead;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
+import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCoreConfig;
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
@@ -183,6 +186,7 @@ class SchedulerHandlerTest {
       .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()));
 
   private static final StreamDescriptor STREAM_DESCRIPTOR = new StreamDescriptor().withName("1");
+  public static final String A_DIFFERENT_STREAM = "aDifferentStream";
 
   private SchedulerHandler schedulerHandler;
   private ConfigRepository configRepository;
@@ -231,7 +235,7 @@ class SchedulerHandlerTest {
 
     featureFlagClient = mock(TestClient.class);
 
-    schedulerHandler = spy(new SchedulerHandler(
+    schedulerHandler = new SchedulerHandler(
         configRepository,
         secretsRepositoryWriter,
         synchronousSchedulerClient,
@@ -244,7 +248,7 @@ class SchedulerHandlerTest {
         envVariableFeatureFlags,
         webUrlHelper,
         actorDefinitionVersionHelper,
-        featureFlagClient));
+        featureFlagClient);
   }
 
   @Test
@@ -885,7 +889,7 @@ class SchedulerHandlerTest {
 
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreaking()
-      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -1043,6 +1047,8 @@ class SchedulerHandlerTest {
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
     when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
+    when(connectionsHandler.updateConnection(new ConnectionUpdate().connectionId(connectionId).breakingChange(true))).thenReturn(
+        new ConnectionRead().status(ConnectionStatus.INACTIVE));
 
     final ActorCatalog actorCatalog = new ActorCatalog()
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
@@ -1063,7 +1069,8 @@ class SchedulerHandlerTest {
 
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdBreaking()
-      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
+    when(envVariableFeatureFlags.autoDetectSchema()).thenReturn(false);
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -1610,59 +1617,205 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testAutoPropagateChange() {
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID connectionId = UUID.randomUUID();
-
-    ConnectionUpdate connectionUpdate = mock(ConnectionUpdate.class);
-    io.airbyte.api.model.generated.AirbyteCatalog catalog = mock(io.airbyte.api.model.generated.AirbyteCatalog.class);
-    UUID sourceCatalogId = UUID.randomUUID();
-    when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId)))
-        .thenReturn(true);
-    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
-    verify(connectionUpdate).setSyncCatalog(any());
-    verify(connectionUpdate).setSourceCatalogId(sourceCatalogId);
-
-    connectionUpdate = mock(ConnectionUpdate.class);
-
-    when(featureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId)))
-        .thenReturn(false);
-    schedulerHandler.autoPropagateSchemaChange(workspaceId, connectionId, connectionUpdate, catalog, catalog, List.of(), sourceCatalogId);
-    verifyNoInteractions(connectionUpdate);
-  }
-
-  @Test
-  void testDiscoverSchemaWithAutoDetectSchema() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testAutoPropagateSchemaChangeAddStream() throws IOException, ConfigNotFoundException, JsonValidationException {
+    // Verify that if auto propagation is fully enabled, a new stream can be added.
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
-    final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
-        .connectionId(UUID.randomUUID());
 
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(UUID.randomUUID());
-    final ActorCatalog actorCatalog = new ActorCatalog()
-        .withCatalog(Jsons.jsonNode(airbyteCatalog))
-        .withCatalogHash("")
-        .withId(UUID.randomUUID());
-    when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
-    when(discoverResponse.getMetadata()).thenReturn(metadata);
-    when(metadata.isSucceeded()).thenReturn(true);
-
-    final ConnectionRead connectionRead = new ConnectionRead();
-    connectionRead.syncCatalog(new io.airbyte.api.model.generated.AirbyteCatalog())
-        .connectionId(UUID.randomUUID())
-        .notifySchemaChanges(false);
-    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
-    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
-    final CatalogDiff catalogDiff = mock(CatalogDiff.class);
-    List<StreamTransform> transforms = List.of(
-        new StreamTransform());
-    when(catalogDiff.getTransforms()).thenReturn(transforms);
-    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withSourceDefinitionId(source.getSourceDefinitionId());
+
+    final var discoveredSourceId = mockSuccessfulDiscoverJob(source);
+    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceDefinition, NonBreakingChangesPreference.PROPAGATE_FULLY);
+    mockNewStreamDiff();
+    mockSourceForDiscoverJob(source, sourceDefinition);
+
+    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
+        CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceDefinition);
+    catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
+
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(source.getSourceId())
+        .workspaceId(UUID.randomUUID())
+        .catalogId(discoveredSourceId)
+        .catalog(catalogWithDiff);
+
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+
+    schedulerHandler.applySchemaChangeForSource(request);
+
+    verify(connectionsHandler).updateConnection(
+        new ConnectionUpdate().connectionId(connection.getConnectionId())
+            .syncCatalog(catalogWithDiff)
+            .sourceCatalogId(discoveredSourceId));
+  }
+
+  @Test
+  void testAutoPropagateSchemaChangeUpdateStream() throws IOException, ConfigNotFoundException, JsonValidationException {
+    // Verify that if auto propagation is fully enabled, an existing stream can be modified.
+    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+
+    final var discoveredSourceId = mockSuccessfulDiscoverJob(source);
+    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceDefinition, NonBreakingChangesPreference.PROPAGATE_FULLY);
+    mockUpdateStreamDiff();
+    mockSourceForDiscoverJob(source, sourceDefinition);
+
+    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
+        Field.of(SKU, JsonSchemaType.STRING), Field.of("aDifferentField", JsonSchemaType.STRING)), sourceDefinition);
+
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(source.getSourceId())
+        .workspaceId(UUID.randomUUID())
+        .catalogId(discoveredSourceId)
+        .catalog(catalogWithDiff);
+
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+
+    schedulerHandler.applySchemaChangeForSource(request);
+
+    verify(connectionsHandler).updateConnection(
+        new ConnectionUpdate().connectionId(connection.getConnectionId())
+            .syncCatalog(catalogWithDiff)
+            .sourceCatalogId(discoveredSourceId));
+  }
+
+  @Test
+  void testAutoPropagateSchemaChangeRemoveStream() throws IOException, ConfigNotFoundException, JsonValidationException {
+    // Verify that if auto propagation is fully enabled, an existing stream can be removed.
+    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+
+    final var discoveredSourceId = mockSuccessfulDiscoverJob(source);
+    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceDefinition, NonBreakingChangesPreference.PROPAGATE_FULLY);
+    mockRemoveStreamDiff();
+    mockSourceForDiscoverJob(source, sourceDefinition);
+
+    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff = CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceDefinition)
+        .streams(List.of());
+
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(source.getSourceId())
+        .workspaceId(UUID.randomUUID())
+        .catalogId(discoveredSourceId)
+        .catalog(catalogWithDiff);
+
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+
+    schedulerHandler.applySchemaChangeForSource(request);
+
+    verify(connectionsHandler).updateConnection(
+        new ConnectionUpdate().connectionId(connection.getConnectionId())
+            .syncCatalog(catalogWithDiff)
+            .sourceCatalogId(discoveredSourceId));
+  }
+
+  @Test
+  void testAutoPropagateSchemaChangeColumnsOnly() throws IOException, ConfigNotFoundException, JsonValidationException {
+    // Verify that if auto propagation is set to PROPAGATE_COLUMNS, then column changes are applied but
+    // a new stream is ignored.
+    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+
+    final var discoveredSourceId = mockSuccessfulDiscoverJob(source);
+    final var connection = mockConnectionForDiscoverJobWithAutopropagation(source, sourceDefinition, NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+    mockUpdateAndAddStreamDiff();
+    mockSourceForDiscoverJob(source, sourceDefinition);
+
+    final var catalogWithNewColumn = CatalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(SHOES,
+        Field.of(SKU, JsonSchemaType.STRING)), sourceDefinition);
+    final var catalogWithNewColumnAndStream = Jsons.clone(catalogWithNewColumn)
+        .addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
+
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(source.getSourceId())
+        .workspaceId(UUID.randomUUID())
+        .catalogId(discoveredSourceId)
+        .catalog(catalogWithNewColumnAndStream);
+
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+
+    schedulerHandler.applySchemaChangeForSource(request);
+
+    verify(connectionsHandler).updateConnection(
+        new ConnectionUpdate().connectionId(connection.getConnectionId())
+            .syncCatalog(catalogWithNewColumn)
+            .sourceCatalogId(discoveredSourceId));
+  }
+
+  @Test
+  void testAutoPropagateSchemaChangeWithIgnoreMode() throws IOException, ConfigNotFoundException, JsonValidationException {
+    final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
+        .withSourceDefinitionId(source.getSourceDefinitionId());
+
+    final var discoveredSourceId = mockSuccessfulDiscoverJob(source);
+    mockConnectionForDiscoverJobWithAutopropagation(source, sourceDefinition, NonBreakingChangesPreference.IGNORE);
+    mockNewStreamDiff();
+    mockSourceForDiscoverJob(source, sourceDefinition);
+
+    final io.airbyte.api.model.generated.AirbyteCatalog catalogWithDiff =
+        CatalogConverter.toApi(Jsons.clone(airbyteCatalog), sourceDefinition);
+    catalogWithDiff.addStreamsItem(new AirbyteStreamAndConfiguration().stream(new AirbyteStream().name(A_DIFFERENT_STREAM)));
+
+    final SourceAutoPropagateChange request = new SourceAutoPropagateChange()
+        .sourceId(source.getSourceId())
+        .workspaceId(UUID.randomUUID())
+        .catalogId(discoveredSourceId)
+        .catalog(catalogWithDiff);
+
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(true);
+
+    schedulerHandler.applySchemaChangeForSource(request);
+
+    verify(connectionsHandler, times(0)).updateConnection(any());
+  }
+
+  @Test
+  void testAutoPropagateSchemaChangeEarlyExits() throws JsonValidationException, ConfigNotFoundException, IOException {
+    SourceAutoPropagateChange request = getMockedSourceAutoPropagateChange().sourceId(null);
+    schedulerHandler.applySchemaChangeForSource(request);
+    verifyNoInteractions(connectionsHandler);
+
+    request = getMockedSourceAutoPropagateChange().catalog(null);
+    schedulerHandler.applySchemaChangeForSource(request);
+    verifyNoInteractions(connectionsHandler);
+
+    request = getMockedSourceAutoPropagateChange().catalogId(null);
+    schedulerHandler.applySchemaChangeForSource(request);
+    verifyNoInteractions(connectionsHandler);
+
+    request = getMockedSourceAutoPropagateChange().workspaceId(null);
+    schedulerHandler.applySchemaChangeForSource(request);
+    verifyNoInteractions(connectionsHandler);
+
+    when(featureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any(Workspace.class))).thenReturn(false);
+    request = getMockedSourceAutoPropagateChange();
+    schedulerHandler.applySchemaChangeForSource(request);
+    verifyNoInteractions(connectionsHandler);
+  }
+
+  private SourceAutoPropagateChange getMockedSourceAutoPropagateChange() {
+    return new SourceAutoPropagateChange()
+        .sourceId(UUID.randomUUID())
+        .workspaceId(UUID.randomUUID())
+        .catalogId(UUID.randomUUID())
+        .catalog(new io.airbyte.api.model.generated.AirbyteCatalog());
+  }
+
+  private void mockSourceForDiscoverJob(final SourceConnection source, final StandardSourceDefinition sourceDefinition)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
@@ -1670,16 +1823,82 @@ class SchedulerHandlerTest {
             .withDockerRepository(SOURCE_DOCKER_REPO)
             .withDockerImageTag(SOURCE_DOCKER_TAG));
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
-    when(configRepository.getActorCatalog(any(), any(), any())).thenReturn(Optional.empty());
+  }
+
+  private UUID mockSuccessfulDiscoverJob(final SourceConnection source) throws ConfigNotFoundException, IOException {
+    final UUID newSourceCatalogId = UUID.randomUUID();
+    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
+    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
+    when(discoverResponse.isSuccess()).thenReturn(true);
+    when(discoverResponse.getOutput()).thenReturn(newSourceCatalogId);
+    final ActorCatalog actorCatalog = new ActorCatalog()
+        .withCatalog(Jsons.jsonNode(airbyteCatalog))
+        .withCatalogHash("")
+        .withId(newSourceCatalogId);
+    when(configRepository.getActorCatalogById(any())).thenReturn(actorCatalog);
+    when(discoverResponse.getMetadata()).thenReturn(metadata);
+    when(metadata.isSucceeded()).thenReturn(true);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, SOURCE_DOCKER_IMAGE, SOURCE_DOCKER_TAG, new Version(SOURCE_PROTOCOL_VERSION),
         false))
             .thenReturn(discoverResponse);
-    when(envVariableFeatureFlags.autoDisablesFailingConnections()).thenReturn(false);
-    doNothing().when(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any(), any());
+    return newSourceCatalogId;
+  }
 
-    schedulerHandler.discoverSchemaForSourceFromSourceId(request);
+  private ConnectionRead mockConnectionForDiscoverJobWithAutopropagation(final SourceConnection source,
+                                                                         final StandardSourceDefinition sourceDefinition,
+                                                                         final NonBreakingChangesPreference nonBreakingChangesPreference)
+      throws IOException, JsonValidationException {
+    final ConnectionRead connectionRead = new ConnectionRead();
+    connectionRead.syncCatalog(CatalogConverter.toApi(airbyteCatalog, sourceDefinition))
+        .connectionId(UUID.randomUUID())
+        .notifySchemaChanges(false)
+        .nonBreakingChangesPreference(nonBreakingChangesPreference);
+    final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
+    when(connectionsHandler.listConnectionsForSource(source.getSourceId(), false)).thenReturn(connectionReadList);
+    final CatalogDiff catalogDiff = mock(CatalogDiff.class);
+    final List<StreamTransform> transforms = List.of(
+        new StreamTransform());
+    when(catalogDiff.getTransforms()).thenReturn(transforms);
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+    return connectionRead;
+  }
 
-    verify(schedulerHandler).autoPropagateSchemaChange(any(), any(), any(), any(), any(), any(), any());
+  private void mockNewStreamDiff() throws JsonValidationException {
+    final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
+        new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM).streamDescriptor(
+            new io.airbyte.api.model.generated.StreamDescriptor().name(A_DIFFERENT_STREAM))));
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+  }
+
+  private void mockRemoveStreamDiff() throws JsonValidationException {
+    final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
+        new StreamTransform().transformType(TransformTypeEnum.REMOVE_STREAM).streamDescriptor(
+            new io.airbyte.api.model.generated.StreamDescriptor().name(SHOES))));
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+  }
+
+  private void mockUpdateStreamDiff() throws JsonValidationException {
+    final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
+        new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
+            .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(SHOES))
+            .addUpdateStreamItem(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(List.of("aDifferentField"))
+                .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
+                .breaking(false))));
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
+  }
+
+  private void mockUpdateAndAddStreamDiff() throws JsonValidationException {
+    final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of(
+        new StreamTransform().transformType(TransformTypeEnum.UPDATE_STREAM)
+            .streamDescriptor(new io.airbyte.api.model.generated.StreamDescriptor().name(SHOES))
+            .addUpdateStreamItem(new FieldTransform().transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(List.of("aDifferentField"))
+                .addField(new FieldAdd().schema(Jsons.deserialize("\"id\": {\"type\": [\"null\", \"integer\"]}")))
+                .breaking(false)),
+        new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM).streamDescriptor(
+            new io.airbyte.api.model.generated.StreamDescriptor().name(A_DIFFERENT_STREAM))));
+    when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
   }
 
 }

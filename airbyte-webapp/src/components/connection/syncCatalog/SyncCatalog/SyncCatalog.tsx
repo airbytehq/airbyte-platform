@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import React, { useCallback, useMemo, useState } from "react";
+import { useToggle } from "react-use";
 
 import { LoadingBackdrop } from "components/ui/LoadingBackdrop";
 
@@ -8,9 +9,11 @@ import { BulkEditServiceProvider } from "hooks/services/BulkEdit/BulkEditService
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { naturalComparatorBy } from "utils/objects";
 
+import { DisabledStreamsSwitch } from "./DisabledStreamsSwitch";
 import styles from "./SyncCatalog.module.scss";
 import { SyncCatalogBody } from "./SyncCatalogBody";
 import { SyncCatalogStreamSearch } from "./SyncCatalogStreamSearch";
+import { useStreamFilters } from "./useStreamFilters";
 import { BulkEditPanel } from "../BulkEditPanel";
 
 interface SyncCatalogProps {
@@ -27,6 +30,7 @@ const SyncCatalogInternal: React.FC<React.PropsWithChildren<SyncCatalogProps>> =
   const { initialValues, mode } = useConnectionFormService();
 
   const [searchString, setSearchString] = useState("");
+  const [hideDisabledStreams, toggleHideDisabledStreams] = useToggle(false);
 
   const onBatchStreamsChanged = useCallback(
     (newStreams: SyncSchemaStream[]) =>
@@ -44,18 +48,7 @@ const SyncCatalogInternal: React.FC<React.PropsWithChildren<SyncCatalogProps>> =
     [streams]
   );
 
-  const filteredStreams = useMemo(() => {
-    const filters: Array<(s: SyncSchemaStream) => boolean> = [
-      (_: SyncSchemaStream) => true,
-      searchString
-        ? (stream: SyncSchemaStream) => stream.stream?.name.toLowerCase().includes(searchString.toLowerCase())
-        : null,
-    ].filter(Boolean) as Array<(s: SyncSchemaStream) => boolean>;
-
-    return sortedSchema.filter((stream) => filters.every((f) => f(stream)));
-  }, [searchString, sortedSchema]);
-
-  const changedStreams = useMemo(
+  const changedStateStreams = useMemo(
     () =>
       streams.filter((stream) => {
         const matchingInitialValue = initialValues.syncCatalog.streams.find((initialStream) => {
@@ -73,10 +66,13 @@ const SyncCatalogInternal: React.FC<React.PropsWithChildren<SyncCatalogProps>> =
     [initialValues.syncCatalog.streams, streams]
   );
 
+  const filteredStreams = useStreamFilters(searchString, hideDisabledStreams, sortedSchema);
+
   return (
     <BulkEditServiceProvider nodes={filteredStreams} update={onBatchStreamsChanged}>
       <LoadingBackdrop loading={isLoading}>
-        {mode !== "readonly" && <SyncCatalogStreamSearch onSearch={setSearchString} />}
+        <SyncCatalogStreamSearch onSearch={setSearchString} />
+        <DisabledStreamsSwitch checked={hideDisabledStreams} onChange={toggleHideDisabledStreams} />
         <div
           className={classNames(styles.bodyContainer, {
             [styles.scrollable]: mode === "create",
@@ -84,8 +80,9 @@ const SyncCatalogInternal: React.FC<React.PropsWithChildren<SyncCatalogProps>> =
         >
           <SyncCatalogBody
             streams={filteredStreams}
-            changedStreams={changedStreams}
+            changedStreams={changedStateStreams}
             onStreamChanged={onSingleStreamChanged}
+            isFilterApplied={filteredStreams.length !== streams.length}
           />
         </div>
       </LoadingBackdrop>

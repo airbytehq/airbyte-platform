@@ -1,6 +1,5 @@
 import { faGear, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useFormikContext } from "formik";
 import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -11,14 +10,14 @@ import { Text } from "components/ui/Text";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { InputForm, InputInEditing, newInputInEditing } from "./InputsForm";
 import styles from "./InputsView.module.scss";
-import { BuilderFormInput, BuilderFormValues } from "../types";
+import { BuilderFormInput, useBuilderWatch } from "../types";
 import { useInferredInputs } from "../useInferredInputs";
 
 const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "unknown"] as const;
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { values } = useFormikContext<BuilderFormValues>();
+  const inputs = useBuilderWatch("inputs");
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
   const inferredInputs = useInferredInputs();
 
@@ -27,13 +26,13 @@ export const InputsView: React.FC = () => {
       <Text align="center" className={styles.inputsDescription}>
         <FormattedMessage id="connectorBuilder.inputsDescription" />
       </Text>
-      {(values.inputs.length > 0 || inferredInputs.length > 0) && (
+      {(inputs.length > 0 || inferredInputs.length > 0) && (
         <Card withPadding className={styles.inputsCard}>
           <ol className={styles.list}>
             {inferredInputs.map((input) => (
               <InputItem key={input.key} input={input} setInputInEditing={setInputInEditing} isInferredInput />
             ))}
-            {values.inputs.map((input) => (
+            {inputs.map((input) => (
               <InputItem key={input.key} input={input} setInputInEditing={setInputInEditing} isInferredInput={false} />
             ))}
           </ol>
@@ -47,6 +46,7 @@ export const InputsView: React.FC = () => {
         icon={<FontAwesomeIcon icon={faPlus} />}
         iconPosition="left"
         variant="secondary"
+        type="button"
       >
         <FormattedMessage id="connectorBuilder.addInputButton" />
       </Button>
@@ -110,6 +110,7 @@ const InputItem = ({
         size="sm"
         variant="secondary"
         aria-label="Edit"
+        type="button"
         onClick={() => {
           setInputInEditing(formInputToInputInEditing(input, isInferredInput));
         }}

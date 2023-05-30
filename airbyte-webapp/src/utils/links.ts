@@ -8,7 +8,7 @@ export const links = {
   dbtCommandsReference: "https://docs.getdbt.com/reference/dbt-commands",
   dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
-  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting/on-deploying`,
+  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting`,
   termsLink: "https://airbyte.com/terms",
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
@@ -47,6 +47,7 @@ export const links = {
   connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,
   connectorBuilderPartitioning: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
+  connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
 } as const;

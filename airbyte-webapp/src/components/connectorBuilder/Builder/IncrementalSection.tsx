@@ -1,4 +1,4 @@
-import { useField } from "formik";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -14,60 +14,50 @@ import { BuilderOptional } from "./BuilderOptional";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
-  BuilderIncrementalSync,
   DATETIME_FORMAT_OPTIONS,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   LARGE_DURATION_OPTIONS,
   SMALL_DURATION_OPTIONS,
+  StreamPathFn,
 } from "../types";
 
 interface IncrementalSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderIncrementalSync | undefined>(streamFieldPath("incrementalSync"));
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      helpers.setValue({
-        datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
-        start_datetime: { type: "user_input" },
-        end_datetime: { type: "now" },
-        step: "P1M",
-        cursor_field: "",
-        cursor_granularity: "",
-        start_time_option: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-        end_time_option: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-      });
-    } else {
-      helpers.setValue(undefined);
-    }
-  };
-  const toggledOn = field.value !== undefined;
 
   return (
     <BuilderCard
       docLink={links.connectorBuilderIncrementalSync}
       label={
         <ControlLabels
-          label="Incremental sync"
+          label="Incremental Sync"
           infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
         />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("incrementalSync"),
+        defaultValue: {
+          datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
+          start_datetime: { type: "user_input" },
+          end_datetime: { type: "now" },
+          step: "P1M",
+          cursor_field: "",
+          cursor_granularity: "",
+          start_time_option: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+          end_time_option: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+        },
       }}
       copyConfig={{
         path: "incrementalSync",

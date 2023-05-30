@@ -27,14 +27,17 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
+import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.book_keeping.MessageTracker;
+import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
@@ -55,27 +58,35 @@ import lombok.extern.slf4j.Slf4j;
 public class ReplicationWorkerFactory {
 
   private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
+  private final ConnectorConfigUpdater connectorConfigUpdater;
   private final SourceApi sourceApi;
   private final SourceDefinitionApi sourceDefinitionApi;
   private final DestinationApi destinationApi;
   private final SyncPersistenceFactory syncPersistenceFactory;
-
+  private final AirbyteMessageDataExtractor airbyteMessageDataExtractor;
   private final FeatureFlagClient featureFlagClient;
   private final FeatureFlags featureFlags;
+  private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
 
   public ReplicationWorkerFactory(
                                   final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory,
+                                  final ConnectorConfigUpdater connectorConfigUpdater,
+                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final SourceApi sourceApi,
                                   final SourceDefinitionApi sourceDefinitionApi,
                                   final DestinationApi destinationApi,
                                   final SyncPersistenceFactory syncPersistenceFactory,
                                   final FeatureFlagClient featureFlagClient,
-                                  final FeatureFlags featureFlags) {
+                                  final FeatureFlags featureFlags,
+                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
+    this.connectorConfigUpdater = connectorConfigUpdater;
     this.sourceApi = sourceApi;
     this.sourceDefinitionApi = sourceDefinitionApi;
     this.destinationApi = destinationApi;
     this.syncPersistenceFactory = syncPersistenceFactory;
+    this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
+    this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
 
     this.featureFlagClient = featureFlagClient;
     this.featureFlags = featureFlags;
@@ -94,8 +105,11 @@ public class ReplicationWorkerFactory {
         featureFlagClient, syncInput);
 
     log.info("Setting up source...");
-    final var airbyteSource = airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
-        syncInput.getCatalog(), heartbeatMonitor);
+    // reset jobs use an empty source to induce resetting all data in destination.
+    final var airbyteSource = syncInput.getIsReset()
+        ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
+        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
+            syncInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
     final var airbyteDestination = airbyteIntegrationLauncherFactory.createAirbyteDestination(destinationLauncherConfig,
@@ -109,19 +123,10 @@ public class ReplicationWorkerFactory {
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
     final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, syncInput);
-    // TODO ConnectorConfigUpdater should be injectable
-    final ConnectorConfigUpdater connectorConfigUpdater = createConnectorConfigUpdater(sourceApi, destinationApi);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
-        syncInput);
-  }
-
-  /**
-   * Create ConnectorConfigUpdater.
-   */
-  private static ConnectorConfigUpdater createConnectorConfigUpdater(final SourceApi sourceApi, final DestinationApi destinationApi) {
-    return new ConnectorConfigUpdater(sourceApi, destinationApi);
+        syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
   }
 
   /**
@@ -162,7 +167,7 @@ public class ReplicationWorkerFactory {
   private static MessageTracker createMessageTracker(final SyncPersistence syncPersistence,
                                                      final FeatureFlags featureFlags,
                                                      final StandardSyncInput syncInput) {
-    final boolean commitStatsAsap = DefaultReplicationWorker.shouldCommitStatsAsap(syncInput);
+    final boolean commitStatsAsap = ReplicationFeatureFlagReader.shouldCommitStatsAsap(syncInput);
     final MessageTracker messageTracker =
         commitStatsAsap ? new AirbyteMessageTracker(syncPersistence, featureFlags) : new AirbyteMessageTracker(featureFlags);
     return messageTracker;
@@ -181,7 +186,9 @@ public class ReplicationWorkerFactory {
                                                            final FeatureFlagClient featureFlagClient,
                                                            final FeatureFlags featureFlags,
                                                            final JobRunConfig jobRunConfig,
-                                                           final StandardSyncInput syncInput) {
+                                                           final StandardSyncInput syncInput,
+                                                           final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
+                                                           final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper) {
     // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
     // environment-variable flags say so (deprecated).
     // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
@@ -203,10 +210,11 @@ public class ReplicationWorkerFactory {
         syncPersistence,
         new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
         new FieldSelector(recordSchemaValidator, metricReporter, fieldSelectionEnabled, removeValidationLimit),
-        metricReporter,
         connectorConfigUpdater,
-        fieldSelectionEnabled,
-        heartbeatTimeoutChaperone);
+        heartbeatTimeoutChaperone,
+        new ReplicationFeatureFlagReader(featureFlagClient),
+        airbyteMessageDataExtractor,
+        replicationEventPublishingHelper);
   }
 
   /**
@@ -216,7 +224,7 @@ public class ReplicationWorkerFactory {
                                                        final StandardSyncInput syncInput,
                                                        final IntegrationLauncherConfig sourceLauncherConfig) {
     // TODO clean up the feature flag init once commitStates and commitStats have been rolled out
-    final boolean commitStatesAsap = DefaultReplicationWorker.shouldCommitStateAsap(syncInput);
+    final boolean commitStatesAsap = ReplicationFeatureFlagReader.shouldCommitStateAsap(syncInput);
     final SyncPersistence syncPersistence = commitStatesAsap
         ? syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
             sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog())

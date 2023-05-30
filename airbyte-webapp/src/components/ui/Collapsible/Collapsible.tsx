@@ -17,6 +17,7 @@ interface CollapsibleProps {
   type?: "footer" | "inline" | "section";
   hideWhenEmpty?: boolean;
   "data-testid"?: string;
+  initiallyOpen?: boolean;
 }
 
 export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = ({
@@ -27,11 +28,12 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   hideWhenEmpty = false,
   children,
   "data-testid": dataTestId,
+  initiallyOpen = false,
 }) => {
   const childrenCount = React.Children.count(children);
 
   return childrenCount === 0 && hideWhenEmpty ? null : (
-    <Disclosure>
+    <Disclosure defaultOpen={initiallyOpen}>
       {({ open }) => (
         <FlexContainer
           direction="column"

@@ -95,7 +95,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailure() {
+  void testReportSyncJobFailure() throws ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
 
     final FailureReason sourceFailureReason = new FailureReason()
@@ -214,7 +214,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
     final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DOCKER_IMAGE, DESTINATION_DOCKER_IMAGE);
 

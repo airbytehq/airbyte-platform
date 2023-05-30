@@ -22,7 +22,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.UUID;
@@ -46,11 +45,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void setup() {
-    configRepository = spy(new ConfigRepository(
-        database,
-        new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
-        null,
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    configRepository = spy(new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
   }
 
   @Test

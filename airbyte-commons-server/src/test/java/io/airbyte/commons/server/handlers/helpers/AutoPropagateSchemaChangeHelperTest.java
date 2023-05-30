@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.SyncMode;
@@ -26,13 +27,23 @@ class AutoPropagateSchemaChangeHelperTest {
   private static final String NAMESPACE1 = "namespace1";
   private static final String NAME2 = "name2";
   private static final String NAMESPACE2 = "namespace2";
+  private static final String OLD_SCHEMA = """
+                                           {
+                                             "schema": "old"
+                                           }
+                                           """;
+  private static final String NEW_SCHEMA = """
+                                           {
+                                             "schema": "old"
+                                           }
+                                           """;
 
   @Test
   void extractStreamAndConfigPerStreamDescriptorTest() {
-    AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
-    AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
+    final AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
+    final AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
         .stream(new AirbyteStream().name(NAME1).namespace(NAMESPACE1).addSupportedSyncModesItem(SyncMode.FULL_REFRESH));
-    AirbyteStreamAndConfiguration airbyteStreamConfiguration2 = new AirbyteStreamAndConfiguration()
+    final AirbyteStreamAndConfiguration airbyteStreamConfiguration2 = new AirbyteStreamAndConfiguration()
         .stream(new AirbyteStream().name(NAME2).namespace(NAMESPACE2).addSupportedSyncModesItem(SyncMode.INCREMENTAL));
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1, airbyteStreamConfiguration2));
 
@@ -47,10 +58,10 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void extractStreamAndConfigPerStreamDescriptorNoNamespaceTest() {
-    AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
-    AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
+    final AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
+    final AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
         .stream(new AirbyteStream().name(NAME1).addSupportedSyncModesItem(SyncMode.FULL_REFRESH));
-    AirbyteStreamAndConfiguration airbyteStreamConfiguration2 = new AirbyteStreamAndConfiguration()
+    final AirbyteStreamAndConfiguration airbyteStreamConfiguration2 = new AirbyteStreamAndConfiguration()
         .stream(new AirbyteStream().name(NAME2).addSupportedSyncModesItem(SyncMode.INCREMENTAL));
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1, airbyteStreamConfiguration2));
 
@@ -65,25 +76,18 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyUpdate() {
-    JsonNode oldSchema = Jsons.deserialize("""
-                                           {
-                                             "schema": "old"
-                                           }
-                                           """);
-    AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
-    JsonNode newSchema = Jsons.deserialize("""
-                                           {
-                                             "schema": "new"
-                                           }
-                                           """);
-    AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, newSchema);
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, newSchema);
 
-    StreamTransform transform = new StreamTransform()
+    final StreamTransform transform = new StreamTransform()
         .streamDescriptor(new StreamDescriptor().name(NAME1))
         .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM);
 
-    AirbyteCatalog result = getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform));
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY);
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(newSchema);
@@ -91,25 +95,18 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyAdd() {
-    JsonNode oldSchema = Jsons.deserialize("""
-                                           {
-                                             "schema": "old"
-                                           }
-                                           """);
-    AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
-    JsonNode newSchema = Jsons.deserialize("""
-                                           {
-                                             "schema": "new"
-                                           }
-                                           """);
-    AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
 
-    StreamTransform transform = new StreamTransform()
+    final StreamTransform transform = new StreamTransform()
         .streamDescriptor(new StreamDescriptor().name(NAME2))
         .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
 
-    AirbyteCatalog result = getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform));
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY);
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -120,28 +117,64 @@ class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   void applyRemove() {
-    JsonNode oldSchema = Jsons.deserialize("""
-                                           {
-                                             "schema": "old"
-                                           }
-                                           """);
-    AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
-    AirbyteCatalog newAirbyteCatalog = new AirbyteCatalog();
+    final AirbyteCatalog newAirbyteCatalog = new AirbyteCatalog();
 
-    StreamTransform transform = new StreamTransform()
+    final StreamTransform transform = new StreamTransform()
         .streamDescriptor(new StreamDescriptor().name(NAME1))
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
 
-    AirbyteCatalog result = getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform));
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY);
 
     Assertions.assertThat(result.getStreams()).hasSize(0);
   }
 
-  private AirbyteCatalog createAirbyteCatalogWithSchema(String name, JsonNode schema) {
-    AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
+  @Test
+  void applyAddNotFully() {
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
 
-    AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
+    final JsonNode newSchema = Jsons.deserialize(NEW_SCHEMA);
+    final AirbyteCatalog newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema);
+
+    final StreamTransform transform = new StreamTransform()
+        .streamDescriptor(new StreamDescriptor().name(NAME2))
+        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM);
+
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+
+    Assertions.assertThat(result.getStreams()).hasSize(1);
+    Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
+    Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(oldSchema);
+  }
+
+  @Test
+  void applyRemoveNotFully() {
+    final JsonNode oldSchema = Jsons.deserialize(OLD_SCHEMA);
+    final AirbyteCatalog oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema);
+
+    final AirbyteCatalog newAirbyteCatalog = new AirbyteCatalog();
+
+    final StreamTransform transform = new StreamTransform()
+        .streamDescriptor(new StreamDescriptor().name(NAME1))
+        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM);
+
+    final AirbyteCatalog result =
+        getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+
+    Assertions.assertThat(result.getStreams()).hasSize(1);
+    Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
+    Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(oldSchema);
+  }
+
+  private AirbyteCatalog createAirbyteCatalogWithSchema(final String name, final JsonNode schema) {
+    final AirbyteCatalog airbyteCatalog = new AirbyteCatalog();
+
+    final AirbyteStreamAndConfiguration airbyteStreamConfiguration1 = new AirbyteStreamAndConfiguration()
         .stream(new AirbyteStream().name(name).jsonSchema(schema));
 
     airbyteCatalog.streams(List.of(airbyteStreamConfiguration1));

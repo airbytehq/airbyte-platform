@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -26,6 +27,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -52,6 +54,7 @@ class OAuthHandlerTest {
   private static final String CLIENT_ID_KEY = "client_id";
   private static final String CLIENT_SECRET_KEY = "client_secret";
   private static final String CLIENT_SECRET = "hunter2";
+  private static TestClient featureFlagClient;
 
   @BeforeEach
   public void init() {
@@ -61,8 +64,9 @@ class OAuthHandlerTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
+    featureFlagClient = mock(TestClient.class);
     handler = new OAuthHandler(configRepository, httpClient, trackingClient, secretsRepositoryReader, secretsRepositoryWriter,
-        actorDefinitionVersionHelper);
+        actorDefinitionVersionHelper, featureFlagClient);
   }
 
   @Test
@@ -284,6 +288,54 @@ class OAuthHandlerTest {
     // Tests that with returnSecretCoordinate set explicitly to false, we DO NOT return secrets.
     verify(handlerSpy, times(3)).completeSourceOAuth(completeSourceOauthRequest);
     verify(handlerSpy).writeOAuthResponseSecret(any(), any());
+  }
+
+  @Test
+  void testGetSourceOAuthParamConfigNoParamFound() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of());
+    assertThrows(ConfigNotFoundException.class, () -> handler.getSourceOAuthParamConfig(sourceDefinitionId, workspaceId));
+
+  }
+
+  @Test
+  void testGetSourceOAuthParamConfigNoFeatureFlag() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
+        .withOauthParameterId(UUID.randomUUID())
+        .withSourceDefinitionId(sourceDefinitionId)
+        .withConfiguration(Jsons.deserialize("""
+                                             {"credentials": {"client_id": "test", "client_secret": "shhhh" }}
+                                             """));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    when(secretsRepositoryReader.hydrateConfig(any())).thenReturn(sourceOAuthParameter.getConfiguration());
+
+    JsonNode expected = Jsons.deserialize("""
+                                          {"client_id": "test", "client_secret": "shhhh"}
+                                          """);
+    assertEquals(expected, handler.getSourceOAuthParamConfig(workspaceId, sourceDefinitionId));
+  }
+
+  @Test
+  void testGetSourceOAuthParamConfigFeatureFlagNoOverride() throws JsonValidationException, ConfigNotFoundException, IOException {
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
+        .withOauthParameterId(UUID.randomUUID())
+        .withSourceDefinitionId(sourceDefinitionId)
+        .withConfiguration(Jsons.deserialize("""
+                                             {"credentials": {"client_id": "test", "client_secret": "shhhh" }}
+                                             """));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(true);
+    when(secretsRepositoryReader.hydrateConfig(any())).thenReturn(sourceOAuthParameter.getConfiguration());
+
+    JsonNode expected = Jsons.deserialize("""
+                                          {"client_id": "test", "client_secret": "shhhh"}
+                                          """);
+    assertEquals(expected, handler.getSourceOAuthParamConfig(workspaceId, sourceDefinitionId));
   }
 
 }

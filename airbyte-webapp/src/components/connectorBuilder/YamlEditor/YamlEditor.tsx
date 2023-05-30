@@ -1,10 +1,11 @@
 import { useMonaco } from "@monaco-editor/react";
-import { useFormikContext } from "formik";
 import { load, YAMLException } from "js-yaml";
 import debounce from "lodash/debounce";
 import isEqual from "lodash/isEqual";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import { useEffect, useMemo, useRef, useState } from "react";
+import React from "react";
+import { useFormContext } from "react-hook-form";
 
 import { CodeEditor } from "components/ui/CodeEditor";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -30,7 +31,7 @@ interface YamlEditorProps {
 
 export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   const analyticsService = useAnalyticsService();
-  const { setValues } = useFormikContext();
+  const { setValue } = useFormContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const yamlEditorRef = useRef<editor.IStandaloneCodeEditor>();
   const {
@@ -104,7 +105,9 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
           jsonManifest,
           builderFormValues.global.connectorName
         );
-        setValues(convertedFormValues);
+        Object.entries(convertedFormValues).forEach(([key, value]) => {
+          setValue(key, value);
+        });
         toggleYamlEditor();
       } catch (e) {
         openConfirmationModal({

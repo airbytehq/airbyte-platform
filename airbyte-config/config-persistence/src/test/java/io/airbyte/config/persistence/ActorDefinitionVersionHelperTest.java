@@ -13,10 +13,11 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.version_overrides.FeatureFlagDefinitionVersionOverrideProvider;
 import io.airbyte.config.persistence.version_overrides.LocalDefinitionVersionOverrideProvider;
-import io.airbyte.config.persistence.version_overrides.OverrideTargetType;
 import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -32,7 +33,8 @@ import org.junit.jupiter.api.Test;
 
 class ActorDefinitionVersionHelperTest {
 
-  private LocalDefinitionVersionOverrideProvider mOverrideProvider;
+  private LocalDefinitionVersionOverrideProvider mLocalOverrideProvider;
+  private FeatureFlagDefinitionVersionOverrideProvider mFFOverrideProvider;
   private FeatureFlagClient mFeatureFlagClient;
   private ConfigRepository mConfigRepository;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
@@ -44,6 +46,7 @@ class ActorDefinitionVersionHelperTest {
   private static final String DOCKER_REPOSITORY = "airbyte/source-test";
   private static final String DOCKER_IMAGE_TAG = "0.1.0";
   private static final String DOCKER_IMAGE_TAG_2 = "0.2.0";
+  private static final String DOCKER_IMAGE_TAG_3 = "0.3.0";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "key", "value")));
@@ -53,24 +56,35 @@ class ActorDefinitionVersionHelperTest {
           "key2", "value2")));
 
   private static final ActorDefinitionVersion DEFAULT_VERSION = new ActorDefinitionVersion()
+      .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSpec(SPEC);
   private static final ActorDefinitionVersion OVERRIDDEN_VERSION = new ActorDefinitionVersion()
+      .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG_2)
+      .withSpec(SPEC_2);
+  private static final ActorDefinitionVersion OVERRIDDEN_VERSION_2 = new ActorDefinitionVersion()
+      .withActorDefinitionId(ACTOR_DEFINITION_ID)
+      .withDockerRepository(DOCKER_REPOSITORY)
+      .withDockerImageTag(DOCKER_IMAGE_TAG_3)
       .withSpec(SPEC_2);
 
   @BeforeEach
   void setup() {
-    mOverrideProvider = mock(LocalDefinitionVersionOverrideProvider.class);
-    when(mOverrideProvider.getOverride(any(), any(), any(), any())).thenReturn(Optional.empty());
+    mLocalOverrideProvider = mock(LocalDefinitionVersionOverrideProvider.class);
+    when(mLocalOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+
+    mFFOverrideProvider = mock(FeatureFlagDefinitionVersionOverrideProvider.class);
+    when(mFFOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
     mFeatureFlagClient = mock(TestClient.class);
     when(mFeatureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     mConfigRepository = mock(ConfigRepository.class);
-    actorDefinitionVersionHelper = new ActorDefinitionVersionHelper(mConfigRepository, mOverrideProvider, mFeatureFlagClient);
+    actorDefinitionVersionHelper =
+        new ActorDefinitionVersionHelper(mConfigRepository, mLocalOverrideProvider, mFFOverrideProvider, mFeatureFlagClient);
   }
 
   @Test
@@ -86,8 +100,8 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetSourceVersionWithActorOverride() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION))
+  void testGetSourceVersionWithOverride() throws ConfigNotFoundException, IOException {
+    when(mLocalOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -101,8 +115,26 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
+  void testGetSourceVersionWithFFOverride() throws ConfigNotFoundException, IOException {
+    when(mFFOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
+
+    when(mLocalOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION_2));
+
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
+        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
+        .withSpec(DEFAULT_VERSION.getSpec());
+
+    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
+    assertEquals(OVERRIDDEN_VERSION, actual);
+  }
+
+  @Test
   void testGetSourceVersionWithDisabledFeatureFlag() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION))
+    when(mLocalOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
     when(mFeatureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(false);
@@ -118,23 +150,9 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetSourceVersionWithWorkspaceOverride() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, OverrideTargetType.WORKSPACE, DEFAULT_VERSION))
-        .thenReturn(Optional.of(OVERRIDDEN_VERSION));
-
-    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-        .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
-
-    final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(OVERRIDDEN_VERSION, actual);
-  }
-
-  @Test
   void testGetSourceVersionForWorkspace() throws ConfigNotFoundException, IOException {
     final ActorDefinitionVersion expected = new ActorDefinitionVersion()
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSpec(SPEC);
@@ -151,7 +169,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetSourceVersionForWorkspaceWithOverride() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, OverrideTargetType.WORKSPACE, DEFAULT_VERSION))
+    when(mLocalOverrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -167,6 +185,7 @@ class ActorDefinitionVersionHelperTest {
   @Test
   void testGetDestinationVersion() throws ConfigNotFoundException, IOException {
     final ActorDefinitionVersion expected = new ActorDefinitionVersion()
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSpec(SPEC);
@@ -182,8 +201,8 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDestinationVersionWithActorOverride() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, ACTOR_ID, OverrideTargetType.ACTOR, DEFAULT_VERSION))
+  void testGetDestinationVersionWithOverride() throws ConfigNotFoundException, IOException {
+    when(mLocalOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
@@ -197,9 +216,12 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDestinationVersionWithWorkspaceOverride() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, OverrideTargetType.WORKSPACE, DEFAULT_VERSION))
+  void testGetDestinationVersionWithFFOverride() throws ConfigNotFoundException, IOException {
+    when(mFFOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
+
+    when(mLocalOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION))
+        .thenReturn(Optional.of(OVERRIDDEN_VERSION_2));
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
@@ -214,6 +236,7 @@ class ActorDefinitionVersionHelperTest {
   @Test
   void testGetDestinationVersionForWorkspace() throws ConfigNotFoundException, IOException {
     final ActorDefinitionVersion expected = new ActorDefinitionVersion()
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSpec(SPEC);
@@ -230,7 +253,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersionForWorkspaceWithOverride() throws ConfigNotFoundException, IOException {
-    when(mOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, OverrideTargetType.WORKSPACE, DEFAULT_VERSION))
+    when(mLocalOverrideProvider.getOverride(ActorType.DESTINATION, ACTOR_DEFINITION_ID, WORKSPACE_ID, null, DEFAULT_VERSION))
         .thenReturn(Optional.of(OVERRIDDEN_VERSION));
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()

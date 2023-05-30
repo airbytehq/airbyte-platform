@@ -20,6 +20,7 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+    implementation libs.micronaut.security
 
     implementation project(':airbyte-commons')
 

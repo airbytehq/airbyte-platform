@@ -8,6 +8,7 @@ import { useIntl } from "react-intl";
 import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
 import { InputProps } from "components/ui/Input";
 import { ListBoxProps, Option } from "components/ui/ListBox";
+import { SwitchProps } from "components/ui/Switch/Switch";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
@@ -16,14 +17,19 @@ import { FormValues } from "./Form";
 import styles from "./FormControl.module.scss";
 import { InputWrapper } from "./InputWrapper";
 import { SelectWrapper } from "./SelectWrapper";
+import { SwitchWrapper } from "./SwitchWrapper";
 
-type ControlProps<T extends FormValues> = SelectControlProps<T> | InputControlProps<T> | DatepickerControlProps<T>;
+type ControlProps<T extends FormValues> =
+  | SelectControlProps<T>
+  | InputControlProps<T>
+  | DatepickerControlProps<T>
+  | SwitchControlProps<T>;
 
 interface ControlBaseProps<T extends FormValues> {
   /**
    * fieldType determines what form element is rendered. Depending on the chosen fieldType, additional props may be optional or required.
    */
-  fieldType: "input" | "date" | "dropdown";
+  fieldType: "input" | "date" | "dropdown" | "switch";
   /**
    * The field name must match any provided default value or validation schema.
    */
@@ -39,15 +45,16 @@ interface ControlBaseProps<T extends FormValues> {
   /**
    * An optional description that appears under the label
    */
-  description?: string;
+  description?: string | ReactNode;
   hasError?: boolean;
   controlId?: string;
+  inline?: boolean;
 }
 
 /**
  * These properties are only relevant at the control level. They can therefore be omitted before passing along to the underlying form input.
  */
-export type OmittableProperties = "fieldType" | "label" | "labelTooltip" | "description";
+export type OmittableProperties = "fieldType" | "label" | "labelTooltip" | "description" | "inline";
 
 export interface InputControlProps<T extends FormValues> extends ControlBaseProps<T>, Omit<InputProps, "name"> {
   fieldType: "input";
@@ -73,7 +80,17 @@ export interface SelectControlProps<T extends FormValues>
   options: Array<Option<string>>;
 }
 
-export const FormControl = <T extends FormValues>({ label, labelTooltip, description, ...props }: ControlProps<T>) => {
+export interface SwitchControlProps<T extends FormValues> extends ControlBaseProps<T>, Omit<SwitchProps, "name"> {
+  fieldType: "switch";
+}
+
+export const FormControl = <T extends FormValues>({
+  label,
+  labelTooltip,
+  description,
+  inline = false,
+  ...props
+}: ControlProps<T>) => {
   // only retrieve new form state if form state of current field has changed
   const { errors } = useFormState<T>({ name: props.name });
   const error = get(errors, props.name);
@@ -103,33 +120,39 @@ export const FormControl = <T extends FormValues>({ label, labelTooltip, descrip
       return <SelectWrapper {...withoutFieldType} />;
     }
 
+    if (controlProps.fieldType === "switch") {
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <SwitchWrapper {...withoutFieldType} />;
+    }
+
     throw new Error(`No matching form input found for type: ${props.fieldType}`);
   }
 
   return (
-    <div className={styles.control}>
+    <div className={classNames(styles.control, { [styles["control--inline"]]: inline })}>
       <FormLabel description={description} label={label} labelTooltip={labelTooltip} htmlFor={controlId} />
-      {renderControl()}
+      <div className={styles.control__input}>{renderControl()}</div>
       {error && <FormControlError error={error} />}
     </div>
   );
 };
 
 interface FormLabelProps {
-  description?: string;
+  description?: string | ReactNode;
   label: string;
   labelTooltip?: ReactNode;
   htmlFor: string;
+  inline?: boolean;
 }
 
 export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor }) => {
   return (
-    <label className={classNames(styles.label)} htmlFor={htmlFor}>
+    <label className={styles.control__label} htmlFor={htmlFor}>
       <Text size="lg">
         {label}
         {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
       </Text>
-      {description && <Text className={styles.description}>{description}</Text>}
+      {description && <Text className={styles.control__description}>{description}</Text>}
     </label>
   );
 };
@@ -147,8 +170,8 @@ export const FormControlError: React.FC<ControlErrorProps> = ({ error }) => {
   }
 
   return (
-    <div className={styles.errorMessage__wrapper}>
-      <p className={styles.errorMessage}>{formatMessage({ id: error.message })}</p>
+    <div className={styles.control__errorWrapper}>
+      <p className={styles.control__errorMessage}>{formatMessage({ id: error.message })}</p>
     </div>
   );
 };

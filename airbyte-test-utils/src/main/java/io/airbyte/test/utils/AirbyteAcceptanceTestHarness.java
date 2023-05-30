@@ -16,6 +16,8 @@ import com.google.common.io.Resources;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ActorDefinitionRequestBody;
+import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
@@ -167,12 +169,20 @@ public class AirbyteAcceptanceTestHarness {
 
   // Used for bypassing SSL modification for db configs
   private static final String IS_TEST = "is_test";
+  public static final int JITTER_MAX_INTERVAL_SECS = 10;
+  public static final int FINAL_INTERVAL_SECS = 60;
+  public static final int MAX_TRIES = 3;
+
+  // NOTE: we include `INCOMPLETE` here because the job may still retry; see
+  // https://docs.airbyte.com/understanding-airbyte/jobs/.
+  public static final Set<JobStatus> IN_PROGRESS_JOB_STATUSES = Set.of(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING);
 
   private static boolean isKube;
   private static boolean isMinikube;
   private static boolean isGke;
   private static boolean isMac;
   private static boolean useExternalDeployment;
+  private static boolean ensureCleanSlate;
 
   /**
    * When the acceptance tests are run against a local instance of docker-compose or KUBE then these
@@ -311,28 +321,10 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   public void cleanup() {
     try {
       clearSourceDbData();
       clearDestinationDbData();
-
-      // wait until db data verified to be cleaned
-      int sourceTableCount = listAllTables(getSourceDatabase()).size();
-      int destinationTableCount = listAllTables(getDestinationDatabase()).size();
-      int iterations = 0;
-      while (sourceTableCount > 0 || destinationTableCount > 0) {
-        if (iterations > 100) {
-          throw new RuntimeException("databases tables aren't dropping after too long, exiting...");
-        }
-        iterations++;
-        LOGGER.warn("tableCount is still greater than 0! Source table count: {}. Destination table count: {}. iterations: {}", sourceTableCount,
-            destinationTableCount, iterations);
-        sleep(1000);
-        sourceTableCount = listAllTables(getSourceDatabase()).size();
-        destinationTableCount = listAllTables(getDestinationDatabase()).size();
-      }
-
       for (final UUID operationId : operationIds) {
         deleteOperation(operationId);
       }
@@ -357,12 +349,61 @@ public class AirbyteAcceptanceTestHarness {
         DataSourceFactory.close(destinationDataSource);
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
-
     } catch (final Exception e) {
       LOGGER.error("Error tearing down test fixtures: {}", e);
     }
   }
 
+  /**
+   * This method is intended to be called at the beginning of a new test run - it identifies and
+   * disables any pre-existing scheduled connections that could potentially interfere with a new test
+   * run.
+   */
+  public void ensureCleanSlate() {
+    if (!ensureCleanSlate) {
+      LOGGER.info("proceeding without cleaning up pre-existing connections.");
+      return;
+    }
+    LOGGER.info("ENSURE_CLEAN_SLATE was true, disabling all scheduled connections using postgres source or postgres destination...");
+    try {
+      final UUID sourceDefinitionId = getPostgresSourceDefinitionId();
+      final UUID destinationDefinitionId = getPostgresDestinationDefinitionId();
+
+      final List<ConnectionRead> sourceDefinitionConnections = this.apiClient.getConnectionApi()
+          .listConnectionsByActorDefinition(
+              new ActorDefinitionRequestBody().actorDefinitionId(sourceDefinitionId).actorType(ActorType.SOURCE))
+          .getConnections();
+
+      final List<ConnectionRead> destinationDefinitionConnections = this.apiClient.getConnectionApi()
+          .listConnectionsByActorDefinition(
+              new ActorDefinitionRequestBody().actorDefinitionId(destinationDefinitionId).actorType(ActorType.DESTINATION))
+          .getConnections();
+
+      final Set<ConnectionRead> allConnections = Sets.newHashSet();
+      allConnections.addAll(sourceDefinitionConnections);
+      allConnections.addAll(destinationDefinitionConnections);
+
+      final List<ConnectionRead> allConnectionsToDisable = allConnections.stream()
+          // filter out any connections that aren't active
+          .filter(connection -> connection.getStatus().equals(ConnectionStatus.ACTIVE))
+          // filter out any manual connections, since we only want to disable scheduled syncs
+          .filter(connection -> !connection.getScheduleType().equals(ConnectionScheduleType.MANUAL))
+          .toList();
+
+      LOGGER.info("Found {} existing connection(s) to clean up", allConnectionsToDisable.size());
+      if (!allConnectionsToDisable.isEmpty()) {
+        for (final ConnectionRead connection : allConnectionsToDisable) {
+          disableConnection(connection.getConnectionId());
+          LOGGER.info("disabled connection with ID {}", connection.getConnectionId());
+        }
+      }
+      LOGGER.info("ensureCleanSlate completed!");
+    } catch (final Exception e) {
+      LOGGER.warn("An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run.", e);
+    }
+  }
+
+  @SuppressWarnings("PMD.LiteralsFirstInComparisons")
   private void assignEnvVars() {
     isKube = System.getenv().containsKey("KUBE");
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
@@ -371,6 +412,8 @@ public class AirbyteAcceptanceTestHarness {
     useExternalDeployment =
         System.getenv("USE_EXTERNAL_DEPLOYMENT") != null
             && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
+    ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
+        && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
   }
 
   private WorkflowClient getWorkflowClient() {
@@ -442,18 +485,27 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void assertSourceAndDestinationDbInSync(final boolean withScdTable) throws Exception {
-    final Database source = getSourceDatabase();
-    final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
-    final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
-    final Database destination = getDestinationDatabase();
-    final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
-    assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
-        String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
+    // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
+    // the sync is marked complete but the destination tables aren't finalized yet.
+    AirbyteApiClient.retryWithJitterThrows(() -> {
+      try {
+        final Database source = getSourceDatabase();
+        final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
+        final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
+        final Database destination = getDestinationDatabase();
+        final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
+        assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
+            String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
 
-    for (final SchemaTableNamePair pair : sourceTables) {
-      final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-      assertRawDestinationContains(sourceRecords, pair);
-    }
+        for (final SchemaTableNamePair pair : sourceTables) {
+          final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
+          assertRawDestinationContains(sourceRecords, pair);
+        }
+      } catch (final Exception e) {
+        return e;
+      }
+      return null;
+    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
   public Database getSourceDatabase() {
@@ -568,6 +620,7 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void runSqlScriptInSource(final String resourceName) throws URISyntaxException, SQLException, IOException {
+    LOGGER.debug("Running sql script in source: {}", resourceName);
     if (isGke) {
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(resourceName).toURI()), getSourceDatabase());
     } else {
@@ -818,7 +871,9 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public String getEchoServerUrl() {
-    if (isGke) {
+    if (isKube && isGke) {
+      return "http://acceptance-test-echo-server-source-svc.acceptance-tests.svc.cluster.local:8080";
+    } else if (isGke) {
       return "http://localhost:6000";
     }
     return String.format("http://%s:%s/", getHostname(), echoServer.getFirstMappedPort());
@@ -928,6 +983,7 @@ public class AirbyteAcceptanceTestHarness {
     final Database database = getSourceDatabase();
     final Set<SchemaTableNamePair> pairs = listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
+      LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s", pair.schemaName(), pair.tableName())));
     }
   }
@@ -936,6 +992,7 @@ public class AirbyteAcceptanceTestHarness {
     final Database database = getDestinationDatabase();
     final Set<SchemaTableNamePair> pairs = listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
+      LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s CASCADE", pair.schemaName(), pair.tableName())));
     }
   }
@@ -1076,7 +1133,7 @@ public class AirbyteAcceptanceTestHarness {
         continue; // To the top of the loop.
       }
       try {
-        while (Set.of(JobStatus.PENDING, JobStatus.RUNNING).contains(job.getStatus())) {
+        while (IN_PROGRESS_JOB_STATUSES.contains(job.getStatus())) {
           job = this.apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(job.getId())).getJob();
           LOGGER.info("waiting: job id: {} config type: {} status: {}", job.getId(), job.getConfigType(), job.getStatus());
           sleep(3000);

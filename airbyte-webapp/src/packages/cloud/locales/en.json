@@ -118,6 +118,8 @@
   "settings.integrationSettings.dbtCloudSettings.form.description": "To use the dbt Cloud integration, enter your service token here. <lnk>Learn more</lnk>.",
   "settings.generalSettings": "General Settings",
   "settings.generalSettings.changeWorkspace": "Change Workspace",
+  "settings.generalSettings.changeWorkspaceSuccess": "Workspace name has been updated!",
+  "settings.generalSettings.changeWorkspaceError": "Something went wrong while updating your workspace name. Please try again.",
   "settings.generalSettings.form.name.label": "Workspace name",
   "settings.generalSettings.form.name.placeholder": "Workspace name",
   "settings.generalSettings.deleteLabel": "Delete your workspace",

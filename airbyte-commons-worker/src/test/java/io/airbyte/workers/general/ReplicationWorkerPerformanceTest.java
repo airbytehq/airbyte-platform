@@ -4,6 +4,11 @@
 
 package io.airbyte.workers.general;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+
+import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.protocol.AirbyteMessageMigrator;
@@ -23,6 +28,7 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
@@ -30,8 +36,14 @@ import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.book_keeping.StreamStatusTracker;
+import io.airbyte.workers.internal.book_keeping.events.AirbyteControlMessageEventListener;
+import io.airbyte.workers.internal.book_keeping.events.AirbyteStreamStatusMessageEventListener;
+import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEvent;
+import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
+import io.micronaut.context.event.ApplicationEventListener;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -40,7 +52,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.mockito.Mockito;
 
 @SuppressWarnings("MissingJavadocType")
 @Slf4j
@@ -77,13 +88,14 @@ public class ReplicationWorkerPerformanceTest {
     final var featureFlags = new EnvVariableFeatureFlags();
     final var perDestination = new EmptyAirbyteDestination();
     final var messageTracker = new AirbyteMessageTracker(featureFlags);
-    final var syncPersistence = Mockito.mock(SyncPersistence.class);
-    final var connectorConfigUpdater = Mockito.mock(ConnectorConfigUpdater.class);
+    final var syncPersistence = mock(SyncPersistence.class);
+    final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(new NotImplementedMetricClient(), "test-image:0.01");
     final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
     final var validator = new RecordSchemaValidator(Map.of(
         new AirbyteStreamNameNamespacePair("s1", null),
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
+    final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
 
     // final IntegrationLauncher integrationLauncher = new LimitedIntegrationLauncher(new
     // LimitedThinRecordSourceProcess());
@@ -108,6 +120,17 @@ public class ReplicationWorkerPerformanceTest {
         workspaceID,
         UUID.randomUUID(),
         new NotImplementedMetricClient());
+    final StreamStatusTracker streamStatusTracker = new StreamStatusTracker(mock(AirbyteApiClient.class));
+    final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(
+        new AirbyteControlMessageEventListener(connectorConfigUpdater),
+        new AirbyteStreamStatusMessageEventListener(streamStatusTracker));
+    final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper =
+        mock(ReplicationAirbyteMessageEventPublishingHelper.class);
+    doAnswer((e) -> {
+      final ReplicationAirbyteMessageEvent event = e.getArgument(0);
+      listeners.forEach(l -> l.onApplicationEvent(event));
+      return null;
+    }).when(replicationAirbyteMessageEventPublishingHelper).publishStatusEvent(any(ReplicationAirbyteMessageEvent.class));
 
     final boolean fieldSelectionEnabled = false;
     final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, fieldSelectionEnabled, false);
@@ -120,10 +143,11 @@ public class ReplicationWorkerPerformanceTest {
         syncPersistence,
         validator,
         fieldSelector,
-        metricReporter,
         connectorConfigUpdater,
-        fieldSelectionEnabled,
-        heartbeatTimeoutChaperone);
+        heartbeatTimeoutChaperone,
+        new ReplicationFeatureFlagReader(featureFlagClient),
+        airbyteMessageDataExtractor,
+        replicationAirbyteMessageEventPublishingHelper);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
       try {
@@ -132,7 +156,8 @@ public class ReplicationWorkerPerformanceTest {
             // The stream fields here are intended to match the records emitted by the
             // LimitedFatRecordSourceProcess
             // class.
-            CatalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)));
+            CatalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)))
+            .withWorkspaceId(UUID.randomUUID());
         output.set(worker.run(testInput, ignoredPath));
       } catch (final WorkerException e) {
         throw new RuntimeException(e);

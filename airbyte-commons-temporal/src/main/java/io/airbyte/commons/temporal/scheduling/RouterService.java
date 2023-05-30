@@ -6,6 +6,7 @@ package io.airbyte.commons.temporal.scheduling;
 
 import io.airbyte.commons.temporal.TemporalJobType;
 import io.airbyte.config.Geography;
+import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldRunOnGkeDataplane;
@@ -42,7 +43,7 @@ public class RouterService {
    * Given a connectionId, look up the connection's configured {@link Geography} in the config DB and
    * use it to determine which Task Queue should be used for this connection's sync.
    */
-  public String getTaskQueue(final UUID connectionId, final TemporalJobType jobType) throws IOException {
+  public String getTaskQueue(final UUID connectionId, final TemporalJobType jobType) throws IOException, ConfigNotFoundException {
     final Geography geography = configRepository.getGeographyForConnection(connectionId);
     final UUID workspaceId = configRepository.getStandardWorkspaceFromConnection(connectionId, false).getWorkspaceId();
     if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {

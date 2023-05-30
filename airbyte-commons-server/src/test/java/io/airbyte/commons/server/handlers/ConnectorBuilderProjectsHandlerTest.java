@@ -409,6 +409,14 @@ class ConnectorBuilderProjectsHandlerTest {
     verify(configRepository, times(1)).assignActorDefinitionToConnectorBuilderProject(A_BUILDER_PROJECT_ID, A_SOURCE_DEFINITION_ID);
   }
 
+  @Test
+  void whenPublishConnectorBuilderProjectThenDraftDeleted() throws IOException {
+    connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
+        .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
+
+    verify(configRepository, times(1)).deleteBuilderProjectDraft(A_BUILDER_PROJECT_ID);
+  }
+
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {
     return new ConnectorBuilderPublishRequestBody().initialDeclarativeManifest(anyInitialManifest());
   }

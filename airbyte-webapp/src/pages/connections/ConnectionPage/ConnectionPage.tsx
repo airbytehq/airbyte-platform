@@ -11,6 +11,7 @@ import {
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
+import { useExperimentContext } from "hooks/services/Experiment";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
@@ -20,6 +21,8 @@ import { ConnectionRoutePaths } from "../types";
 
 const ConnectionHeadTitle: React.FC = () => {
   const { connection } = useConnectionEditService();
+  useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
+  useExperimentContext("connection", connection.connectionId);
 
   return (
     <HeadTitle

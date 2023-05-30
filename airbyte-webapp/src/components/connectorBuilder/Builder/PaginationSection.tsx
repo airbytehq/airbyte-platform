@@ -1,4 +1,4 @@
-import { useField } from "formik";
+import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
@@ -13,41 +13,18 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { BuilderPaginator, CURSOR_PAGINATION, OFFSET_INCREMENT, PAGE_INCREMENT } from "../types";
+import { CURSOR_PAGINATION, OFFSET_INCREMENT, PAGE_INCREMENT, StreamPathFn, useBuilderWatch } from "../types";
 
 interface PaginationSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
 export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderPaginator | undefined>(streamFieldPath("paginator"));
-  const [pageSizeField] = useField(streamFieldPath("paginator.strategy.page_size"));
-  const [, , pageSizeOptionHelpers] = useField(streamFieldPath("paginator.pageSizeOption"));
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      helpers.setValue({
-        strategy: {
-          type: OFFSET_INCREMENT,
-          page_size: "",
-        },
-        pageSizeOption: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-        pageTokenOption: {
-          inject_into: "request_parameter",
-          field_name: "",
-        },
-      });
-    } else {
-      helpers.setValue(undefined);
-    }
-  };
-  const toggledOn = field.value !== undefined;
+  const { setValue } = useFormContext();
+  const pageSize = useBuilderWatch(streamFieldPath("paginator.strategy.page_size"));
+  const pageSizeOptionPath = streamFieldPath("paginator.pageSizeOption");
 
   return (
     <BuilderCard
@@ -56,8 +33,22 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
         <ControlLabels label="Pagination" infoTooltipContent="Configure how pagination is handled by your connector" />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("paginator"),
+        defaultValue: {
+          strategy: {
+            type: OFFSET_INCREMENT,
+            page_size: "",
+          },
+          pageSizeOption: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+          pageTokenOption: {
+            inject_into: "request_parameter",
+            field_name: "",
+          },
+        },
       }}
       copyConfig={{
         path: "paginator",
@@ -75,6 +66,9 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           {
             label: "Offset Increment",
             typeValue: OFFSET_INCREMENT,
+            default: {
+              page_size: "",
+            },
             children: (
               <>
                 <BuilderField
@@ -90,6 +84,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           {
             label: "Page Increment",
             typeValue: PAGE_INCREMENT,
+            default: {
+              page_size: "",
+              start_from_page: "",
+            },
             children: (
               <>
                 <BuilderField
@@ -112,6 +110,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
             label: "Cursor Pagination",
             typeValue: CURSOR_PAGINATION,
             default: {
+              page_size: "",
               cursor: {
                 type: "response",
                 path: [],
@@ -157,6 +156,10 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                     {
                       label: "Custom",
                       typeValue: "custom",
+                      default: {
+                        cursor_value: "",
+                        stop_condition: "",
+                      },
                       children: (
                         <>
                           <BuilderFieldWithInputs
@@ -182,12 +185,12 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   manifestPath="CursorPagination.properties.page_size"
                   onChange={(newValue) => {
                     if (newValue === undefined || newValue === "") {
-                      pageSizeOptionHelpers.setValue(undefined);
+                      setValue(pageSizeOptionPath, undefined);
                     }
                   }}
                   optional
                 />
-                {pageSizeField.value ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
+                {pageSize ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
               </>
             ),
           },

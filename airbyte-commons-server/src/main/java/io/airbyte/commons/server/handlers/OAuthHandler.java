@@ -30,6 +30,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.handlers.helpers.OAuthPathExtractor;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceConnection;
@@ -43,7 +44,11 @@ import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.FieldSelectionWorkspaces.AllowOAuthOverrideCredentials;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.oauth.OAuthFlowImplementation;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
@@ -79,19 +84,22 @@ public class OAuthHandler {
   private final SecretsRepositoryReader secretsRepositoryReader;
   private final SecretsRepositoryWriter secretsRepositoryWriter;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
+  private final FeatureFlagClient featureFlagClient;
 
   public OAuthHandler(final ConfigRepository configRepository,
                       @Named("oauthHttpClient") final HttpClient httpClient,
                       final TrackingClient trackingClient,
                       final SecretsRepositoryReader secretsRepositoryReader,
                       final SecretsRepositoryWriter secretsRepositoryWriter,
-                      final ActorDefinitionVersionHelper actorDefinitionVersionHelper) {
+                      final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
+                      final FeatureFlagClient featureFlagClient) {
     this.configRepository = configRepository;
-    this.oAuthImplementationFactory = new OAuthImplementationFactory(configRepository, httpClient);
+    this.oAuthImplementationFactory = new OAuthImplementationFactory(httpClient);
     this.trackingClient = trackingClient;
     this.secretsRepositoryReader = secretsRepositoryReader;
     this.secretsRepositoryWriter = secretsRepositoryWriter;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
+    this.featureFlagClient = featureFlagClient;
   }
 
   public OAuthConsentRead getSourceOAuthConsent(final SourceOauthConsentRequest sourceOauthConsentRequest)
@@ -108,6 +116,9 @@ public class OAuthHandler {
     final ConnectorSpecification spec = sourceVersion.getSpec();
     final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final OAuthConsentRead result;
+
+    JsonNode sourceOAuthParamConfig = getSourceOAuthParamConfig(sourceOauthConsentRequest.getWorkspaceId(), sourceDefinition.getSourceDefinitionId());
+
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
 
@@ -127,12 +138,12 @@ public class OAuthHandler {
           sourceOauthConsentRequest.getSourceDefinitionId(),
           sourceOauthConsentRequest.getRedirectUrl(),
           oAuthInputConfigurationForConsent,
-          spec.getAdvancedAuth().getOauthConfigSpecification()));
+          spec.getAdvancedAuth().getOauthConfigSpecification(), sourceOAuthParamConfig));
     } else {
       result = new OAuthConsentRead().consentUrl(oAuthFlowImplementation.getSourceConsentUrl(
           sourceOauthConsentRequest.getWorkspaceId(),
           sourceOauthConsentRequest.getSourceDefinitionId(),
-          sourceOauthConsentRequest.getRedirectUrl(), Jsons.emptyObject(), null));
+          sourceOauthConsentRequest.getRedirectUrl(), Jsons.emptyObject(), null, sourceOAuthParamConfig));
     }
     try {
       trackingClient.track(sourceOauthConsentRequest.getWorkspaceId(), "Get Oauth Consent URL - Backend", metadata);
@@ -157,6 +168,10 @@ public class OAuthHandler {
     final ConnectorSpecification spec = destinationVersion.getSpec();
     final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final OAuthConsentRead result;
+
+    JsonNode destinationOAuthParamConfig = getDestinationOAuthParamConfig(
+        destinationOauthConsentRequest.getWorkspaceId(), destinationOauthConsentRequest.getDestinationDefinitionId());
+
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
 
@@ -177,12 +192,12 @@ public class OAuthHandler {
           destinationOauthConsentRequest.getDestinationDefinitionId(),
           destinationOauthConsentRequest.getRedirectUrl(),
           oAuthInputConfigurationForConsent,
-          spec.getAdvancedAuth().getOauthConfigSpecification()));
+          spec.getAdvancedAuth().getOauthConfigSpecification(), destinationOAuthParamConfig));
     } else {
       result = new OAuthConsentRead().consentUrl(oAuthFlowImplementation.getDestinationConsentUrl(
           destinationOauthConsentRequest.getWorkspaceId(),
           destinationOauthConsentRequest.getDestinationDefinitionId(),
-          destinationOauthConsentRequest.getRedirectUrl(), Jsons.emptyObject(), null));
+          destinationOauthConsentRequest.getRedirectUrl(), Jsons.emptyObject(), null, destinationOAuthParamConfig));
     }
     try {
       trackingClient.track(destinationOauthConsentRequest.getWorkspaceId(), "Get Oauth Consent URL - Backend", metadata);
@@ -218,6 +233,9 @@ public class OAuthHandler {
     final ConnectorSpecification spec = sourceVersion.getSpec();
     final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final Map<String, Object> result;
+
+    JsonNode sourceOAuthParamConfig =
+        getSourceOAuthParamConfig(completeSourceOauthRequest.getWorkspaceId(), sourceDefinition.getSourceDefinitionId());
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
 
@@ -238,14 +256,15 @@ public class OAuthHandler {
           completeSourceOauthRequest.getQueryParams(),
           completeSourceOauthRequest.getRedirectUrl(),
           oAuthInputConfigurationForConsent,
-          spec.getAdvancedAuth().getOauthConfigSpecification());
+          spec.getAdvancedAuth().getOauthConfigSpecification(),
+          sourceOAuthParamConfig);
     } else {
       // deprecated but this path is kept for connectors that don't define OAuth Spec yet
       result = oAuthFlowImplementation.completeSourceOAuth(
           completeSourceOauthRequest.getWorkspaceId(),
           completeSourceOauthRequest.getSourceDefinitionId(),
           completeSourceOauthRequest.getQueryParams(),
-          completeSourceOauthRequest.getRedirectUrl());
+          completeSourceOauthRequest.getRedirectUrl(), sourceOAuthParamConfig);
     }
     try {
       trackingClient.track(completeSourceOauthRequest.getWorkspaceId(), "Complete OAuth Flow - Backend", metadata);
@@ -270,6 +289,10 @@ public class OAuthHandler {
     final ConnectorSpecification spec = destinationVersion.getSpec();
     final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final Map<String, Object> result;
+
+    JsonNode destinationOAuthParamConfig = getDestinationOAuthParamConfig(
+        completeDestinationOAuthRequest.getWorkspaceId(), completeDestinationOAuthRequest.getDestinationDefinitionId());
+
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
 
@@ -291,14 +314,14 @@ public class OAuthHandler {
           completeDestinationOAuthRequest.getQueryParams(),
           completeDestinationOAuthRequest.getRedirectUrl(),
           oAuthInputConfigurationForConsent,
-          spec.getAdvancedAuth().getOauthConfigSpecification());
+          spec.getAdvancedAuth().getOauthConfigSpecification(), destinationOAuthParamConfig);
     } else {
       // deprecated but this path is kept for connectors that don't define OAuth Spec yet
       result = oAuthFlowImplementation.completeDestinationOAuth(
           completeDestinationOAuthRequest.getWorkspaceId(),
           completeDestinationOAuthRequest.getDestinationDefinitionId(),
           completeDestinationOAuthRequest.getQueryParams(),
-          completeDestinationOAuthRequest.getRedirectUrl());
+          completeDestinationOAuthRequest.getRedirectUrl(), destinationOAuthParamConfig);
     }
     try {
       trackingClient.track(completeDestinationOAuthRequest.getWorkspaceId(), "Complete OAuth Flow - Backend", metadata);
@@ -541,6 +564,48 @@ public class OAuthHandler {
       // statefulSplitSecrets can find and
       // store them in our secrets manager and replace the values appropriately.
       return secretsRepositoryWriter.statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification);
+    }
+  }
+
+  @VisibleForTesting
+  JsonNode getSourceOAuthParamConfig(final UUID workspaceId, final UUID sourceDefinitionId) throws IOException, ConfigNotFoundException {
+    try {
+      boolean throwIfOverridePresent = !featureFlagClient.boolVariation(AllowOAuthOverrideCredentials.INSTANCE, new Workspace(workspaceId));
+      Optional<SourceOAuthParameter> param = MoreOAuthParameters.getSourceOAuthParameter(
+          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, throwIfOverridePresent);
+
+      if (param.isPresent()) {
+        // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
+        // here see https://github.com/airbytehq/airbyte/issues/7624
+
+        // If config doesn't have nested secrets, will be a no-op
+        JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(param.get().getConfiguration());
+
+        return MoreOAuthParameters.flattenOAuthConfig(hydratedConfig);
+      } else {
+        throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "Undefined OAuth Parameter.");
+      }
+    } catch (final JsonValidationException e) {
+      throw new IOException("Failed to load OAuth Parameters", e);
+    }
+  }
+
+  @VisibleForTesting
+  JsonNode getDestinationOAuthParamConfig(final UUID workspaceId, final UUID destinationDefinitionId)
+      throws IOException, ConfigNotFoundException {
+    try {
+      boolean throwIfOverridePresent = !featureFlagClient.boolVariation(AllowOAuthOverrideCredentials.INSTANCE, new Workspace(workspaceId));
+      final Optional<DestinationOAuthParameter> param = MoreOAuthParameters.getDestinationOAuthParameter(
+          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId, throwIfOverridePresent);
+      if (param.isPresent()) {
+        // TODO: if we write a migration to flatten persisted configs in db, we don't need to flatten
+        // here see https://github.com/airbytehq/airbyte/issues/7624
+        return MoreOAuthParameters.flattenOAuthConfig(param.get().getConfiguration());
+      } else {
+        throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM, "Undefined OAuth Parameter.");
+      }
+    } catch (final JsonValidationException e) {
+      throw new IOException("Failed to load OAuth Parameters", e);
     }
   }
 

@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
@@ -64,6 +65,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -646,6 +648,23 @@ public class ConnectionsHandler {
         connectionRead.setWorkspaceId(workspaceId);
         connectionReads.add(connectionRead);
       }
+    }
+    return new ConnectionReadList().connections(connectionReads);
+  }
+
+  public ConnectionReadList listConnectionsForActorDefinition(final ActorDefinitionRequestBody actorDefinitionRequestBody)
+      throws IOException {
+
+    final List<ConnectionRead> connectionReads = new ArrayList<>();
+
+    final List<StandardSync> standardSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+        actorDefinitionRequestBody.getActorDefinitionId(),
+        actorDefinitionRequestBody.getActorType().toString(),
+        false);
+
+    for (final StandardSync standardSync : standardSyncs) {
+      final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+      connectionReads.add(connectionRead);
     }
     return new ConnectionReadList().connections(connectionReads);
   }

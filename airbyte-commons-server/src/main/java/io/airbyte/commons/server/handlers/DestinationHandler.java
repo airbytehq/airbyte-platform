@@ -19,9 +19,11 @@ import io.airbyte.api.model.generated.DestinationSearch;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
 import io.airbyte.api.model.generated.DestinationUpdate;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.PartialDestinationUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -193,6 +195,37 @@ public class DestinationHandler {
         configRepository.getDestinationConnection(destinationUpdate.getDestinationId()), spec);
   }
 
+  public DestinationRead partialDestinationUpdate(final PartialDestinationUpdate partialDestinationUpdate)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    // get existing implementation
+    final DestinationConnection updatedDestination = configurationUpdate
+        .partialDestination(partialDestinationUpdate.getDestinationId(), partialDestinationUpdate.getName(),
+            partialDestinationUpdate.getConnectionConfiguration());
+
+    final ConnectorSpecification spec =
+        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
+            updatedDestination.getDestinationId());
+
+    OAuthSecretHelper.validateNoSecretsInConfiguration(spec, partialDestinationUpdate.getConnectionConfiguration());
+
+    // validate configuration
+    validateDestination(spec, updatedDestination.getConfiguration());
+
+    // persist
+    persistDestinationConnection(
+        updatedDestination.getName(),
+        updatedDestination.getDestinationDefinitionId(),
+        updatedDestination.getWorkspaceId(),
+        updatedDestination.getDestinationId(),
+        updatedDestination.getConfiguration(),
+        updatedDestination.getTombstone(),
+        spec);
+
+    // read configuration from db
+    return buildDestinationRead(
+        configRepository.getDestinationConnection(partialDestinationUpdate.getDestinationId()), spec);
+  }
+
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildDestinationRead(destinationIdRequestBody.getDestinationId());
@@ -243,7 +276,7 @@ public class DestinationHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final List<DestinationRead> reads = Lists.newArrayList();
-    List<DestinationConnection> destinationConnections = configRepository.listWorkspacesDestinationConnections(
+    final List<DestinationConnection> destinationConnections = configRepository.listWorkspacesDestinationConnections(
         new ResourcesQueryPaginated(
             listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
             listResourcesForWorkspacesRequestBody.getIncludeDeleted(),

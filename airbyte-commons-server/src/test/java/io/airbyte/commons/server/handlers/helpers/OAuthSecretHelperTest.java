@@ -45,9 +45,50 @@ class OAuthSecretHelperTest {
     ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
     Map<String, List<String>> result = OAuthSecretHelper.getOAuthConfigPaths(connectorSpecification);
     Map<String, List<String>> expected = Map.of(
-        REFRESH_TOKEN, List.of("refresh_token"),
-        CLIENT_ID, List.of("client_id"),
-        CLIENT_SECRET, List.of("client_secret"));
+        REFRESH_TOKEN, List.of(REFRESH_TOKEN),
+        CLIENT_ID, List.of(CLIENT_ID),
+        CLIENT_SECRET, List.of(CLIENT_SECRET));
+    assertEquals(expected, result);
+  }
+
+  @Test
+  void testGetOAuthConfigPathsForLegacy() throws IOException, JsonValidationException {
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
+    Map<String, List<String>> result = OAuthSecretHelper.getOAuthConfigPaths(connectorSpecification);
+    Map<String, List<String>> expected = Map.of(
+        REFRESH_TOKEN, List.of(CREDENTIALS, REFRESH_TOKEN),
+        CLIENT_ID, List.of(CREDENTIALS, CLIENT_ID),
+        CLIENT_SECRET, List.of(CREDENTIALS, CLIENT_SECRET));
+    assertEquals(expected, result);
+  }
+
+  @Test
+  void testGetOAuthInputPathsForNestedAdvancedAuth() throws IOException, JsonValidationException {
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateNestedAdvancedAuthConnectorSpecification();
+    Map<String, List<String>> result = OAuthSecretHelper.getOAuthInputPaths(connectorSpecification);
+    Map<String, List<String>> expected = Map.of(
+        CLIENT_ID, List.of(CREDENTIALS, CLIENT_ID),
+        CLIENT_SECRET, List.of(CREDENTIALS, CLIENT_SECRET));
+    assertEquals(expected, result);
+  }
+
+  @Test
+  void testGetOAuthInputPathsForAdvancedAuth() throws IOException, JsonValidationException {
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification();
+    Map<String, List<String>> result = OAuthSecretHelper.getOAuthInputPaths(connectorSpecification);
+    Map<String, List<String>> expected = Map.of(
+        CLIENT_ID, List.of(CLIENT_ID),
+        CLIENT_SECRET, List.of(CLIENT_SECRET));
+    assertEquals(expected, result);
+  }
+
+  @Test
+  void testGetOAuthInputPathsForLegacy() throws IOException, JsonValidationException {
+    ConnectorSpecification connectorSpecification = ConnectorSpecificationHelpers.generateAuthSpecificationConnectorSpecification();
+    Map<String, List<String>> result = OAuthSecretHelper.getOAuthInputPaths(connectorSpecification);
+    Map<String, List<String>> expected = Map.of(
+        CLIENT_ID, List.of(CREDENTIALS, CLIENT_ID),
+        CLIENT_SECRET, List.of(CREDENTIALS, CLIENT_SECRET));
     assertEquals(expected, result);
   }
 

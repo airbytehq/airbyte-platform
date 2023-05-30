@@ -1,5 +1,5 @@
 import * as LDClient from "launchdarkly-js-client-sdk";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { finalize, Subject } from "rxjs";
@@ -11,14 +11,21 @@ import { useI18nContext } from "core/i18n";
 import { useAnalyticsService } from "core/services/analytics";
 import { useDebugVariable } from "core/utils/debug";
 import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonitoringService";
-import { ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
+import { ContextKind, ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
 import { FeatureSet, FeatureItem, useFeatureService } from "hooks/services/Feature";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
+import { isDevelopment } from "utils/isDevelopment";
 import { rejectAfter } from "utils/promises";
 
-import { createMultiContext, createUserContext, createWorkspaceContext } from "./contexts";
+import {
+  createLDContext,
+  createMultiContext,
+  createUserContext,
+  getSingleContextsFromMulti,
+  isMultiContext,
+} from "./contexts";
 
 /**
  * This service hardcodes two conventions about the format of the LaunchDarkly feature
@@ -53,6 +60,11 @@ type LDInitState = "initializing" | "failed" | "initialized";
  * before running disabling it.
  */
 const INITIALIZATION_TIMEOUT = 5000;
+
+const debugFlags = isDevelopment()
+  ? (_: Error | null, flags: LDClient.LDFlagSet | null) =>
+      console.debug("%c[LaunchDarkly] Flags after identify call:", "color: SlateBlue", flags)
+  : undefined;
 
 const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string }>> = ({ children, apiKey }) => {
   const { setFeatureOverwrites } = useFeatureService();
@@ -102,7 +114,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   if (!ldClient.current) {
     const userContext = createUserContext(user, locale);
     const contexts = workspaceId
-      ? createMultiContext(userContext, createWorkspaceContext(workspaceId))
+      ? createMultiContext(userContext, createLDContext("workspace", workspaceId))
       : createMultiContext(userContext);
     ldClient.current = LDClient.initialize(apiKey, contexts);
 
@@ -153,10 +165,73 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   useEffect(() => {
     const userContext = createUserContext(user, locale);
     const contexts = workspaceId
-      ? createMultiContext(userContext, createWorkspaceContext(workspaceId))
+      ? createMultiContext(userContext, createLDContext("workspace", workspaceId))
       : createMultiContext(userContext);
-    ldClient.current?.identify(contexts);
+    ldClient.current?.identify(contexts, undefined, debugFlags);
   }, [workspaceId, locale, user]);
+
+  // Casting the type as LDMultiKindContext | LDSingleKindContext is necessary because the LD client still supports the deprecated LDUser.
+  // We don't use LDUser, but the type is still there, so we need to cast the type to the actual type we're using.
+  const getLDClientContext = () => ldClient.current?.getContext() as Exclude<LDClient.LDContext, LDClient.LDUser>;
+
+  // Adds a context and reidentifies with the ldClient if the context is not already present
+  const addContext = useCallback((kind: ContextKind, key: string) => {
+    const ldClientContext = getLDClientContext();
+    const existingContexts = isMultiContext(ldClientContext)
+      ? getSingleContextsFromMulti(ldClientContext)
+      : [ldClientContext];
+    if (!existingContexts.find((c) => c.kind === kind && c.key !== key)) {
+      ldClient.current?.identify(
+        createMultiContext(...existingContexts, createLDContext(kind, key)),
+        undefined,
+        debugFlags
+      );
+    }
+  }, []);
+
+  // Removes a context and reidentifies with the ldClient if the context is present
+  const removeContext = useCallback((kind: ContextKind) => {
+    const ldClientContext = getLDClientContext();
+    const existingContexts = isMultiContext(ldClientContext)
+      ? getSingleContextsFromMulti(ldClientContext)
+      : [ldClientContext];
+    if (existingContexts.some((c) => c.kind === kind)) {
+      ldClient.current?.identify(
+        createMultiContext(...existingContexts.filter((c) => c.kind !== kind)),
+        undefined,
+        debugFlags
+      );
+    }
+  }, []);
+
+  const experimentService: ExperimentService = useMemo(
+    () => ({
+      addContext,
+      removeContext,
+      getExperiment(key, defaultValue) {
+        // Return the current value of a feature flag from the LD client
+        return ldClient.current?.variation(key, defaultValue);
+      },
+      getExperimentChanges$<K extends keyof Experiments>(key: K) {
+        // To retrieve changes from the LD client, we're subscribing to changes
+        // for that specific key (emitted via the change:key event) and emit that
+        // on our observable.
+        const subject = new Subject<Experiments[K]>();
+        const onNewExperimentValue = (newValue: Experiments[K]) => {
+          subject.next(newValue);
+        };
+        ldClient.current?.on(`change:${key}`, onNewExperimentValue);
+        return subject.pipe(
+          finalize(() => {
+            // Whenever the last subscriber disconnects (or the observable would complete, which
+            // we never do for this observable), make sure to unregister our event listener again
+            ldClient.current?.off(`change:${key}`, onNewExperimentValue);
+          })
+        );
+      },
+    }),
+    [addContext, removeContext]
+  );
 
   // Show the loading page while we're still waiting for the initial set of feature flags (or them to time out)
   if (state === "initializing") {
@@ -168,30 +243,6 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   if (state === "failed") {
     return <>{children}</>;
   }
-
-  const experimentService: ExperimentService = {
-    getExperiment(key, defaultValue) {
-      // Return the current value of a feature flag from the LD client
-      return ldClient.current?.variation(key, defaultValue);
-    },
-    getExperimentChanges$<K extends keyof Experiments>(key: K) {
-      // To retrieve changes from the LD client, we're subscribing to changes
-      // for that specific key (emitted via the change:key event) and emit that
-      // on our observable.
-      const subject = new Subject<Experiments[K]>();
-      const onNewExperimentValue = (newValue: Experiments[K]) => {
-        subject.next(newValue);
-      };
-      ldClient.current?.on(`change:${key}`, onNewExperimentValue);
-      return subject.pipe(
-        finalize(() => {
-          // Whenever the last subscriber disconnects (or the observable would complete, which
-          // we never do for this observable), make sure to unregister our event listener again
-          ldClient.current?.off(`change:${key}`, onNewExperimentValue);
-        })
-      );
-    },
-  };
 
   return <ExperimentProvider value={experimentService}>{children}</ExperimentProvider>;
 };

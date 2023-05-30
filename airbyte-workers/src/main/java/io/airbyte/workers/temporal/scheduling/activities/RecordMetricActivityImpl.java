@@ -23,6 +23,7 @@ import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -78,8 +79,10 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
     final List<MetricAttribute> metricAttributes = new ArrayList<>();
     metricAttributes.add(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(connectionUpdaterInput.getConnectionId())));
 
-    final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString();
-    metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId));
+    final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId());
+    if (workspaceId != null) {
+      metricAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId));
+    }
     log.debug("generated metric attributes for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.getConnectionId());
     return metricAttributes;
   }
@@ -96,9 +99,13 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
     if (connectionUpdaterInput != null) {
       if (connectionUpdaterInput.getConnectionId() != null) {
         tags.put(CONNECTION_ID_KEY, connectionUpdaterInput.getConnectionId());
-        final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId()).toString();
-        tags.put(WORKSPACE_ID_KEY, workspaceId);
-        log.debug("generated tags for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.getConnectionId());
+        final String workspaceId = getWorkspaceId(connectionUpdaterInput.getConnectionId());
+        if (workspaceId != null) {
+          tags.put(WORKSPACE_ID_KEY, workspaceId);
+          log.debug("generated tags for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.getConnectionId());
+        } else {
+          log.debug("unable to find workspaceId for connectionId {}", connectionUpdaterInput.getConnectionId());
+        }
       }
       if (connectionUpdaterInput.getJobId() != null) {
         tags.put(JOB_ID_KEY, connectionUpdaterInput.getJobId());
@@ -109,12 +116,15 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
   }
 
   @Cacheable("connection-workspace-id")
-  UUID getWorkspaceId(final UUID connectionId) {
+  String getWorkspaceId(final UUID connectionId) {
     try {
       log.debug("Calling workspaceApi to fetch workspace ID for connection ID {}", connectionId);
       final WorkspaceRead workspaceRead = workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
-      return workspaceRead.getWorkspaceId();
+      return workspaceRead.getWorkspaceId().toString();
     } catch (final ApiException e) {
+      if (e.getCode() == HttpStatus.NOT_FOUND.getCode()) {
+        return null;
+      }
       throw new RetryableException(e);
     }
   }
