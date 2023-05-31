@@ -23,7 +23,7 @@ interface ConditionSectionProps {
  * ConditionSection is responsible for handling oneOf sections of form
  */
 export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, path, disabled }) => {
-  const { setValue } = useFormContext();
+  const { setValue, clearErrors } = useFormContext();
   const value = useWatch({ name: path });
 
   const { conditions, selectionConstValues } = formField;
@@ -46,8 +46,9 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       setDefaultValues(newSelectedFormBlock, conditionValues, { respectExistingValues: true });
       // do not validate the new oneOf part of the form as the user didn't have a chance to fill it out yet.
       setValue(path, conditionValues, { shouldDirty: true, shouldTouch: true });
+      clearErrors(path);
     },
-    [conditions, formField.selectionKey, selectionConstValues, value, path, setValue]
+    [conditions, value, formField.selectionKey, selectionConstValues, setValue, path, clearErrors]
   );
 
   const options = useMemo(

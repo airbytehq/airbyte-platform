@@ -5,8 +5,8 @@ import { FieldPath, useFormContext } from "react-hook-form";
 
 import { ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 
 import { useConnectorForm } from "./connectorFormContext";
 import { ConnectorFormValues } from "./types";

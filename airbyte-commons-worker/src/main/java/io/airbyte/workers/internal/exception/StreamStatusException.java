@@ -5,6 +5,8 @@
 package io.airbyte.workers.internal.exception;
 
 import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.workers.context.ReplicationContext;
+import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
 import java.io.Serial;
 
 /**
@@ -14,20 +16,32 @@ public class StreamStatusException extends Exception {
 
   @Serial
   private static final long serialVersionUID = 2672916268471741528L;
+  private final AirbyteMessageOrigin airbyteMessageOrigin;
+  private final ReplicationContext replicationContext;
   private final StreamDescriptor streamDescriptor;
 
-  public StreamStatusException(final String message, final StreamDescriptor streamDescriptor) {
+  public StreamStatusException(final String message,
+                               final AirbyteMessageOrigin airbyteMessageOrigin,
+                               final ReplicationContext replicationContext,
+                               final StreamDescriptor streamDescriptor) {
     super(message);
+    this.airbyteMessageOrigin = airbyteMessageOrigin;
+    this.replicationContext = replicationContext;
     this.streamDescriptor = streamDescriptor;
   }
 
-  public StreamStatusException(final String message, final String streamName, final String streamNamespace) {
-    this(message, new StreamDescriptor().withNamespace(streamNamespace).withName(streamName));
+  public StreamStatusException(final String message,
+                               final AirbyteMessageOrigin airbyteMessageOrigin,
+                               final ReplicationContext replicationContext,
+                               final String streamName,
+                               final String streamNamespace) {
+    this(message, airbyteMessageOrigin, replicationContext, new StreamDescriptor().withNamespace(streamNamespace).withName(streamName));
   }
 
   @Override
   public String getMessage() {
-    return String.format("%s (stream = %s:%s)", super.getMessage(), streamDescriptor.getNamespace(), streamDescriptor.getName());
+    return String.format("%s (origin = %s, context = %s, stream = %s:%s)", super.getMessage(), airbyteMessageOrigin.name(), replicationContext,
+        streamDescriptor.getNamespace(), streamDescriptor.getName());
   }
 
 }

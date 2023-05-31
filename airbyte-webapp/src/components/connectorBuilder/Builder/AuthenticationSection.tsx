@@ -44,7 +44,7 @@ export const AuthenticationSection: React.FC = () => {
           })
         }
         options={[
-          { label: "No Auth", typeValue: "NoAuth" },
+          { label: "No Auth", typeValue: "NoAuth", default: {} },
           {
             label: "API Key",
             typeValue: API_KEY_AUTHENTICATOR,

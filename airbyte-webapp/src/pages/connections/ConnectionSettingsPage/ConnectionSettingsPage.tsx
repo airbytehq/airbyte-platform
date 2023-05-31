@@ -6,22 +6,24 @@ import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
 import { DeleteBlock } from "components/common/DeleteBlock";
-import { UpdateConnectionDataResidency } from "components/connection/UpdateConnectionDataResidency";
 import { Form } from "components/forms";
+import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
 import { Geography, WebBackendConnectionUpdate } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDeleteConnection } from "hooks/services/useConnectionHook";
+import { links } from "utils/links";
 
 import styles from "./ConnectionSettingsPage.module.scss";
 import { SchemaUpdateNotifications } from "./SchemaUpdateNotifications";
@@ -39,6 +41,20 @@ const connectionSettingsFormSchema = yup.object({
   geography: yup.mixed<Geography>().optional(),
   notifySchemaChanges: yup.bool().optional(),
 });
+
+const dataResidencyDropdownDescription = (
+  <FormattedMessage
+    id="connection.geographyDescription"
+    values={{
+      ipLink: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
+      docLink: (
+        <ExternalLink href={links.connectionDataResidency}>
+          <FormattedMessage id="ui.learnMore" />
+        </ExternalLink>
+      ),
+    }}
+  />
+);
 
 export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
@@ -113,7 +129,13 @@ export const ConnectionSettingsPage: React.FC = () => {
           >
             <UpdateConnectionName />
             {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications />}
-            {canUpdateDataResidency && <UpdateConnectionDataResidency />}
+            {canUpdateDataResidency && (
+              <DataResidencyDropdown<ConnectionSettingsFormValues>
+                labelId="connection.geographyTitle"
+                description={dataResidencyDropdownDescription}
+                name="geography"
+              />
+            )}
             <FormSubmissionButtons submitKey="form.saveChanges" />
           </Form>
         </Card>

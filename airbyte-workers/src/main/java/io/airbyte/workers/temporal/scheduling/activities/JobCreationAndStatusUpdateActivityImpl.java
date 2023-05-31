@@ -221,6 +221,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         return new JobCreationOutput(jobId);
       }
     } catch (final JsonValidationException | ConfigNotFoundException | IOException e) {
+      log.error("createNewJob for connection {} failed with exception: {}", input.getConnectionId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }
@@ -257,6 +258,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       LogClientSingleton.getInstance().setJobMdc(workerEnvironment, logConfigs, jobRoot);
       return new AttemptNumberCreationOutput(persistedAttemptNumber);
     } catch (final IOException e) {
+      log.error("createNewAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }
@@ -353,6 +355,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       emitJobIdToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, jobId);
       trackFailures(failureSummary);
     } catch (final IOException e) {
+      log.error("attemptFailureWithAttemptNumber for job {} failed with exception: {}", input.getJobId(), e.getMessage(), e);
       throw new RetryableException(e);
     }
   }

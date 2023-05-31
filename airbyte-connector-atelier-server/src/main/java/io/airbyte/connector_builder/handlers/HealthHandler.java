@@ -4,7 +4,6 @@
 
 package io.airbyte.connector_builder.handlers;
 
-import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
 import jakarta.inject.Singleton;
 
@@ -15,9 +14,9 @@ import jakarta.inject.Singleton;
 @Singleton
 public class HealthHandler {
 
-  private final CdkVersionProvider cdkVersionProvider;
+  private final CachedCdkVersionProviderDecorator cdkVersionProvider;
 
-  public HealthHandler(final CdkVersionProvider cdkVersionProvider) {
+  public HealthHandler(final CachedCdkVersionProviderDecorator cdkVersionProvider) {
     this.cdkVersionProvider = cdkVersionProvider;
   }
 

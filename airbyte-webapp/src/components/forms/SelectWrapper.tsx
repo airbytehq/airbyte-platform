@@ -4,6 +4,7 @@ import { ListBox } from "components/ui/ListBox";
 
 import { FormValues } from "./Form";
 import { SelectControlProps, OmittableProperties } from "./FormControl";
+import styles from "./SelectWrapper.module.scss";
 
 export const SelectWrapper = <T extends FormValues>({
   hasError,
@@ -22,6 +23,7 @@ export const SelectWrapper = <T extends FormValues>({
           hasError={hasError}
           onSelect={(value) => field.onChange(value)}
           selectedValue={field.value}
+          className={styles.select}
         />
       )}
     />

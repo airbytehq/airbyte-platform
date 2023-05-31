@@ -10,9 +10,9 @@ import { StepsMenu } from "components/ui/StepsMenu";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStatus } from "core/request/AirbyteClient";
+import { useFeature, FeatureItem } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
-import { useFeature, FeatureItem } from "hooks/services/Feature";
 
 import styles from "./ConnectionPageTitle.module.scss";
 import { ConnectionRoutePaths } from "../types";

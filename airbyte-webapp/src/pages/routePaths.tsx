@@ -10,13 +10,11 @@ export enum RoutePaths {
   Destination = "destination",
   Source = "source",
   Settings = "settings",
+
   Connection = "connection",
   ConnectionNew = "new-connection",
-  SelectSourceNew = "new-source",
-  SourceNew = "new-source/:sourceDefinitionId",
-  SelectDestinationNew = "new-destination",
-
-  DestinationNew = "new-destination/:destinationDefinitionId",
+  SourceNew = "new-source",
+  DestinationNew = "new-destination",
 
   ConnectorBuilder = "connector-builder",
 }
@@ -24,13 +22,11 @@ export enum RoutePaths {
 export enum DestinationPaths {
   Root = ":destinationId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Settings = "settings",
-  SelectNewDestination = "new-destination",
-  NewDestination = "new-destination/:destinationDefinitionId",
+  NewDestination = "new-destination",
 }
 
 export enum SourcePaths {
   Root = ":sourceId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Settings = "settings",
-  SelectNewSource = "new-source",
-  NewSource = "new-source/:sourceDefinitionId",
+  NewSource = "new-source",
 }

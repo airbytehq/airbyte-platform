@@ -18,6 +18,7 @@ import styles from "./FormControl.module.scss";
 import { InputWrapper } from "./InputWrapper";
 import { SelectWrapper } from "./SelectWrapper";
 import { SwitchWrapper } from "./SwitchWrapper";
+
 type ControlProps<T extends FormValues> =
   | SelectControlProps<T>
   | InputControlProps<T>
@@ -128,9 +129,9 @@ export const FormControl = <T extends FormValues>({
   }
 
   return (
-    <div className={classNames(styles.control, { [styles.inline]: inline })}>
+    <div className={classNames(styles.control, { [styles["control--inline"]]: inline })}>
       <FormLabel description={description} label={label} labelTooltip={labelTooltip} htmlFor={controlId} />
-      {renderControl()}
+      <div className={styles.control__input}>{renderControl()}</div>
       {error && <FormControlError error={error} />}
     </div>
   );
@@ -144,14 +145,14 @@ interface FormLabelProps {
   inline?: boolean;
 }
 
-export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor, inline }) => {
+export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor }) => {
   return (
-    <label className={classNames(styles.label, { [styles.inline]: inline })} htmlFor={htmlFor}>
+    <label className={styles.control__label} htmlFor={htmlFor}>
       <Text size="lg">
         {label}
         {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
       </Text>
-      {description && <Text className={styles.description}>{description}</Text>}
+      {description && <Text className={styles.control__description}>{description}</Text>}
     </label>
   );
 };
@@ -169,8 +170,8 @@ export const FormControlError: React.FC<ControlErrorProps> = ({ error }) => {
   }
 
   return (
-    <div className={styles.errorMessage__wrapper}>
-      <p className={styles.errorMessage}>{formatMessage({ id: error.message })}</p>
+    <div className={styles.control__errorWrapper}>
+      <p className={styles.control__errorMessage}>{formatMessage({ id: error.message })}</p>
     </div>
   );
 };

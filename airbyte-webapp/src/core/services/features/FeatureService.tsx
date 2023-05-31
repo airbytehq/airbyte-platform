@@ -4,8 +4,6 @@ import { FeatureItem, FeatureSet } from "./types";
 
 interface FeatureServiceContext {
   features: FeatureItem[];
-  setWorkspaceFeatures: (features: FeatureItem[] | FeatureSet | undefined) => void;
-  setUserFeatures: (features: FeatureItem[] | FeatureSet | undefined) => void;
   setFeatureOverwrites: (features: FeatureItem[] | FeatureSet | undefined) => void;
 }
 
@@ -35,8 +33,6 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   features: defaultFeatures,
   children,
 }) => {
-  const [workspaceFeatures, setWorkspaceFeaturesState] = useState<FeatureSet>();
-  const [userFeatures, setUserFeaturesState] = useState<FeatureSet>();
   const [overwrittenFeatures, setOverwrittenFeaturesState] = useState<FeatureSet>();
 
   const envOverwrites = useMemo(() => {
@@ -62,8 +58,6 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const combinedFeatures = useMemo(() => {
     const combined: FeatureSet = {
       ...featureSetFromList(defaultFeatures),
-      ...workspaceFeatures,
-      ...userFeatures,
       ...overwrittenFeatures,
       ...envOverwrites,
     };
@@ -72,15 +66,7 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
       .filter(([, enabled]) => enabled)
       .map(([id]) => id) as FeatureItem[];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceFeatures, userFeatures, overwrittenFeatures, ...defaultFeatures]);
-
-  const setWorkspaceFeatures = useCallback((features: FeatureItem[] | FeatureSet | undefined) => {
-    setWorkspaceFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);
-  }, []);
-
-  const setUserFeatures = useCallback((features: FeatureItem[] | FeatureSet | undefined) => {
-    setUserFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);
-  }, []);
+  }, [overwrittenFeatures, ...defaultFeatures]);
 
   const setFeatureOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined) => {
     setOverwrittenFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);
@@ -89,11 +75,9 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const serviceContext = useMemo(
     (): FeatureServiceContext => ({
       features: combinedFeatures,
-      setWorkspaceFeatures,
-      setUserFeatures,
       setFeatureOverwrites,
     }),
-    [combinedFeatures, setFeatureOverwrites, setUserFeatures, setWorkspaceFeatures]
+    [combinedFeatures, setFeatureOverwrites]
   );
 
   return <featureServiceContext.Provider value={serviceContext}>{children}</featureServiceContext.Provider>;

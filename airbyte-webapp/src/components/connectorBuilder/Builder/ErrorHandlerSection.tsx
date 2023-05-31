@@ -1,4 +1,3 @@
-import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -13,7 +12,7 @@ import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getOptionsByManifest } from "./manifestHelpers";
 import { ToggleGroupField } from "./ToggleGroupField";
-import { StreamPathFn, useBuilderWatch } from "../types";
+import { StreamPathFn } from "../types";
 
 interface PartitionSectionProps {
   streamFieldPath: StreamPathFn;
@@ -22,22 +21,6 @@ interface PartitionSectionProps {
 
 export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const { setValue } = useFormContext();
-  const path = streamFieldPath("errorHandler");
-  const value = useBuilderWatch(path, { exact: true });
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      setValue(path, [
-        {
-          type: "DefaultErrorHandler",
-        },
-      ]);
-    } else {
-      setValue(path, undefined, { shouldValidate: true });
-    }
-  };
-  const toggledOn = value !== undefined;
 
   const getBackoffOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {
@@ -57,7 +40,9 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     {
       label: "Exponential",
       typeValue: "ExponentialBackoffStrategy",
-      default: {},
+      default: {
+        factor: "",
+      },
       children: (
         <BuilderField
           type="number"
@@ -70,7 +55,10 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     {
       label: "Wait time from header",
       typeValue: "WaitTimeFromHeader",
-      default: {},
+      default: {
+        header: "",
+        regex: "",
+      },
       children: (
         <>
           <BuilderField
@@ -90,7 +78,11 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
     {
       label: "Wait until time from header",
       typeValue: "WaitUntilTimeFromHeader",
-      default: {},
+      default: {
+        header: "",
+        regex: "",
+        min_wait: "",
+      },
       children: (
         <>
           <BuilderField
@@ -122,8 +114,12 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
         <ControlLabels label="Error Handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("errorHandler"),
+        defaultValue: [
+          {
+            type: "DefaultErrorHandler",
+          },
+        ],
       }}
       copyConfig={{
         path: "errorHandler",

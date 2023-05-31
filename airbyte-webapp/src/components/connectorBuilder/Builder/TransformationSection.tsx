@@ -1,5 +1,4 @@
 import React from "react";
-import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
@@ -12,31 +11,17 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
-import { useBuilderWatch } from "../types";
 
-interface PartitionSectionProps {
+interface TransformationSectionProps {
   streamFieldPath: <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
   currentStreamIndex: number;
 }
 
-export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
+export const TransformationSection: React.FC<TransformationSectionProps> = ({
+  streamFieldPath,
+  currentStreamIndex,
+}) => {
   const { formatMessage } = useIntl();
-  const { setValue } = useFormContext();
-  const path = streamFieldPath("transformations");
-  const value = useBuilderWatch(path, { exact: true });
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      setValue(path, [
-        {
-          type: "remove",
-          path: [],
-        },
-      ]);
-    } else {
-      setValue(path, undefined, { shouldValidate: true });
-    }
-  };
 
   const getTransformationOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {
@@ -68,7 +53,6 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
       ),
     },
   ];
-  const toggledOn = value !== undefined;
 
   return (
     <BuilderCard
@@ -80,8 +64,13 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
         />
       }
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("transformations"),
+        defaultValue: [
+          {
+            type: "remove",
+            path: [],
+          },
+        ],
       }}
       copyConfig={{
         path: "transformations",

@@ -1,5 +1,5 @@
 import intersection from "lodash/intersection";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { FieldErrors, set, useFormContext, useFormState } from "react-hook-form";
 
 import {
@@ -11,36 +11,36 @@ import {
 import { BuilderFormValues, builderFormValidationSchema } from "./types";
 
 export const useBuilderErrors = () => {
-  const { trigger, getValues } = useFormContext();
+  const { trigger, getValues } = useFormContext<BuilderFormValues>();
   const { errors } = useFormState<BuilderFormValues>();
   const { setSelectedView } = useConnectorBuilderFormState();
   const { setScrollToField } = useConnectorBuilderFormManagementState();
 
-  const invalidViews = useCallback(
-    (limitToViews?: BuilderView[], inputErrors?: FieldErrors<BuilderFormValues>) => {
-      const errorsToCheck = inputErrors !== undefined ? inputErrors : errors;
-      const errorKeys = Object.keys(errorsToCheck).filter((errorKey) =>
-        Boolean(errorsToCheck[errorKey as keyof BuilderFormValues])
+  const errorsRef = useRef(errors);
+  errorsRef.current = errors;
+
+  const invalidViews = useCallback((limitToViews?: BuilderView[], inputErrors?: FieldErrors<BuilderFormValues>) => {
+    const errorsToCheck = inputErrors !== undefined ? inputErrors : errorsRef.current;
+    const errorKeys = Object.keys(errorsToCheck).filter((errorKey) =>
+      Boolean(errorsToCheck[errorKey as keyof BuilderFormValues])
+    );
+
+    const invalidViews: BuilderView[] = [];
+
+    if (errorKeys.includes("global")) {
+      invalidViews.push("global");
+    }
+
+    if (errorKeys.includes("streams") && typeof errorsToCheck.streams === "object") {
+      const errorStreamNums = Object.keys(errorsToCheck.streams ?? {}).filter((errorKey) =>
+        Boolean(errorsToCheck.streams?.[Number(errorKey)])
       );
 
-      const invalidViews: BuilderView[] = [];
+      invalidViews.push(...errorStreamNums.map((numString) => Number(numString)));
+    }
 
-      if (errorKeys.includes("global")) {
-        invalidViews.push("global");
-      }
-
-      if (errorKeys.includes("streams") && typeof errorsToCheck.streams === "object") {
-        const errorStreamNums = Object.keys(errorsToCheck.streams ?? {}).filter((errorKey) =>
-          Boolean(errorsToCheck.streams?.[Number(errorKey)])
-        );
-
-        invalidViews.push(...errorStreamNums.map((numString) => Number(numString)));
-      }
-
-      return limitToViews === undefined ? invalidViews : intersection(invalidViews, limitToViews);
-    },
-    [errors]
-  );
+    return limitToViews === undefined ? invalidViews : intersection(invalidViews, limitToViews);
+  }, []);
 
   // Returns true if the global config fields or any stream config fields have errors in the provided rhf errors, and false otherwise.
   // If limitToViews is provided, the error check is limited to only those views.

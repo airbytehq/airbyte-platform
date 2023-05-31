@@ -65,6 +65,8 @@ export const Form = <T extends FormValues>({
         onSuccess?.(values);
         if (submissionResult) {
           methods.reset(submissionResult.resetValues ?? values, submissionResult.keepStateOptions ?? undefined);
+        } else {
+          methods.reset(values);
         }
       })
       .catch((e) => {

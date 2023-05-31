@@ -16,17 +16,17 @@ import { WorkspaceRead } from "../core/request/AirbyteClient";
 
 const ConnectionsRoutes = React.lazy(() => import("./connections/ConnectionsRoutes"));
 const ConnectorBuilderRoutes = React.lazy(() => import("./connectorBuilder/ConnectorBuilderRoutes"));
+
 const AllDestinationsPage = React.lazy(() => import("./destination/AllDestinationsPage"));
 const CreateDestinationPage = React.lazy(() => import("./destination/CreateDestinationPage"));
-const SelectDestinationPage = React.lazy(() => import("./destination/SelectDestinationPage"));
 const DestinationItemPage = React.lazy(() => import("./destination/DestinationItemPage"));
 const DestinationOverviewPage = React.lazy(() => import("./destination/DestinationOverviewPage"));
 const DestinationSettingsPage = React.lazy(() => import("./destination/DestinationSettingsPage"));
 const SetupPage = React.lazy(() => import("./SetupPage"));
 const SettingsPage = React.lazy(() => import("./SettingsPage"));
+
 const AllSourcesPage = React.lazy(() => import("./source/AllSourcesPage"));
 const CreateSourcePage = React.lazy(() => import("./source/CreateSourcePage"));
-const SelectSourcePage = React.lazy(() => import("./source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("./source/SourceItemPage"));
 const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"));
 const SourceOverviewPage = React.lazy(() => import("./source/SourceOverviewPage"));
@@ -50,7 +50,6 @@ const MainViewRoutes: React.FC = () => {
         <Routes>
           <Route path={RoutePaths.Destination}>
             <Route index element={<AllDestinationsPage />} />
-            <Route path={DestinationPaths.SelectNewDestination} element={<SelectDestinationPage />} />
             <Route path={DestinationPaths.NewDestination} element={<CreateDestinationPage />} />
             <Route path={DestinationPaths.Root} element={<DestinationItemPage />}>
               <Route index element={<DestinationOverviewPage />} />
@@ -59,7 +58,6 @@ const MainViewRoutes: React.FC = () => {
           </Route>
           <Route path={RoutePaths.Source}>
             <Route index element={<AllSourcesPage />} />
-            <Route path={SourcePaths.SelectNewSource} element={<SelectSourcePage />} />
             <Route path={SourcePaths.NewSource} element={<CreateSourcePage />} />
             <Route path={SourcePaths.Root} element={<SourceItemPage />}>
               <Route index element={<SourceOverviewPage />} />

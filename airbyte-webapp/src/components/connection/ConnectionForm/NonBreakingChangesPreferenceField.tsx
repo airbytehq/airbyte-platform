@@ -22,6 +22,7 @@ export const NonBreakingChangesPreferenceField: React.FC<FieldProps<string>> = (
     if (autoPropagationEnabled) {
       return [
         NonBreakingChangesPreference.ignore,
+        NonBreakingChangesPreference.disable,
         NonBreakingChangesPreference.propagate_columns,
         NonBreakingChangesPreference.propagate_fully,
       ];

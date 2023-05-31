@@ -1,7 +1,7 @@
 import React from "react";
 
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
-import { FeatureItem, IfFeatureEnabled } from "hooks/services/Feature";
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
 import { AuthButton } from "./AuthButton";

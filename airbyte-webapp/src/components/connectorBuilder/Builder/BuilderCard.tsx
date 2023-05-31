@@ -2,7 +2,7 @@ import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import React, { useState } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -14,14 +14,14 @@ import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import styles from "./BuilderCard.module.scss";
-import { BuilderStream, useBuilderWatch } from "../types";
+import { BuilderStream, useBuilderWatch, BuilderFormValues } from "../types";
 
 interface BuilderCardProps {
   className?: string;
   label?: React.ReactNode;
   toggleConfig?: {
-    toggledOn: boolean;
-    onToggle: (newToggleValue: boolean) => void;
+    path: FieldPath<BuilderFormValues>;
+    defaultValue: unknown;
   };
   copyConfig?: {
     path: string;
@@ -41,21 +41,14 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
   label,
 }) => {
   const { formatMessage } = useIntl();
+
   return (
     <Card className={classNames(className, styles.card)}>
       {(toggleConfig || label) && (
         <FlexContainer alignItems="center">
           <FlexItem grow>
             <FlexContainer>
-              {toggleConfig && (
-                <CheckBox
-                  data-testid="toggle"
-                  checked={toggleConfig.toggledOn}
-                  onChange={(event) => {
-                    toggleConfig.onToggle(event.target.checked);
-                  }}
-                />
-              )}
+              {toggleConfig && <CardToggle path={toggleConfig.path} defaultValue={toggleConfig.defaultValue} />}
               <span>{label}</span>
             </FlexContainer>
           </FlexItem>
@@ -73,8 +66,41 @@ export const BuilderCard: React.FC<React.PropsWithChildren<BuilderCardProps>> = 
         </FlexContainer>
       )}
       {copyConfig && <CopyButtons copyConfig={copyConfig} />}
-      {(!toggleConfig || toggleConfig.toggledOn) && children}
+      {toggleConfig ? <ToggledChildren path={toggleConfig.path}>{children}</ToggledChildren> : children}
     </Card>
+  );
+};
+
+interface ToggledChildrenProps {
+  path: FieldPath<BuilderFormValues>;
+}
+
+const ToggledChildren: React.FC<React.PropsWithChildren<ToggledChildrenProps>> = ({ children, path }) => {
+  const value = useBuilderWatch(path, { exact: true });
+
+  if (value !== undefined) {
+    return <>{children}</>;
+  }
+  return null;
+};
+
+const CardToggle = ({ path, defaultValue }: { path: FieldPath<BuilderFormValues>; defaultValue: unknown }) => {
+  const { setValue, clearErrors } = useFormContext();
+  const value = useBuilderWatch(path, { exact: true });
+
+  return (
+    <CheckBox
+      data-testid="toggle"
+      checked={value !== undefined}
+      onChange={(event) => {
+        if (event.target.checked) {
+          setValue(path, defaultValue);
+        } else {
+          setValue(path, undefined);
+          clearErrors(path);
+        }
+      }}
+    />
   );
 };
 
