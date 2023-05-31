@@ -1,5 +1,5 @@
 import React from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
@@ -9,7 +9,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { PageHeader } from "components/ui/PageHeader";
+import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
 import { ConnectionConfiguration } from "core/domain/connection";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
@@ -18,16 +18,29 @@ import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourcePaths } from "pages/routePaths";
+import { RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
 import { SourceForm } from "./SourceForm";
 
 export const CreateSourcePage: React.FC = () => {
+  const params = useParams<{ workspaceId: string }>();
+
   const { sourceDefinitionId } = useParams<{ sourceDefinitionId: string }>();
   const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
+  const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Source}`;
+  const { formatMessage } = useIntl();
+
+  const breadcrumbsData = [
+    {
+      label: formatMessage({ id: "sidebar.sources" }),
+      to: `${breadcrumbBasePath}/`,
+    },
+    { label: formatMessage({ id: "sources.newSource" }) },
+  ];
 
   const sourceDefinitions = useAvailableSourceDefinitions();
   const { mutateAsync: createSource } = useCreateSource();
@@ -71,10 +84,10 @@ export const CreateSourcePage: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
+      <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
 
       <ConnectorDocumentationWrapper>
         <FormPageContent>
-          <PageHeader title={null} middleTitleBlock={<FormattedMessage id="sources.newSourceTitle" />} />
           <FlexContainer justifyContent="flex-start">
             <Box mb="md">
               <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>

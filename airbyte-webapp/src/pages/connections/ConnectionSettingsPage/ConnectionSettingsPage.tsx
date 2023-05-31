@@ -31,13 +31,13 @@ import { StateBlock } from "./StateBlock";
 import { UpdateConnectionName } from "./UpdateConnectionName";
 
 export interface ConnectionSettingsFormValues {
-  connectionName?: string;
+  connectionName: string;
   geography?: Geography;
   notifySchemaChanges?: boolean;
 }
 
 const connectionSettingsFormSchema = yup.object({
-  connectionName: yup.string().min(1, "form.connectionName.minLength").optional(),
+  connectionName: yup.string().trim().required("form.empty.error"),
   geography: yup.mixed<Geography>().optional(),
   notifySchemaChanges: yup.bool().optional(),
 });

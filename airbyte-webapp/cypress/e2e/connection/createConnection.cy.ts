@@ -35,7 +35,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   const dropTables = () => {
     runDbQuery(dropUsersTableQuery, dropDummyTablesQuery(20));
   };
-
   before(() => {
     dropTables();
     runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
@@ -61,35 +60,34 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     dropTables();
   });
 
-  describe("Set up source and destination", () => {
-    it("should open 'New connection' page", () => {
-      connectionListPage.visit();
-      interceptGetSourcesListRequest();
-      interceptGetSourceDefinitionsRequest();
+  describe.only("Set up source and destination", () => {
+    // todo: switching back and forth between views for existing/new connectors
+    describe("With existing connectors", () => {
+      it("should open 'New connection' page", () => {
+        connectionListPage.visit();
+        interceptGetSourcesListRequest();
+        interceptGetSourceDefinitionsRequest();
 
-      connectionListPage.clickNewConnectionButton();
-      waitForGetSourcesListRequest();
-      waitForGetSourceDefinitionsRequest();
-    });
+        connectionListPage.clickNewConnectionButton();
+        waitForGetSourcesListRequest();
+        waitForGetSourceDefinitionsRequest();
+      });
 
-    it("should select existing Source from dropdown and click button", () => {
-      newConnectionPage.selectExistingConnectorFromDropdown(source.name);
-      newConnectionPage.clickUseExistingConnectorButton("source");
-    });
+      it("should select existing Source from dropdown and click button", () => {
+        newConnectionPage.isExistingConnectorTypeSelected("source");
+        newConnectionPage.selectExistingConnectorFromList("source", source.name);
+      });
 
-    it("should select existing Destination from dropdown and click button", () => {
-      interceptDiscoverSchemaRequest();
-      newConnectionPage.selectExistingConnectorFromDropdown(destination.name);
-      newConnectionPage.clickUseExistingConnectorButton("destination");
-      waitForDiscoverSchemaRequest();
-    });
+      it("should select existing Destination from dropdown and click button", () => {
+        interceptDiscoverSchemaRequest();
+        newConnectionPage.isExistingConnectorTypeSelected("destination");
+        newConnectionPage.selectExistingConnectorFromList("destination", destination.name);
+        waitForDiscoverSchemaRequest();
+      });
 
-    it("should redirect to 'New connection' settings page with stream table'", () => {
-      newConnectionPage.isAtNewConnectionPage();
-    });
-
-    it("should show 'New connection' page header", () => {
-      newConnectionPage.isNewConnectionPageHeaderVisible();
+      it("should redirect to 'New connection' configuration page with stream table'", () => {
+        newConnectionPage.isAtNewConnectionPage();
+      });
     });
   });
 

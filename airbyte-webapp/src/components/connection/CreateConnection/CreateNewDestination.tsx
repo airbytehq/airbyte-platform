@@ -55,6 +55,7 @@ export const CreateNewDestination: React.FC<CreateNewDestinationProps> = ({ onDe
     clearAllFormChanges();
     await new Promise((resolve) => setTimeout(resolve, 2000));
     onDestinationCreated(result.destinationId);
+    setDocumentationPanelOpen(false);
   };
 
   const onGoBack = () => {

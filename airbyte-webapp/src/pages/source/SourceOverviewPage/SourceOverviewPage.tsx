@@ -10,7 +10,6 @@ import { FlexContainer } from "components/ui/Flex/FlexContainer";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 import { RoutePaths } from "pages/routePaths";
-import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 
 import { useGetSourceFromParams } from "./useGetSourceFromParams";
 
@@ -19,7 +18,6 @@ const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable")
 export const SourceOverviewPage = () => {
   const source = useGetSourceFromParams();
 
-  const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const { connections } = useConnectionList({ sourceId: [source.sourceId] });
 
   // We load all destinations so the add destination button has a pre-filled list of options.
@@ -60,10 +58,6 @@ export const SourceOverviewPage = () => {
         type="destination"
         dropdownOptions={destinationDropdownOptions}
         onSelect={onSelect}
-        entity={source.sourceName}
-        entityName={source.name}
-        entityIcon={source.icon}
-        releaseStage={sourceDefinition.releaseStage}
         connectionsCount={connections ? connections.length : 0}
       />
       {connections.length ? (
