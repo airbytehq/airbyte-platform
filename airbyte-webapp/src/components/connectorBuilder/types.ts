@@ -134,7 +134,6 @@ export interface BuilderIncrementalSync
     | "cursor_field"
     | "datetime_format"
     | "cursor_granularity"
-    | "step"
     | "end_time_option"
     | "start_time_option"
     | "lookback_window"
@@ -150,6 +149,7 @@ export interface BuilderIncrementalSync
         type: "user_input";
       }
     | { type: "custom"; value: string; format?: string };
+  step?: string;
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
@@ -692,7 +692,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            step: yup.string().required("form.empty.error"),
+            step: yup.string(),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
             end_time_option: nonPathRequestOptionSchema,
@@ -779,7 +779,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, step, ...regularFields } = formValues;
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
@@ -799,6 +799,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
           : `{{ config['end_date'] }}`,
       datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
     },
+    step: step ? step : "P1000Y",
   };
 }
 

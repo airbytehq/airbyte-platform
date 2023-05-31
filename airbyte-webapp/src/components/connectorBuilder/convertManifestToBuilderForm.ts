@@ -391,6 +391,7 @@ function manifestIncrementalSyncToBuilder(
     partition_field_start,
     end_datetime: manifestEndDateTime,
     start_datetime: manifestStartDateTime,
+    step,
     type,
     $parameters,
     ...regularFields
@@ -427,6 +428,7 @@ function manifestIncrementalSyncToBuilder(
     ...regularFields,
     end_datetime,
     start_datetime,
+    step: step === "P1000Y" ? undefined : step,
   };
 }
 
