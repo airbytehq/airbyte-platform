@@ -45,6 +45,10 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.db.jdbc.JdbcUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptStatus;
@@ -479,6 +483,10 @@ public class DefaultJobPersistence implements JobPersistence {
                                              final DSLContext ctx) {
     Optional.ofNullable(perStreamStats).orElse(Collections.emptyList()).forEach(
         streamStats -> {
+          // todo(davin): remove after p0-workers-db-connection-pool-empty is resolved.
+          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STREAM_STATS_WRITE_NUM_QUERIES, 1,
+              new MetricAttribute(MetricTags.ATTEMPT_ID, attemptId.toString()));
+
           // We cannot entirely rely on JOOQ's generated SQL for upserts as it does not support null fields
           // for conflict detection. We are forced to separately check for existence.
           final var stats = streamStats.getStats();
