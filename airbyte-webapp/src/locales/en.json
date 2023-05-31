@@ -937,5 +937,16 @@
   "jobs.noAttemptsFailure": "Failed to start job.",
 
   "cloudApi.loginCallbackUrlError": "There was an error connecting to the developer portal. Please try again.",
-  "upcomingFeatures.title": "Upcoming features"
+  "upcomingFeatures.title": "Upcoming features",
+
+  "jobHistory.logs.title": "Logs for job {jobId}",
+  "jobHistory.logs.noLogs": "No logs",
+  "jobHistory.logs.nextMatchLabel": "Jump to next match",
+  "jobHistory.logs.previousMatchLabel": "Jump to previous match",
+  "jobHistory.logs.downloadLogs": "Download logs",
+  "jobHistory.logs.attemptLabel": "Attempt {attemptNumber} of {totalAttempts}",
+  "jobHistory.logs.searchPlaceholder": "Search logs",
+  "jobHistory.copyLinkToJob": "Copy link to job",
+  "jobHistory.copyLinkToJob.success": "Link copied to clipboard",
+  "jobHistory.viewLogs": "View logs"
 }

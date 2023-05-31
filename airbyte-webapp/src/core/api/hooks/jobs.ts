@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "react-query";
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { cancelJob, getJobDebugInfo, listJobsFor } from "../generated/AirbyteClient";
-import { JobDebugInfoRead, JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -24,11 +24,7 @@ export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = t
   return { jobs: jobReadList.jobs, totalJobCount: jobReadList.totalJobCount, isPreviousData: result.isPreviousData };
 };
 
-export const useGetDebugInfoJob = (
-  id: number,
-  enabled = true,
-  refetchWhileRunning = false
-): JobDebugInfoRead | undefined => {
+export const useGetDebugInfoJob = (id: number, enabled = true, refetchWhileRunning = false) => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(

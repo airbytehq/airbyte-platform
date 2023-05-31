@@ -38,10 +38,10 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
       <ApiErrorBoundary>
         <NotificationService>
           <ConfirmationModalService>
-            <ModalServiceProvider>
-              <FormChangeTrackerService>
-                <FeatureService features={defaultCloudFeatures}>
-                  <AppServicesProvider>
+            <FormChangeTrackerService>
+              <FeatureService features={defaultCloudFeatures}>
+                <AppServicesProvider>
+                  <ModalServiceProvider>
                     <AuthenticationProvider>
                       <ConnectorBuilderTestInputProvider>
                         <HelmetProvider>
@@ -49,10 +49,10 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
                         </HelmetProvider>
                       </ConnectorBuilderTestInputProvider>
                     </AuthenticationProvider>
-                  </AppServicesProvider>
-                </FeatureService>
-              </FormChangeTrackerService>
-            </ModalServiceProvider>
+                  </ModalServiceProvider>
+                </AppServicesProvider>
+              </FeatureService>
+            </FormChangeTrackerService>
           </ConfirmationModalService>
         </NotificationService>
       </ApiErrorBoundary>
