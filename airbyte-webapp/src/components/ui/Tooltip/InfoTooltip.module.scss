@@ -7,11 +7,14 @@ $icon-size: 14px;
 $icon-padding: 5px;
 
 .container {
-  display: inline-block;
+  display: flex;
+  align-items: center;
   color: colors.$grey;
   padding-left: $icon-padding;
 }
 
 .icon {
   position: relative;
+  display: flex;
+  align-items: center;
 }
