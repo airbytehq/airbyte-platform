@@ -16,7 +16,7 @@ import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useDestinationList } from "hooks/services/useDestinationHook";
 
-import { RoutePaths } from "../../routePaths";
+import { DestinationPaths } from "../../routePaths";
 
 export const AllDestinationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export const AllDestinationsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_LIST);
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
-  const onCreateDestination = () => navigate(`${RoutePaths.DestinationNew}`);
+  const onCreateDestination = () => navigate(`${DestinationPaths.SelectDestinationNew}`);
 
   return destinations.length ? (
     <MainPageWithScroll
@@ -69,6 +69,6 @@ export const AllDestinationsPage: React.FC = () => {
       <DestinationsTable destinations={destinations} />
     </MainPageWithScroll>
   ) : (
-    <Navigate to={RoutePaths.DestinationNew} />
+    <Navigate to={DestinationPaths.SelectDestinationNew} />
   );
 };

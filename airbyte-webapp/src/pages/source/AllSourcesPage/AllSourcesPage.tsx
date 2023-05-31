@@ -16,13 +16,13 @@ import { useExperiment } from "hooks/services/Experiment";
 import { useSourceList } from "hooks/services/useSourceHook";
 
 import { SourcesTable } from "./SourcesTable";
-import { RoutePaths } from "../../routePaths";
+import { SourcePaths } from "../../routePaths";
 
 const AllSourcesPage: React.FC = () => {
   const navigate = useNavigate();
   const { sources } = useSourceList();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
-  const onCreateSource = () => navigate(`${RoutePaths.SourceNew}`);
+  const onCreateSource = () => navigate(`${SourcePaths.SelectSourceNew}`);
   const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
   return sources.length ? (
@@ -58,7 +58,7 @@ const AllSourcesPage: React.FC = () => {
       <SourcesTable sources={sources} />
     </MainPageWithScroll>
   ) : (
-    <Navigate to={RoutePaths.SourceNew} />
+    <Navigate to={SourcePaths.SelectSourceNew} />
   );
 };
 

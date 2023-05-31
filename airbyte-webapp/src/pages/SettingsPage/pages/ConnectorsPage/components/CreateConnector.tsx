@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu
 
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
-import { RoutePaths, DestinationPaths } from "pages/routePaths";
+import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 import { useCreateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { useCreateSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -53,7 +53,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
 
       navigate(
         {
-          pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${RoutePaths.SourceNew}`,
+          pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SourceNew}`,
         },
         { state: { sourceDefinitionId: result.sourceDefinitionId } }
       );
@@ -69,7 +69,7 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
 
       navigate(
         {
-          pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.NewDestination}`,
+          pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.DestinationNew}`,
         },
         { state: { destinationDefinitionId: result.destinationDefinitionId } }
       );
