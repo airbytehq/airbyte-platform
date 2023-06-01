@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.38.0
+airbyte-cdk==0.39.1
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -15,15 +15,15 @@ attrs==23.1.0
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
-cachetools==5.3.0
+cachetools==5.3.1
     # via airbyte-cdk
-cattrs==22.2.0
+cattrs==23.1.1
     # via requests-cache
 certifi==2023.5.7
     # via requests
 charset-normalizer==3.1.0
     # via requests
-deprecated==1.2.13
+deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.0.8
     # via airbyte-cdk
@@ -74,7 +74,9 @@ six==1.16.0
     #   python-dateutil
     #   url-normalize
 typing-extensions==4.6.2
-    # via pydantic
+    # via
+    #   cattrs
+    #   pydantic
 url-normalize==1.4.3
     # via requests-cache
 urllib3==2.0.2
