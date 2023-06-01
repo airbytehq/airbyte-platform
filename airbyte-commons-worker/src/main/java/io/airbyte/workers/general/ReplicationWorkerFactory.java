@@ -44,6 +44,7 @@ import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -135,14 +136,20 @@ public class ReplicationWorkerFactory {
   private static HeartbeatMonitor createHeartbeatMonitor(final SourceApi sourceApi,
                                                          final SourceDefinitionApi sourceDefinitionApi,
                                                          final StandardSyncInput syncInput) {
-    final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
-        () -> sourceApi.getSource(
-            new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
-        "get the source for heartbeat");
+    long maxSecondsBetweenMessages;
+    try {
+      final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
+          () -> sourceApi.getSource(
+              new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
+          "get the source for heartbeat");
 
-    final long maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
-        .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
-        .getMaxSecondsBetweenMessages();
+      maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
+          .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
+          .getMaxSecondsBetweenMessages();
+    } catch (final Exception e) {
+      log.warn("An error occured while fetch the max seconds between messages for this source. We are using a default of 24 hours", e);
+      maxSecondsBetweenMessages = TimeUnit.HOURS.toSeconds(24);
+    }
     // reset jobs use an empty source to induce resetting all data in destination.
     return new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
   }
