@@ -5,14 +5,6 @@
 .status {
   position: relative;
 
-  .icon {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   @each $name, $color, $bg-color in stream-status-colors.$by-stream-status {
     &--#{$name} {
       .icon {
@@ -29,6 +21,7 @@
 
 .spinner {
   position: absolute;
-  top: -1px;
-  left: -1px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
