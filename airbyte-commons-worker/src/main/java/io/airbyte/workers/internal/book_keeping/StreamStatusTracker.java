@@ -19,6 +19,7 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.exception.StreamStatusException;
+import jakarta.annotation.PostConstruct;
 import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.util.Locale;
@@ -30,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Tracks the status of individual streams within a replication sync based on the status of
@@ -52,6 +54,11 @@ public class StreamStatusTracker {
 
   public StreamStatusTracker(final AirbyteApiClient airbyteApiClient) {
     this.airbyteApiClient = airbyteApiClient;
+  }
+
+  @PostConstruct
+  public void postConstruct() {
+    MDC.setContextMap(MDC.getCopyOfContextMap());
   }
 
   /**
