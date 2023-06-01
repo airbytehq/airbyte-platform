@@ -46,9 +46,10 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.CommitStatsAsap;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
-import io.airbyte.featureflag.NormalizationInDestinationBiqQuery;
+import io.airbyte.featureflag.NormalizationInDestination;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
@@ -179,7 +180,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
                                                                             final JobSyncConfig config,
                                                                             final StandardDestinationDefinition destinationDefinition,
                                                                             final JsonNode destinationConfiguration,
-                                                                            Map<String, String> additionalEnviornmentVariables)
+                                                                            final Map<String, String> additionalEnviornmentVariables)
       throws IOException {
     final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
     final String destinationNormalizationDockerImage = destinationDefinition.getNormalizationConfig() != null
@@ -347,12 +348,16 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
       final StandardDestinationDefinition destinationDefinition =
           configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
 
-      final var normalizationInDestinationFeatureFlagEnabledForBigquery = featureFlagClient.boolVariation(NormalizationInDestinationBiqQuery.INSTANCE,
+      final List<Context> normalizationInDestinationContext = List.of(
+          new DestinationDefinition(destination.getDestinationDefinitionId()),
           new Workspace(destination.getWorkspaceId()));
+
+      final var normalizationInDestinationMinSupportedVersion = featureFlagClient.stringVariation(
+          NormalizationInDestination.INSTANCE, new Multi(normalizationInDestinationContext));
       final var shouldNormalizeInDestination = NormalizationInDestinationHelper
           .shouldNormalizeInDestination(config.getOperationSequence(),
               config.getDestinationDockerImage(),
-              normalizationInDestinationFeatureFlagEnabledForBigquery);
+              normalizationInDestinationMinSupportedVersion);
 
       reportNormalizationInDestinationMetrics(shouldNormalizeInDestination, config, connectionId);
 

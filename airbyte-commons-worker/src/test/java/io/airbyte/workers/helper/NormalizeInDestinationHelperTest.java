@@ -60,27 +60,34 @@ class NormalizeInDestinationHelperTest {
 
   /**
    * Argument provider for
-   * {@link NormalizeInDestinationHelperTest#testShouldNormalizeInDestination(List, String, boolean, boolean)}.
+   * {@link NormalizeInDestinationHelperTest#testShouldNormalizeInDestination(List, String, String, boolean)}.
    */
   public static class ShouldNormalizeInDestinationArgumentsProvider implements ArgumentsProvider {
+
+    // for testing only
+    private static final String MIN_SUPPORTED_VERSION_OFF = "";
+    private static final String MIN_SUPPORTED_VERSION_BIGQUERY = "1.3.1";
+    private static final String MIN_SUPPORTED_VERSION_SNOWFLAKE = "1.0.0";
 
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
       return Stream.of(
           // Normalization not required
-          Arguments.of(List.of(SOMETHING_ELSE), "destination-bigquery:1.3.2", true, false),
+          Arguments.of(List.of(SOMETHING_ELSE), "destination-bigquery:1.3.2", MIN_SUPPORTED_VERSION_BIGQUERY, false),
           // Container doesn't support it
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "hello:dev", true, false),
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:1.3.0", true, false),
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "hello:1.3.1", true, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "hello:dev", MIN_SUPPORTED_VERSION_OFF, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "hello:1.3.1", MIN_SUPPORTED_VERSION_OFF, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:1.3.0", MIN_SUPPORTED_VERSION_BIGQUERY, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-snowflake:0.0.0", MIN_SUPPORTED_VERSION_SNOWFLAKE, false),
           // Feature Flag off
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:dev", false, false),
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:1.3.1", false, false),
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:2.0.0", false, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:dev", MIN_SUPPORTED_VERSION_OFF, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:1.3.1", MIN_SUPPORTED_VERSION_OFF, false),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:2.0.0", MIN_SUPPORTED_VERSION_OFF, false),
           // Supported
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:dev", true, true),
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:1.3.1", true, true),
-          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:2.0.0", true, true));
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:dev", MIN_SUPPORTED_VERSION_BIGQUERY, true),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:1.3.1", MIN_SUPPORTED_VERSION_BIGQUERY, true),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-bigquery:2.0.0", MIN_SUPPORTED_VERSION_BIGQUERY, true),
+          Arguments.of(List.of(NORMALIZATION_OPERATION), "destination-snowflake:2.0.0", MIN_SUPPORTED_VERSION_SNOWFLAKE, true));
     }
 
   }
@@ -89,9 +96,9 @@ class NormalizeInDestinationHelperTest {
   @ArgumentsSource(ShouldNormalizeInDestinationArgumentsProvider.class)
   void testShouldNormalizeInDestination(final List<StandardSyncOperation> syncOperations,
                                         final String imageName,
-                                        final boolean featureFlagEnabled,
+                                        final String minSupportedVersion,
                                         final boolean expected) {
-    final var actual = NormalizationInDestinationHelper.shouldNormalizeInDestination(syncOperations, imageName, featureFlagEnabled);
+    final var actual = NormalizationInDestinationHelper.shouldNormalizeInDestination(syncOperations, imageName, minSupportedVersion);
     Assertions.assertEquals(expected, actual);
   }
 
