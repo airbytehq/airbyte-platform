@@ -847,7 +847,7 @@
   "connectorBuilder.addNewPartitionRouter": "Add new partition router",
   "connectorBuilder.streamConfiguration": "Configuration",
   "connectorBuilder.streamSchema": "Declared schema",
-  "connectorBuilder.invalidSchema": "Invalid JSON - please fix schema to have it applied",
+  "connectorBuilder.invalidJSON": "Invalid JSON - please fix syntax to have it applied",
   "connectorBuilder.copyToPaginationTitle": "Copy pagination settings to...",
   "connectorBuilder.copyFromPaginationTitle": "Import pagination settings from...",
   "connectorBuilder.copyToPartitionRouterTitle": "Copy partitioning settings to...",

@@ -164,8 +164,7 @@ const manifestStreamToBuilder = (
     requestOptions: {
       requestParameters: Object.entries(requester.request_parameters ?? {}),
       requestHeaders: Object.entries(requester.request_headers ?? {}),
-      // try getting this from request_body_data first, and if not set then pull from request_body_json
-      requestBody: Object.entries(requester.request_body_data ?? requester.request_body_json ?? {}),
+      requestBody: requesterToRequestBody(stream.name, requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
     paginator: manifestPaginatorToBuilder(retriever.paginator, stream.name),
@@ -183,6 +182,32 @@ const manifestStreamToBuilder = (
     },
   };
 };
+
+function requesterToRequestBody(
+  streamName: string | undefined,
+  requester: HttpRequester
+): BuilderStream["requestOptions"]["requestBody"] {
+  if (requester.request_body_data && typeof requester.request_body_data === "object") {
+    return { type: "form_list", values: Object.entries(requester.request_body_data) };
+  }
+  if (requester.request_body_data && typeof requester.request_body_data === "string") {
+    throw new ManifestCompatibilityError(streamName, "request_body_data is a string, but should be an object");
+  }
+  if (!requester.request_body_json) {
+    return { type: "json_list", values: [] };
+  }
+  const allStringValues = Object.values(requester.request_body_json).every((value) => typeof value === "string");
+  if (allStringValues) {
+    return { type: "json_list", values: Object.entries(requester.request_body_json) };
+  }
+  return {
+    type: "json_freeform",
+    value:
+      typeof requester.request_body_json === "string"
+        ? requester.request_body_json
+        : formatJson(requester.request_body_json),
+  };
+}
 
 function manifestPartitionRouterToBuilder(
   partitionRouter: SimpleRetrieverPartitionRouter | SimpleRetrieverPartitionRouterAnyOfItem | undefined,
