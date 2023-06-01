@@ -22,6 +22,7 @@ import io.airbyte.workers.internal.exception.StreamStatusException;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Singleton;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -52,13 +53,15 @@ public class StreamStatusTracker {
 
   private final AirbyteApiClient airbyteApiClient;
 
+  private Map<String, String> mdc;
+
   public StreamStatusTracker(final AirbyteApiClient airbyteApiClient) {
     this.airbyteApiClient = airbyteApiClient;
   }
 
   @PostConstruct
   public void postConstruct() {
-    MDC.setContextMap(MDC.getCopyOfContextMap());
+    mdc = MDC.getCopyOfContextMap();
   }
 
   /**
@@ -68,6 +71,7 @@ public class StreamStatusTracker {
    */
   public void track(final ReplicationAirbyteMessageEvent event) {
     try {
+      MDC.setContextMap(getMdc());
       LOGGER.debug("Received message from {} for stream {}:{} -> {}",
           event.airbyteMessageOrigin(),
           event.airbyteMessage().getTrace().getStreamStatus().getStreamDescriptor().getNamespace(),
@@ -87,6 +91,16 @@ public class StreamStatusTracker {
    */
   public Optional<AirbyteStreamStatus> getCurrentStreamStatus(final StreamStatusKey streamStatusKey) {
     return Optional.ofNullable(currentStreamStatuses.get(streamStatusKey)).map(CurrentStreamStatus::getCurrentStatus);
+  }
+
+  /**
+   * Retrieves the context map stored in the status tracker.
+   *
+   * @see #postConstruct()
+   * @return The context map.
+   */
+  public Map<String, String> getMdc() {
+    return mdc != null ? Collections.unmodifiableMap(mdc) : Map.of();
   }
 
   private void handleStreamStatus(final AirbyteTraceMessage airbyteTraceMessage,

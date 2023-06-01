@@ -38,7 +38,6 @@ import io.airbyte.workers.internal.book_keeping.StreamStatusTracker.StreamStatus
 import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEvent;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,12 +82,10 @@ class StreamStatusTrackerTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
   void testPostConstruct() {
     MDC.put("foo", "bar");
-    final Map<String, String> mdc = MDC.getCopyOfContextMap();
     streamStatusTracker.postConstruct();
-    mdc.entrySet().forEach(e -> assertEquals(e.getValue(), MDC.get(e.getKey())));
+    assertEquals(MDC.getCopyOfContextMap(), streamStatusTracker.getMdc());
   }
 
   @Test
