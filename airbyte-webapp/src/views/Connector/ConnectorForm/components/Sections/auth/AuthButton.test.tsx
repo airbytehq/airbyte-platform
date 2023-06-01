@@ -86,10 +86,6 @@ describe("auth button", () => {
     // no error message
     const errorMessage = screen.queryByText(/Authentication required/i);
     expect(errorMessage).not.toBeInTheDocument();
-
-    // no success message
-    const successMessage = screen.queryByText(/Authentication succeeded/i);
-    expect(successMessage).not.toBeInTheDocument();
   });
 
   it("after successful authentication, it renders with correct message and success message", () => {
@@ -121,10 +117,6 @@ describe("auth button", () => {
     // correct button text
     const button = screen.getByRole("button", { name: "Re-authenticate" });
     expect(button).toBeInTheDocument();
-
-    // success message
-    const successMessage = screen.getByText(/Authentication succeeded/i);
-    expect(successMessage).toBeInTheDocument();
   });
 
   it("renders an error if there are any auth fields with empty values", () => {

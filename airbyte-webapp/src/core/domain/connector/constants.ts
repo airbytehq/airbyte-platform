@@ -39,3 +39,5 @@ export const getExcludedConnectorIds = (workspaceId?: string): string[] =>
         //
       ]
     : [];
+
+export const getSupportRevokingTokensConnectorIds = (): string[] => [ConnectorIds.Sources.QuickBooks];

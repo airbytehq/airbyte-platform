@@ -17,8 +17,10 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +34,7 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
 
   private static final String CONSENT_URL = "https://appcenter.intuit.com/app/connect/oauth2";
   private static final String TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
+  private static final String REVOKE_URL = "https://developer.api.intuit.com/v2/oauth2/tokens/revoke";
   private final Clock clock;
 
   public QuickbooksOAuthFlow(final HttpClient httpClient) {
@@ -39,10 +42,21 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
     this.clock = Clock.systemUTC();
   }
 
+  public QuickbooksOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    this(httpClient, stateSupplier, TokenRequestContentType.JSON, Clock.systemUTC());
+  }
+
   public QuickbooksOAuthFlow(final HttpClient httpClient,
                              final Supplier<String> stateSupplier,
                              final Clock clock) {
-    super(httpClient, stateSupplier);
+    this(httpClient, stateSupplier, TokenRequestContentType.JSON, clock);
+  }
+
+  public QuickbooksOAuthFlow(final HttpClient httpClient,
+                             final Supplier<String> stateSupplier,
+                             final TokenRequestContentType tokenReqContentType,
+                             final Clock clock) {
+    super(httpClient, stateSupplier, tokenReqContentType);
     this.clock = clock;
   }
 
@@ -179,6 +193,7 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
     }
   }
 
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected Map<String, Object> extractOAuthOutput(final JsonNode data, final String accessTokenUrl, final String realmId) throws IOException {
     final Map<String, Object> result = new HashMap<>();
     if (data.has("refresh_token")) {
@@ -199,6 +214,35 @@ public class QuickbooksOAuthFlow extends BaseOAuth2Flow {
     }
     result.put("realm_id", realmId);
     return result;
+  }
+
+  @Override
+  public void revokeSourceOauth(final UUID workspaceId,
+                                final UUID sourceDefinitionId,
+                                final JsonNode configuration,
+                                final JsonNode oauthParamConfig)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    final String clientId = getClientIdUnsafe(oauthParamConfig);
+    final String clientSecret = getClientSecretUnsafe(oauthParamConfig);
+    final String authorization = Base64.getEncoder()
+        .encodeToString((clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
+    final Map<String, String> requestBody = new HashMap<>();
+    final JsonNode credentials = configuration.get("credentials");
+    requestBody.put("token", getConfigValueUnsafe(credentials, "refresh_token"));
+
+    final HttpRequest request = HttpRequest.newBuilder()
+        .POST(HttpRequest.BodyPublishers
+            .ofString(tokenReqContentType.getConverter().apply(requestBody)))
+        .uri(URI.create(REVOKE_URL))
+        .header("Content-Type", tokenReqContentType.getContentType())
+        .header("Accept", "application/json")
+        .header("Authorization", "Basic " + authorization)
+        .build();
+    try {
+      httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    } catch (final InterruptedException e) {
+      throw new IOException("Failed to complete revocation request", e);
+    }
   }
 
 }

@@ -1,11 +1,6 @@
 @use "../../../../../../scss/colors";
 @use "../../../../../../scss/variables";
 
-.authSectionRow {
-  display: flex;
-  align-items: center;
-}
-
 .message {
   margin-left: variables.$spacing-lg;
 }

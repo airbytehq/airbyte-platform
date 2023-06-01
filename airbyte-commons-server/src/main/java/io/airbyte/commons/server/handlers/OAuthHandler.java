@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
+import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest;
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody;
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody;
 import io.airbyte.api.model.generated.SourceOauthConsentRequest;
@@ -329,6 +330,24 @@ public class OAuthHandler {
       LOGGER.error(ERROR_MESSAGE, e);
     }
     return mapToCompleteOAuthResponse(result);
+  }
+
+  public void revokeSourceOauthTokens(final RevokeSourceOauthTokensRequest revokeSourceOauthTokensRequest)
+      throws IOException, ConfigNotFoundException, JsonValidationException {
+    final StandardSourceDefinition sourceDefinition =
+        configRepository.getStandardSourceDefinition(revokeSourceOauthTokensRequest.getSourceDefinitionId());
+    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
+        revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceId());
+    final OAuthFlowImplementation oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.getDockerRepository());
+    final SourceConnection hydratedSourceConnection = secretsRepositoryReader.getSourceConnectionWithSecrets(
+        revokeSourceOauthTokensRequest.getSourceId());
+    final JsonNode sourceOAuthParamConfig =
+        getSourceOAuthParamConfig(revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceDefinitionId());
+    oAuthFlowImplementation.revokeSourceOauth(
+        revokeSourceOauthTokensRequest.getWorkspaceId(),
+        revokeSourceOauthTokensRequest.getSourceDefinitionId(),
+        hydratedSourceConnection.getConfiguration(),
+        sourceOAuthParamConfig);
   }
 
   public void setSourceInstancewideOauthParams(final SetInstancewideSourceOauthParamsRequestBody requestBody)

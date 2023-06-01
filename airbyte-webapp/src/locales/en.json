@@ -225,6 +225,8 @@
   "connectorForm.signInWithGoogle": "Sign in with Google",
   "connectorForm.authenticate.succeeded": "Authentication succeeded!",
   "connectorForm.authenticate.required": "Authentication required",
+  "connectorForm.revoke": "Disconnect",
+  "connectorForm.revocation.succeeded": "Your {connector} integration has been disconnected.",
   "connectorForm.reauthenticate": "Re-authenticate",
   "connectorForm.expandForm": "Expand this form to continue setting up your connector",
   "connectorForm.error.oneOfWithNonObjects": "Spec uses oneOf without using object types for all conditions",
@@ -691,6 +693,7 @@
   "connector.exampleValues": "Example {count, plural, one {value} other {values}}",
   "connector.oauthCredentialsMissing": "OAuth login is temporarily unavailable for this connector. Please try again later.",
   "connector.oauthError": "OAuth login failed: {message}",
+  "connector.oauthRevocationError": "OAuth revocation failed: {message}",
   "connector.testLogs": "Connection test logs",
 
   "credits.credits": "Credits",
