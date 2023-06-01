@@ -84,6 +84,7 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,6 +93,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -3144,17 +3146,31 @@ public class ConfigRepository {
           .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
           .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
           .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-          // TODO (Ella): Replace the below null values with values from
-          // actorDefinitionVersion once the POJO has these fields defined
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
+          .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
+              : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
+                  ReleaseStage.class).orElseThrow())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
+              : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
+              : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
+              actorDefinitionVersion.getSuggestedStreams() == null ? null
+                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
           .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionID)).and(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag))
           .execute();
     } else {
@@ -3166,17 +3182,31 @@ public class ConfigRepository {
           .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
           .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
           .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-          // TODO (Ella): Replace the below null values with values from
-          // actorDefinitionVersion once the POJO has these fields defined
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE)
-          .setNull(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS)
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
+          .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
+              : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
+                  ReleaseStage.class).orElseThrow())
+          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
+              : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
+          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
+              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
+                  : null)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
+              : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
+          .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
+              actorDefinitionVersion.getSuggestedStreams() == null ? null
+                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
           .execute();
     }
     final Optional<ActorDefinitionVersion> updatedOrInsertedADV = getActorDefinitionVersion(actorDefinitionID, dockerImageTag, ctx);

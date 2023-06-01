@@ -63,7 +63,13 @@ public class ActorDefinitionVersionHelper {
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withDockerRepository(sourceDefinition.getDockerRepository())
         .withDockerImageTag(sourceDefinition.getDockerImageTag())
-        .withSpec(sourceDefinition.getSpec());
+        .withSpec(sourceDefinition.getSpec())
+        .withReleaseDate(sourceDefinition.getReleaseDate())
+        .withReleaseStage(sourceDefinition.getReleaseStage())
+        .withDocumentationUrl(sourceDefinition.getDocumentationUrl())
+        .withAllowedHosts(sourceDefinition.getAllowedHosts())
+        .withProtocolVersion(sourceDefinition.getProtocolVersion())
+        .withSuggestedStreams(sourceDefinition.getSuggestedStreams());
   }
 
   private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition, final UUID workspaceId)
@@ -80,7 +86,14 @@ public class ActorDefinitionVersionHelper {
         .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
         .withDockerRepository(destinationDefinition.getDockerRepository())
         .withDockerImageTag(destinationDefinition.getDockerImageTag())
-        .withSpec(destinationDefinition.getSpec());
+        .withSpec(destinationDefinition.getSpec())
+        .withReleaseDate(destinationDefinition.getReleaseDate())
+        .withReleaseStage(destinationDefinition.getReleaseStage())
+        .withDocumentationUrl(destinationDefinition.getDocumentationUrl())
+        .withAllowedHosts(destinationDefinition.getAllowedHosts())
+        .withProtocolVersion(destinationDefinition.getProtocolVersion())
+        .withSupportsDbt(destinationDefinition.getSupportsDbt())
+        .withNormalizationConfig(destinationDefinition.getNormalizationConfig());
   }
 
   /**
