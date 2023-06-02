@@ -37,6 +37,7 @@ object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
 
 object UseActorDefinitionVersionTableDefaults : Temporary<Boolean>(key = "connectors.useActorDefinitionVersionTableDefaults", default = false)
+object SeedActorDefinitionVersions : Temporary<Boolean>(key = "connectors.seedActorDefinitionVersions", default = true)
 
 object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
