@@ -15,7 +15,7 @@ datasources:
     connection-timeout: 30000
     idle-timeout: 600000
     initialization-fail-timeout: -1   # Disable fail fast checking to avoid issues due to other pods not being started in time
-    maximum-pool-size: 10
+    maximum-pool-size: 20
     minimum-idle: 0
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
