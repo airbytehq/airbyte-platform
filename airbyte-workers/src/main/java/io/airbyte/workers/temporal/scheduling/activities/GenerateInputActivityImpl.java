@@ -226,6 +226,7 @@ public class GenerateInputActivityImpl implements GenerateInputActivity {
           .withResourceRequirements(resetConnection.getResourceRequirements())
           .withIsSourceCustomConnector(resetConnection.getIsSourceCustomConnector())
           .withIsDestinationCustomConnector(resetConnection.getIsDestinationCustomConnector())
+          .withWebhookOperationConfigs(resetConnection.getWebhookOperationConfigs())
           .withWorkspaceId(resetConnection.getWorkspaceId());
     } else {
       throw new IllegalStateException(
