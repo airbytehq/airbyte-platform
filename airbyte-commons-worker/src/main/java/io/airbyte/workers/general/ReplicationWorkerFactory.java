@@ -12,12 +12,13 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
-import io.airbyte.commons.features.FeatureFlagHelper;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionEnabled;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.RemoveValidationLimit;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
@@ -43,6 +44,7 @@ import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
 import jakarta.inject.Singleton;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -101,9 +103,14 @@ public class ReplicationWorkerFactory {
                                   final IntegrationLauncherConfig sourceLauncherConfig,
                                   final IntegrationLauncherConfig destinationLauncherConfig)
       throws ApiException {
-    final HeartbeatMonitor heartbeatMonitor = createHeartbeatMonitor(sourceApi, sourceDefinitionApi, syncInput);
+    final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
+        () -> sourceApi.getSource(
+            new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
+        "get the source definition for feature flag checks");
+    final HeartbeatMonitor heartbeatMonitor = createHeartbeatMonitor(sourceDefinitionId, sourceDefinitionApi);
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = createHeartbeatTimeoutChaperone(heartbeatMonitor,
         featureFlagClient, syncInput);
+    final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(syncInput);
 
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
@@ -121,37 +128,33 @@ public class ReplicationWorkerFactory {
     final MetricClient metricClient = MetricClientFactory.getMetricClient();
     final WorkerMetricReporter metricReporter = new WorkerMetricReporter(metricClient, sourceLauncherConfig.getDockerImage());
 
+    final FieldSelector fieldSelector =
+        createFieldSelector(recordSchemaValidator, metricReporter, featureFlagClient, syncInput.getWorkspaceId(), sourceDefinitionId);
+
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
     final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, syncInput);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
-        syncPersistence, metricReporter, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient, featureFlags, jobRunConfig,
+        syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient,
+        jobRunConfig,
         syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
   }
 
   /**
    * Create HeartbeatMonitor.
    */
-  private static HeartbeatMonitor createHeartbeatMonitor(final SourceApi sourceApi,
-                                                         final SourceDefinitionApi sourceDefinitionApi,
-                                                         final StandardSyncInput syncInput) {
-    long maxSecondsBetweenMessages;
-    try {
-      final UUID sourceDefinitionId = AirbyteApiClient.retryWithJitter(
-          () -> sourceApi.getSource(
-              new SourceIdRequestBody().sourceId(syncInput.getSourceId())).getSourceDefinitionId(),
-          "get the source for heartbeat");
-
-      maxSecondsBetweenMessages = AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
-          .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
-          .getMaxSecondsBetweenMessages();
-    } catch (final Exception e) {
-      log.warn("An error occured while fetch the max seconds between messages for this source. We are using a default of 24 hours", e);
-      maxSecondsBetweenMessages = TimeUnit.HOURS.toSeconds(24);
+  private static HeartbeatMonitor createHeartbeatMonitor(final UUID sourceDefinitionId,
+                                                         final SourceDefinitionApi sourceDefinitionApi) {
+    final Long maxSecondsBetweenMessages = sourceDefinitionId != null ? AirbyteApiClient.retryWithJitter(() -> sourceDefinitionApi
+        .getSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)), "get the source definition")
+        .getMaxSecondsBetweenMessages() : null;
+    if (maxSecondsBetweenMessages != null) {
+      // reset jobs use an empty source to induce resetting all data in destination.
+      return new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
     }
-    // reset jobs use an empty source to induce resetting all data in destination.
-    return new HeartbeatMonitor(Duration.ofSeconds(maxSecondsBetweenMessages));
+    log.warn("An error occurred while fetch the max seconds between messages for this source. We are using a default of 24 hours");
+    return new HeartbeatMonitor(Duration.ofSeconds(TimeUnit.HOURS.toSeconds(24)));
   }
 
   /**
@@ -181,32 +184,40 @@ public class ReplicationWorkerFactory {
   }
 
   /**
+   * Create RecordSchemaValidator.
+   */
+  private static RecordSchemaValidator createRecordSchemaValidator(final StandardSyncInput syncInput) {
+    return new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
+  }
+
+  private static FieldSelector createFieldSelector(final RecordSchemaValidator recordSchemaValidator,
+                                                   final WorkerMetricReporter metricReporter,
+                                                   final FeatureFlagClient featureFlagClient,
+                                                   final UUID workspaceId,
+                                                   final UUID sourceDefinitionId) {
+    final boolean fieldSelectionEnabled = workspaceId != null && featureFlagClient.boolVariation(FieldSelectionEnabled.INSTANCE, new Multi(
+        List.of(new Workspace(workspaceId), new SourceDefinition(sourceDefinitionId))));
+    final boolean removeValidationLimit =
+        workspaceId != null && featureFlagClient.boolVariation(RemoveValidationLimit.INSTANCE, new Workspace(workspaceId));
+    return new FieldSelector(recordSchemaValidator, metricReporter, fieldSelectionEnabled, removeValidationLimit);
+  }
+
+  /**
    * Create ReplicationWorker.
    */
   private static ReplicationWorker createReplicationWorker(final AirbyteSource source,
                                                            final AirbyteDestination destination,
                                                            final MessageTracker messageTracker,
                                                            final SyncPersistence syncPersistence,
-                                                           final WorkerMetricReporter metricReporter,
+                                                           final RecordSchemaValidator recordSchemaValidator,
+                                                           final FieldSelector fieldSelector,
                                                            final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
                                                            final ConnectorConfigUpdater connectorConfigUpdater,
                                                            final FeatureFlagClient featureFlagClient,
-                                                           final FeatureFlags featureFlags,
                                                            final JobRunConfig jobRunConfig,
                                                            final StandardSyncInput syncInput,
                                                            final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                            final ReplicationAirbyteMessageEventPublishingHelper replicationEventPublishingHelper) {
-    // NOTE: we apply field selection if the feature flag client says so (recommended) or the old
-    // environment-variable flags say so (deprecated).
-    // The latter FeatureFlagHelper will be removed once the flag client is fully deployed.
-    final UUID workspaceId = syncInput.getWorkspaceId();
-    final boolean fieldSelectionEnabled = workspaceId != null
-        && (featureFlagClient.boolVariation(FieldSelectionEnabled.INSTANCE, new Workspace(workspaceId))
-            || FeatureFlagHelper.isFieldSelectionEnabledForWorkspace(featureFlags, workspaceId));
-    final boolean removeValidationLimit =
-        workspaceId != null && featureFlagClient.boolVariation(RemoveValidationLimit.INSTANCE, new Workspace(workspaceId));
-
-    final RecordSchemaValidator recordSchemaValidator = new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput));
     return new DefaultReplicationWorker(
         jobRunConfig.getJobId(),
         Math.toIntExact(jobRunConfig.getAttemptId()),
@@ -215,8 +226,8 @@ public class ReplicationWorkerFactory {
         destination,
         messageTracker,
         syncPersistence,
-        new RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(syncInput)),
-        new FieldSelector(recordSchemaValidator, metricReporter, fieldSelectionEnabled, removeValidationLimit),
+        recordSchemaValidator,
+        fieldSelector,
         connectorConfigUpdater,
         heartbeatTimeoutChaperone,
         new ReplicationFeatureFlagReader(featureFlagClient),
