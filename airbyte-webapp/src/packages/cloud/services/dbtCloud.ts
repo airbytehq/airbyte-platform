@@ -8,9 +8,9 @@
 // - for now, the code treats "webhook operations" and "dbt Cloud job" as synonymous.
 // - custom domains aren't yet supported
 
+import { useMutation, useQuery } from "@tanstack/react-query";
 import isEmpty from "lodash/isEmpty";
 import { useIntl } from "react-intl";
-import { useMutation, useQuery } from "react-query";
 
 import {
   OperatorType,

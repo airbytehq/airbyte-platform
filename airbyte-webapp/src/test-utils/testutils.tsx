@@ -1,7 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, Queries, queries, render as rtlRender, RenderOptions, RenderResult } from "@testing-library/react";
 import React, { Suspense } from "react";
 import { IntlProvider } from "react-intl";
-import { QueryClient, QueryClientProvider } from "react-query";
 import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 

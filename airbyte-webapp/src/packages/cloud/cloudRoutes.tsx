@@ -10,7 +10,12 @@ import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import { useCurrentWorkspace, WorkspaceServiceProvider } from "services/workspaces/WorkspacesService";
+import {
+  useCurrentWorkspace,
+  WorkspaceServiceProvider,
+  usePrefetchCloudWorkspaceData,
+  useCurrentWorkspaceId,
+} from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -114,8 +119,14 @@ const CloudMainViewRoutes = () => {
   );
 };
 
+const CloudWorkspaceDataPrefetcher = () => {
+  usePrefetchCloudWorkspaceData();
+  return null;
+};
+
 export const Routing: React.FC = () => {
   const { user, inited, providers, hasCorporateEmail, loggedOut } = useAuthService();
+  const workspaceId = useCurrentWorkspaceId();
   const { pathname } = useLocation();
 
   useBuildUpdateCheck();
@@ -145,6 +156,7 @@ export const Routing: React.FC = () => {
   return (
     <WorkspaceServiceProvider>
       <LDExperimentServiceProvider>
+        {workspaceId && user && <CloudWorkspaceDataPrefetcher />}
         <Suspense fallback={<LoadingPage />}>
           <Routes>
             {/*

@@ -3,7 +3,7 @@ import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { IntlProvider } from "react-intl";
 import { ThemeProvider } from "styled-components";
-import { QueryClientProvider, QueryClient } from "react-query";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
 // TODO: theme was not working correctly so imported directly
 import { theme } from "../src/theme";
@@ -17,9 +17,9 @@ import { AppMonitoringServiceProvider } from "../src/hooks/services/AppMonitorin
 import type { AnalyticsService } from "../src/core/services/analytics";
 
 const analyticsContextMock: AnalyticsService = {
-    track: () => {},
-    setContext: () => {},
-    removeFromContext: () => {},
+  track: () => {},
+  setContext: () => {},
+  removeFromContext: () => {},
 } as unknown as AnalyticsService;
 
 const queryClient = new QueryClient({
@@ -48,9 +48,7 @@ export const withProviders = (getStory) => (
                 <ConfigServiceProvider config={config}>
                   <DocumentationPanelProvider>
                     <AppMonitoringServiceProvider>
-                      <FeatureService features={[]}>
-                        {getStory()}
-                      </FeatureService>
+                      <FeatureService features={[]}>{getStory()}</FeatureService>
                     </AppMonitoringServiceProvider>
                   </DocumentationPanelProvider>
                 </ConfigServiceProvider>

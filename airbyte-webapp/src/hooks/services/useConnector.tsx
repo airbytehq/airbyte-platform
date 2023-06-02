@@ -1,5 +1,5 @@
+import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { useMutation } from "react-query";
 
 import { useConfig } from "config";
 import { ConnectionConfiguration } from "core/domain/connection";

@@ -1,6 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useIntl } from "react-intl";
-import { useQuery } from "react-query";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 

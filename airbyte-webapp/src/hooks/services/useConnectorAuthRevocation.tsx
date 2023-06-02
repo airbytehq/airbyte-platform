@@ -1,6 +1,6 @@
+import { useMutation } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { useMutation } from "react-query";
 
 import { useConfig } from "config";
 import { SourceAuthService } from "core/domain/connector/SourceAuthService";

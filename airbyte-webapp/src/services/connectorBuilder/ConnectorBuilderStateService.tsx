@@ -1,10 +1,10 @@
+import { UseQueryResult } from "@tanstack/react-query";
 import { Transition } from "history";
 import { dump } from "js-yaml";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
-import { UseQueryResult } from "react-query";
 import { useParams } from "react-router-dom";
 import { useDebounce, useEffectOnce } from "react-use";
 

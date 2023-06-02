@@ -1,6 +1,6 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
-import { useMutation, useQueryClient } from "react-query";
 
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
@@ -286,16 +286,29 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
   );
 };
 
+export const getConnectionListQueryKey = (connectorIds?: string[]) => {
+  return connectionsKeys.lists(connectorIds);
+};
+
+export const useConnectionListQuery = (workspaceId: string, sourceId?: string[], destinationId?: string[]) => {
+  const service = useWebConnectionService();
+
+  return () => service.list({ workspaceId, sourceId, destinationId });
+};
+
 const useConnectionList = (payload: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId"> = {}) => {
   const workspace = useCurrentWorkspace();
-  const service = useWebConnectionService();
   const REFETCH_CONNECTION_LIST_INTERVAL = 60_000;
+  const connectorIds = [
+    ...(payload.destinationId ? payload.destinationId : []),
+    ...(payload.sourceId ? payload.sourceId : []),
+  ];
+  const queryKey = getConnectionListQueryKey(connectorIds);
+  const queryFn = useConnectionListQuery(workspace.workspaceId, payload.sourceId, payload.destinationId);
 
-  return useSuspenseQuery(
-    connectionsKeys.lists(payload.destinationId ?? payload.sourceId),
-    () => service.list({ ...payload, workspaceId: workspace.workspaceId }),
-    { refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL }
-  );
+  return useSuspenseQuery(queryKey, queryFn, {
+    refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
+  });
 };
 
 const useGetConnectionState = (connectionId: string) => {
