@@ -3141,6 +3141,7 @@ public class ConfigRepository {
     final String dockerImageTag = actorDefinitionVersion.getDockerImageTag();
 
     final Optional<ActorDefinitionVersion> existingADV = getActorDefinitionVersion(actorDefinitionID, dockerImageTag, ctx);
+    final UUID versionId = existingADV.map(ActorDefinitionVersion::getVersionId).orElse(UUID.randomUUID());
     if (existingADV.isPresent()) {
       ctx.update(ACTOR_DEFINITION_VERSION)
           .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
@@ -3175,7 +3176,7 @@ public class ConfigRepository {
           .execute();
     } else {
       ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
-          .set(Tables.ACTOR_DEFINITION_VERSION.ID, UUID.randomUUID())
+          .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
           .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
           .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
           .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
@@ -3209,13 +3210,8 @@ public class ConfigRepository {
                   : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
           .execute();
     }
-    final Optional<ActorDefinitionVersion> updatedOrInsertedADV = getActorDefinitionVersion(actorDefinitionID, dockerImageTag, ctx);
-    if (updatedOrInsertedADV.isEmpty()) {
-      throw new RuntimeException(
-          "Could not retrieve an actor definition version, although one should have already existed or just been inserted. "
-              + "Actor def: " + actorDefinitionID + " Docker image tag: " + dockerImageTag);
-    }
-    return updatedOrInsertedADV.get();
+
+    return actorDefinitionVersion.withVersionId(versionId);
   }
 
   /**
