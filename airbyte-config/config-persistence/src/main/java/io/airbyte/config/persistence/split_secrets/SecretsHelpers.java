@@ -159,30 +159,34 @@ public class SecretsHelpers {
    * @return full config including actual secret values
    */
   public static JsonNode combineConfig(final JsonNode partialConfig, final ReadOnlySecretPersistence secretPersistence) {
-    final var config = partialConfig.deepCopy();
+    if (partialConfig != null) {
+      final var config = partialConfig.deepCopy();
 
-    // if the entire config is a secret coordinate object
-    if (config.has(COORDINATE_FIELD)) {
-      final var coordinateNode = config.get(COORDINATE_FIELD);
-      final var coordinate = getCoordinateFromTextNode(coordinateNode);
-      return new TextNode(getOrThrowSecretValue(secretPersistence, coordinate));
-    }
-
-    // otherwise iterate through all object fields
-    config.fields().forEachRemaining(field -> {
-      final var fieldName = field.getKey();
-      final var fieldNode = field.getValue();
-
-      if (fieldNode instanceof ArrayNode) {
-        for (int i = 0; i < fieldNode.size(); i++) {
-          ((ArrayNode) fieldNode).set(i, combineConfig(fieldNode.get(i), secretPersistence));
-        }
-      } else if (fieldNode instanceof ObjectNode) {
-        ((ObjectNode) config).replace(fieldName, combineConfig(fieldNode, secretPersistence));
+      // if the entire config is a secret coordinate object
+      if (config.has(COORDINATE_FIELD)) {
+        final var coordinateNode = config.get(COORDINATE_FIELD);
+        final var coordinate = getCoordinateFromTextNode(coordinateNode);
+        return new TextNode(getOrThrowSecretValue(secretPersistence, coordinate));
       }
-    });
 
-    return config;
+      // otherwise iterate through all object fields
+      config.fields().forEachRemaining(field -> {
+        final var fieldName = field.getKey();
+        final var fieldNode = field.getValue();
+
+        if (fieldNode instanceof ArrayNode) {
+          for (int i = 0; i < fieldNode.size(); i++) {
+            ((ArrayNode) fieldNode).set(i, combineConfig(fieldNode.get(i), secretPersistence));
+          }
+        } else if (fieldNode instanceof ObjectNode) {
+          ((ObjectNode) config).replace(fieldName, combineConfig(fieldNode, secretPersistence));
+        }
+      });
+
+      return config;
+    } else {
+      return partialConfig;
+    }
   }
 
   /**

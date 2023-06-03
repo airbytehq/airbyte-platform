@@ -12,6 +12,7 @@ import styles from "./AuthButton.module.scss";
 import GoogleAuthButton from "./GoogleAuthButton";
 import QuickBooksAuthButton from "./QuickBooksAuthButton";
 import { useFormikOauthAdapter } from "./useOauthFlowAdapter";
+import { FlexContainer } from "../../../../../../components/ui/Flex";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { useAuthentication } from "../../../useAuthentication";
 
@@ -59,7 +60,7 @@ export const AuthButton: React.FC<{
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("form.empty.error");
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { loading, done, run, hasRun } = useFormikOauthAdapter(
+  const { loading, done, run } = useFormikOauthAdapter(
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition
   );
@@ -85,20 +86,15 @@ export const AuthButton: React.FC<{
     />
   );
   return (
-    <div className={styles.authSectionRow}>
+    <FlexContainer alignItems="center">
       <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
         {buttonLabel}
       </Component>
-      {done && hasRun && (
-        <Text as="div" size="lg" className={messageStyle}>
-          <FormattedMessage id="connectorForm.authenticate.succeeded" />
-        </Text>
-      )}
       {authRequiredError && (
         <Text as="div" size="lg" className={messageStyle}>
           <FormattedMessage id="connectorForm.authenticate.required" />
         </Text>
       )}
-    </div>
+    </FlexContainer>
   );
 };

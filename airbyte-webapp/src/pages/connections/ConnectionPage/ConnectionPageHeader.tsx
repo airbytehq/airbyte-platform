@@ -79,7 +79,7 @@ export const ConnectionPageHeader = () => {
   }, [basePath, connection.schemaChange, schemaRefreshing, streamCentricUIEnabled]);
 
   return (
-    <NextPageHeaderWithNavigation breadCrumbsData={breadcrumbsData}>
+    <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
       <ConnectionTitleBlock />
       <Tabs>
         {tabsData.map((tabItem) => (

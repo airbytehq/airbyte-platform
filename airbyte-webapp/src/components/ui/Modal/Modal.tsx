@@ -10,7 +10,7 @@ export interface ModalProps {
   title?: string | React.ReactNode;
   onClose?: () => void;
   cardless?: boolean;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
   testId?: string;
   /**
    * If specified, the full content of the modal including header, body and footer is wrapped in this component (only a class name prop might be set on the component)
@@ -23,6 +23,7 @@ const cardStyleBySize = {
   md: styles.md,
   lg: styles.lg,
   xl: styles.xl,
+  full: styles.full,
 };
 
 export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({

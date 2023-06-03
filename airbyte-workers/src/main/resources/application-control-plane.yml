@@ -4,7 +4,7 @@ datasources:
     connection-timeout: 30000
     idle-timeout: 600000
     initialization-fail-timeout: -1   # Disable fail fast checking to avoid issues due to other pods not being started in time
-    maximum-pool-size: 5
+    maximum-pool-size: 10
     minimum-idle: 0
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
@@ -15,12 +15,13 @@ datasources:
     connection-timeout: 30000
     idle-timeout: 600000
     initialization-fail-timeout: -1   # Disable fail fast checking to avoid issues due to other pods not being started in time
-    maximum-pool-size: 5
+    maximum-pool-size: 20
     minimum-idle: 0
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
+    leak-detection-threshold: 600001
 
 flyway:
   enabled: true

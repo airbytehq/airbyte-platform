@@ -207,7 +207,7 @@ const CopyToModal: React.FC<{
                     setSelectMap({ ...selectMap, [index]: !selectMap[index] });
                   }}
                 />
-                {getStreamName(stream)}
+                <Text>{getStreamName(stream)}</Text>
               </label>
             )
           )}

@@ -1,6 +1,6 @@
+import { useMutation } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useMutation } from "react-query";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";

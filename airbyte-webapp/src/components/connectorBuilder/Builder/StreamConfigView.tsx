@@ -28,10 +28,10 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
-import { KeyValueListField } from "./KeyValueListField";
 import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { PartitionSection } from "./PartitionSection";
+import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
@@ -94,27 +94,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <BuilderCard
-            copyConfig={{
-              path: "requestOptions",
-              currentStreamIndex: streamNum,
-              copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromRequestOptionsTitle" }),
-              copyToLabel: formatMessage({ id: "connectorBuilder.copyToRequestOptionsTitle" }),
-            }}
-          >
-            <KeyValueListField
-              path={streamFieldPath("requestOptions.requestParameters")}
-              manifestPath="HttpRequester.properties.request_parameters"
-            />
-            <KeyValueListField
-              path={streamFieldPath("requestOptions.requestHeaders")}
-              manifestPath="HttpRequester.properties.request_headers"
-            />
-            <KeyValueListField
-              path={streamFieldPath("requestOptions.requestBody")}
-              manifestPath="HttpRequester.properties.request_body_json"
-            />
-          </BuilderCard>
+          <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
         </>
       ) : (
         <BuilderCard className={styles.schemaEditor}>

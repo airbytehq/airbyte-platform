@@ -389,3 +389,7 @@ env_vars: {}
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
+
+debug:
+  enabled: false
+  remoteDebugPort: 5007

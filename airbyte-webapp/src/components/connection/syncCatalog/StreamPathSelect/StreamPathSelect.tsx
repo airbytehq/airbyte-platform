@@ -80,7 +80,7 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
 
   return (
     <PillSelect
-      disabledLabel={<FormattedMessage id="connectionForm.bulkEdit.pillButtonLabel.notAvailable" />}
+      disabledLabel={<FormattedMessage id="connectionForm.pillButtonLabel.notAvailable" />}
       disabled={props.disabled}
       variant={variant}
       options={options}

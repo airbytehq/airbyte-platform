@@ -90,7 +90,7 @@ class BootloaderTest {
 
   // ⚠️ This line should change with every new migration to show that you meant to make a new
   // migration to the prod database
-  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.44.5.001";
+  private static final String CURRENT_CONFIGS_MIGRATION_VERSION = "0.44.5.002";
   private static final String CURRENT_JOBS_MIGRATION_VERSION = "0.44.5.001";
   private static final String CDK_VERSION = "1.2.3";
 
@@ -149,7 +149,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository);
+    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository, featureFlagClient);
     val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
@@ -217,7 +217,7 @@ class BootloaderTest {
 
     val spiedSecretMigrator =
         spy(new SecretMigrator(secretsReader, secretsWriter, configRepository, jobsPersistence, Optional.of(secretPersistence)));
-    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository);
+    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository, featureFlagClient);
     val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);
@@ -342,7 +342,7 @@ class BootloaderTest {
     val jobsDatabaseMigrator = new JobsDatabaseMigrator(jobDatabase, jobsFlyway);
     val jobsPersistence = new DefaultJobPersistence(jobDatabase);
     val protocolVersionChecker = new ProtocolVersionChecker(jobsPersistence, airbyteProtocolRange, configRepository, definitionsProvider);
-    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository);
+    val actorDefinitionMigrator = new ActorDefinitionMigrator(configRepository, featureFlagClient);
     val applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, definitionsProvider, jobsPersistence);
     final CdkVersionProvider cdkVersionProvider = mock(CdkVersionProvider.class);
     when(cdkVersionProvider.getCdkVersion()).thenReturn(CDK_VERSION);

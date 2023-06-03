@@ -1,6 +1,6 @@
 import { Meta, StoryFn } from "@storybook/react";
 
-import { BreadcrumbsDataItem } from "./Breadcrumbs";
+import { NextBreadcrumbsDataItem } from "./NextBreadcrumbs";
 import { NextBreadcrumbs } from "./NextBreadcrumbs";
 
 export default {
@@ -13,7 +13,7 @@ const Template: StoryFn<typeof NextBreadcrumbs> = (args) => {
   return <NextBreadcrumbs data={args.data} />;
 };
 
-const data: BreadcrumbsDataItem[] = [
+const data: NextBreadcrumbsDataItem[] = [
   {
     label: "Workspace",
     to: "/workspace",

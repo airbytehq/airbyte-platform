@@ -10,7 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
-import { Tooltip } from "components/ui/Tooltip";
+import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
@@ -134,16 +134,21 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       </FlexContainer>
 
       <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
-        <div className={styles.streamsHeader}>
-          <Text className={styles.streamsHeading} size="xs" bold>
-            <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
-          </Text>
+        <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
+          <FlexContainer alignItems="center" gap="none">
+            <Text className={styles.streamsHeading} size="xs" bold>
+              <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
+            </Text>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.streamTooltip" />
+            </InfoTooltip>
+          </FlexContainer>
 
           <AddStreamButton
             onAddStream={(addedStreamNum) => handleViewSelect(addedStreamNum)}
             data-testid="add-stream"
           />
-        </div>
+        </FlexContainer>
 
         <div className={styles.streamList}>
           {values.streams?.map(({ name, id }, num) => (

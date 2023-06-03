@@ -6,9 +6,9 @@ import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";

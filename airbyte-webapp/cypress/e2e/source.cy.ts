@@ -8,6 +8,19 @@ import { openHomepage } from "pages/sidebar";
 import { goToSourcePage, openNewSourcePage } from "pages/sourcePage";
 
 describe("Source main actions", () => {
+  it("Should redirect from source list page to create source page if no sources are configured", () => {
+    cy.intercept("POST", "/api/v1/sources/list", {
+      statusCode: 200,
+      body: {
+        sources: [],
+      },
+    });
+
+    cy.visit("/source");
+
+    cy.url().should("match", /.*\/source\/new-source/);
+  });
+
   it("Create new source", () => {
     cy.intercept("/api/v1/sources/create").as("createSource");
     createPostgresSource("Test source cypress");

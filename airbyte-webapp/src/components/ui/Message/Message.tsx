@@ -74,7 +74,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         )}
       </div>
       {onAction && (
-        <Button {...actionBtnProps} variant="dark" onClick={onAction}>
+        <Button {...actionBtnProps} variant="dark" onClick={onAction} data-testid={`${testId}-button`}>
           {actionBtnText}
         </Button>
       )}

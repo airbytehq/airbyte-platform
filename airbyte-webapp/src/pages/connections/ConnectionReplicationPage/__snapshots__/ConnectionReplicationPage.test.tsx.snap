@@ -279,14 +279,16 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                           >
                             <input
-                              aria-checked="false"
+                              aria-checked="mixed"
+                              class="<removed-for-snapshot-test>"
+                              id="all-streams-sync-switch"
                               type="checkbox"
+                              value=""
+                            />
+                            <span
+                              class="<removed-for-snapshot-test>"
                             />
                           </label>
-                        </div>
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        >
                           <p
                             class="<removed-for-snapshot-test>"
                             data-type="text"
@@ -540,22 +542,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                         data-noexpand="true"
                       >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                        <label
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <input
-                            aria-checked="false"
-                            type="checkbox"
-                          />
-                        </label>
-                      </div>
-                      <div
-                        class="<removed-for-snapshot-test>"
-                        data-noexpand="true"
-                      >
                         <label
                           class="<removed-for-snapshot-test>"
                         >
@@ -571,6 +557,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                           />
                         </label>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        />
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
@@ -734,22 +723,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                         data-noexpand="true"
                       >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                        <label
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <input
-                            aria-checked="false"
-                            type="checkbox"
-                          />
-                        </label>
-                      </div>
-                      <div
-                        class="<removed-for-snapshot-test>"
-                        data-noexpand="true"
-                      >
                         <label
                           class="<removed-for-snapshot-test>"
                         >
@@ -765,6 +738,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                           />
                         </label>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        />
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
@@ -928,22 +904,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                         data-noexpand="true"
                       >
-                        <div
-                          class="<removed-for-snapshot-test>"
-                        />
-                        <label
-                          class="<removed-for-snapshot-test>"
-                        >
-                          <input
-                            aria-checked="false"
-                            type="checkbox"
-                          />
-                        </label>
-                      </div>
-                      <div
-                        class="<removed-for-snapshot-test>"
-                        data-noexpand="true"
-                      >
                         <label
                           class="<removed-for-snapshot-test>"
                         >
@@ -958,6 +918,9 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                           />
                         </label>
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        />
                       </div>
                       <div
                         class="<removed-for-snapshot-test>"
@@ -1156,275 +1119,6 @@ exports[`ConnectionReplicationPage should render 1`] = `
           </div>
         </form>
       </div>
-    </div>
-  </div>
-  <div
-    aria-hidden="true"
-    class="<removed-for-snapshot-test>"
-  >
-    <div
-      class="<removed-for-snapshot-test>"
-    >
-      <p
-        class="<removed-for-snapshot-test>"
-      >
-        0
-      </p>
-      <p
-        class="<removed-for-snapshot-test>"
-      >
-        Streams
-      </p>
-    </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    >
-      <p
-        class="<removed-for-snapshot-test>"
-      >
-        Sync
-      </p>
-      <div
-        class="<removed-for-snapshot-test>"
-      >
-        <label
-          class="<removed-for-snapshot-test>"
-        >
-          <input
-            aria-checked="true"
-            checked=""
-            class="<removed-for-snapshot-test>"
-            type="checkbox"
-            value=""
-          />
-          <span
-            class="<removed-for-snapshot-test>"
-          />
-        </label>
-      </div>
-    </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    >
-      <p
-        class="<removed-for-snapshot-test>"
-      >
-        Sync mode
-      </p>
-      <div
-        class="<removed-for-snapshot-test>"
-      >
-        <div
-          class="<removed-for-snapshot-test>"
-          data-testid="sync-mode-select"
-          role="combobox"
-        >
-          <span
-            class="<removed-for-snapshot-test>"
-            id="react-select-5-live-region"
-          />
-          <span
-            aria-atomic="false"
-            aria-live="polite"
-            aria-relevant="additions text"
-            class="<removed-for-snapshot-test>"
-          />
-          <div>
-            <span
-              class="<removed-for-snapshot-test>"
-            >
-              <button
-                class="<removed-for-snapshot-test>"
-                data-error="false"
-                data-testid="pill-select-button"
-                type="button"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <p
-                    class="<removed-for-snapshot-test>"
-                    data-type="text"
-                  />
-                </div>
-                <svg
-                  aria-hidden="true"
-                  class="<removed-for-snapshot-test>"
-                  data-icon="caret-down"
-                  data-prefix="fas"
-                  focusable="false"
-                  role="img"
-                  viewBox="0 0 320 512"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    >
-      <p
-        class="<removed-for-snapshot-test>"
-      >
-        Cursor field
-      </p>
-      <div
-        class="<removed-for-snapshot-test>"
-      >
-        <div
-          class="<removed-for-snapshot-test>"
-          data-testid="cursor-select"
-          role="combobox"
-        >
-          <span
-            class="<removed-for-snapshot-test>"
-            id="react-select-6-live-region"
-          />
-          <span
-            aria-atomic="false"
-            aria-live="polite"
-            aria-relevant="additions text"
-            class="<removed-for-snapshot-test>"
-          />
-          <div>
-            <span
-              class="<removed-for-snapshot-test>"
-            >
-              <button
-                class="<removed-for-snapshot-test>"
-                data-error="false"
-                data-testid="pill-select-button"
-                disabled=""
-                type="button"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <p
-                    class="<removed-for-snapshot-test>"
-                    data-type="text"
-                  >
-                    Not available
-                  </p>
-                </div>
-                <svg
-                  aria-hidden="true"
-                  class="<removed-for-snapshot-test>"
-                  data-icon="caret-down"
-                  data-prefix="fas"
-                  focusable="false"
-                  role="img"
-                  viewBox="0 0 320 512"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    >
-      <p
-        class="<removed-for-snapshot-test>"
-      >
-        Primary key
-      </p>
-      <div
-        class="<removed-for-snapshot-test>"
-      >
-        <div
-          class="<removed-for-snapshot-test>"
-          data-testid="primary-key-select"
-          role="combobox"
-        >
-          <span
-            class="<removed-for-snapshot-test>"
-            id="react-select-7-live-region"
-          />
-          <span
-            aria-atomic="false"
-            aria-live="polite"
-            aria-relevant="additions text"
-            class="<removed-for-snapshot-test>"
-          />
-          <div>
-            <span
-              class="<removed-for-snapshot-test>"
-            >
-              <button
-                class="<removed-for-snapshot-test>"
-                data-error="false"
-                data-testid="pill-select-button"
-                disabled=""
-                type="button"
-              >
-                <div
-                  class="<removed-for-snapshot-test>"
-                >
-                  <p
-                    class="<removed-for-snapshot-test>"
-                    data-type="text"
-                  >
-                    Not available
-                  </p>
-                </div>
-                <svg
-                  aria-hidden="true"
-                  class="<removed-for-snapshot-test>"
-                  data-icon="caret-down"
-                  data-prefix="fas"
-                  focusable="false"
-                  role="img"
-                  viewBox="0 0 320 512"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="<removed-for-snapshot-test>"
-    >
-      <button
-        class="<removed-for-snapshot-test>"
-      >
-        <div
-          class="<removed-for-snapshot-test>"
-        >
-          Cancel
-        </div>
-      </button>
-      <button
-        class="<removed-for-snapshot-test>"
-      >
-        <div
-          class="<removed-for-snapshot-test>"
-        >
-          Apply
-        </div>
-      </button>
     </div>
   </div>
 </body>

@@ -425,7 +425,6 @@ jobs:
             ${{ github.workspace }}/airbyte-api/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-bootloader/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons/build/reports/jacoco/test/jacocoTestReport.xml,
-            ${{ github.workspace }}/airbyte-commons-cli/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons-protocol/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons-temporal/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons-worker/build/reports/jacoco/test/jacocoTestReport.xml,

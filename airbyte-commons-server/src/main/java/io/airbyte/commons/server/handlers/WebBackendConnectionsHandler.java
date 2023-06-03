@@ -60,9 +60,6 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.UseNotificationWorkflow;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -100,7 +97,6 @@ public class WebBackendConnectionsHandler {
   // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
   @Deprecated
   private final ConfigRepository configRepositoryDoNotUse;
-  private final FeatureFlagClient featureFlagClient;
 
   public WebBackendConnectionsHandler(final ConnectionsHandler connectionsHandler,
                                       final StateHandler stateHandler,
@@ -110,8 +106,7 @@ public class WebBackendConnectionsHandler {
                                       final SchedulerHandler schedulerHandler,
                                       final OperationsHandler operationsHandler,
                                       final EventRunner eventRunner,
-                                      final ConfigRepository configRepositoryDoNotUse,
-                                      final FeatureFlagClient featureFlagClient) {
+                                      final ConfigRepository configRepositoryDoNotUse) {
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
     this.sourceHandler = sourceHandler;
@@ -121,7 +116,6 @@ public class WebBackendConnectionsHandler {
     this.operationsHandler = operationsHandler;
     this.eventRunner = eventRunner;
     this.configRepositoryDoNotUse = configRepositoryDoNotUse;
-    this.featureFlagClient = featureFlagClient;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
@@ -421,12 +415,11 @@ public class WebBackendConnectionsHandler {
 
   private Optional<SourceDiscoverSchemaRead> getRefreshedSchema(final UUID sourceId, final UUID connectionId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final boolean notifySchemaChange = featureFlagClient.boolVariation(UseNotificationWorkflow.INSTANCE, new Connection(connectionId));
     final SourceDiscoverSchemaRequestBody discoverSchemaReadReq = new SourceDiscoverSchemaRequestBody()
         .sourceId(sourceId)
         .disableCache(true)
         .connectionId(connectionId)
-        .notifySchemaChange(notifySchemaChange);
+        .notifySchemaChange(false);
     final SourceDiscoverSchemaRead schemaRead = schedulerHandler.discoverSchemaForSourceFromSourceId(discoverSchemaReadReq);
     return Optional.ofNullable(schemaRead);
   }

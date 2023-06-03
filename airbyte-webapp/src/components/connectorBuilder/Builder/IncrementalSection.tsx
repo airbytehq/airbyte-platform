@@ -44,7 +44,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
           start_datetime: { type: "user_input" },
           end_datetime: { type: "now" },
-          step: "P1M",
+          step: "",
           cursor_field: "",
           cursor_granularity: "",
           start_time_option: {
@@ -212,6 +212,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           path={streamFieldPath("incrementalSync.step")}
           manifestPath="DatetimeBasedCursor.properties.step"
           options={LARGE_DURATION_OPTIONS}
+          optional
         />
         <BuilderFieldWithInputs
           type="combobox"

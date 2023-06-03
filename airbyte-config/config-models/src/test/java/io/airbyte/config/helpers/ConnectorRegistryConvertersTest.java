@@ -83,7 +83,13 @@ class ConnectorRegistryConvertersTest {
         .withActorDefinitionId(DEF_ID)
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_TAG)
-        .withSpec(SPEC);
+        .withSpec(SPEC)
+        .withDocumentationUrl(DOCS_URL)
+        .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
+        .withReleaseDate(RELEASE_DATE)
+        .withProtocolVersion(PROTOCOL_VERSION)
+        .withAllowedHosts(ALLOWED_HOSTS)
+        .withSuggestedStreams(suggestedStreams);
 
     assertEquals(stdSourceDef, ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef));
@@ -136,7 +142,14 @@ class ConnectorRegistryConvertersTest {
         .withActorDefinitionId(DEF_ID)
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_TAG)
-        .withSpec(SPEC);
+        .withSpec(SPEC)
+        .withDocumentationUrl(DOCS_URL)
+        .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
+        .withReleaseDate(RELEASE_DATE)
+        .withProtocolVersion(PROTOCOL_VERSION)
+        .withAllowedHosts(ALLOWED_HOSTS)
+        .withNormalizationConfig(normalizationConfig)
+        .withSupportsDbt(true);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));

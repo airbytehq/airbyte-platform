@@ -32,6 +32,7 @@
 }
 
 .card {
+  position: relative;
   margin-left: variables.$width-size-menu;
   max-width: calc(100vw - #{variables.$width-size-menu} - #{variables.$spacing-lg} * 2);
   display: flex;
@@ -51,5 +52,12 @@
 
   &.xl {
     width: variables.$width-modal-xl;
+  }
+
+  &.full {
+    margin-left: 0;
+    max-width: 100%;
+    width: calc(100vw - #{variables.$spacing-xl} * 2);
+    height: calc(100vh - #{variables.$spacing-xl} * 2);
   }
 }

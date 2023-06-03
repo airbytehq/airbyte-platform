@@ -8,14 +8,14 @@ import { useAttemptLink } from "./attemptLinkUtils";
 import ContentWrapper from "./components/ContentWrapper";
 import { JobSummary } from "./components/JobSummary";
 import styles from "./JobItem.module.scss";
-import { JobsWithJobs } from "./types";
+import { JobWithAttempts } from "./types";
 import { didJobSucceed, getJobAttempts, getJobId } from "./utils";
 
 const ErrorDetails = React.lazy(() => import("./components/ErrorDetails"));
 const JobLogs = React.lazy(() => import("./components/JobLogs"));
 
 interface JobItemProps {
-  job: SynchronousJobRead | JobsWithJobs;
+  job: SynchronousJobRead | JobWithAttempts;
 }
 
 export const JobItem: React.FC<JobItemProps> = ({ job }) => {

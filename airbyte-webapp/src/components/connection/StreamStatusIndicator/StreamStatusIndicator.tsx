@@ -13,10 +13,10 @@ import { StreamStatusType } from "../StreamStatus/streamStatusUtils";
 
 const ICON_BY_STATUS: Readonly<Record<StreamStatusType, JSX.Element>> = {
   [StreamStatusType.ActionRequired]: <ErrorIcon />,
-  [StreamStatusType.Disabled]: <SimpleCircleIcon />,
+  [StreamStatusType.Disabled]: <SimpleCircleIcon viewBox="2 2 20 20" />,
   [StreamStatusType.Error]: <WarningCircleIcon />,
-  [StreamStatusType.Late]: <ClockIcon />,
-  [StreamStatusType.Pending]: <SimpleCircleIcon />,
+  [StreamStatusType.Late]: <ClockIcon viewBox="2 2 20 20" />,
+  [StreamStatusType.Pending]: <SimpleCircleIcon viewBox="2 2 20 20" />,
   [StreamStatusType.UpToDate]: <SuccessIcon />,
 };
 
@@ -46,7 +46,9 @@ interface StreamStatusIndicatorProps {
 
 export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, loading, withBox }) => (
   <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
-    <div className={styles.icon}>{ICON_BY_STATUS[status]}</div>
-    {loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
+    <div className={styles.icon}>
+      {ICON_BY_STATUS[status]}
+      {loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
+    </div>
   </div>
 );

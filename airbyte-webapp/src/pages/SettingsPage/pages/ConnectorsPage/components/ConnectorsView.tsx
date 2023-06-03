@@ -10,7 +10,7 @@ import { Table } from "components/ui/Table";
 
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 import { BuilderProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 

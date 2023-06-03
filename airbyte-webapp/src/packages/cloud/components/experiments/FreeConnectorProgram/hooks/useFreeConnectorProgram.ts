@@ -1,12 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useIntl } from "react-intl";
-import { useQuery } from "react-query";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import { pollUntil } from "core/request/pollUntil";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";

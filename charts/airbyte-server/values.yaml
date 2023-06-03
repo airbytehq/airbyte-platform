@@ -418,3 +418,7 @@ extraLabels: {}
 ## deploymentStrategyType [string] - deployment strategy type for airbyte-server deployment.
 ## Defaults to Recreate since the pod is using pvc
 deploymentStrategyType: Recreate
+
+debug:
+  enabled: false
+  remoteDebugPort: 5001

@@ -5,12 +5,14 @@ import pick from "lodash/pick";
 import set from "lodash/set";
 import { useState } from "react";
 import { FieldPath, useFormContext } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
 
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
 import { AuthSpecification, CompleteOAuthResponseAuthPayload } from "core/request/AirbyteClient";
 import { useRunOauthFlow } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
+import { useNotificationService } from "../../../../../../hooks/services/Notification";
 import { useConnectorForm } from "../../../connectorFormContext";
 import { ConnectorFormValues } from "../../../types";
 import { makeConnectionConfigurationPath, serverProvidedOauthPaths } from "../../../utils";
@@ -32,6 +34,9 @@ function useFormikOauthAdapter(
   const [hasRun, setHasRun] = useState(false);
 
   const { getValues } = useConnectorForm();
+  const { registerNotification } = useNotificationService();
+
+  const OAUTH_SUCCESS_ID = "connectorForm.authenticate.succeeded";
 
   const onDone = (authPayload: CompleteOAuthResponseAuthPayload) => {
     let newValues: ConnectorFormValues<Credentials>;
@@ -57,6 +62,13 @@ function useFormikOauthAdapter(
         shouldValidate: true,
       });
     });
+
+    registerNotification({
+      id: OAUTH_SUCCESS_ID,
+      text: <FormattedMessage id={OAUTH_SUCCESS_ID} />,
+      type: "success",
+    });
+
     setHasRun(true);
   };
 

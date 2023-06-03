@@ -29,7 +29,6 @@ import {
   tidyConnectionFormValues,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useConnectionService, ValuesProps } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -53,13 +52,13 @@ const ValidateFormOnSchemaRefresh: React.FC = () => {
 
 const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange }> = ({ dirty, schemaChange }) => {
   const { hasNonBreakingSchemaChange, hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
+  const { schemaHasBeenRefreshed } = useConnectionEditService();
   const { refreshSchema } = useConnectionFormService();
-  const isNewConnectionFlow = useExperiment("connection.updatedConnectionFlow", false);
-
   const refreshWithConfirm = useRefreshSourceSchemaWithConfirmationOnDirty(dirty);
-  if (!isNewConnectionFlow) {
+
+  if (schemaHasBeenRefreshed) {
     return null;
-  }
+  } // todo: note in review that this is a behavior change
 
   if (hasNonBreakingSchemaChange) {
     return (
@@ -68,6 +67,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
         text={<FormattedMessage id="connection.schemaChange.nonBreaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
         onAction={refreshSchema}
+        data-testid="schemaChangesDetected"
       />
     );
   }
@@ -79,6 +79,7 @@ const SchemaChangeMessage: React.FC<{ dirty: boolean; schemaChange: SchemaChange
         text={<FormattedMessage id="connection.schemaChange.breaking" />}
         actionBtnText={<FormattedMessage id="connection.schemaChange.reviewAction" />}
         onAction={refreshWithConfirm}
+        data-testid="schemaChangesDetected"
       />
     );
   }

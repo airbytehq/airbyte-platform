@@ -1,27 +1,30 @@
-type ConnectorType = "source" | "destination";
-const existingConnectorDropdown = `div[data-testid='entityId']`;
-const getExistingConnectorDropdownOption = (connectorName: string) => `div[data-testid='${connectorName}']`;
-const getUseExistingConnectorButton = (connectorType: ConnectorType) =>
-  `button[data-testid='use-existing-${connectorType}-button']`;
+export type ConnectorType = "source" | "destination";
+const getExistingConnectorItemButton = (connectorType: ConnectorType, connectorName: string) =>
+  `button[data-testid='select-existing-${connectorType}-${connectorName}']`;
 
-const pageHeaderContainer = `div[data-testid='page-header-container']`;
-const newConnectionPageTitle = "New connection";
+const getExistingConnectorTypeOption = (connectorType: ConnectorType) =>
+  `input[data-testid='radio-button-tile-${connectorType}Type-existing']`;
+const getNewConnectorTypeOption = (connectorType: ConnectorType) =>
+  `input[data-testid='radio-button-tile-${connectorType}Type-new']`;
 
 const connectorHeaderGroupIcon = (connectorType: ConnectorType) =>
   `span[data-testid='connector-header-group-icon-container-${connectorType}']`;
 const catalogTreeTableHeader = `div[data-testid='catalog-tree-table-header']`;
 const catalogTreeTableBody = `div[data-testid='catalog-tree-table-body']`;
 
-export const selectExistingConnectorFromDropdown = (connectorName: string) => {
-  cy.get(existingConnectorDropdown).click();
-  cy.get(existingConnectorDropdown).within(() => cy.get(getExistingConnectorDropdownOption(connectorName)).click());
+export const selectExistingConnectorFromList = (connectorType: ConnectorType, connectorName: string) => {
+  cy.get(getExistingConnectorItemButton(connectorType, connectorName)).click();
 };
 
-export const clickUseExistingConnectorButton = (connectorType: ConnectorType) =>
-  cy.get(getUseExistingConnectorButton(connectorType)).click();
+export const isExistingConnectorTypeSelected = (connectorType: ConnectorType) => {
+  cy.get(getExistingConnectorTypeOption(connectorType)).should("be.checked");
+  cy.get(getNewConnectorTypeOption(connectorType)).should("not.be.checked");
+};
 
-export const isNewConnectionPageHeaderVisible = () =>
-  cy.get(pageHeaderContainer).contains(newConnectionPageTitle).should("be.visible");
+export const isNewConnectorTypeSelected = (connectorType: ConnectorType) => {
+  cy.get(getExistingConnectorTypeOption(connectorType)).should("not.be.checked");
+  cy.get(getNewConnectorTypeOption(connectorType)).should("be.checked");
+};
 
 /*
  Route checking

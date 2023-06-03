@@ -6,11 +6,9 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import LoadingPage from "components/LoadingPage";
 import { Heading } from "components/ui/Heading";
-import { PageHeader } from "components/ui/PageHeader";
 import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 import { SideMenu, CategoryItem, SideMenuItem } from "components/ui/SideMenu";
 
-import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
 import AccountPage from "./pages/AccountPage";
@@ -44,7 +42,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
   const push = useNavigate();
   const { pathname } = useLocation();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
-  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
   const menuItems: CategoryItem[] = pageConfig?.menuConfig || [
     {
@@ -97,17 +94,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "sidebar.settings" }]} />}
       pageTitle={
-        isNewConnectionFlowEnabled ? (
-          <NextPageHeader
-            leftComponent={
-              <Heading as="h1" size="lg">
-                <FormattedMessage id="sidebar.settings" />
-              </Heading>
-            }
-          />
-        ) : (
-          <PageHeader title={<FormattedMessage id="sidebar.settings" />} />
-        )
+        <NextPageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="sidebar.settings" />
+            </Heading>
+          }
+        />
       }
     >
       <div className={styles.content}>

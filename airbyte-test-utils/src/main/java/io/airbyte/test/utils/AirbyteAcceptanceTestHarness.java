@@ -470,10 +470,11 @@ public class AirbyteAcceptanceTestHarness {
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true)).getCatalog(), "discover source schema no cache", 10, 60, 3);
   }
 
-  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId) throws ApiException {
+  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId, final UUID workspaceId)
+      throws ApiException {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionSpecificationApi()
         .getDestinationDefinitionSpecification(
-            new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(UUID.randomUUID())),
+            new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(workspaceId)),
         "get destination definition spec", 10, 60, 3);
   }
 

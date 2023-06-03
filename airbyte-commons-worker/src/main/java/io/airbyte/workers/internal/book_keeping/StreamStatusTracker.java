@@ -19,8 +19,10 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.exception.StreamStatusException;
+import jakarta.annotation.PostConstruct;
 import jakarta.inject.Singleton;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Tracks the status of individual streams within a replication sync based on the status of
@@ -50,8 +53,15 @@ public class StreamStatusTracker {
 
   private final AirbyteApiClient airbyteApiClient;
 
+  private Map<String, String> mdc;
+
   public StreamStatusTracker(final AirbyteApiClient airbyteApiClient) {
     this.airbyteApiClient = airbyteApiClient;
+  }
+
+  @PostConstruct
+  public void postConstruct() {
+    mdc = MDC.getCopyOfContextMap();
   }
 
   /**
@@ -61,6 +71,7 @@ public class StreamStatusTracker {
    */
   public void track(final ReplicationAirbyteMessageEvent event) {
     try {
+      MDC.setContextMap(getMdc());
       LOGGER.debug("Received message from {} for stream {}:{} -> {}",
           event.airbyteMessageOrigin(),
           event.airbyteMessage().getTrace().getStreamStatus().getStreamDescriptor().getNamespace(),
@@ -80,6 +91,16 @@ public class StreamStatusTracker {
    */
   public Optional<AirbyteStreamStatus> getCurrentStreamStatus(final StreamStatusKey streamStatusKey) {
     return Optional.ofNullable(currentStreamStatuses.get(streamStatusKey)).map(CurrentStreamStatus::getCurrentStatus);
+  }
+
+  /**
+   * Retrieves the context map stored in the status tracker.
+   *
+   * @see #postConstruct()
+   * @return The context map.
+   */
+  public Map<String, String> getMdc() {
+    return mdc != null ? Collections.unmodifiableMap(mdc) : Map.of();
   }
 
   private void handleStreamStatus(final AirbyteTraceMessage airbyteTraceMessage,
@@ -110,9 +131,7 @@ public class StreamStatusTracker {
           streamDescriptor);
     }
 
-    final CurrentStreamStatus currentStreamStatus = new CurrentStreamStatus(Optional.of(streamStatusTraceMessage), Optional.empty());
-    currentStreamStatuses.put(streamStatusKey, currentStreamStatus);
-
+    // Create the new stream status
     final StreamStatusCreateRequestBody streamStatusCreateRequestBody = new StreamStatusCreateRequestBody()
         .streamName(streamDescriptor.getName())
         .streamNamespace(streamDescriptor.getNamespace())
@@ -123,10 +142,16 @@ public class StreamStatusTracker {
         .runState(StreamStatusRunState.PENDING)
         .transitionedAt(transitionTimestamp.toMillis())
         .workspaceId(replicationContext.workspaceId());
+
     final StreamStatusRead streamStatusRead = AirbyteApiClient
         .retryWithJitterThrows(() -> airbyteApiClient.getStreamStatusesApi().createStreamStatus(streamStatusCreateRequestBody),
             "stream status started " + streamDescriptor.getNamespace() + ":" + streamDescriptor.getName());
+
+    // Add the cached entry to reflect the current status after performing a successful API call to
+    // update the status.
+    final CurrentStreamStatus currentStreamStatus = new CurrentStreamStatus(Optional.of(streamStatusTraceMessage), Optional.empty());
     currentStreamStatus.setStatusId(streamStatusRead.getId());
+    currentStreamStatuses.put(streamStatusKey, currentStreamStatus);
 
     LOGGER.info("Stream status for stream {}:{} set to STARTED (id = {}, context = {}).",
         streamDescriptor.getNamespace(), streamDescriptor.getName(), streamStatusRead.getId(), replicationContext);
@@ -140,9 +165,14 @@ public class StreamStatusTracker {
     final StreamStatusKey streamStatusKey = generateStreamStatusKey(replicationContext, streamDescriptor);
     final CurrentStreamStatus existingStreamStatus = currentStreamStatuses.get(streamStatusKey);
     if (existingStreamStatus != null && AirbyteStreamStatus.STARTED == existingStreamStatus.getCurrentStatus()) {
-      existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, streamStatusTraceMessage);
+      // Update the new stream status
       sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(), transitionTimestamp.toMillis(),
           replicationContext, StreamStatusRunState.RUNNING, Optional.empty(), AirbyteMessageOrigin.SOURCE);
+
+      // Update the cached entry to reflect the current status after performing a successful API call to
+      // update the status.
+      existingStreamStatus.setStatus(AirbyteMessageOrigin.SOURCE, streamStatusTraceMessage);
+
       LOGGER.info("Stream status for stream {}:{} set to RUNNING (id = {}, context = {}).",
           streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
     } else {
@@ -164,17 +194,22 @@ public class StreamStatusTracker {
       final StreamStatusKey streamStatusKey = generateStreamStatusKey(replicationContext, streamDescriptor);
       final CurrentStreamStatus existingStreamStatus = currentStreamStatuses.get(streamStatusKey);
       if (existingStreamStatus != null) {
-        existingStreamStatus.setStatus(airbyteMessageOrigin, streamStatusTraceMessage);
-
-        if (existingStreamStatus.isComplete()) {
+        final CurrentStreamStatus updatedStreamStatus = existingStreamStatus.copy();
+        updatedStreamStatus.setStatus(airbyteMessageOrigin, streamStatusTraceMessage);
+        if (updatedStreamStatus.isComplete()) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.COMPLETE, Optional.empty(), airbyteMessageOrigin);
+
           LOGGER.info("Stream status for stream {}:{} set to COMPLETE (id = {}, context = {}).", streamDescriptor.getNamespace(),
               streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         } else {
           LOGGER.info("Stream status for stream {}:{} set to partially COMPLETE (id = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), replicationContext);
         }
+
+        // Update the cached entry to reflect the current status after performing a successful API call to
+        // update the status.
+        existingStreamStatus.setStatus(airbyteMessageOrigin, streamStatusTraceMessage);
       } else {
         throw new StreamStatusException("Invalid stream status transition to COMPLETE.", airbyteMessageOrigin, replicationContext, streamDescriptor);
       }
@@ -314,25 +349,25 @@ public class StreamStatusTracker {
                                         final Optional streamStatusIncompleteRunCause) {
     try {
       for (final Map.Entry<StreamStatusKey, CurrentStreamStatus> e : currentStreamStatuses.entrySet()) {
-        if (e.getKey().connectionId.equals(replicationContext.connectionId())) {
-          /*
-           * If the current stream is terminated, that means it is already in an incomplete or fully complete
-           * state. If that is the case, there is nothing to do. Otherwise, force the stream to the provided
-           * status.
-           */
-          if (!e.getValue().isTerminated()) {
-            sendUpdate(e.getValue().getStatusId(), e.getKey().streamName(), e.getKey().streamNamespace(), transitionTimestamp.toMillis(),
-                replicationContext, streamStatusRunState, streamStatusIncompleteRunCause, AirbyteMessageOrigin.INTERNAL);
-            LOGGER.info("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
-                e.getKey().streamNamespace(), e.getKey().streamName(), streamStatusRunState.name(), e.getValue().getStatusId(), replicationContext);
-          }
+        /*
+         * If the current stream is terminated, that means it is already in an incomplete or fully complete
+         * state. If that is the case, there is nothing to do. Otherwise, force the stream to the provided
+         * status.
+         */
+        if (matchesReplicationContext(e.getKey(), replicationContext) && !e.getValue().isTerminated()) {
+          sendUpdate(e.getValue().getStatusId(), e.getKey().streamName(), e.getKey().streamNamespace(), transitionTimestamp.toMillis(),
+              replicationContext, streamStatusRunState, streamStatusIncompleteRunCause, AirbyteMessageOrigin.INTERNAL);
+          LOGGER.info("Stream status for stream {}:{} forced to {} (id = {}, context = {}).",
+              e.getKey().streamNamespace(), e.getKey().streamName(), streamStatusRunState.name(), e.getValue().getStatusId(), replicationContext);
+        } else {
+          LOGGER.info("Stream {}:{} already has a terminal status.  Nothing to force (id = {}, context = {}).", e.getKey().streamNamespace(),
+              e.getKey().streamName(), e.getValue().getStatusId(), replicationContext);
         }
       }
 
       // Remove all streams from the tracking map associated with the connection ID after the force update
       final Set<StreamStatusKey> toBeRemoved =
-          currentStreamStatuses.keySet().stream().filter(e -> e.connectionId().equals(replicationContext.connectionId())).collect(
-              Collectors.toSet());
+          currentStreamStatuses.keySet().stream().filter(e -> matchesReplicationContext(e, replicationContext)).collect(Collectors.toSet());
       toBeRemoved.forEach(r -> currentStreamStatuses.remove(r));
     } catch (final Exception ex) {
       LOGGER.error("Unable to force streams for connection {} to status {}.", replicationContext.connectionId(), streamStatusRunState, ex);
@@ -348,8 +383,24 @@ public class StreamStatusTracker {
    * @return The new {@link StreamStatusKey}.
    */
   private StreamStatusKey generateStreamStatusKey(final ReplicationContext replicationContext, final StreamDescriptor streamDescriptor) {
-    return new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(), replicationContext.connectionId(),
-        replicationContext.jobId(), replicationContext.attempt());
+    return new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(), replicationContext.workspaceId(),
+        replicationContext.connectionId(), replicationContext.jobId(), replicationContext.attempt());
+  }
+
+  /**
+   * Tests whether the {@link StreamStatusKey} matches the {@link ReplicationContext}. This comparison
+   * checks the attempt number, connection ID, job ID and workspace ID associated with the sync,
+   * ignoring the stream information, to determine if the stream is part of the replication context.
+   *
+   * @param streamStatusKey The stream status key that is used to look up the status of the stream.
+   * @param replicationContext The replication context for the current sync.
+   * @return {@code true} if the stream is part of the replication context, {@code false} otherwise.
+   */
+  private boolean matchesReplicationContext(final StreamStatusKey streamStatusKey, final ReplicationContext replicationContext) {
+    return streamStatusKey.attempt().equals(replicationContext.attempt())
+        && streamStatusKey.connectionId().equals(replicationContext.connectionId())
+        && streamStatusKey.jobId().equals(replicationContext.jobId())
+        && streamStatusKey.workspaceId().equals(replicationContext.workspaceId());
   }
 
   /**
@@ -358,11 +409,12 @@ public class StreamStatusTracker {
    *
    * @param streamName The stream name.
    * @param streamNamespace The stream namespace.
+   * @param workspaceId The workspace ID associated with the replication execution.
    * @param connectionId The connection ID associated with the replication execution.
    * @param jobId The job ID associated with the replication execution.
    * @param attempt The attempt number associated with the replication execution.
    */
-  public record StreamStatusKey(String streamName, String streamNamespace, UUID connectionId, Long jobId, Integer attempt) {}
+  public record StreamStatusKey(String streamName, String streamNamespace, UUID workspaceId, UUID connectionId, Long jobId, Integer attempt) {}
 
   /**
    * Represents the current status of a stream. It is used to track the transition through the various
@@ -466,6 +518,15 @@ public class StreamStatusTracker {
      */
     boolean isTerminated() {
       return isIncomplete() || isComplete();
+    }
+
+    /**
+     * Creates a copy of this {@link CurrentStreamStatus}.
+     *
+     * @return A copy of the this {@link CurrentStreamStatus}.
+     */
+    CurrentStreamStatus copy() {
+      return new CurrentStreamStatus(sourceStatus, destinationStatus);
     }
 
   }

@@ -67,6 +67,7 @@ export const CreditsUsageFilters = () => {
             ]}
             selectedValue={selectedTimeWindow}
             onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
+            connectorStyle
           />
         </FlexContainer>
 
@@ -80,6 +81,7 @@ export const CreditsUsageFilters = () => {
             options={[{ label: "All Sources", value: null }, ...sourceOptions]}
             selectedValue={selectedSource}
             onSelect={(selectedValue) => onSourceSelect(selectedValue)}
+            connectorStyle
           />
         </FlexContainer>
 
@@ -93,6 +95,7 @@ export const CreditsUsageFilters = () => {
             options={[{ label: "All Destinations", value: null }, ...destinationOptions]}
             selectedValue={selectedDestination}
             onSelect={(selectedValue) => onDestinationSelect(selectedValue)}
+            connectorStyle
           />
         </FlexContainer>
       </FlexContainer>

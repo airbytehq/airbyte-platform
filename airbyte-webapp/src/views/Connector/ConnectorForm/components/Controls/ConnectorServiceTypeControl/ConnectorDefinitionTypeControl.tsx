@@ -21,8 +21,8 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
 import { ReleaseStage } from "core/request/AirbyteClient";
+import { useFeature, FeatureItem } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
-import { useFeature, FeatureItem } from "hooks/services/Feature";
 import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { FreeTag } from "packages/cloud/components/experiments/FreeConnectorProgram";

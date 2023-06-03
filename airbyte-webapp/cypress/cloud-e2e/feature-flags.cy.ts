@@ -1,4 +1,4 @@
-import { FeatureItem } from "@src/hooks/services/Feature/types";
+import { FeatureItem } from "@src/core/services/features";
 
 describe("AllowDBTCloudIntegration", () => {
   beforeEach(() => {
