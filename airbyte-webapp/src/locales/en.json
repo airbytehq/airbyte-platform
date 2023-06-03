@@ -279,6 +279,7 @@
   "preferences.anonymizeUsage": "Anonymize usage data collection",
   "preferences.collectData": "We collect data only for product improvements.",
   "preferences.anonymizeData": "Anonymize my usage data.",
+  "preferences.useDarkMode": "Use dark mode",
 
   "onboarding.createSource": "Create a source",
   "onboarding.sourceSetUp": "Set up a new source",
@@ -660,6 +661,8 @@
   "settings.defaultDataResidencyDescription": "Choose the default preferred data processing location for all of your connections. The default data residency setting only affects new connections. Existing connections will retain their data residency setting. <lnk>Learn more</lnk>.",
   "settings.defaultDataResidencyUpdateError": "There was an error updating the default data residency for this workspace.",
   "settings.defaultDataResidencyUpdateSuccess": "Data residency preference has been updated!",
+  "settings.appearance": "Appearance",
+  "settings.appearanceSettings": "Appearance Setting",
 
   "connector.noSearchResults": "No connectors match your search.",
   "connector.requestConnectorBlock": "Request a new connector",

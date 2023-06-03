@@ -14,6 +14,7 @@ import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
 import AccountPage from "./pages/AccountPage";
+import AppearancePage from "./pages/AppearancePage";
 import ConfigurationsPage from "./pages/ConfigurationsPage";
 import { DestinationsPage, SourcesPage } from "./pages/ConnectorsPage";
 import MetricsPage from "./pages/MetricsPage";
@@ -36,6 +37,7 @@ export const SettingsRoute = {
   Notifications: "notifications",
   Metrics: "metrics",
   DataResidency: "data-residency",
+  Appearance: "appearance",
 } as const;
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
@@ -78,6 +80,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ pageConfig }) => {
           path: `${SettingsRoute.Metrics}`,
           name: <FormattedMessage id="settings.metrics" />,
           component: MetricsPage,
+        },
+        {
+          path: `${SettingsRoute.Appearance}`,
+          name: <FormattedMessage id="settings.appearance" />,
+          component: AppearancePage,
         },
       ],
     },

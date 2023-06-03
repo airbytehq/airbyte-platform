@@ -30,6 +30,11 @@ const data: CategoryItem[] = [
         indicatorCount: 1,
         component: () => <>This is the destinations page</>,
       },
+      {
+        path: `appearance`,
+        name: "Appearance",
+        component: () => <>This is the appearance page</>,
+      },
     ],
   },
   {
