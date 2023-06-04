@@ -1,22 +1,16 @@
-import React from "react";
+import React, {useContext} from "react";
 import { FormattedMessage } from "react-intl";
-
 import { HeadTitle } from "components/common/HeadTitle";
-
-import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-
 import AppearanceMode from "./components/AppearanceMode";
-import useWorkspaceEditor from "../../components/useWorkspaceEditor";
 import { Content, SettingsCard } from "../SettingsComponents";
+import {darkModeContext} from "../../../../App";
+
 
 const AppearancePage: React.FC = () => {
-  const workspace = useCurrentWorkspace();
-  const { errorMessage, successMessage, loading, updateData } = useWorkspaceEditor();
+    const { inDarkMode, setInDarkMode } = useContext(darkModeContext);
 
-  useTrackPage(PageTrackingCodes.SETTINGS_METRICS);
-  const onChange = async (data: { anonymousDataCollection: boolean }) => {
-    await updateData({ ...workspace, ...data, news: !!workspace.news, securityUpdates: !!workspace.securityUpdates });
+  const onToggleDarkModeButton = () => {
+      setInDarkMode(!!!inDarkMode);
   };
 
   return (
@@ -25,11 +19,7 @@ const AppearancePage: React.FC = () => {
       <SettingsCard title={<FormattedMessage id="settings.appearanceSettings" />}>
         <Content>
           <AppearanceMode
-            onChange={onChange}
-            anonymousDataCollection={workspace.anonymousDataCollection}
-            successMessage={successMessage}
-            errorMessage={errorMessage}
-            isLoading={loading}
+            onChange={onToggleDarkModeButton}
           />
         </Content>
       </SettingsCard>

@@ -1,17 +1,12 @@
-import React from "react";
+import React, {useContext} from "react";
 import { FormattedMessage } from "react-intl";
 import styled from "styled-components";
-
 import { LabeledSwitch } from "components/LabeledSwitch";
+import {darkModeContext} from "../../../../../App";
 
-import FeedbackBlock from "../../../components/FeedbackBlock";
 
-export interface MetricsFormProps {
-  onChange: (data: { anonymousDataCollection: boolean }) => void;
-  anonymousDataCollection?: boolean;
-  successMessage?: React.ReactNode;
-  errorMessage?: React.ReactNode;
-  isLoading?: boolean;
+export interface AppearanceFormProps {
+  onChange: () => void;
 }
 
 const FormItem = styled.div`
@@ -22,25 +17,20 @@ const FormItem = styled.div`
   margin-bottom: 10px;
 `;
 
-const AppearanceMode: React.FC<MetricsFormProps> = ({
-  onChange,
-  anonymousDataCollection,
-  successMessage,
-  errorMessage,
-  isLoading,
+const AppearanceMode: React.FC<AppearanceFormProps> = ({
+  onChange
 }) => {
+
+    const { inDarkMode } = useContext(darkModeContext);
+
   return (
     <FormItem>
       <LabeledSwitch
-        checked={anonymousDataCollection}
-        disabled={isLoading}
+          checked={inDarkMode}
+          disabled={false}
         label={<FormattedMessage id="preferences.useDarkMode" />}
-        onChange={(event) => {
-          onChange({ anonymousDataCollection: event.target.checked });
-        }}
-        loading={isLoading}
+        onChange={onChange}
       />
-      <FeedbackBlock errorMessage={errorMessage} successMessage={successMessage} isLoading={isLoading} />
     </FormItem>
   );
 };

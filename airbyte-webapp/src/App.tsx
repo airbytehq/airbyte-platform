@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, {createContext, Suspense, useState} from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter as Router } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
@@ -24,10 +24,13 @@ import en from "./locales/en.json";
 import { Routing } from "./pages/routes";
 import { WorkspaceServiceProvider } from "./services/workspaces/WorkspacesService";
 import { theme } from "./theme";
+import {GlobalStylesDark, GlobalStylesLight} from "./scss/_all-themes";
 
 const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <ThemeProvider theme={theme}>{children}</ThemeProvider>
 );
+
+export const darkModeContext = createContext(null);
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <AnalyticsProvider>
@@ -54,25 +57,37 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
 );
 
 const App: React.FC = () => {
-  return (
+    const [inDarkMode, setInDarkMode] = useState(false);
+
+    return (
     <React.StrictMode>
+        {inDarkMode ? <GlobalStylesDark/> : <GlobalStylesLight/>}
+
       <StyleProvider>
         <I18nProvider locale="en" messages={en}>
           <QueryProvider>
             <ServicesProvider>
-              <Suspense fallback={<LoadingPage />}>
-                <ConfigServiceProvider config={config}>
-                  <Router>
-                    <Services>
-                      <Routing />
-                    </Services>
-                  </Router>
-                </ConfigServiceProvider>
-              </Suspense>
+
+                <darkModeContext.Provider value={{ inDarkMode, setInDarkMode }}>
+
+                    <Suspense fallback={<LoadingPage />}>
+                        <ConfigServiceProvider config={config}>
+                            <Router>
+                                <Services>
+                                    <Routing />
+                                </Services>
+                            </Router>
+                        </ConfigServiceProvider>
+                    </Suspense>
+
+                </darkModeContext.Provider>
+
             </ServicesProvider>
           </QueryProvider>
         </I18nProvider>
       </StyleProvider>
+
+
     </React.StrictMode>
   );
 };

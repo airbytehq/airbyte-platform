@@ -67,6 +67,7 @@ const MainViewRoutes: React.FC = () => {
             </Route>
           </Route>
           <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
+            {/*TODO: in SettingsPage, access the context*/}
           <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />} />
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
 
