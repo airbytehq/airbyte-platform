@@ -21,6 +21,7 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
   onClick,
 }: ExistingConnectorButtonProps<T>) => {
   const { connections } = useConnectionList();
+  const testId = `select-existing-${isSource(connector) ? "source" : "destination"}-${connector.name}`;
 
   const connectionCount = useMemo(
     () =>
@@ -41,7 +42,7 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
   };
 
   return (
-    <button onClick={onClickConnector} className={styles.existingConnectorButton}>
+    <button onClick={onClickConnector} className={styles.existingConnectorButton} data-testid={testId}>
       <Text size="lg">{connector.name}</Text>
       {isSource(connector) ? (
         <ConnectorDefinitionBranding sourceDefinitionId={connector.sourceDefinitionId} />

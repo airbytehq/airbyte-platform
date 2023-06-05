@@ -4,7 +4,6 @@ import { ConnectionSyncButtons } from "components/connection/ConnectionSync/Conn
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
-import styles from "./ConnectionStatusCard.module.scss";
 import { ConnectionStatusOverview } from "./ConnectionStatusOverview";
 import { ErrorMessage } from "./ErrorMessage";
 
@@ -17,7 +16,6 @@ export const ConnectionStatusCard: React.FC<{ streamCount: number }> = ({ stream
           <ConnectionSyncButtons
             buttonText={<FormattedMessage id="connection.stream.status.table.syncButton" values={{ streamCount }} />}
             variant="secondary"
-            buttonClassName={styles.syncButton}
           />
         </FlexContainer>
       }

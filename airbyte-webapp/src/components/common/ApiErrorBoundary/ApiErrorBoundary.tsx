@@ -1,6 +1,6 @@
+import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage } from "react-intl";
-import { useQueryErrorResetBoundary } from "react-query";
 import { NavigateFunction, useNavigate } from "react-router-dom";
 import { useLocation } from "react-use";
 import { LocationSensorState } from "react-use/lib/useLocation";

@@ -43,7 +43,7 @@ export const ConnectionPageHeader = () => {
       {
         id: ConnectionRoutePaths.Replication,
         name: (
-          <FlexContainer gap="sm">
+          <FlexContainer gap="sm" as="span">
             <FormattedMessage id="connection.replication" />
             <ChangesStatusIcon schemaChange={connection.schemaChange} />
           </FlexContainer>
@@ -79,7 +79,7 @@ export const ConnectionPageHeader = () => {
   }, [basePath, connection.schemaChange, schemaRefreshing, streamCentricUIEnabled]);
 
   return (
-    <NextPageHeaderWithNavigation breadCrumbsData={breadcrumbsData}>
+    <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
       <ConnectionTitleBlock />
       <Tabs>
         {tabsData.map((tabItem) => (

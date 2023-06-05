@@ -20,3 +20,9 @@
   align-items: center;
   justify-content: center;
 }
+
+// To be removed after connection.searchableJobLogs experiment is merged
+.narrowTable {
+  max-width: variables.$page-width;
+  margin-inline: auto;
+}

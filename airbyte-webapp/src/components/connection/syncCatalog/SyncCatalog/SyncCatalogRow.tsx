@@ -26,7 +26,7 @@ import {
 } from "./streamConfigHelpers";
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
 import { StreamDetailsPanel } from "../StreamDetailsPanel/StreamDetailsPanel";
-import { StreamsConfigTableRow } from "../StreamsConfigTable/StreamsConfigTableRow";
+import { StreamsConfigTableRow } from "../StreamsConfigTable";
 import { SyncModeValue } from "../SyncModeSelect";
 import { flattenSyncSchemaFields, getFieldPathType } from "../utils";
 
@@ -37,7 +37,6 @@ interface SyncCatalogRowProps {
   namespaceFormat: string;
   prefix: string;
   updateStream: (id: string | undefined, newConfiguration: Partial<AirbyteStreamConfiguration>) => void;
-  changedSelected: boolean;
 }
 
 const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
@@ -47,7 +46,6 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   namespaceFormat,
   prefix,
   errors,
-  changedSelected,
 }) => {
   const { stream, config } = streamNode;
 
@@ -66,7 +64,7 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   } = useConnectionFormService();
   const { mode } = useConnectionFormService();
 
-  const [isRowExpanded, onExpand] = useToggle(false);
+  const [isStreamDetailsPanelOpened, setIsStreamDetailsPanelOpened] = useToggle(false);
 
   const updateStreamWithConfig = useCallback(
     (config: Partial<AirbyteStreamConfiguration>) => updateStream(streamNode.id, config),
@@ -198,18 +196,17 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
         cursorType={cursorType}
         onCursorChange={onCursorSelect}
         fields={fields}
-        onExpand={onExpand}
-        changedSelected={changedSelected}
+        openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
         hasError={hasError}
         configErrors={configErrors}
         disabled={disabled}
       />
-      {isRowExpanded && hasFields && (
+      {isStreamDetailsPanelOpened && hasFields && (
         <StreamDetailsPanel
           config={config}
           disabled={mode === "readonly"}
           syncSchemaFields={flattenedFields}
-          onClose={onExpand}
+          onClose={setIsStreamDetailsPanelOpened}
           onCursorSelect={onCursorSelect}
           onPkSelect={onPkSelect}
           onSelectedChange={onSelectStream}

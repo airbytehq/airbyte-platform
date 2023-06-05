@@ -70,7 +70,6 @@ dependencyResolutionManagement {
 include ':airbyte-commons'
 
 include ':airbyte-api'
-include ':airbyte-commons-cli'
 include ':airbyte-commons-protocol'
 include ':airbyte-config:specs'
 include ':airbyte-config:init'

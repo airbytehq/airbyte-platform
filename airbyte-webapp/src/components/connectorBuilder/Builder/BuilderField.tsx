@@ -6,6 +6,7 @@ import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
+import { CodeEditor } from "components/ui/CodeEditor";
 import { ComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
 import { DropDown } from "components/ui/DropDown";
@@ -61,6 +62,7 @@ export type BuilderFieldProps = BaseFieldProps &
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
     | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
+    | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
   );
@@ -198,6 +200,18 @@ export const BuilderField: React.FC<BuilderFieldProps> = ({
           error={hasError}
           readOnly={readOnly}
           onBlur={field.onBlur}
+        />
+      )}
+      {props.type === "jsoneditor" && (
+        <CodeEditor
+          height="300px"
+          key={path}
+          value={field.value || ""}
+          language="json"
+          theme="airbyte-light"
+          onChange={(val: string | undefined) => {
+            setValue(val);
+          }}
         />
       )}
       {props.type === "array" && (

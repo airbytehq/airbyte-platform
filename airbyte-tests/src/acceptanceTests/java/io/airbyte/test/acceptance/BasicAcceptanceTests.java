@@ -368,7 +368,7 @@ class BasicAcceptanceTests {
   @Order(-2)
   void testGetDestinationSpec() throws ApiException {
     final UUID destinationDefinitionId = testHarness.getPostgresDestinationDefinitionId();
-    final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId);
+    final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId, workspaceId);
     assertEquals(destinationDefinitionId, spec.getDestinationDefinitionId());
     assertNotNull(spec.getConnectionSpecification());
   }

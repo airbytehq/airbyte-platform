@@ -42,3 +42,9 @@
 .docLink {
   color: colors.$blue-400;
 }
+
+.toggleContainer {
+  display: flex;
+  gap: variables.$spacing-md;
+  align-items: center;
+}

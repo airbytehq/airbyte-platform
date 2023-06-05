@@ -21,6 +21,7 @@ datasources:
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
+    leak-detection-threshold: 600001
 
 flyway:
   enabled: true

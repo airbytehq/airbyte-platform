@@ -10,7 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
-import { Tooltip } from "components/ui/Tooltip";
+import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
@@ -134,16 +134,21 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
       </FlexContainer>
 
       <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
-        <div className={styles.streamsHeader}>
-          <Text className={styles.streamsHeading} size="xs" bold>
-            <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
-          </Text>
+        <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
+          <FlexContainer alignItems="center" gap="none">
+            <Text className={styles.streamsHeading} size="xs" bold>
+              <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
+            </Text>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.streamTooltip" />
+            </InfoTooltip>
+          </FlexContainer>
 
           <AddStreamButton
             onAddStream={(addedStreamNum) => handleViewSelect(addedStreamNum)}
             data-testid="add-stream"
           />
-        </div>
+        </FlexContainer>
 
         <div className={styles.streamList}>
           {values.streams?.map(({ name, id }, num) => (
@@ -182,7 +187,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
           control={
             <Text size="sm" className={styles.slackLink}>
               <a href="https://airbytehq.slack.com/archives/C027KKE4BCZ" target="_blank" rel="noreferrer">
-                <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start">
+                <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start" as="span">
                   <SlackIcon className={styles.slackIcon} />
                   <FormattedMessage id="connectorBuilder.slackChannel" />
                 </FlexContainer>
@@ -194,7 +199,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         </Tooltip>
         <Text size="sm" className={styles.slackLink}>
           <a href={links.connectorBuilderTutorial} target="_blank" rel="noreferrer">
-            <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start">
+            <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start" as="span">
               <Icon type="docs" />
               <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
             </FlexContainer>

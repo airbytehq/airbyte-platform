@@ -87,7 +87,13 @@ public class ConnectorRegistryConverters {
         .withActorDefinitionId(def.getSourceDefinitionId())
         .withDockerRepository(def.getDockerRepository())
         .withDockerImageTag(def.getDockerImageTag())
-        .withSpec(def.getSpec());
+        .withSpec(def.getSpec())
+        .withAllowedHosts(def.getAllowedHosts())
+        .withDocumentationUrl(def.getDocumentationUrl())
+        .withProtocolVersion(def.getProtocolVersion())
+        .withReleaseDate(def.getReleaseDate())
+        .withReleaseStage(def.getReleaseStage())
+        .withSuggestedStreams(def.getSuggestedStreams());
   }
 
   /**
@@ -103,7 +109,14 @@ public class ConnectorRegistryConverters {
         .withActorDefinitionId(def.getDestinationDefinitionId())
         .withDockerRepository(def.getDockerRepository())
         .withDockerImageTag(def.getDockerImageTag())
-        .withSpec(def.getSpec());
+        .withSpec(def.getSpec())
+        .withAllowedHosts(def.getAllowedHosts())
+        .withDocumentationUrl(def.getDocumentationUrl())
+        .withProtocolVersion(def.getProtocolVersion())
+        .withReleaseDate(def.getReleaseDate())
+        .withReleaseStage(def.getReleaseStage())
+        .withNormalizationConfig(def.getNormalizationConfig())
+        .withSupportsDbt(def.getSupportsDbt());
   }
 
   private static SourceType toStandardSourceType(@Nullable final ConnectorRegistrySourceDefinition.SourceType sourceType) {
