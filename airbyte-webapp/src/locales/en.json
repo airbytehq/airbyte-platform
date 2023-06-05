@@ -806,7 +806,7 @@
   "connectorBuilder.backToListing": "Go back to connector list",
   "connectorBuilder.emptyName": "(empty)",
   "connectorBuilder.inputsTitle": "User Inputs",
-  "connectorBuilder.inputsDescription": "User inputs will be asked to the end-user in order to set up the connector.",
+  "connectorBuilder.inputsDescription": "User inputs will be asked to the end-user in order to set up the connector.\nOpen the Testing values menu to fill these in for the Builder.",
   "connectorBuilder.addInputButton": "Add new user input",
   "connectorBuilder.inputModal.newTitle": "New user input",
   "connectorBuilder.inputModal.editTitle": "Edit user input",

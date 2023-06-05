@@ -52,13 +52,14 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
 
   const streams = resolvedManifest.streams;
   if (streams === undefined || streams.length === 0) {
-    const { inputs, inferredInputOverrides } = manifestSpecAndAuthToBuilder(
+    const { inputs, inferredInputOverrides, inputOrder } = manifestSpecAndAuthToBuilder(
       resolvedManifest.spec,
       undefined,
       undefined
     );
     builderFormValues.inputs = inputs;
     builderFormValues.inferredInputOverrides = inferredInputOverrides;
+    builderFormValues.inputOrder = inputOrder;
 
     return builderFormValues;
   }
@@ -78,7 +79,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     )
   );
 
-  const { inputs, inferredInputOverrides, auth } = manifestSpecAndAuthToBuilder(
+  const { inputs, inferredInputOverrides, auth, inputOrder } = manifestSpecAndAuthToBuilder(
     resolvedManifest.spec,
     streams[0].retriever.requester.authenticator,
     builderFormValues.streams
@@ -86,6 +87,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.inputs = inputs;
   builderFormValues.inferredInputOverrides = inferredInputOverrides;
   builderFormValues.global.authenticator = auth;
+  builderFormValues.inputOrder = inputOrder;
 
   return builderFormValues;
 };
@@ -626,10 +628,12 @@ function manifestSpecAndAuthToBuilder(
     inputs: BuilderFormValues["inputs"];
     inferredInputOverrides: BuilderFormValues["inferredInputOverrides"];
     auth: BuilderFormAuthenticator;
+    inputOrder: string[];
   } = {
     inputs: [],
     inferredInputOverrides: {},
     auth: manifestAuthenticatorToBuilder(manifestAuthenticator),
+    inputOrder: [],
   };
 
   if (manifestSpec === undefined) {
@@ -638,8 +642,20 @@ function manifestSpecAndAuthToBuilder(
 
   const required = manifestSpec.connection_specification.required as string[];
 
-  Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>).forEach(
-    ([specKey, specDefinition]) => {
+  Object.entries(manifestSpec.connection_specification.properties as Record<string, AirbyteJSONSchema>)
+    .sort(([_keyA, valueA], [_keyB, valueB]) => {
+      if (valueA.order !== undefined && valueB.order !== undefined) {
+        return valueA.order - valueB.order;
+      }
+      if (valueA.order !== undefined && valueB.order === undefined) {
+        return -1;
+      }
+      if (valueA.order === undefined && valueB.order !== undefined) {
+        return 1;
+      }
+      return 0;
+    })
+    .forEach(([specKey, specDefinition]) => {
       const matchingInferredInput = getMatchingInferredInput(result.auth, streams, specKey);
       if (matchingInferredInput) {
         result.inferredInputOverrides[matchingInferredInput.key] = specDefinition;
@@ -650,8 +666,10 @@ function manifestSpecAndAuthToBuilder(
           required: required.includes(specKey),
         });
       }
-    }
-  );
+      if (specDefinition.order !== undefined) {
+        result.inputOrder.push(specKey);
+      }
+    });
 
   return result;
 }
