@@ -66,6 +66,10 @@
       background-color: #ffffb6;
     }
 
+    :global(.ansi-cyan-fg) {
+      color: #0cb5b5;
+    }
+
     :global(.ansi-green-fg) {
       color: #00aa00;
     }

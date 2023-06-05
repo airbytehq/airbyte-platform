@@ -4,7 +4,7 @@ import { StatusIcon } from "components/ui/StatusIcon";
 
 import { AttemptInfoRead, JobStatus } from "core/request/AirbyteClient";
 
-import { partialSuccessCheck } from "./NewJobItem";
+import { isPartialSuccess } from "./isPartialSuccess";
 
 interface JobStatusIconProps {
   job: JobWithAttempts;
@@ -13,9 +13,9 @@ interface JobStatusIconProps {
 export const JobStatusIcon: React.FC<JobStatusIconProps> = ({ job }) => {
   const didSucceed = didJobSucceed(job);
   const jobStatus = getJobStatus(job);
-  const isPartialSuccess = job.attempts && partialSuccessCheck(job.attempts);
+  const jobIsPartialSuccess = isPartialSuccess(job.attempts);
 
-  if (!isPartialSuccess && !didSucceed) {
+  if (!jobIsPartialSuccess && !didSucceed) {
     return <StatusIcon status="error" />;
   } else if (jobStatus === JobStatus.cancelled) {
     return <StatusIcon status="cancelled" />;
@@ -23,7 +23,7 @@ export const JobStatusIcon: React.FC<JobStatusIconProps> = ({ job }) => {
     return <StatusIcon status="loading" />;
   } else if (jobStatus === JobStatus.succeeded) {
     return <StatusIcon status="success" />;
-  } else if (isPartialSuccess) {
+  } else if (jobIsPartialSuccess) {
     return <StatusIcon status="warning" />;
   }
   return null;

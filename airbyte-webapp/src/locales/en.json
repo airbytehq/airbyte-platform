@@ -941,14 +941,18 @@
   "cloudApi.loginCallbackUrlError": "There was an error connecting to the developer portal. Please try again.",
   "upcomingFeatures.title": "Upcoming features",
 
-  "jobHistory.logs.title": "Logs for job {jobId}",
+  "jobHistory.logs.title": "Logs: {connectionName} (job id: {jobId})",
   "jobHistory.logs.noLogs": "No logs",
   "jobHistory.logs.nextMatchLabel": "Jump to next match",
   "jobHistory.logs.previousMatchLabel": "Jump to previous match",
   "jobHistory.logs.downloadLogs": "Download logs",
   "jobHistory.logs.attemptLabel": "Attempt {attemptNumber} of {totalAttempts}",
+  "jobHistory.logs.logDownloadPending": "Downloading logs for job {jobId}…",
+  "jobHistory.logs.logDownloadFailed": "Failed to download logs for job {jobId}.",
   "jobHistory.logs.searchPlaceholder": "Search logs",
+  "jobHistory.logs.failureReason": "Failure reason: {reason}",
   "jobHistory.copyLinkToJob": "Copy link to job",
   "jobHistory.copyLinkToJob.success": "Link copied to clipboard",
-  "jobHistory.viewLogs": "View logs"
+  "jobHistory.viewLogs": "View logs",
+  "jobHistory.downloadLogs": "Download logs"
 }
