@@ -41,3 +41,6 @@ deployment = filter_yaml(
 
 k8s_yaml(deployment[0])
 k8s_resource('ab-worker', new_name='worker', labels='backend')
+
+if DEBUG:
+  local('make intellij.config.oss', dir='../../', env={'DEBUG': DEBUG})
