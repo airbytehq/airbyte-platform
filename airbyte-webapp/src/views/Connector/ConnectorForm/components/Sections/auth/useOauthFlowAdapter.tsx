@@ -21,7 +21,7 @@ interface Credentials {
   credentials: AuthSpecification;
 }
 
-function useFormikOauthAdapter(
+function useFormOauthAdapter(
   connector: ConnectorDefinitionSpecification,
   connectorDefinition?: ConnectorDefinition
 ): {
@@ -59,7 +59,9 @@ function useFormikOauthAdapter(
       setValue(key as keyof ConnectorFormValues<Credentials>, value, {
         shouldDirty: true,
         shouldTouch: true,
-        shouldValidate: true,
+        // do not validate, otherwise all unfilled fields will be marked as invalid
+        // in the off-chance something is wrong with the oauth values, it will be flagged when the user tries to submit the form
+        shouldValidate: false,
       });
     });
 
@@ -124,4 +126,4 @@ function useFormikOauthAdapter(
   };
 }
 
-export { useFormikOauthAdapter };
+export { useFormOauthAdapter };

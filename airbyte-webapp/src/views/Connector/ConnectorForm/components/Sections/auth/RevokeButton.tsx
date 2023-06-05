@@ -7,7 +7,7 @@ import { Button } from "components/ui/Button";
 
 import { ConnectorDefinitionSpecification } from "core/domain/connector";
 
-import { useFormikOauthRevocationAdapter } from "./useOauthRevocationAdapter";
+import { useFormOauthRevocationAdapter } from "./useOauthRevocationAdapter";
 import { FlexContainer } from "../../../../../../components/ui/Flex";
 import { useConnectorForm } from "../../../connectorFormContext";
 
@@ -15,7 +15,7 @@ export const RevokeButton: React.FC<{
   selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecification;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
-  const { loading, run } = useFormikOauthRevocationAdapter(
+  const { loading, run } = useFormOauthRevocationAdapter(
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition
   );
