@@ -30,7 +30,7 @@ const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children })
   <ThemeProvider theme={theme}>{children}</ThemeProvider>
 );
 
-export const darkModeContext = createContext(null);
+export const darkModeContext = createContext(null as any);
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <AnalyticsProvider>

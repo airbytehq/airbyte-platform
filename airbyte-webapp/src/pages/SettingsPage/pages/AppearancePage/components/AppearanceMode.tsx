@@ -20,14 +20,13 @@ const FormItem = styled.div`
 const AppearanceMode: React.FC<AppearanceFormProps> = ({
   onChange
 }) => {
-
-    const { inDarkMode } = useContext(darkModeContext);
+  const { inDarkMode } = useContext(darkModeContext);
 
   return (
     <FormItem>
       <LabeledSwitch
-          checked={inDarkMode}
-          disabled={false}
+        checked={inDarkMode}
+        disabled={false}
         label={<FormattedMessage id="preferences.useDarkMode" />}
         onChange={onChange}
       />

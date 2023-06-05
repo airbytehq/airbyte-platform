@@ -7,10 +7,10 @@ import {darkModeContext} from "../../../../App";
 
 
 const AppearancePage: React.FC = () => {
-    const { inDarkMode, setInDarkMode } = useContext(darkModeContext);
+  const { inDarkMode, setInDarkMode } = useContext(darkModeContext);
 
   const onToggleDarkModeButton = () => {
-      setInDarkMode(!!!inDarkMode);
+    setInDarkMode(!!!inDarkMode);
   };
 
   return (
