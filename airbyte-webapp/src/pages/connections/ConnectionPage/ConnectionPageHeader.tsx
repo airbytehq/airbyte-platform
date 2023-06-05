@@ -43,7 +43,7 @@ export const ConnectionPageHeader = () => {
       {
         id: ConnectionRoutePaths.Replication,
         name: (
-          <FlexContainer gap="sm">
+          <FlexContainer gap="sm" as="span">
             <FormattedMessage id="connection.replication" />
             <ChangesStatusIcon schemaChange={connection.schemaChange} />
           </FlexContainer>
