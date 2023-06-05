@@ -183,4 +183,4 @@ env_vars: {}
 
 debug:
   enabled: false
-  remoteDebugPort: 5003
+  remoteDebugPort: 5005

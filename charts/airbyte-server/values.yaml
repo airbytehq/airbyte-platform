@@ -421,4 +421,4 @@ deploymentStrategyType: Recreate
 
 debug:
   enabled: false
-  remoteDebugPort: 5001
+  remoteDebugPort: 5005
