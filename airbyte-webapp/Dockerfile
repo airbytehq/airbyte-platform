@@ -2,10 +2,8 @@ ARG NGINX_IMAGE=nginx:alpine
 FROM ${NGINX_IMAGE}
 
 RUN apk update && apk upgrade && apk upgrade -U openssl
-EXPOSE 80
+EXPOSE 8080
 
-#RUN addgroup -S appgroup && \
-#    adduser -S appuser -G appgroup -u 1000 \
 RUN touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid && \
     chown -R nginx:nginx /var/cache/nginx
