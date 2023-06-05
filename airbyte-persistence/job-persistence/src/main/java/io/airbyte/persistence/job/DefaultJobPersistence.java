@@ -44,6 +44,7 @@ import io.airbyte.config.persistence.PersistenceHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
+import io.airbyte.db.instance.jobs.jooq.generated.tables.StreamStats;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
@@ -84,6 +85,7 @@ import org.jooq.Field;
 import org.jooq.InsertValuesStepN;
 import org.jooq.JSONB;
 import org.jooq.Named;
+import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.RecordMapper;
 import org.jooq.Result;
@@ -377,7 +379,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
       if (CollectionUtils.isNotEmpty(streamSyncStats)) {
-        saveToStreamStatsTable(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
+        saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, ctx);
       }
 
       final NormalizationSummary normalizationSummary = output.getSync().getNormalizationSummary();
@@ -422,7 +424,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .withBytesCommitted(bytesCommitted);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
-      saveToStreamStatsTable(now, streamStats, attemptId, ctx);
+      saveToStreamStatsTableBatch(now, streamStats, attemptId, ctx);
       return null;
     });
 
@@ -473,50 +475,53 @@ public class DefaultJobPersistence implements JobPersistence {
         .execute();
   }
 
-  private static void saveToStreamStatsTable(final OffsetDateTime now,
-                                             final List<StreamSyncStats> perStreamStats,
-                                             final Long attemptId,
-                                             final DSLContext ctx) {
+  private static void saveToStreamStatsTableBatch(final OffsetDateTime now,
+                                                  final List<StreamSyncStats> perStreamStats,
+                                                  final Long attemptId,
+                                                  final DSLContext ctx) {
+    List<Query> updates = new ArrayList<>();
+    List<Query> inserts = new ArrayList<>();
     Optional.ofNullable(perStreamStats).orElse(Collections.emptyList()).forEach(
         streamStats -> {
-          // We cannot entirely rely on JOOQ's generated SQL for upserts as it does not support null fields
-          // for conflict detection. We are forced to separately check for existence.
           final var stats = streamStats.getStats();
           final var isExisting =
-              ctx.fetchExists(STREAM_STATS, STREAM_STATS.ATTEMPT_ID.eq(attemptId).and(STREAM_STATS.STREAM_NAME.eq(streamStats.getStreamName()))
-                  .and(PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
+              ctx.fetchExists(StreamStats.STREAM_STATS, StreamStats.STREAM_STATS.ATTEMPT_ID.eq(attemptId)
+                  .and(StreamStats.STREAM_STATS.STREAM_NAME.eq(streamStats.getStreamName()))
+                  .and(PersistenceHelpers.isNullOrEquals(StreamStats.STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
           if (isExisting) {
-            ctx.update(STREAM_STATS)
-                .set(STREAM_STATS.UPDATED_AT, now)
-                .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
-                .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
-                .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
-                .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
-                .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
-                .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
-                .where(
-                    STREAM_STATS.ATTEMPT_ID.eq(attemptId),
-                    PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
-                    PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace()))
-                .execute();
-            return;
+            updates.add(
+                ctx.update(STREAM_STATS)
+                    .set(STREAM_STATS.UPDATED_AT, now)
+                    .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
+                    .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
+                    .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
+                    .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
+                    .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
+                    .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
+                    .where(
+                        STREAM_STATS.ATTEMPT_ID.eq(attemptId),
+                        PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
+                        PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
+          } else {
+            inserts.add(
+                ctx.insertInto(STREAM_STATS)
+                    .set(STREAM_STATS.ID, UUID.randomUUID())
+                    .set(STREAM_STATS.ATTEMPT_ID, attemptId)
+                    .set(STREAM_STATS.STREAM_NAME, streamStats.getStreamName())
+                    .set(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())
+                    .set(STREAM_STATS.CREATED_AT, now)
+                    .set(STREAM_STATS.UPDATED_AT, now)
+                    .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
+                    .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
+                    .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
+                    .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
+                    .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
+                    .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted()));
           }
-
-          ctx.insertInto(STREAM_STATS)
-              .set(STREAM_STATS.ID, UUID.randomUUID())
-              .set(STREAM_STATS.ATTEMPT_ID, attemptId)
-              .set(STREAM_STATS.STREAM_NAME, streamStats.getStreamName())
-              .set(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())
-              .set(STREAM_STATS.CREATED_AT, now)
-              .set(STREAM_STATS.UPDATED_AT, now)
-              .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
-              .set(STREAM_STATS.RECORDS_EMITTED, stats.getRecordsEmitted())
-              .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
-              .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
-              .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
-              .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
-              .execute();
         });
+
+    ctx.batch(updates).execute();
+    ctx.batch(inserts).execute();
   }
 
   @Override

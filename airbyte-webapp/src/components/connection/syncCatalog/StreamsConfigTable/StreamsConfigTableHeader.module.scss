@@ -2,17 +2,9 @@
 @use "scss/_variables";
 @forward "./StreamsConfigTableRow.module.scss";
 
-.headerCellText {
-  color: colors.$grey;
-}
-
 .headerContainer {
   margin: variables.$spacing-md variables.$spacing-xl variables.$spacing-sm 0;
-  gap: variables.$spacing-sm;
+  gap: variables.$spacing-md;
   scrollbar-gutter: stable;
   min-height: 33px;
-}
-
-.checkboxCell {
-  @extend %streamRowCheckboxCell;
 }

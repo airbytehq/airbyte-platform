@@ -177,7 +177,7 @@ class ConnectorBuilderControllerIntegrationTest {
 
     final Exception exception =
         Assertions.assertThrows(AirbyteCdkInvalidInputException.class, () -> controller.resolveManifest(resolveManifestRequestBody));
-    assertTrue(exception.getMessage().contains("AirbyteTraceMessage response from CDK."));
+    assertTrue(exception.getMessage().contains("AirbyteTraceMessage response from CDK"));
     assertNotNull(exception.getStackTrace());
   }
 

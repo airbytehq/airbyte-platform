@@ -43,7 +43,7 @@ export const Card: React.FC<React.PropsWithChildren<CardProps>> = ({
           [styles.withDescription]: description,
         })}
       >
-        <Heading as="h5" className={classNames(styles.title)}>
+        <Heading as="h5" size="sm">
           {title}
         </Heading>
         {description && (

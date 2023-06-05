@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { RotateIcon } from "components/icons/RotateIcon";
 import { Button, ButtonVariant } from "components/ui/Button";
+import { theme } from "theme";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -64,7 +65,13 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           <Button
             onClick={syncConnection}
             icon={
-              syncStarting ? undefined : <RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />
+              syncStarting ? undefined : (
+                <RotateIcon
+                  color={variant === "secondary" ? theme.grey300 : undefined}
+                  height={styles.syncIconHeight}
+                  width={styles.syncIconHeight}
+                />
+              )
             }
             variant={variant}
             className={buttonClassName}

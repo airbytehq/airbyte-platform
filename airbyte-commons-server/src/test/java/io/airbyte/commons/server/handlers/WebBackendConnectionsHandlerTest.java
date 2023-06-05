@@ -96,8 +96,6 @@ import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
@@ -138,7 +136,6 @@ class WebBackendConnectionsHandlerTest {
   private WebBackendConnectionRead expectedNoDiscoveryWithNewSchema;
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
-  private FeatureFlagClient featureFlagClient;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -162,7 +159,6 @@ class WebBackendConnectionsHandlerTest {
     final JobHistoryHandler jobHistoryHandler = mock(JobHistoryHandler.class);
     configRepository = mock(ConfigRepository.class);
     schedulerHandler = mock(SchedulerHandler.class);
-    featureFlagClient = mock(TestClient.class);
     eventRunner = mock(EventRunner.class);
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
@@ -173,8 +169,7 @@ class WebBackendConnectionsHandlerTest {
         schedulerHandler,
         operationsHandler,
         eventRunner,
-        configRepository,
-        featureFlagClient);
+        configRepository);
 
     final StandardSourceDefinition sourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
     sourceDefinition.setIcon(SOURCE_ICON);

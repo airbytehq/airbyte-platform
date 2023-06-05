@@ -12,10 +12,10 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStatus, ReleaseStage } from "core/request/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
 import { RoutePaths } from "pages/routePaths";
 

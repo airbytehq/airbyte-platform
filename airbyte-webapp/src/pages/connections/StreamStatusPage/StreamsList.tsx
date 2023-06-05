@@ -61,13 +61,17 @@ export const StreamsList = () => {
     () => [
       columnHelper.accessor("config", {
         id: "statusIcon",
-        header: () => null,
+        header: () => <FormattedMessage id="connection.stream.status.table.status" />,
         cell: (props) => (
           <StreamStatusIndicator
             status={getStreamStatus(props.cell.getValue())}
             loading={props.cell.getValue()?.isSyncing || props.cell.getValue()?.isResetting}
           />
         ),
+        meta: {
+          thClassName: styles.statusHeader,
+          tdClassName: styles.statusCell,
+        },
       }),
       columnHelper.accessor("stream.name", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
@@ -87,6 +91,9 @@ export const StreamsList = () => {
         header: () => null,
         id: "actions",
         cell: (props) => <StreamActionsMenu stream={props.row.original.stream} />,
+        meta: {
+          thClassName: styles.actionsHeader,
+        },
       }),
     ],
     [columnHelper, getStreamStatus, setShowRelativeTime, showRelativeTime]
@@ -94,17 +101,23 @@ export const StreamsList = () => {
 
   return (
     <>
-      <Box mb="lg">
+      <Box mb="md">
         <ConnectionStatusCard streamCount={streams.length} />
       </Box>
-      <Card title={<FormattedMessage id="connection.stream.status.title" />}>
+      <Card
+        title={
+          <FlexContainer justifyContent="space-between" alignItems="center">
+            <FormattedMessage id="connection.stream.status.title" />
+            <StreamSearchFiltering className={styles.search} />
+          </FlexContainer>
+        }
+      >
         <FlexContainer direction="column" gap="sm" className={styles.body}>
           <div className={styles.tableContainer} data-survey="streamcentric">
-            <StreamSearchFiltering className={styles.search} />
             <Table
               columns={columns}
               data={filteredStreams}
-              variant="light"
+              variant="inBlock"
               className={styles.table}
               getRowClassName={(data) =>
                 classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })

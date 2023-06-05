@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { mockConnection, TestWrapper } from "test-utils/testutils";
 
 import { SchemaChange } from "core/request/AirbyteClient";
-import { FeatureItem } from "hooks/services/Feature";
+import { FeatureItem } from "core/services/features";
 import en from "locales/en.json";
 
 // eslint-disable-next-line css-modules/no-unused-class

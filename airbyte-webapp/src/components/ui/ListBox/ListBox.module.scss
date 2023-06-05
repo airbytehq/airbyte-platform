@@ -40,26 +40,23 @@
   }
 }
 
-.optionsContainer {
-  position: relative;
-}
-
 .optionsMenu {
   background-color: colors.$white;
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-raised;
-  padding: variables.$spacing-md;
-  margin-top: 0;
-  margin-bottom: 0;
-  position: absolute;
-  right: 0;
-  left: 0;
+  padding: 0;
+  margin: 0;
   width: 100%;
   min-width: fit-content;
   display: flex;
   flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.optionsMenuConnectorStyle {
+  padding: variables.$spacing-md;
   gap: variables.$spacing-sm;
-  z-index: z-indices.$listBox;
 }
 
 .caret {
@@ -68,12 +65,16 @@
 
 .option {
   list-style-type: none;
+  overflow: hidden;
 }
 
 .optionValue {
-  padding: variables.$spacing-md;
-  border-radius: variables.$border-radius-md;
+  padding: (variables.$spacing-xs + variables.$spacing-md) variables.$spacing-lg;
   cursor: pointer;
+}
+
+.optionValueConnectorStyle {
+  border-radius: variables.$border-radius-md;
 }
 
 .icon {

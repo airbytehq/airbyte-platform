@@ -8,6 +8,9 @@ micronaut:
     port: 80
     cors:
       enabled: true
+    netty:
+      access-logger:
+        enabled: ${HTTP_ACCESS_LOG_ENABLED:true}
   endpoints:
     v1/list/streams:
       enabled: true

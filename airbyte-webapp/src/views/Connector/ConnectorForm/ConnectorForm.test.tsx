@@ -10,7 +10,7 @@ import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/doma
 import { SourceAuthService } from "core/domain/connector/SourceAuthService";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
-import { FeatureItem } from "hooks/services/Feature";
+import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";

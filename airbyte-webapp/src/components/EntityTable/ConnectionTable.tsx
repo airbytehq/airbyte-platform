@@ -8,8 +8,8 @@ import { SortableTableHeader } from "components/ui/Table";
 import { Table } from "components/ui/Table";
 
 import { ConnectionScheduleType, SchemaChange } from "core/request/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useQuery } from "hooks/useQuery";
 
 import ConnectionSettingsCell from "./components/ConnectionSettingsCell";

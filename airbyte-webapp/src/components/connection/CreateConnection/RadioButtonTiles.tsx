@@ -41,6 +41,7 @@ export const RadioButtonTiles = <T extends string>({
             checked={selectedValue === option.value}
             onChange={() => onSelectRadioButton(option.value)}
             className={styles.radioButtonTiles__hiddenInput}
+            data-testid={`radio-button-tile-${name}-${option.value}`}
           />
           <label
             className={classNames(styles.radioButtonTiles__toggle, {

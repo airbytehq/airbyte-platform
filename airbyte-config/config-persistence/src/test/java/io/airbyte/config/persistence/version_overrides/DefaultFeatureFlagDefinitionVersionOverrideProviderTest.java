@@ -17,6 +17,10 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.NormalizationDestinationDefinitionConfig;
+import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.specs.GcsBucketSpecFetcher;
 import io.airbyte.featureflag.ConnectorVersionOverride;
@@ -52,16 +56,37 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
   private static final ConnectorSpecification SPEC_2 = new ConnectorSpecification()
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "theSpec", "goesHere")));
+  private static final String DOCS_URL = "https://airbyte.io/docs/";
+  private static final NormalizationDestinationDefinitionConfig NORMALIZATION_CONFIG = new NormalizationDestinationDefinitionConfig()
+      .withNormalizationRepository("airbyte/normalization")
+      .withNormalizationTag("tag")
+      .withNormalizationIntegrationType("bigquery");
+  private static final AllowedHosts ALLOWED_HOSTS = new AllowedHosts().withHosts(List.of("https://airbyte.io"));
+  private static final SuggestedStreams SUGGESTED_STREAMS = new SuggestedStreams().withStreams(List.of("users"));
   private static final ActorDefinitionVersion DEFAULT_VERSION = new ActorDefinitionVersion()
       .withDockerRepository(DOCKER_REPOSITORY)
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
-      .withSpec(SPEC);
+      .withSpec(SPEC)
+      .withDocumentationUrl(DOCS_URL)
+      .withReleaseStage(ReleaseStage.BETA)
+      .withSuggestedStreams(SUGGESTED_STREAMS)
+      .withProtocolVersion(DOCKER_IMAGE_TAG)
+      .withAllowedHosts(ALLOWED_HOSTS)
+      .withSupportsDbt(true)
+      .withNormalizationConfig(NORMALIZATION_CONFIG);
   private static final ActorDefinitionVersion OVERRIDE_VERSION = new ActorDefinitionVersion()
       .withDockerRepository(DOCKER_REPOSITORY)
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerImageTag(DOCKER_IMAGE_TAG_2)
-      .withSpec(SPEC_2);
+      .withSpec(SPEC_2)
+      .withDocumentationUrl(DOCS_URL)
+      .withReleaseStage(ReleaseStage.BETA)
+      .withSuggestedStreams(SUGGESTED_STREAMS)
+      .withProtocolVersion(DOCKER_IMAGE_TAG)
+      .withAllowedHosts(ALLOWED_HOSTS)
+      .withSupportsDbt(true)
+      .withNormalizationConfig(NORMALIZATION_CONFIG);
 
   private DefaultFeatureFlagDefinitionVersionOverrideProvider overrideProvider;
   private GcsBucketSpecFetcher mGcsBucketSpecFetcher;

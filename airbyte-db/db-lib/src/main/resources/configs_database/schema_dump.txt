@@ -92,13 +92,14 @@ create table "public"."actor_definition_version" (
   "docker_image_tag" varchar(256) not null,
   "spec" jsonb not null,
   "protocol_version" varchar(256),
-  "release_stage" varchar(256),
   "release_date" date,
   "normalization_repository" varchar(256),
   "normalization_tag" varchar(256),
   "supports_dbt" boolean,
   "normalization_integration_type" varchar(256),
   "allowed_hosts" jsonb,
+  "suggested_streams" jsonb,
+  "release_stage" "public"."release_stage",
   constraint "actor_definition_version_pkey"
     primary key ("id")
 );

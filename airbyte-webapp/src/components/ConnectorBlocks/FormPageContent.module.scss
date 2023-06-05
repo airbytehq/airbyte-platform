@@ -3,13 +3,9 @@
 .container {
   padding: 0 variables.$spacing-md variables.$spacing-xl;
   margin: variables.$spacing-lg auto 0;
-  max-width: 833px;
+  max-width: variables.$page-width;
 
   &.cloud {
     padding-bottom: variables.$spacing-page-bottom-cloud;
-  }
-
-  &.wide {
-    max-width: variables.$page-width;
   }
 }

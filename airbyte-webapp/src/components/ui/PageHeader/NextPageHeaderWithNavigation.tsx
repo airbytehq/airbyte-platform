@@ -1,26 +1,28 @@
 import styles from "./NextPageHeaderWithNavigation.module.scss";
 import { Box } from "../Box";
-import { NavigationDataItem, NextBreadcrumbs } from "../Breadcrumbs/NextBreadcrumbs";
+import { NextBreadcrumbsDataItem, NextBreadcrumbs } from "../Breadcrumbs/NextBreadcrumbs";
 import { FlexContainer } from "../Flex";
 
 interface NextPageHeaderWithNavigationProps {
-  breadCrumbsData: NavigationDataItem[];
+  breadcrumbsData: NextBreadcrumbsDataItem[];
 }
 
 export const NextPageHeaderWithNavigation: React.FC<React.PropsWithChildren<NextPageHeaderWithNavigationProps>> = ({
-  breadCrumbsData,
+  breadcrumbsData,
   children,
 }) => {
   return (
     <FlexContainer direction="column" gap="none" className={styles.container}>
       <Box py="lg" px="xl" className={styles.section}>
-        <NextBreadcrumbs data={breadCrumbsData} />
+        <NextBreadcrumbs data={breadcrumbsData} />
       </Box>
-      <Box pt="lg" px="xl" className={styles.section}>
-        <FlexContainer direction="column" gap="lg">
-          {children}
-        </FlexContainer>
-      </Box>
+      {children && (
+        <Box pt="lg" px="xl" className={styles.section}>
+          <FlexContainer direction="column" gap="lg">
+            {children}
+          </FlexContainer>
+        </Box>
+      )}
     </FlexContainer>
   );
 };

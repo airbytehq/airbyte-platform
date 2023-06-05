@@ -2056,6 +2056,25 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_oauths/revoke:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source definition ID and workspace ID revoke access/refresh token etc.
+      operationId: revokeSourceOAuthTokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeSourceOauthTokensRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destination_oauths/get_consent_url:
     post:
       tags:
@@ -5557,6 +5576,19 @@ components:
           default: false
         sourceId:
           $ref: "#/components/schemas/SourceId"
+    RevokeSourceOauthTokensRequest:
+      type: object
+      required:
+        - sourceId
+        - sourceDefinitionId
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
     CompleteDestinationOAuthRequest:
       type: object
       required:

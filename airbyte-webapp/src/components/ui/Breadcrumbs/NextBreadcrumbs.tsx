@@ -5,13 +5,13 @@ import { FlexContainer, FlexItem } from "../Flex";
 import { Link } from "../Link";
 import { Text } from "../Text";
 
-export interface NavigationDataItem {
+export interface NextBreadcrumbsDataItem {
   label: string;
   to?: string;
 }
 
 export interface NextBreadcrumbsProps {
-  data: NavigationDataItem[];
+  data: NextBreadcrumbsDataItem[];
 }
 
 export const NextBreadcrumbs: React.FC<NextBreadcrumbsProps> = ({ data }) => {

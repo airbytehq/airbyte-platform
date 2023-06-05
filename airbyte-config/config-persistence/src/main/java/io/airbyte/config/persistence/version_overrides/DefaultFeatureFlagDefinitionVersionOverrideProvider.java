@@ -104,8 +104,16 @@ public class DefaultFeatureFlagDefinitionVersionOverrideProvider implements Feat
 
       final ActorDefinitionVersion newVersion = new ActorDefinitionVersion()
           .withActorDefinitionId(actorDefinitionId)
+          .withDockerImageTag(dockerImageTag)
           .withDockerRepository(defaultVersion.getDockerRepository())
-          .withDockerImageTag(dockerImageTag);
+          .withAllowedHosts(defaultVersion.getAllowedHosts())
+          .withDocumentationUrl(defaultVersion.getDocumentationUrl())
+          .withNormalizationConfig(defaultVersion.getNormalizationConfig())
+          .withReleaseDate(defaultVersion.getReleaseDate())
+          .withReleaseStage(defaultVersion.getReleaseStage())
+          .withSuggestedStreams(defaultVersion.getSuggestedStreams())
+          .withSupportsDbt(defaultVersion.getSupportsDbt())
+          .withProtocolVersion(defaultVersion.getProtocolVersion());
 
       final Optional<ConnectorSpecification> spec = gcsBucketSpecFetcher.attemptFetch(
           String.format("%s:%s", newVersion.getDockerRepository(), newVersion.getDockerImageTag()));

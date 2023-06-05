@@ -43,7 +43,7 @@ export const ErrorMessage: React.FC = () => {
     errorMessage: string;
     errorAction: () => void;
     buttonMessage: string;
-    variant: "error" | "info";
+    variant: "error" | "warning";
   } | null>(() => {
     const { jobId, attemptId, errorMessage } = getErrorMessageFromJob(lastCompletedSyncJob) ?? {};
     // If we have an error message and no breaking schema changes, show the error message
@@ -65,7 +65,7 @@ export const ErrorMessage: React.FC = () => {
         errorAction: () =>
           navigate(`../${ConnectionRoutePaths.Replication}`, { state: { triggerRefreshSchema: true } }),
         buttonMessage: formatMessage({ id: "connection.schemaChange.reviewAction" }),
-        variant: "info",
+        variant: hasBreakingSchemaChange ? "error" : "warning",
       };
     }
 

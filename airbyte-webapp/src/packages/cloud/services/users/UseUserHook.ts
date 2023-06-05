@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { SCOPE_WORKSPACE } from "services/Scope";
+import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { useGetUserService } from "./UserService";
 import { useSuspenseQuery } from "../../../../services/connector/useSuspenseQuery";
@@ -14,11 +14,22 @@ export const userKeys = {
   detail: (id: number) => [...userKeys.details(), id] as const,
 };
 
-export const useListUsers = () => {
-  const userService = useGetUserService();
-  const { workspaceId } = useCurrentWorkspace();
+export const getListUsersQueryKey = (workspaceId: string) => {
+  return userKeys.list(workspaceId);
+};
 
-  return useSuspenseQuery(userKeys.list(workspaceId), () => userService.listByWorkspaceId(workspaceId));
+export const useListUsersQuery = (workspaceId: string) => {
+  const userService = useGetUserService();
+
+  return () => userService.listByWorkspaceId(workspaceId);
+};
+
+export const useListUsers = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const queryKey = getListUsersQueryKey(workspaceId);
+  const queryFn = useListUsersQuery(workspaceId);
+
+  return useSuspenseQuery(queryKey, queryFn);
 };
 
 export const useUserHook = () => {

@@ -65,6 +65,8 @@ const InnerUserInputHelper = React.memo(
             }
           }}
           options={listOptions}
+          adaptiveWidth={false}
+          placement="bottom-end"
           footerOption={
             <button
               type="button"

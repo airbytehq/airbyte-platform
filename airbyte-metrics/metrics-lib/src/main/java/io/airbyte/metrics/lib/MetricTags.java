@@ -36,6 +36,7 @@ public class MetricTags {
   public static final String MIN_CONNECTOR_RELEASE_STATE = "min_connector_release_stage";
   public static final String ATTEMPT_OUTCOME = "attempt_outcome"; // succeeded|failed
   public static final String ATTEMPT_NUMBER = "attempt_number"; // 0|1|2|3
+  public static final String ATTEMPT_ID = "attempt_id"; // the row id of the attempt
   public static final String IS_CUSTOM_CONNECTOR_SYNC = "is_custom_connector_sync";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
   public static final String SOURCE_ID = "source_id";

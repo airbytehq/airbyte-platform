@@ -6,11 +6,14 @@ package io.airbyte.config.persistence;
 
 import static io.airbyte.config.ConfigSchema.STANDARD_DESTINATION_DEFINITION;
 import static io.airbyte.config.ConfigSchema.STANDARD_SOURCE_DEFINITION;
+import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ReleaseStage;
@@ -18,6 +21,10 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.persistence.ActorDefinitionMigrator.ConnectorInfo;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.SeedActorDefinitionVersions;
+import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,13 +76,15 @@ class ActorDefinitionMigratorTest extends BaseConfigDatabaseTest {
 
   private ActorDefinitionMigrator migrator;
   private ConfigRepository configRepository;
+  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
 
   @BeforeEach
   void setup() throws SQLException {
     truncateAllTables();
 
     configRepository = new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER);
-    migrator = new ActorDefinitionMigrator(configRepository);
+    migrator = new ActorDefinitionMigrator(configRepository, featureFlagClient);
+    when(featureFlagClient.boolVariation(SeedActorDefinitionVersions.INSTANCE, new Workspace(ANONYMOUS))).thenReturn(true);
   }
 
   private void writeSource(final StandardSourceDefinition source) throws Exception {

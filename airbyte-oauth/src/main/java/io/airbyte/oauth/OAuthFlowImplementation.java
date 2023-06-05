@@ -67,4 +67,10 @@ public interface OAuthFlowImplementation {
                                                JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException;
 
+  default void revokeSourceOauth(UUID workspaceId,
+                                 UUID sourceDefinitionId,
+                                 JsonNode hydratedSourceConnectionConfiguration,
+                                 JsonNode oauthParamConfig)
+      throws IOException, ConfigNotFoundException, JsonValidationException {}
+
 }

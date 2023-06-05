@@ -18,7 +18,7 @@ export interface TableProps<T> {
    */
   sortedByColumn?: string;
   data: T[];
-  variant?: "default" | "light" | "white";
+  variant?: "default" | "light" | "white" | "inBlock";
   onClickRow?: (data: T) => void;
   getRowCanExpand?: (data: Row<T>) => boolean;
   getIsRowExpanded?: (data: Row<T>) => boolean;
@@ -75,6 +75,7 @@ export const Table = <T,>({
                       [styles["th--default"]]: variant === "default",
                       [styles["th--light"]]: variant === "light",
                       [styles["th--white"]]: variant === "white",
+                      [styles["th--inBlock"]]: variant === "inBlock",
                       [styles["th--sorted"]]: isSorted,
                     },
                     meta?.thClassName

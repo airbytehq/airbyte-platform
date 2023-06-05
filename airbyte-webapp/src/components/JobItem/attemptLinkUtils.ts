@@ -4,6 +4,9 @@ import { AttemptRead } from "core/request/AirbyteClient";
 
 const PARSE_REGEXP = /^#(?<jobId>\w*)::(?<attemptId>\w*)$/;
 
+// With the new job logs design, we will not allow linking to a specific attempt.
+const NEW_PARSE_REGEXP = /^#(?<jobId>\w*)$/;
+
 /**
  * Create and returns a link for a specific job and (optionally) attempt.
  * The returned string is the hash part of a URL.
@@ -18,13 +21,19 @@ export const buildAttemptLink = (jobId: number | string, attemptId?: AttemptRead
  */
 export const parseAttemptLink = (link: string): { jobId?: string; attemptId?: string } => {
   const match = link.match(PARSE_REGEXP);
-  if (!match) {
-    return {};
+  const newMatch = link.match(NEW_PARSE_REGEXP);
+  if (match) {
+    return {
+      jobId: match.groups?.jobId,
+      attemptId: match.groups?.attemptId,
+    };
   }
-  return {
-    jobId: match.groups?.jobId,
-    attemptId: match.groups?.attemptId,
-  };
+  if (newMatch) {
+    return {
+      jobId: newMatch.groups?.jobId,
+    };
+  }
+  return {};
 };
 
 /**
