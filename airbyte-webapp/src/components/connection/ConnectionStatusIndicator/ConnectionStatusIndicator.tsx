@@ -16,7 +16,6 @@ export enum ConnectionStatusIndicatorStatus {
   Error = "error",
   ActionRequired = "actionRequired",
   Disabled = "disabled",
-  Cancelled = "cancelled",
 }
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
@@ -27,7 +26,6 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Eleme
   pending: <ClockIcon />,
   late: <ClockIcon />,
   actionRequired: <Icon type="cross" withBackground />,
-  cancelled: <Icon type="minus" color="action" withBackground />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -38,7 +36,6 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
   pending: styles["status--pending"],
   late: styles["status--late"],
   actionRequired: styles["status--actionRequired"],
-  cancelled: styles["status--cancelled"],
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -49,7 +46,6 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, stri
   pending: styles["status--pending-withBox"],
   late: styles["status--late-withBox"],
   actionRequired: styles["status--actionRequired-withBox"],
-  cancelled: styles["status--cancelled-withBox"],
 };
 
 interface ConnectionStatusIndicatorProps {

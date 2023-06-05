@@ -1,4 +1,4 @@
-import { Connection } from "commands/api/types";
+import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 import { submitButtonClick } from "commands/common";
 import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
@@ -50,7 +50,7 @@ export const saveChangesAndHandleResetModal = ({
   return waitForUpdateConnectionRequest().then((interception) => {
     expect(interception.response?.statusCode).to.eq(200, "response status");
     expect(interception.response?.body).to.exist;
-    const connection: Connection = interception.response?.body;
+    const connection: WebBackendConnectionRead = interception.response?.body;
 
     return checkSuccessResult().then(() => connection);
   });

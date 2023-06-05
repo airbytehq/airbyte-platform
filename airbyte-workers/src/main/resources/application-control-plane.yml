@@ -10,6 +10,7 @@ datasources:
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
+    pool-name: config-pool
   jobs:
     connection-test-query: SELECT 1
     connection-timeout: 30000
@@ -22,6 +23,7 @@ datasources:
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
     leak-detection-threshold: 600001
+    pool-name: jobs-pool
 
 flyway:
   enabled: true

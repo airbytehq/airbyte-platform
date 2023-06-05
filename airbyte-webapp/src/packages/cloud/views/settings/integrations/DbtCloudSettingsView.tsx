@@ -7,8 +7,8 @@ import { Button } from "components/ui/Button";
 import { SecretTextArea } from "components/ui/SecretTextArea";
 import { Text } from "components/ui/Text";
 
+import { useDbtCloudServiceToken } from "core/api/cloud";
 import { useNotificationService } from "hooks/services/Notification";
-import { useDbtCloudServiceToken } from "packages/cloud/services/dbtCloud";
 import { SettingsCard } from "pages/SettingsPage/pages/SettingsComponents";
 import { links } from "utils/links";
 

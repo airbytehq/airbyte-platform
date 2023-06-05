@@ -44,7 +44,6 @@ import io.airbyte.config.persistence.PersistenceHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
-import io.airbyte.db.instance.jobs.jooq.generated.tables.StreamStats;
 import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.persistence.job.models.Attempt;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
@@ -53,6 +52,7 @@ import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Path;
@@ -479,17 +479,27 @@ public class DefaultJobPersistence implements JobPersistence {
                                                   final List<StreamSyncStats> perStreamStats,
                                                   final Long attemptId,
                                                   final DSLContext ctx) {
-    List<Query> updates = new ArrayList<>();
-    List<Query> inserts = new ArrayList<>();
+    final List<Query> queries = new ArrayList<>();
+
+    // Upserts require the onConflict statement that does not work as the table currently has duplicate
+    // records on the null
+    // namespace value. This is a valid state and not a bug.
+    // Upserts are possible if we upgrade to Postgres 15. However this requires downtime. A simpler
+    // solution to prevent O(N) existence checks, where N in the
+    // number of streams, is to fetch all streams for the attempt. Existence checks are in memory,
+    // letting us do only 2 queries in total.
+    final Set<StreamDescriptor> existingStreams = ctx.select(STREAM_STATS.STREAM_NAME, STREAM_STATS.STREAM_NAMESPACE)
+        .from(STREAM_STATS)
+        .where(STREAM_STATS.ATTEMPT_ID.eq(attemptId))
+        .fetchSet(r -> new StreamDescriptor().withName(r.get(STREAM_STATS.STREAM_NAME)).withNamespace(r.get(STREAM_STATS.STREAM_NAMESPACE)));
+
     Optional.ofNullable(perStreamStats).orElse(Collections.emptyList()).forEach(
         streamStats -> {
-          final var stats = streamStats.getStats();
           final var isExisting =
-              ctx.fetchExists(StreamStats.STREAM_STATS, StreamStats.STREAM_STATS.ATTEMPT_ID.eq(attemptId)
-                  .and(StreamStats.STREAM_STATS.STREAM_NAME.eq(streamStats.getStreamName()))
-                  .and(PersistenceHelpers.isNullOrEquals(StreamStats.STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
+              existingStreams.contains(new StreamDescriptor().withName(streamStats.getStreamName()).withNamespace(streamStats.getStreamNamespace()));
+          final var stats = streamStats.getStats();
           if (isExisting) {
-            updates.add(
+            queries.add(
                 ctx.update(STREAM_STATS)
                     .set(STREAM_STATS.UPDATED_AT, now)
                     .set(STREAM_STATS.BYTES_EMITTED, stats.getBytesEmitted())
@@ -503,7 +513,7 @@ public class DefaultJobPersistence implements JobPersistence {
                         PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
                         PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAMESPACE, streamStats.getStreamNamespace())));
           } else {
-            inserts.add(
+            queries.add(
                 ctx.insertInto(STREAM_STATS)
                     .set(STREAM_STATS.ID, UUID.randomUUID())
                     .set(STREAM_STATS.ATTEMPT_ID, attemptId)
@@ -520,8 +530,7 @@ public class DefaultJobPersistence implements JobPersistence {
           }
         });
 
-    ctx.batch(updates).execute();
-    ctx.batch(inserts).execute();
+    ctx.batch(queries).execute();
   }
 
   @Override

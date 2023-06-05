@@ -3,7 +3,7 @@ import { screen, render } from "@testing-library/react";
 import { TestWrapper } from "test-utils/testutils";
 
 import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/domain/connector";
-import { useFormikOauthAdapter } from "views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
+import { useFormOauthAdapter } from "views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -30,8 +30,8 @@ jest.mock("formik", () => {
  */
 
 jest.mock("views/Connector/ConnectorForm/components/Sections/auth/useOauthFlowAdapter");
-const mockUseFormikOauthAdapter = useFormikOauthAdapter as unknown as jest.Mock<Partial<typeof useFormikOauthAdapter>>;
-const baseUseFormikOauthAdapterValues = {
+const mockUseFormOauthAdapter = useFormOauthAdapter as unknown as jest.Mock<Partial<typeof useFormOauthAdapter>>;
+const baseUseFormOauthAdapterValues = {
   run: jest.fn(),
   loading: false,
 };
@@ -62,9 +62,9 @@ describe("auth button", () => {
     });
 
     // not done
-    mockUseFormikOauthAdapter.mockImplementationOnce(() => {
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
       const done = false;
-      const { run, loading } = baseUseFormikOauthAdapterValues;
+      const { run, loading } = baseUseFormOauthAdapterValues;
 
       return { done, run, loading };
     });
@@ -97,9 +97,9 @@ describe("auth button", () => {
     });
 
     // done
-    mockUseFormikOauthAdapter.mockImplementationOnce(() => {
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
       const done = true;
-      const { run, loading } = baseUseFormikOauthAdapterValues;
+      const { run, loading } = baseUseFormOauthAdapterValues;
 
       return { done, run, loading, hasRun: done };
     });
@@ -130,9 +130,9 @@ describe("auth button", () => {
     });
 
     // not done
-    mockUseFormikOauthAdapter.mockImplementationOnce(() => {
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
       const done = false;
-      const { run, loading } = baseUseFormikOauthAdapterValues;
+      const { run, loading } = baseUseFormOauthAdapterValues;
 
       return { done, run, loading };
     });

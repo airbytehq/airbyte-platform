@@ -1,5 +1,4 @@
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "@cy/commands/api";
-import { Connection, Destination, Source } from "@cy/commands/api/types";
 import { deleteEntity, submitButtonClick } from "@cy/commands/common";
 import {
   createJsonDestinationViaApi,
@@ -20,16 +19,16 @@ import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
 import { visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
-import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
+import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 
 import * as connectionSettings from "pages/connection/connectionSettingsPageObject";
 
 describe("Connection Configuration", () => {
-  let pokeApiSource: Source;
-  let postgresSource: Source;
-  let jsonDestination: Destination;
-  let postgresDestination: Destination;
-  let connection: Connection | null;
+  let pokeApiSource: SourceRead;
+  let postgresSource: SourceRead;
+  let jsonDestination: DestinationRead;
+  let postgresDestination: DestinationRead;
+  let connection: WebBackendConnectionRead | null;
 
   before(() => {
     runDbQuery(dropUsersTableQuery);
@@ -51,23 +50,23 @@ describe("Connection Configuration", () => {
 
   afterEach(() => {
     if (connection) {
-      requestDeleteConnection(connection.connectionId);
+      requestDeleteConnection({ connectionId: connection.connectionId });
       connection = null;
     }
   });
 
   after(() => {
     if (pokeApiSource) {
-      requestDeleteSource(pokeApiSource.sourceId);
+      requestDeleteSource({ sourceId: pokeApiSource.sourceId });
     }
     if (postgresSource) {
-      requestDeleteSource(postgresSource.sourceId);
+      requestDeleteSource({ sourceId: postgresSource.sourceId });
     }
     if (jsonDestination) {
-      requestDeleteDestination(jsonDestination.destinationId);
+      requestDeleteDestination({ destinationId: jsonDestination.destinationId });
     }
     if (postgresDestination) {
-      requestDeleteDestination(postgresDestination.destinationId);
+      requestDeleteDestination({ destinationId: postgresDestination.destinationId });
     }
     runDbQuery(dropUsersTableQuery);
   });

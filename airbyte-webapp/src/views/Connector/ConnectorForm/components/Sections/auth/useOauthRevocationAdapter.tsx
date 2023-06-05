@@ -14,7 +14,7 @@ interface Credentials {
   credentials: AuthSpecification;
 }
 
-function useFormikOauthRevocationAdapter(
+function useFormOauthRevocationAdapter(
   connector: ConnectorDefinitionSpecification,
   connectorDefinition?: ConnectorDefinition
 ): {
@@ -54,4 +54,4 @@ function useFormikOauthRevocationAdapter(
   };
 }
 
-export { useFormikOauthRevocationAdapter };
+export { useFormOauthRevocationAdapter };
