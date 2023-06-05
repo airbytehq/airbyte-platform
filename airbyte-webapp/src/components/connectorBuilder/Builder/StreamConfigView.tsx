@@ -89,12 +89,12 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             />
             <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
           </BuilderCard>
+          <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
         </>
       ) : (
         <BuilderCard className={styles.schemaEditor}>

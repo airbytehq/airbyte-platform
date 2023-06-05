@@ -44,15 +44,22 @@ interface KeyValueListFieldProps {
   label?: string;
   tooltip?: ReactNode;
   manifestPath?: string;
+  optional?: boolean;
 }
 
-export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, label, tooltip, manifestPath }) => {
+export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
+  path,
+  label,
+  tooltip,
+  manifestPath,
+  optional,
+}) => {
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path);
   const { fields: keyValueList, append, remove } = useFieldArray({ name: path });
 
   return (
     <GroupControls
-      label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
+      label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} optional={optional} />}
       control={
         <Button type="button" variant="secondary" onClick={() => append([["", ""]])}>
           <FormattedMessage id="connectorBuilder.addKeyValue" />

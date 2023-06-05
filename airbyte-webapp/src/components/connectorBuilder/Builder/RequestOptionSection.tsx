@@ -26,6 +26,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
         <KeyValueListField
           path={streamFieldPath("requestOptions.requestBody.values")}
           manifestPath="HttpRequester.properties.request_body_json"
+          optional
         />
       ),
     },
@@ -39,6 +40,7 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
         <KeyValueListField
           path={streamFieldPath("requestOptions.requestBody.values")}
           manifestPath="HttpRequester.properties.request_body_data"
+          optional
         />
       ),
     },
@@ -70,10 +72,12 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
       <KeyValueListField
         path={streamFieldPath("requestOptions.requestParameters")}
         manifestPath="HttpRequester.properties.request_parameters"
+        optional
       />
       <KeyValueListField
         path={streamFieldPath("requestOptions.requestHeaders")}
         manifestPath="HttpRequester.properties.request_headers"
+        optional
       />
       <BuilderOneOf
         path={streamFieldPath("requestOptions.requestBody")}
