@@ -1,6 +1,6 @@
 # airbyte
 
-![Version: 0.44.11](https://img.shields.io/badge/Version-0.44.11-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.11](https://img.shields.io/badge/AppVersion-0.44.11-informational?style=flat-square)
+![Version: 0.44.12](https://img.shields.io/badge/Version-0.44.12-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.44.12](https://img.shields.io/badge/AppVersion-0.44.12-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
@@ -8,15 +8,15 @@ Helm chart to deploy airbyte
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | cron | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | server | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 0.44.11 |
-| https://airbytehq.github.io/helm-charts/ | worker | 0.44.11 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | cron | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | metrics | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | server | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | temporal | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | webapp | 0.44.12 |
+| https://airbytehq.github.io/helm-charts/ | worker | 0.44.12 |
 | https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
