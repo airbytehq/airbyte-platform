@@ -25,13 +25,11 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { useNotificationService } from "hooks/services/Notification";
 import { useWebConnectionService } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import {
-  DbtCloudJobInfo,
-  webBackendGetAvailableDbtJobsForWorkspace,
-  WorkspaceGetDbtJobsResponse,
-} from "packages/cloud/lib/domain/dbtCloud/api";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useUpdateWorkspace } from "services/workspaces/WorkspacesService";
+
+import { webBackendGetAvailableDbtJobsForWorkspace } from "../../generated/CloudApi";
+import { DbtCloudJobInfo, WorkspaceGetDbtJobsResponse } from "../../types/CloudApi";
 
 export interface DbtCloudJob {
   accountId: number;
@@ -39,7 +37,6 @@ export interface DbtCloudJob {
   operationId?: string;
   jobName?: string;
 }
-export type { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud/api";
 
 type ServiceToken = string;
 
