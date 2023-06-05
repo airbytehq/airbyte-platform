@@ -42,7 +42,7 @@ export const CreateConnectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
 
-  const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Destination}`;
+  const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Connections}`;
 
   const breadcrumbsData = [
     {
