@@ -4,26 +4,13 @@ datasources:
     connection-timeout: 30000
     idle-timeout: 600000
     initialization-fail-timeout: -1   # Disable fail fast checking to avoid issues due to other pods not being started in time
-    maximum-pool-size: 10
+    maximum-pool-size: 30
     minimum-idle: 0
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD}
     pool-name: config-pool
-  jobs:
-    connection-test-query: SELECT 1
-    connection-timeout: 30000
-    idle-timeout: 600000
-    initialization-fail-timeout: -1   # Disable fail fast checking to avoid issues due to other pods not being started in time
-    maximum-pool-size: 20
-    minimum-idle: 0
-    url: ${DATABASE_URL}
-    driverClassName: org.postgresql.Driver
-    username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
-    leak-detection-threshold: 600001
-    pool-name: jobs-pool
 
 flyway:
   enabled: true
@@ -40,8 +27,5 @@ flyway:
 jooq:
   datasources:
     config:
-      jackson-converter-enabled: true
-      sql-dialect: POSTGRES
-    jobs:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
