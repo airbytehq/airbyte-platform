@@ -17,5 +17,7 @@ flags:
     serve: false
   - name: autopropagation.enabled
     serve: false
+  - name: connection.columnSelection
+    serve: true
   - name: handle.stream.status
     serve: false
