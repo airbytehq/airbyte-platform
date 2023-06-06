@@ -761,7 +761,7 @@
   "connectorBuilder.requestTab": "Request",
   "connectorBuilder.responseTab": "Response",
   "connectorBuilder.schemaTab": "Detected schema",
-  "connectorBuilder.useSchemaButton": "Import schema",
+  "connectorBuilder.useSchemaButton": "Use detected schema",
   "connectorBuilder.differentSchemaDescription": "Detected schema and declared schema are different",
   "connectorBuilder.overwriteSchemaButton": "Overwrite declared schema",
   "connectorBuilder.mergeSchemaButton": "Merge properties",

@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
+import { LabelInfo } from "components/Label";
 import { ControlLabels } from "components/LabeledControl";
 
 import { RequestOption } from "core/request/ConnectorManifest";
@@ -121,7 +122,28 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                 <BuilderOneOf
                   path={streamFieldPath("paginator.strategy.cursor")}
                   label="Next page cursor"
-                  tooltip="Specify how to select the next page"
+                  tooltip={
+                    <LabelInfo
+                      description="Specify how to select the next page"
+                      options={[
+                        {
+                          title: "Response",
+                          description:
+                            "Pointer to a field in the raw response body that will be used as the cursor token for fetching the next page of data",
+                        },
+                        {
+                          title: "Header",
+                          description:
+                            "Pointer to a field in the raw response headers that will be used as the cursor token for fetching the next page of data",
+                        },
+                        {
+                          title: "Custom",
+                          description:
+                            "Define a custom cursor token for fetching the next page of data which supports interpolated values, and a stop condition describing when to stop fetching more pages",
+                        },
+                      ]}
+                    />
+                  }
                   options={[
                     {
                       label: "Response",
