@@ -158,7 +158,7 @@ micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari", ver
 micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq", version.ref = "micronaut-jdbc" }
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
-micronaut-micrometer-registry-statsd = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-statsd", version.ref = "micronaut-micrometer" }
+micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
 micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "2.6.0" }
 micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "5.3.2" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut" }
@@ -177,9 +177,9 @@ log4j = ["log4j-api", "log4j-core", "log4j-impl", "log4j-web"]
 micronaut = ["jakarta-inject", "javax-transaction", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-jaxrs-server", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq"]
 micronaut-annotation = ["jakarta-inject", "micronaut-inject-java"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
-micronaut-data-jdbc = ["micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
+micronaut-data-jdbc = [ "micronaut-data-jdbc", "micronaut-data-model", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
-micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-statsd"]
+micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-datadog"]
 micronaut-server = ["micronaut-jaxrs-processor", "micronaut-jaxrs-server"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java"]
