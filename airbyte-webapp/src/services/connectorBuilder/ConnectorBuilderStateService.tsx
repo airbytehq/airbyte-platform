@@ -17,6 +17,7 @@ import {
   DEFAULT_JSON_MANIFEST_VALUES,
   EditorView,
 } from "components/connectorBuilder/types";
+import { formatJson } from "components/connectorBuilder/utils";
 
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
@@ -35,6 +36,10 @@ import {
   useUpdateProject,
 } from "./ConnectorBuilderProjectsService";
 import { useConnectorBuilderTestInputState } from "./ConnectorBuilderTestInputService";
+import { IncomingData, OutgoingData } from "./SchemaWorker";
+import SchemaWorker from "./SchemaWorker?worker";
+
+const worker = new SchemaWorker();
 
 export type BuilderView = "global" | "inputs" | number;
 
@@ -73,6 +78,10 @@ interface TestReadContext {
   testInputJson: ConnectorConfig;
   testInputJsonDirty: boolean;
   setTestInputJson: (value: TestReadContext["testInputJson"] | undefined) => void;
+  schemaWarnings: {
+    schemaDifferences: boolean;
+    incompatibleSchemaErrors: string[] | undefined;
+  };
 }
 
 interface FormManagementStateContext {
@@ -441,6 +450,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     record_limit: 1000,
   });
 
+  const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
+
   const ctx = {
     streams,
     streamListErrorMessage,
@@ -451,10 +462,61 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     testInputJson: testInputWithDefaults,
     testInputJsonDirty: Boolean(testInputJson),
     setTestInputJson,
+    schemaWarnings,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;
 };
+
+export function useSchemaWarnings(
+  streamRead: UseQueryResult<StreamRead, unknown>,
+  streamNumber: number,
+  streamName: string
+) {
+  const { builderFormValues } = useConnectorBuilderFormState();
+  const schema = builderFormValues.streams[streamNumber]?.schema;
+
+  const formattedDetectedSchema = useMemo(
+    () => streamRead.data?.inferred_schema && formatJson(streamRead.data?.inferred_schema, true),
+    [streamRead.data?.inferred_schema]
+  );
+
+  const formattedDeclaredSchema = useMemo(() => {
+    if (!schema) {
+      return undefined;
+    }
+    try {
+      return formatJson(JSON.parse(schema), true);
+    } catch {}
+    return undefined;
+  }, [schema]);
+
+  const [incompatibleSchemaErrors, setIncompatibleSchemaErrors] = useState<string[] | undefined>(undefined);
+
+  useEffect(() => {
+    worker.onmessage = (event: MessageEvent<OutgoingData>) => {
+      if (event.data.streamName === streamName && schema) {
+        setIncompatibleSchemaErrors(event.data.incompatibleSchemaErrors);
+      }
+    };
+  }, [schema, streamName]);
+
+  useEffect(() => {
+    const records = streamRead.data?.slices.flatMap((slice) => slice.pages.flatMap((page) => page.records)) || [];
+    if (!schema || records.length === 0) {
+      setIncompatibleSchemaErrors(undefined);
+      return;
+    }
+    const request: IncomingData = { schema, records, streamName };
+    worker.postMessage(request);
+  }, [streamRead.data?.slices, schema, streamName]);
+  return {
+    schemaDifferences: Boolean(
+      (formattedDetectedSchema && formattedDeclaredSchema !== formattedDetectedSchema) || incompatibleSchemaErrors
+    ),
+    incompatibleSchemaErrors,
+  };
+}
 
 export const useConnectorBuilderTestRead = (): TestReadContext => {
   const connectorBuilderState = useContext(ConnectorBuilderTestReadContext);

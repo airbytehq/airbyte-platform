@@ -16,6 +16,7 @@ specifiers:
   '@babel/preset-env': ^7.20.2
   '@babel/preset-react': ^7.18.6
   '@babel/preset-typescript': ^7.21.0
+  '@cfworker/json-schema': ^1.12.5
   '@datadog/browser-rum': ^4.21.2
   '@dnd-kit/core': ^6.0.8
   '@dnd-kit/sortable': ^7.0.2
@@ -180,6 +181,7 @@ specifiers:
   yup: ^0.32.11
 
 dependencies:
+  '@cfworker/json-schema': 1.12.5
   '@datadog/browser-rum': 4.30.1
   '@dnd-kit/core': 6.0.8_sfoxds7t5ydpegc3knd667wn6m
   '@dnd-kit/sortable': 7.0.2_t27c2n57fgirhmvux7d536sgxm
@@ -2051,6 +2053,10 @@ packages:
   /@bcoe/v8-coverage/0.2.3:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
     dev: true
+
+  /@cfworker/json-schema/1.12.5:
+    resolution: {integrity: sha512-k+ungOs1TxSfNfmfOxkwaiNL2EgRQjhk2SRweMYoKkBJZUYsGsY+XYpe2KpuS9EyjZWjZhq8QvVM+gwi3g1+hQ==}
+    dev: false
 
   /@colors/colors/1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}

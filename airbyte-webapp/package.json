@@ -50,6 +50,7 @@
     "cloud-cypress:run": "cypress run --config-file cypress/cypress.cloud-config.ts"
   },
   "dependencies": {
+    "@cfworker/json-schema": "^1.12.5",
     "@datadog/browser-rum": "^4.21.2",
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^7.0.2",
