@@ -92,7 +92,7 @@ class StreamStatusTrackerTest {
   void testCurrentStatusNoStatus() {
     final StreamStatusKey streamStatusKey =
         new StreamStatusKey(streamDescriptor.getName(), streamDescriptor.getNamespace(), WORKSPACE_ID, CONNECTION_ID, JOB_ID, ATTEMPT);
-    assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isEmpty());
+    assertTrue(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isEmpty());
   }
 
   @ParameterizedTest
@@ -132,7 +132,7 @@ class StreamStatusTrackerTest {
 
     streamStatusTracker.track(event);
 
-    assertEquals(STARTED, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(STARTED, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(expected);
     verify(streamStatusesApi, times(0)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
@@ -168,7 +168,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
 
-    assertEquals(AirbyteStreamStatus.RUNNING, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(AirbyteStreamStatus.RUNNING, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
@@ -196,7 +196,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(1)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
@@ -224,7 +224,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(destinationEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(1)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
@@ -267,9 +267,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(destinationEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -313,16 +313,16 @@ class StreamStatusTrackerTest {
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(startedEvent);
-    assertEquals(STARTED, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(STARTED, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
 
     streamStatusTracker.track(runningEvent);
-    assertEquals(RUNNING, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(RUNNING, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
 
     streamStatusTracker.track(destinationEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
 
     streamStatusTracker.track(sourceEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -366,7 +366,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -410,7 +410,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(destinationEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -457,9 +457,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(destinationEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -506,9 +506,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(destinationEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(sourceEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -555,9 +555,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(destinationEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -604,9 +604,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(destinationEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(sourceEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -653,9 +653,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceEvent);
-    assertEquals(COMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(COMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(destinationEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -702,9 +702,9 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(destinationEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(sourceEvent);
-    assertEquals(INCOMPLETE, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(INCOMPLETE, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -749,7 +749,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(internalEvent);
 
-    assertEquals(Optional.empty(), streamStatusTracker.getCurrentStreamStatus(streamStatusKey));
+    assertEquals(Optional.empty(), streamStatusTracker.getAirbyteStreamStatus(streamStatusKey));
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(2)).updateStreamStatus(updateArgumentCaptor.capture());
 
@@ -781,9 +781,9 @@ class StreamStatusTrackerTest {
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(event);
-    assertEquals(STARTED, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(STARTED, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(event);
-    assertEquals(STARTED, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(STARTED, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(expected);
   }
 
@@ -816,12 +816,12 @@ class StreamStatusTrackerTest {
     when(airbyteApiClient.getStreamStatusesApi()).thenReturn(streamStatusesApi);
 
     streamStatusTracker.track(runningEvent);
-    assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isEmpty());
+    assertTrue(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isEmpty());
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
-    assertEquals(AirbyteStreamStatus.RUNNING, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(AirbyteStreamStatus.RUNNING, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     streamStatusTracker.track(runningEvent);
-    assertEquals(AirbyteStreamStatus.RUNNING, streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get());
+    assertEquals(AirbyteStreamStatus.RUNNING, streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).get());
     verify(streamStatusesApi, times(1)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
@@ -843,7 +843,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(sourceEvent);
     streamStatusTracker.track(destinationEvent);
 
-    assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isEmpty());
+    assertTrue(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isEmpty());
     verify(streamStatusesApi, times(0)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(0)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
@@ -865,7 +865,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(sourceEvent);
     streamStatusTracker.track(destinationEvent);
 
-    assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isEmpty());
+    assertTrue(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isEmpty());
     verify(streamStatusesApi, times(0)).createStreamStatus(any(StreamStatusCreateRequestBody.class));
     verify(streamStatusesApi, times(0)).updateStreamStatus(any(StreamStatusUpdateRequestBody.class));
   }
@@ -907,7 +907,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(forceCompletionEvent);
 
-    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+    assertFalse(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isPresent());
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
@@ -950,9 +950,12 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(startedEvent);
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(sourceCompletedEvent);
+
+    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).get().isComplete());
+
     streamStatusTracker.track(forceCompletionEvent);
 
-    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+    assertFalse(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isPresent());
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
@@ -1002,7 +1005,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(destinationCompletedEvent);
     streamStatusTracker.track(forceCompletionEvent);
 
-    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+    assertFalse(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isPresent());
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
@@ -1051,7 +1054,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(destinationCompletedEvent);
     streamStatusTracker.track(forceCompletionEvent);
 
-    assertFalse(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+    assertFalse(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isPresent());
     verify(streamStatusesApi, times(1)).updateStreamStatus(expected);
   }
 
@@ -1097,7 +1100,7 @@ class StreamStatusTrackerTest {
     streamStatusTracker.track(runningEvent);
     streamStatusTracker.track(forceCompletionEvent);
 
-    assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+    assertTrue(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isPresent());
     verify(streamStatusesApi, times(0)).updateStreamStatus(expected);
   }
 
@@ -1134,7 +1137,7 @@ class StreamStatusTrackerTest {
     assertDoesNotThrow(() -> {
       streamStatusTracker.track(startedEvent);
       streamStatusTracker.track(forceCompletionEvent);
-      assertTrue(streamStatusTracker.getCurrentStreamStatus(streamStatusKey).isPresent());
+      assertTrue(streamStatusTracker.getAirbyteStreamStatus(streamStatusKey).isPresent());
       verify(streamStatusesApi, times(0)).updateStreamStatus(expected);
     });
   }
