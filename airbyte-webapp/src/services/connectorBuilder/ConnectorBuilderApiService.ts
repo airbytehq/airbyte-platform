@@ -70,7 +70,7 @@ export const useResolvedManifest = (manifest?: unknown) => {
     try {
       return (await service.resolveManifest({ manifest })).manifest as DeclarativeComponentSchema;
     } catch {
-      return undefined;
+      return null;
     }
   });
 };
