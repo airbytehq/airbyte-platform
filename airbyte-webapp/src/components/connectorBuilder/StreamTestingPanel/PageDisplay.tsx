@@ -131,7 +131,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           ))}
           {inferredSchema && (
             <Tab.Panel className={styles.tabPanel}>
-              <SchemaDiffView inferredSchema={inferredSchema} />
+              <SchemaDiffView inferredSchema={inferredSchema} key={testStreamIndex} />
             </Tab.Panel>
           )}
         </Tab.Panels>
