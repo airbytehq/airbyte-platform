@@ -3243,6 +3243,7 @@ public class ConfigRepository {
     return ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
+        .fetch()
         .stream()
         .findFirst()
         .map(DbConverter::buildActorDefinitionVersion);
@@ -3260,6 +3261,7 @@ public class ConfigRepository {
   public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
         .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
+        .fetch()
         .stream()
         .findFirst()
         .map(DbConverter::buildActorDefinitionVersion)
