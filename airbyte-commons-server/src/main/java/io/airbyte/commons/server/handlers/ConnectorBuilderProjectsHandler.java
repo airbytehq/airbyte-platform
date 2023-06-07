@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspa
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -202,8 +203,9 @@ public class ConnectorBuilderProjectsHandler {
 
   private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
     final ConnectorSpecification connectorSpecification = manifestInjector.createDeclarativeManifestConnectorSpecification(spec);
+    final UUID actorDefinitionId = uuidSupplier.get();
     final StandardSourceDefinition source = new StandardSourceDefinition()
-        .withSourceDefinitionId(uuidSupplier.get())
+        .withSourceDefinitionId(actorDefinitionId)
         .withName(name)
         .withDockerImageTag(cdkVersionProvider.getCdkVersion())
         .withDockerRepository("airbyte/source-declarative-manifest")
@@ -215,9 +217,19 @@ public class ConnectorBuilderProjectsHandler {
         .withCustom(true)
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
-    configRepository.writeCustomSourceDefinition(source, workspaceId);
 
+    final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefinitionId)
+        .withDockerImageTag(cdkVersionProvider.getCdkVersion())
+        .withDockerRepository("airbyte/source-declarative-manifest")
+        .withSpec(connectorSpecification)
+        .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
+        .withReleaseStage(ReleaseStage.CUSTOM)
+        .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
+
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId);
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
+
     return source.getSourceDefinitionId();
   }
 

@@ -32,6 +32,7 @@ import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
@@ -377,7 +378,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
-    verify(configRepository, times(1)).writeCustomSourceDefinition(eq(new StandardSourceDefinition()
+    verify(configRepository, times(1)).writeCustomSourceDefinitionAndDefaultVersion(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withDockerImageTag(CDK_VERSION)
         .withDockerRepository("airbyte/source-declarative-manifest")
@@ -389,7 +390,16 @@ class ConnectorBuilderProjectsHandlerTest {
         .withPublic(false)
         .withCustom(true)
         .withReleaseStage(ReleaseStage.CUSTOM)
-        .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(workspaceId));
+        .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(
+            new ActorDefinitionVersion()
+                .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+                .withDockerRepository("airbyte/source-declarative-manifest")
+                .withDockerImageTag(CDK_VERSION)
+                .withSpec(adaptedConnectorSpecification)
+                .withReleaseStage(ReleaseStage.CUSTOM)
+                .withDocumentationUrl(A_DOCUMENTATION_URL)
+                .withProtocolVersion("0.2.0")),
+        eq(workspaceId));
     verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 

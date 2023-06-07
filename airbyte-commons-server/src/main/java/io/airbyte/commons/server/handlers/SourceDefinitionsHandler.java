@@ -32,6 +32,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
@@ -203,10 +204,20 @@ public class SourceDefinitionsHandler {
     final StandardSourceDefinition sourceDefinition = sourceDefinitionFromCreate(customSourceDefinitionCreate.getSourceDefinition())
         .withPublic(false)
         .withCustom(true);
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withDockerImageTag(sourceDefinition.getDockerImageTag())
+        .withDockerRepository(sourceDefinition.getDockerRepository())
+        .withSpec(sourceDefinition.getSpec())
+        .withDocumentationUrl(sourceDefinition.getDocumentationUrl())
+        .withProtocolVersion(sourceDefinition.getProtocolVersion())
+        .withReleaseStage(sourceDefinition.getReleaseStage());
+
     if (!protocolVersionRange.isSupported(new Version(sourceDefinition.getProtocolVersion()))) {
       throw new UnsupportedProtocolVersionException(sourceDefinition.getProtocolVersion(), protocolVersionRange.min(), protocolVersionRange.max());
     }
-    configRepository.writeCustomSourceDefinition(sourceDefinition, customSourceDefinitionCreate.getWorkspaceId());
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion,
+        customSourceDefinitionCreate.getWorkspaceId());
 
     return buildSourceDefinitionRead(sourceDefinition);
   }
@@ -273,9 +284,24 @@ public class SourceDefinitionsHandler {
         .withCustom(currentSourceDefinition.getCustom())
         .withReleaseStage(currentSourceDefinition.getReleaseStage())
         .withReleaseDate(currentSourceDefinition.getReleaseDate())
+        .withSuggestedStreams(currentSourceDefinition.getSuggestedStreams())
+        .withAllowedHosts(currentSourceDefinition.getAllowedHosts())
+        .withMaxSecondsBetweenMessages(currentSourceDefinition.getMaxSecondsBetweenMessages())
         .withResourceRequirements(updatedResourceReqs);
 
-    configRepository.writeStandardSourceDefinition(newSource);
+    final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(newSource.getSourceDefinitionId())
+        .withDockerImageTag(newSource.getDockerImageTag())
+        .withDockerRepository(newSource.getDockerRepository())
+        .withSpec(newSource.getSpec())
+        .withDocumentationUrl(newSource.getDocumentationUrl())
+        .withProtocolVersion(newSource.getProtocolVersion())
+        .withReleaseStage(newSource.getReleaseStage())
+        .withReleaseDate(newSource.getReleaseDate())
+        .withSuggestedStreams(newSource.getSuggestedStreams())
+        .withAllowedHosts(newSource.getAllowedHosts());
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(newSource, defaultVersion);
     configRepository.clearUnsupportedProtocolVersionFlag(newSource.getSourceDefinitionId(), ActorType.SOURCE, protocolVersionRange);
 
     return buildSourceDefinitionRead(newSource);

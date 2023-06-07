@@ -14,6 +14,7 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -260,6 +261,14 @@ public class MockData {
         .withPublic(false)
         .withCustom(true)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+  }
+
+  public static ActorDefinitionVersion actorDefinitionVersion() {
+    return new ActorDefinitionVersion()
+        .withDockerImageTag("tag-4")
+        .withDockerRepository("repository-4")
+        .withSpec(connectorSpecification())
+        .withProtocolVersion("0.2.0");
   }
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {

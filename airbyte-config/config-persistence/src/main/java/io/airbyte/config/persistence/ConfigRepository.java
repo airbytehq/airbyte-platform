@@ -606,13 +606,18 @@ public class ConfigRepository {
    */
   public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition stdSourceDef, final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
-
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(stdSourceDef), ctx);
-      final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setSourceDefinitionDefaultVersion(stdSourceDef, actorDefinitionVersionWithID, ctx);
+      writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion, ctx);
       return null;
     });
+  }
+
+  private void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                      final ActorDefinitionVersion defaultVersion,
+                                                      final DSLContext ctx) {
+    ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
+    final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(defaultVersion, ctx);
+    setSourceDefinitionDefaultVersion(sourceDefinition, actorDefinitionVersionWithID, ctx);
   }
 
   /**
@@ -648,16 +653,19 @@ public class ConfigRepository {
   }
 
   /**
-   * Write custom source definition.
+   * Write custom source definition and its default version.
    *
    * @param sourceDefinition source definition
+   * @param defaultVersion default version
    * @param workspaceId workspace id
    * @throws IOException - you never know when you IO
    */
-  public void writeCustomSourceDefinition(final StandardSourceDefinition sourceDefinition, final UUID workspaceId)
+  public void writeCustomSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                           final ActorDefinitionVersion defaultVersion,
+                                                           final UUID workspaceId)
       throws IOException {
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
+      writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, ctx);
       writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ctx);
       return null;
     });
@@ -822,11 +830,17 @@ public class ConfigRepository {
                                                           final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
-      final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
+      writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion, ctx);
       return null;
     });
+  }
+
+  private void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition stdDestDef,
+                                                           final ActorDefinitionVersion actorDefinitionVersion,
+                                                           final DSLContext ctx) {
+    ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
+    final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+    setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
   }
 
   /**
@@ -851,16 +865,18 @@ public class ConfigRepository {
   }
 
   /**
-   * Write custom destination definition.
+   * Write custom destination definition and its default version.
    *
    * @param destinationDefinition destination definition
    * @param workspaceId workspace id
    * @throws IOException - you never know when you IO
    */
-  public void writeCustomDestinationDefinition(final StandardDestinationDefinition destinationDefinition, final UUID workspaceId)
+  public void writeCustomDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
+                                                                final ActorDefinitionVersion defaultVersion,
+                                                                final UUID workspaceId)
       throws IOException {
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardDestinationDefinition(List.of(destinationDefinition), ctx);
+      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, ctx);
       writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId, ctx);
       return null;
     });

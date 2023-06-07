@@ -31,6 +31,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
@@ -206,7 +207,20 @@ public class DestinationDefinitionsHandler {
       throw new UnsupportedProtocolVersionException(destinationDefinition.getProtocolVersion(), protocolVersionRange.min(),
           protocolVersionRange.max());
     }
-    configRepository.writeCustomDestinationDefinition(destinationDefinition, customDestinationDefinitionCreate.getWorkspaceId());
+
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withDockerImageTag(destinationDefinition.getDockerImageTag())
+        .withDockerRepository(destinationDefinition.getDockerRepository())
+        .withSpec(destinationDefinition.getSpec())
+        .withDocumentationUrl(destinationDefinition.getDocumentationUrl())
+        .withProtocolVersion(destinationDefinition.getProtocolVersion())
+        .withReleaseStage(destinationDefinition.getReleaseStage());
+
+    configRepository.writeCustomDestinationDefinitionAndDefaultVersion(
+        destinationDefinition,
+        actorDefinitionVersion,
+        customDestinationDefinitionCreate.getWorkspaceId());
 
     return buildDestinationDefinitionRead(destinationDefinition);
   }
@@ -273,9 +287,23 @@ public class DestinationDefinitionsHandler {
         .withCustom(currentDestination.getCustom())
         .withReleaseStage(currentDestination.getReleaseStage())
         .withReleaseDate(currentDestination.getReleaseDate())
-        .withResourceRequirements(updatedResourceReqs);
+        .withResourceRequirements(updatedResourceReqs)
+        .withAllowedHosts(currentDestination.getAllowedHosts());
 
-    configRepository.writeStandardDestinationDefinition(newDestination);
+    final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(newDestination.getDestinationDefinitionId())
+        .withDockerImageTag(newDestination.getDockerImageTag())
+        .withDockerRepository(newDestination.getDockerRepository())
+        .withDocumentationUrl(newDestination.getDocumentationUrl())
+        .withSpec(newDestination.getSpec())
+        .withProtocolVersion(newDestination.getProtocolVersion())
+        .withReleaseDate(newDestination.getReleaseDate())
+        .withReleaseStage(newDestination.getReleaseStage())
+        .withNormalizationConfig(newDestination.getNormalizationConfig())
+        .withSupportsDbt(newDestination.getSupportsDbt())
+        .withAllowedHosts(newDestination.getAllowedHosts());
+
+    configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, defaultVersion);
     configRepository.clearUnsupportedProtocolVersionFlag(newDestination.getDestinationDefinitionId(), ActorType.DESTINATION, protocolVersionRange);
     return buildDestinationDefinitionRead(newDestination);
   }
