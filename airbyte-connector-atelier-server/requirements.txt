@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.39.3
+airbyte-cdk==0.39.4
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -79,7 +79,7 @@ typing-extensions==4.6.3
     #   pydantic
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.0.2
+urllib3==2.0.3
     # via
     #   requests
     #   requests-cache
