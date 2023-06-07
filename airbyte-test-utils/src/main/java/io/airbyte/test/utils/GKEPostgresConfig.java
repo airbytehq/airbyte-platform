@@ -48,6 +48,7 @@ class GKEPostgresConfig {
     dbConfig.put(JdbcUtils.PORT_KEY, PORT);
     dbConfig.put(JdbcUtils.DATABASE_KEY, DB);
     dbConfig.put(JdbcUtils.USERNAME_KEY, USERNAME);
+    dbConfig.put(JdbcUtils.JDBC_URL_PARAMS, "connectTimeout=60");
 
     if (withSchema) {
       dbConfig.put(JdbcUtils.SCHEMA_KEY, "public");
