@@ -32,7 +32,13 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
 
   private static final String CUSTOMER_IO_URL = "https://api.customer.io/v1/send/email";
   private static final String CUSTOMER_IO_DEFAULT_TEMPLATE = "customerio/default_template.json";
+  private static final String INVITATION_NEW_USER_TEMPLATE = "customerio/invitation_new_user_template.json";
+  private static final String INVITATION_RESEND_TEMPLATE = "customerio/invitation_resend_template.json";
+  private static final String INVITATION_EXISTING_USER_TEMPLATE = "customerio/invitation_existing_user_template.json";
   private static final String BREAKING_CHANGE_TRANSACTION_MESSAGE_ID = "6";
+  private static final String INVITATION_NEW_USER_TRANSACTION_MESSAGE_ID = "11";
+  private static final String INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID = "12";
+  private static final String INVITATION_RESEND_TRANSACTION_MESSAGE_ID = "17";
 
   private final OkHttpClient okHttpClient;
   private final String apiToken;
@@ -45,15 +51,64 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
 
   @Override
   public void sendNotification(final CustomerIoEmailConfig config, @NotNull final String subject, @NotNull final String message) {
-    final String custumerIoPayload;
     final String formattedMessage = message.replace("\n", "<br>");
-    try {
-      custumerIoPayload = renderTemplate(CUSTOMER_IO_DEFAULT_TEMPLATE, BREAKING_CHANGE_TRANSACTION_MESSAGE_ID,
-          config.getTo(), config.getTo(), subject, subject, formattedMessage);
-    } catch (final IOException e) {
-      log.error("Unable to render the customer io notification.");
-      throw new RuntimeException(e);
-    }
+    final String custumerIoPayload = renderTemplate(
+        CUSTOMER_IO_DEFAULT_TEMPLATE,
+        BREAKING_CHANGE_TRANSACTION_MESSAGE_ID,
+        /* to_email= */ config.getTo(),
+        /* identifier_email= */ config.getTo(),
+        /* subject= */ subject,
+        /* email_title= */ subject,
+        /* email_body= */ formattedMessage);
+    callCustomerIoSendNotification(custumerIoPayload);
+  }
+
+  /**
+   * Invitation emails will be sent on a separate CustomerIO email templates. This does not apply to
+   * slack notifications thus it is only implemented here.
+   */
+  public void sendNotificationOnInvitingNewUser(final CustomerIoEmailConfig config,
+                                                final String inviterUserName,
+                                                final String workspaceName,
+                                                final String inviteUrl) {
+    final String custumerIoPayload = renderTemplate(INVITATION_EXISTING_USER_TEMPLATE,
+        INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID,
+        /* to_email= */config.getTo(),
+        /* identifier_email= */ config.getTo(),
+        /* name= */inviterUserName,
+        /* workspace_name= */workspaceName,
+        /* invite_url= */inviteUrl);
+    callCustomerIoSendNotification(custumerIoPayload);
+  }
+
+  /**
+   * Invitation emails will be sent on a separate CustomerIO email templates. This does not apply to
+   * slack notifications thus it is only implemented here.
+   */
+  public void sendNotificationOnInvitingExistingUser(final CustomerIoEmailConfig config, final String inviterUserName, final String workspaceName) {
+    final String custumerIoPayload =
+        renderTemplate(INVITATION_EXISTING_USER_TEMPLATE, INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID,
+            /* to_email= */config.getTo(),
+            /* identifier_email= */ config.getTo(),
+            /* name= */inviterUserName,
+            /* workspace_name= */workspaceName);
+    callCustomerIoSendNotification(custumerIoPayload);
+  }
+
+  /**
+   * Invitation emails will be sent on a separate CustomerIO email templates. This does not apply to
+   * slack notifications thus it is only implemented here.
+   */
+  public void resendNotificationOnInvitingNewUser(final CustomerIoEmailConfig config, final String workspaceName, final String inviteUrl) {
+    final String custumerIoPayload =
+        renderTemplate(INVITATION_RESEND_TEMPLATE, INVITATION_RESEND_TRANSACTION_MESSAGE_ID, /* to_email= */config.getTo(),
+            /* identifier_email= */ config.getTo(),
+            /* workspace_name= */workspaceName,
+            /* invite_url= */inviteUrl);
+    callCustomerIoSendNotification(custumerIoPayload);
+  }
+
+  protected void callCustomerIoSendNotification(final String custumerIoPayload) {
 
     final RequestBody requestBody = RequestBody.create(custumerIoPayload, JSON);
 
@@ -82,8 +137,14 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
     return NotificationType.customerio;
   }
 
-  private String renderTemplate(final String templateFile, final String... data) throws IOException {
-    final String template = MoreResources.readResource(templateFile);
+  private String renderTemplate(final String templateFile, final String... data) {
+    String template;
+    try {
+      template = MoreResources.readResource(templateFile);
+    } catch (final IOException e) {
+      log.error("Unable to render the customer io notification.");
+      throw new RuntimeException(e);
+    }
     return String.format(template, data);
   }
 
