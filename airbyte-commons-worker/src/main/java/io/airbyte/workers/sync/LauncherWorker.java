@@ -173,6 +173,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
             containerOrchestratorConfig.dataPlaneCredsSecretMountPath(),
             containerOrchestratorConfig.googleApplicationCredentials(),
             envMap,
+            workerConfigs.getWorkerKubeAnnotations(),
             serverPort);
 
         // Define what to do on cancellation.
