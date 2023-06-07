@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.39.1
+airbyte-cdk==0.39.3
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -17,7 +17,7 @@ backoff==2.2.1
     # via airbyte-cdk
 cachetools==5.3.1
     # via airbyte-cdk
-cattrs==23.1.1
+cattrs==23.1.2
     # via requests-cache
 certifi==2023.5.7
     # via requests
@@ -41,7 +41,7 @@ jsonref==0.3.0
     # via airbyte-cdk
 jsonschema==3.2.0
     # via airbyte-cdk
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via jinja2
 pendulum==2.1.2
     # via airbyte-cdk
@@ -73,7 +73,7 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.6.2
+typing-extensions==4.6.3
     # via
     #   cattrs
     #   pydantic
