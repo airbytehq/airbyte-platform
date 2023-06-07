@@ -6,7 +6,7 @@ import {
   setupDestinationNamespaceSourceFormat,
   enterConnectionName,
 } from "pages/connection/connectionFormPageObject";
-import { openAddSource } from "pages/destinationPage";
+import { openCreateConnection } from "pages/destinationPage";
 
 import {
   getConnectionCreateRequest,
@@ -60,7 +60,8 @@ export const createTestConnection = (sourceName: string, destinationName: string
   // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(5000);
 
-  openAddSource();
+  openCreateConnection();
+
   cy.get("div").contains(sourceName).click();
   cy.wait("@discoverSchema");
   enterConnectionName("Connection name");

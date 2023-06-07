@@ -390,6 +390,11 @@
   "destinations.updateError": "Error updating destination: {message}",
   "destinations.deleteError": "Error deleting destination: {message}",
 
+  "connector.connections.empty": "Add a {needs} for this {has}",
+  "connector.connections.empty.sourceCTA": "To sync data from <b>{name}</b>, connect it with one of our {count, plural, =0 {} other {{count}+}}  destinations.",
+  "connector.connections.empty.destinationCTA": "To sync data to <b>{name}</b>, connect it with one of our {count, plural, =0 {} other {{count}+}}  sources.",
+  "connector.connections.empty.button": "Create a connection",
+
   "connection.stream.syncMode": "{syncMode} - {destinationSyncMode}",
 
   "destinationSyncMode.append": "Append",
@@ -403,12 +408,12 @@
   "connection.onboarding.createFirst": "Create your first connection",
   "connection.onboarding.sources": "Sources",
   "connection.onboarding.sourcesDescription": "A source is where Airbyte pulls data from. Airbyte supports many sources across APIs, databases, and files.",
-  "connection.onboarding.moreSources": "Connect to any of Airbyte’s {count}+ sources",
+  "connection.onboarding.moreSources": "Connect to any of Airbyte’s {count, plural, =0 {} other {{count}+}} sources",
   "connection.onboarding.addSource": "Connect to {source}",
   "connection.onboarding.destinations": "Destinations",
   "connection.onboarding.destinationsDescription": "A destination is where Airbyte sends data. These are typically data warehouses or databases.",
   "connection.onboarding.addDestination": "Connect a source in order to send data to {destination}",
-  "connection.onboarding.moreDestinations": "Connect a source in order to send data to any of Airbyte’s {count}+ destinations",
+  "connection.onboarding.moreDestinations": "Connect a source in order to send data to any of Airbyte’s {count, plural, =0 {} other {{count}+}} destinations",
   "connection.onboarding.demoInstance": "or play around in our <demoLnk>demo instance</demoLnk>.",
   "connection.resetModalTitle": "Stream configuration changed",
   "connection.streamResetHint": "Due to changes in the stream configuration, we recommend a data reset. A reset will delete data in the destination of the affected streams and then re-sync that data. Skipping the reset is discouraged and might lead to unexpected behavior.",

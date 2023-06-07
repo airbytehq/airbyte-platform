@@ -22,6 +22,7 @@ $box-shadow-right: var(--box-shadow-right);
 $box-shadow-raised: var(--box-shadow-raised);
 $box-shadow-popup: var(--box-shadow-popup);
 $box-shadow-sidebar: var(--box-shadow-sidebar);
+$box-shadow-inset: var(--box-shadow-inset);
 
 $spacing-xs: 3px;
 $spacing-sm: 5px;
@@ -46,6 +47,7 @@ $width-modal-xl: 1008px;
 // large total width - sidebar width - main layout padding-left - main layout padding-right
 $min-width-wide-table-container: 1280px - $width-size-menu - $spacing-xl - $spacing-xl;
 $height-empty-sync-catalog: 300px;
+$height-connection-header: 167px;
 
 $height-soft-edge: 15px;
 

@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
 import { TableItemTitle } from "components/ConnectorBlocks";
 import { DestinationConnectionTable } from "components/destination/DestinationConnectionTable";
-import Placeholder, { ResourceTypes } from "components/Placeholder";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
@@ -38,33 +38,39 @@ export const DestinationOverviewPage = () => {
     [sources]
   );
 
-  const onSelect = (data: DropdownMenuOptionType) => {
+  const onSelect = (data?: DropdownMenuOptionType) => {
     const path = `../../../${RoutePaths.Connections}/${RoutePaths.ConnectionNew}`;
     const state =
-      data.value === "create-new-item"
-        ? { destinationId: destination.destinationId }
-        : {
+      data && data.value !== "create-new-item"
+        ? {
             sourceId: data.value,
             destinationId: destination.destinationId,
-          };
-
+          }
+        : { destinationId: destination.destinationId };
     navigate(path, { state });
   };
 
   return (
-    <FlexContainer direction="column" gap="xl">
-      <TableItemTitle
-        type="source"
-        dropdownOptions={sourceDropdownOptions}
-        onSelect={onSelect}
-        connectionsCount={connections.length}
-      />
+    <>
       {connections.length ? (
-        <DestinationConnectionTable connections={connections} />
+        <FlexContainer direction="column" gap="xl">
+          <TableItemTitle
+            type="source"
+            dropdownOptions={sourceDropdownOptions}
+            onSelect={onSelect}
+            connectionsCount={connections.length}
+          />
+          <DestinationConnectionTable connections={connections} />
+        </FlexContainer>
       ) : (
-        <Placeholder resource={ResourceTypes.Sources} />
+        <ConnectorEmptyStateContent
+          onButtonClick={() => onSelect()}
+          icon={destination.icon}
+          connectorType="destination"
+          connectorName={destination.name}
+        />
       )}
-    </FlexContainer>
+    </>
   );
 };
 
