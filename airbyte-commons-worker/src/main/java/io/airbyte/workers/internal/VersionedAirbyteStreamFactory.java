@@ -67,7 +67,7 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   // Given that BufferedReader::reset fails if we try to reset if we go past its buffer size, this
   // buffer has to be big enough to contain our longest spec and whatever messages get emitted before
   // the SPEC.
-  private static final int BUFFER_READ_AHEAD_LIMIT = 32000;
+  private static final int BUFFER_READ_AHEAD_LIMIT = 64000;
   private static final int MESSAGES_LOOK_AHEAD_FOR_DETECTION = 10;
   private static final String TYPE_FIELD_NAME = "type";
 
