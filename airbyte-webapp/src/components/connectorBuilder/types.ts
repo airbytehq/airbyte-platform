@@ -4,6 +4,8 @@ import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
 
+import { naturalComparator } from "utils/objects";
+
 import { CDK_VERSION } from "./cdk";
 import { formatJson } from "./utils";
 import { FORM_PATTERN_ERROR } from "../../core/form/types";
@@ -71,6 +73,7 @@ export interface BuilderFormValues {
   };
   inputs: BuilderFormInput[];
   inferredInputOverrides: Record<string, Partial<AirbyteJSONSchema>>;
+  inputOrder: string[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
@@ -134,7 +137,6 @@ export interface BuilderIncrementalSync
     | "cursor_field"
     | "datetime_format"
     | "cursor_granularity"
-    | "step"
     | "end_time_option"
     | "start_time_option"
     | "lookback_window"
@@ -150,9 +152,24 @@ export interface BuilderIncrementalSync
         type: "user_input";
       }
     | { type: "custom"; value: string; format?: string };
+  step?: string;
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
+
+export type BuilderRequestBody =
+  | {
+      type: "json_list";
+      values: Array<[string, string]>;
+    }
+  | {
+      type: "json_freeform";
+      value: string;
+    }
+  | {
+      type: "form_list";
+      values: Array<[string, string]>;
+    };
 
 export interface BuilderStream {
   id: string;
@@ -164,7 +181,7 @@ export interface BuilderStream {
   requestOptions: {
     requestParameters: Array<[string, string]>;
     requestHeaders: Array<[string, string]>;
-    requestBody: Array<[string, string]>;
+    requestBody: BuilderRequestBody;
   };
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
@@ -216,6 +233,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   inputs: [],
   inferredInputOverrides: {},
+  inputOrder: [],
   streams: [],
   checkStreams: [],
   version: CDK_VERSION,
@@ -245,7 +263,10 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   requestOptions: {
     requestParameters: [],
     requestHeaders: [],
-    requestBody: [],
+    requestBody: {
+      type: "json_list",
+      values: [],
+    },
   },
 };
 
@@ -283,6 +304,15 @@ export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", Bu
     },
   },
 };
+
+export const DEFAULT_INFERRED_INPUT_ORDER = [
+  "api_key",
+  "username",
+  "password",
+  "client_id",
+  "client_secret",
+  "client_refresh_token",
+];
 
 export const authTypeToKeyToInferredInput = (
   authenticator: BuilderFormAuthenticator | { type: BuilderFormAuthenticator["type"] }
@@ -463,6 +493,21 @@ const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("
 
 const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
 
+const jsonString = yup.string().test({
+  test: (val: string | undefined) => {
+    if (!val) {
+      return true;
+    }
+    try {
+      JSON.parse(val);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  message: "connectorBuilder.invalidJSON",
+});
+
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
     connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
@@ -498,22 +543,20 @@ export const builderFormValidationSchema = yup.object().shape({
         requestOptions: yup.object().shape({
           requestParameters: keyValueListSchema,
           requestHeaders: keyValueListSchema,
-          requestBody: keyValueListSchema,
+          requestBody: yup.object().shape({
+            values: yup.mixed().when("type", {
+              is: (val: string) => val === "form_list" || val === "json_list",
+              then: keyValueListSchema,
+              otherwise: (schema) => schema.strip(),
+            }),
+            value: yup.mixed().when("type", {
+              is: (val: string) => val === "json_freeform",
+              then: jsonString,
+              otherwise: (schema) => schema.strip(),
+            }),
+          }),
         }),
-        schema: yup.string().test({
-          test: (val: string | undefined) => {
-            if (!val) {
-              return true;
-            }
-            try {
-              JSON.parse(val);
-              return true;
-            } catch {
-              return false;
-            }
-          },
-          message: "connectorBuilder.invalidSchema",
-        }),
+        schema: jsonString,
         paginator: yup
           .object()
           .shape({
@@ -692,7 +735,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            step: yup.string().required("form.empty.error"),
+            step: yup.string(),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
             end_time_option: nonPathRequestOptionSchema,
@@ -779,7 +822,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, step, ...regularFields } = formValues;
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
@@ -799,6 +842,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
           : `{{ config['end_date'] }}`,
       datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
     },
+    step: step ? step : "P1000Y",
   };
 }
 
@@ -908,6 +952,25 @@ function parseSchemaString(schema?: string): DeclarativeStreamSchemaLoader {
   }
 }
 
+function builderRequestBodyToStreamRequestBody(stream: BuilderStream) {
+  try {
+    return {
+      request_body_json:
+        stream.requestOptions.requestBody.type === "json_list"
+          ? Object.fromEntries(stream.requestOptions.requestBody.values)
+          : stream.requestOptions.requestBody.type === "json_freeform"
+          ? JSON.parse(stream.requestOptions.requestBody.value)
+          : undefined,
+      request_body_data:
+        stream.requestOptions.requestBody.type === "form_list"
+          ? Object.fromEntries(stream.requestOptions.requestBody.values)
+          : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function builderStreamToDeclarativeSteam(
   values: BuilderFormValues,
   stream: BuilderStream,
@@ -927,9 +990,9 @@ function builderStreamToDeclarativeSteam(
         http_method: stream.httpMethod,
         request_parameters: Object.fromEntries(stream.requestOptions.requestParameters),
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
-        request_body_json: Object.fromEntries(stream.requestOptions.requestBody),
         authenticator: builderAuthenticatorToManifest(values.global),
         error_handler: buildCompositeErrorHandler(stream.errorHandler),
+        ...builderRequestBodyToStreamRequestBody(stream),
       },
       record_selector: {
         type: "RecordSelector",
@@ -951,26 +1014,71 @@ function builderStreamToDeclarativeSteam(
   return merge({}, declarativeStream, stream.unsupportedFields);
 }
 
+export const orderInputs = (
+  inputs: BuilderFormInput[],
+  inferredInputs: BuilderFormInput[],
+  storedInputOrder: string[]
+) => {
+  const keyToStoredOrder = storedInputOrder.reduce((map, key, index) => map.set(key, index), new Map<string, number>());
+
+  return inferredInputs
+    .map((input) => {
+      return { input, isInferred: true, id: input.key };
+    })
+    .concat(
+      inputs.map((input) => {
+        return { input, isInferred: false, id: input.key };
+      })
+    )
+    .sort((inputA, inputB) => {
+      const storedIndexA = keyToStoredOrder.get(inputA.id);
+      const storedIndexB = keyToStoredOrder.get(inputB.id);
+
+      if (storedIndexA !== undefined && storedIndexB !== undefined) {
+        return storedIndexA - storedIndexB;
+      }
+      if (storedIndexA !== undefined && storedIndexB === undefined) {
+        return inputB.isInferred ? 1 : -1;
+      }
+      if (storedIndexA === undefined && storedIndexB !== undefined) {
+        return inputA.isInferred ? -1 : 1;
+      }
+      // both indexes are undefined
+      if (inputA.isInferred && inputB.isInferred) {
+        return DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputA.id) - DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputB.id);
+      }
+      if (inputA.isInferred && !inputB.isInferred) {
+        return -1;
+      }
+      if (!inputA.isInferred && inputB.isInferred) {
+        return 1;
+      }
+      return naturalComparator(inputA.id, inputB.id);
+    });
+};
+
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
     builderStreamToDeclarativeSteam(values, stream, [])
   );
 
-  const allInputs = [
-    ...values.inputs,
-    ...getInferredInputList(
+  const orderedInputs = orderInputs(
+    values.inputs,
+    getInferredInputList(
       values.global,
       values.inferredInputOverrides,
       hasIncrementalSyncUserInput(values.streams, "start_datetime"),
       hasIncrementalSyncUserInput(values.streams, "end_datetime")
     ),
-  ];
+    values.inputOrder
+  );
+  const allInputs = orderedInputs.map((orderedInput) => orderedInput.input);
 
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",
     type: "object",
     required: allInputs.filter((input) => input.required).map((input) => input.key),
-    properties: Object.fromEntries(allInputs.map((input) => [input.key, input.definition])),
+    properties: Object.fromEntries(allInputs.map((input, index) => [input.key, { ...input.definition, order: index }])),
     additionalProperties: true,
   };
 

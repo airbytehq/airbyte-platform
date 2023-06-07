@@ -1,14 +1,22 @@
 import {
-  ConnectionGetBody,
-  Connection,
-  ConnectionCreateRequestBody,
-  ConnectionsList,
-  Destination,
-  DestinationsList,
-  Source,
-  SourceDiscoverSchema,
-  SourcesList,
-} from "./types";
+  ConnectionCreate,
+  ConnectionIdRequestBody,
+  DestinationCreate,
+  DestinationIdRequestBody,
+  DestinationRead,
+  DestinationReadList,
+  SourceCreate,
+  SourceDiscoverSchemaRead,
+  SourceDiscoverSchemaRequestBody,
+  SourceIdRequestBody,
+  SourceRead,
+  SourceReadList,
+  WebBackendConnectionRead,
+  WebBackendConnectionReadList,
+  WebBackendConnectionRequestBody,
+  WebBackendConnectionUpdate,
+} from "@src/core/api/generated/AirbyteClient.schemas";
+
 import { getWorkspaceId, setWorkspaceId } from "./workspace";
 
 const getApiUrl = (path: string): string => `http://localhost:8001/api/v1${path}`;
@@ -39,36 +47,35 @@ export const completeInitialSetup = () =>
   });
 
 export const requestConnectionsList = () =>
-  apiRequest<ConnectionsList>("POST", "/connections/list", { workspaceId: getWorkspaceId() });
+  apiRequest<WebBackendConnectionReadList>("POST", "/connections/list", { workspaceId: getWorkspaceId() });
 
-export const requestCreateConnection = (body: ConnectionCreateRequestBody) =>
-  apiRequest<Connection>("POST", "/web_backend/connections/create", body);
+export const requestCreateConnection = (body: ConnectionCreate) =>
+  apiRequest<WebBackendConnectionRead>("POST", "/web_backend/connections/create", body);
 
-export const requestUpdateConnection = (body: Record<string, unknown>) =>
-  apiRequest<Connection>("POST", "/web_backend/connections/update", body);
+export const requestUpdateConnection = (body: WebBackendConnectionUpdate) =>
+  apiRequest<WebBackendConnectionRead>("POST", "/web_backend/connections/update", body);
 
-export const requestGetConnection = (body: ConnectionGetBody) =>
-  apiRequest<Connection>("POST", "/web_backend/connections/get", body);
+export const requestGetConnection = (body: WebBackendConnectionRequestBody) =>
+  apiRequest<WebBackendConnectionRead>("POST", "/web_backend/connections/get", body);
 
-export const requestDeleteConnection = (connectionId: string) =>
-  apiRequest("POST", "/connections/delete", { connectionId }, 204);
+export const requestDeleteConnection = (body: ConnectionIdRequestBody) =>
+  apiRequest("POST", "/connections/delete", body, 204);
 
 export const requestSourcesList = () =>
-  apiRequest<SourcesList>("POST", "/sources/list", { workspaceId: getWorkspaceId() });
+  apiRequest<SourceReadList>("POST", "/sources/list", { workspaceId: getWorkspaceId() });
 
-export const requestSourceDiscoverSchema = (sourceId: string) =>
-  apiRequest<SourceDiscoverSchema>("POST", "/sources/discover_schema", { sourceId, disable_cache: true });
+export const requestSourceDiscoverSchema = (body: SourceDiscoverSchemaRequestBody) =>
+  apiRequest<SourceDiscoverSchemaRead>("POST", "/sources/discover_schema", body);
 
-export const requestCreateSource = (body: Record<string, unknown>) =>
-  apiRequest<Source>("POST", "/sources/create", body);
+export const requestCreateSource = (body: SourceCreate) => apiRequest<SourceRead>("POST", "/sources/create", body);
 
-export const requestDeleteSource = (sourceId: string) => apiRequest("POST", "/sources/delete", { sourceId }, 204);
+export const requestDeleteSource = (body: SourceIdRequestBody) => apiRequest("POST", "/sources/delete", body, 204);
 
 export const requestDestinationsList = () =>
-  apiRequest<DestinationsList>("POST", "/destinations/list", { workspaceId: getWorkspaceId() });
+  apiRequest<DestinationReadList>("POST", "/destinations/list", { workspaceId: getWorkspaceId() });
 
-export const requestCreateDestination = (body: Record<string, unknown>) =>
-  apiRequest<Destination>("POST", "/destinations/create", body);
+export const requestCreateDestination = (body: DestinationCreate) =>
+  apiRequest<DestinationRead>("POST", "/destinations/create", body);
 
-export const requestDeleteDestination = (destinationId: string) =>
-  apiRequest("POST", "/destinations/delete", { destinationId }, 204);
+export const requestDeleteDestination = (body: DestinationIdRequestBody) =>
+  apiRequest("POST", "/destinations/delete", body, 204);

@@ -1,10 +1,11 @@
+import { action } from "@storybook/addon-actions";
 import { StoryObj } from "@storybook/react";
 import * as yup from "yup";
 import { SchemaOf } from "yup";
 
-import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
+
+import { FormSubmissionButtons } from "./FormSubmissionButtons";
 
 import { Form, FormControl, Option } from "./index";
 
@@ -44,38 +45,94 @@ const MyFormControl = FormControl<MyFormValues>;
 
 export const Primary: StoryObj<typeof Form> = {
   render: (props) => (
-    <Card withPadding>
-      <Form {...props} schema={schema} defaultValues={defaultValues}>
-        <MyFormControl
-          fieldType="input"
-          name="some_input"
-          label="A default text input"
-          description="Some default message that appears under the label"
-        />
-        <MyFormControl
-          fieldType="input"
-          type="password"
-          name="some_password"
-          label="Password input"
-          labelTooltip={
-            <>
-              <p>A tooltip to give the user more context. Can also include HTML:</p>
-              <ol>
-                <li>One</li>
-                <li>Two</li>
-                <li>Three</li>
-              </ol>
-            </>
-          }
-        />
-        <MyFormControl fieldType="date" name="some_date" format="date-time" label="Date input" />
-        <MyFormControl fieldType="dropdown" name="some_select" label="DropDown input" options={listBoxOptions} />
-        <FlexContainer justifyContent="flex-end">
-          <FlexItem>
-            <Button type="submit">Submit</Button>
-          </FlexItem>
-        </FlexContainer>
-      </Form>
-    </Card>
+    <div style={{ maxWidth: "1200px" }}>
+      <Card withPadding>
+        <Form
+          {...props}
+          schema={schema}
+          defaultValues={defaultValues}
+          onSuccess={action("onSuccess")}
+          onSubmit={() => new Promise((resolve) => window.setTimeout(resolve, 1000))}
+        >
+          <MyFormControl
+            fieldType="input"
+            name="some_input"
+            label="A default text input"
+            description="Some default message that appears under the label"
+          />
+          <MyFormControl
+            fieldType="input"
+            type="password"
+            name="some_password"
+            label="Password input"
+            labelTooltip={
+              <>
+                <p>A tooltip to give the user more context. Can also include HTML:</p>
+                <ol>
+                  <li>One</li>
+                  <li>Two</li>
+                  <li>Three</li>
+                </ol>
+              </>
+            }
+          />
+          <MyFormControl fieldType="date" name="some_date" format="date-time" label="Date input" />
+          <MyFormControl fieldType="dropdown" name="some_select" label="DropDown input" options={listBoxOptions} />
+          <FormSubmissionButtons />
+          <button>Click to submit, even if there are errors</button>
+        </Form>
+      </Card>
+    </div>
+  ),
+};
+
+export const InlineFormControls: StoryObj<typeof Form> = {
+  render: (props) => (
+    <div style={{ maxWidth: "1200px" }}>
+      <Card withPadding>
+        <Form
+          {...props}
+          schema={schema}
+          defaultValues={defaultValues}
+          onSuccess={action("onSuccess")}
+          onSubmit={() => new Promise((resolve) => window.setTimeout(resolve, 1000))}
+        >
+          <MyFormControl
+            inline
+            fieldType="input"
+            name="some_input"
+            label="A default text input"
+            description="Some default message that appears under the label"
+          />
+          <MyFormControl
+            inline
+            fieldType="input"
+            type="password"
+            name="some_password"
+            label="Password input"
+            labelTooltip={
+              <>
+                <p>A tooltip to give the user more context. Can also include HTML:</p>
+                <ol>
+                  <li>One</li>
+                  <li>Two</li>
+                  <li>Three</li>
+                </ol>
+              </>
+            }
+          />
+          <MyFormControl inline fieldType="date" name="some_date" format="date-time" label="Date input" />
+          <MyFormControl
+            inline
+            fieldType="dropdown"
+            name="some_select"
+            label="DropDown input"
+            options={listBoxOptions}
+          />
+          <FormSubmissionButtons />
+          <button>Click to submit, even if there are errors</button>
+        </Form>
+      </Card>
+    </div>
   ),
 };

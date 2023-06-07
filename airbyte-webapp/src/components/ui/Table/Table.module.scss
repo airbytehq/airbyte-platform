@@ -54,6 +54,14 @@ $border-radius: variables.$border-radius-lg;
     background-color: colors.$white;
   }
 
+  &--inBlock {
+    text-transform: none;
+    background-color: colors.$white;
+    font-size: variables.$font-size-sm;
+    font-weight: normal;
+    border-bottom: variables.$border-thin solid colors.$grey-50;
+  }
+
   &:first-child {
     border-radius: $border-radius 0 0;
   }

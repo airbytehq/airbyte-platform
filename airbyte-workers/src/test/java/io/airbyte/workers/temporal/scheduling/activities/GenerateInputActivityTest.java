@@ -249,6 +249,7 @@ class GenerateInputActivityTest {
         .withWorkspaceId(jobResetConfig.getWorkspaceId())
         .withCommitStateAsap(true)
         .withCommitStatsAsap(true)
+        .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()

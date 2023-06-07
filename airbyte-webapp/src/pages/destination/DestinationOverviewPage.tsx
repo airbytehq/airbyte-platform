@@ -2,16 +2,15 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
 import { TableItemTitle } from "components/ConnectorBlocks";
 import { DestinationConnectionTable } from "components/destination/DestinationConnectionTable";
-import Placeholder, { ResourceTypes } from "components/Placeholder";
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { RoutePaths } from "pages/routePaths";
-import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
 import { useGetDestinationFromParams } from "./useGetDestinationFromParams";
 
@@ -19,7 +18,7 @@ export const DestinationOverviewPage = () => {
   const navigate = useNavigate();
 
   const destination = useGetDestinationFromParams();
-  const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
+
   // We load only connections attached to this destination to be shown in the connections grid
   const { connections } = useConnectionList({ destinationId: [destination.destinationId] });
 
@@ -39,37 +38,39 @@ export const DestinationOverviewPage = () => {
     [sources]
   );
 
-  const onSelect = (data: DropdownMenuOptionType) => {
+  const onSelect = (data?: DropdownMenuOptionType) => {
     const path = `../../../${RoutePaths.Connections}/${RoutePaths.ConnectionNew}`;
     const state =
-      data.value === "create-new-item"
-        ? { destinationId: destination.destinationId }
-        : {
+      data && data.value !== "create-new-item"
+        ? {
             sourceId: data.value,
             destinationId: destination.destinationId,
-          };
-
+          }
+        : { destinationId: destination.destinationId };
     navigate(path, { state });
   };
 
   return (
-    <FlexContainer direction="column" gap="xl">
-      <TableItemTitle
-        type="source"
-        dropdownOptions={sourceDropdownOptions}
-        onSelect={onSelect}
-        entityName={destination.name}
-        entity={destination.destinationName}
-        entityIcon={destination.icon}
-        releaseStage={destinationDefinition.releaseStage}
-        connectionsCount={connections.length}
-      />
+    <>
       {connections.length ? (
-        <DestinationConnectionTable connections={connections} />
+        <FlexContainer direction="column" gap="xl">
+          <TableItemTitle
+            type="source"
+            dropdownOptions={sourceDropdownOptions}
+            onSelect={onSelect}
+            connectionsCount={connections.length}
+          />
+          <DestinationConnectionTable connections={connections} />
+        </FlexContainer>
       ) : (
-        <Placeholder resource={ResourceTypes.Sources} />
+        <ConnectorEmptyStateContent
+          onButtonClick={() => onSelect()}
+          icon={destination.icon}
+          connectorType="destination"
+          connectorName={destination.name}
+        />
       )}
-    </FlexContainer>
+    </>
   );
 };
 

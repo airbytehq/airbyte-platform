@@ -1,4 +1,4 @@
-export { cloudApiCall, cloudPublicApiCall } from "./apis";
+export { cloudApiCall, cloudAirbyteApiCall as cloudPublicApiCall } from "./apis";
 export { useSuspenseQuery } from "./useSuspenseQuery";
 export { QueryProvider } from "./QueryProvider";
 

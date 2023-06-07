@@ -5,7 +5,6 @@ import { FormikConnectionFormValues } from "components/connection/ConnectionForm
 
 import { SyncSchemaStream } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./SyncCatalogBody.module.scss";
 import { SyncCatalogEmpty } from "./SyncCatalogEmpty";
@@ -15,19 +14,17 @@ import { StreamsConfigTableConnectorHeader } from "../StreamsConfigTable/Streams
 
 interface SyncCatalogBodyProps {
   streams: SyncSchemaStream[];
-  changedStreams: SyncSchemaStream[];
+  onStreamsChanged: (streams: SyncSchemaStream[]) => void;
   onStreamChanged: (stream: SyncSchemaStream) => void;
   isFilterApplied?: boolean;
 }
 
 export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
   streams,
-  changedStreams,
+  onStreamsChanged,
   onStreamChanged,
   isFilterApplied = false,
 }) => {
-  const { mode } = useConnectionFormService();
-
   const onUpdateStream = useCallback(
     (id: string | undefined, newConfig: Partial<AirbyteStreamConfiguration>) => {
       const streamNode = streams.find((streamNode) => streamNode.id === id);
@@ -50,7 +47,11 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
     <div data-testid="catalog-tree-table-body">
       <div className={styles.header}>
         <StreamsConfigTableConnectorHeader />
-        <StreamsConfigTableHeader />
+        <StreamsConfigTableHeader
+          streams={streams}
+          onStreamsChanged={onStreamsChanged}
+          syncSwitchDisabled={isFilterApplied}
+        />
       </div>
       {streams.length ? (
         streams.map((streamNode) => (
@@ -64,7 +65,6 @@ export const SyncCatalogBody: React.FC<SyncCatalogBodyProps> = ({
                 prefix={form.values.prefix}
                 streamNode={streamNode}
                 updateStream={onUpdateStream}
-                changedSelected={changedStreams.includes(streamNode) && mode === "edit"}
               />
             )}
           </Field>

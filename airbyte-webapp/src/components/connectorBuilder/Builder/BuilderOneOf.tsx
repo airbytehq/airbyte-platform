@@ -24,7 +24,7 @@ interface BuilderOneOfProps {
   options: OneOfOption[];
   path: string; // path to the oneOf component in the json schema
   label?: string;
-  tooltip?: string;
+  tooltip?: string | React.ReactNode;
   manifestPath?: string;
   manifestOptionPaths?: string[];
   onSelect?: (type: string) => void;

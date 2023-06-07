@@ -3,7 +3,7 @@ import get from "lodash/get";
 import { FieldError, useFormContext } from "react-hook-form";
 
 import { SourceDefinitionSpecificationRead } from "core/request/AirbyteClient";
-import { FeatureItem, FeatureService } from "hooks/services/Feature";
+import { FeatureItem, FeatureService } from "core/services/features";
 
 import { useConnectorForm } from "./connectorFormContext";
 import { useAuthentication as useAuthenticationHook } from "./useAuthentication";

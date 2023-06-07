@@ -466,7 +466,30 @@ public class DbConverter {
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID))
         .withDockerRepository(record.get(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY))
         .withDockerImageTag(record.get(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG))
-        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class));
+        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SPEC).data(), ConnectorSpecification.class))
+        .withDocumentationUrl(record.get(ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL))
+        .withProtocolVersion(record.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION))
+        .withReleaseStage(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE) == null ? null
+            : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
+        .withReleaseDate(record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE) == null ? null
+            : record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE).toString())
+        .withAllowedHosts(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS).data(), AllowedHosts.class))
+        .withSuggestedStreams(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS).data(),
+                SuggestedStreams.class))
+        .withSupportsDbt(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DBT))
+        .withNormalizationConfig(
+            Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
+                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
+                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
+                    ? new NormalizationDestinationDefinitionConfig()
+                        .withNormalizationRepository(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
+                        .withNormalizationTag(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
+                        .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
+                    : null);
   }
 
 }

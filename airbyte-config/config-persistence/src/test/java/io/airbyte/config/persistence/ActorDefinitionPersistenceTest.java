@@ -271,32 +271,45 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     sourceDef2.setDockerImageTag(targetImageTag);
     final StandardSourceDefinition sourceDef3 = createBaseSourceDef();
 
-    configRepository.writeStandardSourceDefinition(sourceDef1);
-    configRepository.writeStandardSourceDefinition(sourceDef2);
-    configRepository.writeStandardSourceDefinition(sourceDef3);
+    final ActorDefinitionVersion sourceVer1 = createActorDefinitionFromSourceDef(sourceDef1);
+    final ActorDefinitionVersion sourceVer2 = createActorDefinitionFromSourceDef(sourceDef2);
+    final ActorDefinitionVersion sourceVer3 = createActorDefinitionFromSourceDef(sourceDef3);
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef1, sourceVer1);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef2, sourceVer2);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef3, sourceVer3);
 
     final int updatedDefinitions = configRepository
         .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
 
     assertEquals(1, updatedDefinitions);
-    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId()).getDockerImageTag());
-    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId()).getDockerImageTag());
-    assertEquals(DOCKER_IMAGE_TAG, configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef1 = configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId());
+    assertEquals(targetImageTag, newSourceDef1.getDockerImageTag());
+    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef1.getDefaultVersionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef2 = configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId());
+    assertEquals(targetImageTag, newSourceDef2.getDockerImageTag());
+    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef2.getDefaultVersionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef3 = configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId());
+    assertEquals(DOCKER_IMAGE_TAG, newSourceDef3.getDockerImageTag());
+    assertEquals(DOCKER_IMAGE_TAG, configRepository.getActorDefinitionVersion(newSourceDef3.getDefaultVersionId()).getDockerImageTag());
   }
 
   @Test
   void testWriteSourceDefinitionAndDefaultVersion() throws JsonValidationException, IOException, ConfigNotFoundException {
-    StandardSourceDefinition sourceDefinition = createBaseSourceDef();
-    ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromSourceDef(sourceDefinition);
+    final StandardSourceDefinition sourceDefinition = createBaseSourceDef();
+    final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromSourceDef(sourceDefinition);
 
     configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
 
-    StandardSourceDefinition sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
-    Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
+    final StandardSourceDefinition sourceDefinitionFromDB = configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId());
+    final Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
         configRepository.getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag());
 
     assertTrue(actorDefinitionVersionFromDB.isPresent());
-    UUID actualVersionID = actorDefinitionVersionFromDB.get().getVersionId();
+    final UUID actualVersionID = actorDefinitionVersionFromDB.get().getVersionId();
 
     assertEquals(actorDefinitionVersion.withVersionId(actualVersionID), actorDefinitionVersionFromDB.get());
     assertEquals(actualVersionID, sourceDefinitionFromDB.getDefaultVersionId());
@@ -305,18 +318,18 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testWriteDestinationDefinitionAndDefaultVersion() throws JsonValidationException, IOException, ConfigNotFoundException {
-    StandardDestinationDefinition destinationDefinition = createBaseDestDef();
-    ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromDestDef(destinationDefinition);
+    final StandardDestinationDefinition destinationDefinition = createBaseDestDef();
+    final ActorDefinitionVersion actorDefinitionVersion = createActorDefinitionFromDestDef(destinationDefinition);
 
     configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
 
-    StandardDestinationDefinition destinationDefinitionFromDB =
+    final StandardDestinationDefinition destinationDefinitionFromDB =
         configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
-    Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
+    final Optional<ActorDefinitionVersion> actorDefinitionVersionFromDB =
         configRepository.getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag());
 
     assertTrue(actorDefinitionVersionFromDB.isPresent());
-    UUID actualVersionID = actorDefinitionVersionFromDB.get().getVersionId();
+    final UUID actualVersionID = actorDefinitionVersionFromDB.get().getVersionId();
 
     assertEquals(actorDefinitionVersion.withVersionId(actualVersionID), actorDefinitionVersionFromDB.get());
     assertEquals(actualVersionID, destinationDefinitionFromDB.getDefaultVersionId());
@@ -394,7 +407,13 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(sourceDef.getSourceDefinitionId())
         .withDockerRepository(sourceDef.getDockerRepository())
         .withDockerImageTag(sourceDef.getDockerImageTag())
-        .withSpec(sourceDef.getSpec());
+        .withSpec(sourceDef.getSpec())
+        .withAllowedHosts(sourceDef.getAllowedHosts())
+        .withDocumentationUrl(sourceDef.getDocumentationUrl())
+        .withProtocolVersion(sourceDef.getProtocolVersion())
+        .withReleaseDate(sourceDef.getReleaseDate())
+        .withReleaseStage(sourceDef.getReleaseStage())
+        .withSuggestedStreams(sourceDef.getSuggestedStreams());
   }
 
   private static ActorDefinitionVersion createActorDefinitionFromDestDef(final StandardDestinationDefinition destDef) {
@@ -403,7 +422,14 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withActorDefinitionId(destDef.getDestinationDefinitionId())
         .withDockerRepository(destDef.getDockerRepository())
         .withDockerImageTag(destDef.getDockerImageTag())
-        .withSpec(destDef.getSpec());
+        .withSpec(destDef.getSpec())
+        .withAllowedHosts(destDef.getAllowedHosts())
+        .withDocumentationUrl(destDef.getDocumentationUrl())
+        .withProtocolVersion(destDef.getProtocolVersion())
+        .withReleaseDate(destDef.getReleaseDate())
+        .withReleaseStage(destDef.getReleaseStage())
+        .withNormalizationConfig(destDef.getNormalizationConfig())
+        .withSupportsDbt(destDef.getSupportsDbt());
   }
 
 }

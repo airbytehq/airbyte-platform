@@ -12,11 +12,12 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStatus, ReleaseStage } from "core/request/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
+import { isConnectionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionTitleBlock.module.scss";
@@ -49,9 +50,8 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, stage, 
 };
 
 export const ConnectionTitleBlock = () => {
-  const {
-    connection: { name, source, destination, schemaChange, status },
-  } = useConnectionEditService();
+  const { connection } = useConnectionEditService();
+  const { name, source, destination, schemaChange, status } = connection;
   const { sourceDefinition, destDefinition } = useConnectionFormService();
   const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
@@ -90,10 +90,9 @@ export const ConnectionTitleBlock = () => {
           text={<FormattedMessage id="connection.connectionDeletedView" />}
         />
       )}
-      {fcpEnabled &&
-        status !== ConnectionStatus.deprecated &&
-        (sourceDefinition.releaseStage !== ReleaseStage.generally_available ||
-          destDefinition.releaseStage !== ReleaseStage.generally_available) && <InlineEnrollmentCallout />}
+      {fcpEnabled && isConnectionEligibleForFCP(connection, sourceDefinition, destDefinition) && (
+        <InlineEnrollmentCallout />
+      )}
     </FlexContainer>
   );
 };

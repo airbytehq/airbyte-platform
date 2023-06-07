@@ -1,14 +1,23 @@
-import { AirbyteCatalog } from "@cy/../src/core/api/generated/AirbyteClient.schemas";
-import { createNewConnectionViaApi } from "@cy/commands/connection";
-import { createPostgresDestinationViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
+import {
+  createNewConnectionViaApi,
+  createPostgresDestinationViaApi,
+  createPostgresSourceViaApi,
+} from "@cy/commands/connection";
+import {
+  WebBackendConnectionRead,
+  DestinationRead,
+  DestinationSyncMode,
+  SourceRead,
+  SyncMode,
+} from "@src/core/api/types/AirbyteClient";
 import {
   getPostgresToPostgresUpdateConnectionBody,
   requestDeleteConnection,
+  requestDeleteDestination,
   requestDeleteSource,
   requestGetConnection,
   requestUpdateConnection,
 } from "commands/api";
-import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } from "commands/api/types";
 import {
   cleanDBSource,
   makeChangesInDBSource,
@@ -26,9 +35,9 @@ import * as replicationPage from "pages/connection/connectionReplicationPageObje
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
 describe("Connection - Auto-detect schema changes", () => {
-  let source: Source;
-  let destination: Destination;
-  let connection: Connection;
+  let source: SourceRead;
+  let destination: DestinationRead;
+  let connection: WebBackendConnectionRead;
 
   before(() => {
     createPostgresDestinationViaApi().then((pgDestination) => {
@@ -48,12 +57,18 @@ describe("Connection - Auto-detect schema changes", () => {
 
   afterEach(() => {
     if (connection) {
-      requestDeleteConnection(connection.connectionId);
+      requestDeleteConnection({ connectionId: connection.connectionId });
     }
     if (source) {
-      requestDeleteSource(source.sourceId);
+      requestDeleteSource({ sourceId: source.sourceId });
     }
     cleanDBSource();
+  });
+
+  after(() => {
+    if (destination) {
+      requestDeleteDestination({ destinationId: destination.destinationId });
+    }
   });
 
   describe("non-breaking changes", () => {
@@ -114,14 +129,14 @@ describe("Connection - Auto-detect schema changes", () => {
   describe("breaking changes", () => {
     beforeEach(() => {
       const streamToUpdate = connection.syncCatalog.streams.findIndex(
-        (stream) => stream.stream.name === "users" && stream.stream.namespace === "public"
+        (stream) => stream.stream?.name === "users" && stream.stream.namespace === "public"
       );
-      const newSyncCatalog = { streams: [...connection.syncCatalog.streams] } as AirbyteCatalog; // this is because we reinvented our type system for e2e :( TODO: don't
+      const newSyncCatalog = { streams: [...connection.syncCatalog.streams] };
 
       newSyncCatalog.streams[streamToUpdate].config = {
         ...newSyncCatalog.streams[streamToUpdate].config,
-        destinationSyncMode: DestinationSyncMode.AppendDedup,
-        syncMode: SourceSyncMode.Incremental,
+        destinationSyncMode: DestinationSyncMode.append_dedup,
+        syncMode: SyncMode.incremental,
         cursorField: ["updated_at"],
       };
 
@@ -164,7 +179,7 @@ describe("Connection - Auto-detect schema changes", () => {
       // Fix the conflict
       streamsTable.searchStream("users");
       const row = streamsTable.getRow("public", "users");
-      row.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+      row.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
 
       replicationPage.saveChangesAndHandleResetModal();
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
@@ -194,7 +209,7 @@ describe("Connection - Auto-detect schema changes", () => {
       replicationPage.saveChangesAndHandleResetModal({ expectModal: false });
 
       cy.wait("@updatesNonBreakingPreference").then((interception) => {
-        assert.equal((interception.response?.body as Connection).nonBreakingChangesPreference, "disable");
+        assert.equal((interception.response?.body as WebBackendConnectionRead).nonBreakingChangesPreference, "disable");
       });
     });
   });

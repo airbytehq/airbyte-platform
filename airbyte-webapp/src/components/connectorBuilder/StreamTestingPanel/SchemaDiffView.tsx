@@ -20,11 +20,13 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
+import { SchemaConflictMessage } from "../SchemaConflictMessage";
 import { isEmptyOrDefault, useBuilderWatch } from "../types";
 import { formatJson } from "../utils";
 
 interface SchemaDiffViewProps {
   inferredSchema: StreamReadInferredSchema;
+  incompatibleErrors?: string[];
 }
 
 interface Diff {
@@ -62,7 +64,7 @@ function getDiff(existingSchema: string | undefined, detectedSchema: object): Di
   }
 }
 
-export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }) => {
+export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, incompatibleErrors }) => {
   const analyticsService = useAnalyticsService();
   const { streams, testStreamIndex } = useConnectorBuilderTestRead();
   const { editorView } = useConnectorBuilderFormState();
@@ -88,7 +90,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema }
   return (
     <FlexContainer direction="column">
       {editorView === "ui" && !isEmptyOrDefault(value) && value !== formattedSchema && (
-        <Message type="warning" text={<FormattedMessage id="connectorBuilder.differentSchemaDescription" />}>
+        <Message type="warning" text={<SchemaConflictMessage errors={incompatibleErrors} />}>
           <FlexItem grow className={styles.mergeButtons}>
             <FlexContainer direction="column">
               <FlexContainer>

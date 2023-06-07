@@ -1,5 +1,5 @@
+import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { QueryObserverResult, useMutation, useQuery, useQueryClient } from "react-query";
 
 import { MissingConfigError, useConfig } from "config";
 import { CloudWorkspacesService } from "packages/cloud/lib/domain/cloudWorkspaces/CloudWorkspacesService";
@@ -23,7 +23,7 @@ export const workspaceKeys = {
   usage: (id: number | string, timeWindow: string) => [...workspaceKeys.all, id, timeWindow, "usage"] as const,
 };
 
-function useGetWorkspaceService(): CloudWorkspacesService {
+export function useGetWorkspaceService(): CloudWorkspacesService {
   const { cloudApiUrl } = useConfig();
 
   if (!cloudApiUrl) {
@@ -45,11 +45,22 @@ export function useListCloudWorkspaces(): CloudWorkspace[] {
   return useSuspenseQuery<CloudWorkspace[]>(workspaceKeys.lists(), () => service.listByUser(user.userId));
 }
 
-export function useListCloudWorkspacesAsync(): QueryObserverResult<CloudWorkspace[]> {
-  const service = useGetWorkspaceService();
-  const user = useCurrentUser();
+export const getListCloudWorkspacesAsyncQueryKey = () => {
+  return workspaceKeys.lists();
+};
 
-  return useQuery<CloudWorkspace[]>(workspaceKeys.lists(), () => service.listByUser(user.userId));
+export const useListCloudWorkspacesAsyncQuery = (userId: string) => {
+  const service = useGetWorkspaceService();
+
+  return () => service.listByUser(userId);
+};
+
+export function useListCloudWorkspacesAsync(): QueryObserverResult<CloudWorkspace[]> {
+  const user = useCurrentUser();
+  const queryKey = getListCloudWorkspacesAsyncQueryKey();
+  const queryFn = useListCloudWorkspacesAsyncQuery(user.userId);
+
+  return useQuery<CloudWorkspace[]>(queryKey, queryFn);
 }
 
 export function useCreateCloudWorkspace() {
@@ -112,10 +123,21 @@ export function useRemoveCloudWorkspace() {
   });
 }
 
-export function useGetCloudWorkspace(workspaceId: string): CloudWorkspace {
+export function getCloudWorkspaceQueryKey(workspaceId: string) {
+  return workspaceKeys.detail(workspaceId);
+}
+
+export function useGetCloudWorkspaceQuery(workspaceId: string) {
   const service = useGetWorkspaceService();
 
-  return useSuspenseQuery<CloudWorkspace>(workspaceKeys.detail(workspaceId), () => service.get(workspaceId));
+  return () => service.get(workspaceId);
+}
+
+export function useGetCloudWorkspace(workspaceId: string): CloudWorkspace {
+  const queryKey = getCloudWorkspaceQueryKey(workspaceId);
+  const queryFn = useGetCloudWorkspaceQuery(workspaceId);
+
+  return useSuspenseQuery<CloudWorkspace>(queryKey, queryFn);
 }
 
 export function useInvalidateCloudWorkspace(workspaceId: string): () => Promise<void> {

@@ -1,26 +1,4 @@
 @use "../../scss/colors";
-@use "../../scss/variables";
-
-.entityInfo {
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  padding: variables.$spacing-lg variables.$spacing-xl variables.$spacing-2xl;
-  gap: variables.$spacing-lg;
-  align-items: center;
-}
-
-.entityType {
-  display: flex;
-  gap: variables.$spacing-sm;
-  align-items: center;
-  color: colors.$grey-400;
-}
-
-.entityIcon {
-  height: 40px;
-  width: 40px;
-}
 
 .primary p {
   color: colors.$blue;

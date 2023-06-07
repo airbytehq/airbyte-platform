@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 public class NormalizationInDestinationHelper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(NormalizationInDestinationHelper.class);
-  private static final Version BIG_QUERY_IN_DESTINATION_MIN_VERSION = new Version("1.3.1");
 
   private static final Map<String, String> IN_DESTINATION_NORMALIZATION_ENV_VAR = Map.of("NORMALIZATION_TECHNIQUE", "LEGACY");
 
@@ -40,26 +39,29 @@ public class NormalizationInDestinationHelper {
    *
    * @param standardSyncOperations the sync operations for the replication job
    * @param containerName the name of the destination container
-   * @param featureFlagEnabled whether this workspace has opted into the feature flag for
-   *        normalization in destination containers
+   * @param minSupportedVersion the minimum version that supports normalization for this destination,
+   *        if this workspace has opted into the feature flag for normalization in destination
+   *        containers (otherwise an empty string)
    * @return a boolean value of whether normalization should be run in the destination container
    */
   public static boolean shouldNormalizeInDestination(final List<StandardSyncOperation> standardSyncOperations,
                                                      final String containerName,
-                                                     final boolean featureFlagEnabled) {
+                                                     final String minSupportedVersion) {
     final var requiresNormalization = normalizationStepRequired(standardSyncOperations);
-    final var normalizationSupported = connectorSupportsNormalizationInDestination(containerName);
-    LOGGER.info("Requires Normalization: {} Normalization Supported: {}, Feature Flag Enabled: {}",
-        requiresNormalization, normalizationSupported, featureFlagEnabled);
-    return requiresNormalization && normalizationSupported && featureFlagEnabled;
+    final var normalizationSupported = connectorSupportsNormalizationInDestination(containerName, minSupportedVersion);
+    LOGGER.info("Requires Normalization: {}, Normalization Supported: {}, Feature Flag Enabled: {}",
+        requiresNormalization, normalizationSupported, !minSupportedVersion.isBlank());
+    return requiresNormalization && normalizationSupported;
   }
 
-  private static boolean connectorSupportsNormalizationInDestination(final String containerName) {
-    final var meetsMinVersion =
-        DockerImageNameHelper.extractImageVersion(containerName)
-            .map(version -> version.greaterThanOrEqualTo(BIG_QUERY_IN_DESTINATION_MIN_VERSION))
-            .orElse(false);
-    return DockerImageNameHelper.extractShortImageName(containerName).startsWith("destination-bigquery") && meetsMinVersion;
+  private static boolean connectorSupportsNormalizationInDestination(final String containerName,
+                                                                     final String minSupportedVersion) {
+    if (!minSupportedVersion.isBlank()) {
+      return DockerImageNameHelper.extractImageVersion(containerName)
+          .map(version -> version.greaterThanOrEqualTo(new Version(minSupportedVersion)))
+          .orElse(false);
+    }
+    return false;
   }
 
 }

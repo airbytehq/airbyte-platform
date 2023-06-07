@@ -10,7 +10,8 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { Button } from "components/ui/Button";
-import { PageHeader } from "components/ui/PageHeader";
+import { Heading } from "components/ui/Heading";
+import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 
 import { useQuery } from "hooks/useQuery";
 import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
@@ -61,8 +62,12 @@ export const ConnectorBuilderListPage: React.FC = () => {
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "connectorBuilder.title" }]} />}
       pageTitle={
-        <PageHeader
-          title={<FormattedMessage id="connectorBuilder.listPage.heading" values={{ count: projects.length }} />}
+        <NextPageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="connectorBuilder.listPage.title" values={{ count: projects.length }} />
+            </Heading>
+          }
           endComponent={
             <Button
               icon={<FontAwesomeIcon icon={faPlus} />}

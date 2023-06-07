@@ -97,6 +97,7 @@ public class EnvConfigs implements Configs {
   public static final String JOB_KUBE_CURL_IMAGE = "JOB_KUBE_CURL_IMAGE";
   public static final String SYNC_JOB_MAX_ATTEMPTS = "SYNC_JOB_MAX_ATTEMPTS";
   public static final String SYNC_JOB_MAX_TIMEOUT_DAYS = "SYNC_JOB_MAX_TIMEOUT_DAYS";
+  public static final String SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES = "SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES";
   private static final String CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED = "CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED";
   public static final String MAX_SPEC_WORKERS = "MAX_SPEC_WORKERS";
   public static final String MAX_CHECK_WORKERS = "MAX_CHECK_WORKERS";
@@ -585,6 +586,11 @@ public class EnvConfigs implements Configs {
   @Override
   public int getSyncJobMaxTimeoutDays() {
     return Integer.parseInt(getEnvOrDefault(SYNC_JOB_MAX_TIMEOUT_DAYS, "3"));
+  }
+
+  @Override
+  public int getJobInitRetryTimeoutMinutes() {
+    return Integer.parseInt(getEnvOrDefault(SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES, "5"));
   }
 
   @Override

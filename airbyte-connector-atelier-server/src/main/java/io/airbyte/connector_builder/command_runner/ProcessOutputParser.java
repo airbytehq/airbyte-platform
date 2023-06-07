@@ -74,7 +74,8 @@ public class ProcessOutputParser {
           "Error response from CDK: {}\n{}",
           traceMessage.getError().getMessage(),
           traceMessage.getError().getStackTrace());
-      throw new AirbyteCdkInvalidInputException("AirbyteTraceMessage response from CDK.", traceMessage);
+      throw new AirbyteCdkInvalidInputException(
+          String.format("AirbyteTraceMessage response from CDK: %s", traceMessage.getError().getMessage()), traceMessage);
     }
     throw generateError(process, cdkCommand);
   }

@@ -1,5 +1,6 @@
 const newDestination = "button[data-id='new-destination']";
 const addSourceButton = "button[data-testid='select-source']";
+const createConnectionButton = "button[data-testid='create-connection']";
 
 export const goToDestinationPage = () => {
   cy.intercept("/api/v1/destinations/list").as("getDestinationsList");
@@ -17,4 +18,8 @@ export const openNewDestinationForm = () => {
 
 export const openAddSource = () => {
   cy.get(addSourceButton).click();
+};
+
+export const openCreateConnection = () => {
+  cy.get(createConnectionButton).click();
 };

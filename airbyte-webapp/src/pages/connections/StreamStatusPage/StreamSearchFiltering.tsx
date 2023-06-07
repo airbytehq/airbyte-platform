@@ -1,6 +1,7 @@
+import { useCallback, useState } from "react";
 import { useIntl } from "react-intl";
 
-import { Input } from "components/ui/Input";
+import { SearchInput } from "components/ui/SearchInput";
 
 import { useStreamsListContext } from "./StreamsListContext";
 
@@ -9,16 +10,26 @@ interface StreamSearchFilteringProps {
 }
 
 export const StreamSearchFiltering: React.FC<StreamSearchFilteringProps> = ({ className }) => {
+  const [value, _setValue] = useState("");
   const { setSearchTerm } = useStreamsListContext();
   const { formatMessage } = useIntl();
 
+  const setValue = useCallback(
+    (value: string) => {
+      _setValue(value);
+      setSearchTerm(value);
+    },
+    [setSearchTerm]
+  );
+
   return (
     <div className={className}>
-      <Input
+      <SearchInput
         placeholder={formatMessage({
-          id: `form.nameSearch`,
+          id: "form.search.placeholder",
         })}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
       />
     </div>
   );

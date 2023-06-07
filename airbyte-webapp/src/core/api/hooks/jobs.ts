@@ -1,9 +1,9 @@
-import { useMutation, useQuery } from "react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { SCOPE_WORKSPACE } from "services/Scope";
 
 import { cancelJob, getJobDebugInfo, listJobsFor } from "../generated/AirbyteClient";
-import { JobDebugInfoRead, JobListRequestBody, JobReadList } from "../types/AirbyteClient";
+import { JobListRequestBody, JobReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -24,11 +24,15 @@ export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = t
   return { jobs: jobReadList.jobs, totalJobCount: jobReadList.totalJobCount, isPreviousData: result.isPreviousData };
 };
 
-export const useGetDebugInfoJob = (
-  id: number,
-  enabled = true,
-  refetchWhileRunning = false
-): JobDebugInfoRead | undefined => {
+// A disabled useQuery that can be called manually to download job logs
+export const useGetDebugInfoJobManual = (id: number) => {
+  const requestOptions = useRequestOptions();
+  return useQuery([SCOPE_WORKSPACE, "jobs", "getDebugInfo", id], () => getJobDebugInfo({ id }, requestOptions), {
+    enabled: false,
+  });
+};
+
+export const useGetDebugInfoJob = (id: number, enabled = true, refetchWhileRunning = false) => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(

@@ -75,7 +75,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
   toggleAllFieldsSelected,
 }) => {
   const { formatMessage } = useIntl();
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const checkIsCursor = useCallback((path: string[]) => isCursor(config, path), [config]);
   const checkIsChildFieldCursor = useCallback((path: string[]) => isChildFieldCursor(config, path), [config]);
   const checkIsPrimaryKey = useCallback((path: string[]) => isPrimaryKey(config, path), [config]);

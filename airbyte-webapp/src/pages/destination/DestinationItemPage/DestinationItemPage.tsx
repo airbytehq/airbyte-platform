@@ -1,43 +1,41 @@
 import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
-import { Outlet, useNavigate, useParams } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
 import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
-import { ItemTabs, StepsTypes } from "components/ConnectorBlocks";
-import { Breadcrumbs } from "components/ui/Breadcrumbs";
-import { PageHeader } from "components/ui/PageHeader";
+import { StepsTypes } from "components/ConnectorBlocks";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useExperiment } from "hooks/services/Experiment";
+import InlineEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
+import { isDestinationDefinitionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
 import { RoutePaths } from "pages/routePaths";
 import { useDestinationDefinition } from "services/connector/DestinationDefinitionService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
-import { useGetDestinationFromParams, useGetDestinationTabFromParams } from "../useGetDestinationFromParams";
+import { useGetDestinationFromParams } from "../useGetDestinationFromParams";
 
 export const DestinationItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM);
   const params = useParams<{ workspaceId: string; "*": StepsTypes | "" | undefined }>();
   const destination = useGetDestinationFromParams();
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
-  const navigate = useNavigate();
   const { formatMessage } = useIntl();
-  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
-  const currentStep = useGetDestinationTabFromParams();
+  const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   const { trackError } = useAppMonitoringService();
 
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Destination}`;
 
-  const nextBreadcrumbsData = [
+  const breadcrumbsData = [
     {
       label: formatMessage({ id: "sidebar.destinations" }),
       to: `${breadcrumbBasePath}/`,
@@ -45,42 +43,15 @@ export const DestinationItemPage: React.FC = () => {
     { label: destination.name },
   ];
 
-  // can be removed after flag enabled for all users
-  const onSelectStep = (id: string) => {
-    const path = id === StepsTypes.OVERVIEW ? "." : id.toLowerCase();
-    navigate(path);
-  };
-
-  const breadcrumbsData = [
-    {
-      label: formatMessage({ id: "admin.destinations" }),
-      to: "..",
-    },
-    { label: destination.name },
-  ];
-  // to here
-
   return (
     <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
       <ConnectorDocumentationWrapper>
         <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
-        {!isNewConnectionFlowEnabled ? (
-          <PageHeader
-            title={<Breadcrumbs data={breadcrumbsData} />}
-            middleComponent={
-              !isNewConnectionFlowEnabled && <ItemTabs currentStep={currentStep} setCurrentStep={onSelectStep} />
-            }
-          />
-        ) : (
-          <NextPageHeaderWithNavigation breadCrumbsData={nextBreadcrumbsData}>
-            <ConnectorTitleBlock connector={destination} connectorDefinition={destinationDefinition} />
-            <ConnectorNavigationTabs
-              connectorType="destination"
-              connector={destination}
-              id={destination.destinationId}
-            />
-          </NextPageHeaderWithNavigation>
-        )}
+        <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+          <ConnectorTitleBlock connector={destination} connectorDefinition={destinationDefinition} />
+          {fcpEnabled && isDestinationDefinitionEligibleForFCP(destinationDefinition) && <InlineEnrollmentCallout />}
+          <ConnectorNavigationTabs connectorType="destination" connector={destination} id={destination.destinationId} />
+        </NextPageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>
           <ApiErrorBoundary>
             <Outlet />

@@ -10,7 +10,13 @@ import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
-import { useCurrentWorkspace, WorkspaceServiceProvider } from "services/workspaces/WorkspacesService";
+import {
+  useCurrentWorkspace,
+  WorkspaceServiceProvider,
+  usePrefetchCloudWorkspaceData,
+  useCurrentWorkspaceId,
+  useInvalidateAllWorkspaceScopeOnChange,
+} from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -31,12 +37,14 @@ const ConnectionsRoutes = React.lazy(() => import("pages/connections/Connections
 
 const AllDestinationsPage = React.lazy(() => import("pages/destination/AllDestinationsPage"));
 const CreateDestinationPage = React.lazy(() => import("pages/destination/CreateDestinationPage"));
+const SelectDestinationPage = React.lazy(() => import("pages/destination/SelectDestinationPage"));
 const DestinationItemPage = React.lazy(() => import("pages/destination/DestinationItemPage"));
 const DestinationOverviewPage = React.lazy(() => import("pages/destination/DestinationOverviewPage"));
 const DestinationSettingsPage = React.lazy(() => import("pages/destination/DestinationSettingsPage"));
 
 const AllSourcesPage = React.lazy(() => import("pages/source/AllSourcesPage"));
 const CreateSourcePage = React.lazy(() => import("pages/source/CreateSourcePage"));
+const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
 const SourceOverviewPage = React.lazy(() => import("pages/source/SourceOverviewPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
@@ -61,7 +69,8 @@ const MainRoutes: React.FC = () => {
       <Routes>
         <Route path={RoutePaths.Destination}>
           <Route index element={<AllDestinationsPage />} />
-          <Route path={DestinationPaths.NewDestination} element={<CreateDestinationPage />} />
+          <Route path={DestinationPaths.SelectDestinationNew} element={<SelectDestinationPage />} />
+          <Route path={DestinationPaths.DestinationNew} element={<CreateDestinationPage />} />
           <Route path={DestinationPaths.Root} element={<DestinationItemPage />}>
             <Route index element={<DestinationOverviewPage />} />
             <Route path={DestinationPaths.Settings} element={<DestinationSettingsPage />} />
@@ -69,7 +78,8 @@ const MainRoutes: React.FC = () => {
         </Route>
         <Route path={RoutePaths.Source}>
           <Route index element={<AllSourcesPage />} />
-          <Route path={SourcePaths.NewSource} element={<CreateSourcePage />} />
+          <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
+          <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
           <Route path={SourcePaths.Root} element={<SourceItemPage />}>
             <Route index element={<SourceOverviewPage />} />
             <Route path={SourcePaths.Settings} element={<SourceSettingsPage />} />
@@ -110,11 +120,20 @@ const CloudMainViewRoutes = () => {
   );
 };
 
+const CloudWorkspaceDataPrefetcher = () => {
+  usePrefetchCloudWorkspaceData();
+  return null;
+};
+
 export const Routing: React.FC = () => {
   const { user, inited, providers, hasCorporateEmail, loggedOut } = useAuthService();
+  const workspaceId = useCurrentWorkspaceId();
   const { pathname } = useLocation();
 
   useBuildUpdateCheck();
+
+  // invalidate everything in the workspace scope when the workspaceId changes
+  useInvalidateAllWorkspaceScopeOnChange(workspaceId);
 
   const analyticsContext = useMemo(
     () =>
@@ -141,12 +160,13 @@ export const Routing: React.FC = () => {
   return (
     <WorkspaceServiceProvider>
       <LDExperimentServiceProvider>
+        {workspaceId && user && <CloudWorkspaceDataPrefetcher />}
         <Suspense fallback={<LoadingPage />}>
           <Routes>
             {/*
-              The firebase callback action route is available no matter wheter a user is logged in or not, since
-              the verify email action need to work in both cases.
-            */}
+            The firebase callback action route is available no matter wheter a user is logged in or not, since
+            the verify email action need to work in both cases.
+          */}
             <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
             <Route
               path="*"

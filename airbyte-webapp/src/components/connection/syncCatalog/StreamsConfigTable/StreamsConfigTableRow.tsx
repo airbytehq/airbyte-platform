@@ -4,13 +4,11 @@ import { FormattedMessage } from "react-intl";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Row } from "components/SimpleTableComponents";
-import { CheckBox } from "components/ui/CheckBox";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Switch } from "components/ui/Switch";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
-import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
@@ -35,8 +33,7 @@ interface StreamsConfigTableRowProps {
   cursorType: IndexerType;
   onCursorChange: (cursorPath: Path) => void;
   fields: SyncSchemaField[];
-  onExpand: () => void;
-  changedSelected: boolean;
+  openStreamDetailsPanel: () => void;
   hasError: boolean;
   configErrors?: Record<string, string>;
   disabled?: boolean;
@@ -55,11 +52,11 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   primitiveFields,
   cursorType,
   fields,
-  onExpand,
+  openStreamDetailsPanel,
   disabled,
   configErrors,
 }) => {
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
   const { defaultCursorField } = stream.stream ?? {};
   const syncSchema = useMemo(
@@ -69,8 +66,6 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
     }),
     [syncMode, destinationSyncMode]
   );
-
-  const [isSelected, selectForBulkEdit] = useBulkEditSelect(stream.id);
 
   const paths = useMemo(() => primitiveFields.map((field) => field.path), [primitiveFields]);
   const fieldCount = fields?.length ?? 0;
@@ -89,7 +84,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
             target = target.parentElement;
           }
 
-          onExpand();
+          openStreamDetailsPanel();
         }
       : undefined;
 
@@ -132,14 +127,6 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
       ref={rowRef}
     >
-      <CellText size="fixed" className={styles.streamRowCheckboxCell} data-noexpand>
-        {!disabled && (
-          <>
-            <StreamsConfigTableRowStatus stream={stream} />
-            <CheckBox checkboxSize="sm" checked={isSelected} onChange={selectForBulkEdit} />
-          </>
-        )}
-      </CellText>
       <CellText size="fixed" className={styles.syncCell} data-noexpand>
         <Switch
           size="sm"
@@ -148,6 +135,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           disabled={disabled}
           data-testid="selected-switch"
         />
+        <StreamsConfigTableRowStatus stream={stream} />
       </CellText>
       {isColumnSelectionEnabled && (
         <CellText size="fixed" className={styles.fieldsCell}>

@@ -154,6 +154,9 @@ components:
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
+        latest_config_update:
+          type: object
+          description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
     StreamReadRequestBody:
       type: object
       required:

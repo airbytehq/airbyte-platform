@@ -1,7 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { User as FirebaseUser, AuthErrorCodes } from "firebase/auth";
 import React, { useCallback, useContext, useMemo, useRef } from "react";
 import { useIntl } from "react-intl";
-import { useQueryClient } from "react-query";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
 

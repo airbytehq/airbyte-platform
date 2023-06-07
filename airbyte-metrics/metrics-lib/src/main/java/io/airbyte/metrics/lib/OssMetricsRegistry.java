@@ -264,6 +264,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "stats_commit_close_successful",
       "number of final to connection exiting with the a successful final stats flush",
       MetricTags.GEOGRAPHY),
+  STREAM_STATS_WRITE_NUM_QUERIES(MetricEmittingApps.WORKER,
+      "stream_stats_write_num_queries",
+      "number of separate queries to update the stream stats table"),
   @Deprecated
   // To be deleted along with PersistStateActivity
   STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,

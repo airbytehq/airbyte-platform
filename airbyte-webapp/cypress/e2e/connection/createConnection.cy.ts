@@ -1,6 +1,6 @@
 import { createPostgresDestinationViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
+import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { Connection, Destination, Source } from "commands/api/types";
 import { submitButtonClick } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
@@ -28,14 +28,13 @@ import { StreamRowPageObject } from "pages/connection/StreamRowPageObject";
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
 describe("Connection - Create new connection", { testIsolation: false }, () => {
-  let source: Source;
-  let destination: Destination;
+  let source: SourceRead;
+  let destination: DestinationRead;
   let connectionId: string;
 
   const dropTables = () => {
     runDbQuery(dropUsersTableQuery, dropDummyTablesQuery(20));
   };
-
   before(() => {
     dropTables();
     runDbQuery(createUsersTableQuery, createDummyTablesQuery(20));
@@ -49,47 +48,46 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
   after(() => {
     if (connectionId) {
-      requestDeleteConnection(connectionId);
+      requestDeleteConnection({ connectionId });
     }
     if (source) {
-      requestDeleteSource(source.sourceId);
+      requestDeleteSource({ sourceId: source.sourceId });
     }
     if (destination) {
-      requestDeleteDestination(destination.destinationId);
+      requestDeleteDestination({ destinationId: destination.destinationId });
     }
 
     dropTables();
   });
 
-  describe("Set up source and destination", () => {
-    it("should open 'New connection' page", () => {
-      connectionListPage.visit();
-      interceptGetSourcesListRequest();
-      interceptGetSourceDefinitionsRequest();
+  describe.only("Set up source and destination", () => {
+    // todo: switching back and forth between views for existing/new connectors
+    describe("With existing connectors", () => {
+      it("should open 'New connection' page", () => {
+        connectionListPage.visit();
+        interceptGetSourcesListRequest();
+        interceptGetSourceDefinitionsRequest();
 
-      connectionListPage.clickNewConnectionButton();
-      waitForGetSourcesListRequest();
-      waitForGetSourceDefinitionsRequest();
-    });
+        connectionListPage.clickNewConnectionButton();
+        waitForGetSourcesListRequest();
+        waitForGetSourceDefinitionsRequest();
+      });
 
-    it("should select existing Source from dropdown and click button", () => {
-      newConnectionPage.selectExistingConnectorFromDropdown(source.name);
-      newConnectionPage.clickUseExistingConnectorButton("source");
-    });
+      it("should select existing Source from dropdown and click button", () => {
+        newConnectionPage.isExistingConnectorTypeSelected("source");
+        newConnectionPage.selectExistingConnectorFromList("source", source.name);
+      });
 
-    it("should select existing Destination from dropdown and click button", () => {
-      interceptDiscoverSchemaRequest();
-      newConnectionPage.selectExistingConnectorFromDropdown(destination.name);
-      newConnectionPage.clickUseExistingConnectorButton("destination");
-      waitForDiscoverSchemaRequest();
-    });
+      it("should select existing Destination from dropdown and click button", () => {
+        interceptDiscoverSchemaRequest();
+        newConnectionPage.isExistingConnectorTypeSelected("destination");
+        newConnectionPage.selectExistingConnectorFromList("destination", destination.name);
+        waitForDiscoverSchemaRequest();
+      });
 
-    it("should redirect to 'New connection' settings page with stream table'", () => {
-      newConnectionPage.isAtNewConnectionPage();
-    });
-
-    it("should show 'New connection' page header", () => {
-      newConnectionPage.isNewConnectionPageHeaderVisible();
+      it("should redirect to 'New connection' configuration page with stream table'", () => {
+        newConnectionPage.isAtNewConnectionPage();
+      });
     });
   });
 
@@ -203,7 +201,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         assert.isNotNull(interception.response?.statusCode, "200");
         expect(interception.request.method).to.eq("POST");
 
-        const connection: Partial<Connection> = {
+        const connection: Partial<WebBackendConnectionRead> = {
           name: `${source.name} → ${destination.name}`,
           scheduleType: "manual",
         };

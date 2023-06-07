@@ -28,7 +28,7 @@ object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValida
 
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
 
-object NormalizationInDestinationBiqQuery : Temporary<Boolean>(key = "connectors.normalizationInDestination.bigquery", default = false)
+object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
 
@@ -37,6 +37,7 @@ object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
 
 object UseActorDefinitionVersionTableDefaults : Temporary<Boolean>(key = "connectors.useActorDefinitionVersionTableDefaults", default = false)
+object SeedActorDefinitionVersions : Temporary<Boolean>(key = "connectors.seedActorDefinitionVersions", default = true)
 
 object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
@@ -92,4 +93,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
   object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
 
   object AllowOAuthOverrideCredentials : Temporary<Boolean>(key = "allow-oauth-override-credentials", default = false)
+
+  object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 }

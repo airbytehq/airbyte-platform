@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
@@ -70,7 +70,7 @@ export const useResolvedManifest = (manifest?: unknown) => {
     try {
       return (await service.resolveManifest({ manifest })).manifest as DeclarativeComponentSchema;
     } catch {
-      return undefined;
+      return null;
     }
   });
 };

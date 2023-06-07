@@ -36,12 +36,7 @@ interface ConnectionSyncContext {
   lastSuccessfulSync?: number;
 }
 
-const jobStatusesIndicatingFinishedExecution: string[] = [
-  JobStatus.cancelled,
-  JobStatus.succeeded,
-  JobStatus.failed,
-  JobStatus.incomplete,
-];
+const jobStatusesIndicatingFinishedExecution: string[] = [JobStatus.succeeded, JobStatus.failed, JobStatus.incomplete];
 const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);

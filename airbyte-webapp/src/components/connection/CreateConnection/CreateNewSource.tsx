@@ -52,6 +52,7 @@ export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreate
     clearAllFormChanges();
     await new Promise((resolve) => setTimeout(resolve, 2000));
     onSourceCreated(result.sourceId);
+    setDocumentationPanelOpen(false);
   };
 
   const onGoBack = () => {

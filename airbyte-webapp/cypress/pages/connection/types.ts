@@ -1,9 +1,9 @@
-import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
+import { DestinationSyncMode, SyncMode } from "@src/core/api/types/AirbyteClient";
 
-export const SYNC_MODE_STRINGS: Readonly<Record<SourceSyncMode | DestinationSyncMode, string>> = {
-  [SourceSyncMode.FullRefresh]: "Full refresh",
-  [SourceSyncMode.Incremental]: "Incremental",
-  [DestinationSyncMode.Append]: "Append",
-  [DestinationSyncMode.AppendDedup]: "Deduped + history",
-  [DestinationSyncMode.Overwrite]: "Overwrite",
+export const SYNC_MODE_STRINGS: Readonly<Record<SyncMode | DestinationSyncMode, string>> = {
+  [SyncMode.full_refresh]: "Full refresh",
+  [SyncMode.incremental]: "Incremental",
+  [DestinationSyncMode.append]: "Append",
+  [DestinationSyncMode.append_dedup]: "Deduped + history",
+  [DestinationSyncMode.overwrite]: "Overwrite",
 };

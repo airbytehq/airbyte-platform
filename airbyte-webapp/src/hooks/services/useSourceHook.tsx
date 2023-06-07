@@ -1,5 +1,5 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { useMutation, useQueryClient } from "react-query";
 
 import { useConfig } from "config";
 import { SyncSchema } from "core/domain/catalog";

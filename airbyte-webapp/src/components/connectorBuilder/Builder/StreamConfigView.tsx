@@ -1,7 +1,7 @@
 import { faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import React from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -28,10 +28,10 @@ import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderTitle } from "./BuilderTitle";
 import { ErrorHandlerSection } from "./ErrorHandlerSection";
 import { IncrementalSection } from "./IncrementalSection";
-import { KeyValueListField } from "./KeyValueListField";
 import { getOptionsByManifest } from "./manifestHelpers";
 import { PaginationSection } from "./PaginationSection";
 import { PartitionSection } from "./PartitionSection";
+import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
 import { TransformationSection } from "./TransformationSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
@@ -89,32 +89,12 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             />
             <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
           </BuilderCard>
+          <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PartitionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <ErrorHandlerSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <BuilderCard
-            copyConfig={{
-              path: "requestOptions",
-              currentStreamIndex: streamNum,
-              copyFromLabel: formatMessage({ id: "connectorBuilder.copyFromRequestOptionsTitle" }),
-              copyToLabel: formatMessage({ id: "connectorBuilder.copyToRequestOptionsTitle" }),
-            }}
-          >
-            <KeyValueListField
-              path={streamFieldPath("requestOptions.requestParameters")}
-              manifestPath="HttpRequester.properties.request_parameters"
-            />
-            <KeyValueListField
-              path={streamFieldPath("requestOptions.requestHeaders")}
-              manifestPath="HttpRequester.properties.request_headers"
-            />
-            <KeyValueListField
-              path={streamFieldPath("requestOptions.requestBody")}
-              manifestPath="HttpRequester.properties.request_body_json"
-            />
-          </BuilderCard>
         </>
       ) : (
         <BuilderCard className={styles.schemaEditor}>
@@ -144,15 +124,11 @@ const StreamControls = ({
   const { setValue } = useFormContext();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setSelectedView } = useConnectorBuilderFormState();
-  const { streamRead: readStream } = useConnectorBuilderTestRead();
-  const schemaPath = streamFieldPath("schema");
-  const schema = useBuilderWatch(schemaPath);
+  const {
+    schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
+  } = useConnectorBuilderTestRead();
   const { errors } = useFormState({ name: streamFieldPath("schema") });
   const error = get(errors, streamFieldPath("schema"));
-  const formattedDetectedSchema = useMemo(
-    () => readStream.data?.inferred_schema && formatJson(readStream.data?.inferred_schema, true),
-    [readStream.data?.inferred_schema]
-  );
   const hasSchemaErrors = Boolean(error);
 
   const handleDelete = () => {
@@ -189,7 +165,8 @@ const StreamControls = ({
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
         showErrorIndicator={hasSchemaErrors}
-        showSchemaConflictIndicator={Boolean(formattedDetectedSchema && schema !== formattedDetectedSchema)}
+        showSchemaConflictIndicator={schemaDifferences}
+        schemaErrors={incompatibleSchemaErrors}
       />
       <AddStreamButton
         onAddStream={(addedStreamNum) => {
@@ -216,6 +193,7 @@ const StreamTab = ({
   onSelect,
   showErrorIndicator,
   showSchemaConflictIndicator,
+  schemaErrors,
   "data-testid": testId,
 }: {
   selected: boolean;
@@ -223,6 +201,7 @@ const StreamTab = ({
   onSelect: () => void;
   showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
+  schemaErrors?: string[];
   "data-testid": string;
 }) => (
   <button
@@ -233,7 +212,7 @@ const StreamTab = ({
   >
     <Text>{label}</Text>
     {showErrorIndicator && <Indicator />}
-    {showSchemaConflictIndicator && <SchemaConflictIndicator />}
+    {showSchemaConflictIndicator && <SchemaConflictIndicator errors={schemaErrors} />}
   </button>
 );
 

@@ -1,8 +1,17 @@
-import React, { useCallback, useContext, useMemo } from "react";
-import { useMutation, useQueryClient } from "react-query";
+import { useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
+import React, { useCallback, useContext, useLayoutEffect, useMemo } from "react";
 import { useNavigate, useMatch } from "react-router-dom";
 
 import { Workspace, WorkspaceService } from "core/domain/workspace";
+import { getConnectionListQueryKey, useConnectionListQuery } from "hooks/services/useConnectionHook";
+import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { getListUsersQueryKey, useListUsersQuery } from "packages/cloud/services/users/UseUserHook";
+import {
+  getCloudWorkspaceQueryKey,
+  getListCloudWorkspacesAsyncQueryKey,
+  useGetCloudWorkspaceQuery,
+  useListCloudWorkspacesAsyncQuery,
+} from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { RoutePaths } from "pages/routePaths";
 
 import { useConfig } from "../../config";
@@ -28,7 +37,6 @@ interface Context {
 export const WorkspaceServiceContext = React.createContext<Context | null>(null);
 
 const useSelectWorkspace = (): ((workspace?: string | null | Workspace) => void) => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   return useCallback(
@@ -38,9 +46,8 @@ const useSelectWorkspace = (): ((workspace?: string | null | Workspace) => void)
       } else {
         navigate(`/${RoutePaths.Workspaces}/${workspace}`);
       }
-      queryClient.removeQueries(SCOPE_WORKSPACE);
     },
-    [navigate, queryClient]
+    [navigate]
   );
 };
 
@@ -80,6 +87,57 @@ export const useCurrentWorkspaceId = () => {
   return match?.params.workspaceId || "";
 };
 
+/**
+ * Warms the react-query cache with data that is most likely needed for the given workspace
+ */
+export const usePrefetchCloudWorkspaceData = () => {
+  const user = useCurrentUser();
+  const workspaceId = useCurrentWorkspaceId();
+
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: getWorkspaceQueryKey(workspaceId),
+        queryFn: useGetWorkspaceQuery(workspaceId),
+        suspense: true,
+        staleTime: 10000,
+      },
+      {
+        queryKey: getCloudWorkspaceQueryKey(workspaceId),
+        queryFn: useGetCloudWorkspaceQuery(workspaceId),
+        suspense: true,
+        staleTime: 10000,
+      },
+      {
+        queryKey: getConnectionListQueryKey(),
+        queryFn: useConnectionListQuery(workspaceId),
+        suspense: true,
+        staleTime: 10000,
+      },
+      {
+        queryKey: getCurrentWorkspaceStateQueryKey(workspaceId),
+        queryFn: useGetCurrentWorkspaceStateQuery(workspaceId),
+        suspense: true,
+        staleTime: 10000,
+      },
+      {
+        queryKey: getListUsersQueryKey(workspaceId),
+        queryFn: useListUsersQuery(workspaceId),
+        suspense: true,
+        staleTime: 10000,
+      },
+      {
+        queryKey: getListCloudWorkspacesAsyncQueryKey(),
+        queryFn: useListCloudWorkspacesAsyncQuery(user.userId),
+        suspense: true,
+        staleTime: 10000,
+      },
+    ],
+  });
+
+  return queries;
+};
+
 export const useCurrentWorkspace = () => {
   const workspaceId = useCurrentWorkspaceId();
 
@@ -88,11 +146,21 @@ export const useCurrentWorkspace = () => {
   });
 };
 
+const getCurrentWorkspaceStateQueryKey = (workspaceId: string) => {
+  return workspaceKeys.state(workspaceId);
+};
+
+const useGetCurrentWorkspaceStateQuery = (workspaceId: string) => {
+  const service = useWorkspaceApiService();
+  return () => service.getState({ workspaceId });
+};
+
 export const useCurrentWorkspaceState = () => {
   const workspaceId = useCurrentWorkspaceId();
-  const service = useWorkspaceApiService();
+  const queryKey = getCurrentWorkspaceStateQueryKey(workspaceId);
+  const queryFn = useGetCurrentWorkspaceStateQuery(workspaceId);
 
-  return useSuspenseQuery(workspaceKeys.state(workspaceId), () => service.getState({ workspaceId }), {
+  return useSuspenseQuery(queryKey, queryFn, {
     // We want to keep this query only shortly in cache, so we refetch
     // the data whenever the user might have changed sources/destinations/connections
     // without requiring to manually invalidate that query on each change.
@@ -114,14 +182,26 @@ export const useListWorkspaces = () => {
   return useSuspenseQuery(workspaceKeys.lists(), () => service.list()).workspaces;
 };
 
+const getWorkspaceQueryKey = (workspaceId: string) => {
+  return workspaceKeys.detail(workspaceId);
+};
+
+const useGetWorkspaceQuery = (workspaceId: string) => {
+  const service = useWorkspaceApiService();
+
+  return () => service.get({ workspaceId });
+};
+
 export const useGetWorkspace = (
   workspaceId: string,
   options?: {
     staleTime: number;
   }
 ) => {
-  const service = useWorkspaceApiService();
-  return useSuspenseQuery(workspaceKeys.detail(workspaceId), () => service.get({ workspaceId }), options);
+  const queryKey = getWorkspaceQueryKey(workspaceId);
+  const queryFn = useGetWorkspaceQuery(workspaceId);
+
+  return useSuspenseQuery(queryKey, queryFn, options);
 };
 
 export const useUpdateWorkspace = () => {
@@ -142,4 +222,20 @@ export const useInvalidateWorkspace = (workspaceId: string) => {
     () => queryClient.invalidateQueries(workspaceKeys.detail(workspaceId)),
     [queryClient, workspaceId]
   );
+};
+
+export const useInvalidateAllWorkspaceScope = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => {
+    queryClient.removeQueries([SCOPE_WORKSPACE]);
+  }, [queryClient]);
+};
+
+export const useInvalidateAllWorkspaceScopeOnChange = (workspaceId: string) => {
+  const invalidateWorkspaceScope = useInvalidateAllWorkspaceScope();
+  // useLayoutEffect so the query removal happens before the new workspace's queries are triggered
+  useLayoutEffect(() => {
+    invalidateWorkspaceScope();
+  }, [invalidateWorkspaceScope, workspaceId]);
 };

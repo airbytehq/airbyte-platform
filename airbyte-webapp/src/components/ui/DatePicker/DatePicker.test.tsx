@@ -77,7 +77,7 @@ describe(`${DatePicker.name}`, () => {
 
   it("allows selecting a date from the datepicker", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2010-09-05"));
-    const MOCK_DESIRED_DATETIME = "2010-09-12";
+    const MOCK_DESIRED_DATE = "2010-09-12";
     let mockValue = "";
     render(
       <TestWrapper>
@@ -94,6 +94,59 @@ describe(`${DatePicker.name}`, () => {
     const datepicker = screen.getByLabelText("Open datepicker");
     userEvent.click(datepicker);
     const date = screen.getByLabelText("Choose Sunday, September 12th, 2010");
+    userEvent.click(date);
+
+    expect(mockValue).toEqual(MOCK_DESIRED_DATE);
+    jest.useRealTimers();
+  });
+
+  it("allows selecting a datetime from the datepicker", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2010-09-05"));
+    const MOCK_DESIRED_DATETIME = "2010-09-05T12:00:00Z";
+    let mockValue = "";
+    render(
+      <TestWrapper>
+        <DatePicker
+          onChange={(value) => {
+            // necessary for controlled inputs https://github.com/testing-library/user-event/issues/387#issuecomment-819868799
+            mockValue = mockValue + value;
+          }}
+          value={mockValue}
+          withTime
+        />
+      </TestWrapper>
+    );
+
+    const datepicker = screen.getByLabelText("Open datepicker");
+    userEvent.click(datepicker);
+    const date = screen.getByText("12:00 PM");
+    userEvent.click(date);
+
+    expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);
+    jest.useRealTimers();
+  });
+
+  it("allows selecting a datetime with milliseconds from the datepicker", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2010-09-05"));
+    const MOCK_DESIRED_DATETIME = "2010-09-05T12:00:00.000Z";
+    let mockValue = "";
+    render(
+      <TestWrapper>
+        <DatePicker
+          onChange={(value) => {
+            // necessary for controlled inputs https://github.com/testing-library/user-event/issues/387#issuecomment-819868799
+            mockValue = mockValue + value;
+          }}
+          value={mockValue}
+          withTime
+          withMilliseconds
+        />
+      </TestWrapper>
+    );
+
+    const datepicker = screen.getByLabelText("Open datepicker");
+    userEvent.click(datepicker);
+    const date = screen.getByText("12:00 PM");
     userEvent.click(date);
 
     expect(mockValue).toEqual(MOCK_DESIRED_DATETIME);

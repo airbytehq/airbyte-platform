@@ -1,4 +1,4 @@
-import { Connection } from "commands/api/types";
+import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 import { submitButtonClick } from "commands/common";
 import { interceptUpdateConnectionRequest, waitForUpdateConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
@@ -10,7 +10,7 @@ const successResult = "div[data-id='success-result']";
 const resetModalResetCheckbox = "[data-testid='resetModal-reset-checkbox']";
 const saveStreamChangesButton = "button[data-testid='resetModal-save']";
 const schemaChangesDetectedBanner = "[data-testid='schemaChangesDetected']";
-const schemaChangesReviewButton = "[data-testid='schemaChangesReviewButton']";
+const schemaChangesReviewButton = "[data-testid='schemaChangesDetected-button']";
 const schemaChangesBackdrop = "[data-testid='schemaChangesBackdrop']";
 const nonBreakingChangesPreference = "[data-testid='nonBreakingChangesPreference']";
 const nonBreakingChangesPreferenceValue = (value: string) => `div[data-testid='nonBreakingChangesPreference-${value}']`;
@@ -23,7 +23,7 @@ export const checkSchemaChangesDetected = ({ breaking }: { breaking: boolean }) 
   cy.get(schemaChangesDetectedBanner).should("exist");
   cy.get(schemaChangesDetectedBanner)
     .invoke("attr", "class")
-    .should("match", breaking ? /_breaking/ : /nonBreaking/);
+    .should("match", breaking ? /error/ : /warning/);
   cy.get(schemaChangesBackdrop).should(breaking ? "exist" : "not.exist");
 };
 
@@ -50,7 +50,7 @@ export const saveChangesAndHandleResetModal = ({
   return waitForUpdateConnectionRequest().then((interception) => {
     expect(interception.response?.statusCode).to.eq(200, "response status");
     expect(interception.response?.body).to.exist;
-    const connection: Connection = interception.response?.body;
+    const connection: WebBackendConnectionRead = interception.response?.body;
 
     return checkSuccessResult().then(() => connection);
   });
@@ -76,7 +76,7 @@ export const checkNoDiffToast = () => {
 
 export const clickSchemaChangesReviewButton = () => {
   cy.get(schemaChangesReviewButton).click();
-  cy.get(schemaChangesReviewButton).should("be.disabled");
+  cy.get(schemaChangesReviewButton).should("not.exist");
 };
 
 export const selectNonBreakingChangesPreference = (preference: "ignore" | "disable") => {
