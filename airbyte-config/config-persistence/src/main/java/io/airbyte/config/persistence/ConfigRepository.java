@@ -343,6 +343,7 @@ public class ConfigRepository {
             .set(WORKSPACE.DISPLAY_SETUP_WIZARD, workspace.getDisplaySetupWizard())
             .set(WORKSPACE.TOMBSTONE, workspace.getTombstone() != null && workspace.getTombstone())
             .set(WORKSPACE.NOTIFICATIONS, JSONB.valueOf(Jsons.serialize(workspace.getNotifications())))
+            .set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.valueOf(Jsons.serialize(workspace.getNotificationSettings())))
             .set(WORKSPACE.FIRST_SYNC_COMPLETE, workspace.getFirstCompletedSync())
             .set(WORKSPACE.FEEDBACK_COMPLETE, workspace.getFeedbackDone())
             .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(

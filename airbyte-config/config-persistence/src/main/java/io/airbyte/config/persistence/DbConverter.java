@@ -38,6 +38,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
+import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
@@ -165,6 +166,8 @@ public class DbConverter {
         .withDisplaySetupWizard(record.get(WORKSPACE.DISPLAY_SETUP_WIZARD))
         .withTombstone(record.get(WORKSPACE.TOMBSTONE))
         .withNotifications(notificationList)
+        .withNotificationSettings(record.get(WORKSPACE.NOTIFICATION_SETTINGS) == null ? null
+            : Jsons.deserialize(record.get(WORKSPACE.NOTIFICATION_SETTINGS).data(), NotificationSettings.class))
         .withFirstCompletedSync(record.get(WORKSPACE.FIRST_SYNC_COMPLETE))
         .withFeedbackDone(record.get(WORKSPACE.FEEDBACK_COMPLETE))
         .withDefaultGeography(
