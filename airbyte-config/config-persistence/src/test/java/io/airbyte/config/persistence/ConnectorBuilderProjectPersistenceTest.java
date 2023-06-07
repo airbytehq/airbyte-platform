@@ -158,10 +158,11 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   void whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() throws Exception {
     configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
-    configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition()
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
-        .withPublic(false), A_WORKSPACE_ID);
+        .withPublic(false),
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID);
 
     configRepository.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);
@@ -176,10 +177,11 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   void givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() throws Exception {
     configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
-    configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition()
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
-        .withPublic(true), A_WORKSPACE_ID);
+        .withPublic(true),
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID);
 
     configRepository.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);

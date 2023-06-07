@@ -271,17 +271,30 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     sourceDef2.setDockerImageTag(targetImageTag);
     final StandardSourceDefinition sourceDef3 = createBaseSourceDef();
 
-    configRepository.writeStandardSourceDefinition(sourceDef1);
-    configRepository.writeStandardSourceDefinition(sourceDef2);
-    configRepository.writeStandardSourceDefinition(sourceDef3);
+    final ActorDefinitionVersion sourceVer1 = createActorDefinitionFromSourceDef(sourceDef1);
+    final ActorDefinitionVersion sourceVer2 = createActorDefinitionFromSourceDef(sourceDef2);
+    final ActorDefinitionVersion sourceVer3 = createActorDefinitionFromSourceDef(sourceDef3);
+
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef1, sourceVer1);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef2, sourceVer2);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef3, sourceVer3);
 
     final int updatedDefinitions = configRepository
         .updateActorDefinitionsDockerImageTag(List.of(sourceDef1.getSourceDefinitionId(), sourceDef2.getSourceDefinitionId()), targetImageTag);
 
     assertEquals(1, updatedDefinitions);
-    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId()).getDockerImageTag());
-    assertEquals(targetImageTag, configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId()).getDockerImageTag());
-    assertEquals(DOCKER_IMAGE_TAG, configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef1 = configRepository.getStandardSourceDefinition(sourceDef1.getSourceDefinitionId());
+    assertEquals(targetImageTag, newSourceDef1.getDockerImageTag());
+    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef1.getDefaultVersionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef2 = configRepository.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId());
+    assertEquals(targetImageTag, newSourceDef2.getDockerImageTag());
+    assertEquals(targetImageTag, configRepository.getActorDefinitionVersion(newSourceDef2.getDefaultVersionId()).getDockerImageTag());
+
+    final StandardSourceDefinition newSourceDef3 = configRepository.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId());
+    assertEquals(DOCKER_IMAGE_TAG, newSourceDef3.getDockerImageTag());
+    assertEquals(DOCKER_IMAGE_TAG, configRepository.getActorDefinitionVersion(newSourceDef3.getDefaultVersionId()).getDockerImageTag());
   }
 
   @Test
