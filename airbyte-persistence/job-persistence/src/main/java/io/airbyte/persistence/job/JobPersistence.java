@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AttemptFailureSummary;
@@ -15,7 +14,6 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
-import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -29,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 /**
  * General interface methods for persistence to the Jobs database. This database is separate from
@@ -348,21 +345,6 @@ public interface JobPersistence {
    * Set deployment id. If one is already set, the new value is ignored.
    */
   void setDeployment(UUID uuid) throws IOException;
-
-  /**
-   * Export all SQL tables from @param schema into streams of JsonNode objects. This returns a Map of
-   * table schemas to the associated streams of records that is being exported.
-   */
-  Map<JobsDatabaseSchema, Stream<JsonNode>> exportDatabase() throws IOException;
-
-  /**
-   * Import all SQL tables from streams of JsonNode objects.
-   *
-   * @param data is a Map of table schemas to the associated streams of records to import.
-   * @param airbyteVersion is the version of the files to be imported and should match the Airbyte
-   *        version in the Database.
-   */
-  void importDatabase(String airbyteVersion, Map<JobsDatabaseSchema, Stream<JsonNode>> data) throws IOException;
 
   /**
    * Purges job history while ensuring that the latest saved-state information is maintained.
