@@ -5,17 +5,16 @@
 package io.airbyte.workers;
 
 import io.airbyte.config.Configs;
+import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.TolerationPOJO;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
 
 /**
  * Configuration object for a worker.
  */
-@AllArgsConstructor
 public class WorkerConfigs {
 
   private final Configs.WorkerEnvironment workerEnvironment;
@@ -31,6 +30,34 @@ public class WorkerConfigs {
   private final String jobBusyboxImage;
   private final String jobCurlImage;
   private final Map<String, String> envMap;
+
+  public WorkerConfigs(WorkerEnvironment workerEnvironment,
+                       ResourceRequirements resourceRequirements,
+                       List<TolerationPOJO> workerKubeTolerations,
+                       Map<String, String> workerKubeNodeSelectors,
+                       Optional<Map<String, String>> workerIsolatedKubeNodeSelectors,
+                       Map<String, String> workerKubeAnnotations,
+                       List<String> jobImagePullSecrets,
+                       String jobImagePullPolicy,
+                       String sidecarImagePullPolicy,
+                       String jobSocatImage,
+                       String jobBusyboxImage,
+                       String jobCurlImage,
+                       Map<String, String> envMap) {
+    this.workerEnvironment = workerEnvironment;
+    this.resourceRequirements = resourceRequirements;
+    this.workerKubeTolerations = workerKubeTolerations;
+    this.workerKubeNodeSelectors = workerKubeNodeSelectors;
+    this.workerIsolatedKubeNodeSelectors = workerIsolatedKubeNodeSelectors;
+    this.workerKubeAnnotations = workerKubeAnnotations;
+    this.jobImagePullSecrets = jobImagePullSecrets;
+    this.jobImagePullPolicy = jobImagePullPolicy;
+    this.sidecarImagePullPolicy = sidecarImagePullPolicy;
+    this.jobSocatImage = jobSocatImage;
+    this.jobBusyboxImage = jobBusyboxImage;
+    this.jobCurlImage = jobCurlImage;
+    this.envMap = envMap;
+  }
 
   /**
    * Constructs a job-type-agnostic WorkerConfigs. For WorkerConfigs customized for specific

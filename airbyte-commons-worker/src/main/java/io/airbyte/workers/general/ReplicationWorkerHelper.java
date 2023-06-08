@@ -196,7 +196,7 @@ class ReplicationWorkerHelper {
    *
    */
   private void handleStreamStatusFailure() {
-    handleReplicationFailure(AirbyteMessageOrigin.INTERNAL, () -> null);
+    handleReplicationFailure(AirbyteMessageOrigin.INTERNAL, StreamDescriptor::new);
   }
 
   public Optional<AirbyteMessage> processMessageFromSource(final AirbyteMessage airbyteMessage) {

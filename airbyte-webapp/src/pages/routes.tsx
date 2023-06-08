@@ -7,7 +7,7 @@ import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/servi
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useListWorkspaces } from "services/workspaces/WorkspacesService";
+import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 import MainView from "views/layout/MainView";
 
@@ -101,6 +101,9 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
   const workspace = useCurrentWorkspace();
   useAddAnalyticsContextForWorkspace(workspace);
   useApiHealthPoll();
+
+  // invalidate everything in the workspace scope when the workspaceId changes
+  useInvalidateAllWorkspaceScopeOnChange(workspace.workspaceId);
 
   return workspace.initialSetupComplete ? element ?? <MainViewRoutes /> : <PreferencesRoutes />;
 };

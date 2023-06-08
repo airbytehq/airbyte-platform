@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import React from "react";
 
-import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
@@ -15,7 +15,10 @@ interface BuilderProps {
   toggleYamlEditor: () => void;
 }
 
-function getView(selectedView: BuilderView, hasMultipleStreams: boolean) {
+function getView(
+  selectedView: "global" | "inputs" | { streamNum: number; streamId: string },
+  hasMultipleStreams: boolean
+) {
   switch (selectedView) {
     case "global":
       return <GlobalConfigView />;
@@ -23,13 +26,33 @@ function getView(selectedView: BuilderView, hasMultipleStreams: boolean) {
       return <InputsView />;
     default:
       // re-mount on changing stream
-      return <StreamConfigView streamNum={selectedView} key={selectedView} hasMultipleStreams={hasMultipleStreams} />;
+      return (
+        <StreamConfigView
+          streamNum={selectedView.streamNum}
+          key={selectedView.streamId}
+          hasMultipleStreams={hasMultipleStreams}
+        />
+      );
   }
 }
 
 export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams, toggleYamlEditor }) => {
   const { validateAndTouch } = useBuilderErrors();
-  const { selectedView, blockedOnInvalidState } = useConnectorBuilderFormState();
+  const {
+    selectedView: selectedBuilderView,
+    blockedOnInvalidState,
+    builderFormValues,
+  } = useConnectorBuilderFormState();
+  const selectedView = useMemo(
+    () =>
+      selectedBuilderView !== "global" && selectedBuilderView !== "inputs"
+        ? {
+            streamNum: selectedBuilderView,
+            streamId: builderFormValues.streams[selectedBuilderView]?.id ?? selectedBuilderView,
+          }
+        : selectedBuilderView,
+    [builderFormValues.streams, selectedBuilderView]
+  );
 
   useEffect(() => {
     if (blockedOnInvalidState) {

@@ -780,7 +780,11 @@ public class KubePodProcess implements KubePod {
     KubePortManagerSingleton.getInstance().offer(stdoutLocalPort);
     KubePortManagerSingleton.getInstance().offer(stderrLocalPort);
 
-    LOGGER.info(prependPodInfo("Closed all resources for pod", podDefinition.getMetadata().getNamespace(), podDefinition.getMetadata().getName()));
+    if (podDefinition != null) {
+      LOGGER.info(prependPodInfo("Closed all resources for pod", podDefinition.getMetadata().getNamespace(), podDefinition.getMetadata().getName()));
+    } else {
+      LOGGER.error("Unexpected: PodDefinition is null when closing in KubePodProcess. Log an error to help debugging but not blocking the process.");
+    }
   }
 
   private int getReturnCode() {

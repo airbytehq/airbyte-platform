@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
+import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
@@ -114,6 +115,7 @@ public class WorkspacesHandler {
         .withDisplaySetupWizard(displaySetupWizard != null ? displaySetupWizard : false)
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreate.getNotifications()))
+        .withNotificationSettings(NotificationSettingsConverter.toConfig(workspaceCreate.getNotificationSettings()))
         .withDefaultGeography(defaultGeography)
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreate.getWebhookConfigs(), uuidSupplier));
 
@@ -284,6 +286,7 @@ public class WorkspacesHandler {
         .news(workspace.getNews())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class));
     // Add read-only webhook configs.
     if (workspace.getWebhookOperationConfigs() != null) {
@@ -317,6 +320,9 @@ public class WorkspacesHandler {
     }
     if (workspacePatch.getNotifications() != null) {
       workspace.setNotifications(NotificationConverter.toConfigList(workspacePatch.getNotifications()));
+    }
+    if (workspacePatch.getNotificationSettings() != null) {
+      workspace.setNotificationSettings(NotificationSettingsConverter.toConfig(workspacePatch.getNotificationSettings()));
     }
     if (workspacePatch.getDefaultGeography() != null) {
       workspace.setDefaultGeography(ApiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));

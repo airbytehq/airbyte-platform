@@ -44,6 +44,8 @@ properties:
     type: array
     items:
       "$ref": Notification.yaml
+  notificationSettings:
+    "$ref": NotificationSettings.yaml
   firstCompletedSync:
     type: boolean
   feedbackDone:

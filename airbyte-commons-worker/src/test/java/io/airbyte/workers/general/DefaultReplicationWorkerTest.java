@@ -298,7 +298,7 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        null,
+        new StreamDescriptor(),
         replicationContext,
         AirbyteMessageOrigin.INTERNAL);
   }
@@ -330,7 +330,7 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        null,
+        new StreamDescriptor(),
         replicationContext,
         AirbyteMessageOrigin.INTERNAL);
   }
@@ -356,7 +356,7 @@ class DefaultReplicationWorkerTest {
         replicationContext,
         AirbyteMessageOrigin.DESTINATION);
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        null,
+        new StreamDescriptor(),
         replicationContext,
         AirbyteMessageOrigin.INTERNAL);
   }
@@ -388,7 +388,7 @@ class DefaultReplicationWorkerTest {
         AirbyteStreamNameNamespacePair.fromRecordMessage(RECORD_MESSAGE2.getRecord()),
         new ConcurrentHashMap<>());
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
-        null,
+        new StreamDescriptor(),
         replicationContext,
         AirbyteMessageOrigin.INTERNAL);
   }

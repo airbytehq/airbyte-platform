@@ -219,6 +219,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           path={streamFieldPath("incrementalSync.lookback_window")}
           manifestPath="DatetimeBasedCursor.properties.lookback_window"
           options={LARGE_DURATION_OPTIONS}
+          optional
         />
       </BuilderOptional>
     </BuilderCard>

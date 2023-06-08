@@ -1,5 +1,6 @@
 import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
 
+import { NotificationSettings } from "core/request/AirbyteClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useCurrentWorkspace, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
@@ -48,14 +49,47 @@ const useWorkspace = () => {
       ...data,
     });
 
-  const updateWebhook = async (data: WebhookPayload) =>
-    await updateWorkspace({
+  const updateWebhook = async (data: WebhookPayload) => {
+    const updatedNotificationSettings: NotificationSettings = {
+      sendOnSuccess: data.sendOnSuccess
+        ? {
+            notificationType: ["slack"],
+            slackConfiguration: {
+              webhook: data.webhook ?? "",
+            },
+          }
+        : { notificationType: [] },
+
+      sendOnFailure: data.sendOnFailure
+        ? {
+            notificationType: ["slack"],
+            slackConfiguration: {
+              webhook: data.webhook ?? "",
+            },
+          }
+        : { notificationType: [] },
+      sendOnConnectionUpdate: {
+        notificationType: ["customerio"],
+      },
+      sendOnSyncDisabled: {
+        notificationType: ["customerio"],
+      },
+      sendOnSyncDisabledWarning: {
+        notificationType: ["customerio"],
+      },
+      sendOnConnectionUpdateActionRequired: {
+        notificationType: ["customerio"],
+      },
+    };
+
+    return await updateWorkspace({
       workspaceId: workspace.workspaceId,
       initialSetupComplete: workspace.initialSetupComplete,
       displaySetupWizard: workspace.displaySetupWizard,
       anonymousDataCollection: !!workspace.anonymousDataCollection,
       news: !!workspace.news,
       securityUpdates: !!workspace.securityUpdates,
+      notificationSettings: updatedNotificationSettings,
       notifications: [
         {
           notificationType: "slack",
@@ -67,6 +101,7 @@ const useWorkspace = () => {
         },
       ],
     });
+  };
 
   return {
     setInitialSetupConfig,
