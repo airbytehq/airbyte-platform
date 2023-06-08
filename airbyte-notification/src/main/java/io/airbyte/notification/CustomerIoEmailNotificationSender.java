@@ -71,8 +71,8 @@ public class CustomerIoEmailNotificationSender implements NotificationSender<Cus
                                                 final String inviterUserName,
                                                 final String workspaceName,
                                                 final String inviteUrl) {
-    final String custumerIoPayload = renderTemplate(INVITATION_EXISTING_USER_TEMPLATE,
-        INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID,
+    final String custumerIoPayload = renderTemplate(INVITATION_NEW_USER_TEMPLATE,
+        INVITATION_NEW_USER_TRANSACTION_MESSAGE_ID,
         /* to_email= */config.getTo(),
         /* identifier_email= */ config.getTo(),
         /* name= */inviterUserName,
