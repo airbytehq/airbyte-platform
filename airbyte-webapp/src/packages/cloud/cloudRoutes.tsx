@@ -5,7 +5,6 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
-import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -129,8 +128,6 @@ export const Routing: React.FC = () => {
   const { user, inited, providers, hasCorporateEmail, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname } = useLocation();
-
-  useBuildUpdateCheck();
 
   // invalidate everything in the workspace scope when the workspaceId changes
   useInvalidateAllWorkspaceScopeOnChange(workspaceId);
