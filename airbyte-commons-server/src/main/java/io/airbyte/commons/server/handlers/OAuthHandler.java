@@ -47,7 +47,6 @@ import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
 import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionWorkspaces.AllowOAuthOverrideCredentials;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisabled;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.SourceDefinition;
@@ -611,9 +610,8 @@ public class OAuthHandler {
   @VisibleForTesting
   JsonNode getSourceOAuthParamConfig(final UUID workspaceId, final UUID sourceDefinitionId) throws IOException, ConfigNotFoundException {
     try {
-      final boolean throwIfOverridePresent = !featureFlagClient.boolVariation(AllowOAuthOverrideCredentials.INSTANCE, new Workspace(workspaceId));
       final Optional<SourceOAuthParameter> param = MoreOAuthParameters.getSourceOAuthParameter(
-          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, throwIfOverridePresent);
+          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId);
 
       if (param.isPresent()) {
         // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
@@ -635,9 +633,8 @@ public class OAuthHandler {
   JsonNode getDestinationOAuthParamConfig(final UUID workspaceId, final UUID destinationDefinitionId)
       throws IOException, ConfigNotFoundException {
     try {
-      final boolean throwIfOverridePresent = !featureFlagClient.boolVariation(AllowOAuthOverrideCredentials.INSTANCE, new Workspace(workspaceId));
       final Optional<DestinationOAuthParameter> param = MoreOAuthParameters.getDestinationOAuthParameter(
-          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId, throwIfOverridePresent);
+          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId);
       if (param.isPresent()) {
         // TODO: if we write a migration to flatten persisted configs in db, we don't need to flatten
         // here see https://github.com/airbytehq/airbyte/issues/7624

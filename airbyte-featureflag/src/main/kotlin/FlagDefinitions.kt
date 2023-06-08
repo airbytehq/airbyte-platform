@@ -92,7 +92,5 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
 
   object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
 
-  object AllowOAuthOverrideCredentials : Temporary<Boolean>(key = "allow-oauth-override-credentials", default = false)
-
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 }
