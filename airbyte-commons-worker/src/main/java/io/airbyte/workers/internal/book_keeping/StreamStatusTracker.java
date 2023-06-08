@@ -364,6 +364,10 @@ public class StreamStatusTracker {
                                         final Optional streamStatusIncompleteRunCause) {
     try {
       for (final Map.Entry<StreamStatusKey, CurrentStreamStatus> e : currentStreamStatuses.entrySet()) {
+        LOGGER.info("Attempting to force stream {}:{} with current status {} to status {} (id = {}, context = {})...",
+            e.getKey().streamNamespace(), e.getKey().streamName(), e.getValue().getCurrentStatus(), streamStatusRunState,
+            e.getValue().getStatusId(), replicationContext);
+
         /*
          * If the current stream is terminated, that means it is already in an incomplete or fully complete
          * state. If that is the case, there is nothing to do. Otherwise, force the stream to the provided
@@ -380,12 +384,20 @@ public class StreamStatusTracker {
         }
       }
 
+      LOGGER.info("The forcing of status to {} for all streams in connection {} is complete (context = {}).",
+          streamStatusRunState, replicationContext.connectionId(), replicationContext);
+
       // Remove all streams from the tracking map associated with the connection ID after the force update
       final Set<StreamStatusKey> toBeRemoved =
           currentStreamStatuses.keySet().stream().filter(e -> matchesReplicationContext(e, replicationContext)).collect(Collectors.toSet());
-      toBeRemoved.forEach(r -> currentStreamStatuses.remove(r));
+      toBeRemoved.forEach(r -> {
+        LOGGER.info("Removing stream {} from the status tracking cache...", r);
+        currentStreamStatuses.remove(r);
+        LOGGER.info("stream {} removed from the status tracking cache.", r);
+      });
     } catch (final Exception ex) {
-      LOGGER.error("Unable to force streams for connection {} to status {}.", replicationContext.connectionId(), streamStatusRunState, ex);
+      LOGGER.error("Unable to force streams for connection {} to status {} (context = {}).", replicationContext.connectionId(),
+          streamStatusRunState, replicationContext, ex);
     }
   }
 
