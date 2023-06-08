@@ -67,6 +67,8 @@ public final class DatabaseConstants {
 
   public static final String PERMISSION_TABLE = "permission";
 
+  public static final String WORKSPACE_TABLE = "workspace";
+
   /**
    * Private constructor to prevent instantiation.
    */
