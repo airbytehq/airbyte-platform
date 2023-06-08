@@ -80,6 +80,14 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "activity_webhook_operation",
       "increments when we start a webhook operation activity"),
 
+  ATTEMPTS_CREATED(
+      MetricEmittingApps.WORKER,
+      "attempt_created",
+      "increments when a new attempt is created. one is emitted per attempt"),
+  ATTEMPTS_COMPLETED(
+      MetricEmittingApps.WORKER,
+      "attempt_completed",
+      "increments when a new attempt is completed. one is emitted per attempt"),
   ATTEMPT_CREATED_BY_RELEASE_STAGE(
       MetricEmittingApps.WORKER,
       "attempt_created_by_release_stage",
@@ -101,6 +109,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.SERVER,
       "authentication_request",
       "increments when an authentication request is attempted."),
+  BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
+      "breaking_change_detected",
+      "a breaking schema change has been detected"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -129,7 +140,13 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "kube_pod_process_create_time_millisecs",
       "time taken to create a new kube pod process"),
+  INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
+      "inconsistent_activity_input",
+      "whenever we detect a mismatch between the input and the actual config"),
 
+  MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
+      "missing_apply_schema_change_input",
+      "one expected value for applying the schema change is missing"),
   NORMALIZATION_IN_DESTINATION_CONTAINER(
       MetricEmittingApps.WORKER,
       "normalization_in_destination_container",
@@ -146,6 +163,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.METRICS_REPORTER,
       "num_active_conn_per_workspace",
       "number of active connections per workspace"),
+  NON_BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
+      "non_breaking_change_detected",
+      "a non breaking schema change has been detected"),
   NUM_PENDING_JOBS(
       MetricEmittingApps.METRICS_REPORTER,
       "num_pending_jobs",
@@ -182,25 +202,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "overall_job_runtime_in_last_hour_by_terminal_state_secs",
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. "
           + "tagged by terminal states."),
-  SOURCE_HEARTBEAT_FAILURE(MetricEmittingApps.ORCHESTRATOR,
-      "source_hearbeat_failure",
-      "Fail a replication because the source missed an heartbeat"),
-  SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
-      "source_time_since_last_heartbeat_millis",
-      "Time since last heartbeat (message from a source) for a connection."),
-  STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
-      "state_timestamp_metric_tracker_error",
-      "number of syncs where the state timestamp metric tracker ran out of memory or "
-          + "was unable to match destination state message to source state message"),
-  TEMPORAL_WORKFLOW_ATTEMPT(MetricEmittingApps.WORKER,
-      "temporal_workflow_attempt",
-      "count of the number of workflow attempts"),
-  TEMPORAL_WORKFLOW_SUCCESS(MetricEmittingApps.WORKER,
-      "temporal_workflow_success",
-      "count of the number of successful workflow syncs."),
-  TEMPORAL_WORKFLOW_FAILURE(MetricEmittingApps.WORKER,
-      "temporal_workflow_failure",
-      "count of the number of workflow failures"),
   REPLICATION_BYTES_SYNCED(MetricEmittingApps.WORKER,
       "replication_bytes_synced",
       "number of bytes synced during replication"),
@@ -210,6 +211,12 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),
+  SOURCE_HEARTBEAT_FAILURE(MetricEmittingApps.ORCHESTRATOR,
+      "source_hearbeat_failure",
+      "Fail a replication because the source missed an heartbeat"),
+  SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
+      "source_time_since_last_heartbeat_millis",
+      "Time since last heartbeat (message from a source) for a connection."),
   STATE_BUFFERING(MetricEmittingApps.WORKER,
       "state_buffering",
       "number of state messages being buffered before a flush"),
@@ -228,7 +235,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATE_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
       "state_commit_close_successful",
       "number of final to connection exiting with the a successful final state flush"),
-
   STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "stats_commit_attempt",
       "number of attempts to commit stats from the orchestrator/workers"),
@@ -236,7 +242,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "stats_commit_attempt_failed",
       "number of failed attempts to commit stats from the orchestrator/workers"),
-
+  @Deprecated
+  // To be deleted along with PersistStateActivity
+  STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
+      "state_commit_attempt_from_persist_state",
+      "number of attempts to commit states from the PersistState activity"),
   STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_attempt_successful",
       "number of successful attempts to commit stats from the orchestrator/workers"),
@@ -247,43 +257,25 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_close_successful",
       "number of final to connection exiting with the a successful final stats flush"),
+  STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
+      "state_timestamp_metric_tracker_error",
+      "number of syncs where the state timestamp metric tracker ran out of memory or "
+          + "was unable to match destination state message to source state message"),
   STREAM_STATS_WRITE_NUM_QUERIES(MetricEmittingApps.WORKER,
       "stream_stats_write_num_queries",
       "number of separate queries to update the stream stats table"),
-  @Deprecated
-  // To be deleted along with PersistStateActivity
-  STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
-      "state_commit_attempt_from_persist_state",
-      "number of attempts to commit states from the PersistState activity"),
-
-  ATTEMPTS_CREATED(
-      MetricEmittingApps.WORKER,
-      "attempt_created",
-      "increments when a new attempt is created. one is emitted per attempt"),
-  ATTEMPTS_COMPLETED(
-      MetricEmittingApps.WORKER,
-      "attempt_completed",
-      "increments when a new attempt is completed. one is emitted per attempt"),
-
-  BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
-      "breaking_change_detected",
-      "a breaking schema change has been detected"),
-
-  NON_BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
-      "non_breaking_change_detected",
-      "a non breaking schema change has been detected"),
-
+  TEMPORAL_WORKFLOW_ATTEMPT(MetricEmittingApps.WORKER,
+      "temporal_workflow_attempt",
+      "count of the number of workflow attempts"),
+  TEMPORAL_WORKFLOW_SUCCESS(MetricEmittingApps.WORKER,
+      "temporal_workflow_success",
+      "count of the number of successful workflow syncs."),
+  TEMPORAL_WORKFLOW_FAILURE(MetricEmittingApps.WORKER,
+      "temporal_workflow_failure",
+      "count of the number of workflow failures"),
   SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
       "schema_change_auto_propagated",
-      "a schema change have been propagated"),
-
-  INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
-      "inconsistent_activity_input",
-      "whenever we detect a mismatch between the input and the actual config"),
-
-  MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
-      "missing_apply_schema_change_input",
-      "one expected value for applying the schema change is missing");
+      "a schema change have been propagated");
 
   private final MetricEmittingApp application;
   private final String metricName;
