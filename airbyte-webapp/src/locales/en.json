@@ -191,6 +191,8 @@
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Propagate all changes",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
   "connectionForm.jobHistory": "Job History",
+  "connectionForm.update.success": "Connection update succeeded",
+  "connectionForm.update.failed": "Connection update failed",
 
   "connectionForm.modal.destinationNamespace.title": "Destination namespace",
   "connectionForm.modal.destinationNamespace.option.source": "Mirror source structure",
