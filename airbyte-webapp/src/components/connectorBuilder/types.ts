@@ -575,11 +575,7 @@ export const builderFormValidationSchema = yup.object().shape({
             }),
             strategy: yup
               .object({
-                page_size: yup.mixed().when("type", {
-                  is: (val: string) => ([OFFSET_INCREMENT, PAGE_INCREMENT] as string[]).includes(val),
-                  then: yupNumberOrEmptyString.required("form.empty.error"),
-                  otherwise: yupNumberOrEmptyString,
-                }),
+                page_size: yupNumberOrEmptyString,
                 cursor: yup.mixed().when("type", {
                   is: CURSOR_PAGINATION,
                   then: yup.object().shape({

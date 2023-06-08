@@ -76,8 +76,9 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   type="number"
                   manifestPath="OffsetIncrement.properties.page_size"
                   path={streamFieldPath("paginator.strategy.page_size")}
+                  optional
                 />
-                <PageSizeOption label="limit" streamFieldPath={streamFieldPath} />
+                {pageSize ? <PageSizeOption label="limit" streamFieldPath={streamFieldPath} /> : null}
                 <PageTokenOption label="offset" streamFieldPath={streamFieldPath} />
               </>
             ),
@@ -95,6 +96,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   type="number"
                   path={streamFieldPath("paginator.strategy.page_size")}
                   manifestPath="PageIncrement.properties.page_size"
+                  optional
                 />
                 <BuilderField
                   type="number"
@@ -102,7 +104,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
                   manifestPath="PageIncrement.properties.start_from_page"
                   optional
                 />
-                <PageSizeOption label="page size" streamFieldPath={streamFieldPath} />
+                {pageSize ? <PageSizeOption label="page size" streamFieldPath={streamFieldPath} /> : null}
                 <PageTokenOption label="page number" streamFieldPath={streamFieldPath} />
               </>
             ),
