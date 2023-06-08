@@ -91,7 +91,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         class="<removed-for-snapshot-test>"
                         data-type="text"
                       >
-                        Non-breaking schema updates detected
+                        Detect and propagate schema changes
                         :
                       </p>
                       <p

@@ -95,7 +95,7 @@ const NonBreakingChanges: React.FC<{
   const {
     values: { nonBreakingChangesPreference },
   } = useFormikContext<FormikConnectionFormValues>();
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
+  const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
   const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
   const labelKey = autoPropagationEnabled
     ? "connectionForm.nonBreakingChangesPreference.autopropagation.label"
