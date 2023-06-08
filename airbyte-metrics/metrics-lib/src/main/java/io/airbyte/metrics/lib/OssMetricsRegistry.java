@@ -5,8 +5,6 @@
 package io.airbyte.metrics.lib;
 
 import com.google.api.client.util.Preconditions;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Enum source of truth of all Airbyte metrics. Each enum value represent a metric and is linked to
@@ -135,13 +133,11 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   NORMALIZATION_IN_DESTINATION_CONTAINER(
       MetricEmittingApps.WORKER,
       "normalization_in_destination_container",
-      "increments when normalization is run in the destination container",
-      MetricTags.CONNECTION_ID),
+      "increments when normalization is run in the destination container"),
   NORMALIZATION_IN_NORMALIZATION_CONTAINER(
       MetricEmittingApps.WORKER,
       "normalization_in_normalization_container",
-      "increments when normalization is run in the normalization container",
-      MetricTags.CONNECTION_ID),
+      "increments when normalization is run in the normalization container"),
   NUM_ABNORMAL_SCHEDULED_SYNCS_IN_LAST_DAY(
       MetricEmittingApps.METRICS_REPORTER,
       "num_abnormal_scheduled_syncs_last_day",
@@ -188,12 +184,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
           + "tagged by terminal states."),
   SOURCE_HEARTBEAT_FAILURE(MetricEmittingApps.ORCHESTRATOR,
       "source_hearbeat_failure",
-      "Fail a replication because the source missed an heartbeat",
-      MetricTags.CONNECTION_ID),
+      "Fail a replication because the source missed an heartbeat"),
   SOURCE_TIME_SINCE_LAST_HEARTBEAT_MILLIS(MetricEmittingApps.ORCHESTRATOR,
       "source_time_since_last_heartbeat_millis",
-      "Time since last heartbeat (message from a source) for a connection.",
-      MetricTags.CONNECTION_ID),
+      "Time since last heartbeat (message from a source) for a connection."),
   STATE_METRIC_TRACKER_ERROR(MetricEmittingApps.WORKER,
       "state_timestamp_metric_tracker_error",
       "number of syncs where the state timestamp metric tracker ran out of memory or "
@@ -218,52 +212,41 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "number of requested resets"),
   STATE_BUFFERING(MetricEmittingApps.WORKER,
       "state_buffering",
-      "number of state messages being buffered before a flush",
-      MetricTags.GEOGRAPHY),
+      "number of state messages being buffered before a flush"),
   STATE_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "state_commit_attempt",
-      "number of attempts to commit states from the orchestrator/workers",
-      MetricTags.GEOGRAPHY),
+      "number of attempts to commit states from the orchestrator/workers"),
   STATE_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "state_commit_attempt_failed",
-      "number of failed attempts to commit states from the orchestrator/workers",
-      MetricTags.GEOGRAPHY),
+      "number of failed attempts to commit states from the orchestrator/workers"),
   STATE_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "state_commit_attempt_successful",
-      "number of successful attempts to commit states from the orchestrator/workers",
-      MetricTags.GEOGRAPHY),
+      "number of successful attempts to commit states from the orchestrator/workers"),
   STATE_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
       "state_commit_not_attempted",
-      "number of attempts to commit states dropped due to an early termination",
-      MetricTags.GEOGRAPHY),
+      "number of attempts to commit states dropped due to an early termination"),
   STATE_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
       "state_commit_close_successful",
-      "number of final to connection exiting with the a successful final state flush",
-      MetricTags.GEOGRAPHY),
+      "number of final to connection exiting with the a successful final state flush"),
 
   STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "stats_commit_attempt",
-      "number of attempts to commit stats from the orchestrator/workers",
-      MetricTags.GEOGRAPHY),
+      "number of attempts to commit stats from the orchestrator/workers"),
 
   STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "stats_commit_attempt_failed",
-      "number of failed attempts to commit stats from the orchestrator/workers",
-      MetricTags.GEOGRAPHY),
+      "number of failed attempts to commit stats from the orchestrator/workers"),
 
   STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_attempt_successful",
-      "number of successful attempts to commit stats from the orchestrator/workers",
-      MetricTags.GEOGRAPHY),
+      "number of successful attempts to commit stats from the orchestrator/workers"),
 
   STATS_COMMIT_NOT_ATTEMPTED(MetricEmittingApps.WORKER,
       "stats_commit_not_attempted",
-      "number of attempts to commit stats dropped due to an early termination",
-      MetricTags.GEOGRAPHY),
+      "number of attempts to commit stats dropped due to an early termination"),
   STATS_COMMIT_CLOSE_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_close_successful",
-      "number of final to connection exiting with the a successful final stats flush",
-      MetricTags.GEOGRAPHY),
+      "number of final to connection exiting with the a successful final stats flush"),
   STREAM_STATS_WRITE_NUM_QUERIES(MetricEmittingApps.WORKER,
       "stream_stats_write_num_queries",
       "number of separate queries to update the stream stats table"),
@@ -271,44 +254,28 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   // To be deleted along with PersistStateActivity
   STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
       "state_commit_attempt_from_persist_state",
-      "number of attempts to commit states from the PersistState activity",
-      MetricTags.GEOGRAPHY),
+      "number of attempts to commit states from the PersistState activity"),
 
   ATTEMPTS_CREATED(
       MetricEmittingApps.WORKER,
       "attempt_created",
-      "increments when a new attempt is created. one is emitted per attempt",
-      MetricTags.GEOGRAPHY,
-      MetricTags.ATTEMPT_NUMBER,
-      MetricTags.MIN_CONNECTOR_RELEASE_STATE,
-      MetricTags.MAX_CONNECTOR_RELEASE_STATE),
+      "increments when a new attempt is created. one is emitted per attempt"),
   ATTEMPTS_COMPLETED(
       MetricEmittingApps.WORKER,
       "attempt_completed",
-      "increments when a new attempt is completed. one is emitted per attempt",
-      MetricTags.GEOGRAPHY,
-      MetricTags.ATTEMPT_NUMBER,
-      MetricTags.MIN_CONNECTOR_RELEASE_STATE,
-      MetricTags.MAX_CONNECTOR_RELEASE_STATE,
-      MetricTags.ATTEMPT_QUEUE,
-      MetricTags.ATTEMPT_OUTCOME,
-      MetricTags.FAILURE_ORIGIN, // only includes the first failure origin
-      MetricTags.FAILURE_TYPE), // only includes the first failure type
+      "increments when a new attempt is completed. one is emitted per attempt"),
 
   BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "breaking_change_detected",
-      "a breaking schema change has been detected",
-      MetricTags.CONNECTION_ID),
+      "a breaking schema change has been detected"),
 
   NON_BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "non_breaking_change_detected",
-      "a non breaking schema change has been detected",
-      MetricTags.CONNECTION_ID),
+      "a non breaking schema change has been detected"),
 
   SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
       "schema_change_auto_propagated",
-      "a schema change have been propagated",
-      MetricTags.CONNECTION_ID),
+      "a schema change have been propagated"),
 
   INCONSISTENT_ACTIVITY_INPUT(MetricEmittingApps.WORKER,
       "inconsistent_activity_input",
@@ -316,28 +283,21 @@ public enum OssMetricsRegistry implements MetricsRegistry {
 
   MISSING_APPLY_SCHEMA_CHANGE_INPUT(MetricEmittingApps.SERVER,
       "missing_apply_schema_change_input",
-      "one expected value for applying the schema change is missing",
-      MetricTags.SOURCE_ID);
+      "one expected value for applying the schema change is missing");
 
   private final MetricEmittingApp application;
   private final String metricName;
   private final String metricDescription;
 
-  // added this field to declare metric attributes, but we never read them.
-  @SuppressWarnings("FieldCanBeLocal")
-  private final List<String> metricTags;
-
   OssMetricsRegistry(final MetricEmittingApp application,
                      final String metricName,
-                     final String metricDescription,
-                     final String... metricTags) {
+                     final String metricDescription) {
     Preconditions.checkNotNull(metricDescription);
     Preconditions.checkNotNull(application);
 
     this.application = application;
     this.metricName = metricName;
     this.metricDescription = metricDescription;
-    this.metricTags = Arrays.asList(metricTags);
   }
 
   @Override
