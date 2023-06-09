@@ -239,7 +239,7 @@ export const ConnectionReplicationPage: React.FC = () => {
                     <EditControls
                       hidden={!status.editControlsVisible}
                       isSubmitting={isSubmitting}
-                      submitDisabled={!isValid}
+                      submitDisabled={!isValid || mode === "readonly"}
                       dirty={dirty}
                       resetForm={async () => {
                         resetForm();

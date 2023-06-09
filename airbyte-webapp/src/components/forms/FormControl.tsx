@@ -49,6 +49,7 @@ interface ControlBaseProps<T extends FormValues> {
   hasError?: boolean;
   controlId?: string;
   inline?: boolean;
+  disabled?: boolean;
 }
 
 /**
