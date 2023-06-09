@@ -2,9 +2,10 @@ upstream api-server {
     server $INTERNAL_API_HOST;
 }
 
-upstream connector-builder-server {
-   server $CONNECTOR_BUILDER_API_HOST;
-}
+# FIXME when you disable connector-builder-server then this should be removed.
+#upstream connector-builder-server {
+#   server $CONNECTOR_BUILDER_API_HOST;
+#}
 
 server {
     listen       80;
