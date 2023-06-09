@@ -18,10 +18,9 @@ import { useConnectionEditService } from "hooks/services/ConnectionEdit/Connecti
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
 import { isConnectionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionTitleBlock.module.scss";
-import { ConnectionRoutePaths } from "../types";
 
 interface ConnectorBlockProps {
   name: string;

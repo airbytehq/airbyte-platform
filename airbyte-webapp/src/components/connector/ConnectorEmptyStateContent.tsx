@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
+import { createSearchParams, useNavigate } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { useConnectorSpecificationMap } from "components/connection/ConnectionOnboarding/ConnectionOnboarding";
@@ -10,11 +11,14 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
+import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
+
 import styles from "./ConnectorEmptyStateContent.module.scss";
 
 interface ConnectorEmptyStateContentProps {
-  onButtonClick: React.ComponentProps<typeof Button>["onClick"];
   connectorType: "source" | "destination";
+  connectorId: string;
   icon?: string;
   connectorName: string;
 }
@@ -32,11 +36,24 @@ const EmptyCard = () => {
 };
 export const ConnectorEmptyStateContent: React.FC<ConnectorEmptyStateContentProps> = ({
   icon,
-  onButtonClick,
+  connectorId,
   connectorType,
   connectorName,
 }) => {
   const { sourceDefinitions, destinationDefinitions } = useConnectorSpecificationMap();
+  const navigate = useNavigate();
+  const { workspaceId } = useCurrentWorkspace();
+
+  const onButtonClick = () => {
+    const basePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
+
+    const searchParams =
+      connectorType === "source"
+        ? createSearchParams({ sourceId: connectorId })
+        : createSearchParams({ destinationId: connectorId });
+
+    navigate({ pathname: basePath, search: `?${searchParams}` });
+  };
 
   const roundConnectorCount = (): number => {
     if (connectorType === "source") {

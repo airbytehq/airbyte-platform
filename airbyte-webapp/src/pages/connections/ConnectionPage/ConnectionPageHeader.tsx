@@ -11,9 +11,9 @@ import { LinkTab } from "components/ui/Tabs/LinkTab";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
-import { ConnectionRoutePaths } from "../types";
 
 export const ConnectionPageHeader = () => {
   const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);

@@ -30,6 +30,7 @@ const TableItemTitle: React.FC<TableItemTitleProps> = ({ type, dropdownOptions, 
             {
               as: "button",
               className: styles.primary,
+              value: "create-new-item",
               displayName: formatMessage({
                 id: `tables.${type}AddNew`,
               }),
