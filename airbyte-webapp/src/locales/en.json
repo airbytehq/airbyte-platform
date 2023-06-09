@@ -943,6 +943,7 @@
   "connectorBuilder.createPage.tutorialPrompt": "Check out the tutorial",
   "connectorBuilder.incompatibleChanges": "Some parts of the declared schema are incompatible with the returned records. These can cause syncs to fail. Please address the following issues:",
   "connectorBuilder.streamTooltip": "A stream defines how requests are made to a single API endpoint to fetch data, and how that data gets translated into records.",
+  "connectorBuilder.errorHandlerWarning": "To keep testing times short, <b>retries are disabled in the connector builder</b>. If you want to test retries, please publish your connector and test it in a connection.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
