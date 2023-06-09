@@ -39,7 +39,7 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
   manifestOptionPaths,
   onSelect,
 }) => {
-  const { setValue, clearErrors } = useFormContext();
+  const { setValue, unregister } = useFormContext();
   const { field } = useController({ name: `${path}.type` });
 
   const selectedOption = options.find((option) => option.typeValue === field.value);
@@ -54,8 +54,6 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
 
   return (
     <GroupControls
-      /* Make sure the sub-form re-renders when switching  */
-      key={field.value}
       label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
       control={
         <DropDown
@@ -73,8 +71,7 @@ export const BuilderOneOf: React.FC<BuilderOneOfProps> = ({
               type: selectedOption.value,
               ...selectedOption.default,
             });
-            // clear errors at the path so that the fields for the newly selected option are treated as "fresh"
-            clearErrors(path);
+            unregister(path, { keepValue: true });
 
             onSelect?.(selectedOption.value);
           }}

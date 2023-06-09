@@ -104,7 +104,7 @@ const handleScrollToField = (
   }
 };
 
-export const BuilderField: React.FC<BuilderFieldProps> = ({
+const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   path,
   optional = false,
   readOnly,
@@ -265,3 +265,5 @@ export const BuilderField: React.FC<BuilderFieldProps> = ({
     </ControlLabels>
   );
 };
+
+export const BuilderField: React.FC<BuilderFieldProps> = (props) => <InnerBuilderField {...props} key={props.path} />;
