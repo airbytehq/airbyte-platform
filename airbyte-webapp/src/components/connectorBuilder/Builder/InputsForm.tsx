@@ -217,7 +217,13 @@ const InputModal = ({
       }
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form
+        onSubmit={(e) => {
+          // stop propagation to avoid submitting the outer form as this form is nested
+          e.stopPropagation();
+          handleSubmit(onSubmit)(e);
+        }}
+      >
         <ModalBody className={styles.inputFormBody}>
           <BuilderField
             path="definition.title"
