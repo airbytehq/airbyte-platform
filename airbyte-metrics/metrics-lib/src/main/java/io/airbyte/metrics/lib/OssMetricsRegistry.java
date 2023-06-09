@@ -112,6 +112,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "breaking_change_detected",
       "a breaking schema change has been detected"),
+  CRON_JOB_RUN_BY_CRON_TYPE(MetricEmittingApps.CRON,
+      "cron_jobs_run",
+      "number of cron runs by cron type"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -238,7 +241,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "stats_commit_attempt",
       "number of attempts to commit stats from the orchestrator/workers"),
-
   STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "stats_commit_attempt_failed",
       "number of failed attempts to commit stats from the orchestrator/workers"),
@@ -275,7 +277,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "count of the number of workflow failures"),
   SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
       "schema_change_auto_propagated",
-      "a schema change have been propagated");
+      "a schema change have been propagated"),
+  WORKFLOWS_HEALED(MetricEmittingApps.CRON,
+      "workflows_healed",
+      "number of workflow the self healing cron healed");
 
   private final MetricEmittingApp application;
   private final String metricName;

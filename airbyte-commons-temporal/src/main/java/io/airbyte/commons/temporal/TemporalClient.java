@@ -98,17 +98,19 @@ public class TemporalClient {
    * Restart workflows stuck in a certain status.
    *
    * @param executionStatus execution status
+   * @return set of connection ids that were restarted, primarily used for tracking purposes
    */
-  public void restartClosedWorkflowByStatus(final WorkflowExecutionStatus executionStatus) {
+  public int restartClosedWorkflowByStatus(final WorkflowExecutionStatus executionStatus) {
     final Set<UUID> workflowExecutionInfos = fetchClosedWorkflowsByStatus(executionStatus);
 
     final Set<UUID> nonRunningWorkflow = filterOutRunningWorkspaceId(workflowExecutionInfos);
-
     nonRunningWorkflow.forEach(connectionId -> {
-      connectionManagerUtils.safeTerminateWorkflow(client, connectionId, "Terminating workflow in "
-          + "unreachable state before starting a new workflow for this connection");
+      connectionManagerUtils.safeTerminateWorkflow(client, connectionId,
+          "Terminating workflow in unreachable state before starting a new workflow for this connection");
       connectionManagerUtils.startConnectionManagerNoSignal(client, connectionId);
     });
+
+    return nonRunningWorkflow.size();
   }
 
   Set<UUID> fetchClosedWorkflowsByStatus(final WorkflowExecutionStatus executionStatus) {
