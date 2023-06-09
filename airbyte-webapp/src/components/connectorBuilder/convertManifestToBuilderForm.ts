@@ -109,6 +109,7 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "scopes",
   "token_expiry_date",
   "token_expiry_date_format",
+  "inject_into",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -575,6 +576,15 @@ function manifestAuthenticatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "uses a SessionTokenAuthenticator");
   } else if (manifestAuthenticator.type === "SingleUseRefreshTokenOAuthAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a SingleUseRefreshTokenOAuthAuthenticator");
+  } else if (manifestAuthenticator.type === "ApiKeyAuthenticator") {
+    builderAuthenticator = {
+      ...manifestAuthenticator,
+      inject_into: manifestAuthenticator.inject_into ?? {
+        type: "RequestOption",
+        field_name: manifestAuthenticator.header || "",
+        inject_into: "header",
+      },
+    };
   } else if (manifestAuthenticator.type === "OAuthAuthenticator") {
     if (
       Object.values(manifestAuthenticator.refresh_request_body ?? {}).filter((value) => typeof value !== "string")

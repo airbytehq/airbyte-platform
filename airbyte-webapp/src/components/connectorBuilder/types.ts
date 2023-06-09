@@ -513,9 +513,9 @@ export const builderFormValidationSchema = yup.object().shape({
     connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
     urlBase: yup.string().required("form.empty.error"),
     authenticator: yup.object({
-      header: yup.mixed().when("type", {
+      inject_into: yup.mixed().when("type", {
         is: (type: string) => type === API_KEY_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
+        then: nonPathRequestOptionSchema,
         otherwise: (schema) => schema.strip(),
       }),
       token_refresh_endpoint: yup.mixed().when("type", {
@@ -754,6 +754,12 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
           ? undefined
           : globalSettings.authenticator.refresh_token,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
+    };
+  }
+  if (globalSettings.authenticator.type === "ApiKeyAuthenticator") {
+    return {
+      ...globalSettings.authenticator,
+      header: undefined,
     };
   }
   return globalSettings.authenticator as HttpRequesterAuthenticator;
