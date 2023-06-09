@@ -24,6 +24,14 @@ export const useListJobs = (listParams: JobListRequestBody, keepPreviousData = t
   return { jobs: jobReadList.jobs, totalJobCount: jobReadList.totalJobCount, isPreviousData: result.isPreviousData };
 };
 
+// A disabled useQuery that can be called manually to download job logs
+export const useGetDebugInfoJobManual = (id: number) => {
+  const requestOptions = useRequestOptions();
+  return useQuery([SCOPE_WORKSPACE, "jobs", "getDebugInfo", id], () => getJobDebugInfo({ id }, requestOptions), {
+    enabled: false,
+  });
+};
+
 export const useGetDebugInfoJob = (id: number, enabled = true, refetchWhileRunning = false) => {
   const requestOptions = useRequestOptions();
 

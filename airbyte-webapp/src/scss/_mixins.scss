@@ -18,6 +18,10 @@
   box-shadow: variables.$box-shadow-right;
 }
 
+@mixin shadow-inset {
+  box-shadow: variables.$box-shadow-inset;
+}
+
 $bar-width: 20px;
 $gap-width: 18px;
 $stripes-width: 83px;

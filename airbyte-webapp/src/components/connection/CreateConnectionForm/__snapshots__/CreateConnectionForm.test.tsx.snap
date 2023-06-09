@@ -426,7 +426,7 @@ exports[`CreateConnectionForm should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Non-breaking schema updates detected
+                          Detect and propagate schema changes
                           <span
                             class="<removed-for-snapshot-test>"
                           >
@@ -741,6 +741,16 @@ exports[`CreateConnectionForm should render 1`] = `
                           class="<removed-for-snapshot-test>"
                           data-type="text"
                         >
+                          Fields
+                        </p>
+                      </div>
+                      <div
+                        class="<removed-for-snapshot-test>"
+                      >
+                        <p
+                          class="<removed-for-snapshot-test>"
+                          data-type="text"
+                        >
                           Namespace
                           <span
                             class="<removed-for-snapshot-test>"
@@ -1001,6 +1011,26 @@ exports[`CreateConnectionForm should render 1`] = `
                     </div>
                     <div
                       class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="field-selection-status"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-testid="field-selection-status-selected-count"
+                            data-type="text"
+                          >
+                            All
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="<removed-for-snapshot-test>"
                       data-testid="source-namespace-cell"
                     >
                       <span
@@ -1182,6 +1212,26 @@ exports[`CreateConnectionForm should render 1`] = `
                     </div>
                     <div
                       class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="field-selection-status"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-testid="field-selection-status-selected-count"
+                            data-type="text"
+                          >
+                            All
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="<removed-for-snapshot-test>"
                       data-testid="source-namespace-cell"
                     >
                       <span
@@ -1359,6 +1409,26 @@ exports[`CreateConnectionForm should render 1`] = `
                       <div
                         class="<removed-for-snapshot-test>"
                       />
+                    </div>
+                    <div
+                      class="<removed-for-snapshot-test>"
+                    >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-testid="field-selection-status"
+                      >
+                        <div
+                          class="<removed-for-snapshot-test>"
+                        >
+                          <p
+                            class="<removed-for-snapshot-test>"
+                            data-testid="field-selection-status-selected-count"
+                            data-type="text"
+                          >
+                            All
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     <div
                       class="<removed-for-snapshot-test>"

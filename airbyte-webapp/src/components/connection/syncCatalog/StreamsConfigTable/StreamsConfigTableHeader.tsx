@@ -51,7 +51,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
 }) => {
   const { openModal, closeModal } = useModalService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
     formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useDebounce } from "react-use";
 
 import { JobWithAttempts } from "components/JobItem/types";
@@ -9,6 +9,7 @@ import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { useGetDebugInfoJob } from "core/api";
+import { FailureType } from "core/request/AirbyteClient";
 import { formatBytes } from "utils/numberHelper";
 
 import { DownloadLogsButton } from "./DownloadLogsButton";
@@ -32,7 +33,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
   const highlightedMatchingLineNumber = highlightedMatchIndex !== undefined ? highlightedMatchIndex + 1 : undefined;
   const [selectedAttemptIndex, setSelectedAttemptIndex] = useState<number>(debugInfo.attempts.length - 1);
   const cleanedLogs = useCleanLogs(debugInfo);
-  const attempt = useMemo(() => cleanedLogs.attempts[selectedAttemptIndex], [cleanedLogs, selectedAttemptIndex]);
+  const logLines = useMemo(() => cleanedLogs.attempts[selectedAttemptIndex], [cleanedLogs, selectedAttemptIndex]);
   const firstMatchIndex = 0;
   const lastMatchIndex = matchingLines.length - 1;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -60,6 +61,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
     setInputValue("");
   };
 
+  // Debounces changes to the search input so we don't recompute the matching lines on every keystroke
   useDebounce(
     () => {
       setDebouncedSearchTerm(inputValue);
@@ -67,7 +69,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
       const searchTermLowerCase = inputValue.toLowerCase();
       if (inputValue.length > 0) {
         const matchingLines: number[] = [];
-        attempt.forEach(
+        logLines.forEach(
           (line, index) => line.text.toLocaleLowerCase().includes(searchTermLowerCase) && matchingLines.push(index)
         );
         setMatchingLines(matchingLines);
@@ -81,7 +83,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
         setHighlightedMatchIndex(undefined);
       }
     },
-    100,
+    150,
     [inputValue]
   );
 
@@ -133,12 +135,29 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
     return () => document.body.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const showFailureReason = useMemo(
+    () =>
+      debugInfo.attempts[selectedAttemptIndex].attempt?.failureSummary?.failures[0] &&
+      !debugInfo.attempts[selectedAttemptIndex].attempt.failureSummary?.failures.some(
+        ({ failureType }) => failureType === FailureType.manual_cancellation
+      ),
+    [debugInfo, selectedAttemptIndex]
+  );
+
+  const failureReason = useMemo(
+    () => debugInfo.attempts[selectedAttemptIndex].attempt?.failureSummary?.failures[0]?.internalMessage,
+    [debugInfo, selectedAttemptIndex]
+  );
+
+  const selectedAttempt = useMemo(() => job.attempts[selectedAttemptIndex], [job, selectedAttemptIndex]);
+
   return (
     <FlexContainer direction="column" style={{ height: "100%" }}>
       <Box p="md" pb="none">
         <FlexContainer alignItems="center">
           <div className={styles.attemptDropdown}>
             <ListBox
+              className={styles.attemptDropdown__listbox}
               selectedValue={selectedAttemptIndex}
               options={attemptListboxOptions}
               onSelect={onSelectAttempt}
@@ -156,13 +175,26 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
             scrollToNextMatch={scrollToNextMatch}
             scrollToPreviousMatch={scrollToPreviousMatch}
           />
-          <DownloadLogsButton logLines={attempt} fileName={`job-${jobId}`} />
+          <DownloadLogsButton logLines={logLines} fileName={`job-${jobId}-attempt-${selectedAttemptIndex + 1}`} />
         </FlexContainer>
       </Box>
       <Box pl="xl" pr="md">
         <FlexContainer>
+          {selectedAttempt.endedAt && (
+            <>
+              <Text as="span" color="grey" size="sm">
+                <FormattedTimeParts value={selectedAttempt.createdAt * 1000} hour="numeric" minute="2-digit">
+                  {(parts) => <span>{`${parts[0].value}:${parts[2].value}${parts[4].value} `}</span>}
+                </FormattedTimeParts>
+                <FormattedDate value={selectedAttempt.createdAt * 1000} month="2-digit" day="2-digit" year="numeric" />
+              </Text>
+              <Text as="span" color="grey" size="sm">
+                |
+              </Text>
+            </>
+          )}
           <Text as="span" color="grey" size="sm">
-            {formatBytes(job.attempts[selectedAttemptIndex].totalStats?.bytesEmitted)}
+            {formatBytes(selectedAttempt.totalStats?.bytesEmitted)}
           </Text>
           <Text as="span" color="grey" size="sm">
             |
@@ -170,7 +202,7 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countEmittedRecords"
-              values={{ count: job.attempts[selectedAttemptIndex].totalStats?.recordsEmitted || 0 }}
+              values={{ count: selectedAttempt.totalStats?.recordsEmitted || 0 }}
             />
           </Text>
           <Text as="span" color="grey" size="sm">
@@ -179,14 +211,26 @@ export const JobLogsModalContent: React.FC<JobLogsModalContentProps> = ({ jobId,
           <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countCommittedRecords"
-              values={{ count: job.attempts[selectedAttemptIndex].totalStats?.recordsCommitted || 0 }}
+              values={{ count: selectedAttempt.totalStats?.recordsCommitted || 0 }}
             />
           </Text>
         </FlexContainer>
       </Box>
+
+      {showFailureReason && (
+        <Box pl="xl" pr="md">
+          <Text color="grey" size="sm">
+            {failureReason ? (
+              <FormattedMessage id="jobHistory.logs.failureReason" values={{ reason: failureReason }} />
+            ) : (
+              <FormattedMessage id="errorView.unknown" />
+            )}
+          </Text>
+        </Box>
+      )}
       <VirtualLogs
         selectedAttempt={selectedAttemptIndex}
-        logLines={attempt}
+        logLines={logLines}
         searchTerm={debouncedSearchTerm}
         scrollTo={scrollTo}
       />

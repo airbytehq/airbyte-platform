@@ -128,6 +128,7 @@ describe("Connector builder", { testIsolation: false }, () => {
     assertMaxNumberOfSlicesAndPages();
   });
 
+  // Note: This test cannot be run in isolation!  It is dependent on the previous test
   it("Sync published version", () => {
     publishProject();
 

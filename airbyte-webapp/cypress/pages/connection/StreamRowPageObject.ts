@@ -1,4 +1,4 @@
-import { DestinationSyncMode, SourceSyncMode } from "commands/api/types";
+import { DestinationSyncMode, SyncMode } from "@src/core/api/types/AirbyteClient";
 
 import { getTestId, getTestIds, joinTestIds } from "utils/selectors";
 
@@ -110,7 +110,7 @@ export class StreamRowPageObject {
     cy.get(this.stream).within(() => cy.get(destinationNamespaceCell).click());
   }
 
-  selectSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
+  selectSyncMode(source: SyncMode, dest: DestinationSyncMode): void {
     cy.get(this.stream).scrollIntoView();
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
@@ -126,7 +126,7 @@ export class StreamRowPageObject {
     this.selectFieldOption("primary-key", primaryKeyValues);
   }
 
-  hasSelectedSyncMode(source: SourceSyncMode, dest: DestinationSyncMode): void {
+  hasSelectedSyncMode(source: SyncMode, dest: DestinationSyncMode): void {
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[source]}`);
       cy.get(syncModeSelectButton).contains(`${SYNC_MODE_STRINGS[dest]}`);

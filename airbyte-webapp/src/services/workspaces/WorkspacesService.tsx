@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
-import React, { useCallback, useContext, useMemo } from "react";
+import React, { useCallback, useContext, useLayoutEffect, useMemo } from "react";
 import { useNavigate, useMatch } from "react-router-dom";
 
 import { Workspace, WorkspaceService } from "core/domain/workspace";
@@ -37,7 +37,6 @@ interface Context {
 export const WorkspaceServiceContext = React.createContext<Context | null>(null);
 
 const useSelectWorkspace = (): ((workspace?: string | null | Workspace) => void) => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   return useCallback(
@@ -47,9 +46,8 @@ const useSelectWorkspace = (): ((workspace?: string | null | Workspace) => void)
       } else {
         navigate(`/${RoutePaths.Workspaces}/${workspace}`);
       }
-      queryClient.removeQueries([SCOPE_WORKSPACE]);
     },
-    [navigate, queryClient]
+    [navigate]
   );
 };
 
@@ -224,4 +222,20 @@ export const useInvalidateWorkspace = (workspaceId: string) => {
     () => queryClient.invalidateQueries(workspaceKeys.detail(workspaceId)),
     [queryClient, workspaceId]
   );
+};
+
+export const useInvalidateAllWorkspaceScope = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => {
+    queryClient.removeQueries([SCOPE_WORKSPACE]);
+  }, [queryClient]);
+};
+
+export const useInvalidateAllWorkspaceScopeOnChange = (workspaceId: string) => {
+  const invalidateWorkspaceScope = useInvalidateAllWorkspaceScope();
+  // useLayoutEffect so the query removal happens before the new workspace's queries are triggered
+  useLayoutEffect(() => {
+    invalidateWorkspaceScope();
+  }, [invalidateWorkspaceScope, workspaceId]);
 };

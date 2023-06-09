@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
+import { useDbtCloudServiceToken } from "core/api/cloud";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
-import { useDbtCloudServiceToken } from "packages/cloud/services/dbtCloud";
 
 import { cleanedErrorMessage } from "./DbtCloudSettingsView";
 

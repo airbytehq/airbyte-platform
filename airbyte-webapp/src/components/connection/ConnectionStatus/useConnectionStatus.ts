@@ -48,11 +48,14 @@ export const useConnectionStatus = () => {
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
 
-  // Disabling the schema changes as it's the only actionable error and is per-connection, not stream
   const { connection } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
   const { connectionEnabled, connectionStatus, lastSuccessfulSync } = useConnectionSyncContext();
+
+  if (hasBreakingSchemaChange) {
+    return ConnectionStatusIndicatorStatus.ActionRequired;
+  }
 
   if (!connectionEnabled) {
     return ConnectionStatusIndicatorStatus.Disabled;
@@ -71,14 +74,6 @@ export const useConnectionStatus = () => {
       lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
   ) {
     return ConnectionStatusIndicatorStatus.Error;
-  }
-
-  if (hasBreakingSchemaChange && isConnectionLate(connection, lastSuccessfulSync, lateMultiplier)) {
-    return ConnectionStatusIndicatorStatus.ActionRequired;
-  }
-
-  if (connectionStatus === ConnectionSyncStatus.CANCELLED) {
-    return ConnectionStatusIndicatorStatus.Cancelled;
   }
 
   // The `late` value is based on the `connection.streamCentricUI.late` experiment

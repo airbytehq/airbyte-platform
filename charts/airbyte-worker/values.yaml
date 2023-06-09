@@ -170,7 +170,7 @@ containerSecurityContext: {}
 ##
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 30
+  initialDelaySeconds: 50
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -403,4 +403,4 @@ extraLabels: {}
 
 debug:
   enabled: false
-  remoteDebugPort: 5007
+  remoteDebugPort: 5005

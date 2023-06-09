@@ -7,7 +7,7 @@ import { Button } from "components/ui/Button";
 
 import { JobDebugInfoRead } from "core/request/AirbyteClient";
 import { useCurrentWorkspaceId, useGetWorkspace } from "services/workspaces/WorkspacesService";
-import { downloadFile, fileizeString } from "utils/file";
+import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "utils/file";
 
 interface DownloadButtonProps {
   jobDebugInfo: JobDebugInfoRead;
@@ -20,7 +20,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ jobDebugInfo, fileName 
 
   const downloadFileWithLogs = () => {
     const file = new Blob([jobDebugInfo.attempts.flatMap((info) => info.logs.logLines).join("\n")], {
-      type: "text/plain;charset=utf-8",
+      type: FILE_TYPE_DOWNLOAD,
     });
     downloadFile(file, fileizeString(`${name}-${fileName}.txt`));
   };

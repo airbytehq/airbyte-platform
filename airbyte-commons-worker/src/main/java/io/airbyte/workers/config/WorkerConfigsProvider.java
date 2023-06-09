@@ -111,13 +111,23 @@ public class WorkerConfigsProvider {
 
     final Map<String, String> isolatedNodeSelectors = splitKVPairsFromEnvString(workerConfigsDefaults.isolatedNodeSelectors);
     validateIsolatedPoolConfigInitialization(workerConfigsDefaults.useCustomNodeSelector(), isolatedNodeSelectors);
+
+    // if annotations are not defined for this specific resource, then fallback to the default
+    // resource's annotations
+    final Map<String, String> annotations;
+    if (Strings.isNullOrEmpty(kubeResourceConfig.getAnnotations())) {
+      annotations = splitKVPairsFromEnvString(workerConfigsDefaults.defaultKubeResourceConfig.getAnnotations());
+    } else {
+      annotations = splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations());
+    }
+
     return new WorkerConfigs(
         workerConfigsDefaults.workerEnvironment(),
         getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig()),
         workerConfigsDefaults.jobKubeTolerations(),
         splitKVPairsFromEnvString(kubeResourceConfig.getNodeSelectors()),
         workerConfigsDefaults.useCustomNodeSelector() ? Optional.of(isolatedNodeSelectors) : Optional.empty(),
-        splitKVPairsFromEnvString(kubeResourceConfig.getAnnotations()),
+        annotations,
         workerConfigsDefaults.mainContainerImagePullSecret(),
         workerConfigsDefaults.mainContainerImagePullPolicy(),
         workerConfigsDefaults.sidecarContainerImagePullPolicy(),

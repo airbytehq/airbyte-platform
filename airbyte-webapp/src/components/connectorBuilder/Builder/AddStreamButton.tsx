@@ -19,7 +19,7 @@ import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, useBuilderWatch } from "../types";
+import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface AddStreamValues {
@@ -72,6 +72,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         ...otherStreamValues,
         name: values.streamName,
         urlPath: values.urlPath,
+        schema: DEFAULT_SCHEMA,
         id,
       }),
     ]);

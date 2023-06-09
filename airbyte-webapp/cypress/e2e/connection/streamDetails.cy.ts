@@ -3,8 +3,14 @@ import {
   createPostgresSourceViaApi,
   createNewConnectionViaApi,
 } from "@cy/commands/connection";
+import {
+  WebBackendConnectionRead,
+  DestinationRead,
+  DestinationSyncMode,
+  SyncMode,
+  SourceRead,
+} from "@src/core/api/types/AirbyteClient";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } from "commands/api/types";
 import { runDbQuery } from "commands/db/db";
 import {
   createTableWithLotsOfColumnsQuery,
@@ -26,9 +32,9 @@ const dropTables = () => {
 describe("Connection - Stream details", () => {
   const streamRow = new StreamRowPageObject("public", "users");
 
-  let source: Source;
-  let destination: Destination;
-  let connection: Connection;
+  let source: SourceRead;
+  let destination: DestinationRead;
+  let connection: WebBackendConnectionRead;
 
   before(() => {
     dropTables();
@@ -52,13 +58,13 @@ describe("Connection - Stream details", () => {
 
   after(() => {
     if (connection) {
-      requestDeleteConnection(connection.connectionId);
+      requestDeleteConnection({ connectionId: connection.connectionId });
     }
     if (source) {
-      requestDeleteSource(source.sourceId);
+      requestDeleteSource({ sourceId: source.sourceId });
     }
     if (destination) {
-      requestDeleteDestination(destination.destinationId);
+      requestDeleteDestination({ destinationId: destination.destinationId });
     }
 
     dropTables();
@@ -77,7 +83,7 @@ describe("Connection - Stream details", () => {
       streamDetails.isSyncStreamEnabled();
       streamDetails.isNamespace("public");
       streamDetails.isStreamName("users");
-      streamDetails.isSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+      streamDetails.isSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
       streamDetails.areFieldsValid({ names: fieldNames, dataTypes: fieldTypes });
     });
 
@@ -108,7 +114,7 @@ describe("Connection - Stream details", () => {
       const cursor = "created_at";
       const primaryKeys = ["car_id", "user_id"];
 
-      userCarsStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      userCarsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
       userCarsStreamRow.showStreamDetails();
 
       streamDetails.selectCursor(cursor);
@@ -125,7 +131,7 @@ describe("Connection - Stream details", () => {
     const columnsStreamRow = new StreamRowPageObject("public", "columns");
 
     it("selects cursors for stream with many fields", () => {
-      columnsStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.Append);
+      columnsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       columnsStreamRow.showStreamDetails();
 
       streamDetails.selectCursor("field_49");

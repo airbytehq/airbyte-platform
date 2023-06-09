@@ -45,8 +45,11 @@ import io.airbyte.config.persistence.SecretsRepositoryReader;
 import io.airbyte.config.persistence.SecretsRepositoryWriter;
 import io.airbyte.config.persistence.split_secrets.SecretCoordinate;
 import io.airbyte.config.persistence.split_secrets.SecretsHelpers;
+import io.airbyte.featureflag.DestinationDefinition;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.FieldSelectionWorkspaces.AllowOAuthOverrideCredentials;
+import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisabled;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.oauth.MoreOAuthParameters;
@@ -109,6 +112,15 @@ public class OAuthHandler {
         sourceOauthConsentRequest.getSourceDefinitionId());
     ApmTraceUtils.addTagsToTrace(traceTags);
     ApmTraceUtils.addTagsToRootSpan(traceTags);
+
+    if (featureFlagClient.boolVariation(ConnectorOAuthConsentDisabled.INSTANCE, new Multi(List.of(
+        new SourceDefinition(sourceOauthConsentRequest.getSourceDefinitionId()),
+        new Workspace(sourceOauthConsentRequest.getWorkspaceId()))))) {
+      // OAuth temporary disabled for this connector via feature flag
+      // Returns a 404 (ConfigNotFoundException) so that the frontend displays the correct error message
+      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "OAuth temporarily disabled");
+    }
+
     final StandardSourceDefinition sourceDefinition =
         configRepository.getStandardSourceDefinition(sourceOauthConsentRequest.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition,
@@ -118,7 +130,8 @@ public class OAuthHandler {
     final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final OAuthConsentRead result;
 
-    JsonNode sourceOAuthParamConfig = getSourceOAuthParamConfig(sourceOauthConsentRequest.getWorkspaceId(), sourceDefinition.getSourceDefinitionId());
+    final JsonNode sourceOAuthParamConfig =
+        getSourceOAuthParamConfig(sourceOauthConsentRequest.getWorkspaceId(), sourceDefinition.getSourceDefinitionId());
 
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
@@ -161,6 +174,14 @@ public class OAuthHandler {
     ApmTraceUtils.addTagsToTrace(traceTags);
     ApmTraceUtils.addTagsToRootSpan(traceTags);
 
+    if (featureFlagClient.boolVariation(ConnectorOAuthConsentDisabled.INSTANCE, new Multi(List.of(
+        new DestinationDefinition(destinationOauthConsentRequest.getDestinationDefinitionId()),
+        new Workspace(destinationOauthConsentRequest.getWorkspaceId()))))) {
+      // OAuth temporary disabled for this connector via feature flag
+      // Returns a 404 (ConfigNotFoundException) so that the frontend displays the correct error message
+      throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM, "OAuth temporarily disabled");
+    }
+
     final StandardDestinationDefinition destinationDefinition =
         configRepository.getStandardDestinationDefinition(destinationOauthConsentRequest.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
@@ -170,7 +191,7 @@ public class OAuthHandler {
     final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final OAuthConsentRead result;
 
-    JsonNode destinationOAuthParamConfig = getDestinationOAuthParamConfig(
+    final JsonNode destinationOAuthParamConfig = getDestinationOAuthParamConfig(
         destinationOauthConsentRequest.getWorkspaceId(), destinationOauthConsentRequest.getDestinationDefinitionId());
 
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
@@ -235,7 +256,7 @@ public class OAuthHandler {
     final Map<String, Object> metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion);
     final Map<String, Object> result;
 
-    JsonNode sourceOAuthParamConfig =
+    final JsonNode sourceOAuthParamConfig =
         getSourceOAuthParamConfig(completeSourceOauthRequest.getWorkspaceId(), sourceDefinition.getSourceDefinitionId());
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
       final JsonNode oAuthInputConfigurationForConsent;
@@ -291,7 +312,7 @@ public class OAuthHandler {
     final Map<String, Object> metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion);
     final Map<String, Object> result;
 
-    JsonNode destinationOAuthParamConfig = getDestinationOAuthParamConfig(
+    final JsonNode destinationOAuthParamConfig = getDestinationOAuthParamConfig(
         completeDestinationOAuthRequest.getWorkspaceId(), completeDestinationOAuthRequest.getDestinationDefinitionId());
 
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(spec)) {
@@ -493,7 +514,7 @@ public class OAuthHandler {
    *
    * @param requestBody request body
    */
-  public void setWorkspaceOverrideOAuthParams(WorkspaceOverrideOauthParamsRequestBody requestBody)
+  public void setWorkspaceOverrideOAuthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     switch (requestBody.getActorType()) {
       case SOURCE -> setSourceWorkspaceOverrideOauthParams(requestBody);
@@ -516,7 +537,7 @@ public class OAuthHandler {
 
     final JsonNode oauthParamConfiguration = Jsons.jsonNode(requestBody.getParams());
 
-    JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
+    final JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
 
     final SourceOAuthParameter param = configRepository
         .getSourceOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
@@ -541,7 +562,7 @@ public class OAuthHandler {
 
     final JsonNode oauthParamConfiguration = Jsons.jsonNode(requestBody.getParams());
 
-    JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
+    final JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
 
     final DestinationOAuthParameter param = configRepository
         .getDestinationOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
@@ -589,16 +610,15 @@ public class OAuthHandler {
   @VisibleForTesting
   JsonNode getSourceOAuthParamConfig(final UUID workspaceId, final UUID sourceDefinitionId) throws IOException, ConfigNotFoundException {
     try {
-      boolean throwIfOverridePresent = !featureFlagClient.boolVariation(AllowOAuthOverrideCredentials.INSTANCE, new Workspace(workspaceId));
-      Optional<SourceOAuthParameter> param = MoreOAuthParameters.getSourceOAuthParameter(
-          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, throwIfOverridePresent);
+      final Optional<SourceOAuthParameter> param = MoreOAuthParameters.getSourceOAuthParameter(
+          configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId);
 
       if (param.isPresent()) {
         // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
         // here see https://github.com/airbytehq/airbyte/issues/7624
 
         // If config doesn't have nested secrets, will be a no-op
-        JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(param.get().getConfiguration());
+        final JsonNode hydratedConfig = secretsRepositoryReader.hydrateConfig(param.get().getConfiguration());
 
         return MoreOAuthParameters.flattenOAuthConfig(hydratedConfig);
       } else {
@@ -613,9 +633,8 @@ public class OAuthHandler {
   JsonNode getDestinationOAuthParamConfig(final UUID workspaceId, final UUID destinationDefinitionId)
       throws IOException, ConfigNotFoundException {
     try {
-      boolean throwIfOverridePresent = !featureFlagClient.boolVariation(AllowOAuthOverrideCredentials.INSTANCE, new Workspace(workspaceId));
       final Optional<DestinationOAuthParameter> param = MoreOAuthParameters.getDestinationOAuthParameter(
-          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId, throwIfOverridePresent);
+          configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId);
       if (param.isPresent()) {
         // TODO: if we write a migration to flatten persisted configs in db, we don't need to flatten
         // here see https://github.com/airbytehq/airbyte/issues/7624

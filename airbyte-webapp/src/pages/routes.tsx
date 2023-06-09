@@ -5,9 +5,8 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useApiHealthPoll } from "hooks/services/Health";
-import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useListWorkspaces } from "services/workspaces/WorkspacesService";
+import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 import MainView from "views/layout/MainView";
 
@@ -102,12 +101,13 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
   useAddAnalyticsContextForWorkspace(workspace);
   useApiHealthPoll();
 
+  // invalidate everything in the workspace scope when the workspaceId changes
+  useInvalidateAllWorkspaceScopeOnChange(workspace.workspaceId);
+
   return workspace.initialSetupComplete ? element ?? <MainViewRoutes /> : <PreferencesRoutes />;
 };
 
 export const Routing: React.FC = () => {
-  useBuildUpdateCheck();
-
   // TODO: Remove this after it is verified there are no problems with current routing
   const OldRoutes = useMemo(
     () =>

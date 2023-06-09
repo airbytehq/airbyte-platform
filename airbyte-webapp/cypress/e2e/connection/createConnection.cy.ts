@@ -1,6 +1,6 @@
 import { createPostgresDestinationViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
+import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { Connection, Destination, Source } from "commands/api/types";
 import { submitButtonClick } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
@@ -28,8 +28,8 @@ import { StreamRowPageObject } from "pages/connection/StreamRowPageObject";
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
 describe("Connection - Create new connection", { testIsolation: false }, () => {
-  let source: Source;
-  let destination: Destination;
+  let source: SourceRead;
+  let destination: DestinationRead;
   let connectionId: string;
 
   const dropTables = () => {
@@ -48,13 +48,13 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
   after(() => {
     if (connectionId) {
-      requestDeleteConnection(connectionId);
+      requestDeleteConnection({ connectionId });
     }
     if (source) {
-      requestDeleteSource(source.sourceId);
+      requestDeleteSource({ sourceId: source.sourceId });
     }
     if (destination) {
-      requestDeleteDestination(destination.destinationId);
+      requestDeleteDestination({ destinationId: destination.destinationId });
     }
 
     dropTables();
@@ -201,7 +201,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         assert.isNotNull(interception.response?.statusCode, "200");
         expect(interception.request.method).to.eq("POST");
 
-        const connection: Partial<Connection> = {
+        const connection: Partial<WebBackendConnectionRead> = {
           name: `${source.name} → ${destination.name}`,
           scheduleType: "manual",
         };

@@ -4,6 +4,8 @@ import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
 
+import { naturalComparator } from "utils/objects";
+
 import { CDK_VERSION } from "./cdk";
 import { formatJson } from "./utils";
 import { FORM_PATTERN_ERROR } from "../../core/form/types";
@@ -71,6 +73,7 @@ export interface BuilderFormValues {
   };
   inputs: BuilderFormInput[];
   inferredInputOverrides: Record<string, Partial<AirbyteJSONSchema>>;
+  inputOrder: string[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
@@ -230,6 +233,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   inputs: [],
   inferredInputOverrides: {},
+  inputOrder: [],
   streams: [],
   checkStreams: [],
   version: CDK_VERSION,
@@ -300,6 +304,15 @@ export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", Bu
     },
   },
 };
+
+export const DEFAULT_INFERRED_INPUT_ORDER = [
+  "api_key",
+  "username",
+  "password",
+  "client_id",
+  "client_secret",
+  "client_refresh_token",
+];
 
 export const authTypeToKeyToInferredInput = (
   authenticator: BuilderFormAuthenticator | { type: BuilderFormAuthenticator["type"] }
@@ -562,11 +575,7 @@ export const builderFormValidationSchema = yup.object().shape({
             }),
             strategy: yup
               .object({
-                page_size: yup.mixed().when("type", {
-                  is: (val: string) => ([OFFSET_INCREMENT, PAGE_INCREMENT] as string[]).includes(val),
-                  then: yupNumberOrEmptyString.required("form.empty.error"),
-                  otherwise: yupNumberOrEmptyString,
-                }),
+                page_size: yupNumberOrEmptyString,
                 cursor: yup.mixed().when("type", {
                   is: CURSOR_PAGINATION,
                   then: yup.object().shape({
@@ -1001,26 +1010,71 @@ function builderStreamToDeclarativeSteam(
   return merge({}, declarativeStream, stream.unsupportedFields);
 }
 
+export const orderInputs = (
+  inputs: BuilderFormInput[],
+  inferredInputs: BuilderFormInput[],
+  storedInputOrder: string[]
+) => {
+  const keyToStoredOrder = storedInputOrder.reduce((map, key, index) => map.set(key, index), new Map<string, number>());
+
+  return inferredInputs
+    .map((input) => {
+      return { input, isInferred: true, id: input.key };
+    })
+    .concat(
+      inputs.map((input) => {
+        return { input, isInferred: false, id: input.key };
+      })
+    )
+    .sort((inputA, inputB) => {
+      const storedIndexA = keyToStoredOrder.get(inputA.id);
+      const storedIndexB = keyToStoredOrder.get(inputB.id);
+
+      if (storedIndexA !== undefined && storedIndexB !== undefined) {
+        return storedIndexA - storedIndexB;
+      }
+      if (storedIndexA !== undefined && storedIndexB === undefined) {
+        return inputB.isInferred ? 1 : -1;
+      }
+      if (storedIndexA === undefined && storedIndexB !== undefined) {
+        return inputA.isInferred ? -1 : 1;
+      }
+      // both indexes are undefined
+      if (inputA.isInferred && inputB.isInferred) {
+        return DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputA.id) - DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputB.id);
+      }
+      if (inputA.isInferred && !inputB.isInferred) {
+        return -1;
+      }
+      if (!inputA.isInferred && inputB.isInferred) {
+        return 1;
+      }
+      return naturalComparator(inputA.id, inputB.id);
+    });
+};
+
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
     builderStreamToDeclarativeSteam(values, stream, [])
   );
 
-  const allInputs = [
-    ...values.inputs,
-    ...getInferredInputList(
+  const orderedInputs = orderInputs(
+    values.inputs,
+    getInferredInputList(
       values.global,
       values.inferredInputOverrides,
       hasIncrementalSyncUserInput(values.streams, "start_datetime"),
       hasIncrementalSyncUserInput(values.streams, "end_datetime")
     ),
-  ];
+    values.inputOrder
+  );
+  const allInputs = orderedInputs.map((orderedInput) => orderedInput.input);
 
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",
     type: "object",
     required: allInputs.filter((input) => input.required).map((input) => input.key),
-    properties: Object.fromEntries(allInputs.map((input) => [input.key, input.definition])),
+    properties: Object.fromEntries(allInputs.map((input, index) => [input.key, { ...input.definition, order: index }])),
     additionalProperties: true,
   };
 

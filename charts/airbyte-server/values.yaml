@@ -112,7 +112,7 @@ containerSecurityContext: {}
 ##
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 30
+  initialDelaySeconds: 60
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -127,7 +127,7 @@ livenessProbe:
 ##
 readinessProbe:
   enabled: true
-  initialDelaySeconds: 10
+  initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -432,4 +432,4 @@ deploymentStrategyType: Recreate
 
 debug:
   enabled: false
-  remoteDebugPort: 5001
+  remoteDebugPort: 5005

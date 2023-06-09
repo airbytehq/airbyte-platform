@@ -343,6 +343,7 @@ public class ConfigRepository {
             .set(WORKSPACE.DISPLAY_SETUP_WIZARD, workspace.getDisplaySetupWizard())
             .set(WORKSPACE.TOMBSTONE, workspace.getTombstone() != null && workspace.getTombstone())
             .set(WORKSPACE.NOTIFICATIONS, JSONB.valueOf(Jsons.serialize(workspace.getNotifications())))
+            .set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.valueOf(Jsons.serialize(workspace.getNotificationSettings())))
             .set(WORKSPACE.FIRST_SYNC_COMPLETE, workspace.getFirstCompletedSync())
             .set(WORKSPACE.FEEDBACK_COMPLETE, workspace.getFeedbackDone())
             .set(WORKSPACE.GEOGRAPHY, Enums.toEnum(
@@ -606,13 +607,18 @@ public class ConfigRepository {
    */
   public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition stdSourceDef, final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
-
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(stdSourceDef), ctx);
-      final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setSourceDefinitionDefaultVersion(stdSourceDef, actorDefinitionVersionWithID, ctx);
+      writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion, ctx);
       return null;
     });
+  }
+
+  private void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                      final ActorDefinitionVersion defaultVersion,
+                                                      final DSLContext ctx) {
+    ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
+    final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(defaultVersion, ctx);
+    setSourceDefinitionDefaultVersion(sourceDefinition, actorDefinitionVersionWithID, ctx);
   }
 
   /**
@@ -648,16 +654,19 @@ public class ConfigRepository {
   }
 
   /**
-   * Write custom source definition.
+   * Write custom source definition and its default version.
    *
    * @param sourceDefinition source definition
+   * @param defaultVersion default version
    * @param workspaceId workspace id
    * @throws IOException - you never know when you IO
    */
-  public void writeCustomSourceDefinition(final StandardSourceDefinition sourceDefinition, final UUID workspaceId)
+  public void writeCustomSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                           final ActorDefinitionVersion defaultVersion,
+                                                           final UUID workspaceId)
       throws IOException {
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
+      writeSourceDefinitionAndDefaultVersion(sourceDefinition, defaultVersion, ctx);
       writeActorDefinitionWorkspaceGrant(sourceDefinition.getSourceDefinitionId(), workspaceId, ctx);
       return null;
     });
@@ -822,11 +831,17 @@ public class ConfigRepository {
                                                           final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
-      final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-      setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
+      writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion, ctx);
       return null;
     });
+  }
+
+  private void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition stdDestDef,
+                                                           final ActorDefinitionVersion actorDefinitionVersion,
+                                                           final DSLContext ctx) {
+    ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
+    final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+    setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
   }
 
   /**
@@ -851,16 +866,18 @@ public class ConfigRepository {
   }
 
   /**
-   * Write custom destination definition.
+   * Write custom destination definition and its default version.
    *
    * @param destinationDefinition destination definition
    * @param workspaceId workspace id
    * @throws IOException - you never know when you IO
    */
-  public void writeCustomDestinationDefinition(final StandardDestinationDefinition destinationDefinition, final UUID workspaceId)
+  public void writeCustomDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
+                                                                final ActorDefinitionVersion defaultVersion,
+                                                                final UUID workspaceId)
       throws IOException {
     database.transaction(ctx -> {
-      ConfigWriter.writeStandardDestinationDefinition(List.of(destinationDefinition), ctx);
+      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, defaultVersion, ctx);
       writeActorDefinitionWorkspaceGrant(destinationDefinition.getDestinationDefinitionId(), workspaceId, ctx);
       return null;
     });
@@ -3243,6 +3260,7 @@ public class ConfigRepository {
     return ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId)
             .and(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag)))
+        .fetch()
         .stream()
         .findFirst()
         .map(DbConverter::buildActorDefinitionVersion);
@@ -3260,6 +3278,7 @@ public class ConfigRepository {
   public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
     return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
         .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
+        .fetch()
         .stream()
         .findFirst()
         .map(DbConverter::buildActorDefinitionVersion)

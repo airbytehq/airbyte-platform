@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -39,7 +40,9 @@ import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
@@ -55,6 +58,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -118,7 +122,23 @@ class DestinationDefinitionsHandlerTest {
         .withTombstone(false)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")));
+  }
+
+  private ActorDefinitionVersion generateVersionFromDestinationDefinition(final StandardDestinationDefinition destinationDefinition) {
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withDockerRepository(destinationDefinition.getDockerRepository())
+        .withDockerImageTag(destinationDefinition.getDockerImageTag())
+        .withDocumentationUrl(destinationDefinition.getDocumentationUrl())
+        .withSpec(destinationDefinition.getSpec())
+        .withProtocolVersion(destinationDefinition.getProtocolVersion())
+        .withReleaseDate(destinationDefinition.getReleaseDate())
+        .withReleaseStage(destinationDefinition.getReleaseStage())
+        .withNormalizationConfig(destinationDefinition.getNormalizationConfig())
+        .withSupportsDbt(destinationDefinition.getSupportsDbt())
+        .withAllowedHosts(destinationDefinition.getAllowedHosts());
   }
 
   private StandardDestinationDefinition generateDestinationDefinitionWithNormalization() {
@@ -460,12 +480,14 @@ class DestinationDefinitionsHandlerTest {
 
     assertEquals(expectedRead, actualRead);
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository).writeCustomDestinationDefinition(
+    verify(configRepository).writeCustomDestinationDefinitionAndDefaultVersion(
         destination
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withReleaseDate(null)
             .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
+            .withAllowedHosts(null)
             .withCustom(true),
+        generateVersionFromDestinationDefinition(destination),
         workspaceId);
   }
 
@@ -500,13 +522,7 @@ class DestinationDefinitionsHandlerTest {
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate));
 
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository, never()).writeCustomDestinationDefinition(
-        destination
-            .withProtocolVersion(invalidProtocol)
-            .withReleaseDate(null)
-            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-            .withCustom(true),
-        workspaceId);
+    verify(configRepository, never()).writeCustomDestinationDefinitionAndDefaultVersion(any(), any(), any());
   }
 
   @Test
@@ -539,7 +555,8 @@ class DestinationDefinitionsHandlerTest {
 
     assertEquals(newDockerImageTag, destinationRead.getDockerImageTag());
     verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false);
-    verify(configRepository).writeStandardDestinationDefinition(updatedDestination);
+    verify(configRepository).writeDestinationDefinitionAndDefaultVersion(
+        updatedDestination, generateVersionFromDestinationDefinition(updatedDestination));
 
     verify(configRepository).clearUnsupportedProtocolVersionFlag(updatedDestination.getDestinationDefinitionId(), ActorType.DESTINATION,
         protocolVersionRange);

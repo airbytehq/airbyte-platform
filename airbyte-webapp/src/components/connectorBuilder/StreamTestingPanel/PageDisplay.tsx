@@ -16,7 +16,6 @@ import {
 import styles from "./PageDisplay.module.scss";
 import { SchemaDiffView } from "./SchemaDiffView";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
-import { useBuilderWatch } from "../types";
 import { formatJson } from "../utils";
 
 interface PageDisplayProps {
@@ -35,8 +34,11 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const { formatMessage } = useIntl();
 
   const { editorView } = useConnectorBuilderFormState();
-  const { testStreamIndex, streamRead } = useConnectorBuilderTestRead();
-  const value = useBuilderWatch(`streams.${testStreamIndex}.schema`);
+  const {
+    streamRead,
+    schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
+    testStreamIndex,
+  } = useConnectorBuilderTestRead();
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
   const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
@@ -59,7 +61,6 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
     };
     return formatJson(unpackedBodyResponse);
   }, [page.response]);
-  const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);
 
   let defaultTabIndex = 0;
   const tabs: TabData[] = [
@@ -116,7 +117,9 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">
                     {formatMessage({ id: "connectorBuilder.schemaTab" })}
-                    {editorView === "ui" && value !== formattedSchema && <SchemaConflictIndicator />}
+                    {editorView === "ui" && schemaDifferences && (
+                      <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
+                    )}
                   </FlexContainer>
                 </Text>
               )}
@@ -131,7 +134,11 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
           ))}
           {inferredSchema && (
             <Tab.Panel className={styles.tabPanel}>
-              <SchemaDiffView inferredSchema={inferredSchema} />
+              <SchemaDiffView
+                inferredSchema={inferredSchema}
+                incompatibleErrors={incompatibleSchemaErrors}
+                key={testStreamIndex}
+              />
             </Tab.Panel>
           )}
         </Tab.Panels>

@@ -28,6 +28,7 @@ public class OrchestratorConstants {
       .addAll(EnvConfigs.JOB_SHARED_ENVS.keySet())
       .addAll(Set.of(
           EnvConfigs.WORKER_ENVIRONMENT,
+          EnvConfigs.JOB_KUBE_ANNOTATIONS,
           EnvConfigs.JOB_KUBE_TOLERATIONS,
           EnvConfigs.JOB_KUBE_CURL_IMAGE,
           EnvConfigs.JOB_KUBE_BUSYBOX_IMAGE,

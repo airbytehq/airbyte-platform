@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -41,11 +42,14 @@ import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -56,6 +60,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -113,8 +118,24 @@ class SourceDefinitionsHandlerTest {
         .withTombstone(false)
         .withReleaseStage(io.airbyte.config.ReleaseStage.ALPHA)
         .withReleaseDate(TODAY_DATE_STRING)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")))
+        .withAllowedHosts(new AllowedHosts().withHosts(List.of("host1", "host2")))
+        .withSuggestedStreams(new SuggestedStreams().withStreams(List.of("stream1", "stream2")));
 
+  }
+
+  private ActorDefinitionVersion generateVersionFromSourceDefinition(final StandardSourceDefinition sourceDefinition) {
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withDockerRepository(sourceDefinition.getDockerRepository())
+        .withDockerImageTag(sourceDefinition.getDockerImageTag())
+        .withSpec(sourceDefinition.getSpec())
+        .withDocumentationUrl(sourceDefinition.getDocumentationUrl())
+        .withProtocolVersion(sourceDefinition.getProtocolVersion())
+        .withReleaseStage(sourceDefinition.getReleaseStage())
+        .withReleaseDate(sourceDefinition.getReleaseDate())
+        .withAllowedHosts(sourceDefinition.getAllowedHosts())
+        .withSuggestedStreams(sourceDefinition.getSuggestedStreams());
   }
 
   @Test
@@ -409,12 +430,15 @@ class SourceDefinitionsHandlerTest {
 
     assertEquals(expectedRead, actualRead);
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository).writeCustomSourceDefinition(
+    verify(configRepository).writeCustomSourceDefinitionAndDefaultVersion(
         sourceDefinition
             .withReleaseDate(null)
             .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
+            .withAllowedHosts(null)
+            .withSuggestedStreams(null)
             .withCustom(true),
+        generateVersionFromSourceDefinition(sourceDefinition),
         workspaceId);
   }
 
@@ -449,13 +473,7 @@ class SourceDefinitionsHandlerTest {
     assertThrows(UnsupportedProtocolVersionException.class, () -> sourceDefinitionsHandler.createCustomSourceDefinition(customCreate));
 
     verify(schedulerSynchronousClient).createGetSpecJob(imageName, true);
-    verify(configRepository, never()).writeCustomSourceDefinition(
-        sourceDefinition
-            .withReleaseDate(null)
-            .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-            .withProtocolVersion(invalidVersion)
-            .withCustom(true),
-        workspaceId);
+    verify(configRepository, never()).writeCustomSourceDefinitionAndDefaultVersion(any(), any(), any());
   }
 
   @Test
@@ -486,7 +504,8 @@ class SourceDefinitionsHandlerTest {
 
     assertEquals(newDockerImageTag, sourceDefinitionRead.getDockerImageTag());
     verify(schedulerSynchronousClient).createGetSpecJob(newImageName, false);
-    verify(configRepository).writeStandardSourceDefinition(updatedSource);
+    verify(configRepository).writeSourceDefinitionAndDefaultVersion(
+        updatedSource, generateVersionFromSourceDefinition(updatedSource));
 
     verify(configRepository).clearUnsupportedProtocolVersionFlag(updatedSource.getSourceDefinitionId(), ActorType.SOURCE, protocolVersionRange);
   }

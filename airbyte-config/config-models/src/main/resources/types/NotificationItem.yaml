@@ -6,11 +6,10 @@ description: Notification Settings for a type of event
 type: object
 additionalProperties: true
 properties:
-  # Instead of this type field, we would prefer a json schema "oneOf" but unfortunately,
-  # the jsonschema2pojo does not seem to support it yet: https://github.com/joelittlejohn/jsonschema2pojo/issues/392
+  # Notification type is defined as array because user can completely disable the notification (empty array), or enable multiple notifications types.
   notificationType:
     type: array
-    item:
+    items:
       "$ref": NotificationType.yaml
   slackConfiguration:
     "$ref": SlackNotificationConfiguration.yaml

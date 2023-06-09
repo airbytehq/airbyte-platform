@@ -4,7 +4,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Text } from "components/ui/Text";
 
-import { DbtCloudJob } from "packages/cloud/services/dbtCloud";
+import { DbtCloudJob } from "core/api/cloud";
 
 import styles from "./JobsList.module.scss";
 import { JobsListItem } from "./JobsListItem";

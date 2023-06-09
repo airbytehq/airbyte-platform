@@ -43,6 +43,10 @@
     // checking for `children` in tsx isn't enough as the passed child can return null
     border-bottom: colors.$grey-100 variables.$border-thin solid;
   }
+
+  &.inset {
+    @include mixins.shadow-inset;
+  }
 }
 
 .infoTooltip {

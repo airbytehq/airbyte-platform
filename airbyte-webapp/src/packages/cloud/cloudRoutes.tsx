@@ -5,7 +5,6 @@ import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
-import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -15,6 +14,7 @@ import {
   WorkspaceServiceProvider,
   usePrefetchCloudWorkspaceData,
   useCurrentWorkspaceId,
+  useInvalidateAllWorkspaceScopeOnChange,
 } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 
@@ -129,7 +129,8 @@ export const Routing: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
   const { pathname } = useLocation();
 
-  useBuildUpdateCheck();
+  // invalidate everything in the workspace scope when the workspaceId changes
+  useInvalidateAllWorkspaceScopeOnChange(workspaceId);
 
   const analyticsContext = useMemo(
     () =>
@@ -160,9 +161,9 @@ export const Routing: React.FC = () => {
         <Suspense fallback={<LoadingPage />}>
           <Routes>
             {/*
-              The firebase callback action route is available no matter wheter a user is logged in or not, since
-              the verify email action need to work in both cases.
-            */}
+            The firebase callback action route is available no matter wheter a user is logged in or not, since
+            the verify email action need to work in both cases.
+          */}
             <Route path={CloudRoutes.FirebaseAction} element={<FirebaseActionRoute />} />
             <Route
               path="*"

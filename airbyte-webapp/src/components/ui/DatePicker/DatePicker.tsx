@@ -55,6 +55,7 @@ export interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   withTime?: boolean;
+  withMilliseconds?: boolean;
   disabled?: boolean;
   onBlur?: () => void;
   placeholder?: string;
@@ -81,6 +82,10 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
 });
 DatepickerButton.displayName = "DatepickerButton";
 
+const ISO8601_NO_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss[Z]";
+const ISO8601_WITH_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss.SSS[Z]";
+const YEAR_MONTH_DAY_FORMAT = "YYYY-MM-DD";
+
 export const DatePicker: React.FC<DatePickerProps> = ({
   disabled,
   error,
@@ -89,6 +94,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   placeholder,
   value = "",
   withTime = false,
+  withMilliseconds = false,
 }) => {
   const { locale, formatMessage } = useIntl();
   const datepickerRef = useRef<ReactDatePicker>(null);
@@ -104,19 +110,27 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const datetimeFormat = useMemo(
+    () => (withMilliseconds ? ISO8601_WITH_MILLISECONDS : ISO8601_NO_MILLISECONDS),
+    [withMilliseconds]
+  );
+
   const handleDatepickerChange = useCallback(
     (val: Date | null) => {
+      // Workaround for a bug in react-datepicker where selecting a time does not zero out the millisecond value https://github.com/Hacker0x01/react-datepicker/issues/1991
+      val?.setMilliseconds(0);
       const date = dayjs(val);
       if (!date.isValid()) {
         onChange("");
         return;
       }
-
-      const formattedDate = withTime ? date.utcOffset(0, true).format() : date.format("YYYY-MM-DD");
+      const formattedDate = withTime
+        ? date.utcOffset(0, true).format(datetimeFormat)
+        : date.format(YEAR_MONTH_DAY_FORMAT);
       onChange(formattedDate);
       inputRef.current?.focus();
     },
-    [onChange, withTime]
+    [onChange, withTime, datetimeFormat]
   );
 
   const handleInputChange = useCallback(

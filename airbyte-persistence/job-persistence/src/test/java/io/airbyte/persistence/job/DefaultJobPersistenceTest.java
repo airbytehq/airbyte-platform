@@ -18,11 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -49,7 +47,6 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.factory.DataSourceFactory;
-import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.db.instance.test.TestDatabaseProviders;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair;
@@ -61,8 +58,6 @@ import io.airbyte.persistence.job.models.Job;
 import io.airbyte.persistence.job.models.JobStatus;
 import io.airbyte.persistence.job.models.JobWithStatusAndTimestamp;
 import io.airbyte.test.utils.DatabaseConnectionHelper;
-import io.airbyte.validation.json.JsonSchemaValidator;
-import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -71,16 +66,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.sql.DataSource;
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -722,45 +714,6 @@ class DefaultJobPersistenceTest {
   }
 
   @Test
-  @DisplayName("Should be able to import database that was exported")
-  void testExportImport() throws IOException, SQLException {
-    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-    final int attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH);
-    jobPersistence.failAttempt(jobId, attemptNumber0);
-    final Path secondAttemptLogPath = LOG_PATH.resolve("2");
-    final int attemptNumber1 = jobPersistence.createAttempt(jobId, secondAttemptLogPath);
-    jobPersistence.succeedAttempt(jobId, attemptNumber1);
-
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> inputStreams = jobPersistence.exportDatabase();
-
-    // Collect streams to memory for temporary storage
-    final Map<JobsDatabaseSchema, List<JsonNode>> tempData = new HashMap<>();
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> outputStreams = new HashMap<>();
-    for (final Entry<JobsDatabaseSchema, Stream<JsonNode>> entry : inputStreams.entrySet()) {
-      final List<JsonNode> tableData = entry.getValue().collect(Collectors.toList());
-      tempData.put(entry.getKey(), tableData);
-      outputStreams.put(entry.getKey(), tableData.stream());
-    }
-    resetDb();
-
-    jobPersistence.importDatabase("test", outputStreams);
-
-    final List<Job> actualList = jobPersistence.listJobs(SPEC_JOB_CONFIG.getConfigType(), CONNECTION_ID.toString(), 9999, 0);
-    final Job actual = actualList.get(0);
-    final Job expected = createJob(
-        jobId,
-        SPEC_JOB_CONFIG,
-        JobStatus.SUCCEEDED,
-        Lists.newArrayList(
-            createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
-            createAttempt(1, jobId, AttemptStatus.SUCCEEDED, secondAttemptLogPath)),
-        NOW.getEpochSecond());
-
-    assertEquals(1, actualList.size());
-    assertEquals(expected, actual);
-  }
-
-  @Test
   @DisplayName("Should return correct set of jobs when querying on end timestamp")
   void testListJobsWithTimestamp() throws IOException {
     // TODO : Once we fix the problem of precision loss in DefaultJobPersistence, change the test value
@@ -896,34 +849,6 @@ class DefaultJobPersistenceTest {
 
     final Supplier<Instant> timeSupplier = () -> startTime.plusSeconds(intArray[0]++);
     return timeSupplier;
-  }
-
-  @SuppressWarnings("LineLength")
-  @Test
-  @DisplayName("Should have valid yaml schemas in exported database")
-  void testYamlSchemas() throws IOException {
-    final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
-    final int attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH);
-    jobPersistence.failAttempt(jobId, attemptNumber0);
-    final Path secondAttemptLogPath = LOG_PATH.resolve("2");
-    final int attemptNumber1 = jobPersistence.createAttempt(jobId, secondAttemptLogPath);
-    jobPersistence.succeedAttempt(jobId, attemptNumber1);
-    final JsonSchemaValidator jsonSchemaValidator = new JsonSchemaValidator();
-
-    final Map<JobsDatabaseSchema, Stream<JsonNode>> inputStreams = jobPersistence.exportDatabase();
-    inputStreams.forEach((tableSchema, tableStream) -> {
-      final String tableName = tableSchema.name();
-      final JsonNode schema = tableSchema.getTableDefinition();
-      assertNotNull(schema,
-          "Json schema files should be created in airbyte-persistence/job-persistence/src/main/resources/tables for every table in the Database to validate its content");
-      tableStream.forEach(row -> {
-        try {
-          jsonSchemaValidator.ensure(schema, row);
-        } catch (final JsonValidationException e) {
-          fail(String.format("JSON Schema validation failed for %s with record %s", tableName, row.toPrettyString()));
-        }
-      });
-    });
   }
 
   @Test

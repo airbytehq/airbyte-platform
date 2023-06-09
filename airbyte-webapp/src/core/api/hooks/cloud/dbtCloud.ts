@@ -11,6 +11,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import isEmpty from "lodash/isEmpty";
 import { useIntl } from "react-intl";
+import { useAsyncFn } from "react-use";
 
 import {
   OperatorType,
@@ -23,15 +24,12 @@ import {
 } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useWebConnectionService } from "hooks/services/useConnectionHook";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import {
-  DbtCloudJobInfo,
-  webBackendGetAvailableDbtJobsForWorkspace,
-  WorkspaceGetDbtJobsResponse,
-} from "packages/cloud/lib/domain/dbtCloud/api";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useUpdateWorkspace } from "services/workspaces/WorkspacesService";
+
+import { webBackendGetAvailableDbtJobsForWorkspace } from "../../generated/CloudApi";
+import { DbtCloudJobInfo, WorkspaceGetDbtJobsResponse } from "../../types/CloudApi";
 
 export interface DbtCloudJob {
   accountId: number;
@@ -39,7 +37,6 @@ export interface DbtCloudJob {
   operationId?: string;
   jobName?: string;
 }
-export type { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud/api";
 
 type ServiceToken = string;
 
@@ -116,10 +113,6 @@ export const useDbtCloudServiceToken = () => {
 export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
-  const connectionService = useWebConnectionService();
-  const { setConnection } = useConnectionEditService();
-  const notificationService = useNotificationService();
-  const { formatMessage } = useIntl();
 
   const webhookConfigId = workspace.webhookConfigs?.find((config) => isDbtWebhookConfig(config))?.id;
 
@@ -127,53 +120,52 @@ export const useDbtIntegration = (connection: WebBackendConnectionRead) => {
     toDbtCloudJob
   );
   const otherOperations = [...(connection.operations?.filter((operation) => !isDbtCloudJob(operation)) || [])];
+  const { registerNotification } = useNotificationService();
 
-  const { mutateAsync, isLoading } = useMutation({
-    mutationFn: (jobs: DbtCloudJob[]) =>
-      connectionService.update({
-        connectionId: connection.connectionId,
-        operations: [
-          ...otherOperations,
-          ...jobs.map((job) => ({
-            workspaceId,
-            ...(job.operationId ? { operationId: job.operationId } : {}),
-            name: jobName(job),
-            operatorConfiguration: {
-              operatorType: OperatorType.webhook,
-              webhook: {
-                webhookType: OperatorWebhookWebhookType.dbtCloud,
-                dbtCloud: {
-                  jobId: job.jobId,
-                  accountId: job.accountId,
+  const { formatMessage } = useIntl();
+
+  const { updateConnection } = useConnectionEditService();
+  const [{ loading }, saveJobs] = useAsyncFn(
+    async (jobs: DbtCloudJob[]) => {
+      try {
+        await updateConnection({
+          connectionId: connection.connectionId,
+          operations: [
+            ...otherOperations,
+            ...jobs.map((job) => ({
+              workspaceId,
+              ...(job.operationId ? { operationId: job.operationId } : {}),
+              name: jobName(job),
+              operatorConfiguration: {
+                operatorType: OperatorType.webhook,
+                webhook: {
+                  webhookType: OperatorWebhookWebhookType.dbtCloud,
+                  dbtCloud: {
+                    jobId: job.jobId,
+                    accountId: job.accountId,
+                  },
+                  // if `hasDbtIntegration` is true, webhookConfigId is guaranteed to exist
+                  ...(webhookConfigId ? { webhookConfigId } : {}),
                 },
-                // if `hasDbtIntegration` is true, webhookConfigId is guaranteed to exist
-                ...(webhookConfigId ? { webhookConfigId } : {}),
               },
-            },
-          })),
-        ],
-      }),
-    onSuccess(updatedConnection) {
-      // Error banners should disappear after a successful retry
-      notificationService.unregisterNotificationById("connection.dbtCloudJobs.error");
-      // Ensure that unrelated connection-editing UI (e.g. other tabs of the connection
-      // page) isn't left with a stale reference
-      setConnection(updatedConnection);
+            })),
+          ],
+        });
+      } catch (e) {
+        registerNotification({
+          id: "connection.updateFailed",
+          text: formatMessage({ id: "notification.connection.updateFailed" }),
+        });
+      }
     },
-    onError() {
-      notificationService.registerNotification({
-        id: "connection.dbtCloudJobs.error",
-        text: formatMessage({ id: "connection.dbtCloudJobs.genericError" }),
-        type: "error",
-      });
-    },
-  });
+    [connection, otherOperations, updateConnection, webhookConfigId, workspaceId]
+  );
 
   return {
     hasDbtIntegration: hasDbtIntegration(workspace),
     dbtCloudJobs,
-    saveJobs: mutateAsync,
-    isSaving: isLoading,
+    saveJobs,
+    isSaving: loading,
   };
 };
 

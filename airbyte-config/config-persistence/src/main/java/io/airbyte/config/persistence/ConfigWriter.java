@@ -6,6 +6,7 @@ package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -80,6 +81,16 @@ public class ConfigWriter {
 
   static int writeSourceDefinitionImageTag(final List<UUID> sourceDefinitionIds, final String targetImageTag, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
+
+    // TODO(pedro) this is currently double writing - this should stop updating the actor_definition
+    // table once those fields are gone
+    // We are updating the same version since connector builder projects have a different concept of
+    // versioning
+    ctx.update(ACTOR_DEFINITION_VERSION).set(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, targetImageTag)
+        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
+        .where(
+            ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.in(sourceDefinitionIds).andNot(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(targetImageTag)))
+        .execute();
 
     return ctx.update(ACTOR_DEFINITION).set(ACTOR_DEFINITION.DOCKER_IMAGE_TAG, targetImageTag).set(ACTOR_DEFINITION.UPDATED_AT, timestamp)
         .where(ACTOR_DEFINITION.ID.in(sourceDefinitionIds).andNot(ACTOR_DEFINITION.DOCKER_IMAGE_TAG.eq(targetImageTag))).execute();

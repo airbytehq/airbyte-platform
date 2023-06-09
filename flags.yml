@@ -16,6 +16,8 @@ flags:
   - name: validation.removeValidationLimit
     serve: false
   - name: autopropagation.enabled
-    serve: false
+    serve: true
+  - name: connection.columnSelection
+    serve: true
   - name: handle.stream.status
     serve: false

@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
+import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBranding";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+
 import { ConnectionConfiguration } from "core/domain/connection";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
@@ -60,11 +64,22 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
     });
 
+  const HeaderBlock = () => {
+    return (
+      <FlexContainer justifyContent="space-between">
+        <Heading as="h3" size="sm">
+          <FormattedMessage id="onboarding.createSource" />
+        </Heading>
+        {selectedSourceDefinitionId && <ConnectorDefinitionBranding sourceDefinitionId={selectedSourceDefinitionId} />}
+      </FlexContainer>
+    );
+  };
+
   return (
     <ConnectorCard
       formType="source"
-      title={<FormattedMessage id="onboarding.sourceSetUp" />}
       description={<FormattedMessage id="sources.description" />}
+      headerBlock={<HeaderBlock />}
       isLoading={isLoading}
       fetchingConnectorError={sourceDefinitionError instanceof Error ? sourceDefinitionError : null}
       availableConnectorDefinitions={sourceDefinitions}
