@@ -43,6 +43,7 @@ import {
   OAuthAuthenticator,
   DefaultPaginator,
   CursorPagination,
+  DeclarativeComponentSchemaMetadata,
 } from "../../core/request/ConnectorManifest";
 
 export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManifest, connectorName: string) => {
@@ -75,7 +76,8 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       index,
       serializedStreamToIndex,
       streams[0].retriever.requester.url_base,
-      streams[0].retriever.requester.authenticator
+      streams[0].retriever.requester.authenticator,
+      resolvedManifest.metadata
     )
   );
 
@@ -128,7 +130,8 @@ const manifestStreamToBuilder = (
   index: number,
   serializedStreamToIndex: Record<string, number>,
   firstStreamUrlBase: string,
-  firstStreamAuthenticator?: HttpRequesterAuthenticator
+  firstStreamAuthenticator?: HttpRequesterAuthenticator,
+  metadata?: DeclarativeComponentSchemaMetadata
 ): BuilderStream => {
   assertType<SimpleRetriever>(stream.retriever, "SimpleRetriever", stream.name);
   const retriever = stream.retriever;
@@ -183,6 +186,7 @@ const manifestStreamToBuilder = (
         },
       },
     },
+    autoImportSchema: metadata?.autoImportSchema?.[stream.name ?? ""] === true,
   };
 };
 

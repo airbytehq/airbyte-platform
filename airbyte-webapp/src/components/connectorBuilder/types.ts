@@ -45,6 +45,7 @@ import {
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
   DefaultPaginator,
+  DeclarativeComponentSchemaMetadata,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -190,6 +191,7 @@ export interface BuilderStream {
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, object>;
+  autoImportSchema: boolean;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -268,6 +270,7 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
       values: [],
     },
   },
+  autoImportSchema: true,
 };
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
@@ -1059,6 +1062,12 @@ export const orderInputs = (
     });
 };
 
+export const builderFormValuesToMetadata = (values: BuilderFormValues): DeclarativeComponentSchemaMetadata => {
+  return {
+    autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+  };
+};
+
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
     builderStreamToDeclarativeSteam(values, stream, [])
@@ -1104,6 +1113,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     },
     streams: manifestStreams,
     spec,
+    metadata: builderFormValuesToMetadata(values),
   });
 };
 
