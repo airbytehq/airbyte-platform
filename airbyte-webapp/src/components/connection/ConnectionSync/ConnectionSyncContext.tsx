@@ -1,8 +1,4 @@
-import dayjs from "dayjs";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-
-import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
-import { getConnectionSyncStatus } from "components/EntityTable/utils";
 
 import { useCancelJob } from "core/api";
 import {
@@ -10,13 +6,11 @@ import {
   ConnectionStatus,
   ConnectionStream,
   JobWithAttemptsRead,
-  JobCreatedAt,
   JobConfigType,
   JobStatus,
 } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useResetConnection, useResetConnectionStream, useSyncConnection } from "hooks/services/useConnectionHook";
-import { moveTimeToFutureByPeriod } from "utils/time";
 
 interface ConnectionSyncContext {
   syncConnection: () => Promise<void>;
@@ -30,13 +24,13 @@ interface ConnectionSyncContext {
   jobResetRunning: boolean;
   activeJob?: JobRead;
   lastCompletedSyncJob?: JobWithAttemptsRead;
-  connectionStatus: ConnectionSyncStatus;
-  latestSyncJobCreatedAt?: JobCreatedAt;
-  nextSync?: dayjs.Dayjs;
-  lastSuccessfulSync?: number;
 }
 
-const jobStatusesIndicatingFinishedExecution: string[] = [JobStatus.succeeded, JobStatus.failed, JobStatus.incomplete];
+export const jobStatusesIndicatingFinishedExecution: string[] = [
+  JobStatus.succeeded,
+  JobStatus.failed,
+  JobStatus.incomplete,
+];
 const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSyncContext => {
   const { connection } = useConnectionEditService();
   const [activeJob, setActiveJob] = useState(jobs[0]?.job);
@@ -89,26 +83,6 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSy
     ({ job }) =>
       job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
   );
-  const lastSyncJobStatus = lastCompletedSyncJob?.job?.status || connection.latestSyncJobStatus;
-  const connectionStatus = getConnectionSyncStatus(connection.status, lastSyncJobStatus);
-
-  const lastSyncJob = jobs.find(({ job }) => job?.configType === JobConfigType.sync);
-  const latestSyncJobCreatedAt = lastSyncJob?.job?.createdAt;
-
-  const lastSuccessfulSyncJob = jobs.find(
-    ({ job }) => job?.configType === JobConfigType.sync && job?.status === JobStatus.succeeded
-  );
-  const lastSuccessfulSync = lastSuccessfulSyncJob?.job?.createdAt;
-
-  let nextSync;
-  if (latestSyncJobCreatedAt && connection.scheduleData?.basicSchedule) {
-    const latestSync = dayjs(latestSyncJobCreatedAt * 1000);
-    nextSync = moveTimeToFutureByPeriod(
-      latestSync.subtract(connection.scheduleData.basicSchedule.units, connection.scheduleData.basicSchedule.timeUnit),
-      connection.scheduleData.basicSchedule.units,
-      connection.scheduleData.basicSchedule.timeUnit
-    );
-  }
 
   return {
     syncConnection,
@@ -122,10 +96,6 @@ const useConnectionSyncContextInit = (jobs: JobWithAttemptsRead[]): ConnectionSy
     jobResetRunning,
     activeJob,
     lastCompletedSyncJob,
-    connectionStatus,
-    latestSyncJobCreatedAt,
-    nextSync,
-    lastSuccessfulSync,
   };
 };
 

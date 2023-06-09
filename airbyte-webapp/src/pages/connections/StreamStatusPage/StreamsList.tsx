@@ -18,6 +18,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
+import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+
 import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
@@ -52,7 +54,8 @@ const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showR
 export const StreamsList = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
 
-  const { streams, filteredStreams } = useStreamsListContext();
+  const { filteredStreams } = useStreamsListContext();
+  const { connection } = useConnectionEditService();
 
   const columnHelper = useMemo(() => createColumnHelper<AirbyteStreamWithStatusAndConfiguration>(), []);
   const getStreamStatus = useGetStreamStatus();
@@ -102,7 +105,7 @@ export const StreamsList = () => {
   return (
     <>
       <Box mb="md">
-        <ConnectionStatusCard streamCount={streams.length} />
+        <ConnectionStatusCard />
       </Box>
       <Card
         title={
