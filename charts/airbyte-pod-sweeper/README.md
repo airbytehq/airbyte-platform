@@ -1,6 +1,6 @@
 # pod-sweeper
 
-![Version: 0.39.36](https://img.shields.io/badge/Version-0.39.36-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.39.37-alpha](https://img.shields.io/badge/AppVersion-0.39.37--alpha-informational?style=flat-square)
+![Version: 0.45.20](https://img.shields.io/badge/Version-0.45.20-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.39.37-alpha](https://img.shields.io/badge/AppVersion-0.39.37--alpha-informational?style=flat-square)
 
 Helm chart to deploy airbyte-pod-sweeper
 
@@ -56,16 +56,21 @@ Helm chart to deploy airbyte-pod-sweeper
 | livenessProbe.periodSeconds | int | `30` |  |
 | livenessProbe.successThreshold | int | `1` |  |
 | livenessProbe.timeoutSeconds | int | `1` |  |
+| namespace | string | `""` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
 | readinessProbe.enabled | bool | `true` |  |
 | readinessProbe.failureThreshold | int | `3` |  |
 | readinessProbe.initialDelaySeconds | int | `5` |  |
 | readinessProbe.periodSeconds | int | `30` |  |
 | readinessProbe.successThreshold | int | `1` |  |
 | readinessProbe.timeoutSeconds | int | `1` |  |
+| replicaCount | int | `1` |  |
 | resources.limits | object | `{}` |  |
 | resources.requests | object | `{}` |  |
+| timeToDeletePods.completed | int | `120` |  |
+| timeToDeletePods.error | int | `1440` |  |
 | tolerations | list | `[]` |  |
 
 ----------------------------------------------

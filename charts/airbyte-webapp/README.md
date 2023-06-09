@@ -1,6 +1,6 @@
 # webapp
 
-![Version: 0.39.36](https://img.shields.io/badge/Version-0.39.36-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.4](https://img.shields.io/badge/AppVersion-0.40.4-informational?style=flat-square)
+![Version: 0.45.20](https://img.shields.io/badge/Version-0.45.20-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.50.0](https://img.shields.io/badge/AppVersion-0.50.0-informational?style=flat-square)
 
 Helm chart to deploy airbyte-webapp
 
@@ -22,6 +22,8 @@ Helm chart to deploy airbyte-webapp
 | extraContainers | list | `[]` |  |
 | extraEnv | list | `[]` |  |
 | extraInitContainers | list | `[]` |  |
+| extraLabels | object | `{}` |  |
+| extraSelectorLabels | object | `{}` |  |
 | extraVolumeMounts | list | `[]` |  |
 | extraVolumes | list | `[]` |  |
 | fullstory.enabled | bool | `false` |  |
@@ -32,6 +34,8 @@ Helm chart to deploy airbyte-webapp
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
 | global.extraContainers | list | `[]` |  |
+| global.extraLabels | object | `{}` |  |
+| global.extraSelectorLabels | object | `{}` |  |
 | global.secretName | string | `""` |  |
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
@@ -49,8 +53,10 @@ Helm chart to deploy airbyte-webapp
 | livenessProbe.timeoutSeconds | int | `1` |  |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
 | readinessProbe.enabled | bool | `true` |  |
 | readinessProbe.failureThreshold | int | `3` |  |
+| readinessProbe.httpPath | string | `"/api/v1/health"` |  |
 | readinessProbe.initialDelaySeconds | int | `10` |  |
 | readinessProbe.periodSeconds | int | `10` |  |
 | readinessProbe.successThreshold | int | `1` |  |

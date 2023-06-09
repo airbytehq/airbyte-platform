@@ -1,6 +1,6 @@
 # airbyte
 
-![Version: 0.50.0](https://img.shields.io/badge/Version-0.50.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.50.0](https://img.shields.io/badge/AppVersion-0.50.0-informational?style=flat-square)
+![Version: 0.45.20](https://img.shields.io/badge/Version-0.45.20-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.50.0](https://img.shields.io/badge/AppVersion-0.50.0-informational?style=flat-square)
 
 Helm chart to deploy airbyte
 
@@ -8,15 +8,15 @@ Helm chart to deploy airbyte
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | cron | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | metrics | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | server | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | temporal | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | webapp | 0.50.0 |
-| https://airbytehq.github.io/helm-charts/ | worker | 0.50.0 |
+| https://airbytehq.github.io/helm-charts/ | airbyte-bootloader | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | connector-builder-server | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | cron | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | metrics | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | pod-sweeper | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | server | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | temporal | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | webapp | 0.45.20 |
+| https://airbytehq.github.io/helm-charts/ | worker | 0.45.20 |
 | https://charts.bitnami.com/bitnami | common | 1.x.x |
 
 ## Values
@@ -44,7 +44,19 @@ Helm chart to deploy airbyte
 | connector-builder-server.env_vars | object | `{}` |  |
 | connector-builder-server.image.pullPolicy | string | `"IfNotPresent"` |  |
 | connector-builder-server.image.repository | string | `"airbyte/connector-atelier-server"` |  |
+| connector-builder-server.livenessProbe.enabled | bool | `true` |  |
+| connector-builder-server.livenessProbe.failureThreshold | int | `3` |  |
+| connector-builder-server.livenessProbe.initialDelaySeconds | int | `30` |  |
+| connector-builder-server.livenessProbe.periodSeconds | int | `10` |  |
+| connector-builder-server.livenessProbe.successThreshold | int | `1` |  |
+| connector-builder-server.livenessProbe.timeoutSeconds | int | `1` |  |
 | connector-builder-server.log.level | string | `"INFO"` |  |
+| connector-builder-server.readinessProbe.enabled | bool | `true` |  |
+| connector-builder-server.readinessProbe.failureThreshold | int | `3` |  |
+| connector-builder-server.readinessProbe.initialDelaySeconds | int | `10` |  |
+| connector-builder-server.readinessProbe.periodSeconds | int | `10` |  |
+| connector-builder-server.readinessProbe.successThreshold | int | `1` |  |
+| connector-builder-server.readinessProbe.timeoutSeconds | int | `1` |  |
 | connector-builder-server.replicaCount | int | `1` |  |
 | connector-builder-server.resources.limits | object | `{}` |  |
 | connector-builder-server.resources.requests | object | `{}` |  |
@@ -95,6 +107,7 @@ Helm chart to deploy airbyte
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
+| global.env_vars | object | `{}` |  |
 | global.jobs.kube.annotations | object | `{}` |  |
 | global.jobs.kube.images.busybox | string | `""` |  |
 | global.jobs.kube.images.curl | string | `""` |  |
@@ -197,6 +210,7 @@ Helm chart to deploy airbyte
 | server.image.repository | string | `"airbyte/server"` |  |
 | server.livenessProbe.enabled | bool | `true` |  |
 | server.livenessProbe.failureThreshold | int | `3` |  |
+| server.livenessProbe.httpPath | string | `"/api/v1/health"` |  |
 | server.livenessProbe.initialDelaySeconds | int | `30` |  |
 | server.livenessProbe.periodSeconds | int | `10` |  |
 | server.livenessProbe.successThreshold | int | `1` |  |
@@ -207,6 +221,7 @@ Helm chart to deploy airbyte
 | server.podLabels | object | `{}` |  |
 | server.readinessProbe.enabled | bool | `true` |  |
 | server.readinessProbe.failureThreshold | int | `3` |  |
+| server.readinessProbe.httpPath | string | `"/api/v1/health"` |  |
 | server.readinessProbe.initialDelaySeconds | int | `10` |  |
 | server.readinessProbe.periodSeconds | int | `10` |  |
 | server.readinessProbe.successThreshold | int | `1` |  |
@@ -272,6 +287,7 @@ Helm chart to deploy airbyte
 | webapp.podLabels | object | `{}` |  |
 | webapp.readinessProbe.enabled | bool | `true` |  |
 | webapp.readinessProbe.failureThreshold | int | `3` |  |
+| webapp.readinessProbe.httpPath | string | `"/api/v1/health"` |  |
 | webapp.readinessProbe.initialDelaySeconds | int | `10` |  |
 | webapp.readinessProbe.periodSeconds | int | `10` |  |
 | webapp.readinessProbe.successThreshold | int | `1` |  |
@@ -291,6 +307,8 @@ Helm chart to deploy airbyte
 | worker.containerOrchestrator.enabled | bool | `true` |  |
 | worker.containerOrchestrator.image | string | `""` |  |
 | worker.containerSecurityContext | object | `{}` |  |
+| worker.debug.enabled | bool | `false` |  |
+| worker.debug.remoteDebugPort | string | `nil` |  |
 | worker.enabled | bool | `true` |  |
 | worker.extraContainers | list | `[]` |  |
 | worker.extraEnv | list | `[]` |  |

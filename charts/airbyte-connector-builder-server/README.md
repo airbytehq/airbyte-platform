@@ -1,8 +1,8 @@
-# server
+# connector-builder-server
 
-![Version: 0.39.36](https://img.shields.io/badge/Version-0.39.36-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.40.4](https://img.shields.io/badge/AppVersion-0.40.4-informational?style=flat-square)
+![Version: 0.45.20](https://img.shields.io/badge/Version-0.45.20-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.50.0](https://img.shields.io/badge/AppVersion-0.50.0-informational?style=flat-square)
 
-Helm chart to deploy airbyte-server
+Helm chart to deploy airbyte-connector-builder-server
 
 ## Requirements
 
@@ -16,6 +16,8 @@ Helm chart to deploy airbyte-server
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
 | containerSecurityContext | object | `{}` |  |
+| debug.enabled | bool | `false` |  |
+| debug.remoteDebugPort | int | `5005` |  |
 | enabled | bool | `true` |  |
 | env_vars | object | `{}` |  |
 | extraContainers | list | `[]` |  |
@@ -31,26 +33,12 @@ Helm chart to deploy airbyte-server
 | global.database.secretValue | string | `""` |  |
 | global.deploymentMode | string | `"oss"` |  |
 | global.extraContainers | list | `[]` |  |
-| global.logs.accessKey.existingSecret | string | `""` |  |
-| global.logs.accessKey.existingSecretKey | string | `""` |  |
-| global.logs.accessKey.password | string | `"minio"` |  |
-| global.logs.externalMinio.enabled | bool | `false` |  |
-| global.logs.externalMinio.host | string | `"localhost"` |  |
-| global.logs.externalMinio.port | int | `9000` |  |
-| global.logs.gcs.bucket | string | `""` |  |
-| global.logs.gcs.credentials | string | `""` |  |
-| global.logs.gcs.credentialsJson | string | `""` |  |
-| global.logs.minio.enabled | bool | `true` |  |
-| global.logs.s3.bucket | string | `"airbyte-dev-logs"` |  |
-| global.logs.s3.bucketRegion | string | `""` |  |
-| global.logs.s3.enabled | bool | `false` |  |
-| global.logs.secretKey.existingSecret | string | `""` |  |
-| global.logs.secretKey.existingSecretKey | string | `""` |  |
-| global.logs.secretKey.password | string | `"minio123"` |  |
+| global.extraLabels | object | `{}` |  |
+| global.extraSelectorLabels | object | `{}` |  |
 | global.secretName | string | `""` |  |
 | global.serviceAccountName | string | `"placeholderServiceAccount"` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
-| image.repository | string | `"airbyte/server"` |  |
+| image.repository | string | `"airbyte/connector-atelier-server"` |  |
 | livenessProbe.enabled | bool | `true` |  |
 | livenessProbe.failureThreshold | int | `3` |  |
 | livenessProbe.initialDelaySeconds | int | `30` |  |
@@ -71,8 +59,8 @@ Helm chart to deploy airbyte-server
 | resources.requests | object | `{}` |  |
 | secrets | object | `{}` |  |
 | service.annotations | object | `{}` |  |
-| service.port | int | `8001` |  |
-| service.type | string | `"ClusterIP"` |  |
+| service.port | int | `80` |  |
+| service.type | string | `"NodePort"` |  |
 | tolerations | list | `[]` |  |
 
 ----------------------------------------------
