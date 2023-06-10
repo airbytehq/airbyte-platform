@@ -74,8 +74,7 @@ public class KubeProcessFactory implements ProcessFactory {
     this.namespace = namespace;
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
-    this.processRunnerHost = processRunnerHost.contains(":") ? "[" + processRunnerHost + "]" : processRunnerHost; 
-    ;
+    this.processRunnerHost = processRunnerHost.contains(":") ? "[" + processRunnerHost + "]" : processRunnerHost; // IPv6 needs brackets.
   }
 
   @Override
