@@ -46,14 +46,14 @@ public class KubeProcessFactory implements ProcessFactory {
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl) {
     // Need to process the IP Address before passing it down IPv6 needs brackets.
-    final String runnerHostIP = InetAddress.getLocalHost().getHostAddress()));
+    final String runnerHostIP = InetAddress.getLocalHost().getHostAddress();
     final String processRunnerHost = runnerHostIP.contains(":") ? "[" + localIp + "]:" + serverPort : runnerHostIP + ":" + serverPort; 
     this(
         workerConfigsProvider,
         namespace,
         fabricClient,
         kubeHeartbeatUrl,
-        Exceptions.toRuntime(() -> processRunnerHost;
+        Exceptions.toRuntime(() -> processRunnerHost);
   }
 
   /**
