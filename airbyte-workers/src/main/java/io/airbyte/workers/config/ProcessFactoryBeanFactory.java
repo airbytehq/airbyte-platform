@@ -50,7 +50,7 @@ public class ProcessFactoryBeanFactory {
       throws UnknownHostException {
     final KubernetesClient fabricClient = new DefaultKubernetesClient();
     final String localIp = InetAddress.getLocalHost().getHostAddress();
-    final String kubeHeartbeatUrl = localIp + ":" + serverPort;
+    final String kubeHeartbeatUrl = localIp.contains(":") ? "[" + localIp + "]:" + serverPort : localIp + ":" + serverPort;
     return new KubeProcessFactory(workerConfigsProvider,
         kubernetesNamespace,
         fabricClient,

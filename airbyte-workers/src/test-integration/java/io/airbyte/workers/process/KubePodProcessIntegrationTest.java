@@ -100,7 +100,7 @@ class KubePodProcessIntegrationTest {
 
   @BeforeEach
   void setup() throws Exception {
-    heartbeatUrl = getHost() + ":" + heartbeatPort;
+    heartbeatUrl = getHost().contains(":") ? "[" + localIp + "]:" + serverPort : getHost() + ":" + serverPort;
 
     fabricClient = new DefaultKubernetesClient();
 
