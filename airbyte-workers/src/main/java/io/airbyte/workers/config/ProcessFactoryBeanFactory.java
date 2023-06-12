@@ -46,6 +46,7 @@ public class ProcessFactoryBeanFactory {
   @Requires(env = Environment.KUBERNETES)
   public ProcessFactory createKubernetesProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                                                        @Value("${airbyte.worker.job.kube.namespace}") final String kubernetesNamespace,
+                                                       @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount,
                                                        @Value("${micronaut.server.port}") final Integer serverPort)
       throws UnknownHostException {
     final KubernetesClient fabricClient = new DefaultKubernetesClient();
@@ -53,6 +54,7 @@ public class ProcessFactoryBeanFactory {
     final String kubeHeartbeatUrl = localIp + ":" + serverPort;
     return new KubeProcessFactory(workerConfigsProvider,
         kubernetesNamespace,
+        serviceAccount,
         fabricClient,
         kubeHeartbeatUrl);
   }

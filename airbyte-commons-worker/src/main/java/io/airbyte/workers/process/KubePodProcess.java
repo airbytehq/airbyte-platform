@@ -395,6 +395,7 @@ public class KubePodProcess implements KubePod {
                         final KubernetesClient fabricClient,
                         final String podName,
                         final String namespace,
+                        final String serviceAccount,
                         final String image,
                         final String imagePullPolicy,
                         final String sidecarImagePullPolicy,
@@ -549,7 +550,9 @@ public class KubePodProcess implements KubePod {
           .withLabels(labels)
           .withAnnotations(annotations)
           .endMetadata()
-          .withNewSpec();
+          .withNewSpec()
+          .withServiceAccount(serviceAccount)
+          .withAutomountServiceAccountToken(true);
 
       final List<LocalObjectReference> pullSecrets = imagePullSecrets
           .stream()

@@ -34,6 +34,7 @@ public class KubeProcessFactory implements ProcessFactory {
 
   private final WorkerConfigsProvider workerConfigsProvider;
   private final String namespace;
+  private final String serviceAccount;
   private final KubernetesClient fabricClient;
   private final String kubeHeartbeatUrl;
   private final String processRunnerHost;
@@ -43,11 +44,13 @@ public class KubeProcessFactory implements ProcessFactory {
    */
   public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                             final String namespace,
+                            final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl) {
     this(
         workerConfigsProvider,
         namespace,
+        serviceAccount,
         fabricClient,
         kubeHeartbeatUrl,
         Exceptions.toRuntime(() -> InetAddress.getLocalHost().getHostAddress()));
@@ -66,11 +69,13 @@ public class KubeProcessFactory implements ProcessFactory {
   @VisibleForTesting
   public KubeProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                             final String namespace,
+                            final String serviceAccount,
                             final KubernetesClient fabricClient,
                             final String kubeHeartbeatUrl,
                             final String processRunnerHost) {
     this.workerConfigsProvider = workerConfigsProvider;
     this.namespace = namespace;
+    this.serviceAccount = serviceAccount;
     this.fabricClient = fabricClient;
     this.kubeHeartbeatUrl = kubeHeartbeatUrl;
     this.processRunnerHost = processRunnerHost;
@@ -123,6 +128,7 @@ public class KubeProcessFactory implements ProcessFactory {
           fabricClient,
           podName,
           namespace,
+          serviceAccount,
           imageName,
           workerConfigs.getJobImagePullPolicy(),
           workerConfigs.getSidecarImagePullPolicy(),

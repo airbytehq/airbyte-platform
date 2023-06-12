@@ -118,7 +118,8 @@ class AsyncOrchestratorPodProcessIntegrationTest {
         null,
         Map.of(EnvVariableFeatureFlags.USE_STREAM_CAPABLE_STATE, "true", EnvVariableFeatureFlags.AUTO_DETECT_SCHEMA, "true"),
         Map.of("k8s.io/example", "true"),
-        serverPort);
+        serverPort,
+        "airbyte-admin");
 
     final Map<Integer, Integer> portMap = Map.of(
         serverPort, serverPort,
