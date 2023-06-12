@@ -12,12 +12,11 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.UseNotificationWorkflow;
-import io.airbyte.notification.NotificationType;
+import io.airbyte.notification.NotificationEvent;
 import io.airbyte.validation.json.JsonValidationException;
 import io.temporal.client.WorkflowClient;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 
@@ -72,7 +71,8 @@ public class NotificationClient {
       throw new RuntimeException(e);
     }
     try {
-      notificationWorkflow.sendNotification(connectionId, "", message, List.of(NotificationType.webhook, NotificationType.customerio));
+      notificationWorkflow.sendNotification(connectionId, "", message,
+          containsBreakingChange ? NotificationEvent.onBreakingChange : NotificationEvent.onNonBreakingChange);
     } catch (final RuntimeException e) {
       log.error("There was an error while sending a Schema Change Notification", e);
       throw e;
