@@ -278,6 +278,25 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
       "schema_change_auto_propagated",
       "a schema change have been propagated"),
+  WORKER_DESTINATION_BUFFER_SIZE(MetricEmittingApps.WORKER,
+      "worker_destination_buffer_size",
+      "the size of the replication worker destination buffer queue"),
+
+  WORKER_DESTINATION_MESSAGE_READ(MetricEmittingApps.WORKER,
+      "worker_destination_message_read",
+      "whenever a message is read from the destination"),
+
+  WORKER_DESTINATION_MESSAGE_SENT(MetricEmittingApps.WORKER,
+      "worker_destination_message_sent",
+      "whenever a message is sent to the destination"),
+
+  WORKER_SOURCE_BUFFER_SIZE(MetricEmittingApps.WORKER,
+      "worker_source_buffer_size",
+      "the size of the replication worker source buffer queue"),
+
+  WORKER_SOURCE_MESSAGE_READ(MetricEmittingApps.WORKER,
+      "worker_source_message_read",
+      "whenever a message is read from the source"),
   WORKFLOWS_HEALED(MetricEmittingApps.CRON,
       "workflows_healed",
       "number of workflow the self healing cron healed");

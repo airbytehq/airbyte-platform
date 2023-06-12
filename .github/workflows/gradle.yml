@@ -494,6 +494,8 @@ jobs:
           path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: "false"
+        env:
+          NODE_OPTIONS: '--max_old_space_size=4096'
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-platform-build-runner:

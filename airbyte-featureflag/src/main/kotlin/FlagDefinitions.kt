@@ -72,6 +72,8 @@ object HandleStreamStatus : Temporary<Boolean>(key = "handle.stream.status", def
 
 object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
 
+object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "default")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
