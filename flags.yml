@@ -21,3 +21,5 @@ flags:
     serve: true
   - name: handle.stream.status
     serve: false
+  - name: refreshSchema.period.hours
+    serve: 24

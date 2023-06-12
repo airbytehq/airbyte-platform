@@ -24,12 +24,14 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
+import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamTransform;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.RefreshSchemaPeriod;
 import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
@@ -53,9 +55,10 @@ class RefreshSchemaActivityTest {
   private RefreshSchemaActivityImpl refreshSchemaActivity;
 
   private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws ApiException {
     mSourceApi = mock(SourceApi.class);
     mEnvVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     mSourceApi = mock(SourceApi.class);
@@ -76,6 +79,8 @@ class RefreshSchemaActivityTest {
     final Long twoDaysAgo = OffsetDateTime.now().minusHours(48L).toEpochSecond();
     final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twoDaysAgo);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
+    when(mSourceApi.getSource(any())).thenReturn(new SourceRead().workspaceId(WORKSPACE_ID));
+    when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(24);
     Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
   }
 
@@ -83,8 +88,20 @@ class RefreshSchemaActivityTest {
   void testShouldRefreshSchemaRecentRefreshLessThan24HoursAgo() throws ApiException {
     final Long twelveHoursAgo = OffsetDateTime.now().minusHours(12L).toEpochSecond();
     final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twelveHoursAgo);
+    when(mSourceApi.getSource(any())).thenReturn(new SourceRead().workspaceId(WORKSPACE_ID));
+    when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(24);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
     Assertions.assertThat(false).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
+  }
+
+  @Test
+  void testShouldRefreshSchemaRecentRefreshLessThanValueFromFF() throws ApiException {
+    final Long twelveHoursAgo = OffsetDateTime.now().minusHours(12L).toEpochSecond();
+    final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twelveHoursAgo);
+    when(mSourceApi.getSource(any())).thenReturn(new SourceRead().workspaceId(WORKSPACE_ID));
+    when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(10);
+    when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
+    Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
   }
 
   @Test

@@ -70,6 +70,8 @@ object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOve
 
 object HandleStreamStatus : Temporary<Boolean>(key = "handle.stream.status", default = false)
 
+object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
