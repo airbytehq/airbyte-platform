@@ -25,9 +25,12 @@ import io.airbyte.featureflag.ReplicationWorkerImpl;
 import io.airbyte.featureflag.Source;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.Workspace;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.MetricEmittingApps;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.RecordSchemaValidator;
@@ -277,10 +280,14 @@ public class ReplicationWorkerFactory {
                                                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                                   final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper) {
     if ("buffered".equals(workerImpl)) {
+      MetricClientFactory.getMetricClient()
+          .count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
       return new BufferedReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
           fieldSelector, connectorConfigUpdater, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
           messageEventPublishingHelper);
     } else {
+      MetricClientFactory.getMetricClient()
+          .count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
       return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
           fieldSelector, connectorConfigUpdater, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
           messageEventPublishingHelper);
