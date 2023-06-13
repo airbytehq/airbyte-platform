@@ -26,9 +26,18 @@ export const SelectSource: React.FC = () => {
   const { sources } = useSourceList();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  if (!searchParams.get(SOURCE_TYPE_PARAM)) {
+    if (sources.length === 0) {
+      searchParams.set(SOURCE_TYPE_PARAM, NEW_SOURCE_TYPE);
+      setSearchParams(searchParams);
+    } else {
+      searchParams.set(SOURCE_TYPE_PARAM, EXISTING_SOURCE_TYPE);
+      setSearchParams(searchParams);
+    }
+  }
   const selectedSourceType = useMemo(() => {
-    return sources.length === 0 ? NEW_SOURCE_TYPE : searchParams.get(SOURCE_TYPE_PARAM) ?? EXISTING_SOURCE_TYPE;
-  }, [searchParams, sources.length]);
+    return searchParams.get(SOURCE_TYPE_PARAM) as SourceType;
+  }, [searchParams]);
 
   const { hasFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();

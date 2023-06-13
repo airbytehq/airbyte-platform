@@ -26,11 +26,19 @@ export const SelectDestination: React.FC = () => {
   const { destinations } = useDestinationList();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
+    if (destinations.length === 0) {
+      searchParams.set(DESTINATION_TYPE_PARAM, NEW_DESTINATION_TYPE);
+      setSearchParams(searchParams);
+    } else {
+      searchParams.set(DESTINATION_TYPE_PARAM, EXISTING_DESTINATION_TYPE);
+      setSearchParams(searchParams);
+    }
+  }
+
   const selectedDestinationType = useMemo(() => {
-    return destinations.length === 0
-      ? NEW_DESTINATION_TYPE
-      : (searchParams.get(DESTINATION_TYPE_PARAM) as DestinationType) ?? EXISTING_DESTINATION_TYPE;
-  }, [searchParams, destinations.length]);
+    return searchParams.get(DESTINATION_TYPE_PARAM) as DestinationType;
+  }, [searchParams]);
 
   const { hasFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
