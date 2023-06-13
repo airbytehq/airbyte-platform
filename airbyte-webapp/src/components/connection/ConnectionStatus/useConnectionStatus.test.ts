@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { mockConnection } from "test-utils";
 import { mockJob } from "test-utils/mock-data/mockJob";
 
-import { useListJobs } from "core/api";
+import { useListJobsForConnectionStatus } from "core/api";
 import {
   ConnectionScheduleDataBasicSchedule,
   ConnectionScheduleDataCron,
@@ -39,7 +39,9 @@ jest.mock("hooks/services/useConnectionHook");
 const mockUseGetConnection = useGetConnection as unknown as jest.Mock<WebBackendConnectionRead>;
 
 jest.mock("core/api");
-const mockUseListJobs = useListJobs as unknown as jest.Mock<ReturnType<typeof useListJobs>>;
+const mockUseListJobsForConnectionStatus = useListJobsForConnectionStatus as unknown as jest.Mock<
+  ReturnType<typeof useListJobsForConnectionStatus>
+>;
 
 interface MockSetup {
   // connection values
@@ -67,10 +69,10 @@ const resetAndSetupMocks = ({ connectionStatus, schemaChange, scheduleType, sche
     scheduleData,
   }));
 
-  mockUseListJobs.mockImplementation(() => ({
-    jobs: jobList || [],
-    totalJobCount: jobList?.length ?? 0,
+  mockUseListJobsForConnectionStatus.mockImplementation(() => ({
+    data: { jobs: jobList || [], totalJobCount: jobList?.length ?? 0 },
     isPreviousData: false,
+    setData: () => undefined,
   }));
 
   mockUseSchemaChanges.mockImplementation(() => ({

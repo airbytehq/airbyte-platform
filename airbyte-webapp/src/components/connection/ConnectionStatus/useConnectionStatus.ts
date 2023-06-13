@@ -7,7 +7,7 @@ import {
 import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
 import { getConnectionSyncStatus } from "components/EntityTable/utils";
 
-import { useListJobs } from "core/api";
+import { useListJobsForConnectionStatus } from "core/api";
 import {
   ConnectionScheduleType,
   ConnectionStatus,
@@ -16,7 +16,6 @@ import {
   WebBackendConnectionRead,
 } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnection } from "hooks/services/useConnectionHook";
 import { moveTimeToFutureByPeriod } from "utils/time";
 
@@ -68,13 +67,9 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
 
   // get the last N (10) jobs for this connection
   // to determine the connection's status
-  const { jobs } = useListJobs({
-    configId: connectionId,
-    configTypes: ["sync", "reset_connection"],
-    pagination: {
-      pageSize: useExperiment("connection.streamCentricUI.numberOfLogsToLoad", 10),
-    },
-  });
+  const {
+    data: { jobs },
+  } = useListJobsForConnectionStatus(connectionId);
 
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
 
