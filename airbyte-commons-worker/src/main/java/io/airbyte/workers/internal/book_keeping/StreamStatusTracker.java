@@ -303,8 +303,13 @@ public class StreamStatusTracker {
 
       incompleteRunCause.ifPresent(i -> streamStatusUpdateRequestBody.setIncompleteRunCause(i));
 
-      AirbyteApiClient.retryWithJitterThrows(() -> airbyteApiClient.getStreamStatusesApi().updateStreamStatus(streamStatusUpdateRequestBody),
-          "update stream status " + streamStatusRunState.name().toLowerCase(Locale.getDefault()) + " " + streamNamespace + ":" + streamName);
+      try {
+        AirbyteApiClient.retryWithJitterThrows(() -> airbyteApiClient.getStreamStatusesApi().updateStreamStatus(streamStatusUpdateRequestBody),
+            "update stream status " + streamStatusRunState.name().toLowerCase(Locale.getDefault()) + " " + streamNamespace + ":" + streamName);
+      } catch (final Exception e) {
+        LOGGER.error("Unable to update status for stream {}:{} (id = {}, origin = {}, context = {}).", streamNamespace, streamName,
+            statusId, airbyteMessageOrigin, replicationContext, e);
+      }
     } else {
       throw new StreamStatusException("Stream status ID not present to perform update.", airbyteMessageOrigin, replicationContext, streamName,
           streamNamespace);
