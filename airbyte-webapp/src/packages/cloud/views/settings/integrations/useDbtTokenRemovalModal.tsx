@@ -19,7 +19,7 @@ export const useDbtTokenRemovalModal = () => {
       title: "settings.integrationSettings.dbtCloudSettings.actions.delete.confirm",
       submitButtonText: "settings.integrationSettings.dbtCloudSettings.actions.delete",
       onSubmit: async () => {
-        deleteToken(void 0, {
+        await deleteToken(void 0, {
           onError: (e) => {
             registerNotification({
               id: "dbtCloud/delete-token-failure",

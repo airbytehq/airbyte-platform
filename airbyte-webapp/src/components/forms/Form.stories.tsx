@@ -11,6 +11,7 @@ import { Form, FormControl, Option } from "./index";
 
 interface MyFormValues {
   some_input: string;
+  some_textarea: string;
   some_password: string;
   some_date: string;
   some_select: string;
@@ -18,6 +19,7 @@ interface MyFormValues {
 
 const schema: SchemaOf<MyFormValues> = yup.object({
   some_input: yup.string().required("This is a required field."),
+  some_textarea: yup.string().required("This is a required field."),
   some_password: yup
     .string()
     .min(5, "The password needs to be at least 5 characters long.")
@@ -34,6 +36,7 @@ export default {
 
 const defaultValues: MyFormValues = {
   some_input: "",
+  some_textarea: "",
   some_password: "3mnv0dkln2%#@9fds",
   some_date: "",
   some_select: "",
@@ -76,6 +79,7 @@ export const Primary: StoryObj<typeof Form> = {
               </>
             }
           />
+          <MyFormControl fieldType="textarea" name="some_textarea" label="Text area" rows={5} />
           <MyFormControl fieldType="date" name="some_date" format="date-time" label="Date input" />
           <MyFormControl fieldType="dropdown" name="some_select" label="DropDown input" options={listBoxOptions} />
           <FormSubmissionButtons />

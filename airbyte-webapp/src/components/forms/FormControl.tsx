@@ -10,6 +10,7 @@ import { InputProps } from "components/ui/Input";
 import { ListBoxProps, Option } from "components/ui/ListBox";
 import { SwitchProps } from "components/ui/Switch/Switch";
 import { Text } from "components/ui/Text";
+import { TextAreaProps } from "components/ui/TextArea";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { DatepickerWrapper } from "./DatepickerWrapper";
@@ -18,10 +19,11 @@ import styles from "./FormControl.module.scss";
 import { InputWrapper } from "./InputWrapper";
 import { SelectWrapper } from "./SelectWrapper";
 import { SwitchWrapper } from "./SwitchWrapper";
-
+import { TextAreaWrapper } from "./TextAreaWrapper";
 type ControlProps<T extends FormValues> =
   | SelectControlProps<T>
   | InputControlProps<T>
+  | TextAreaControlProps<T>
   | DatepickerControlProps<T>
   | SwitchControlProps<T>;
 
@@ -29,7 +31,7 @@ interface ControlBaseProps<T extends FormValues> {
   /**
    * fieldType determines what form element is rendered. Depending on the chosen fieldType, additional props may be optional or required.
    */
-  fieldType: "input" | "date" | "dropdown" | "switch";
+  fieldType: "input" | "textarea" | "date" | "dropdown" | "switch";
   /**
    * The field name must match any provided default value or validation schema.
    */
@@ -60,6 +62,11 @@ export type OmittableProperties = "fieldType" | "label" | "labelTooltip" | "desc
 export interface InputControlProps<T extends FormValues> extends ControlBaseProps<T>, Omit<InputProps, "name"> {
   fieldType: "input";
   type?: HTMLInputTypeAttribute;
+}
+
+export interface TextAreaControlProps<T extends FormValues> extends ControlBaseProps<T>, Omit<TextAreaProps, "name"> {
+  fieldType: "textarea";
+  type?: HTMLTextAreaElement;
 }
 
 export interface DatepickerControlProps<T extends FormValues>
@@ -109,6 +116,11 @@ export const FormControl = <T extends FormValues>({
       // After narrowing controlProps, we need to strip controlProps.fieldType as it's no longer needed
       const { fieldType, ...withoutFieldType } = controlProps;
       return <InputWrapper {...withoutFieldType} />;
+    }
+
+    if (controlProps.fieldType === "textarea") {
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <TextAreaWrapper {...withoutFieldType} />;
     }
 
     if (controlProps.fieldType === "date") {

@@ -6,7 +6,7 @@ import { FileUpload } from "../FileUpload/FileUpload";
 import { FlexContainer } from "../Flex";
 import { TextInputContainer } from "../TextInputContainer";
 
-interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: boolean;
   light?: boolean;
   onUpload?: (value: string) => void;
