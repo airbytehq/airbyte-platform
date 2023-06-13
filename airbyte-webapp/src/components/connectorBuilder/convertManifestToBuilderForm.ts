@@ -112,6 +112,7 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "token_expiry_date",
   "token_expiry_date_format",
   "inject_into",
+  "refresh_token_updater",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -424,6 +425,7 @@ function manifestIncrementalSyncToBuilder(
     end_datetime: manifestEndDateTime,
     start_datetime: manifestStartDateTime,
     step,
+    cursor_granularity,
     type,
     $parameters,
     ...regularFields
@@ -436,8 +438,8 @@ function manifestIncrementalSyncToBuilder(
   };
   let end_datetime: BuilderIncrementalSync["end_datetime"] = {
     type: "custom",
-    value: typeof manifestEndDateTime === "string" ? manifestEndDateTime : manifestEndDateTime.datetime,
-    format: getFormat(manifestEndDateTime, manifestIncrementalSync),
+    value: typeof manifestEndDateTime === "string" ? manifestEndDateTime : manifestEndDateTime?.datetime || "",
+    format: manifestEndDateTime ? getFormat(manifestEndDateTime, manifestIncrementalSync) : undefined,
   };
 
   if (
@@ -449,10 +451,14 @@ function manifestIncrementalSyncToBuilder(
 
   if (
     end_datetime.value === "{{ config['end_date'] }}" &&
+    manifestEndDateTime &&
     isFormatSupported(manifestEndDateTime, manifestIncrementalSync)
   ) {
     end_datetime = { type: "user_input" };
-  } else if (end_datetime.value === `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`) {
+  } else if (
+    !manifestEndDateTime ||
+    end_datetime.value === `{{ now_utc().strftime('${INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT}') }}`
+  ) {
     end_datetime = { type: "now" };
   }
 
@@ -460,7 +466,7 @@ function manifestIncrementalSyncToBuilder(
     ...regularFields,
     end_datetime,
     start_datetime,
-    step: step === "P1000Y" ? undefined : step,
+    slicer: step && cursor_granularity ? { step, cursor_granularity } : undefined,
   };
 }
 
@@ -578,8 +584,6 @@ function manifestAuthenticatorToBuilder(
     throw new ManifestCompatibilityError(streamName, "uses a CustomAuthenticator");
   } else if (manifestAuthenticator.type === "SessionTokenAuthenticator") {
     throw new ManifestCompatibilityError(streamName, "uses a SessionTokenAuthenticator");
-  } else if (manifestAuthenticator.type === "SingleUseRefreshTokenOAuthAuthenticator") {
-    throw new ManifestCompatibilityError(streamName, "uses a SingleUseRefreshTokenOAuthAuthenticator");
   } else if (manifestAuthenticator.type === "ApiKeyAuthenticator") {
     builderAuthenticator = {
       ...manifestAuthenticator,

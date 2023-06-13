@@ -135,12 +135,7 @@ interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strateg
 export interface BuilderIncrementalSync
   extends Pick<
     DatetimeBasedCursor,
-    | "cursor_field"
-    | "datetime_format"
-    | "cursor_granularity"
-    | "end_time_option"
-    | "start_time_option"
-    | "lookback_window"
+    "cursor_field" | "datetime_format" | "end_time_option" | "start_time_option" | "lookback_window"
   > {
   end_datetime:
     | {
@@ -153,7 +148,10 @@ export interface BuilderIncrementalSync
         type: "user_input";
       }
     | { type: "custom"; value: string; format?: string };
-  step?: string;
+  slicer?: {
+    step?: string;
+    cursor_granularity?: string;
+  };
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
@@ -719,7 +717,13 @@ export const builderFormValidationSchema = yup.object().shape({
           .object()
           .shape({
             cursor_field: yup.string().required("form.empty.error"),
-            cursor_granularity: yup.string().required("form.empty.error"),
+            slicer: yup
+              .object()
+              .shape({
+                cursor_granularity: yup.string().required("form.empty.error"),
+                step: yup.string().required("form.empty.error"),
+              })
+              .default(undefined),
             start_datetime: yup.object().shape({
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "custom",
@@ -734,7 +738,6 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            step: yup.string(),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
             end_time_option: nonPathRequestOptionSchema,
@@ -827,7 +830,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, step, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, slicer, ...regularFields } = formValues;
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
@@ -847,7 +850,8 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
           : `{{ config['end_date'] }}`,
       datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
     },
-    step: step ? step : "P1000Y",
+    step: slicer?.step,
+    cursor_granularity: slicer?.cursor_granularity,
   };
 }
 
