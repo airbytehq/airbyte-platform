@@ -150,6 +150,7 @@
   "connectionForm.namespaceFormat.placeholder": "My namespace",
   "connectionForm.defineSource": "Define source",
   "connectionForm.defineDestination": "Define destination",
+  "connectionForm.configureConnection": "Configure connection",
   "connectionForm.destinationNew": "Set up a new destination",
   "connectionForm.destinationNewDescription": "Configure a new destination from Airbyte's catalog of available connectors",
   "connectionForm.sourceFormat": "Mirror source structure",

@@ -8,6 +8,8 @@ import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageH
 
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
+import { CreateConnectionTitleBlock } from "../CreateConnectionPage/CreateConnectionTitleBlock";
+
 export const ConfigureConnectionPage = () => {
   const { formatMessage } = useIntl();
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -38,7 +40,11 @@ export const ConfigureConnectionPage = () => {
   return (
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "connection.newConnectionTitle" }]} />}
-      pageTitle={<NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />}
+      pageTitle={
+        <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
+          <CreateConnectionTitleBlock />
+        </NextPageHeaderWithNavigation>
+      }
     >
       <CreateConnectionForm />
     </MainPageWithScroll>
