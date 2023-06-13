@@ -4,7 +4,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./SpeedyConnectionBanner.module.scss";
 import { CountDownTimer } from "../CountDownTimer";
@@ -22,7 +22,7 @@ export const SpeedyConnectionBanner = () => {
             link: (link: React.ReactNode[]) => (
               <Link
                 className={styles.speedyConnectionbanner__cta}
-                to={`${RoutePaths.Connections}/${RoutePaths.ConnectionNew}`}
+                to={`${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`}
               >
                 {link}
               </Link>
