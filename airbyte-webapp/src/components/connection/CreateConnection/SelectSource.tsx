@@ -10,18 +10,17 @@ import { Heading } from "components/ui/Heading";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useSourceList } from "hooks/services/useSourceHook";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
-import { CreateNewSource } from "./CreateNewSource";
+import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";
 import { SelectExistingConnector } from "./SelectExistingConnector";
 
 export type SourceType = "existing" | "new";
 
-const EXISTING_SOURCE_TYPE = "existing";
-const NEW_SOURCE_TYPE = "new";
-const SOURCE_TYPE_PARAM = "sourceType";
-const SOURCE_ID_PARAM = "sourceId";
+export const EXISTING_SOURCE_TYPE = "existing";
+export const NEW_SOURCE_TYPE = "new";
+export const SOURCE_TYPE_PARAM = "sourceType";
+export const SOURCE_ID_PARAM = "sourceId";
 
 export const SelectSource: React.FC = () => {
   const { sources } = useSourceList();
@@ -33,9 +32,9 @@ export const SelectSource: React.FC = () => {
 
   const { hasFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
 
   const selectSourceType = (sourceType: SourceType) => {
+    searchParams.delete(SOURCE_DEFINITION_PARAM);
     searchParams.set(SOURCE_TYPE_PARAM, sourceType);
     setSearchParams(searchParams);
   };
@@ -55,9 +54,6 @@ export const SelectSource: React.FC = () => {
         onSubmit: () => {
           closeConfirmationModal();
           selectSourceType(sourceType);
-          if (sourceType === EXISTING_SOURCE_TYPE) {
-            setDocumentationPanelOpen(false);
-          }
         },
         onClose: () => {
           selectSourceType(sourceType);
@@ -65,9 +61,6 @@ export const SelectSource: React.FC = () => {
       });
     } else {
       selectSourceType(sourceType);
-      if (sourceType === EXISTING_SOURCE_TYPE) {
-        setDocumentationPanelOpen(false);
-      }
     }
   };
 
@@ -102,9 +95,7 @@ export const SelectSource: React.FC = () => {
         {selectedSourceType === EXISTING_SOURCE_TYPE && (
           <SelectExistingConnector connectors={sources} selectConnector={selectSource} />
         )}
-        {selectedSourceType === NEW_SOURCE_TYPE && (
-          <CreateNewSource onSourceCreated={(sourceId) => selectSource(sourceId)} />
-        )}
+        {selectedSourceType === NEW_SOURCE_TYPE && <CreateNewSource />}
       </Box>
       <CloudInviteUsersHint connectorType="source" />
     </>

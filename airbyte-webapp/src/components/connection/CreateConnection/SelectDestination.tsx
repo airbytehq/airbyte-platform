@@ -10,18 +10,17 @@ import { Heading } from "components/ui/Heading";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useDestinationList } from "hooks/services/useDestinationHook";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 
-import { CreateNewDestination } from "./CreateNewDestination";
+import { CreateNewDestination, DESTINATION_DEFINITION_PARAM } from "./CreateNewDestination";
 import { RadioButtonTiles } from "./RadioButtonTiles";
 import { SelectExistingConnector } from "./SelectExistingConnector";
 
 type DestinationType = "existing" | "new";
 
-const EXISTING_DESTINATION_TYPE = "existing";
-const NEW_DESTINATION_TYPE = "new";
-const DESTINATION_TYPE_PARAM = "destinationType";
-const DESTINATION_ID_PARAM = "destinationId";
+export const EXISTING_DESTINATION_TYPE = "existing";
+export const NEW_DESTINATION_TYPE = "new";
+export const DESTINATION_TYPE_PARAM = "destinationType";
+export const DESTINATION_ID_PARAM = "destinationId";
 
 export const SelectDestination: React.FC = () => {
   const { destinations } = useDestinationList();
@@ -35,9 +34,9 @@ export const SelectDestination: React.FC = () => {
 
   const { hasFormChanges } = useFormChangeTrackerService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
 
   const selectDestinationType = (destinationType: DestinationType) => {
+    searchParams.delete(DESTINATION_DEFINITION_PARAM);
     searchParams.set(DESTINATION_TYPE_PARAM, destinationType);
     setSearchParams(searchParams);
   };
@@ -57,9 +56,6 @@ export const SelectDestination: React.FC = () => {
         onSubmit: () => {
           closeConfirmationModal();
           selectDestinationType(destinationType);
-          if (destinationType === EXISTING_DESTINATION_TYPE) {
-            setDocumentationPanelOpen(false);
-          }
         },
         onClose: () => {
           selectDestinationType(destinationType);
@@ -67,9 +63,6 @@ export const SelectDestination: React.FC = () => {
       });
     } else {
       selectDestinationType(destinationType);
-      if (destinationType === EXISTING_DESTINATION_TYPE) {
-        setDocumentationPanelOpen(false);
-      }
     }
   };
 
@@ -104,9 +97,7 @@ export const SelectDestination: React.FC = () => {
         {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
           <SelectExistingConnector connectors={destinations} selectConnector={selectDestination} />
         )}
-        {selectedDestinationType === NEW_DESTINATION_TYPE && (
-          <CreateNewDestination onDestinationCreated={(destinationId) => selectDestination(destinationId)} />
-        )}
+        {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
       </Box>
       <CloudInviteUsersHint connectorType="destination" />
     </>
