@@ -18,42 +18,41 @@ import {
 } from "./packages/vite-plugins";
 
 export default defineConfig(() => {
-  const plugins = [
-    environmentVariables(),
-    basicSsl(),
-    react(),
-    buildInfo(),
-    compileFormatJsMessages(),
-    viteTsconfigPaths(),
-    viteYaml(),
-    svgrPlugin({
-      svgrOptions: {
-        titleProp: true,
-      },
-    }),
-    checker({
-      // Enable checks while building the app (not just in dev mode)
-      enableBuild: true,
-      overlay: {
-        initialIsOpen: false,
-        position: "br",
-        // Align error popover button with the react-query dev tool button
-        badgeStyle: "transform: translate(-135px,-11px)",
-      },
-      eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx src` },
-      stylelint: {
-        lintCommand: 'stylelint "src/**/*.{css,scss}"',
-        // We need to overwrite this during development, since otherwise `files` are wrongly
-        // still containing the quotes around them, which they shouldn't
-        dev: { overrideConfig: { files: "src/**/*.{css,scss}" } },
-      },
-      typescript: true,
-    }),
-    docMiddleware(),
-    experimentOverwrites(),
-  ];
   const config: UserConfig = {
-    plugins,
+    plugins: [
+      environmentVariables(),
+      basicSsl(),
+      react(),
+      buildInfo(),
+      compileFormatJsMessages(),
+      viteTsconfigPaths(),
+      viteYaml(),
+      svgrPlugin({
+        svgrOptions: {
+          titleProp: true,
+        },
+      }),
+      checker({
+        // Enable checks while building the app (not just in dev mode)
+        enableBuild: true,
+        overlay: {
+          initialIsOpen: false,
+          position: "br",
+          // Align error popover button with the react-query dev tool button
+          badgeStyle: "transform: translate(-135px,-11px)",
+        },
+        eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx src` },
+        stylelint: {
+          lintCommand: 'stylelint "src/**/*.{css,scss}"',
+          // We need to overwrite this during development, since otherwise `files` are wrongly
+          // still containing the quotes around them, which they shouldn't
+          dev: { overrideConfig: { files: "src/**/*.{css,scss}" } },
+        },
+        typescript: true,
+      }),
+      docMiddleware(),
+      experimentOverwrites(),
+    ],
     // Use `REACT_APP_` as a prefix for environment variables that should be accessible from within FE code.
     envPrefix: ["REACT_APP_"],
     clearScreen: false,
@@ -67,9 +66,6 @@ export default defineConfig(() => {
       headers: {
         "Content-Security-Policy": "script-src * 'unsafe-inline'; worker-src 'self' blob:;",
       },
-    },
-    worker: {
-      plugins,
     },
     css: {
       modules: {
