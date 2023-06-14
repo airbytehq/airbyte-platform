@@ -7,10 +7,13 @@ import {
   StreamStatusType,
 } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
-const useStreamsContextInit = (jobs: JobWithAttemptsRead[]) => {
+const useStreamsContextInit = (connectionId: string) => {
+  const {
+    data: { jobs },
+  } = useListJobsForConnectionStatus(connectionId);
   const { connection } = useConnectionEditService();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -48,8 +51,9 @@ export const useStreamsListContext = () => {
   return context;
 };
 
-export const StreamsListContextProvider: React.FC<{ jobs: JobWithAttemptsRead[] }> = ({ children, jobs }) => {
-  const streamsContext = useStreamsContextInit(jobs);
+export const StreamsListContextProvider: React.FC = ({ children }) => {
+  const { connection } = useConnectionEditService();
+  const streamsContext = useStreamsContextInit(connection.connectionId);
 
   return <StreamsContext.Provider value={streamsContext}>{children}</StreamsContext.Provider>;
 };

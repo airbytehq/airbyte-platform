@@ -101,6 +101,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -110,6 +112,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SchedulerHandler {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerHandler.class);
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
   private static final ImmutableSet<ErrorCode> VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET =
@@ -391,6 +394,8 @@ public class SchedulerHandler {
             sourceAutoPropagateChange.getCatalogId(),
             connectionRead.getNonBreakingChangesPreference());
         connectionsHandler.updateConnection(updateObject);
+        LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
+            connectionRead.getConnectionId(), sourceAutoPropagateChange.getCatalogId());
       }
     }
   }

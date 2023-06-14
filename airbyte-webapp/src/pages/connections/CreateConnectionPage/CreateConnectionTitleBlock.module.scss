@@ -1,0 +1,21 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.iconPlaceholder {
+  @include mixins.shadow-inset;
+
+  background-color: colors.$grey-50;
+  width: 32px;
+  height: 32px;
+  border-radius: variables.$border-radius-md;
+}
+
+.namePlaceholder {
+  @include mixins.shadow-inset;
+
+  width: variables.$width-connector-name-placeholder;
+  height: variables.$spacing-xl;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$grey-50;
+}

@@ -12,6 +12,7 @@ import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageH
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import InlineEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
 import { isSourceDefinitionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
@@ -20,8 +21,6 @@ import { useSourceDefinition } from "services/connector/SourceDefinitionService"
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
-
-import { useGetSourceFromParams } from "../SourceOverviewPage/useGetSourceFromParams";
 
 export const SourceItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SOURCE_ITEM);

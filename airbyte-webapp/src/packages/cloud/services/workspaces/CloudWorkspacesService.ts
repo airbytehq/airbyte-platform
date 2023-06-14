@@ -70,7 +70,7 @@ export function useCreateCloudWorkspace() {
 
   return useMutation(async (name: string) => service.create({ name, userId: user.userId }), {
     onSuccess: (result) => {
-      queryClient.setQueryData<CloudWorkspace[]>(workspaceKeys.lists(), (old) => [...(old ?? []), result]);
+      queryClient.setQueryData<CloudWorkspace[]>(workspaceKeys.lists(), (old) => [result, ...(old ?? [])]);
     },
   });
 }

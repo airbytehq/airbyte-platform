@@ -1,6 +1,7 @@
 import get from "lodash/get";
 import { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
+import ReactMarkdown from "react-markdown";
 
 import { LabelInfo } from "components/Label";
 
@@ -46,12 +47,13 @@ export function getLabelAndTooltip(
 ): { label: string; tooltip: React.ReactNode | undefined } {
   const manifestDescriptor = manifestPath ? getDescriptor(manifestPath) : undefined;
   const finalLabel = label || manifestDescriptor?.title || path;
-  let finalDescription: ReactNode = manifestDescriptor?.description;
+  let finalDescription: ReactNode = manifestDescriptor?.description ? (
+    <ReactMarkdown linkTarget="_blank">{manifestDescriptor?.description}</ReactMarkdown>
+  ) : undefined;
   if (!omitExamplesAndInterpolationContext && manifestDescriptor?.interpolation_context) {
     finalDescription = (
       <>
         {finalDescription}
-        <br />
         <br />
         <FormattedMessage id="connectorBuilder.interpolationHeading" />:{" "}
         <ul>

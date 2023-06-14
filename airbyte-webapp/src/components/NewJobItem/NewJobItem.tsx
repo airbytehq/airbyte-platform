@@ -9,6 +9,7 @@ import { useEffectOnce } from "react-use";
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
+import { ResetStreamsDetails } from "components/JobItem/components/ResetStreamDetails";
 import { JobWithAttempts } from "components/JobItem/types";
 import { getJobAttempts } from "components/JobItem/utils";
 import { Box } from "components/ui/Box";
@@ -164,12 +165,19 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.newJobItem__main}>
         <Box className={styles.newJobItem__summary}>
           <JobStatusLabel jobWithAttempts={jobWithAttempts} />
-          {attempts && attempts.length > 0 && (
-            <AttemptDetails
-              attempt={attempts[attempts.length - 1]}
-              hasMultipleAttempts={attempts.length > 1}
-              jobId={String(jobWithAttempts.job.id)}
+          {jobWithAttempts.job.configType === "reset_connection" ? (
+            <ResetStreamsDetails
+              names={jobWithAttempts.job.resetConfig?.streamsToReset?.map((stream) => stream.name)}
             />
+          ) : (
+            attempts &&
+            attempts.length > 0 && (
+              <AttemptDetails
+                attempt={attempts[attempts.length - 1]}
+                hasMultipleAttempts={attempts.length > 1}
+                jobId={String(jobWithAttempts.job.id)}
+              />
+            )
           )}
         </Box>
         <Box pr="lg" className={styles.newJobItem__timestamp}>

@@ -162,6 +162,11 @@ spotless {
 }
 check.dependsOn 'spotlessApply'
 
+tasks.named('spotlessStyling') {
+    dependsOn(':airbyte-config:specs:downloadConnectorRegistry')
+    dependsOn(':airbyte-commons:downloadSpecSecretMask')
+}
+
 @SuppressWarnings('GroovyAssignabilityCheck')
 def Task getPublishArtifactsTask(String buildVersion, Project subproject) {
     // generate a unique task name based on the directory name.

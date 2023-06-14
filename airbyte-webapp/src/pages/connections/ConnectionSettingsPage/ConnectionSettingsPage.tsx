@@ -21,6 +21,7 @@ import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDeleteConnection } from "hooks/services/useConnectionHook";
 import { links } from "utils/links";
@@ -58,6 +59,7 @@ const dataResidencyDropdownDescription = (
 
 export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
+  const { mode } = useConnectionFormService();
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const canUpdateDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const canSendSchemaUpdateNotifications = useFeature(FeatureItem.AllowAutoDetectSchema);
@@ -128,12 +130,13 @@ export const ConnectionSettingsPage: React.FC = () => {
             defaultValues={connectionSettingsDefaultValues()}
           >
             <UpdateConnectionName />
-            {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications />}
+            {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications disabled={mode === "readonly"} />}
             {canUpdateDataResidency && (
               <DataResidencyDropdown<ConnectionSettingsFormValues>
                 labelId="connection.geographyTitle"
                 description={dataResidencyDropdownDescription}
                 name="geography"
+                disabled={mode === "readonly"}
               />
             )}
             <FormSubmissionButtons submitKey="form.saveChanges" />

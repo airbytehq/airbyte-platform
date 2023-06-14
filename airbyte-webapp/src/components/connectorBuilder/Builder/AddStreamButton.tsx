@@ -151,7 +151,13 @@ const AddStreamForm = ({
     defaultValues: { streamName: "", urlPath: "", copyOtherStream: false, streamToCopy: streams[0]?.name },
     resolver: yupResolver(
       yup.object().shape({
-        streamName: yup.string().required("form.empty.error"),
+        streamName: yup
+          .string()
+          .required("form.empty.error")
+          .notOneOf(
+            streams.map((stream) => stream.name),
+            "connectorBuilder.duplicateStreamName"
+          ),
         urlPath: yup.string().required("form.empty.error"),
       })
     ),

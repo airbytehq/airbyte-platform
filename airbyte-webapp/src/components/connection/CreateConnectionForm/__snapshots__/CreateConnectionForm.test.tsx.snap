@@ -426,7 +426,7 @@ exports[`CreateConnectionForm should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          Non-breaking schema updates detected
+                          Detect and propagate schema changes
                           <span
                             class="<removed-for-snapshot-test>"
                           >

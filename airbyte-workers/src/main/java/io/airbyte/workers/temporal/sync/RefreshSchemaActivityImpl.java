@@ -22,6 +22,7 @@ import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.RefreshSchemaPeriod;
 import io.airbyte.featureflag.ShouldRunRefreshSchema;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -141,7 +142,14 @@ public class RefreshSchemaActivityImpl implements RefreshSchemaActivity {
       if (mostRecentFetchEvent.getUpdatedAt() == null) {
         return false;
       }
-      return mostRecentFetchEvent.getUpdatedAt() > OffsetDateTime.now().minusHours(24L).toEpochSecond();
+      final UUID workspaceId = AirbyteApiClient.retryWithJitter(
+          () -> sourceApi.getSource(sourceIdRequestBody).getWorkspaceId(),
+          "Retrieve Id of the workspace for the source");
+      int refreshPeriod = 24;
+      if (workspaceId != null) {
+        refreshPeriod = featureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(workspaceId));
+      }
+      return mostRecentFetchEvent.getUpdatedAt() > OffsetDateTime.now().minusHours(refreshPeriod).toEpochSecond();
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
       // catching this exception because we don't want to block replication due to a failed schema refresh

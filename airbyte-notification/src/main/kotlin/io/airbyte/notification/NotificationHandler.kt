@@ -7,12 +7,17 @@ enum class NotificationType {
     webhook, customerio
 }
 
+enum class NotificationEvent {
+    onNonBreakingChange, onBreakingChange
+}
+
 @Singleton
 open class NotificationHandler(
         private val maybeWebhookConfigFetcher: WebhookConfigFetcher?,
         private val maybeCustomerIoConfigFetcher: CustomerIoEmailConfigFetcher?,
         private val maybeWebhookNotificationSender: WebhookNotificationSender?,
         private val maybeCustomerIoNotificationSender: CustomerIoEmailNotificationSender?,
+        private val maybeWorkspaceNotificationConfigFetcher: WorkspaceNotificationConfigFetcher?,
 ) {
     /**
      * Send a notification with a subject and a message if a configuration is present
@@ -34,4 +39,33 @@ open class NotificationHandler(
             }
         }
     }
+
+    open fun sendNotification(connectionId: UUID, subject: String, message: String, notificationEvent: NotificationEvent) {
+        val notificationItemWithCustomerIoEmailConfig = maybeWorkspaceNotificationConfigFetcher?.fetchNotificationConfig(connectionId, notificationEvent)
+
+        if (notificationItemWithCustomerIoEmailConfig?.notificationItem == null) {
+            return;
+        }
+        notificationItemWithCustomerIoEmailConfig!!.notificationItem.notificationType!!.forEach { notificationType ->
+            runCatching {
+                if (maybeWebhookNotificationSender != null
+                        && notificationType == io.airbyte.api.client.model.generated.NotificationType.SLACK) {
+                    val webhookConfig = WebhookConfig(
+                        notificationItemWithCustomerIoEmailConfig
+                            !!.notificationItem
+                            !!.slackConfiguration
+                            !!.webhook)
+                    maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)
+                }
+
+                if (maybeCustomerIoNotificationSender != null
+                    && notificationType == io.airbyte.api.client.model.generated.NotificationType.CUSTOMERIO) {
+                        maybeCustomerIoNotificationSender
+                            .sendNotification(notificationItemWithCustomerIoEmailConfig
+                            !!.customerIoEmailConfig, subject, message)
+                }
+            }
+        }
+    }
 }
+

@@ -12,6 +12,7 @@ import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageH
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import InlineEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
 import { isDestinationDefinitionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
@@ -20,8 +21,6 @@ import { useDestinationDefinition } from "services/connector/DestinationDefiniti
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
-
-import { useGetDestinationFromParams } from "../useGetDestinationFromParams";
 
 export const DestinationItemPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.DESTINATION_ITEM);

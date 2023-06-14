@@ -18,7 +18,7 @@ kotlin = "1.8.20"
 kubernetes-client = "6.5.1"
 log4j = "2.17.2"
 lombok = "1.18.24"
-micronaut = "3.9.2"
+micronaut = "3.9.3"
 micronaut-data = "3.10.0"
 micronaut-email = "1.5.0"
 micronaut-jaxrs = "3.4.0"
@@ -82,6 +82,7 @@ jooq = { module = "org.jooq:jooq", version.ref = "jooq" }
 jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
 jooq-meta = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
 json-path = { module = "com.jayway.jsonpath:json-path", version = "2.7.0" }
+json-assert = { module = "org.skyscreamer:jsonassert", version = "1.5.1" }
 jul-to-slf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }

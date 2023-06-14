@@ -11,8 +11,9 @@ import {
 import { OperationsSection } from "components/connection/ConnectionForm/OperationsSection";
 import LoadingSchema from "components/LoadingSchema";
 
-import { DestinationRead, SourceRead } from "core/request/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useGetDestinationFromSearchParams } from "hooks/domain/connector/useGetDestinationFromParams";
+import { useGetSourceFromSearchParams } from "hooks/domain/connector/useGetSourceFromParams";
 import {
   ConnectionFormServiceProvider,
   tidyConnectionFormValues,
@@ -29,17 +30,11 @@ import { CreateConnectionNameField } from "./CreateConnectionNameField";
 import { DataResidency } from "./DataResidency";
 import { SchemaError } from "./SchemaError";
 
-interface CreateConnectionProps {
-  source: SourceRead;
-  destination: DestinationRead;
-  afterSubmitConnection?: () => void;
-}
-
-interface CreateConnectionPropsInner extends Pick<CreateConnectionProps, "afterSubmitConnection"> {
+interface CreateConnectionPropsInner {
   schemaError: SchemaErrorType;
 }
 
-const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schemaError, afterSubmitConnection }) => {
+const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schemaError }) => {
   const navigate = useNavigate();
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
   const { mutateAsync: createConnection } = useCreateConnection();
@@ -75,11 +70,7 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
         // We need to clear the form changes otherwise the dirty form intercept service will prevent navigation
         clearFormChange(formId);
 
-        if (afterSubmitConnection) {
-          afterSubmitConnection();
-        } else {
-          navigate(`../../connections/${createdConnection.connectionId}`);
-        }
+        navigate(`../../connections/${createdConnection.connectionId}`);
       } catch (e) {
         setSubmitError(e);
       }
@@ -93,7 +84,6 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
       connection.catalogId,
       clearFormChange,
       formId,
-      afterSubmitConnection,
       navigate,
       setSubmitError,
     ]
@@ -129,11 +119,10 @@ const CreateConnectionFormInner: React.FC<CreateConnectionPropsInner> = ({ schem
   );
 };
 
-export const CreateConnectionForm: React.FC<CreateConnectionProps> = ({
-  source,
-  destination,
-  afterSubmitConnection,
-}) => {
+export const CreateConnectionForm: React.FC = () => {
+  const source = useGetSourceFromSearchParams();
+  const destination = useGetDestinationFromSearchParams();
+
   const { schema, isLoading, schemaErrorStatus, catalogId, onDiscoverSchema } = useDiscoverSchema(
     source.sourceId,
     true
@@ -153,11 +142,7 @@ export const CreateConnectionForm: React.FC<CreateConnectionProps> = ({
       refreshSchema={onDiscoverSchema}
       schemaError={schemaErrorStatus}
     >
-      {isLoading ? (
-        <LoadingSchema />
-      ) : (
-        <CreateConnectionFormInner afterSubmitConnection={afterSubmitConnection} schemaError={schemaErrorStatus} />
-      )}
+      {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner schemaError={schemaErrorStatus} />}
     </ConnectionFormServiceProvider>
   );
 };

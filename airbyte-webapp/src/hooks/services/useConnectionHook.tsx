@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
@@ -121,7 +121,9 @@ export const useSyncConnection = () => {
 export const useResetConnection = () => {
   const service = useConnectionService();
 
-  return useMutation((connectionId: string) => service.reset(connectionId));
+  const mutation = useMutation(["useResetConnection"], (connectionId: string) => service.reset(connectionId));
+  const activeMutationsCount = useIsMutating(["useResetConnection"]);
+  return { ...mutation, isLoading: activeMutationsCount > 0 };
 };
 
 export const useResetConnectionStream = (connectionId: string) => {

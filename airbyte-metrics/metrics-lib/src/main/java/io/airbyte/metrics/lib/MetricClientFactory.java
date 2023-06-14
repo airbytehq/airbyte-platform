@@ -122,21 +122,18 @@ public class MetricClientFactory {
     return null;
   }
 
-  private static DogStatsDMetricClient initializeDatadogMetricClient(
-                                                                     final MetricEmittingApp metricEmittingApp) {
+  private static void initializeDatadogMetricClient(final MetricEmittingApp metricEmittingApp) {
+    LOGGER.info("Initializing DatadogMetricClient");
     final DogStatsDMetricClient client = new DogStatsDMetricClient();
-
     client.initialize(metricEmittingApp, new DatadogClientConfiguration(configs));
     metricClient = client;
-    return client;
   }
 
-  private static OpenTelemetryMetricClient initializeOpenTelemetryMetricClient(
-                                                                               final MetricEmittingApp metricEmittingApp) {
+  private static void initializeOpenTelemetryMetricClient(final MetricEmittingApp metricEmittingApp) {
+    LOGGER.info("Initializing OpenTelemetryMetricClient");
     final OpenTelemetryMetricClient client = new OpenTelemetryMetricClient();
     client.initialize(metricEmittingApp, configs.getOtelCollectorEndpoint());
     metricClient = client;
-    return client;
   }
 
   static synchronized void flush() {

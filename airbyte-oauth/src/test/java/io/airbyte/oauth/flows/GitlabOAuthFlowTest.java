@@ -8,9 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.oauth.BaseOAuthFlow;
 import io.airbyte.oauth.MoreOAuthParameters;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -19,8 +16,7 @@ class GitlabOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    final Clock clock = Clock.fixed(Instant.ofEpochSecond(1673464409), ZoneId.of("UTC"));
-    return new GitlabOAuthFlow(getHttpClient(), this::getConstantState, clock);
+    return new GitlabOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override
@@ -50,7 +46,8 @@ class GitlabOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected Map<String, String> getExpectedOutput() {
     return Map.of(
-        "expires_in", "720",
+        "expires_in", "7200",
+        "created_at", "1673450729",
         "refresh_token", "refresh_token_response",
         "access_token", "access_token_response",
         "client_id", MoreOAuthParameters.SECRET_MASK,
@@ -60,7 +57,7 @@ class GitlabOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected Map<String, String> getExpectedFilteredOutput() {
     return Map.of(
-        "token_expiry_date", "2023-01-11T19:25:29Z",
+        "token_expiry_date", "2023-01-11T17:25:29Z",
         "refresh_token", "refresh_token_response",
         "access_token", "access_token_response",
         "client_id", MoreOAuthParameters.SECRET_MASK);

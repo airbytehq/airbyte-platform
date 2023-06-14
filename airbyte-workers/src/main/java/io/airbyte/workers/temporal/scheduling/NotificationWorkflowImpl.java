@@ -5,10 +5,9 @@
 package io.airbyte.workers.temporal.scheduling;
 
 import io.airbyte.commons.temporal.scheduling.NotificationWorkflow;
-import io.airbyte.notification.NotificationType;
+import io.airbyte.notification.NotificationEvent;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.NotifyActivity;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -21,8 +20,8 @@ public class NotificationWorkflowImpl implements NotificationWorkflow {
   private NotifyActivity notifyActivity;
 
   @Override
-  public void sendNotification(UUID connectionId, String subject, String message, List<NotificationType> notificationType) {
-    notifyActivity.sendNotification(connectionId, subject, message, notificationType);
+  public void sendNotification(UUID connectionId, String subject, String message, NotificationEvent notificationEvent) {
+    notifyActivity.sendNotificationWithEvent(connectionId, subject, message, notificationEvent);
   }
 
 }

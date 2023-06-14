@@ -19,11 +19,10 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseNotificationWorkflow;
-import io.airbyte.notification.NotificationType;
+import io.airbyte.notification.NotificationEvent;
 import io.airbyte.validation.json.JsonValidationException;
 import io.temporal.client.WorkflowClient;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +50,7 @@ class NotificationClientTest {
 
     notificationClient.sendSchemaChangeNotification(connectionId, "", false);
 
-    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(List.of(NotificationType.webhook, NotificationType.customerio)));
+    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.onNonBreakingChange));
   }
 
   @Test

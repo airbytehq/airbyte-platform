@@ -11,6 +11,7 @@ import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
 import { BuilderOneOf } from "./BuilderOneOf";
 import { BuilderOptional } from "./BuilderOptional";
 import { KeyValueListField } from "./KeyValueListField";
+import { RequestOptionFields } from "./RequestOptionFields";
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
@@ -50,15 +51,15 @@ export const AuthenticationSection: React.FC = () => {
             typeValue: API_KEY_AUTHENTICATOR,
             default: {
               ...inferredAuthValues("ApiKeyAuthenticator"),
-              header: "",
+              inject_into: {
+                type: "RequestOption",
+                inject_into: "header",
+                field_name: "",
+              },
             },
             children: (
               <>
-                <BuilderFieldWithInputs
-                  type="string"
-                  path="global.authenticator.header"
-                  manifestPath="ApiKeyAuthenticator.properties.header"
-                />
+                <RequestOptionFields path="global.authenticator.inject_into" descriptor="token" excludePathInjection />
                 <BuilderInputPlaceholder manifestPath="ApiKeyAuthenticator.properties.api_token" />
               </>
             ),

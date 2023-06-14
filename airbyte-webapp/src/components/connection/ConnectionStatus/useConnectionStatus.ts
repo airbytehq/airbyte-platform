@@ -5,13 +5,22 @@ import {
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
 import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
+import { getConnectionSyncStatus } from "components/EntityTable/utils";
 
-import { ConnectionScheduleType, WebBackendConnectionRead } from "core/request/AirbyteClient";
+import { useListJobsForConnectionStatus } from "core/api";
+import {
+  ConnectionScheduleType,
+  ConnectionStatus,
+  JobConfigType,
+  JobStatus,
+  WebBackendConnectionRead,
+} from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useGetConnection } from "hooks/services/useConnectionHook";
+import { moveTimeToFutureByPeriod } from "utils/time";
 
 import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
-import { useConnectionSyncContext } from "../ConnectionSync/ConnectionSyncContext";
+import { jobStatusesIndicatingFinishedExecution } from "../ConnectionSync/ConnectionSyncContext";
 
 export const isHandleableScheduledConnection = (scheduleType: ConnectionScheduleType | undefined) =>
   scheduleType === "basic";
@@ -44,48 +53,91 @@ export const isConnectionLate = (
   );
 };
 
-export const useConnectionStatus = () => {
+export interface UIConnectionStatus {
+  // user-facing status reflecting the state of the connection
+  status: ConnectionStatusIndicatorStatus;
+  // status of the last completed sync job, useful for distinguishing between failed & delayed in OnTrack status
+  lastSyncJobStatus: JobStatus | undefined;
+  // expected time the next scheduled sync will start (basic schedule only)
+  nextSync: dayjs.Dayjs | undefined;
+}
+
+export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
+  const connection = useGetConnection(connectionId);
+
+  // get the last N (10) jobs for this connection
+  // to determine the connection's status
+  const {
+    data: { jobs },
+  } = useListJobsForConnectionStatus(connectionId);
+
+  const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+
+  // both default to 2; used as the connection schedule multiplier
+  // to evaluate if a connection is OnTrack vs. Late/Error
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
 
-  const { connection } = useConnectionEditService();
-  const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
+  // compute the connection sync status from the job history
+  const lastCompletedSyncJob = jobs.find(
+    ({ job }) =>
+      job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
+  );
+  const lastSyncJobStatus = lastCompletedSyncJob?.job?.status || connection.latestSyncJobStatus;
+  const connectionSyncStatus = getConnectionSyncStatus(connection.status, lastSyncJobStatus);
 
-  const { connectionEnabled, connectionStatus, lastSuccessfulSync } = useConnectionSyncContext();
+  // find the last successful sync job & its timestamp
+  const lastSuccessfulSyncJob = jobs.find(
+    ({ job }) => job?.configType === JobConfigType.sync && job?.status === JobStatus.succeeded
+  );
+  const lastSuccessfulSync = lastSuccessfulSyncJob?.job?.createdAt;
+
+  // calculate the time we expect the next sync to start (basic schedule only)
+  const lastSyncJob = jobs.find(({ job }) => job?.configType === JobConfigType.sync);
+  const latestSyncJobCreatedAt = lastSyncJob?.job?.createdAt;
+  let nextSync;
+  if (latestSyncJobCreatedAt && connection.scheduleData?.basicSchedule) {
+    const latestSync = dayjs(latestSyncJobCreatedAt * 1000);
+    nextSync = moveTimeToFutureByPeriod(
+      latestSync.subtract(connection.scheduleData.basicSchedule.units, connection.scheduleData.basicSchedule.timeUnit),
+      connection.scheduleData.basicSchedule.units,
+      connection.scheduleData.basicSchedule.timeUnit
+    );
+  }
 
   if (hasBreakingSchemaChange) {
-    return ConnectionStatusIndicatorStatus.ActionRequired;
+    return { status: ConnectionStatusIndicatorStatus.ActionRequired, lastSyncJobStatus, nextSync };
   }
 
-  if (!connectionEnabled) {
-    return ConnectionStatusIndicatorStatus.Disabled;
+  if (connection.status !== ConnectionStatus.active) {
+    return { status: ConnectionStatusIndicatorStatus.Disabled, lastSyncJobStatus, nextSync };
   }
 
-  if (connectionStatus === ConnectionSyncStatus.EMPTY) {
-    return ConnectionStatusIndicatorStatus.Pending;
+  if (connectionSyncStatus === ConnectionSyncStatus.EMPTY) {
+    return { status: ConnectionStatusIndicatorStatus.Pending, lastSyncJobStatus, nextSync };
   }
 
   // The `error` value is based on the `connection.streamCentricUI.errorMultiplyer` experiment
   if (
     !hasBreakingSchemaChange &&
-    connectionStatus === ConnectionSyncStatus.FAILED &&
+    connectionSyncStatus === ConnectionSyncStatus.FAILED &&
     (!isHandleableScheduledConnection(connection.scheduleType) ||
       isConnectionLate(connection, lastSuccessfulSync, errorMultiplier) ||
       lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
   ) {
-    return ConnectionStatusIndicatorStatus.Error;
+    return { status: ConnectionStatusIndicatorStatus.Error, lastSyncJobStatus, nextSync };
   }
 
   // The `late` value is based on the `connection.streamCentricUI.late` experiment
   if (isConnectionLate(connection, lastSuccessfulSync, lateMultiplier)) {
-    return ConnectionStatusIndicatorStatus.Late;
+    return { status: ConnectionStatusIndicatorStatus.Late, lastSyncJobStatus, nextSync };
   } else if (isConnectionLate(connection, lastSuccessfulSync, 1)) {
-    return ConnectionStatusIndicatorStatus.OnTrack;
+    return { status: ConnectionStatusIndicatorStatus.OnTrack, lastSyncJobStatus, nextSync };
   }
 
-  if (connectionStatus === ConnectionSyncStatus.FAILED) {
-    return ConnectionStatusIndicatorStatus.OnTrack;
+  if (connectionSyncStatus === ConnectionSyncStatus.FAILED) {
+    return { status: ConnectionStatusIndicatorStatus.OnTrack, lastSyncJobStatus, nextSync };
   }
 
-  return ConnectionStatusIndicatorStatus.OnTime;
+  return { status: ConnectionStatusIndicatorStatus.OnTime, lastSyncJobStatus, nextSync };
 };

@@ -42,6 +42,11 @@ public class SlackNotificationClient extends NotificationClient {
     this.config = notification.getSlackConfiguration();
   }
 
+  public SlackNotificationClient(final SlackNotificationConfiguration slackNotificationConfiguration) {
+    super();
+    this.config = slackNotificationConfiguration;
+  }
+
   @Override
   public boolean notifyJobFailure(final String sourceConnector,
                                   final String destinationConnector,

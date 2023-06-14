@@ -11,7 +11,6 @@ export enum RoutePaths {
   Source = "source",
   Settings = "settings",
   Connection = "connection",
-  ConnectionNew = "new-connection",
   ConnectorBuilder = "connector-builder",
 }
 
@@ -27,4 +26,14 @@ export enum SourcePaths {
   Settings = "settings",
   SelectSourceNew = "new-source",
   SourceNew = "new-source/:sourceDefinitionId",
+}
+export const enum ConnectionRoutePaths {
+  Root = ":connectionId/*",
+  Status = "status",
+  Transformation = "transformation",
+  Replication = "replication",
+  Settings = "settings",
+  JobHistory = "job-history",
+  ConnectionNew = "new-connection",
+  Configure = "configure",
 }

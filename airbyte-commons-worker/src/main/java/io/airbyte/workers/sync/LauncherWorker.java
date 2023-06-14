@@ -174,7 +174,8 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
             containerOrchestratorConfig.googleApplicationCredentials(),
             envMap,
             workerConfigs.getWorkerKubeAnnotations(),
-            serverPort);
+            serverPort,
+            containerOrchestratorConfig.serviceAccount());
 
         // Define what to do on cancellation.
         cancellationCallback.set(() -> {

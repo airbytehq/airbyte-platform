@@ -9,7 +9,6 @@ import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.workers.internal.book_keeping.StreamStatusTracker;
 import io.micronaut.context.event.ApplicationEventListener;
-import io.micronaut.scheduling.annotation.Async;
 import jakarta.inject.Singleton;
 
 /**
@@ -28,7 +27,6 @@ public class AirbyteStreamStatusMessageEventListener implements ApplicationEvent
   }
 
   @Override
-  @Async("stream-status")
   public void onApplicationEvent(final ReplicationAirbyteMessageEvent event) {
     streamStatusTracker.track(event);
   }

@@ -70,6 +70,10 @@ object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOve
 
 object HandleStreamStatus : Temporary<Boolean>(key = "handle.stream.status", default = false)
 
+object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
+
+object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "default")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
@@ -91,8 +95,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
   }
 
   object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
-
-  object AllowOAuthOverrideCredentials : Temporary<Boolean>(key = "allow-oauth-override-credentials", default = false)
 
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 }

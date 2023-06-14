@@ -61,10 +61,10 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
   }
 
   @Override
-  public CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                         IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                         JobRunConfig jobRunConfig,
-                                                                                         StandardSyncInput syncInput,
+  public CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                                         final IntegrationLauncherConfig destinationLauncherConfig,
+                                                                                         final JobRunConfig jobRunConfig,
+                                                                                         final StandardSyncInput syncInput,
                                                                                          final Supplier<ActivityExecutionContext> activityContext) {
     final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorConfig(featureFlagClient, containerOrchestratorConfig,
         syncInput.getConnectionId());
@@ -124,7 +124,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         orchestratorImage,
         containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
         containerOrchestratorConfig.googleApplicationCredentials(),
-        containerOrchestratorConfig.workerEnvironment());
+        containerOrchestratorConfig.workerEnvironment(),
+        containerOrchestratorConfig.serviceAccount());
   }
 
 }

@@ -12,7 +12,7 @@ import { useExperiment } from "hooks/services/Experiment";
 import { FormFieldLayout } from "./FormFieldLayout";
 
 export const NonBreakingChangesPreferenceField: React.FC<FieldProps<string>> = ({ field, form }) => {
-  const autoPropagationEnabled = useExperiment("autopropagation.enabled", false);
+  const autoPropagationEnabled = useExperiment("autopropagation.enabled", true);
   const autoPropagationPrefix = autoPropagationEnabled ? "autopropagation." : "";
   const labelKey = autoPropagationEnabled
     ? "connectionForm.nonBreakingChangesPreference.autopropagation.label"

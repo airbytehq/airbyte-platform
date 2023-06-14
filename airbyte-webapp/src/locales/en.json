@@ -150,6 +150,7 @@
   "connectionForm.namespaceFormat.placeholder": "My namespace",
   "connectionForm.defineSource": "Define source",
   "connectionForm.defineDestination": "Define destination",
+  "connectionForm.configureConnection": "Configure connection",
   "connectionForm.destinationNew": "Set up a new destination",
   "connectionForm.destinationNewDescription": "Configure a new destination from Airbyte's catalog of available connectors",
   "connectionForm.sourceFormat": "Mirror source structure",
@@ -191,6 +192,8 @@
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Propagate all changes",
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
   "connectionForm.jobHistory": "Job History",
+  "connectionForm.update.success": "Connection update succeeded",
+  "connectionForm.update.failed": "Connection update failed",
 
   "connectionForm.modal.destinationNamespace.title": "Destination namespace",
   "connectionForm.modal.destinationNamespace.option.source": "Mirror source structure",
@@ -766,7 +769,7 @@
   "connectorBuilder.requestTab": "Request",
   "connectorBuilder.responseTab": "Response",
   "connectorBuilder.schemaTab": "Detected schema",
-  "connectorBuilder.useSchemaButton": "Use detected schema",
+  "connectorBuilder.useSchemaButton": "Import detected schema",
   "connectorBuilder.differentSchemaDescription": "Detected schema and declared schema are different",
   "connectorBuilder.overwriteSchemaButton": "Overwrite declared schema",
   "connectorBuilder.mergeSchemaButton": "Merge properties",
@@ -941,6 +944,8 @@
   "connectorBuilder.createPage.tutorialPrompt": "Check out the tutorial",
   "connectorBuilder.incompatibleChanges": "Some parts of the declared schema are incompatible with the returned records. These can cause syncs to fail. Please address the following issues:",
   "connectorBuilder.streamTooltip": "A stream defines how requests are made to a single API endpoint to fetch data, and how that data gets translated into records.",
+  "connectorBuilder.duplicateStreamName": "Cannot match any other stream name",
+  "connectorBuilder.errorHandlerWarning": "To keep testing times short, <b>retries are disabled in the connector builder</b>. If you want to test retries, please publish your connector and test it in a connection.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

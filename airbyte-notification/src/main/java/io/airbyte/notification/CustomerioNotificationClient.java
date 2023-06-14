@@ -52,6 +52,15 @@ public class CustomerioNotificationClient extends NotificationClient {
         .build();
   }
 
+  public CustomerioNotificationClient() {
+    super();
+    this.apiToken = System.getenv("CUSTOMERIO_API_KEY");
+    this.emailApiEndpoint = CUSTOMERIO_EMAIL_API_ENDPOINT;
+    this.httpClient = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_2)
+        .build();
+  }
+
   @VisibleForTesting
   public CustomerioNotificationClient(final Notification notification,
                                       final String apiToken,
