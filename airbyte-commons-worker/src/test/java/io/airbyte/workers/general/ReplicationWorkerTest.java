@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.io.IOs;
 import io.airbyte.commons.json.Jsons;
@@ -317,7 +318,8 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
         new StreamDescriptor(),
         replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
+        AirbyteMessageOrigin.INTERNAL,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
   }
 
   @ParameterizedTest
@@ -349,7 +351,8 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
         new StreamDescriptor(),
         replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
+        AirbyteMessageOrigin.INTERNAL,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
   }
 
   @ParameterizedTest
@@ -370,7 +373,8 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
         new StreamDescriptor(),
         replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
+        AirbyteMessageOrigin.INTERNAL,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
   }
 
   @ParameterizedTest
@@ -402,7 +406,8 @@ abstract class ReplicationWorkerTest {
     verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
         new StreamDescriptor(),
         replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
+        AirbyteMessageOrigin.INTERNAL,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
   }
 
   @Test

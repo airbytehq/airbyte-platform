@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.internal.book_keeping.events;
 
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -12,6 +13,7 @@ import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
 import io.airbyte.workers.test_utils.AirbyteMessageUtils;
 import io.micronaut.context.event.ApplicationEventPublisher;
 import jakarta.inject.Singleton;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,12 +55,14 @@ public class ReplicationAirbyteMessageEventPublishingHelper {
    * @param replicationContext The replication context containing information about the sync.
    * @param airbyteMessageOrigin The {@link AirbyteMessage} origin that will be associated with the
    *        published incomplete status event.
+   * @param incompleteRunCause The optional cause for incomplete status.
    */
   public void publishIncompleteStatusEvent(final StreamDescriptor stream,
                                            final ReplicationContext replicationContext,
-                                           final AirbyteMessageOrigin airbyteMessageOrigin) {
+                                           final AirbyteMessageOrigin airbyteMessageOrigin,
+                                           final Optional<StreamStatusIncompleteRunCause> incompleteRunCause) {
     publishStatusEvent(stream, AirbyteStreamStatus.INCOMPLETE, replicationContext,
-        airbyteMessageOrigin);
+        airbyteMessageOrigin, incompleteRunCause);
   }
 
   /**
@@ -84,10 +88,28 @@ public class ReplicationAirbyteMessageEventPublishingHelper {
                                  final AirbyteStreamStatus streamStatus,
                                  final ReplicationContext replicationContext,
                                  final AirbyteMessageOrigin airbyteMessageOrigin) {
+    publishStatusEvent(stream, streamStatus, replicationContext, airbyteMessageOrigin, Optional.empty());
+  }
+
+  /**
+   * Publishes a stream status event using the provided event publisher.
+   *
+   * @param stream The stream to be associated with the status.
+   * @param streamStatus The stream status.
+   * @param replicationContext The replication context containing information about the sync.
+   * @param airbyteMessageOrigin The {@link AirbyteMessage} origin that will be associated with the
+   *        published status event.
+   * @param incompleteRunCause The optional cause for incomplete status.
+   */
+  public void publishStatusEvent(final StreamDescriptor stream,
+                                 final AirbyteStreamStatus streamStatus,
+                                 final ReplicationContext replicationContext,
+                                 final AirbyteMessageOrigin airbyteMessageOrigin,
+                                 final Optional<StreamStatusIncompleteRunCause> incompleteRunCause) {
     final AirbyteMessage airbyteMessage = AirbyteMessageUtils.createStatusTraceMessage(stream, streamStatus);
 
     final ReplicationAirbyteMessageEvent replicationAirbyteMessageEvent =
-        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext);
+        new ReplicationAirbyteMessageEvent(airbyteMessageOrigin, airbyteMessage, replicationContext, incompleteRunCause);
     LOGGER.debug("Publishing {} event for stream {}:{} -> {}",
         airbyteMessageOrigin, stream != null ? stream.getNamespace() : null, stream != null ? stream.getName() : null, streamStatus);
     this.publishStatusEvent(replicationAirbyteMessageEvent);

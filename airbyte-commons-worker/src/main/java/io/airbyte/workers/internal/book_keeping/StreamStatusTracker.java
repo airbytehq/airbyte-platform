@@ -77,7 +77,7 @@ public class StreamStatusTracker {
           event.airbyteMessage().getTrace().getStreamStatus().getStreamDescriptor().getNamespace(),
           event.airbyteMessage().getTrace().getStreamStatus().getStreamDescriptor().getName(),
           event.airbyteMessage().getTrace().getStreamStatus().getStatus());
-      handleStreamStatus(event.airbyteMessage().getTrace(), event.airbyteMessageOrigin(), event.replicationContext());
+      handleStreamStatus(event.airbyteMessage().getTrace(), event.airbyteMessageOrigin(), event.replicationContext(), event.incompleteRunCause());
     } catch (final Exception e) {
       LOGGER.error("Unable to update stream status for event {}.", event, e);
     }
@@ -117,7 +117,8 @@ public class StreamStatusTracker {
 
   private void handleStreamStatus(final AirbyteTraceMessage airbyteTraceMessage,
                                   final AirbyteMessageOrigin airbyteMessageOrigin,
-                                  final ReplicationContext replicationContext)
+                                  final ReplicationContext replicationContext,
+                                  final Optional<StreamStatusIncompleteRunCause> incompleteRunCause)
       throws Exception {
     final AirbyteStreamStatusTraceMessage streamStatusTraceMessage = airbyteTraceMessage.getStreamStatus();
     final Duration transitionTimestamp = Duration.ofMillis(Double.valueOf(airbyteTraceMessage.getEmittedAt()).longValue());
@@ -125,7 +126,8 @@ public class StreamStatusTracker {
       case STARTED -> handleStreamStarted(streamStatusTraceMessage, replicationContext, transitionTimestamp);
       case RUNNING -> handleStreamRunning(streamStatusTraceMessage, replicationContext, transitionTimestamp);
       case COMPLETE -> handleStreamComplete(streamStatusTraceMessage, airbyteMessageOrigin, replicationContext, transitionTimestamp);
-      case INCOMPLETE -> handleStreamIncomplete(streamStatusTraceMessage, airbyteMessageOrigin, replicationContext, transitionTimestamp);
+      case INCOMPLETE -> handleStreamIncomplete(streamStatusTraceMessage, airbyteMessageOrigin, replicationContext, transitionTimestamp,
+          incompleteRunCause);
       default -> LOGGER.warn("Invalid stream status '{}' for message: {}", streamStatusTraceMessage.getStatus(), streamStatusTraceMessage);
     }
   }
@@ -232,10 +234,11 @@ public class StreamStatusTracker {
   private void handleStreamIncomplete(final AirbyteStreamStatusTraceMessage streamStatusTraceMessage,
                                       final AirbyteMessageOrigin airbyteMessageOrigin,
                                       final ReplicationContext replicationContext,
-                                      final Duration transitionTimestamp)
+                                      final Duration transitionTimestamp,
+                                      final Optional<StreamStatusIncompleteRunCause> incompleteCause)
       throws Exception {
     if (AirbyteMessageOrigin.INTERNAL == airbyteMessageOrigin) {
-      forceIncompleteForConnection(replicationContext, transitionTimestamp);
+      forceIncompleteForConnection(replicationContext, transitionTimestamp, incompleteCause);
     } else {
       final StreamDescriptor streamDescriptor = streamStatusTraceMessage.getStreamDescriptor();
       final StreamStatusKey streamStatusKey = generateStreamStatusKey(replicationContext, streamDescriptor);
@@ -244,7 +247,7 @@ public class StreamStatusTracker {
         if (existingStreamStatus.getCurrentStatus() != AirbyteStreamStatus.INCOMPLETE) {
           sendUpdate(existingStreamStatus.getStatusId(), streamDescriptor.getName(), streamDescriptor.getNamespace(),
               transitionTimestamp.toMillis(), replicationContext, StreamStatusRunState.INCOMPLETE,
-              Optional.of(StreamStatusIncompleteRunCause.FAILED), airbyteMessageOrigin);
+              incompleteCause, airbyteMessageOrigin);
           LOGGER.info("Stream status for stream {}:{} set to INCOMPLETE (id = {}, origin = {}, context = {}).",
               streamDescriptor.getNamespace(), streamDescriptor.getName(), existingStreamStatus.getStatusId(), airbyteMessageOrigin,
               replicationContext);
@@ -342,10 +345,12 @@ public class StreamStatusTracker {
    * @param replicationContext The {@link ReplicationContext} used to identify tracked streams
    *        associated with a connection ID.
    * @param transitionTimestamp The timestamp of the force status change.
+   * @param incompleteRunCause The optional cause of the incomplete status.
    */
-  private void forceIncompleteForConnection(final ReplicationContext replicationContext, final Duration transitionTimestamp) {
-    forceStatusForConnection(replicationContext, transitionTimestamp, StreamStatusRunState.INCOMPLETE,
-        Optional.of(StreamStatusIncompleteRunCause.FAILED));
+  private void forceIncompleteForConnection(final ReplicationContext replicationContext,
+                                            final Duration transitionTimestamp,
+                                            final Optional<StreamStatusIncompleteRunCause> incompleteRunCause) {
+    forceStatusForConnection(replicationContext, transitionTimestamp, StreamStatusRunState.INCOMPLETE, incompleteRunCause);
   }
 
   /**
