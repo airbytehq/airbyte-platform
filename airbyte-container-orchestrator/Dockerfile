@@ -3,9 +3,9 @@ FROM ${JDK_IMAGE} AS orchestrator
 
 ARG DOCKER_BUILD_ARCH=amd64
 
-RUN apk add tar jq
+RUN apk add docker jq tar
 
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${DOCKER_BUILD_ARCH}/kubectl" \
+RUN wget "https://dl.k8s.io/release/$(wget -qO-  https://dl.k8s.io/release/stable.txt)/bin/linux/${DOCKER_BUILD_ARCH}/kubectl" \
         && chmod +x kubectl && mv kubectl /usr/local/bin/
 
 # Don't change this manually.  Bump version expects to make moves based on this string

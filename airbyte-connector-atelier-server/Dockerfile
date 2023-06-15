@@ -1,9 +1,16 @@
 ARG JDK_IMAGE=airbyte/airbyte-base-java-image:2.0.2
 FROM ${JDK_IMAGE} AS connector-atelier-server
 
-RUN yum update -y && \
-    yum groupinstall -y "Development Tools" && \
-    yum install -y openssl-devel bzip2-devel libffi-devel zlib-devel sqlite-devel xz-devel
+RUN apk add --update \
+    build-base \
+    openssl-dev \
+    bzip2-dev \
+    libffi-dev \
+    zlib-dev \
+    sqlite-dev \
+    xz-dev \
+    git \
+    bash
 
 # Set up CDK requirements
 ARG PYTHON_VERSION=3.9.11

@@ -3,11 +3,11 @@
 set -ex
 
 install_init() {
-  sudo yum update -y
+  sudo apk update
 }
 
 install_docker() {
-  sudo yum install -y docker
+  sudo apk add docker
   sudo service docker start
   sudo usermod -a -G docker ec2-user
 }
