@@ -28,6 +28,7 @@
   "sidebar.upcomingFeatures": "Upcoming features",
 
   "form.error": "Error: {message}",
+  "form.error.missing": "missing",
   "form.yourEmail": "Your email",
   "form.email.placeholder": "you@company.com",
   "form.email.error": "Enter a valid email",
@@ -112,6 +113,8 @@
   "form.hideDisabledStreams": "Hide disabled streams",
   "form.fields": "Fields",
   "form.namespace": "Namespace",
+  "form.dataDestination": "Data destination",
+  "form.stream": "Stream",
   "form.streamName": "Stream name",
   "form.sourceAndDestination": "Source | Destination",
   "form.noNamespace": "No namespace",

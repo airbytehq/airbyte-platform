@@ -8,6 +8,7 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { AirbyteStream, AirbyteStreamConfiguration } from "core/request/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./StreamPanelHeader.module.scss";
 
@@ -35,6 +36,24 @@ export const StreamProperty: React.FC<StreamPropertyProps> = ({ messageId, value
     </Text>
   </div>
 );
+
+const NamespaceProperty: React.FC<{ namespace?: string }> = ({ namespace }) => {
+  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", false);
+
+  if (isSimplifiedCatalogRowEnabled) {
+    return namespace ? (
+      <StreamProperty messageId="form.sourceNamespace" value={namespace} data-testid="stream-details-namespace" />
+    ) : null;
+  }
+
+  return (
+    <StreamProperty
+      messageId="form.namespace"
+      value={namespace ?? <FormattedMessage id="form.noNamespace" />}
+      data-testid="stream-details-namespace"
+    />
+  );
+};
 
 export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
   config,
@@ -72,11 +91,7 @@ export const StreamPanelHeader: React.FC<StreamPanelHeaderProps> = ({
         </Text>
       </FlexContainer>
       <FlexContainer className={styles.properties} justifyContent="center" gap="xl">
-        <StreamProperty
-          messageId="form.namespace"
-          value={stream?.namespace ?? <FormattedMessage id="form.noNamespace" />}
-          data-testid="stream-details-namespace"
-        />
+        <NamespaceProperty namespace={stream?.namespace} />
         <StreamProperty messageId="form.streamName" value={stream?.name} data-testid="stream-details-stream-name" />
         <StreamProperty messageId="form.syncMode" value={syncMode} data-testid="stream-details-sync-mode" />
       </FlexContainer>

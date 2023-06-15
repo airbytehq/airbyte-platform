@@ -19,7 +19,12 @@ import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
 import { visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
-import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
+import {
+  WebBackendConnectionRead,
+  DestinationRead,
+  SourceRead,
+  AirbyteStreamAndConfiguration,
+} from "@src/core/api/types/AirbyteClient";
 
 import * as connectionSettings from "pages/connection/connectionSettingsPageObject";
 
@@ -146,6 +151,46 @@ describe("Connection Configuration", () => {
 
     describe("Destination namespace", { testIsolation: false }, () => {
       it("Set destination namespace with 'Custom format' option", () => {
+        createNewConnectionViaApi(postgresSource, jsonDestination).then((connectionResponse) => {
+          connection = connectionResponse;
+          visit(connection, "replication");
+        });
+        connectionForm.expandConfigurationSection();
+
+        const namespace = "_DestinationNamespaceCustomFormat";
+        connectionForm.setupDestinationNamespaceCustomFormat(namespace);
+
+        // Ensures the DestinationNamespace is applied to the streams
+        const row = streamsTable.getRow("public", "users");
+        row.checkDestinationNamespace(`public${namespace}`);
+
+        submitButtonClick();
+
+        waitForUpdateConnectionRequest().then((interception) => {
+          assert.isNotNull(interception.response?.statusCode, "200");
+          expect(interception.request.method).to.eq("POST");
+          expect(interception.request)
+            .property("body")
+            .to.contain({
+              name: `${connection?.name}`,
+              namespaceDefinition: "customformat",
+              namespaceFormat: "${SOURCE_NAMESPACE}_DestinationNamespaceCustomFormat",
+              status: "active",
+            });
+
+          const streamToCheck = interception.request.body.syncCatalog.streams.filter(
+            (stream: AirbyteStreamAndConfiguration) => stream?.stream?.name.includes("users")
+          )[0];
+
+          // should not change the saved source namespace
+          expect(streamToCheck.stream).to.contain({
+            name: "users",
+            namespace: "public",
+          });
+        });
+        replicationPage.checkSuccessResult();
+      });
+      it("Set destination namespace with 'Custom format' option and interpolates an empty string if relevant", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "replication");
@@ -157,7 +202,8 @@ describe("Connection Configuration", () => {
 
         // Ensures the DestinationNamespace is applied to the streams
         const row = streamsTable.getRow("no-namespace", "pokemon");
-        row.checkDestinationNamespace(`\${SOURCE_NAMESPACE}${namespace}`);
+        // Because there
+        row.checkDestinationNamespace(`${namespace}`);
 
         submitButtonClick();
 
@@ -178,17 +224,31 @@ describe("Connection Configuration", () => {
           expect(streamToUpdate.stream).to.contain({
             name: "pokemon",
           });
+          // check that we did NOT set the namespace on the stream
+          expect(streamToUpdate.stream).not.to.have.property("namespace");
         });
         replicationPage.checkSuccessResult();
       });
 
       it("Set destination namespace with 'Mirror source structure' option", () => {
+        createNewConnectionViaApi(postgresSource, jsonDestination).then((connectionResponse) => {
+          connection = connectionResponse;
+          visit(connection, "replication");
+        });
+
+        const namespace = "public";
+
+        // Ensures the DestinationNamespace is applied to the streams
+        const row = streamsTable.getRow("public", "users");
+        row.checkDestinationNamespace(namespace);
+      });
+      it("Set destination namespace with 'Mirror source structure' option and shows destination fallback if relevant", () => {
         createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "replication");
         });
 
-        const namespace = "<source schema>";
+        const namespace = "<destination schema>";
 
         // Ensures the DestinationNamespace is applied to the streams
         const row = streamsTable.getRow("no-namespace", "pokemon");
@@ -206,7 +266,7 @@ describe("Connection Configuration", () => {
 
         const namespace = "<destination schema>";
 
-        // Ensures the DestinationNamespace is applied to the streams
+        // Ensures the DestinationNamespace is applied to the stream rows in table
         const row = streamsTable.getRow("no-namespace", "pokemon");
         row.checkDestinationNamespace(namespace);
 
@@ -229,6 +289,9 @@ describe("Connection Configuration", () => {
           expect(streamToUpdate.stream).to.contain({
             name: "pokemon",
           });
+
+          // verify nothing changed in the saved stream
+          expect(streamToUpdate.stream).to.not.have.property("namespace");
         });
         replicationPage.checkSuccessResult();
       });

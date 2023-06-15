@@ -29,6 +29,7 @@ export interface Experiments {
   "connection.searchableJobLogs": boolean;
   "connector.showRequestSchemabutton": boolean;
   "connection.syncCatalogConfig.disabledStreams": boolean;
+  "connection.syncCatalog.simplifiedCatalogRow": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connector.allowlistIpBanner": boolean;

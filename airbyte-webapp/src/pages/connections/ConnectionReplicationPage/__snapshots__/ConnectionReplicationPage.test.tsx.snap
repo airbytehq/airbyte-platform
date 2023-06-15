@@ -725,7 +725,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -926,7 +926,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -1126,7 +1126,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
