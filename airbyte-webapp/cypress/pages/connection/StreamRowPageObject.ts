@@ -90,6 +90,12 @@ export class StreamRowPageObject {
       .should(`${expectedValue ? "" : "not."}match`, /removed/);
   }
 
+  hasAddedStyle(expectedValue: boolean) {
+    cy.get(this.stream)
+      .invoke("attr", "class")
+      .should(`${expectedValue ? "" : "not."}match`, /added/);
+  }
+
   checkSourceNamespace() {
     cy.get(this.stream).within(() => cy.get(sourceNamespaceCell).contains(this.namespace));
   }

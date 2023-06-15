@@ -80,7 +80,7 @@ describe("Connection - Stream details", () => {
       const fieldNames = ["email", "id", "name", "updated_at"];
       const fieldTypes = ["String", "Integer", "String", "Datetime"];
 
-      streamDetails.isSyncStreamEnabled();
+      streamDetails.isSyncStreamDisabled();
       streamDetails.isNamespace("public");
       streamDetails.isStreamName("users");
       streamDetails.isSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
@@ -98,12 +98,12 @@ describe("Connection - Stream details", () => {
       streamRow.toggleStreamSync();
       streamRow.showStreamDetails();
 
-      streamDetails.isSyncStreamDisabled();
-      streamDetails.enableSyncStream();
       streamDetails.isSyncStreamEnabled();
+      streamDetails.disableSyncStream();
+      streamDetails.isSyncStreamDisabled();
       streamDetails.close();
 
-      streamRow.isStreamSyncEnabled(true);
+      streamRow.isStreamSyncEnabled(false);
     });
   });
 

@@ -139,6 +139,7 @@ describe("Connection - sync modes", () => {
 
   describe("Full refresh | Overwrite", () => {
     it("selects and saves", () => {
+      usersStreamRow.toggleStreamSync();
       usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
 
       // Check cursor and primary key
@@ -208,6 +209,7 @@ describe("Connection - sync modes", () => {
       const cursor = "updated_at"; // todo: should we get this from syncCatalog.streams[??].config.defaultCursorField with sourceDefinedCursor === true? and/or
       const primaryKey = "id"; // todo: should we get this from syncCatalog.streams[??].config.primaryKeys?
 
+      users2StreamRow.toggleStreamSync();
       users2StreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Select cursor mode
@@ -251,6 +253,7 @@ describe("Connection - sync modes", () => {
       const cursor = "updated_at";
       const primaryKey = "id";
 
+      accountsStreamRow.toggleStreamSync();
       accountsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Check cursor and primary key
@@ -291,6 +294,7 @@ describe("Connection - sync modes", () => {
       const cursorValue = "created_at";
       const primaryKeyValue = ["car_id", "user_id"];
 
+      userCarsStreamRow.toggleStreamSync();
       userCarsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Check that cursor and primary key is required

@@ -119,7 +119,7 @@ public class CatalogConverter {
             .map(CatalogConverter::toApi)
             .map(s -> new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
                 .stream(s)
-                .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams)))
+                .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams, catalog.getStreams().stream().count())))
             .collect(Collectors.toList()));
   }
 
@@ -221,22 +221,21 @@ public class CatalogConverter {
   @SuppressWarnings("LineLength")
   private static io.airbyte.api.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(final io.airbyte.api.model.generated.AirbyteStream stream,
                                                                                                         Boolean suggestingStreams,
-                                                                                                        List<String> suggestedStreams) {
+                                                                                                        List<String> suggestedStreams,
+                                                                                                        Long totalStreams) {
     final io.airbyte.api.model.generated.AirbyteStreamConfiguration result = new io.airbyte.api.model.generated.AirbyteStreamConfiguration()
         .aliasName(Names.toAlphanumericAndUnderscore(stream.getName()))
         .cursorField(stream.getDefaultCursorField())
         .destinationSyncMode(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
-        .primaryKey(stream.getSourceDefinedPrimaryKey())
-        .selected(!suggestingStreams)
-        .suggested(true);
+        .primaryKey(stream.getSourceDefinedPrimaryKey());
 
-    if (suggestingStreams) {
-      if (suggestedStreams.contains(stream.getName())) {
-        result.setSelected(true);
-      } else {
-        result.setSuggested(false);
-      }
-    }
+    final boolean onlyOneStream = totalStreams == 1L;
+    final boolean isSelected = onlyOneStream || (suggestingStreams && suggestedStreams.contains(stream.getName()));
+
+    // In the case where this connection hasn't yet been configured, the suggested streams are also
+    // (pre)-selected
+    result.setSuggested(isSelected);
+    result.setSelected(isSelected);
 
     if (stream.getSupportedSyncModes().size() > 0) {
       result.setSyncMode(stream.getSupportedSyncModes().get(0));

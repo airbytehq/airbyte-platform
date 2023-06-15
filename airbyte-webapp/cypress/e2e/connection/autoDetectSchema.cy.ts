@@ -49,7 +49,7 @@ describe("Connection - Auto-detect schema changes", () => {
     populateDBSource();
     createPostgresSourceViaApi().then((pgSource) => {
       source = pgSource;
-      createNewConnectionViaApi(source, destination).then((connectionResponse) => {
+      createNewConnectionViaApi(source, destination, { enableAllStreams: true }).then((connectionResponse) => {
         connection = connectionResponse;
       });
     });
