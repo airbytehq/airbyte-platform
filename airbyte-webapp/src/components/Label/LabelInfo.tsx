@@ -74,7 +74,11 @@ const Examples: React.FC<Pick<LabelInfoProps, "examples">> = ({ examples }) => {
       <div className={styles.exampleContainer}>
         {examplesArray.map((example, i) => (
           <span key={i} className={styles.exampleItem}>
-            {typeof example === "object" ? JSON.stringify(example) : String(example)}
+            {typeof example === "object"
+              ? Array.isArray(example)
+                ? example.join(", ")
+                : JSON.stringify(example)
+              : String(example)}
           </span>
         ))}
       </div>

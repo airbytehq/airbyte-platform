@@ -83,7 +83,14 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
 
 const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType }) => {
   return (
-    <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} itemType={itemType} error={error} />
+    <TagInput
+      name={name}
+      fieldValue={value}
+      onChange={(value) => setValue(value)}
+      itemType={itemType}
+      error={error}
+      directionalStyle
+    />
   );
 };
 
