@@ -226,6 +226,11 @@ public class JobNotifier {
 
   private void sendNotification(final NotificationItem notificationItem,
                                 ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification) {
+    if (notificationItem == null) {
+      // Note: we may be able to implement a log notifier to log notification message only.
+      LOGGER.info("No notification item found for the desired notification event found. Skipping notification.");
+      return;
+    }
     final List<NotificationClient> notificationClients = getNotificationClientsFromNotificationItem(notificationItem);
     for (final NotificationClient notificationClient : notificationClients) {
       try {

@@ -34,11 +34,15 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
   }
 
   protected static String getDomain(JsonNode inputOAuthConfiguration) throws IOException {
-    final var domain = inputOAuthConfiguration.get("domain");
-    if (domain == null) {
+    final var url = inputOAuthConfiguration.get("domain");
+    if (url == null) {
       throw new IOException("Domain field is empty.");
     }
-    return domain.asText();
+    final String stringURL = url.asText();
+    // this could be `https://gitlab.com` or `gitlab.com`
+    // because the connector supports storing hostname with and without schema
+    final String[] parts = stringURL.split("//");
+    return parts[parts.length - 1];
   }
 
   @Override
@@ -62,8 +66,17 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
 
   @Override
   protected String getAccessTokenUrl(final JsonNode inputOAuthConfiguration) {
-    final var domain = inputOAuthConfiguration.get("domain");
-    return String.format(ACCESS_TOKEN_URL, domain == null ? "gitlab.com" : domain.asText());
+    final var url = inputOAuthConfiguration.get("domain");
+    final String stringURL;
+    if (url == null) {
+      stringURL = "gitlab.com";
+    } else {
+      stringURL = url.asText();
+    }
+    // this could be `https://gitlab.com` or `gitlab.com`
+    // because the connector supports storing hostname with and without schema
+    final String[] parts = stringURL.split("//");
+    return String.format(ACCESS_TOKEN_URL, parts[parts.length - 1]);
   }
 
   @Override

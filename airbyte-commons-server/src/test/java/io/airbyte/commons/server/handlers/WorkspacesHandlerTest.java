@@ -156,6 +156,37 @@ class WorkspacesHandlerTest {
                     .webhook(FAILURE_NOTIFICATION_WEBHOOK)));
   }
 
+  private io.airbyte.api.model.generated.NotificationSettings generateApiNotificationSettingsWithDefaultValue() {
+    return new io.airbyte.api.model.generated.NotificationSettings()
+        .sendOnFailure(
+            new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of(io.airbyte.api.model.generated.NotificationType.SLACK))
+                .slackConfiguration(new io.airbyte.api.model.generated.SlackNotificationConfiguration()
+                    .webhook(FAILURE_NOTIFICATION_WEBHOOK)))
+        .sendOnSuccess(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
+        .sendOnConnectionUpdate(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnConnectionUpdateActionRequired(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabledWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO));
+  }
+
+  private io.airbyte.api.model.generated.NotificationSettings generateDefaultApiNotificationSettings() {
+    return new io.airbyte.api.model.generated.NotificationSettings()
+        .sendOnSuccess(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
+        .sendOnFailure(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
+        .sendOnConnectionUpdate(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnConnectionUpdateActionRequired(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabledWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO));
+  }
+
   @Test
   void testCreateWorkspace() throws JsonValidationException, IOException, ConfigNotFoundException {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS);
@@ -190,9 +221,42 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)));
+
+    assertEquals(expectedRead, actualRead);
+  }
+
+  @Test
+  void testCreateWorkspaceWithMinimumInput() throws JsonValidationException, IOException, ConfigNotFoundException {
+    when(configRepository.getStandardWorkspaceNoSecrets(any(), eq(false))).thenReturn(workspace);
+
+    final UUID uuid = UUID.randomUUID();
+    when(uuidSupplier.get()).thenReturn(uuid);
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+
+    final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
+        .name(NEW_WORKSPACE)
+        .email(TEST_EMAIL);
+
+    final WorkspaceRead actualRead = workspacesHandler.createWorkspace(workspaceCreate);
+    final WorkspaceRead expectedRead = new WorkspaceRead()
+        .workspaceId(actualRead.getWorkspaceId())
+        .customerId(actualRead.getCustomerId())
+        .email(TEST_EMAIL)
+        .name(NEW_WORKSPACE)
+        .slug(actualRead.getSlug())
+        .initialSetupComplete(false)
+        .displaySetupWizard(false)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(List.of())
+        .notificationSettings(generateDefaultApiNotificationSettings())
+        .defaultGeography(GEOGRAPHY_AUTO)
+        .webhookConfigs(Collections.emptyList());
 
     assertEquals(expectedRead, actualRead);
   }
@@ -231,7 +295,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(Collections.emptyList())
-        .notificationSettings(new io.airbyte.api.model.generated.NotificationSettings())
+        .notificationSettings(generateDefaultApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
         .webhookConfigs(Collections.emptyList());
 
@@ -626,7 +690,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
-        .notificationSettings(generateApiNotificationSettings())
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(Collections.emptyList());
 

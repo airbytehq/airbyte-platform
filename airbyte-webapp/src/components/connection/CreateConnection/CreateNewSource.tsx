@@ -102,13 +102,11 @@ export const CreateNewSource: React.FC = () => {
   if (selectedSourceDefinitionId) {
     return (
       <>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
+        <Box mb="md">
+          <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+            <FormattedMessage id="connectorBuilder.backButtonLabel" />
+          </Button>
+        </Box>
         <SourceForm
           selectedSourceDefinitionId={selectedSourceDefinitionId}
           sourceDefinitions={sourceDefinitions}
@@ -125,6 +123,7 @@ export const CreateNewSource: React.FC = () => {
         connectorDefinitions={filteredSourceDefinitions}
         onConnectorButtonClick={(sourceDefinition) => onSelectSourceDefinitionId(sourceDefinition.sourceDefinitionId)}
         onOpenRequestConnectorModal={onOpenRequestConnectorModal}
+        showConnectorBuilderButton
       />
     </FlexContainer>
   );

@@ -76,31 +76,33 @@ export const SelectDestination: React.FC = () => {
 
   return (
     <>
-      <Card withPadding>
-        <Heading as="h2">
-          <FormattedMessage id="connectionForm.defineDestination" />
-        </Heading>
-        <Box mt="md">
-          <RadioButtonTiles
-            name="destinationType"
-            options={[
-              {
-                value: EXISTING_DESTINATION_TYPE,
-                label: "connectionForm.destinationExisting",
-                description: "connectionForm.destinationExistingDescription",
-                disabled: destinations.length === 0,
-              },
-              {
-                value: NEW_DESTINATION_TYPE,
-                label: "connectionForm.destinationNew",
-                description: "connectionForm.destinationNewDescription",
-              },
-            ]}
-            selectedValue={selectedDestinationType}
-            onSelectRadioButton={(id) => onSelectDestinationType(id)}
-          />
-        </Box>
-      </Card>
+      {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
+        <Card withPadding>
+          <Heading as="h2">
+            <FormattedMessage id="connectionForm.defineDestination" />
+          </Heading>
+          <Box mt="md">
+            <RadioButtonTiles
+              name="destinationType"
+              options={[
+                {
+                  value: EXISTING_DESTINATION_TYPE,
+                  label: "connectionForm.destinationExisting",
+                  description: "connectionForm.destinationExistingDescription",
+                  disabled: destinations.length === 0,
+                },
+                {
+                  value: NEW_DESTINATION_TYPE,
+                  label: "connectionForm.destinationNew",
+                  description: "connectionForm.destinationNewDescription",
+                },
+              ]}
+              selectedValue={selectedDestinationType}
+              onSelectRadioButton={(id) => onSelectDestinationType(id)}
+            />
+          </Box>
+        </Card>
+      )}
       <Box mt="xl">
         {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
           <SelectExistingConnector connectors={destinations} selectConnector={selectDestination} />

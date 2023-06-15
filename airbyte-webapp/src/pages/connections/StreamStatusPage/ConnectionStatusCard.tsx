@@ -14,6 +14,7 @@ export const ConnectionStatusCard: React.FC = () => {
   const {
     syncCatalog: { streams },
   } = connection;
+  const streamCount = streams.reduce((count, stream) => count + (stream.config?.selected ? 1 : 0), 0);
 
   return (
     <Card
@@ -21,12 +22,7 @@ export const ConnectionStatusCard: React.FC = () => {
         <FlexContainer justifyContent="space-between" alignItems="center">
           <ConnectionStatusOverview />
           <ConnectionSyncButtons
-            buttonText={
-              <FormattedMessage
-                id="connection.stream.status.table.syncButton"
-                values={{ streamCount: streams.length }}
-              />
-            }
+            buttonText={<FormattedMessage id="connection.stream.status.table.syncButton" values={{ streamCount }} />}
             variant="secondary"
           />
         </FlexContainer>

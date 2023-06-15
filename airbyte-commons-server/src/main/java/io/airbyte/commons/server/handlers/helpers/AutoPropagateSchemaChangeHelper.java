@@ -16,12 +16,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.ws.rs.NotSupportedException;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper that allows to generate the catalogs to be auto propagated.
  */
 @Slf4j
 public class AutoPropagateSchemaChangeHelper {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(AutoPropagateSchemaChangeHelper.class);
 
   /**
    * This is auto propagating schema changes, it replaces the stream in the old catalog by using the
@@ -45,8 +49,13 @@ public class AutoPropagateSchemaChangeHelper {
     transformations.forEach(transformation -> {
       final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
       switch (transformation.getTransformType()) {
-        case UPDATE_STREAM -> oldCatalogPerStream.get(streamDescriptor)
-            .stream(newCatalogPerStream.get(streamDescriptor).getStream());
+        case UPDATE_STREAM -> {
+          if (!oldCatalogPerStream.containsKey(streamDescriptor)) {
+            LOGGER.error("Attempting to update a stream that does not exist in the old catalog: {}", streamDescriptor);
+          }
+          oldCatalogPerStream.get(streamDescriptor)
+              .stream(newCatalogPerStream.get(streamDescriptor).getStream());
+        }
         case ADD_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
             oldCatalogPerStream.put(streamDescriptor, newCatalogPerStream.get(streamDescriptor));
