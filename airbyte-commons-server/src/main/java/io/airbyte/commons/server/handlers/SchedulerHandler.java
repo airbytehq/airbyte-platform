@@ -375,12 +375,12 @@ public class SchedulerHandler {
     for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
       final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler
           .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
-      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog currentAirbyteCatalog =
+      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog syncCatalog =
           connectionRead.getSyncCatalog();
       final CatalogDiff diff =
-          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog),
+          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(syncCatalog),
               sourceAutoPropagateChange.getCatalog(),
-              CatalogConverter.toConfiguredProtocol(currentAirbyteCatalog));
+              CatalogConverter.toConfiguredProtocol(syncCatalog));
 
       final ConnectionUpdate updateObject =
           new ConnectionUpdate().connectionId(connectionRead.getConnectionId());
@@ -388,7 +388,7 @@ public class SchedulerHandler {
       if (shouldAutoPropagate(diff, sourceAutoPropagateChange.getWorkspaceId(), connectionRead)) {
         applySchemaChange(sourceAutoPropagateChange.getWorkspaceId(),
             updateObject,
-            currentAirbyteCatalog,
+            syncCatalog,
             sourceAutoPropagateChange.getCatalog(),
             diff.getTransforms(),
             sourceAutoPropagateChange.getCatalogId(),
@@ -611,7 +611,7 @@ public class SchedulerHandler {
 
   private void applySchemaChange(final UUID connectionId,
                                  final ConnectionUpdate updateObject,
-                                 final io.airbyte.api.model.generated.AirbyteCatalog currentAirbyteCatalog,
+                                 final io.airbyte.api.model.generated.AirbyteCatalog currentSyncCatalog,
                                  final io.airbyte.api.model.generated.AirbyteCatalog newCatalog,
                                  final List<StreamTransform> transformations,
                                  final UUID sourceCatalogId,
@@ -619,7 +619,7 @@ public class SchedulerHandler {
     MetricClientFactory.getMetricClient().count(OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED, 1,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
     final io.airbyte.api.model.generated.AirbyteCatalog catalog = getUpdatedSchema(
-        currentAirbyteCatalog,
+        currentSyncCatalog,
         newCatalog,
         transformations,
         nonBreakingChangesPreference);
