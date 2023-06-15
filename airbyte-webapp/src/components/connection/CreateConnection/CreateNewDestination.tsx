@@ -106,13 +106,11 @@ export const CreateNewDestination: React.FC = () => {
   if (selectedDestinationDefinitionId) {
     return (
       <>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
+        <Box mb="md">
+          <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+            <FormattedMessage id="connectorBuilder.backButtonLabel" />
+          </Button>
+        </Box>
         <DestinationForm
           selectedDestinationDefinitionId={selectedDestinationDefinitionId}
           destinationDefinitions={destinationDefinitions}

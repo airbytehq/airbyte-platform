@@ -75,38 +75,40 @@ export const SelectSource: React.FC = () => {
 
   return (
     <>
-      <Card withPadding>
-        <Heading as="h2">
-          <FormattedMessage id="connectionForm.defineSource" />
-        </Heading>
-        <Box mt="md">
-          <RadioButtonTiles
-            name="sourceType"
-            options={[
-              {
-                value: EXISTING_SOURCE_TYPE,
-                label: "connectionForm.sourceExisting",
-                description: "connectionForm.sourceExistingDescription",
-                disabled: sources.length === 0,
-              },
-              {
-                value: NEW_SOURCE_TYPE,
-                label: "onboarding.sourceSetUp",
-                description: "onboarding.sourceSetUp.description",
-              },
-            ]}
-            selectedValue={selectedSourceType}
-            onSelectRadioButton={(id) => onSelectSourceType(id)}
-          />
-        </Box>
-      </Card>
+      {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
+        <Card withPadding>
+          <Heading as="h2">
+            <FormattedMessage id="connectionForm.defineSource" />
+          </Heading>
+          <Box mt="md">
+            <RadioButtonTiles
+              name="sourceType"
+              options={[
+                {
+                  value: EXISTING_SOURCE_TYPE,
+                  label: "connectionForm.sourceExisting",
+                  description: "connectionForm.sourceExistingDescription",
+                  disabled: sources.length === 0,
+                },
+                {
+                  value: NEW_SOURCE_TYPE,
+                  label: "onboarding.sourceSetUp",
+                  description: "onboarding.sourceSetUp.description",
+                },
+              ]}
+              selectedValue={selectedSourceType}
+              onSelectRadioButton={(id) => onSelectSourceType(id)}
+            />
+          </Box>
+        </Card>
+      )}
       <Box mt="xl">
         {selectedSourceType === EXISTING_SOURCE_TYPE && (
           <SelectExistingConnector connectors={sources} selectConnector={selectSource} />
         )}
         {selectedSourceType === NEW_SOURCE_TYPE && <CreateNewSource />}
+        <CloudInviteUsersHint connectorType="source" />
       </Box>
-      <CloudInviteUsersHint connectorType="source" />
     </>
   );
 };
