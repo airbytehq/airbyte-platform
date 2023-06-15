@@ -65,6 +65,16 @@ export function getLabelAndTooltip(
             </li>
           ))}
         </ul>
+        <FormattedMessage
+          id="connectorBuilder.interpolationMacros"
+          values={{
+            a: (node: React.ReactNode) => (
+              <a href={links.interpolationMacroDocs} target="_blank" rel="noreferrer">
+                {node}
+              </a>
+            ),
+          }}
+        />
       </>
     );
   }
