@@ -97,7 +97,7 @@ export const StreamErrorMessage: React.FC<{ stream: AirbyteStreamWithStatusAndCo
 
   const { jobs } = useStreamsListContext();
 
-  const { activeJob } = useConnectionSyncContext();
+  const activeJob = jobs[0]?.job;
   const streamJob = jobs.find((job) => job.job?.id && stream.config?.jobId && job.job.id === stream.config.jobId);
   const streamStatus = useGetStreamStatus()(stream.config);
   const jobErrorMessage = getErrorMessageFromJob(streamJob)?.errorMessage;
