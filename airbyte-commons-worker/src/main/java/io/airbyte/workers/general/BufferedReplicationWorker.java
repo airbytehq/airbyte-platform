@@ -156,7 +156,9 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         scheduledExecutors.shutdownNow();
       }
 
-      replicationWorkerHelper.endOfReplication();
+      if (!cancelled) {
+        replicationWorkerHelper.endOfReplication();
+      }
       return replicationWorkerHelper.getReplicationOutput();
     } catch (final Exception e) {
       ApmTraceUtils.addExceptionToTrace(e);
@@ -245,6 +247,8 @@ public class BufferedReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.info("Error cancelling source: ", e);
     }
+
+    replicationWorkerHelper.endOfReplication();
   }
 
   private void readFromSource() {
@@ -272,7 +276,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     } catch (final SourceException e) {
       LOGGER.info("readFromSource: source exception", e);
       throw e;
-    } catch (InterruptedException e) {
+    } catch (final InterruptedException e) {
       LOGGER.info("readFromSource: interrupted", e);
       // Getting interrupted during sleep, rethrowing to fail fast
       throw new RuntimeException(e);
@@ -309,7 +313,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
         }
       }
 
-    } catch (InterruptedException e) {
+    } catch (final InterruptedException e) {
       // Getting interrupted during sleep, rethrowing to fail fast
       LOGGER.info("processMessage: interrupted", e);
       throw new RuntimeException(e);

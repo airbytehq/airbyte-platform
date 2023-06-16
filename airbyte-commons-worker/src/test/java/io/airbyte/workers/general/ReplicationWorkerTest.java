@@ -774,6 +774,11 @@ abstract class ReplicationWorkerTest {
     worker.cancel();
     Assertions.assertTimeout(Duration.ofSeconds(5), (Executable) workerThread::join);
     assertNotNull(output.get());
+    verify(replicationAirbyteMessageEventPublishingHelper, times(1)).publishIncompleteStatusEvent(
+        new StreamDescriptor(),
+        simpleContext(false),
+        AirbyteMessageOrigin.INTERNAL,
+        Optional.of(StreamStatusIncompleteRunCause.CANCELED));
   }
 
   @Test
