@@ -599,27 +599,40 @@ public class ConfigRepository {
   }
 
   /**
-   * Write a StandardSourceDefinition and the ActorDefinitionVersion associated with it to the DB,
-   * setting the default version on the StandardSourceDefinition.
+   * Write a StandardSourceDefinition and the ActorDefinitionVersion associated with it (if not
+   * pre-existing) to the DB, setting the default version on the StandardSourceDefinition.
    *
-   * @param stdSourceDef standard source definition
+   * @param sourceDefinition standard source definition
    * @param actorDefinitionVersion actor definition version
    * @throws IOException - you never know when you IO
    */
-  public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition stdSourceDef, final ActorDefinitionVersion actorDefinitionVersion)
+  public void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
+                                                     final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     database.transaction(ctx -> {
-      writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion, ctx);
+      writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion, ctx);
       return null;
     });
   }
 
   private void writeSourceDefinitionAndDefaultVersion(final StandardSourceDefinition sourceDefinition,
-                                                      final ActorDefinitionVersion defaultVersion,
+                                                      final ActorDefinitionVersion actorDefinitionVersion,
                                                       final DSLContext ctx) {
     ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDefinition), ctx);
-    final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(defaultVersion, ctx);
-    setSourceDefinitionDefaultVersion(sourceDefinition, actorDefinitionVersionWithID, ctx);
+
+    // Check if an existing ADV already exists for this docker image + tag combo - if so, we use that
+    // one instead of updating it, since the versioned info is only guaranteed to match upon insertion
+    final Optional<ActorDefinitionVersion> existingADV =
+        getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
+
+    if (existingADV.isPresent()) {
+      // We still need to set the default version even if the ADV exists, e.g. if we merge a cloud
+      // rollback to a pre-existing version
+      setSourceDefinitionDefaultVersion(sourceDefinition, existingADV.get(), ctx);
+    } else {
+      final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+      setSourceDefinitionDefaultVersion(sourceDefinition, insertedADV, ctx);
+    }
   }
 
   /**
@@ -821,28 +834,40 @@ public class ConfigRepository {
   }
 
   /**
-   * Write a StandardDestinationDefinition and the ActorDefinitionVersion associated with it to the
-   * DB, setting the default version on the StandardDestinationDefinition.
+   * Write a StandardDestinationDefinition and the ActorDefinitionVersion associated with it (if not
+   * pre-existing) to the DB, setting the default version on the StandardDestinationDefinition.
    *
-   * @param stdDestDef standard destination definition
+   * @param destinationDefinition standard destination definition
    * @param actorDefinitionVersion actor definition version
    * @throws IOException - you never know when you IO
    */
-  public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition stdDestDef,
+  public void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                           final ActorDefinitionVersion actorDefinitionVersion)
       throws IOException {
     database.transaction(ctx -> {
-      writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion, ctx);
+      writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion, ctx);
       return null;
     });
   }
 
-  private void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition stdDestDef,
+  private void writeDestinationDefinitionAndDefaultVersion(final StandardDestinationDefinition destinationDefinition,
                                                            final ActorDefinitionVersion actorDefinitionVersion,
                                                            final DSLContext ctx) {
-    ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(stdDestDef), ctx);
-    final ActorDefinitionVersion actorDefinitionVersionWithID = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
-    setDestinationDefinitionDefaultVersion(stdDestDef, actorDefinitionVersionWithID, ctx);
+    ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destinationDefinition), ctx);
+
+    // Check if an existing ADV already exists for this docker image + tag combo - if so, we use that
+    // one instead of updating it, since the versioned info is only guaranteed to match upon insertion
+    final Optional<ActorDefinitionVersion> existingADV =
+        getActorDefinitionVersion(actorDefinitionVersion.getActorDefinitionId(), actorDefinitionVersion.getDockerImageTag(), ctx);
+
+    if (existingADV.isPresent()) {
+      // We still need to set the default version even if the ADV exists, e.g. if we merge a cloud
+      // rollback to a pre-existing version
+      setDestinationDefinitionDefaultVersion(destinationDefinition, existingADV.get(), ctx);
+    } else {
+      final ActorDefinitionVersion insertedADV = writeActorDefinitionVersion(actorDefinitionVersion, ctx);
+      setDestinationDefinitionDefaultVersion(destinationDefinition, insertedADV, ctx);
+    }
   }
 
   /**
@@ -3134,10 +3159,9 @@ public class ConfigRepository {
    *
    * @param actorDefinitionVersion - actor definition version to insert
    * @throws IOException - you never know when you io
-   * @returns the POJO associated with the actor definition version inserted/updated. Contains the
-   *          versionId field from the DB.
+   * @returns the POJO associated with the actor definition version inserted. Contains the versionId
+   *          field from the DB.
    */
-  @VisibleForTesting
   public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion) throws IOException {
     return database.transaction(ctx -> writeActorDefinitionVersion(actorDefinitionVersion, ctx));
   }
@@ -3148,87 +3172,46 @@ public class ConfigRepository {
    * @param actorDefinitionVersion - actor definition version to insert
    * @param ctx database context
    * @throws IOException - you never know when you io
-   * @returns the POJO associated with the actor definition version inserted/updated. Contains the
-   *          versionId field from the DB.
+   * @returns the POJO associated with the actor definition version inserted. Contains the versionId
+   *          field from the DB.
    */
   public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-
-    // These 2 fields together identify a distinct ActorDefinitionVersion
-    final UUID actorDefinitionID = actorDefinitionVersion.getActorDefinitionId();
-    final String dockerImageTag = actorDefinitionVersion.getDockerImageTag();
-
-    final Optional<ActorDefinitionVersion> existingADV = getActorDefinitionVersion(actorDefinitionID, dockerImageTag, ctx);
-    final UUID versionId = existingADV.map(ActorDefinitionVersion::getVersionId).orElse(UUID.randomUUID());
-    if (existingADV.isPresent()) {
-      ctx.update(ACTOR_DEFINITION_VERSION)
-          .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-          .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
-          .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
-          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
-              : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
-                  ReleaseStage.class).orElseThrow())
-          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
-              : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
-              : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
-              actorDefinitionVersion.getSuggestedStreams() == null ? null
-                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
-          .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionID)).and(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG.eq(dockerImageTag))
-          .execute();
-    } else {
-      ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
-          .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-          .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
-          .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
-          .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
-          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
-          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
-          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
-          .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
-          .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
-          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
-              : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
-                  ReleaseStage.class).orElseThrow())
-          .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
-              : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
-          .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
-              Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
-                  ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
-                  : null)
-          .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
-              : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
-          .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
-              actorDefinitionVersion.getSuggestedStreams() == null ? null
-                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
-          .execute();
-    }
-
+    final UUID versionId = UUID.randomUUID();
+    ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
+        .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
+        .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
+        .set(ACTOR_DEFINITION_VERSION.UPDATED_AT, timestamp)
+        .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, actorDefinitionVersion.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, actorDefinitionVersion.getDockerRepository())
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, actorDefinitionVersion.getDockerImageTag())
+        .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSpec())))
+        .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.getDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.getProtocolVersion())
+        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.getReleaseStage() == null ? null
+            : Enums.toEnum(actorDefinitionVersion.getReleaseStage().value(),
+                ReleaseStage.class).orElseThrow())
+        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE, actorDefinitionVersion.getReleaseDate() == null ? null
+            : LocalDate.parse(actorDefinitionVersion.getReleaseDate()))
+        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY,
+            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationRepository()
+                : null)
+        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG,
+            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationTag()
+                : null)
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_DBT, actorDefinitionVersion.getSupportsDbt())
+        .set(Tables.ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE,
+            Objects.nonNull(actorDefinitionVersion.getNormalizationConfig())
+                ? actorDefinitionVersion.getNormalizationConfig().getNormalizationIntegrationType()
+                : null)
+        .set(Tables.ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS, actorDefinitionVersion.getAllowedHosts() == null ? null
+            : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getAllowedHosts())))
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS,
+            actorDefinitionVersion.getSuggestedStreams() == null ? null
+                : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getSuggestedStreams())))
+        .execute();
     return actorDefinitionVersion.withVersionId(versionId);
   }
 
