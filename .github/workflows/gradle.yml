@@ -495,7 +495,7 @@ jobs:
           reporter: java-junit
           fail-on-error: "false"
         env:
-          NODE_OPTIONS: '--max_old_space_size=4096'
+          NODE_OPTIONS: '--max_old_space_size=8192'
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-platform-build-runner:
