@@ -12,7 +12,7 @@ interface JobsListProps {
 }
 
 const JobsList: React.FC<JobsListProps> = ({ jobs }) => {
-  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", false);
+  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const sortJobReads: JobWithAttempts[] = useMemo(
     () =>
