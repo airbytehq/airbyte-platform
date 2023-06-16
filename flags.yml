@@ -23,3 +23,5 @@ flags:
     serve: false
   - name: refreshSchema.period.hours
     serve: 24
+  - name: platform.add-scheduling-jitter
+    serve: false
