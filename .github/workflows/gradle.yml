@@ -703,6 +703,8 @@ jobs:
           path: "./*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: "false"
+        env:
+          NODE_OPTIONS: '--max_old_space_size=8192'
 
       - name: "Display logs of k3s"
         if: failure()
