@@ -261,13 +261,37 @@ paths:
     post:
       tags:
         - notifications
-      summary: Try sending a notifications
+      summary: Try sending a notifications; to be deprecated
       operationId: tryNotificationConfig
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Notification"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/notifications/try_webhook:
+    post:
+      tags:
+        - notifications
+      summary: Try sending a notifications to webhook
+      operationId: tryNotificationWebhookConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationWebhookConfigValidationRequestBody"
         required: true
       responses:
         "200":
@@ -2792,6 +2816,15 @@ components:
         - slack
         - customerio
         # - webhook
+    NotificationTrigger:
+      type: string
+      enum:
+        - sync_success
+        - sync_failure
+        - sync_disabled
+        - sync_disabled_warning
+        - connection_update
+        - connection_update_action_required
     NotificationRead:
       type: object
       required:
@@ -6114,6 +6147,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StreamStatusRead"
+    NotificationWebhookConfigValidationRequestBody:
+      type: object
+      required:
+        - NotificationTrigger
+        - slackConfiguration
+      properties:
+        slackConfiguration:
+          $ref: "#/components/schemas/SlackNotificationConfiguration"
+        notificationTrigger:
+          $ref: "#/components/schemas/NotificationTrigger"
     InvalidInputProperty:
       type: object
       required:

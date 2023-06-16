@@ -54,7 +54,11 @@ public class NotificationSettingsConverter {
     return result;
   }
 
-  private static io.airbyte.config.SlackNotificationConfiguration toConfig(final io.airbyte.api.model.generated.SlackNotificationConfiguration notification) {
+  /**
+   * Convert SlackNotificationConfiguration from api to config. Used in notifications/trywebhook api
+   * path.
+   */
+  public static io.airbyte.config.SlackNotificationConfiguration toConfig(final io.airbyte.api.model.generated.SlackNotificationConfiguration notification) {
     if (notification == null) {
       return new io.airbyte.config.SlackNotificationConfiguration();
     }

@@ -180,6 +180,17 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   /**
+   * Used when user tries to test the notification webhook settings on UI.
+   */
+  public boolean notifyTest(final String message) throws IOException, InterruptedException {
+    final String webhookUrl = config.getWebhook();
+    if (!Strings.isEmpty(webhookUrl)) {
+      return notify(message);
+    }
+    return false;
+  }
+
+  /**
    * Use an integer division to check successful HTTP status codes (i.e., those from 200-299), not
    * just 200. https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
    */
