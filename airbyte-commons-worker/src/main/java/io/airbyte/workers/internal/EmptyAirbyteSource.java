@@ -170,26 +170,43 @@ public class EmptyAirbyteSource implements AirbyteSource {
     }
 
     final AirbyteMessage message = perStreamMessages.poll();
-    return Optional.of(message);
+    return Optional.ofNullable(message);
   }
 
   private Optional<AirbyteMessage> emitGlobalState() {
-    if (hasEmittedState.get()) {
-      return Optional.empty();
-    } else {
+    if (!hasEmittedState.get()) {
       hasEmittedState.compareAndSet(false, true);
       return Optional.of(getNullGlobalMessage(streamsToReset, stateWrapper.get().getGlobal()));
     }
+
+    return emitStreamResetTraceMessagesForSingleStateTypes();
   }
 
   private Optional<AirbyteMessage> emitLegacyState() {
-    if (hasEmittedState.get()) {
-      return Optional.empty();
-    } else {
+    if (!hasEmittedState.get()) {
       hasEmittedState.compareAndSet(false, true);
       return Optional.of(new AirbyteMessage().withType(Type.STATE)
           .withState(new AirbyteStateMessage().withType(AirbyteStateType.LEGACY).withData(Jsons.emptyObject())));
     }
+
+    return emitStreamResetTraceMessagesForSingleStateTypes();
+  }
+
+  private Optional<AirbyteMessage> emitStreamResetTraceMessagesForSingleStateTypes() {
+    if (streamsToReset.isEmpty() && perStreamMessages.isEmpty()) {
+      return Optional.empty();
+    }
+
+    if (perStreamMessages.isEmpty()) {
+      // Per stream, we emit one 'started' and one 'complete' message.
+      // The single null state message is to be emitted by the caller.
+      final StreamDescriptor s = streamsToReset.poll();
+      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.STARTED));
+      perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatus.COMPLETE));
+    }
+
+    final AirbyteMessage message = perStreamMessages.poll();
+    return Optional.ofNullable(message);
   }
 
   private boolean resettingAllCatalogStreams(final WorkerSourceConfig sourceConfig) {
