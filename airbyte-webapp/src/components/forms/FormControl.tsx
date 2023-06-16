@@ -39,7 +39,7 @@ interface ControlBaseProps<T extends FormValues> {
   /**
    * A label that is displayed above the form control
    */
-  label: string;
+  label?: string;
   /**
    * A tooltip that appears next to the form label
    */
@@ -52,6 +52,10 @@ interface ControlBaseProps<T extends FormValues> {
   controlId?: string;
   inline?: boolean;
   disabled?: boolean;
+  /**
+   * A custom className that is applied to the form control container
+   */
+  containerControlClassName?: string;
 }
 
 /**
@@ -97,6 +101,7 @@ export const FormControl = <T extends FormValues>({
   labelTooltip,
   description,
   inline = false,
+  containerControlClassName,
   ...props
 }: ControlProps<T>) => {
   // only retrieve new form state if form state of current field has changed
@@ -142,9 +147,9 @@ export const FormControl = <T extends FormValues>({
   }
 
   return (
-    <div className={classNames(styles.control, { [styles["control--inline"]]: inline })}>
-      <FormLabel description={description} label={label} labelTooltip={labelTooltip} htmlFor={controlId} />
-      <div className={styles.control__input}>{renderControl()}</div>
+    <div className={classNames(styles.control, { [styles["control--inline"]]: inline }, containerControlClassName)}>
+      {label && <FormLabel description={description} label={label} labelTooltip={labelTooltip} htmlFor={controlId} />}
+      <div className={styles.control__field}>{renderControl()}</div>
       {error && <FormControlError error={error} />}
     </div>
   );
