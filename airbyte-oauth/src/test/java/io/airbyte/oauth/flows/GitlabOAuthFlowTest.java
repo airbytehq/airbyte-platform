@@ -87,4 +87,8 @@ class GitlabOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   void testGetDestinationConsentUrl() {}
 
+  @Test
+  @Override
+  void testGetSourceConsentUrlEmptyOAuthSpec() {}
+
 }
