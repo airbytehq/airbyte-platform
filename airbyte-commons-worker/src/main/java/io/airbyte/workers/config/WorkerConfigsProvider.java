@@ -8,7 +8,9 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import io.airbyte.config.Configs.WorkerEnvironment;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.config.TolerationPOJO;
+import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.workers.WorkerConfigs;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Provide WorkerConfigs.
@@ -27,7 +30,8 @@ import java.util.stream.Collectors;
  * `airbyte.worker.kube-job-configs` key.
  */
 @Singleton
-public class WorkerConfigsProvider {
+@Slf4j
+public class WorkerConfigsProvider implements ResourceRequirementsProvider {
 
   /**
    * Set of known resource types.
@@ -39,6 +43,8 @@ public class WorkerConfigsProvider {
     DISCOVER("discover"),
     NORMALIZATION("normalization"),
     REPLICATION("replication"),
+    SOURCE("source"),
+    SOURCE_DATABASE("source-database"),
     SPEC("spec");
 
     private final String value;
@@ -135,6 +141,45 @@ public class WorkerConfigsProvider {
         workerConfigsDefaults.busyboxImage(),
         workerConfigsDefaults.curlImage(),
         workerConfigsDefaults.jobDefaultEnvMap());
+  }
+
+  @Override
+  public ResourceRequirements getResourceRequirements(final ResourceRequirementsType type, final Optional<String> subType) {
+    final ResourceType actualType = inferResourceRequirementsType(type, subType);
+
+    WorkerConfigs workerConfigs;
+    try {
+      workerConfigs = getConfig(actualType);
+    } catch (final Exception e) {
+      log.info("unable to find resource requirements for ({}, {}), falling back to default", type, subType.orElse(""));
+      workerConfigs = getConfig(ResourceType.DEFAULT);
+    }
+
+    return workerConfigs.getResourceRequirements();
+  }
+
+  @SuppressWarnings("PMD.EmptyCatchBlock")
+  private ResourceType inferResourceRequirementsType(final ResourceRequirementsType type, final Optional<String> subType) {
+    final String primaryTypeString = type.toString().toLowerCase();
+    final String subTypeString = subType.map(String::toLowerCase).orElse(null);
+
+    // if we have specific type-subtype ResourceType use it.
+    if (subTypeString != null) {
+      try {
+        return ResourceType.fromValue(String.format("%s-%s", primaryTypeString, subTypeString));
+      } catch (final IllegalArgumentException e) {
+        // PrimaryType-SubType is unknown, safe to ignore since we are checking for existence
+        // of an override
+      }
+    }
+
+    // fallback to primary type if it exists, other use default
+    try {
+      return ResourceType.fromValue(primaryTypeString);
+    } catch (final IllegalArgumentException e) {
+      // primaryType is unknown, falling back to default
+      return ResourceType.DEFAULT;
+    }
   }
 
   private Optional<KubeResourceConfig> getKubeResourceConfig(final ResourceType name) {

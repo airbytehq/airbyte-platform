@@ -6,6 +6,7 @@ package io.airbyte.persistence.job;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,12 +29,15 @@ import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorNormalization.Option;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
+import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -69,13 +73,17 @@ class DefaultJobCreatorTest {
   private static final StandardSyncOperation STANDARD_SYNC_OPERATION;
 
   private static final StandardSourceDefinition STANDARD_SOURCE_DEFINITION;
+  private static final StandardSourceDefinition STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE;
   private static final StandardDestinationDefinition STANDARD_DESTINATION_DEFINITION;
   private static final long JOB_ID = 12L;
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
   private JobPersistence jobPersistence;
   private JobCreator jobCreator;
+  private ResourceRequirementsProvider resourceRequirementsProvider;
   private ResourceRequirements workerResourceRequirements;
+  private ResourceRequirements sourceResourceRequirements;
+  private ResourceRequirements destResourceRequirements;
 
   private static final JsonNode PERSISTED_WEBHOOK_CONFIGS;
 
@@ -152,6 +160,7 @@ class DefaultJobCreatorTest {
             WEBHOOK_CONFIG_ID, WEBHOOK_NAME));
 
     STANDARD_SOURCE_DEFINITION = new StandardSourceDefinition().withCustom(false);
+    STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE = new StandardSourceDefinition().withSourceType(SourceType.DATABASE).withCustom(false);
     STANDARD_DESTINATION_DEFINITION = new StandardDestinationDefinition().withCustom(false);
   }
 
@@ -163,11 +172,31 @@ class DefaultJobCreatorTest {
         .withCpuRequest("0.2")
         .withMemoryLimit("200Mi")
         .withMemoryRequest("200Mi");
-    jobCreator = new DefaultJobCreator(jobPersistence, workerResourceRequirements);
+    sourceResourceRequirements = new ResourceRequirements()
+        .withCpuLimit("0.1")
+        .withCpuRequest("0.1")
+        .withMemoryLimit("400Mi")
+        .withMemoryRequest("300Mi");
+    destResourceRequirements = new ResourceRequirements()
+        .withCpuLimit("0.3")
+        .withCpuRequest("0.3")
+        .withMemoryLimit("1200Mi")
+        .withMemoryRequest("1000Mi");
+    resourceRequirementsProvider = mock(ResourceRequirementsProvider.class);
+    when(resourceRequirementsProvider.getResourceRequirements(any(), any()))
+        .thenReturn(workerResourceRequirements);
+    jobCreator = new DefaultJobCreator(jobPersistence, resourceRequirementsProvider);
   }
 
   @Test
   void testCreateSyncJob() throws IOException {
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.empty()))
+        .thenReturn(workerResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database")))
+        .thenReturn(sourceResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, Optional.empty()))
+        .thenReturn(destResourceRequirements);
+
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(STANDARD_SYNC.getNamespaceDefinition())
         .withNamespaceFormat(STANDARD_SYNC.getNamespaceFormat())
@@ -179,8 +208,8 @@ class DefaultJobCreatorTest {
         .withConfiguredAirbyteCatalog(STANDARD_SYNC.getCatalog())
         .withOperationSequence(List.of(STANDARD_SYNC_OPERATION))
         .withResourceRequirements(workerResourceRequirements)
-        .withSourceResourceRequirements(workerResourceRequirements)
-        .withDestinationResourceRequirements(workerResourceRequirements)
+        .withSourceResourceRequirements(sourceResourceRequirements)
+        .withDestinationResourceRequirements(destResourceRequirements)
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
@@ -203,7 +232,7 @@ class DefaultJobCreatorTest {
         DESTINATION_PROTOCOL_VERSION,
         List.of(STANDARD_SYNC_OPERATION),
         PERSISTED_WEBHOOK_CONFIGS,
-        STANDARD_SOURCE_DEFINITION,
+        STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
         STANDARD_DESTINATION_DEFINITION, WORKSPACE_ID).orElseThrow();
     assertEquals(JOB_ID, jobId);
   }

@@ -14,11 +14,14 @@ import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.provider.ResourceRequirementsProvider;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.DestinationSyncMode;
@@ -39,12 +42,12 @@ import lombok.extern.slf4j.Slf4j;
 public class DefaultJobCreator implements JobCreator {
 
   private final JobPersistence jobPersistence;
-  private final ResourceRequirements workerResourceRequirements;
+  private final ResourceRequirementsProvider resourceRequirementsProvider;
 
   public DefaultJobCreator(final JobPersistence jobPersistence,
-                           final ResourceRequirements workerResourceRequirements) {
+                           final ResourceRequirementsProvider resourceRequirementsProvider) {
     this.jobPersistence = jobPersistence;
-    this.workerResourceRequirements = workerResourceRequirements;
+    this.resourceRequirementsProvider = resourceRequirementsProvider;
   }
 
   @Override
@@ -63,19 +66,9 @@ public class DefaultJobCreator implements JobCreator {
       throws IOException {
     // reusing this isn't going to quite work.
 
-    final ResourceRequirements mergedOrchestratorResourceReq = ResourceRequirementsUtils.getResourceRequirements(
-        standardSync.getResourceRequirements(),
-        workerResourceRequirements);
-    final ResourceRequirements mergedSrcResourceReq = ResourceRequirementsUtils.getResourceRequirements(
-        standardSync.getResourceRequirements(),
-        sourceDefinition.getResourceRequirements(),
-        workerResourceRequirements,
-        JobType.SYNC);
-    final ResourceRequirements mergedDstResourceReq = ResourceRequirementsUtils.getResourceRequirements(
-        standardSync.getResourceRequirements(),
-        destinationDefinition.getResourceRequirements(),
-        workerResourceRequirements,
-        JobType.SYNC);
+    final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync);
+    final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition);
+    final ResourceRequirements mergedDstResourceReq = getDestinationResourceRequirements(standardSync, destinationDefinition);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -128,6 +121,7 @@ public class DefaultJobCreator implements JobCreator {
         }
       }
     });
+
     final JobResetConnectionConfig resetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
         .withNamespaceFormat(standardSync.getNamespaceFormat())
@@ -136,9 +130,7 @@ public class DefaultJobCreator implements JobCreator {
         .withDestinationProtocolVersion(destinationProtocolVersion)
         .withOperationSequence(standardSyncOperations)
         .withConfiguredAirbyteCatalog(configuredAirbyteCatalog)
-        .withResourceRequirements(ResourceRequirementsUtils.getResourceRequirements(
-            standardSync.getResourceRequirements(),
-            workerResourceRequirements))
+        .withResourceRequirements(getOrchestratorResourceRequirements(standardSync))
         .withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(isDestinationCustomConnector)
@@ -148,6 +140,36 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.RESET_CONNECTION)
         .withResetConnection(resetConnectionConfig);
     return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+  }
+
+  private ResourceRequirements getOrchestratorResourceRequirements(final StandardSync standardSync) {
+    final ResourceRequirements defaultOrchestratorRssReqs =
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.empty());
+    return ResourceRequirementsUtils.getResourceRequirements(
+        standardSync.getResourceRequirements(),
+        defaultOrchestratorRssReqs);
+  }
+
+  private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync, final StandardSourceDefinition sourceDefinition) {
+    final ResourceRequirements defaultSrcRssReqs =
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE,
+            Optional.ofNullable(sourceDefinition.getSourceType()).map(SourceType::toString));
+    return ResourceRequirementsUtils.getResourceRequirements(
+        standardSync.getResourceRequirements(),
+        sourceDefinition.getResourceRequirements(),
+        defaultSrcRssReqs,
+        JobType.SYNC);
+  }
+
+  private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
+                                                                  final StandardDestinationDefinition destinationDefinition) {
+    final ResourceRequirements defaultDstRssReqs =
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, Optional.empty());
+    return ResourceRequirementsUtils.getResourceRequirements(
+        standardSync.getResourceRequirements(),
+        destinationDefinition.getResourceRequirements(),
+        defaultDstRssReqs,
+        JobType.SYNC);
   }
 
 }

@@ -24,8 +24,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -74,10 +72,7 @@ public class ApplicationBeanFactory {
   @Singleton
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
                                              final WorkerConfigsProvider workerConfigsProvider) {
-    final WorkerConfigs defaultWorkerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
-    return new DefaultJobCreator(
-        jobPersistence,
-        defaultWorkerConfigs.getResourceRequirements());
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider);
   }
 
   @Singleton
