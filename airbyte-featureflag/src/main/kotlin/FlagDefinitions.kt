@@ -19,11 +19,6 @@ object StreamCapableState : EnvVar(envVar = "USE_STREAM_CAPABLE_STATE")
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
-// NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
-object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
-
-object PerfBackgroundJsonValidation : Temporary<Boolean>(key = "performance.backgroundJsonSchemaValidation", default = false)
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
