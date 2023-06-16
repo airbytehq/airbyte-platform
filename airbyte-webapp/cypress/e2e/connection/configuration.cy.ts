@@ -1,5 +1,11 @@
-import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "@cy/commands/api";
-import { deleteEntity, submitButtonClick } from "@cy/commands/common";
+import {
+  getPostgresToPostgresUpdateConnectionBody,
+  requestDeleteConnection,
+  requestDeleteDestination,
+  requestDeleteSource,
+  requestUpdateConnection,
+} from "@cy/commands/api";
+import { appendRandomString, deleteEntity, submitButtonClick } from "@cy/commands/common";
 import {
   createJsonDestinationViaApi,
   createPokeApiSourceViaApi,
@@ -16,6 +22,7 @@ import {
   waitForUpdateConnectionRequest,
 } from "@cy/commands/interceptors";
 import * as connectionForm from "@cy/pages/connection/connectionFormPageObject";
+import { getSyncEnabledSwitch } from "@cy/pages/connection/connectionPageObject";
 import { visit } from "@cy/pages/connection/connectionPageObject";
 import * as replicationPage from "@cy/pages/connection/connectionReplicationPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
@@ -23,8 +30,12 @@ import {
   WebBackendConnectionRead,
   DestinationRead,
   SourceRead,
+  SyncMode,
+  DestinationSyncMode,
+  ConnectionStatus,
   AirbyteStreamAndConfiguration,
 } from "@src/core/api/types/AirbyteClient";
+import { ConnectionRoutePaths, RoutePaths } from "@src/pages/routePaths";
 
 import * as connectionSettings from "pages/connection/connectionSettingsPageObject";
 
@@ -353,5 +364,165 @@ describe("Connection Configuration", () => {
     });
     connectionSettings.goToSettingsPage();
     deleteEntity();
+  });
+
+  describe("Deleted connection", () => {
+    beforeEach(() => {
+      createNewConnectionViaApi(pokeApiSource, jsonDestination).as("connection");
+      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+        requestDeleteConnection({ connectionId: connection.connectionId });
+      });
+      createNewConnectionViaApi(postgresSource, postgresDestination).as("postgresConnection");
+      cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
+        const streamToUpdate = postgresConnection.syncCatalog.streams.findIndex(
+          (stream) => stream.stream?.name === "users" && stream.stream.namespace === "public"
+        );
+
+        const newSyncCatalog = { streams: [...postgresConnection.syncCatalog.streams] };
+        // update so one stream is enabled, to test that you can still filter by enabled/disabled streams
+        newSyncCatalog.streams[streamToUpdate].config = {
+          ...newSyncCatalog.streams[streamToUpdate].config,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
+          selected: true,
+        };
+
+        requestUpdateConnection(
+          getPostgresToPostgresUpdateConnectionBody(postgresConnection.connectionId, { syncCatalog: newSyncCatalog })
+        );
+
+        requestDeleteConnection({ connectionId: postgresConnection.connectionId });
+      });
+    });
+
+    it("should not be listed on connection list page", () => {
+      cy.visit(`/${RoutePaths.Connections}`);
+      cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+        cy.get("td").contains(connection.name).should("not.exist");
+      });
+    });
+    describe("Syncs tab", () => {
+      it("can visit the connection", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+          cy.get("div").contains("This connection has been deleted").should("exist");
+        });
+      });
+      it("cannot toggle enabled/disabled state or trigger a sync", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+          getSyncEnabledSwitch().should("be.disabled");
+          cy.contains("Reset your data").should("be.disabled");
+          cy.contains(/Sync now/).should("be.disabled");
+        });
+      });
+    });
+    describe("Replication tab", () => {
+      it("Cannot edit fields in Configuration section", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
+          cy.get(connectionForm.scheduleDropdown).within(() => cy.get("input").should("be.disabled"));
+          cy.get(connectionForm.destinationNamespaceEditButton).should("be.disabled");
+          cy.get(connectionForm.destinationPrefixEditButton).should("be.disabled");
+          cy.get(replicationPage.nonBreakingChangesPreference).within(() => cy.get("input").should("be.disabled"));
+        });
+      });
+      it("Cannot enable/disable streams", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
+          // enable/disable all switch
+          cy.get('[data-testid="all-streams-sync-switch"]').should("be.disabled");
+
+          const row = streamsTable.getRow("no-namespace", "pokemon");
+          row.checkSyncToggleDisabled();
+        });
+      });
+      it("Cannot change sync mode", () => {
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
+          const row = streamsTable.getRow("no-namespace", "pokemon");
+          row.checkSyncModeDropdownDisabled();
+        });
+      });
+      it("Stream filters are not disabled", () => {
+        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Replication}`);
+          cy.get('[data-testid="hideDisableStreams-switch"]').should("not.be.disabled");
+          cy.get('input[placeholder*="Search stream name"]').should("not.be.disabled");
+        });
+      });
+    });
+
+    describe("Settings tab", () => {
+      it("Can only edit the connection name", () => {
+        interceptUpdateConnectionRequest();
+
+        cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
+          const newName = appendRandomString("new connection name");
+          // I am not 100% sure why this call is so long.  I assume it may have something to do with the fact
+          // that this connection is tombstoned
+          cy.get('input[name="notifySchemaChanges"]', { timeout: 8000 }).should("be.disabled");
+          cy.get('input[name="connectionName"]').clear();
+          cy.get('input[name="connectionName"]').type(newName);
+          submitButtonClick();
+
+          waitForUpdateConnectionRequest().then((interception) => {
+            expect(interception.request.body).to.deep.equal({
+              name: newName,
+              connectionId: connection.connectionId,
+              notifySchemaChanges: connection.notifySchemaChanges,
+            });
+          });
+        });
+      });
+    });
+    describe("Transformations tab", () => {
+      it("cannot edit any fields on the transformation tab", () => {
+        cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
+          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Transformation}`);
+
+          cy.get("fieldset").within(() => {
+            cy.get("input").should("be.disabled");
+          });
+        });
+      });
+      //   cannot edit existing transformation
+      //   cannot change normalization method
+    });
+  });
+  describe.only("Disabled connection", () => {
+    beforeEach(() => {
+      createNewConnectionViaApi(postgresSource, postgresDestination)
+        .then((connection) => {
+          requestUpdateConnection(
+            getPostgresToPostgresUpdateConnectionBody(connection.connectionId, { status: ConnectionStatus.inactive })
+          );
+        })
+        .as("postgresConnection");
+    });
+    it("should not be allowed to trigger a reset or a sync", () => {
+      cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
+        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+        cy.contains(/Sync now/).should("be.disabled");
+        cy.contains("Reset your data").should("be.disabled");
+      });
+    });
+    it("should be able to edit the connection and refresh source schema", () => {
+      interceptUpdateConnectionRequest();
+      cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
+        cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
+        cy.get("[data-testid='refresh-source-schema-btn']").should("not.be.disabled");
+        connectionForm.expandConfigurationSection();
+        connectionForm.selectSchedule("Manual");
+        submitButtonClick();
+
+        waitForUpdateConnectionRequest().then((interception) => {
+          // Schedule is pulled out here, but we don't do anything with is as it's legacy
+          const { scheduleType } = interception.response?.body;
+          expect(scheduleType).to.eq("manual");
+        });
+      });
+    });
   });
 });
