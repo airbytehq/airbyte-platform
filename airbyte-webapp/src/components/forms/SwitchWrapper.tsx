@@ -9,6 +9,7 @@ import { FormValues } from "./Form";
 export const SwitchWrapper = <T extends FormValues>({
   controlId,
   name,
+  disabled = false,
 }: Omit<SwitchControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
 
@@ -17,7 +18,13 @@ export const SwitchWrapper = <T extends FormValues>({
       name={name}
       control={control}
       render={({ field }) => (
-        <Switch name={name} id={controlId} checked={field.value} onChange={(value) => field.onChange(value)} />
+        <Switch
+          disabled={disabled}
+          name={name}
+          id={controlId}
+          checked={field.value}
+          onChange={(value) => field.onChange(value)}
+        />
       )}
     />
   );

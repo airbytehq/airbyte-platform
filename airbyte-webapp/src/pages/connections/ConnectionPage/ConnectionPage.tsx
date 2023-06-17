@@ -11,11 +11,11 @@ import {
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperimentContext } from "hooks/services/Experiment";
+import { ConnectionRoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import { ConnectionPageHeader } from "./ConnectionPageHeader";
-import { ConnectionRoutePaths } from "../types";
 
 const ConnectionHeadTitle: React.FC = () => {
   const { connection } = useConnectionEditService();

@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.cron.selfhealing;
+package io.airbyte.cron.jobs;
 
 import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME;
 
@@ -10,6 +10,10 @@ import datadog.trace.api.Trace;
 import io.airbyte.config.Configs;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.scheduling.annotation.Scheduled;
@@ -37,8 +41,9 @@ public class WorkspaceCleaner {
 
   private final Path workspaceRoot;
   private final long maxAgeFilesInDays;
+  private final MetricClient metricClient;
 
-  WorkspaceCleaner() {
+  WorkspaceCleaner(final MetricClient metricClient) {
     log.info("Creating workspace cleaner");
 
     // TODO Configs should get injected through micronaut
@@ -48,6 +53,7 @@ public class WorkspaceCleaner {
     // We align max file age on temporal for history consistency
     // It might make sense configure this independently in the future
     this.maxAgeFilesInDays = configs.getTemporalRetentionInDays();
+    this.metricClient = metricClient;
   }
 
   /**
@@ -61,6 +67,7 @@ public class WorkspaceCleaner {
   public void deleteOldFiles() throws IOException {
     final Date oldestAllowed = getDateFromDaysAgo(maxAgeFilesInDays);
     log.info("Deleting files older than {} days ({})", maxAgeFilesInDays, oldestAllowed);
+    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "workspace_cleaner"));
 
     ApmTraceUtils.addTagsToTrace(Map.of("oldest_date_allowed", oldestAllowed, "max_age", maxAgeFilesInDays));
 

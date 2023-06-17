@@ -31,8 +31,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   const { jobId: linkedJobId } = useAttemptLink();
   const { pathname } = useLocation();
   const {
-    jobs,
-    totalJobCount,
+    data: { jobs, totalJobCount },
     isPreviousData: isJobPageLoading,
   } = useListJobs({
     configId: connection.connectionId,
@@ -42,7 +41,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       pageSize: jobPageSize,
     },
   });
-  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", false);
+  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
   const moreJobPagesAvailable = !linkedJobNotFound && jobPageSize < totalJobCount;
@@ -64,7 +63,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
 
   return (
     <div className={classNames(searchableJobLogsEnabled && styles.narrowTable)}>
-      <ConnectionSyncContextProvider jobs={jobs}>
+      <ConnectionSyncContextProvider>
         <Card
           title={
             <div className={styles.title}>

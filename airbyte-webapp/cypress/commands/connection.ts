@@ -122,12 +122,23 @@ export const createPostgresDestinationViaApi = () => {
   });
 };
 
-export const createNewConnectionViaApi = (source: SourceRead, destination: DestinationRead) => {
+export const createNewConnectionViaApi = (
+  source: SourceRead,
+  destination: DestinationRead,
+  options: { enableAllStreams?: boolean } = {}
+) => {
   let connection: WebBackendConnectionRead;
   let connectionRequestBody: WebBackendConnectionCreate;
 
   const myConnection = requestWorkspaceId().then(() => {
     requestSourceDiscoverSchema({ sourceId: source.sourceId, disable_cache: true }).then(({ catalog, catalogId }) => {
+      if (options.enableAllStreams) {
+        catalog?.streams.forEach((stream) => {
+          if (stream.config) {
+            stream.config.selected = true;
+          }
+        });
+      }
       connectionRequestBody = getConnectionCreateRequest({
         name: appendRandomString(`${source.name} → ${destination.name} Cypress Connection`),
         sourceId: source.sourceId,

@@ -12,16 +12,12 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { ConnectionStatus, ReleaseStage } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { InlineEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
-import { isConnectionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionTitleBlock.module.scss";
-import { ConnectionRoutePaths } from "../types";
 
 interface ConnectorBlockProps {
   name: string;
@@ -54,7 +50,6 @@ export const ConnectionTitleBlock = () => {
   const { name, source, destination, schemaChange, status } = connection;
   const { sourceDefinition, destDefinition } = useConnectionFormService();
   const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
-  const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   return (
     <FlexContainer direction="column">
@@ -89,9 +84,6 @@ export const ConnectionTitleBlock = () => {
           type="warning"
           text={<FormattedMessage id="connection.connectionDeletedView" />}
         />
-      )}
-      {fcpEnabled && isConnectionEligibleForFCP(connection, sourceDefinition, destDefinition) && (
-        <InlineEnrollmentCallout />
       )}
     </FlexContainer>
   );

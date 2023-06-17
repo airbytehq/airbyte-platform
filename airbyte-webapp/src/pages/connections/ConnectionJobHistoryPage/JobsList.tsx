@@ -1,11 +1,10 @@
 import React, { useMemo } from "react";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { JobItem } from "components/JobItem";
 import { JobWithAttempts } from "components/JobItem/types";
 import { NewJobItem } from "components/NewJobItem";
 
-import { JobStatus, JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useExperiment } from "hooks/services/Experiment";
 
 interface JobsListProps {
@@ -13,8 +12,7 @@ interface JobsListProps {
 }
 
 const JobsList: React.FC<JobsListProps> = ({ jobs }) => {
-  const { activeJob } = useConnectionSyncContext();
-  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", false);
+  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const sortJobReads: JobWithAttempts[] = useMemo(
     () =>
@@ -26,12 +24,6 @@ const JobsList: React.FC<JobsListProps> = ({ jobs }) => {
 
   return (
     <div>
-      {activeJob && activeJob.id !== sortJobReads?.[0]?.job?.id && (
-        <JobItem
-          key={`${activeJob.id}activeJob`}
-          job={{ job: { ...activeJob, status: JobStatus.running }, attempts: [] }}
-        />
-      )}
       {searchableJobLogsEnabled &&
         sortJobReads.map((jobWithAttempts) => (
           <NewJobItem key={`newJobItem_${jobWithAttempts.job.id}`} jobWithAttempts={jobWithAttempts} />

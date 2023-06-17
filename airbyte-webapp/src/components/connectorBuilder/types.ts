@@ -45,6 +45,7 @@ import {
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
   DefaultPaginator,
+  DeclarativeComponentSchemaMetadata,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -134,12 +135,7 @@ interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strateg
 export interface BuilderIncrementalSync
   extends Pick<
     DatetimeBasedCursor,
-    | "cursor_field"
-    | "datetime_format"
-    | "cursor_granularity"
-    | "end_time_option"
-    | "start_time_option"
-    | "lookback_window"
+    "cursor_field" | "datetime_format" | "end_time_option" | "start_time_option" | "lookback_window"
   > {
   end_datetime:
     | {
@@ -152,7 +148,10 @@ export interface BuilderIncrementalSync
         type: "user_input";
       }
     | { type: "custom"; value: string; format?: string };
-  step?: string;
+  slicer?: {
+    step?: string;
+    cursor_granularity?: string;
+  };
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
@@ -190,6 +189,7 @@ export interface BuilderStream {
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
   unsupportedFields?: Record<string, object>;
+  autoImportSchema: boolean;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -268,6 +268,7 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
       values: [],
     },
   },
+  autoImportSchema: true,
 };
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
@@ -513,9 +514,9 @@ export const builderFormValidationSchema = yup.object().shape({
     connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
     urlBase: yup.string().required("form.empty.error"),
     authenticator: yup.object({
-      header: yup.mixed().when("type", {
+      inject_into: yup.mixed().when("type", {
         is: (type: string) => type === API_KEY_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
+        then: nonPathRequestOptionSchema,
         otherwise: (schema) => schema.strip(),
       }),
       token_refresh_endpoint: yup.mixed().when("type", {
@@ -716,7 +717,13 @@ export const builderFormValidationSchema = yup.object().shape({
           .object()
           .shape({
             cursor_field: yup.string().required("form.empty.error"),
-            cursor_granularity: yup.string().required("form.empty.error"),
+            slicer: yup
+              .object()
+              .shape({
+                cursor_granularity: yup.string().required("form.empty.error"),
+                step: yup.string().required("form.empty.error"),
+              })
+              .default(undefined),
             start_datetime: yup.object().shape({
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "custom",
@@ -731,7 +738,6 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            step: yup.string(),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
             end_time_option: nonPathRequestOptionSchema,
@@ -754,6 +760,12 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
           ? undefined
           : globalSettings.authenticator.refresh_token,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
+    };
+  }
+  if (globalSettings.authenticator.type === "ApiKeyAuthenticator") {
+    return {
+      ...globalSettings.authenticator,
+      header: undefined,
     };
   }
   return globalSettings.authenticator as HttpRequesterAuthenticator;
@@ -818,7 +830,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, step, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, slicer, ...regularFields } = formValues;
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
@@ -838,7 +850,8 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
           : `{{ config['end_date'] }}`,
       datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
     },
-    step: step ? step : "P1000Y",
+    step: slicer?.step,
+    cursor_granularity: slicer?.cursor_granularity,
   };
 }
 
@@ -1053,6 +1066,12 @@ export const orderInputs = (
     });
 };
 
+export const builderFormValuesToMetadata = (values: BuilderFormValues): DeclarativeComponentSchemaMetadata => {
+  return {
+    autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+  };
+};
+
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
     builderStreamToDeclarativeSteam(values, stream, [])
@@ -1098,6 +1117,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     },
     streams: manifestStreams,
     spec,
+    metadata: builderFormValuesToMetadata(values),
   });
 };
 

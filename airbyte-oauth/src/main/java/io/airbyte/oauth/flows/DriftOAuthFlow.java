@@ -88,6 +88,11 @@ public class DriftOAuthFlow extends BaseOAuth2Flow {
     } else {
       throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
     }
+    if (data.has("refresh_token")) {
+      result.put("refresh_token", data.get("refresh_token").asText());
+    } else {
+      throw new IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl));
+    }
     return result;
   }
 

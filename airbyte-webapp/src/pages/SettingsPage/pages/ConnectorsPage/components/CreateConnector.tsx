@@ -51,12 +51,9 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     try {
       const result = await createSourceDefinition(sourceDefinition);
 
-      navigate(
-        {
-          pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SourceNew}`,
-        },
-        { state: { sourceDefinitionId: result.sourceDefinitionId } }
-      );
+      navigate({
+        pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SelectSourceNew}/${result.sourceDefinitionId}`,
+      });
     } catch (e) {
       setErrorMessage(e.message || formatMessage({ id: "form.dockerError" }));
     }
@@ -67,12 +64,9 @@ const CreateConnector: React.FC<IProps> = ({ type }) => {
     try {
       const result = await createDestinationDefinition(destinationDefinition);
 
-      navigate(
-        {
-          pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.DestinationNew}`,
-        },
-        { state: { destinationDefinitionId: result.destinationDefinitionId } }
-      );
+      navigate({
+        pathname: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}/${DestinationPaths.SelectDestinationNew}/${result.destinationDefinitionId}`,
+      });
     } catch (e) {
       setErrorMessage(e.message || formatMessage({ id: "form.dockerError" }));
     }

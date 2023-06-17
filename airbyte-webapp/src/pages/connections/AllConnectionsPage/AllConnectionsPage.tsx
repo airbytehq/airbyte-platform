@@ -15,7 +15,7 @@ import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 
 import ConnectionsTable from "./ConnectionsTable";
-import { RoutePaths } from "../../routePaths";
+import { ConnectionRoutePaths } from "../../routePaths";
 
 export const AllConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export const AllConnectionsPage: React.FC = () => {
   const { connections } = useConnectionList();
 
   const onCreateClick = (sourceDefinitionId?: string) =>
-    navigate(`${RoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });
+    navigate(`${ConnectionRoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });
 
   return (
     <Suspense fallback={<LoadingPage />}>

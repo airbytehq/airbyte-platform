@@ -14,6 +14,7 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { SyncSchemaStream } from "core/domain/catalog";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { links } from "utils/links";
@@ -49,6 +50,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
   onStreamsChanged,
   syncSwitchDisabled,
 }) => {
+  const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
@@ -90,8 +92,9 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
           indeterminate={isPartOfStreamsSyncEnabled()}
           checked={areAllStreamsSyncEnabled()}
           onChange={onToggleAllStreamsSyncSwitch}
-          disabled={syncSwitchDisabled || !streams.length}
+          disabled={syncSwitchDisabled || !streams.length || mode === "readonly"}
           id="all-streams-sync-switch"
+          data-testid="all-streams-sync-switch"
         />
         <Text size="sm" color="grey300">
           <FormattedMessage id="sources.sync" />
@@ -139,6 +142,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         <Button
           type="button"
           variant="clear"
+          disabled={mode === "readonly"}
           onClick={() =>
             openModal({
               size: "lg",
@@ -164,6 +168,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
         <Button
           type="button"
           variant="clear"
+          disabled={mode === "readonly"}
           onClick={() =>
             openModal({
               size: "sm",

@@ -9,6 +9,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import Indicator from "components/Indicator";
 import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import { Action, Namespace } from "core/services/analytics";
@@ -165,7 +166,7 @@ const StreamControls = ({
         selected={selectedTab === "schema"}
         onSelect={() => setSelectedTab("schema")}
         showErrorIndicator={hasSchemaErrors}
-        showSchemaConflictIndicator={schemaDifferences}
+        showSchemaConflictIndicator={schemaDifferences && !streams[streamNum].autoImportSchema}
         schemaErrors={incompatibleSchemaErrors}
       />
       <AddStreamButton
@@ -218,6 +219,8 @@ const StreamTab = ({
 
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const analyticsService = useAnalyticsService();
+  const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
+  const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
   const schema = useBuilderWatch(schemaFieldPath);
   const { setValue } = useFormContext();
@@ -226,10 +229,16 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
   const error = get(errors, path);
   const { streamRead, streams, testStreamIndex } = useConnectorBuilderTestRead();
 
-  const showImportButton = isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
+  const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
 
   return (
     <>
+      <BuilderField
+        label="Automatically import detected schema"
+        path={autoImportSchemaFieldPath}
+        type="boolean"
+        tooltip="Automatically sets the declared schema to the schema that is detected when clicking Test for this stream.<br></br>Disable this in order to manually edit the schema."
+      />
       {showImportButton && (
         <Button
           full
@@ -248,15 +257,23 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
         </Button>
       )}
       <div className={styles.editorContainer}>
-        <CodeEditor
-          key={schemaFieldPath}
-          value={schema || ""}
-          language="json"
-          theme="airbyte-light"
-          onChange={(val: string | undefined) => {
-            setValue(path, val);
-          }}
-        />
+        {autoImportSchema ? (
+          <Pre>{schema}</Pre>
+        ) : (
+          <CodeEditor
+            key={schemaFieldPath}
+            value={schema || ""}
+            language="json"
+            theme="airbyte-light"
+            onChange={(val: string | undefined) => {
+              setValue(path, val, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              });
+            }}
+          />
+        )}
       </div>
       {error && (
         <Text className={styles.errorMessage}>

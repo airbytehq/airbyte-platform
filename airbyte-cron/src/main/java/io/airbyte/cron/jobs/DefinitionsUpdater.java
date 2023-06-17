@@ -2,13 +2,17 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.cron.selfhealing;
+package io.airbyte.cron.jobs;
 
 import static io.airbyte.cron.MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
 import io.airbyte.config.Configs.DeploymentMode;
 import io.airbyte.config.init.ApplyDefinitionsHelper;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Singleton;
@@ -28,13 +32,16 @@ public class DefinitionsUpdater {
 
   private final ApplyDefinitionsHelper applyDefinitionsHelper;
   private final DeploymentMode deploymentMode;
+  private final MetricClient metricClient;
 
   public DefinitionsUpdater(final ApplyDefinitionsHelper applyDefinitionsHelper,
-                            final DeploymentMode deploymentMode) {
+                            final DeploymentMode deploymentMode,
+                            final MetricClient metricClient) {
     log.info("Creating connector definitions updater");
 
     this.applyDefinitionsHelper = applyDefinitionsHelper;
     this.deploymentMode = deploymentMode;
+    this.metricClient = metricClient;
   }
 
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
@@ -42,6 +49,7 @@ public class DefinitionsUpdater {
              initialDelay = "1m")
   void updateDefinitions() {
     log.info("Updating definitions...");
+    metricClient.count(OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE, 1, new MetricAttribute(MetricTags.CRON_TYPE, "definitions_updater"));
 
     try {
       try {

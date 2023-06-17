@@ -14,6 +14,7 @@ import { BuilderOptional } from "./BuilderOptional";
 import { RequestOptionFields } from "./RequestOptionFields";
 import { ToggleGroupField } from "./ToggleGroupField";
 import {
+  BuilderIncrementalSync,
   DATETIME_FORMAT_OPTIONS,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   LARGE_DURATION_OPTIONS,
@@ -76,12 +77,6 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         path={streamFieldPath("incrementalSync.datetime_format")}
         manifestPath="DatetimeBasedCursor.properties.datetime_format"
         options={DATETIME_FORMAT_OPTIONS}
-      />
-      <BuilderFieldWithInputs
-        type="combobox"
-        path={streamFieldPath("incrementalSync.cursor_granularity")}
-        manifestPath="DatetimeBasedCursor.properties.cursor_granularity"
-        options={SMALL_DURATION_OPTIONS}
       />
       <BuilderOneOf
         path={streamFieldPath("incrementalSync.start_datetime")}
@@ -207,13 +202,28 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         />
       </ToggleGroupField>
       <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
-        <BuilderFieldWithInputs
-          type="combobox"
-          path={streamFieldPath("incrementalSync.step")}
-          manifestPath="DatetimeBasedCursor.properties.step"
-          options={LARGE_DURATION_OPTIONS}
-          optional
-        />
+        <ToggleGroupField<BuilderIncrementalSync["slicer"]>
+          label="Split up interval"
+          tooltip="Optionally split up the interval into smaller chunks to reduce the amount of data fetched in a single request and to make the sync more resilient to failures"
+          fieldPath={streamFieldPath("incrementalSync.slicer")}
+          initialValues={{
+            step: "",
+            cursor_granularity: "",
+          }}
+        >
+          <BuilderFieldWithInputs
+            type="combobox"
+            path={streamFieldPath("incrementalSync.slicer.step")}
+            manifestPath="DatetimeBasedCursor.properties.step"
+            options={LARGE_DURATION_OPTIONS}
+          />
+          <BuilderFieldWithInputs
+            type="combobox"
+            path={streamFieldPath("incrementalSync.slicer.cursor_granularity")}
+            manifestPath="DatetimeBasedCursor.properties.cursor_granularity"
+            options={SMALL_DURATION_OPTIONS}
+          />
+        </ToggleGroupField>
         <BuilderFieldWithInputs
           type="combobox"
           path={streamFieldPath("incrementalSync.lookback_window")}

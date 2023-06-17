@@ -118,6 +118,13 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
+
+  // Stderr channel usually does not require much CPU resources. It's not on critical path nor it will
+  // impact performance.
+  // Thus, we will allocate much less CPU for these containers.
+  private static final ResourceRequirements LOW_SOCAT_RESOURCES = new ResourceRequirements()
+      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
+      .withCpuLimit("2").withCpuRequest("0.25");
   private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
 
   private static final String PIPES_DIR = "/pipes";
@@ -395,6 +402,7 @@ public class KubePodProcess implements KubePod {
                         final KubernetesClient fabricClient,
                         final String podName,
                         final String namespace,
+                        final String serviceAccount,
                         final String image,
                         final String imagePullPolicy,
                         final String sidecarImagePullPolicy,
@@ -495,6 +503,9 @@ public class KubePodProcess implements KubePod {
       final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarResources =
           getResourceRequirementsBuilder(DEFAULT_SOCAT_RESOURCES).build();
 
+      final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarLowCpuResources =
+          getResourceRequirementsBuilder(LOW_SOCAT_RESOURCES).build();
+
       final Container remoteStdin = new ContainerBuilder()
           .withName("remote-stdin")
           .withImage(socatImage)
@@ -518,7 +529,7 @@ public class KubePodProcess implements KubePod {
           .withImage(socatImage)
           .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-          .withResources(socatSidecarResources)
+          .withResources(socatSidecarLowCpuResources)
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
@@ -549,7 +560,9 @@ public class KubePodProcess implements KubePod {
           .withLabels(labels)
           .withAnnotations(annotations)
           .endMetadata()
-          .withNewSpec();
+          .withNewSpec()
+          .withServiceAccount(serviceAccount)
+          .withAutomountServiceAccountToken(true);
 
       final List<LocalObjectReference> pullSecrets = imagePullSecrets
           .stream()

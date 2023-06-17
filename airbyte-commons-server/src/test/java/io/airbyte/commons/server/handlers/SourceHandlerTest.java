@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
@@ -42,6 +44,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -58,6 +61,7 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -440,6 +444,60 @@ class SourceHandlerTest {
 
     verify(configRepository).writeActorCatalogFetchEvent(airbyteCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
+  }
+
+  @Test
+  @SuppressWarnings("PMD")
+  void testCatalogResultSelectedStreams() throws JsonValidationException, IOException {
+    final UUID actorId = UUID.randomUUID();
+    final String connectorVersion = "0.0.1";
+    final String hashValue = "0123456789abcd";
+
+    final StandardSourceDefinition sourceDefinitionNoSuggestedStreams = configRepository.getSourceDefinitionFromSource(actorId);
+    final ArrayList<String> suggestedStreamsList = new ArrayList();
+    suggestedStreamsList.add("streamA");
+    final StandardSourceDefinition sourceDefinitionOneSuggestedStream =
+        new StandardSourceDefinition().withSuggestedStreams(new SuggestedStreams().withStreams(
+            suggestedStreamsList));
+
+    final AirbyteCatalog airbyteCatalogWithOneStream = new AirbyteCatalog().withStreams(
+        Lists.newArrayList(createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING))));
+    final AirbyteCatalog airbyteCatalogWithTwoUnsuggestedStreams = new AirbyteCatalog().withStreams(
+        Lists.newArrayList(
+            createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING)),
+            createAirbyteStream("streamB", Field.of(SKU, JsonSchemaType.STRING))));
+    final AirbyteCatalog airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream = new AirbyteCatalog().withStreams(
+        Lists.newArrayList(
+            createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING)),
+            createAirbyteStream("streamB", Field.of(SKU, JsonSchemaType.STRING))));
+
+    final SourceDiscoverSchemaWriteRequestBody requestOne = new SourceDiscoverSchemaWriteRequestBody().catalog(
+        CatalogConverter.toApi(airbyteCatalogWithOneStream, sourceDefinitionNoSuggestedStreams)).sourceId(actorId).connectorVersion(connectorVersion)
+        .configurationHash(hashValue);
+    final SourceDiscoverSchemaWriteRequestBody requestTwo = new SourceDiscoverSchemaWriteRequestBody().catalog(
+        CatalogConverter.toApi(airbyteCatalogWithTwoUnsuggestedStreams, sourceDefinitionNoSuggestedStreams)).sourceId(actorId)
+        .connectorVersion(connectorVersion)
+        .configurationHash(hashValue);
+    final SourceDiscoverSchemaWriteRequestBody requestThree = new SourceDiscoverSchemaWriteRequestBody().catalog(
+        CatalogConverter.toApi(airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream, sourceDefinitionOneSuggestedStream)).sourceId(actorId)
+        .connectorVersion(connectorVersion)
+        .configurationHash(hashValue);
+
+    assertEquals(1, requestOne.getCatalog().getStreams().size());
+    requestOne.getCatalog().getStreams().stream().forEach(s -> assertEquals(true, s.getConfig().getSelected()));
+    requestOne.getCatalog().getStreams().stream().forEach(s -> assertEquals(true, s.getConfig().getSuggested()));
+
+    assertEquals(2, requestTwo.getCatalog().getStreams().size());
+    requestTwo.getCatalog().getStreams().stream().forEach(s -> assertEquals(false, s.getConfig().getSelected()));
+    requestTwo.getCatalog().getStreams().stream().forEach(s -> assertEquals(false, s.getConfig().getSuggested()));
+
+    assertEquals(2, requestThree.getCatalog().getStreams().size());
+    final AirbyteStreamConfiguration firstStreamConfig = requestThree.getCatalog().getStreams().get(0).getConfig();
+    assertEquals(true, firstStreamConfig.getSuggested());
+    assertEquals(true, firstStreamConfig.getSelected());
+    final AirbyteStreamConfiguration secondStreamConfig = requestThree.getCatalog().getStreams().get(1).getConfig();
+    assertEquals(false, secondStreamConfig.getSuggested());
+    assertEquals(false, secondStreamConfig.getSelected());
   }
 
   @Test

@@ -200,13 +200,17 @@ function getConnectorName(fileName?: string | undefined, formValues?: BuilderFor
   return startCase(fileNameNoType);
 }
 
-export const ConnectorBuilderCreatePage: React.FC = () => (
-  <ConnectorBuilderLocalStorageProvider>
-    <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-    <BackButton />
-    <ConnectorBuilderCreatePageInner />
-  </ConnectorBuilderLocalStorageProvider>
-);
+export const ConnectorBuilderCreatePage: React.FC = () => {
+  const existingProjects = useListProjects();
+
+  return (
+    <ConnectorBuilderLocalStorageProvider>
+      <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+      {existingProjects.length > 0 && <BackButton />}
+      <ConnectorBuilderCreatePageInner />
+    </ConnectorBuilderLocalStorageProvider>
+  );
+};
 
 interface TileProps {
   image: React.ReactNode;

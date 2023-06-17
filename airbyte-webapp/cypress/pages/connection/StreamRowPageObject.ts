@@ -84,10 +84,22 @@ export class StreamRowPageObject {
     });
   }
 
+  checkSyncToggleDisabled() {
+    cy.get(this.stream).within(() => {
+      cy.get(streamSyncSwitch).should("be.disabled");
+    });
+  }
+
   hasRemovedStyle(expectedValue: boolean) {
     cy.get(this.stream)
       .invoke("attr", "class")
       .should(`${expectedValue ? "" : "not."}match`, /removed/);
+  }
+
+  hasAddedStyle(expectedValue: boolean) {
+    cy.get(this.stream)
+      .invoke("attr", "class")
+      .should(`${expectedValue ? "" : "not."}match`, /added/);
   }
 
   checkSourceNamespace() {
@@ -115,6 +127,12 @@ export class StreamRowPageObject {
     cy.get(this.stream).within(() => {
       cy.get(syncModeSelectButton).click({ force: true });
       cy.get(`.react-select__option`).contains(`${SYNC_MODE_STRINGS[source]} | ${SYNC_MODE_STRINGS[dest]}`).click();
+    });
+  }
+
+  checkSyncModeDropdownDisabled() {
+    cy.get(this.stream).within(() => {
+      cy.get(syncModeSelectButton).should("be.disabled");
     });
   }
 

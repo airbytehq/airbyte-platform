@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useApiHealthPoll } from "hooks/services/Health";
+import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
@@ -83,14 +84,18 @@ const PreferencesRoutes = () => (
   </Routes>
 );
 
-export const AutoSelectFirstWorkspace: React.FC<{ includePath?: boolean }> = ({ includePath }) => {
+export const AutoSelectFirstWorkspace: React.FC = () => {
   const location = useLocation();
   const workspaces = useListWorkspaces();
   const currentWorkspace = workspaces[0];
+  const [searchParams] = useSearchParams();
 
   return (
     <Navigate
-      to={`/${RoutePaths.Workspaces}/${currentWorkspace.workspaceId}${includePath ? location.pathname : ""}`}
+      to={{
+        pathname: `/${RoutePaths.Workspaces}/${currentWorkspace.workspaceId}${location.pathname}`,
+        search: `?${searchParams.toString()}`,
+      }}
       replace
     />
   );
@@ -108,12 +113,12 @@ const RoutingWithWorkspace: React.FC<{ element?: JSX.Element }> = ({ element }) 
 };
 
 export const Routing: React.FC = () => {
+  useBuildUpdateCheck();
+
   // TODO: Remove this after it is verified there are no problems with current routing
   const OldRoutes = useMemo(
     () =>
-      Object.values(RoutePaths).map((r) => (
-        <Route path={`${r}/*`} key={r} element={<AutoSelectFirstWorkspace includePath />} />
-      )),
+      Object.values(RoutePaths).map((r) => <Route path={`${r}/*`} key={r} element={<AutoSelectFirstWorkspace />} />),
     []
   );
   return (

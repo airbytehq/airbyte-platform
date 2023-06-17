@@ -19,11 +19,6 @@ object StreamCapableState : EnvVar(envVar = "USE_STREAM_CAPABLE_STATE")
 object AutoDetectSchema : EnvVar(envVar = "AUTO_DETECT_SCHEMA")
 object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
-// NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
-object ApplyFieldSelection : EnvVar(envVar = "APPLY_FIELD_SELECTION")
-
-object PerfBackgroundJsonValidation : Temporary<Boolean>(key = "performance.backgroundJsonSchemaValidation", default = false)
-
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
 object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
@@ -70,6 +65,10 @@ object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOve
 
 object HandleStreamStatus : Temporary<Boolean>(key = "handle.stream.status", default = false)
 
+object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
+
+object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "default")
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
@@ -93,4 +92,6 @@ object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") 
   object UnlimitedCredits : Temporary<String>(key = "unlimited-credits", default = "")
 
   object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
+
+  object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 }

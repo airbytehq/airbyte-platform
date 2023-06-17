@@ -39,6 +39,14 @@ jest.mock("services/workspaces/WorkspacesService", () => ({
   useInvalidateWorkspaceStateQuery: () => () => null,
 }));
 
+jest.mock("hooks/domain/connector/useGetSourceFromParams", () => ({
+  useGetSourceFromSearchParams: () => mockConnection.source,
+}));
+
+jest.mock("hooks/domain/connector/useGetDestinationFromParams", () => ({
+  useGetDestinationFromSearchParams: () => mockConnection.destination,
+}));
+
 jest.setTimeout(20000);
 
 describe("CreateConnectionForm", () => {
@@ -49,7 +57,7 @@ describe("CreateConnectionForm", () => {
     await act(async () => {
       renderResult = tlr(
         <Wrapper>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </Wrapper>
       );
     });
@@ -103,7 +111,7 @@ describe("CreateConnectionForm", () => {
 
       const container = tlr(
         <TestWrapper>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </TestWrapper>
       );
 
@@ -124,7 +132,7 @@ describe("CreateConnectionForm", () => {
 
       const container = tlr(
         <TestWrapper>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </TestWrapper>
       );
 
@@ -146,7 +154,7 @@ describe("CreateConnectionForm", () => {
 
       const container = tlr(
         <TestWrapper features={featuresToInject}>
-          <CreateConnectionForm source={mockConnection.source} destination={mockConnection.destination} />
+          <CreateConnectionForm />
         </TestWrapper>
       );
 

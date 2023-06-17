@@ -83,7 +83,14 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
 
 const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType }) => {
   return (
-    <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} itemType={itemType} error={error} />
+    <TagInput
+      name={name}
+      fieldValue={value}
+      onChange={(value) => setValue(value)}
+      itemType={itemType}
+      error={error}
+      directionalStyle
+    />
   );
 };
 
@@ -104,7 +111,7 @@ const handleScrollToField = (
   }
 };
 
-export const BuilderField: React.FC<BuilderFieldProps> = ({
+const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   path,
   optional = false,
   readOnly,
@@ -265,3 +272,5 @@ export const BuilderField: React.FC<BuilderFieldProps> = ({
     </ControlLabels>
   );
 };
+
+export const BuilderField: React.FC<BuilderFieldProps> = (props) => <InnerBuilderField {...props} key={props.path} />;

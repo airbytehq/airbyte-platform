@@ -18,6 +18,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -48,22 +49,27 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSourceDefinitionId(ACTOR_DEFINITION_ID);
-  private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = new ActorDefinitionVersion()
-      .withActorDefinitionId(ACTOR_DEFINITION_ID)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_IMAGE_TAG)
-      .withSpec(SPEC)
-      .withDocumentationUrl("https://airbyte.io/docs/")
-      .withReleaseStage(ReleaseStage.BETA)
-      .withReleaseDate("2021-01-21")
-      .withSuggestedStreams(new SuggestedStreams().withStreams(List.of("users")))
-      .withProtocolVersion("0.1.0")
-      .withAllowedHosts(new AllowedHosts().withHosts(List.of("https://airbyte.com")))
-      .withSupportsDbt(true)
-      .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
-          .withNormalizationRepository("airbyte/normalization")
-          .withNormalizationTag("tag")
-          .withNormalizationIntegrationType("bigquery"));
+
+  private static ActorDefinitionVersion baseActorDefinitionVersion() {
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withSpec(SPEC)
+        .withDocumentationUrl("https://airbyte.io/docs/")
+        .withReleaseStage(ReleaseStage.BETA)
+        .withReleaseDate("2021-01-21")
+        .withSuggestedStreams(new SuggestedStreams().withStreams(List.of("users")))
+        .withProtocolVersion("0.1.0")
+        .withAllowedHosts(new AllowedHosts().withHosts(List.of("https://airbyte.com")))
+        .withSupportsDbt(true)
+        .withNormalizationConfig(new NormalizationDestinationDefinitionConfig()
+            .withNormalizationRepository("airbyte/normalization")
+            .withNormalizationTag("tag")
+            .withNormalizationIntegrationType("bigquery"));
+  }
+
+  private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = baseActorDefinitionVersion();
 
   private ConfigRepository configRepository;
 
@@ -77,32 +83,20 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testReadAndWriteActorDefinitionVersion() throws IOException {
-    ActorDefinitionVersion writtenADV = configRepository.writeActorDefinitionVersion(ACTOR_DEFINITION_VERSION);
-    Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
-    assertTrue(optRetrievedADV.isPresent());
-    assertEquals(writtenADV, optRetrievedADV.get());
+  void testWriteActorDefinitionVersion() throws IOException {
+    final ActorDefinitionVersion writtenADV = configRepository.writeActorDefinitionVersion(ACTOR_DEFINITION_VERSION);
+    // All non-ID fields should match (the ID is randomly assigned)
     assertEquals(ACTOR_DEFINITION_VERSION.withVersionId(writtenADV.getVersionId()), writtenADV);
+  }
 
-    // update same ADV
-    final ActorDefinitionVersion modifiedADV = ACTOR_DEFINITION_VERSION.withSpec(SPEC_2);
-    writtenADV = configRepository.writeActorDefinitionVersion(modifiedADV);
-    optRetrievedADV = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
+  @Test
+  void testGetActorDefinitionVersionByTag() throws IOException {
+    final ActorDefinitionVersion actorDefinitionVersion = configRepository.writeActorDefinitionVersion(ACTOR_DEFINITION_VERSION);
+    final UUID id = actorDefinitionVersion.getVersionId();
+
+    final Optional<ActorDefinitionVersion> optRetrievedADV = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
     assertTrue(optRetrievedADV.isPresent());
-    assertEquals(writtenADV, optRetrievedADV.get());
-    assertEquals(modifiedADV.withVersionId(writtenADV.getVersionId()), writtenADV);
-
-    // different docker tag, new ADV
-    final ActorDefinitionVersion newADV = ACTOR_DEFINITION_VERSION.withDockerImageTag(DOCKER_IMAGE_TAG_2);
-    writtenADV = configRepository.writeActorDefinitionVersion(newADV);
-    final Optional<ActorDefinitionVersion> optOldADV = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
-    final Optional<ActorDefinitionVersion> optNewADV = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
-    assertTrue(optNewADV.isPresent());
-    assertTrue(optOldADV.isPresent());
-    assertEquals(writtenADV, optNewADV.get());
-    assertEquals(newADV.withVersionId(writtenADV.getVersionId()), writtenADV);
-    assertEquals(optRetrievedADV.get(), optOldADV.get());
-    assertNotEquals(optNewADV.get().getVersionId(), optOldADV.get().getVersionId());
+    assertEquals(ACTOR_DEFINITION_VERSION.withVersionId(id), optRetrievedADV.get());
   }
 
   @Test
@@ -115,13 +109,50 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersion actorDefinitionVersion = configRepository.writeActorDefinitionVersion(ACTOR_DEFINITION_VERSION);
     final UUID id = actorDefinitionVersion.getVersionId();
 
-    assertNotNull(configRepository.getActorDefinitionVersion(id));
-    assertEquals(ACTOR_DEFINITION_VERSION.withVersionId(id), configRepository.getActorDefinitionVersion(id));
+    final ActorDefinitionVersion retrievedADV = configRepository.getActorDefinitionVersion(id);
+    assertNotNull(retrievedADV);
+    assertEquals(ACTOR_DEFINITION_VERSION.withVersionId(id), retrievedADV);
   }
 
   @Test
   void testGetActorDefinitionVersionByIdNotExistentThrowsConfigNotFound() {
     assertThrows(ConfigNotFoundException.class, () -> configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID));
+  }
+
+  @Test
+  void testWriteSourceDefinitionAndDefaultVersion() throws IOException, JsonValidationException, ConfigNotFoundException {
+    // Write initial source definition and default version
+    configRepository.writeSourceDefinitionAndDefaultVersion(SOURCE_DEFINITION, ACTOR_DEFINITION_VERSION);
+
+    final Optional<ActorDefinitionVersion> optADVForTag = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
+    assertTrue(optADVForTag.isPresent());
+    final ActorDefinitionVersion advForTag = optADVForTag.get();
+    final StandardSourceDefinition retrievedSourceDefinition =
+        configRepository.getStandardSourceDefinition(SOURCE_DEFINITION.getSourceDefinitionId());
+    assertEquals(retrievedSourceDefinition.getDefaultVersionId(), advForTag.getVersionId());
+
+    // Modify spec without changing docker image tag
+    final ActorDefinitionVersion modifiedADV = baseActorDefinitionVersion().withSpec(SPEC_2);
+    configRepository.writeSourceDefinitionAndDefaultVersion(SOURCE_DEFINITION, modifiedADV);
+
+    assertEquals(retrievedSourceDefinition, configRepository.getStandardSourceDefinition(SOURCE_DEFINITION.getSourceDefinitionId()));
+    final Optional<ActorDefinitionVersion> optADVForTagAfterCall2 = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG);
+    assertTrue(optADVForTagAfterCall2.isPresent());
+    // Versioned data does not get updated since the tag did not change - old spec is still returned
+    assertEquals(advForTag, optADVForTagAfterCall2.get());
+
+    // Modifying docker image tag creates a new version (which can contain new versioned data)
+    final ActorDefinitionVersion newADV = baseActorDefinitionVersion().withDockerImageTag(DOCKER_IMAGE_TAG_2).withSpec(SPEC_2);
+    configRepository.writeSourceDefinitionAndDefaultVersion(SOURCE_DEFINITION, newADV);
+
+    final Optional<ActorDefinitionVersion> optADVForTag2 = configRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
+    assertTrue(optADVForTag2.isPresent());
+    final ActorDefinitionVersion advForTag2 = optADVForTag2.get();
+
+    // Versioned data is updated as well as the version id
+    assertEquals(advForTag2, newADV.withVersionId(advForTag2.getVersionId()));
+    assertNotEquals(advForTag2.getVersionId(), advForTag.getVersionId());
+    assertNotEquals(advForTag2.getSpec(), advForTag.getSpec());
   }
 
 }

@@ -1,10 +1,11 @@
-import React, { Suspense, useMemo } from "react";
+import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 import LoadingPage from "components/LoadingPage";
 
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
+import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -109,9 +110,11 @@ const CloudMainViewRoutes = () => {
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={
-          <CloudMainView>
-            <MainRoutes />
-          </CloudMainView>
+          <CloudWorkspaceDataPrefetcher>
+            <CloudMainView>
+              <MainRoutes />
+            </CloudMainView>
+          </CloudWorkspaceDataPrefetcher>
         }
       />
       <Route path="*" element={<DefaultView />} />
@@ -119,15 +122,17 @@ const CloudMainViewRoutes = () => {
   );
 };
 
-const CloudWorkspaceDataPrefetcher = () => {
+const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   usePrefetchCloudWorkspaceData();
-  return null;
+  return <>{children}</>;
 };
 
 export const Routing: React.FC = () => {
   const { user, inited, providers, hasCorporateEmail, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname } = useLocation();
+
+  useBuildUpdateCheck();
 
   // invalidate everything in the workspace scope when the workspaceId changes
   useInvalidateAllWorkspaceScopeOnChange(workspaceId);
@@ -157,7 +162,6 @@ export const Routing: React.FC = () => {
   return (
     <WorkspaceServiceProvider>
       <LDExperimentServiceProvider>
-        {workspaceId && user && <CloudWorkspaceDataPrefetcher />}
         <Suspense fallback={<LoadingPage />}>
           <Routes>
             {/*

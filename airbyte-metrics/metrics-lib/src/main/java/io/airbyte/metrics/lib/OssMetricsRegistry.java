@@ -112,6 +112,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   BREAKING_SCHEMA_CHANGE_DETECTED(MetricEmittingApps.SERVER,
       "breaking_change_detected",
       "a breaking schema change has been detected"),
+  CRON_JOB_RUN_BY_CRON_TYPE(MetricEmittingApps.CRON,
+      "cron_jobs_run",
+      "number of cron runs by cron type"),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
       MetricEmittingApps.METRICS_REPORTER,
       "est_num_metrics_emitted_by_reporter",
@@ -208,6 +211,9 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   REPLICATION_RECORDS_SYNCED(MetricEmittingApps.WORKER,
       "replication_records_synced",
       "number of records synced during replication"),
+  REPLICATION_WORKER_CREATED(MetricEmittingApps.WORKER,
+      "replication_worker_created",
+      "number of replication worker created"),
   RESET_REQUEST(MetricEmittingApps.WORKER,
       "reset_request",
       "number of requested resets"),
@@ -238,7 +244,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_ATTEMPT(MetricEmittingApps.WORKER,
       "stats_commit_attempt",
       "number of attempts to commit stats from the orchestrator/workers"),
-
   STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "stats_commit_attempt_failed",
       "number of failed attempts to commit stats from the orchestrator/workers"),
@@ -275,7 +280,29 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "count of the number of workflow failures"),
   SCHEMA_CHANGE_AUTO_PROPAGATED(MetricEmittingApps.SERVER,
       "schema_change_auto_propagated",
-      "a schema change have been propagated");
+      "a schema change have been propagated"),
+  WORKER_DESTINATION_BUFFER_SIZE(MetricEmittingApps.WORKER,
+      "worker_destination_buffer_size",
+      "the size of the replication worker destination buffer queue"),
+
+  WORKER_DESTINATION_MESSAGE_READ(MetricEmittingApps.WORKER,
+      "worker_destination_message_read",
+      "whenever a message is read from the destination"),
+
+  WORKER_DESTINATION_MESSAGE_SENT(MetricEmittingApps.WORKER,
+      "worker_destination_message_sent",
+      "whenever a message is sent to the destination"),
+
+  WORKER_SOURCE_BUFFER_SIZE(MetricEmittingApps.WORKER,
+      "worker_source_buffer_size",
+      "the size of the replication worker source buffer queue"),
+
+  WORKER_SOURCE_MESSAGE_READ(MetricEmittingApps.WORKER,
+      "worker_source_message_read",
+      "whenever a message is read from the source"),
+  WORKFLOWS_HEALED(MetricEmittingApps.CRON,
+      "workflows_healed",
+      "number of workflow the self healing cron healed");
 
   private final MetricEmittingApp application;
   private final String metricName;

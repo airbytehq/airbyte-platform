@@ -1,7 +1,17 @@
-import { createPostgresDestinationViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
+import {
+  createNewConnectionViaApi,
+  createPostgresDestinationViaApi,
+  createPostgresSourceViaApi,
+} from "@cy/commands/connection";
+import { fillLocalJsonForm } from "@cy/commands/connector";
+import { fillPokeAPIForm } from "@cy/commands/connector";
+import { goToDestinationPage, openDestinationOverview } from "@cy/pages/destinationPage";
+import { openSourceOverview } from "@cy/pages/sourcePage";
+import { goToSourcePage } from "@cy/pages/sourcePage";
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
+import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { submitButtonClick } from "commands/common";
+import { appendRandomString, submitButtonClick, getSubmitButton } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createUsersTableQuery,
@@ -20,7 +30,7 @@ import {
   waitForGetSourcesListRequest,
 } from "commands/interceptors";
 
-import * as replicationPage from "pages/connection/connectionFormPageObject";
+import * as connectionConfigurationForm from "pages/connection/connectionFormPageObject";
 import * as connectionListPage from "pages/connection/connectionListPageObject";
 import * as newConnectionPage from "pages/connection/createConnectionPageObject";
 import { streamDetails } from "pages/connection/StreamDetailsPageObject";
@@ -60,9 +70,8 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     dropTables();
   });
 
-  describe.only("Set up source and destination", () => {
-    // todo: switching back and forth between views for existing/new connectors
-    describe("With existing connectors", () => {
+  describe("Set up connection", () => {
+    describe("From connection page", () => {
       it("should open 'New connection' page", () => {
         connectionListPage.visit();
         interceptGetSourcesListRequest();
@@ -86,14 +95,107 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       });
 
       it("should redirect to 'New connection' configuration page with stream table'", () => {
-        newConnectionPage.isAtNewConnectionPage();
+        newConnectionPage.isAtConnectionConfigurationStep();
+      });
+    });
+    describe("From source page", () => {
+      it("can use existing destination", () => {
+        goToSourcePage();
+        openSourceOverview(source.name);
+        cy.get("button").contains("Create a connection").click();
+        cy.get("button").contains(destination.name).click();
+        newConnectionPage.isAtConnectionConfigurationStep();
+      });
+      it("can use new destination", () => {
+        // this depends on the source having at least one configured connection already
+        createNewConnectionViaApi(source, destination).then((connection) => {
+          connectionId = connection.connectionId;
+
+          cy.intercept("/api/v1/destinations/create").as("createDestination");
+
+          goToSourcePage();
+          openSourceOverview(source.name);
+          cy.get("button").contains("add destination").click();
+          cy.get("button").contains("add a new destination").click();
+          cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
+
+          // confirm toggling the type
+          cy.get("label").contains("Select an existing destination").click();
+          cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=existing`);
+
+          cy.get("button").contains(destination.name).should("exist");
+
+          cy.get("label").contains("Set up a new destination").click();
+          cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
+
+          fillLocalJsonForm(appendRandomString("LocalJSON Cypress"), "/local");
+
+          cy.get("button").contains("Set up destination").click();
+
+          cy.wait("@createDestination", { timeout: 30000 }).then((interception) => {
+            const createdDestinationId = interception.response?.body.destinationId;
+            cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationId=${createdDestinationId}`);
+
+            requestDeleteDestination({ destinationId: createdDestinationId });
+          });
+          requestDeleteConnection({ connectionId: connection.connectionId });
+        });
+      });
+    });
+    describe("From destination page", () => {
+      it("can use existing source", () => {
+        goToDestinationPage();
+        openDestinationOverview(destination.name);
+        cy.get("button").contains("Create a connection").click();
+        cy.get("button").contains(source.name).click();
+        newConnectionPage.isAtConnectionConfigurationStep();
+      });
+      it("can use new source", () => {
+        // this depends on the source having at least one configured connection already
+        createNewConnectionViaApi(source, destination).then((connection) => {
+          cy.intercept("/api/v1/sources/create").as("createSource");
+
+          goToDestinationPage();
+          openDestinationOverview(destination.name);
+          cy.get("button").contains("add source").click();
+          cy.get("button").contains("add a new source").click();
+          cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);
+
+          // confirm can toggle back and
+          cy.get("label").contains("Select an existing source").click();
+          cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=existing`);
+
+          cy.get("button").contains(source.name).should("exist");
+
+          cy.get("label").contains("Set up a new source").click();
+          cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);
+
+          const testPokeSourceName = appendRandomString("Cypress Test Poke");
+          fillPokeAPIForm(testPokeSourceName, "ditto");
+          cy.get("button").contains("Set up source").click();
+          cy.wait("@createSource", { timeout: 30000 }).then((interception) => {
+            const createdSourceId = interception.response?.body.sourceId;
+            newConnectionPage.isAtConnectionConfigurationStep();
+
+            requestDeleteSource({ sourceId: createdSourceId });
+          });
+
+          newConnectionPage.isAtConnectionConfigurationStep();
+          requestDeleteConnection({ connectionId: connection.connectionId });
+        });
       });
     });
   });
 
   describe("Configuration", () => {
     it("should set 'Replication frequency' to 'Manual'", () => {
-      replicationPage.selectSchedule("Manual");
+      interceptDiscoverSchemaRequest();
+
+      cy.visit(
+        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+      );
+      waitForDiscoverSchemaRequest();
+      connectionConfigurationForm.selectSchedule("Manual");
     });
   });
 
@@ -133,27 +235,36 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   describe("Stream", () => {
     const usersStreamRow = new StreamRowPageObject("public", "users");
 
-    it("should have checked sync switch by default", () => {
-      // filter table to have only one stream
+    it("should have no streams checked by default", () => {
+      getSubmitButton().should("be.disabled");
+      newConnectionPage.getNoStreamsSelectedError().should("exist");
+
+      // filter table for an sample stream
       streamsTable.searchStream("users");
       newConnectionPage.checkAmountOfStreamTableRows(1);
 
-      usersStreamRow.isStreamSyncEnabled(true);
-    });
-
-    it("should have unchecked sync switch after click", () => {
-      usersStreamRow.toggleStreamSync();
       usersStreamRow.isStreamSyncEnabled(false);
     });
 
-    it("should have removed stream style after click", () => {
-      usersStreamRow.hasRemovedStyle(true);
-    });
-
-    it("should have checked sync switch after click and default stream style", () => {
+    it("should have checked sync switch after click", () => {
       usersStreamRow.toggleStreamSync();
       usersStreamRow.isStreamSyncEnabled(true);
-      usersStreamRow.hasRemovedStyle(false);
+    });
+
+    it("should have added stream style after click", () => {
+      usersStreamRow.hasAddedStyle(true);
+    });
+
+    it("should have unchecked sync switch after click and default stream style", () => {
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.isStreamSyncEnabled(false);
+      usersStreamRow.hasAddedStyle(false);
+    });
+
+    it("should enable form submit after a stream is selected", () => {
+      usersStreamRow.toggleStreamSync();
+      newConnectionPage.getNoStreamsSelectedError().should("not.exist");
+      getSubmitButton().should("be.enabled");
     });
 
     it("should have source namespace name", () => {
@@ -187,10 +298,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       streamDetails.isClosed();
     });
   });
-
-  /*
-    here will be added more tests to extend the test flow
-   */
 
   describe("Submit form", () => {
     it("should set up a connection", () => {

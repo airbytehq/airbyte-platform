@@ -136,7 +136,7 @@ class AdvancedAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
@@ -182,6 +182,7 @@ class AdvancedAcceptanceTests {
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
         .cursorField(List.of(COLUMN_ID))
+        .selected(true)
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
@@ -241,6 +242,7 @@ class AdvancedAcceptanceTests {
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
 
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)

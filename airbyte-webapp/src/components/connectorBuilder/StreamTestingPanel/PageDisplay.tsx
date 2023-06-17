@@ -4,6 +4,7 @@ import React, { ReactNode, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
@@ -33,12 +34,17 @@ interface TabData {
 export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
   const { formatMessage } = useIntl();
 
-  const { editorView } = useConnectorBuilderFormState();
+  const {
+    editorView,
+    builderFormValues: { streams: builderFormStreams },
+  } = useConnectorBuilderFormState();
   const {
     streamRead,
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
     testStreamIndex,
   } = useConnectorBuilderTestRead();
+
+  const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
   const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
@@ -117,7 +123,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">
                     {formatMessage({ id: "connectorBuilder.schemaTab" })}
-                    {editorView === "ui" && schemaDifferences && (
+                    {editorView === "ui" && schemaDifferences && !autoImportSchema && (
                       <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
                     )}
                   </FlexContainer>
@@ -129,7 +135,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
         <Tab.Panels className={styles.tabPanelContainer}>
           {tabs.map((tab) => (
             <Tab.Panel className={styles.tabPanel} key={tab.key}>
-              <pre>{tab.content}</pre>
+              <Pre>{tab.content}</Pre>
             </Tab.Panel>
           ))}
           {inferredSchema && (

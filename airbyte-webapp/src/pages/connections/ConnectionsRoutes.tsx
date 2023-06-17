@@ -5,9 +5,9 @@ import { LoadingPage } from "components";
 
 import { useExperiment } from "hooks/services/Experiment";
 
-import { ConnectionRoutePaths } from "./types";
-import { RoutePaths } from "../routePaths";
+import { ConnectionRoutePaths } from "../routePaths";
 
+const ConfigureConnectionPage = React.lazy(() => import("./ConfigureConnectionPage"));
 const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
@@ -22,7 +22,11 @@ export const ConnectionsRoutes: React.FC = () => {
   return (
     <Suspense fallback={<LoadingPage />}>
       <Routes>
-        <Route path={RoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
+        <Route
+          path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`}
+          element={<ConfigureConnectionPage />}
+        />
+        <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           {streamCentricUIEnabled ? (
             <>

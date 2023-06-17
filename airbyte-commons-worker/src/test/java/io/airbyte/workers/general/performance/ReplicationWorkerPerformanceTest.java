@@ -2,7 +2,7 @@
  * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.general;
+package io.airbyte.workers.general.performance;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -28,7 +28,15 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.general.EmptyAirbyteDestination;
+import io.airbyte.workers.general.LimitedFatRecordSourceProcess;
+import io.airbyte.workers.general.LimitedIntegrationLauncher;
+import io.airbyte.workers.general.ReplicationFeatureFlagReader;
+import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
+import io.airbyte.workers.internal.AirbyteDestination;
+import io.airbyte.workers.internal.AirbyteMapper;
+import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
@@ -36,6 +44,7 @@ import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
+import io.airbyte.workers.internal.book_keeping.MessageTracker;
 import io.airbyte.workers.internal.book_keeping.StreamStatusTracker;
 import io.airbyte.workers.internal.book_keeping.events.AirbyteControlMessageEventListener;
 import io.airbyte.workers.internal.book_keeping.events.AirbyteStreamStatusMessageEventListener;
@@ -44,20 +53,36 @@ import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessage
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.process.IntegrationLauncher;
 import io.micronaut.context.event.ApplicationEventListener;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("MissingJavadocType")
-@Slf4j
-public class ReplicationWorkerPerformanceTest {
+public abstract class ReplicationWorkerPerformanceTest {
+
+  private static final Logger log = LoggerFactory.getLogger(ReplicationWorkerPerformanceTest.class);
 
   public static final Duration DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD = Duration.ofMillis(1);
+
+  public abstract ReplicationWorker getReplicationWorker(final String jobId,
+                                                         final int attempt,
+                                                         final AirbyteSource source,
+                                                         final AirbyteMapper mapper,
+                                                         final AirbyteDestination destination,
+                                                         final MessageTracker messageTracker,
+                                                         final SyncPersistence syncPersistence,
+                                                         final RecordSchemaValidator recordSchemaValidator,
+                                                         final FieldSelector fieldSelector,
+                                                         final ConnectorConfigUpdater connectorConfigUpdater,
+                                                         final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
+                                                         final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                                         final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
+                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
@@ -84,7 +109,8 @@ public class ReplicationWorkerPerformanceTest {
   // @Fork(1)
   // Within each run, how many iterations to do.
   // @Measurement(iterations = 2)
-  public static void executeOneSync() throws InterruptedException {
+  public void executeOneSync() throws InterruptedException {
+    log.warn("availableProcessors {}", Runtime.getRuntime().availableProcessors());
     final var featureFlags = new EnvVariableFeatureFlags();
     final var perDestination = new EmptyAirbyteDestination();
     final var messageTracker = new AirbyteMessageTracker(featureFlags);
@@ -135,7 +161,7 @@ public class ReplicationWorkerPerformanceTest {
     final boolean fieldSelectionEnabled = false;
     final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, fieldSelectionEnabled, false);
 
-    final var worker = new DefaultReplicationWorker("1", 0,
+    final var worker = getReplicationWorker("1", 0,
         versionedAbSource,
         dstNamespaceMapper,
         perDestination,
@@ -172,12 +198,6 @@ public class ReplicationWorkerPerformanceTest {
     final var timeTakenSec = timeTakenMs / 1000.0;
     final var recReadSec = summary.getRecordsSynced() / timeTakenSec;
     log.info("MBs read: {}, Time taken sec: {}, MB/s: {}, records/s: {}", mbRead, timeTakenSec, mbRead / timeTakenSec, recReadSec);
-  }
-
-  public static void main(final String[] args) throws IOException, InterruptedException {
-    // Run this main class to start benchmarking.
-    // org.openjdk.jmh.Main.main(args);
-    executeOneSync();
   }
 
 }

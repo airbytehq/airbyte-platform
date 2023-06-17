@@ -52,7 +52,7 @@ const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showR
 export const StreamsList = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
 
-  const { streams, filteredStreams } = useStreamsListContext();
+  const { filteredStreams } = useStreamsListContext();
 
   const columnHelper = useMemo(() => createColumnHelper<AirbyteStreamWithStatusAndConfiguration>(), []);
   const getStreamStatus = useGetStreamStatus();
@@ -102,7 +102,7 @@ export const StreamsList = () => {
   return (
     <>
       <Box mb="md">
-        <ConnectionStatusCard streamCount={streams.length} />
+        <ConnectionStatusCard />
       </Box>
       <Card
         title={

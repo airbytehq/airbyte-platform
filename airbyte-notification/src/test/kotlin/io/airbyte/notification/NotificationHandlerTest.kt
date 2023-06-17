@@ -13,6 +13,7 @@ class NotificationHandlerTest {
     private val customerIoConfigFetcher: CustomerIoEmailConfigFetcher = mockk()
     private val webhookNotificationSender: WebhookNotificationSender = mockk()
     private val customerIoNotificationSender: CustomerIoEmailNotificationSender = mockk()
+    private val workspaceNotificationConfigFetcher: WorkspaceNotificationConfigFetcher = mockk()
 
     private val webhookConfig: WebhookConfig = WebhookConfig("http://webhook.com")
     private val customerIoConfig: CustomerIoEmailConfig = CustomerIoEmailConfig( "to@to.com")
@@ -22,7 +23,7 @@ class NotificationHandlerTest {
 
     @Test
     fun testNoBeanPresent() {
-        val notificationHandler = NotificationHandler(null, null, null, null)
+        val notificationHandler = NotificationHandler(null, null, null, null, null,)
 
         notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.webhook))
 
@@ -37,7 +38,8 @@ class NotificationHandlerTest {
         val notificationHandler = NotificationHandler(webhookConfigFetcher,
                 customerIoConfigFetcher,
                 webhookNotificationSender,
-                customerIoNotificationSender,)
+                customerIoNotificationSender,
+                workspaceNotificationConfigFetcher,)
 
         every {
             webhookConfigFetcher.fetchConfig(connectionId)
@@ -69,7 +71,8 @@ class NotificationHandlerTest {
         val notificationHandler = NotificationHandler(webhookConfigFetcher,
                 customerIoConfigFetcher,
                 webhookNotificationSender,
-                customerIoNotificationSender,)
+                customerIoNotificationSender,
+                workspaceNotificationConfigFetcher,)
 
         notificationHandler.sendNotification(connectionId, subject, message, listOf())
 

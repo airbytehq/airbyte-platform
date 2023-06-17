@@ -9,8 +9,7 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
 import { AirbyteStream } from "core/request/AirbyteClient";
-
-import { ConnectionRoutePaths } from "../types";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 interface StreamActionsMenuProps {
   stream?: AirbyteStream;

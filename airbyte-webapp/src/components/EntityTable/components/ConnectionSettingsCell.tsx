@@ -6,7 +6,7 @@ import styled from "styled-components";
 import { Link } from "components/ui/Link";
 
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { ConnectionRoutePaths } from "pages/connections/types";
+import { ConnectionRoutePaths } from "pages/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
 interface IProps {

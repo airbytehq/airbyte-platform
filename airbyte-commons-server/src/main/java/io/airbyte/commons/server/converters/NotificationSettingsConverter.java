@@ -43,14 +43,22 @@ public class NotificationSettingsConverter {
 
   // Currently customerIoConfiguration is an empty object, so we tend to keep it as null.
   private static io.airbyte.config.NotificationItem toConfig(final io.airbyte.api.model.generated.NotificationItem notificationItem) {
-    return new io.airbyte.config.NotificationItem()
+    io.airbyte.config.NotificationItem result = new io.airbyte.config.NotificationItem()
         .withNotificationType(notificationItem.getNotificationType().stream()
             .map(notificationType -> Enums.convertTo(notificationType, io.airbyte.config.Notification.NotificationType.class)).collect(
-                Collectors.toList()))
-        .withSlackConfiguration(toConfig(notificationItem.getSlackConfiguration()));
+                Collectors.toList()));
+
+    if (notificationItem.getSlackConfiguration() != null) {
+      result.withSlackConfiguration(toConfig(notificationItem.getSlackConfiguration()));
+    }
+    return result;
   }
 
-  private static io.airbyte.config.SlackNotificationConfiguration toConfig(final io.airbyte.api.model.generated.SlackNotificationConfiguration notification) {
+  /**
+   * Convert SlackNotificationConfiguration from api to config. Used in notifications/trywebhook api
+   * path.
+   */
+  public static io.airbyte.config.SlackNotificationConfiguration toConfig(final io.airbyte.api.model.generated.SlackNotificationConfiguration notification) {
     if (notification == null) {
       return new io.airbyte.config.SlackNotificationConfiguration();
     }
@@ -86,11 +94,14 @@ public class NotificationSettingsConverter {
   }
 
   private static io.airbyte.api.model.generated.NotificationItem toApi(final io.airbyte.config.NotificationItem notificationItem) {
-    return new io.airbyte.api.model.generated.NotificationItem()
+    var result = new io.airbyte.api.model.generated.NotificationItem()
         .notificationType(notificationItem.getNotificationType().stream()
             .map(notificationType -> Enums.convertTo(notificationType, io.airbyte.api.model.generated.NotificationType.class)).collect(
-                Collectors.toList()))
-        .slackConfiguration(toApi(notificationItem.getSlackConfiguration()));
+                Collectors.toList()));
+    if (notificationItem.getSlackConfiguration() != null) {
+      result.slackConfiguration(toApi(notificationItem.getSlackConfiguration()));
+    }
+    return result;
   }
 
   private static io.airbyte.api.model.generated.SlackNotificationConfiguration toApi(final io.airbyte.config.SlackNotificationConfiguration notification) {

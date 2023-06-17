@@ -12,7 +12,7 @@ import { ConnectorsViewProps } from "./ConnectorsView";
 import { DestinationUpdateIndicator } from "./DestinationUpdateIndicator";
 import { SourceUpdateIndicator } from "./SourceUpdateIndicator";
 
-interface ConnectorCellProps {
+export interface ConnectorCellProps {
   connectorName: string;
   img?: string;
   releaseStage?: ReleaseStage;
@@ -33,7 +33,9 @@ const ConnectorCell: React.FC<ConnectorCellProps> = ({
 
   return (
     <FlexContainer alignItems="center" gap="lg">
-      {allowUpdateConnectors && type === "sources" && <SourceUpdateIndicator id={id} currentVersion={currentVersion} />}
+      {allowUpdateConnectors && type === "sources" && (
+        <SourceUpdateIndicator id={id} currentVersion={currentVersion} releaseStage={releaseStage} />
+      )}
       {allowUpdateConnectors && type === "destinations" && (
         <DestinationUpdateIndicator id={id} currentVersion={currentVersion} />
       )}

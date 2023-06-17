@@ -13,10 +13,10 @@ import { Message } from "components/ui/Message";
 import { JobStatus, JobWithAttemptsRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./ErrorMessage.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
-import { ConnectionRoutePaths } from "../types";
 
 const getErrorMessageFromJob = (job: JobWithAttemptsRead | undefined) => {
   const latestAttempt = job?.attempts?.slice(-1)[0];
@@ -97,7 +97,7 @@ export const StreamErrorMessage: React.FC<{ stream: AirbyteStreamWithStatusAndCo
 
   const { jobs } = useStreamsListContext();
 
-  const { activeJob } = useConnectionSyncContext();
+  const activeJob = jobs[0]?.job;
   const streamJob = jobs.find((job) => job.job?.id && stream.config?.jobId && job.job.id === stream.config.jobId);
   const streamStatus = useGetStreamStatus()(stream.config);
   const jobErrorMessage = getErrorMessageFromJob(streamJob)?.errorMessage;

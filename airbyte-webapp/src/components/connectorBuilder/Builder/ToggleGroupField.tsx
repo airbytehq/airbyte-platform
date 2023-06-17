@@ -22,7 +22,7 @@ export function ToggleGroupField<T>({
   initialValues,
 }: React.PropsWithChildren<ToggleGroupFieldProps<T>>) {
   const value = useWatch({ name: fieldPath, exact: false }) as T | undefined;
-  const { setValue } = useFormContext();
+  const { setValue, unregister } = useFormContext();
   const enabled = value !== undefined;
 
   const labelComponent = (
@@ -30,7 +30,7 @@ export function ToggleGroupField<T>({
       <CheckBox
         checked={enabled}
         onChange={(event) => {
-          event.target.checked ? setValue(fieldPath, initialValues) : setValue(fieldPath, undefined);
+          event.target.checked ? setValue(fieldPath, initialValues) : unregister(fieldPath);
         }}
       />
       <ControlLabels label={label} infoTooltipContent={tooltip} />

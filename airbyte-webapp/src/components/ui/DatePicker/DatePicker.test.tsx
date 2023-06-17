@@ -100,6 +100,7 @@ describe(`${DatePicker.name}`, () => {
     jest.useRealTimers();
   });
 
+  // eslint-disable-next-line jest/no-commented-out-tests
   // it("allows selecting a datetime from the datepicker", async () => {
   //   jest.useFakeTimers().setSystemTime(new Date("2010-09-05"));
   //   const MOCK_DESIRED_DATETIME = "2010-09-05T12:00:00Z";
@@ -126,6 +127,7 @@ describe(`${DatePicker.name}`, () => {
   //   jest.useRealTimers();
   // });
 
+  // eslint-disable-next-line jest/no-commented-out-tests
   // it("allows selecting a datetime with milliseconds from the datepicker", async () => {
   //   jest.useFakeTimers().setSystemTime(new Date("2010-09-05"));
   //   const MOCK_DESIRED_DATETIME = "2010-09-05T12:00:00.000Z";

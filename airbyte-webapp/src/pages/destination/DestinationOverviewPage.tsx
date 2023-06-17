@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { createSearchParams, useNavigate } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
@@ -8,14 +8,15 @@ import { DestinationConnectionTable } from "components/destination/DestinationCo
 import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useSourceList } from "hooks/services/useSourceHook";
-import { RoutePaths } from "pages/routePaths";
-
-import { useGetDestinationFromParams } from "./useGetDestinationFromParams";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
+import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 export const DestinationOverviewPage = () => {
   const navigate = useNavigate();
+  const { workspaceId } = useCurrentWorkspace();
 
   const destination = useGetDestinationFromParams();
 
@@ -38,16 +39,15 @@ export const DestinationOverviewPage = () => {
     [sources]
   );
 
-  const onSelect = (data?: DropdownMenuOptionType) => {
-    const path = `../../../${RoutePaths.Connections}/${RoutePaths.ConnectionNew}`;
-    const state =
-      data && data.value !== "create-new-item"
-        ? {
-            sourceId: data.value,
-            destinationId: destination.destinationId,
-          }
-        : { destinationId: destination.destinationId };
-    navigate(path, { state });
+  const onSelect = (data: DropdownMenuOptionType) => {
+    const path = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
+
+    const searchParams =
+      data.value !== "create-new-item"
+        ? createSearchParams({ sourceId: data.value as string, destinationId: destination.destinationId })
+        : createSearchParams({ destinationId: destination.destinationId, sourceType: "new" });
+
+    navigate({ pathname: path, search: `?${searchParams}` });
   };
 
   return (
@@ -64,7 +64,7 @@ export const DestinationOverviewPage = () => {
         </FlexContainer>
       ) : (
         <ConnectorEmptyStateContent
-          onButtonClick={() => onSelect()}
+          connectorId={destination.destinationId}
           icon={destination.icon}
           connectorType="destination"
           connectorName={destination.name}

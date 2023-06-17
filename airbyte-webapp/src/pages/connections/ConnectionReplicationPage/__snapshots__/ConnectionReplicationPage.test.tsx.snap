@@ -281,6 +281,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             <input
                               aria-checked="mixed"
                               class="<removed-for-snapshot-test>"
+                              data-testid="all-streams-sync-switch"
                               id="all-streams-sync-switch"
                               type="checkbox"
                               value=""
@@ -725,7 +726,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -926,7 +927,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>
@@ -1126,7 +1127,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             class="<removed-for-snapshot-test>"
                             data-type="text"
                           >
-                            '&lt;source schema&gt;
+                            '&lt;destination schema&gt;
                           </p>
                         </span>
                       </div>

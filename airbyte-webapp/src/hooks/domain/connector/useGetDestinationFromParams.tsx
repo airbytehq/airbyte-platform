@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { StepsTypes } from "components/ConnectorBlocks";
 
@@ -12,6 +12,15 @@ export const useGetDestinationFromParams = () => {
   }
 
   return useGetDestination(params.destinationId);
+};
+
+export const useGetDestinationFromSearchParams = () => {
+  const [searchParams] = useSearchParams();
+  const destinationId = searchParams.get("destinationId");
+  if (!destinationId) {
+    throw new Error("Destination id is missing");
+  }
+  return useGetDestination(destinationId);
 };
 
 export const useGetDestinationTabFromParams = () => {

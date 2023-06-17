@@ -69,7 +69,7 @@ export const DocumentationPanel: React.FC = () => {
 
   useUpdateEffect(() => {
     setDocumentationPanelOpen(false);
-  }, [setDocumentationPanelOpen, location.pathname]);
+  }, [setDocumentationPanelOpen, location.pathname, location.search]);
 
   const [activeTab, setActiveTab] = useState<TabsType>("setupGuide");
   const tabs: Array<{ id: TabsType; name: JSX.Element }> = [

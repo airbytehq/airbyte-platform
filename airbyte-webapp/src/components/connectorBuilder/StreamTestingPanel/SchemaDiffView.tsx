@@ -9,6 +9,7 @@ import { useDebounce } from "react-use";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
+import { Pre } from "components/ui/Pre";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { StreamReadInferredSchema } from "core/request/ConnectorBuilderClient";
@@ -165,15 +166,15 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
       )}
       <FlexItem>
         {editorView === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(value) ? (
-          <pre className={styles.diffLine}>
+          <Pre className={styles.diffLine}>
             {formattedSchema
               .split("\n")
               .map((line) => ` ${line}`)
               .join("\n")}
-          </pre>
+          </Pre>
         ) : (
           schemaDiff.changes.map((change, changeIndex) => (
-            <pre
+            <Pre
               className={classNames(
                 {
                   [styles.added]: change.added,
@@ -188,7 +189,7 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                 .map((line) => (line === "" ? undefined : `${change.added ? "+" : change.removed ? "-" : " "}${line}`))
                 .filter(Boolean)
                 .join("\n")}
-            </pre>
+            </Pre>
           ))
         )}
       </FlexItem>

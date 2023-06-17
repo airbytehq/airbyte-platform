@@ -1,3 +1,7 @@
+export const getSubmitButton = () => {
+  return cy.get("button[type=submit]");
+};
+
 export const submitButtonClick = (force = false) => {
   cy.get("button[type=submit]").click({ force });
 };

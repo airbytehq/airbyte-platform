@@ -15,6 +15,7 @@ interface DataResidencyFormControlProps<T extends FormValues> {
   name: Path<T>;
   description: React.ReactNode;
   inline?: boolean;
+  disabled?: boolean;
 }
 
 export const DataResidencyDropdown = <T extends FormValues>({
@@ -22,6 +23,7 @@ export const DataResidencyDropdown = <T extends FormValues>({
   name,
   description,
   inline,
+  disabled = false,
 }: DataResidencyFormControlProps<T>): JSX.Element => {
   const { formatMessage } = useIntl();
   const { geographies } = useAvailableGeographies();
@@ -47,6 +49,7 @@ export const DataResidencyDropdown = <T extends FormValues>({
       name={name}
       options={options}
       inline={inline}
+      disabled={disabled}
     />
   );
 };
