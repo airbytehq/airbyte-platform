@@ -1,11 +1,12 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useEffect, useMemo } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 
@@ -28,6 +29,7 @@ import { useBuilderWatch } from "./types";
 const NOTIFICATION_ID = "connectorBuilder.publish";
 
 export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { projectId, lastValidJsonManifest, currentProject } = useConnectorBuilderFormState();
@@ -148,7 +150,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   return (
     <FormProvider {...methods}>
       <Modal
-        size="sm"
+        size="md"
         title={
           <FormattedMessage
             id={currentProject.sourceDefinitionId ? "connectorBuilder.releaseNewVersion" : "connectorBuilder.publish"}
@@ -158,28 +160,46 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       >
         <form onSubmit={methods.handleSubmit(handleSubmit)}>
           <ModalBody>
-            <FlexContainer alignItems="flex-start" gap="xl">
-              <ConnectorImage />
-              <FlexItem grow>
-                <FlexContainer direction="column">
-                  <BuilderField path="name" type="string" label="Connector name" />
-                  <FlexContainer direction="row">
-                    {currentProject.sourceDefinitionId && (
-                      <div className={styles.versionInput}>
-                        <BuilderField path="version" type="string" label="Version" disabled />
-                      </div>
-                    )}
-                    <BuilderField path="description" type="textarea" label="Description" optional />
+            <FlexContainer direction="column" gap="xl">
+              <Message
+                text={
+                  <FormattedMessage
+                    id={
+                      currentProject.sourceDefinitionId
+                        ? "connectorBuilder.releaseNewVersionDescription"
+                        : "connectorBuilder.publishDescription"
+                    }
+                  />
+                }
+              />
+              <FlexContainer alignItems="flex-start" gap="xl">
+                <ConnectorImage />
+                <FlexItem grow>
+                  <FlexContainer direction="column">
+                    <BuilderField path="name" type="string" label="Connector name" />
+                    <FlexContainer direction="row">
+                      {currentProject.sourceDefinitionId && (
+                        <div className={styles.versionInput}>
+                          <BuilderField path="version" type="string" label="Version" disabled />
+                        </div>
+                      )}
+                      <BuilderField path="description" type="textarea" label="Description" optional />
+                    </FlexContainer>
                   </FlexContainer>
-                </FlexContainer>
-              </FlexItem>
+                </FlexItem>
+              </FlexContainer>
             </FlexContainer>
           </ModalBody>
           <ModalFooter>
             <FlexItem grow>
               <FlexContainer justifyContent="space-between">
                 {currentProject.sourceDefinitionId && (
-                  <BuilderField path="useVersion" type="boolean" label="Set as active version" />
+                  <BuilderField
+                    path="useVersion"
+                    type="boolean"
+                    label={formatMessage({ id: "connectorBuilder.setAsActiveVersion.label" })}
+                    tooltip={formatMessage({ id: "connectorBuilder.setAsActiveVersion.tooltip" })}
+                  />
                 )}
                 <FlexItem grow>
                   <FlexContainer justifyContent="flex-end">

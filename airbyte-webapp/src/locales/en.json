@@ -762,7 +762,7 @@
   "airbyte.datatype.boolean": "Boolean",
 
   "connectorBuilder.downloadYaml": "Export YAML",
-  "connectorBuilder.publish": "Publish",
+  "connectorBuilder.publish": "Publish to workspace",
   "connectorBuilder.releaseNewVersion": "Release new version",
   "connectorBuilder.publishedMessage": "Published {name} version {version}. It's now possible to use this version of the connector in connections.",
   "connectorBuilder.testButton": "Test",
@@ -950,6 +950,10 @@
   "connectorBuilder.streamTooltip": "A stream defines how requests are made to a single API endpoint to fetch data, and how that data gets translated into records.",
   "connectorBuilder.duplicateStreamName": "Cannot match any other stream name",
   "connectorBuilder.errorHandlerWarning": "To keep testing times short, <b>retries are disabled in the connector builder</b>. If you want to test retries, please publish your connector and test it in a connection.",
+  "connectorBuilder.publishDescription": "Publishes this configuration to your workspace as a custom connector that can be used to create Sources and run syncs",
+  "connectorBuilder.releaseNewVersionDescription": "Adds a new version of this custom connector to your workspace",
+  "connectorBuilder.setAsActiveVersion.label": "Set as active version",
+  "connectorBuilder.setAsActiveVersion.tooltip": "If enabled, will set this configuration as the new active version of your custom connector and update any Sources built on top of it. Only one version can be active per connector.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 
