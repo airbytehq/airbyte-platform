@@ -1,5 +1,3 @@
-import { ControlLabels } from "components/LabeledControl";
-
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { links } from "utils/links";
@@ -27,7 +25,7 @@ export const AuthenticationSection: React.FC = () => {
   const grantType = useBuilderWatch("global.authenticator.grant_type");
 
   return (
-    <BuilderCard docLink={links.connectorBuilderAuthentication} label={<ControlLabels label="Authentication" />}>
+    <BuilderCard docLink={links.connectorBuilderAuthentication} label="Authentication">
       <BuilderOneOf
         path="global.authenticator"
         label="Method"

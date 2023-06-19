@@ -28,12 +28,13 @@ export function ToggleGroupField<T>({
   const labelComponent = (
     <div className={styles.label}>
       <CheckBox
+        id={fieldPath}
         checked={enabled}
         onChange={(event) => {
           event.target.checked ? setValue(fieldPath, initialValues) : unregister(fieldPath);
         }}
       />
-      <ControlLabels label={label} infoTooltipContent={tooltip} />
+      <ControlLabels label={label} infoTooltipContent={tooltip} htmlFor={fieldPath} />
     </div>
   );
 

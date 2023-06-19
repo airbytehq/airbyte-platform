@@ -30,9 +30,8 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
   return (
     <BuilderCard
       docLink={links.connectorBuilderPagination}
-      label={
-        <ControlLabels label="Pagination" infoTooltipContent="Configure how pagination is handled by your connector" />
-      }
+      label="Pagination"
+      tooltip="Configure how pagination is handled by your connector"
       toggleConfig={{
         path: streamFieldPath("paginator"),
         defaultValue: {

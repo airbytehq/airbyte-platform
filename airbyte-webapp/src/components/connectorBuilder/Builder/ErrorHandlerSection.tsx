@@ -1,6 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ControlLabels } from "components/LabeledControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
@@ -111,9 +110,8 @@ export const ErrorHandlerSection: React.FC<PartitionSectionProps> = ({ streamFie
   return (
     <BuilderCard
       docLink={links.connectorBuilderErrorHandler}
-      label={
-        <ControlLabels label="Error Handler" infoTooltipContent={getDescriptionByManifest("DefaultErrorHandler")} />
-      }
+      label="Error Handler"
+      tooltip={getDescriptionByManifest("DefaultErrorHandler")}
       toggleConfig={{
         path: streamFieldPath("errorHandler"),
         defaultValue: [
