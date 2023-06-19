@@ -8,9 +8,10 @@ interface FormSubmissionButtonsProps {
   submitKey?: string;
   cancelKey?: string;
   onCancelClickCallback?: () => void;
+  enableCancelWhileClean?: boolean;
 }
 
-export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
+export const ModalFormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   submitKey = "form.submit",
   cancelKey = "form.cancel",
   onCancelClickCallback,

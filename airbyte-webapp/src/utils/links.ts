@@ -51,6 +51,7 @@ export const links = {
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
 } as const;
 
 export type OutboundLinks = typeof links;
