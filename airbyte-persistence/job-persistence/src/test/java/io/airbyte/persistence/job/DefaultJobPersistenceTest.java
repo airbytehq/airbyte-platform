@@ -12,7 +12,6 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 import static io.airbyte.persistence.job.DefaultJobPersistence.toSqlName;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -91,7 +90,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "PMD.AvoidDuplicateLiterals"})
-@DisplayName("DefaultJobPersistance")
+@DisplayName("DefaultJobPersistence")
 class DefaultJobPersistenceTest {
 
   private static final Instant NOW = Instant.now();
@@ -626,7 +625,7 @@ class DefaultJobPersistenceTest {
       final String stream3 = "s3";
       final String namespace3 = null;
 
-      var streamStatsUpdate0 = List.of(
+      final var streamStatsUpdate0 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
               .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
@@ -635,17 +634,17 @@ class DefaultJobPersistenceTest {
               .withStats(new SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, null, null, 1000L, null, streamStatsUpdate0);
 
-      var streamStatsUpdate1 = List.of(
+      final var streamStatsUpdate1 = List.of(
           new StreamSyncStats().withStreamName(stream1).withStreamNamespace(namespace1)
               .withStats(new SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 1L, 10L, 1000L, null, streamStatsUpdate1);
 
-      var streamStatsUpdate2 = List.of(
+      final var streamStatsUpdate2 = List.of(
           new StreamSyncStats().withStreamName(stream2).withStreamNamespace(namespace2)
               .withStats(new SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 3L, 30L, 1000L, null, streamStatsUpdate2);
 
-      var streamStatsUpdate3 = List.of(
+      final var streamStatsUpdate3 = List.of(
           new StreamSyncStats().withStreamName(stream3).withStreamNamespace(namespace3)
               .withStats(new SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L)));
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, null, null, 6L, 60L, 1000L, null, streamStatsUpdate3);
@@ -849,15 +848,6 @@ class DefaultJobPersistenceTest {
 
     final Supplier<Instant> timeSupplier = () -> startTime.plusSeconds(intArray[0]++);
     return timeSupplier;
-  }
-
-  @Test
-  void testSecretMigrationMetadata() throws IOException {
-    boolean isMigrated = jobPersistence.isSecretMigrated();
-    assertFalse(isMigrated);
-    jobPersistence.setSecretMigrationDone();
-    isMigrated = jobPersistence.isSecretMigrated();
-    assertTrue(isMigrated);
   }
 
   @Test

@@ -351,16 +351,6 @@ public interface JobPersistence {
    */
   void purgeJobHistory();
 
-  /**
-   * Check if the secret has been migrated to a new secret store from a plain text values.
-   */
-  boolean isSecretMigrated() throws IOException;
-
-  /**
-   * Set that the secret migration has been performed.
-   */
-  void setSecretMigrationDone() throws IOException;
-
   List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 
 }

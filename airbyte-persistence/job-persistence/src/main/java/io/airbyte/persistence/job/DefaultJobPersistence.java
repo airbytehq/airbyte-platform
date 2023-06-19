@@ -1078,18 +1078,6 @@ public class DefaultJobPersistence implements JobPersistence {
     return record.get(fieldName, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC);
   }
 
-  private static final String SECRET_MIGRATION_STATUS = "secretMigration";
-
-  @Override
-  public boolean isSecretMigrated() throws IOException {
-    return getMetadata(SECRET_MIGRATION_STATUS).count() == 1;
-  }
-
-  @Override
-  public void setSecretMigrationDone() throws IOException {
-    setMetadata(SECRET_MIGRATION_STATUS, "true");
-  }
-
   @Override
   public Optional<String> getVersion() throws IOException {
     return getMetadata(AirbyteVersion.AIRBYTE_VERSION_KEY_NAME).findFirst();
