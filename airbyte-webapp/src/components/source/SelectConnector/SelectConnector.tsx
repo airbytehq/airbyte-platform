@@ -56,6 +56,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           onClose={closeModal}
         />
       ),
+      size: "sm",
     });
 
   const filteredDefinitions = useMemo(
