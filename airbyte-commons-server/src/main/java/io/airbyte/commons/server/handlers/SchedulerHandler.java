@@ -199,7 +199,7 @@ public class SchedulerHandler {
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
     final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
-    final Version protocolVersion = new Version(sourceDef.getProtocolVersion());
+    final Version protocolVersion = new Version(sourceVersion.getProtocolVersion());
 
     return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, imageName, protocolVersion, isCustomConnector));
   }
@@ -221,7 +221,7 @@ public class SchedulerHandler {
         .withConfiguration(partialConfig)
         .withWorkspaceId(sourceConfig.getWorkspaceId());
 
-    final Version protocolVersion = new Version(sourceDef.getProtocolVersion());
+    final Version protocolVersion = new Version(sourceVersion.getProtocolVersion());
 
     final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
@@ -255,7 +255,7 @@ public class SchedulerHandler {
         actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
     final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
     final boolean isCustomConnector = destinationDef.getCustom();
-    final Version protocolVersion = new Version(destinationDef.getProtocolVersion());
+    final Version protocolVersion = new Version(destinationVersion.getProtocolVersion());
     return reportConnectionStatus(
         synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, imageName, protocolVersion, isCustomConnector));
   }
@@ -278,7 +278,7 @@ public class SchedulerHandler {
         .withConfiguration(partialConfig)
         .withWorkspaceId(destinationConfig.getWorkspaceId());
     final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
-    final Version protocolVersion = new Version(destDef.getProtocolVersion());
+    final Version protocolVersion = new Version(destinationVersion.getProtocolVersion());
     return reportConnectionStatus(
         synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, imageName, protocolVersion, isCustomConnector));
   }
@@ -324,9 +324,9 @@ public class SchedulerHandler {
               source,
               imageName,
               connectorVersion,
-              new Version(sourceDef.getProtocolVersion()),
+              new Version(sourceVersion.getProtocolVersion()),
               isCustomConnector);
-      final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceDef);
+      final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
 
       if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
         // modify discoveredSchema object to add CatalogDiff, containsBreakingChange, and connectionStatus
@@ -345,7 +345,7 @@ public class SchedulerHandler {
         .logs(new LogRead().logLines(new ArrayList<>()))
         .succeeded(true);
     return new SourceDiscoverSchemaRead()
-        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceDef))
+        .catalog(CatalogConverter.toApi(airbyteCatalog, sourceVersion))
         .jobInfo(emptyJob)
         .catalogId(currentCatalog.get().getId());
   }
@@ -421,13 +421,12 @@ public class SchedulerHandler {
         source,
         imageName,
         sourceVersion.getDockerImageTag(),
-        new Version(
-            sourceDef.getProtocolVersion()),
+        new Version(sourceVersion.getProtocolVersion()),
         isCustomConnector);
-    return retrieveDiscoveredSchema(response, sourceDef);
+    return retrieveDiscoveredSchema(response, sourceVersion);
   }
 
-  private SourceDiscoverSchemaRead retrieveDiscoveredSchema(final SynchronousResponse<UUID> response, final StandardSourceDefinition sourceDef)
+  private SourceDiscoverSchemaRead retrieveDiscoveredSchema(final SynchronousResponse<UUID> response, final ActorDefinitionVersion sourceVersion)
       throws ConfigNotFoundException, IOException {
     final SourceDiscoverSchemaRead sourceDiscoverSchemaRead = new SourceDiscoverSchemaRead()
         .jobInfo(jobConverter.getSynchronousJobRead(response));
@@ -436,7 +435,7 @@ public class SchedulerHandler {
       final ActorCatalog catalog = configRepository.getActorCatalogById(response.getOutput());
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
           io.airbyte.protocol.models.AirbyteCatalog.class);
-      sourceDiscoverSchemaRead.catalog(CatalogConverter.toApi(persistenceCatalog, sourceDef));
+      sourceDiscoverSchemaRead.catalog(CatalogConverter.toApi(persistenceCatalog, sourceVersion));
       sourceDiscoverSchemaRead.catalogId(response.getOutput());
     }
 

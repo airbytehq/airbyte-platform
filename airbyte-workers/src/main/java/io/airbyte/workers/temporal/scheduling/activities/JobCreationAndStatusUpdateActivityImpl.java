@@ -203,7 +203,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         }
 
         final Optional<Long> jobIdOptional =
-            jobCreator.createResetConnectionJob(destination, standardSync, destinationImageName, new Version(destinationDef.getProtocolVersion()),
+            jobCreator.createResetConnectionJob(destination, standardSync, destinationImageName, new Version(destinationVersion.getProtocolVersion()),
                 destinationDef.getCustom(),
                 standardSyncOperations, streamsToReset);
 
@@ -483,7 +483,7 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
     }
   }
 
-  private String parseIsJobRunningOnCustomConnectorForMetrics(Job job) {
+  private String parseIsJobRunningOnCustomConnectorForMetrics(final Job job) {
     if (job.getConfig() == null || job.getConfig().getSync() == null) {
       return "null";
     }

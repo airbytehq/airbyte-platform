@@ -87,16 +87,20 @@ class DefaultSyncJobFactoryTest {
     final String dstDockerImage = dstDockerRepo + ":" + dstDockerTag;
     final Version dstProtocolVersion = new Version("0.3.2");
     final StandardSourceDefinition standardSourceDefinition =
-        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId)
-            .withProtocolVersion(srcProtocolVersion.serialize());
+        new StandardSourceDefinition().withSourceDefinitionId(sourceDefinitionId);
     final StandardDestinationDefinition standardDestinationDefinition =
-        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId)
-            .withProtocolVersion(dstProtocolVersion.serialize());
+        new StandardDestinationDefinition().withDestinationDefinitionId(destinationDefinitionId);
 
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId))
-        .thenReturn(new ActorDefinitionVersion().withDockerRepository(srcDockerRepo).withDockerImageTag(srcDockerTag));
+        .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(srcDockerRepo)
+            .withDockerImageTag(srcDockerTag)
+            .withProtocolVersion(srcProtocolVersion.serialize()));
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId))
-        .thenReturn(new ActorDefinitionVersion().withDockerRepository(dstDockerRepo).withDockerImageTag(dstDockerTag));
+        .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(dstDockerRepo)
+            .withDockerImageTag(dstDockerTag)
+            .withProtocolVersion(dstProtocolVersion.serialize()));
 
     when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
     when(configRepository.getStandardSync(connectionId)).thenReturn(standardSync);

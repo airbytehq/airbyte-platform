@@ -179,12 +179,12 @@ class JobCreationAndStatusUpdateActivityTest {
           .withWorkspaceId(WORKSPACE_ID)
           .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
       Mockito.when(mConfigRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
-      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-          .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize());
+      final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition();
       Mockito.when(mActorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
           .thenReturn(new ActorDefinitionVersion()
               .withDockerRepository(DOCKER_REPOSITORY)
-              .withDockerImageTag(DOCKER_IMAGE_TAG));
+              .withDockerImageTag(DOCKER_IMAGE_TAG)
+              .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize()));
       Mockito.when(mConfigRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
       final List<StreamDescriptor> streamsToReset = List.of(STREAM_DESCRIPTOR1, STREAM_DESCRIPTOR2);
       Mockito.when(mStreamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset);

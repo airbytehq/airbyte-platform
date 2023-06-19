@@ -91,6 +91,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
@@ -136,6 +137,7 @@ class WebBackendConnectionsHandlerTest {
   private WebBackendConnectionRead expectedNoDiscoveryWithNewSchema;
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -160,6 +162,7 @@ class WebBackendConnectionsHandlerTest {
     configRepository = mock(ConfigRepository.class);
     schedulerHandler = mock(SchedulerHandler.class);
     eventRunner = mock(EventRunner.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
         stateHandler,
@@ -169,7 +172,8 @@ class WebBackendConnectionsHandlerTest {
         schedulerHandler,
         operationsHandler,
         eventRunner,
-        configRepository);
+        configRepository,
+        actorDefinitionVersionHelper);
 
     final StandardSourceDefinition sourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
     sourceDefinition.setIcon(SOURCE_ICON);
@@ -1093,7 +1097,7 @@ class WebBackendConnectionsHandlerTest {
         .skipReset(false)
         .connectionId(expected.getConnectionId());
 
-    final UUID sourceId = UUID.randomUUID();
+    final UUID sourceId = sourceRead.getSourceId();
 
     // existing connection has a breaking change
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
