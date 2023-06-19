@@ -36,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Bootloader {
 
+  // Ordered list of version upgrades that must be completed before upgrading to latest.
   private static final List<AirbyteVersion> REQUIRED_VERSION_UPGRADES = List.of(
       new AirbyteVersion("0.32.0-alpha"),
       new AirbyteVersion("0.37.0-alpha"));
@@ -141,7 +142,7 @@ public class Bootloader {
       log.error(attentionBanner);
       final String message = String.format(
           "Cannot upgrade from version %s to version %s directly. First you must upgrade to version %s. "
-              + "After that upgrade is complete, you may upgrade to version %s",
+              + "After that upgrade is complete, you may upgrade to version %s.",
           initialAirbyteDatabaseVersion.get().serialize(),
           airbyteVersion.serialize(),
           requiredVersionUpgrade.get().serialize(),
