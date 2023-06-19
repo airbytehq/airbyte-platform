@@ -14,7 +14,27 @@ export const EMBEDDED_DOCS_PATH = "/docs";
 
 const DOCS_URL = /^https:\/\/docs\.airbyte\.(io|com)/;
 
-const AVAILABLE_INAPP_DOCS = ["hubspot", "google-analytics-v4", "notion", "google-search-console", "instagram"];
+const AVAILABLE_INAPP_DOCS = [
+  "airtable",
+  "amazon-ads",
+  "asana",
+  "bamboo-hr",
+  "bing-ads",
+  "exchange-rates",
+  "github",
+  "google-analytics-v4",
+  "google-search-console",
+  "google-sheets",
+  "instagram",
+  "hubspot",
+  "jira",
+  "notion",
+  "salesforce",
+  "sendgrid",
+  "shopify",
+  "slack",
+  "zendesk-support",
+];
 
 export const useDocumentation = (documentationUrl: string): UseDocumentationResult => {
   const shortSetupGuides = useExperiment("connector.shortSetupGuides", false);
