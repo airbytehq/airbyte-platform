@@ -8,6 +8,8 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.SecretPersistenceType;
 import io.airbyte.config.Configs.TrackingStrategy;
@@ -112,6 +114,13 @@ public class ApplicationBeanFactory {
     return JsonSecretsProcessor.builder()
         .copySecrets(false)
         .build();
+  }
+
+  @Singleton
+  public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
+                                                                 @Value("${airbyte.protocol.min-version}") final String minVersion,
+                                                                 @Value("${airbyte.protocol.max-version}") final String maxVersion) {
+    return new AirbyteProtocolVersionRange(new Version(minVersion), new Version(maxVersion));
   }
 
   @Singleton

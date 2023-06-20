@@ -108,6 +108,9 @@ airbyte:
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
+  protocol:
+    min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
+    max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   worker:
     kube-job-configs:
       default:

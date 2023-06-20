@@ -80,10 +80,18 @@ public class MockData {
   private static final UUID SOURCE_DEFINITION_ID_2 = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_3 = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_4 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_1 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_2 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_3 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_4 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_1 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_2 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_3 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_4 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_1 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_2 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_3 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_4 = UUID.randomUUID();
   public static final UUID SOURCE_ID_1 = UUID.randomUUID();
   public static final UUID SOURCE_ID_2 = UUID.randomUUID();
   private static final UUID SOURCE_ID_3 = UUID.randomUUID();
@@ -201,6 +209,7 @@ public class MockData {
   public static StandardSourceDefinition publicSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withSourceType(SourceType.API)
         .withName("random-source-1")
         .withDockerImageTag("tag-1")
@@ -219,6 +228,7 @@ public class MockData {
   public static StandardSourceDefinition grantableSourceDefinition1() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-2")
         .withDockerImageTag("tag-2")
@@ -234,6 +244,7 @@ public class MockData {
   public static StandardSourceDefinition grantableSourceDefinition2() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_3)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_3)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-3")
         .withDockerImageTag("tag-3")
@@ -250,6 +261,7 @@ public class MockData {
   public static StandardSourceDefinition customSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_4)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_4)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-4")
         .withDockerImageTag("tag-4")
@@ -295,6 +307,7 @@ public class MockData {
   public static StandardDestinationDefinition publicDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withName("random-destination-1")
         .withDockerImageTag("tag-3")
         .withDockerRepository("repository-3")
@@ -311,6 +324,7 @@ public class MockData {
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withName("random-destination-2")
         .withDockerImageTag("tag-4")
         .withDockerRepository("repository-4")
@@ -325,6 +339,7 @@ public class MockData {
   public static StandardDestinationDefinition grantableDestinationDefinition2() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_3)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_3)
         .withName("random-destination-3")
         .withDockerImageTag("tag-33")
         .withDockerRepository("repository-33")
@@ -336,9 +351,10 @@ public class MockData {
         .withCustom(false);
   }
 
-  public static StandardDestinationDefinition cusstomDestinationDefinition() {
+  public static StandardDestinationDefinition customDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_4)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_4)
         .withName("random-destination-4")
         .withDockerImageTag("tag-44")
         .withDockerRepository("repository-44")
@@ -356,7 +372,7 @@ public class MockData {
         publicDestinationDefinition(),
         grantableDestinationDefinition1(),
         grantableDestinationDefinition2(),
-        cusstomDestinationDefinition());
+        customDestinationDefinition());
   }
 
   public static List<SourceConnection> sourceConnections() {

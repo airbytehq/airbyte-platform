@@ -3177,7 +3177,8 @@ public class ConfigRepository {
    */
   public ActorDefinitionVersion writeActorDefinitionVersion(final ActorDefinitionVersion actorDefinitionVersion, final DSLContext ctx) {
     final OffsetDateTime timestamp = OffsetDateTime.now();
-    final UUID versionId = UUID.randomUUID();
+    // Generate a new UUID if one is not provided. Passing an ID is useful for mocks.
+    final UUID versionId = actorDefinitionVersion.getVersionId() != null ? actorDefinitionVersion.getVersionId() : UUID.randomUUID();
     ctx.insertInto(Tables.ACTOR_DEFINITION_VERSION)
         .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
         .set(ACTOR_DEFINITION_VERSION.CREATED_AT, timestamp)
