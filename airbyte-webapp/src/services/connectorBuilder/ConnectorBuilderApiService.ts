@@ -7,6 +7,7 @@ import { ConnectorBuilderServerRequestService } from "core/domain/connectorBuild
 import {
   ConnectorConfig,
   ConnectorManifest,
+  StreamRead,
   StreamReadRequestBody,
   StreamsListRequestBody,
 } from "core/request/ConnectorBuilderClient";
@@ -34,12 +35,17 @@ function useConnectorBuilderService() {
   );
 }
 
-export const useReadStream = (projectId: string, params: StreamReadRequestBody) => {
+export const useReadStream = (
+  projectId: string,
+  params: StreamReadRequestBody,
+  onSuccess: (data: StreamRead) => void
+) => {
   const service = useConnectorBuilderService();
 
   return useQuery(connectorBuilderKeys.read(projectId, params.stream), () => service.readStream(params), {
     refetchOnWindowFocus: false,
     enabled: false,
+    onSuccess,
   });
 };
 
