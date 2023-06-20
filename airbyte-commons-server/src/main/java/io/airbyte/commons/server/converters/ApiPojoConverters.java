@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.JobType;
 import io.airbyte.api.model.generated.JobTypeResourceLimit;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.model.generated.NormalizationDestinationDefinitionConfig;
+import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.enums.Enums;
@@ -29,6 +30,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -221,6 +223,20 @@ public class ApiPojoConverters {
 
   public static Schedule.TimeUnit toLegacyScheduleTimeUnit(final ConnectionScheduleDataBasicSchedule.TimeUnitEnum timeUnit) {
     return Enums.convertTo(timeUnit, Schedule.TimeUnit.class);
+  }
+
+  public static ReleaseStage toApiReleaseStage(final io.airbyte.config.ReleaseStage releaseStage) {
+    if (releaseStage == null) {
+      return null;
+    }
+    return ReleaseStage.fromValue(releaseStage.value());
+  }
+
+  public static LocalDate toLocalDate(final String date) {
+    if (date == null || date.isBlank()) {
+      return null;
+    }
+    return LocalDate.parse(date);
   }
 
   public static ConnectionScheduleDataBasicSchedule.TimeUnitEnum toApiBasicScheduleTimeUnit(final BasicSchedule.TimeUnit timeUnit) {

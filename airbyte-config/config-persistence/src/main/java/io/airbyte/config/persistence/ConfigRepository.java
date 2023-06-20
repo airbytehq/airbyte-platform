@@ -3260,13 +3260,26 @@ public class ConfigRepository {
    * @throws IOException - you never know when you io
    */
   public ActorDefinitionVersion getActorDefinitionVersion(final UUID actorDefinitionVersionId) throws IOException, ConfigNotFoundException {
-    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
-        .where(Tables.ACTOR_DEFINITION_VERSION.ID.eq(actorDefinitionVersionId))
-        .fetch()
+    return getActorDefinitionVersions(List.of(actorDefinitionVersionId))
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion)
         .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.ACTOR_DEFINITION_VERSION, actorDefinitionVersionId.toString()));
+  }
+
+  /**
+   * Get actor definition versions by ID.
+   *
+   * @param actorDefinitionVersionIds - actor definition version ids
+   * @return list of actor definition version
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionVersion> getActorDefinitionVersions(final List<UUID> actorDefinitionVersionIds) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_VERSION))
+        .where(Tables.ACTOR_DEFINITION_VERSION.ID.in(actorDefinitionVersionIds))
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionVersion)
+        .collect(Collectors.toList());
   }
 
 }
