@@ -2,6 +2,7 @@ import { UseQueryResult, useQuery } from "@tanstack/react-query";
 
 import { fetchDocumentation } from "core/domain/Documentation";
 
+import { useAppMonitoringService } from "./AppMonitoringService";
 import { useExperiment } from "./Experiment";
 
 type UseDocumentationResult = UseQueryResult<string, Error>;
@@ -41,8 +42,9 @@ export const useDocumentation = (documentationUrl: string): UseDocumentationResu
   const docName = documentationUrl.substring(documentationUrl.lastIndexOf("/") + 1);
   const showShortSetupGuide = shortSetupGuides && AVAILABLE_INAPP_DOCS.includes(docName);
   const url = `${documentationUrl.replace(DOCS_URL, EMBEDDED_DOCS_PATH)}${showShortSetupGuide ? ".inapp.md" : ".md"}`;
+  const { trackAction } = useAppMonitoringService();
 
-  return useQuery(documentationKeys.text(documentationUrl), () => fetchDocumentation(url), {
+  return useQuery(documentationKeys.text(documentationUrl), () => fetchDocumentation(url, trackAction), {
     enabled: !!documentationUrl,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
