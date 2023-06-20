@@ -6,8 +6,8 @@ import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { ReactComponent as CaretDownIcon } from "components/ui/ListBox/CaretDownIcon.svg";
 import { Text } from "components/ui/Text";
 
+import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
 import { DestinationId, SourceId } from "core/request/AirbyteClient";
-import { ConsumptionTimeWindow } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 
 import { useCreditsContext } from "./CreditsUsageContext";
 import styles from "./CreditsUsageFilters.module.scss";

@@ -1,4 +1,4 @@
-import { ConsumptionRead } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { ConsumptionRead } from "core/api/types/CloudApi";
 
 import { AvailableDestination, AvailableSource } from "./CreditsUsageContext";
 

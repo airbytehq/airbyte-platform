@@ -6,16 +6,16 @@ import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
+import { useGetCloudWorkspace } from "core/api/cloud";
+import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
-import { WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -48,8 +48,8 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
 
   const { hasCorporateEmail } = useAuthService();
   const isTrial = isNewTrialPolicy
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.IN_TRIAL ||
-      cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.PRE_TRIAL
+    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
+      cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
     : Boolean(cloudWorkspace.trialExpiryTimestamp);
   const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
 
@@ -74,7 +74,9 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                 icon={<CreditsIcon />}
                 label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
-                withNotification={cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD}
+                withNotification={
+                  !cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD
+                }
               />
               <CloudResourcesDropdown /> <CloudSupportDropdown />
               <NavItem

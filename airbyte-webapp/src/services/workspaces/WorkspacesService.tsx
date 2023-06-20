@@ -2,16 +2,16 @@ import { useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import React, { useCallback, useContext, useLayoutEffect, useMemo } from "react";
 import { useNavigate, useMatch } from "react-router-dom";
 
-import { Workspace, WorkspaceService } from "core/domain/workspace";
-import { getConnectionListQueryKey, useConnectionListQuery } from "hooks/services/useConnectionHook";
-import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
-import { getListUsersQueryKey, useListUsersQuery } from "packages/cloud/services/users/UseUserHook";
 import {
   getCloudWorkspaceQueryKey,
   getListCloudWorkspacesAsyncQueryKey,
   useGetCloudWorkspaceQuery,
   useListCloudWorkspacesAsyncQuery,
-} from "packages/cloud/services/workspaces/CloudWorkspacesService";
+} from "core/api/cloud";
+import { Workspace, WorkspaceService } from "core/domain/workspace";
+import { getConnectionListQueryKey, useConnectionListQuery } from "hooks/services/useConnectionHook";
+import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
+import { getListUsersQueryKey, useListUsersQuery } from "packages/cloud/services/users/UseUserHook";
 import { RoutePaths } from "pages/routePaths";
 
 import { useConfig } from "../../config";

@@ -6,7 +6,7 @@ import styled from "styled-components";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Popout } from "components/ui/Popout";
 
-import { useListCloudWorkspacesAsync } from "packages/cloud/services/workspaces/CloudWorkspacesService";
+import { useListCloudWorkspacesAsync } from "core/api/cloud";
 import { useCurrentWorkspace, useWorkspaceService } from "services/workspaces/WorkspacesService";
 
 import ExitIcon from "./components/ExitIcon";
@@ -106,8 +106,8 @@ const WorkspacePopout: React.FC<{
 
   const options = useMemo(
     () =>
-      workspaceList
-        ?.filter((w) => w.workspaceId !== workspace.workspaceId)
+      workspaceList?.workspaces
+        .filter((w) => w.workspaceId !== workspace.workspaceId)
         .map((workspace) => ({
           value: workspace.workspaceId,
           label: workspace.name,

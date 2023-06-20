@@ -8,9 +8,9 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useUpdateCloudWorkspace } from "core/api/cloud";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useUpdateCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import {
   useCurrentWorkspace,
   useInvalidateWorkspace,
