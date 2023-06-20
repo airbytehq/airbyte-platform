@@ -60,7 +60,6 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
-import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -197,11 +196,9 @@ public class SchedulerHandler {
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
-    final Version protocolVersion = new Version(sourceVersion.getProtocolVersion());
 
-    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, imageName, protocolVersion, isCustomConnector));
+    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceCreate(final SourceCoreConfig sourceConfig)
@@ -221,11 +218,8 @@ public class SchedulerHandler {
         .withConfiguration(partialConfig)
         .withWorkspaceId(sourceConfig.getWorkspaceId());
 
-    final Version protocolVersion = new Version(sourceVersion.getProtocolVersion());
-
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
-    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, imageName, protocolVersion, isCustomConnector));
+    return reportConnectionStatus(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceIdForUpdate(final SourceUpdate sourceUpdate)
@@ -253,11 +247,9 @@ public class SchedulerHandler {
     final StandardDestinationDefinition destinationDef = configRepository.getStandardDestinationDefinition(destination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destination.getWorkspaceId(), destination.getDestinationId());
-    final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
     final boolean isCustomConnector = destinationDef.getCustom();
-    final Version protocolVersion = new Version(destinationVersion.getProtocolVersion());
     return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, imageName, protocolVersion, isCustomConnector));
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationCreate(final DestinationCoreConfig destinationConfig)
@@ -277,10 +269,8 @@ public class SchedulerHandler {
         .withDestinationDefinitionId(destinationConfig.getDestinationDefinitionId())
         .withConfiguration(partialConfig)
         .withWorkspaceId(destinationConfig.getWorkspaceId());
-    final String imageName = destinationVersion.getDockerRepository() + ":" + destinationVersion.getDockerImageTag();
-    final Version protocolVersion = new Version(destinationVersion.getProtocolVersion());
     return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, imageName, protocolVersion, isCustomConnector));
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector));
   }
 
   public CheckConnectionRead checkDestinationConnectionFromDestinationIdForUpdate(final DestinationUpdate destinationUpdate)
@@ -309,7 +299,6 @@ public class SchedulerHandler {
     final SourceConnection source = configRepository.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
 
     final String configHash = HASH_FUNCTION.hashBytes(Jsons.serialize(source.getConfiguration()).getBytes(
@@ -322,9 +311,7 @@ public class SchedulerHandler {
       final SynchronousResponse<UUID> persistedCatalogId =
           synchronousSchedulerClient.createDiscoverSchemaJob(
               source,
-              imageName,
-              connectorVersion,
-              new Version(sourceVersion.getProtocolVersion()),
+              sourceVersion,
               isCustomConnector);
       final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
 
@@ -409,7 +396,6 @@ public class SchedulerHandler {
         sourceCreate.getConnectionConfiguration(),
         sourceVersion.getSpec());
 
-    final String imageName = sourceVersion.getDockerRepository() + ":" + sourceVersion.getDockerImageTag();
     final boolean isCustomConnector = sourceDef.getCustom();
     // todo (cgardens) - narrow the struct passed to the client. we are not setting fields that are
     // technically declared as required.
@@ -419,9 +405,7 @@ public class SchedulerHandler {
         .withWorkspaceId(sourceCreate.getWorkspaceId());
     final SynchronousResponse<UUID> response = synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
-        imageName,
-        sourceVersion.getDockerImageTag(),
-        new Version(sourceVersion.getProtocolVersion()),
+        sourceVersion,
         isCustomConnector);
     return retrieveDiscoveredSchema(response, sourceVersion);
   }

@@ -59,7 +59,6 @@ import io.airbyte.persistence.job.tracker.JobTracker.JobState;
 import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.validation.json.JsonValidationException;
 import io.airbyte.workers.JobStatus;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.context.AttemptContext;
 import io.airbyte.workers.helper.FailureHelper;
 import io.micronaut.context.annotation.Requires;
@@ -203,7 +202,12 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
         }
 
         final Optional<Long> jobIdOptional =
-            jobCreator.createResetConnectionJob(destination, standardSync, destinationImageName, new Version(destinationVersion.getProtocolVersion()),
+            jobCreator.createResetConnectionJob(
+                destination,
+                standardSync,
+                destinationVersion,
+                destinationImageName,
+                new Version(destinationVersion.getProtocolVersion()),
                 destinationDef.getCustom(),
                 standardSyncOperations, streamsToReset);
 
@@ -311,18 +315,18 @@ public class JobCreationAndStatusUpdateActivityImpl implements JobCreationAndSta
       }
 
       final JobSyncConfig jobSyncConfig = job.getConfig().getSync();
-      final String sourceDockerImage;
-      final String destinationDockerImage;
+      final UUID destinationDefinitionVersionId;
+      final UUID sourceDefinitionVersionId;
       if (jobSyncConfig == null) {
         final JobResetConnectionConfig resetConfig = job.getConfig().getResetConnection();
         // In a reset, we run a fake source
-        sourceDockerImage = resetConfig != null ? WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB : null;
-        destinationDockerImage = resetConfig != null ? resetConfig.getDestinationDockerImage() : null;
+        sourceDefinitionVersionId = null;
+        destinationDefinitionVersionId = resetConfig != null ? resetConfig.getDestinationDefinitionVersionId() : null;
       } else {
-        sourceDockerImage = jobSyncConfig.getSourceDockerImage();
-        destinationDockerImage = jobSyncConfig.getDestinationDockerImage();
+        sourceDefinitionVersionId = jobSyncConfig.getSourceDefinitionVersionId();
+        destinationDefinitionVersionId = jobSyncConfig.getDestinationDefinitionVersionId();
       }
-      final SyncJobReportingContext jobContext = new SyncJobReportingContext(jobId, sourceDockerImage, destinationDockerImage);
+      final SyncJobReportingContext jobContext = new SyncJobReportingContext(jobId, sourceDefinitionVersionId, destinationDefinitionVersionId);
       job.getLastFailedAttempt().flatMap(Attempt::getFailureSummary)
           .ifPresent(failureSummary -> jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext));
       trackCompletion(job, JobStatus.FAILED);

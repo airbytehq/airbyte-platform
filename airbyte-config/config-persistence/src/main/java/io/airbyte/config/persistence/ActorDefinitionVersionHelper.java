@@ -199,4 +199,8 @@ public class ActorDefinitionVersionHelper {
     return getDestinationVersion(destinationDefinition, workspaceId, null);
   }
 
+  public static String getDockerImageName(final ActorDefinitionVersion actorDefinitionVersion) {
+    return String.format("%s:%s", actorDefinitionVersion.getDockerRepository(), actorDefinitionVersion.getDockerImageTag());
+  }
+
 }

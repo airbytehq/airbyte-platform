@@ -6,6 +6,7 @@ package io.airbyte.persistence.job;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -62,6 +63,8 @@ public class DefaultJobCreator implements JobCreator {
                                       @Nullable final JsonNode webhookOperationConfigs,
                                       final StandardSourceDefinition sourceDefinition,
                                       final StandardDestinationDefinition destinationDefinition,
+                                      final ActorDefinitionVersion sourceDefinitionVersion,
+                                      final ActorDefinitionVersion destinationDefinitionVersion,
                                       final UUID workspaceId)
       throws IOException {
     // reusing this isn't going to quite work.
@@ -86,7 +89,9 @@ public class DefaultJobCreator implements JobCreator {
         .withDestinationResourceRequirements(mergedDstResourceReq)
         .withIsSourceCustomConnector(sourceDefinition.getCustom())
         .withIsDestinationCustomConnector(destinationDefinition.getCustom())
-        .withWorkspaceId(workspaceId);
+        .withWorkspaceId(workspaceId)
+        .withSourceDefinitionVersionId(sourceDefinitionVersion.getVersionId())
+        .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId());
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.SYNC)
@@ -97,6 +102,7 @@ public class DefaultJobCreator implements JobCreator {
   @Override
   public Optional<Long> createResetConnectionJob(final DestinationConnection destination,
                                                  final StandardSync standardSync,
+                                                 final ActorDefinitionVersion destinationDefinitionVersion,
                                                  final String destinationDockerImage,
                                                  final Version destinationProtocolVersion,
                                                  final boolean isDestinationCustomConnector,
@@ -134,7 +140,8 @@ public class DefaultJobCreator implements JobCreator {
         .withResetSourceConfiguration(new ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(isDestinationCustomConnector)
-        .withWorkspaceId(destination.getWorkspaceId());
+        .withWorkspaceId(destination.getWorkspaceId())
+        .withDestinationDefinitionVersionId(destinationDefinitionVersion.getVersionId());
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.RESET_CONNECTION)

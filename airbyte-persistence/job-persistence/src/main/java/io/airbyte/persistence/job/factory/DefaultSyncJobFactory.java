@@ -113,6 +113,8 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           workspace.getWebhookOperationConfigs(),
           sourceDefinition,
           destinationDefinition,
+          sourceVersion,
+          destinationVersion,
           workspace.getWorkspaceId())
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 

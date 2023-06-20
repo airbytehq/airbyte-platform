@@ -40,6 +40,7 @@ import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
+import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.models.Attempt;
@@ -180,17 +181,19 @@ class JobCreationAndStatusUpdateActivityTest {
           .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
       Mockito.when(mConfigRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
       final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition();
+      final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
+          .withDockerRepository(DOCKER_REPOSITORY)
+          .withDockerImageTag(DOCKER_IMAGE_TAG)
+          .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize());
       Mockito.when(mActorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
-          .thenReturn(new ActorDefinitionVersion()
-              .withDockerRepository(DOCKER_REPOSITORY)
-              .withDockerImageTag(DOCKER_IMAGE_TAG)
-              .withProtocolVersion(DESTINATION_PROTOCOL_VERSION.serialize()));
+          .thenReturn(destinationVersion);
       Mockito.when(mConfigRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
       final List<StreamDescriptor> streamsToReset = List.of(STREAM_DESCRIPTOR1, STREAM_DESCRIPTOR2);
       Mockito.when(mStreamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset);
 
       Mockito
-          .when(mJobCreator.createResetConnectionJob(destination, standardSync, DOCKER_IMAGE_NAME, DESTINATION_PROTOCOL_VERSION, false, List.of(),
+          .when(mJobCreator.createResetConnectionJob(destination, standardSync, destinationVersion, DOCKER_IMAGE_NAME, DESTINATION_PROTOCOL_VERSION,
+              false, List.of(),
               streamsToReset))
           .thenReturn(Optional.of(JOB_ID));
 
@@ -356,12 +359,12 @@ class JobCreationAndStatusUpdateActivityTest {
       final Attempt mAttempt = Mockito.mock(Attempt.class);
       Mockito.when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
 
-      final JobSyncConfig mJobSyncConfig = Mockito.mock(JobSyncConfig.class);
-      Mockito.when(mJobSyncConfig.getSourceDockerImage()).thenReturn(DOCKER_IMAGE_NAME);
-      Mockito.when(mJobSyncConfig.getDestinationDockerImage()).thenReturn(DOCKER_IMAGE_NAME);
+      final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+          .withSourceDefinitionVersionId(UUID.randomUUID())
+          .withDestinationDefinitionVersionId(UUID.randomUUID());
 
       final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
-      Mockito.when(mJobConfig.getSync()).thenReturn(mJobSyncConfig);
+      Mockito.when(mJobConfig.getSync()).thenReturn(jobSyncConfig);
 
       final Job mJob = Mockito.mock(Job.class);
       Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
@@ -373,9 +376,14 @@ class JobCreationAndStatusUpdateActivityTest {
 
       jobCreationAndStatusUpdateActivity.jobFailure(new JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON));
 
+      final SyncJobReportingContext expectedReportingContext = new SyncJobReportingContext(
+          JOB_ID,
+          jobSyncConfig.getSourceDefinitionVersionId(),
+          jobSyncConfig.getDestinationDefinitionVersionId());
+
       verify(mJobPersistence).failJob(JOB_ID);
       verify(mJobNotifier).failJob(eq(REASON), Mockito.any());
-      verify(mJobErrorReporter).reportSyncJobFailure(eq(CONNECTION_ID), eq(failureSummary), Mockito.any());
+      verify(mJobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext);
     }
 
     @Test
