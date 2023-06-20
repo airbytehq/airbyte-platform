@@ -47,7 +47,11 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
   return (
     <Dialog open={isOpen} onClose={onModalClose} data-testid={testId} className={styles.modalPageContainer}>
       <Overlay />
-      <Wrapper className={styles.modalContainer}>
+      <Wrapper
+        className={classNames(styles.modalContainer, {
+          [styles["modalContainer--noSidebarOffset"]]: size === "full",
+        })}
+      >
         <Dialog.Panel className={styles.modalPanel}>
           {cardless ? (
             children

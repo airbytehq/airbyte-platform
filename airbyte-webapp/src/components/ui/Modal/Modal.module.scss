@@ -25,6 +25,10 @@
   justify-content: center;
   align-items: center;
   margin-left: variables.$width-size-menu;
+
+  &--noSidebarOffset {
+    margin-left: 0;
+  }
 }
 
 .modalPanel {
