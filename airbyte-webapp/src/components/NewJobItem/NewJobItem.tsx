@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { Suspense, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
-import { useLocation, useNavigate } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
@@ -50,8 +49,6 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const location = useLocation();
-  const navigate = useNavigate();
   const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobWithAttempts.job.id);
   const workspaceId = useCurrentWorkspaceId();
   const { name: workspaceName } = useGetWorkspace(workspaceId);
@@ -112,10 +109,6 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
           });
         break;
       case ContextMenuOptions.OpenLogsModal:
-        if (attemptLink.jobId) {
-          // Clear the hash to remove the highlighted job from the UI
-          navigate(location.pathname);
-        }
         openModal({
           size: "full",
           title: formatMessage(
