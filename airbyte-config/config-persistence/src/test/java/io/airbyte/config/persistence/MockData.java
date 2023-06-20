@@ -382,21 +382,24 @@ public class MockData {
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
-        .withSourceId(SOURCE_ID_1);
+        .withSourceId(SOURCE_ID_1)
+        .withHasOAuthParameterOverride(true);
     final SourceConnection sourceConnection2 = new SourceConnection()
         .withName("source-2")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
         .withWorkspaceId(WORKSPACE_ID_1)
         .withConfiguration(Jsons.deserialize(CONNECTION_SPECIFICATION))
-        .withSourceId(SOURCE_ID_2);
+        .withSourceId(SOURCE_ID_2)
+        .withHasOAuthParameterOverride(true);
     final SourceConnection sourceConnection3 = new SourceConnection()
         .withName("source-3")
         .withTombstone(false)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(Jsons.emptyObject())
-        .withSourceId(SOURCE_ID_3);
+        .withSourceId(SOURCE_ID_3)
+        .withHasOAuthParameterOverride(false);
     return Arrays.asList(sourceConnection1, sourceConnection2, sourceConnection3);
   }
 

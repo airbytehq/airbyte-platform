@@ -3589,6 +3589,8 @@ components:
           type: string
         icon:
           type: string
+        hasOAuthCredentialsOverride:
+          type: boolean
     SourceSnippetRead:
       type: object
       required:

@@ -11,6 +11,7 @@ required:
   - workspaceId
   - configuration
   - tombstone
+  - hasOAuthParameterOverride
 additionalProperties: true
 properties:
   name:
@@ -32,4 +33,7 @@ properties:
     description:
       if not set or false, the configuration is active. if true, then this
       configuration is permanently off.
+    type: boolean
+  hasOAuthParameterOverride:
+    description: if set to true, has a current OAuth parameter override
     type: boolean

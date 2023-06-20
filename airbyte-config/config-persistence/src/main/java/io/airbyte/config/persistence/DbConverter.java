@@ -189,7 +189,8 @@ public class DbConverter {
         .withWorkspaceId(record.get(ACTOR.WORKSPACE_ID))
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
-        .withName(record.get(ACTOR.NAME));
+        .withName(record.get(ACTOR.NAME))
+        .withHasOAuthParameterOverride((boolean) record.get(Constants.HAS_OAUTH_PARAMETER_OVERRIDE));
   }
 
   /**
