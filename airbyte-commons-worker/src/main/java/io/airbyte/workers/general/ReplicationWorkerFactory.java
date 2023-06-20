@@ -14,6 +14,7 @@ import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.Destination;
@@ -51,10 +52,12 @@ import io.airbyte.workers.internal.book_keeping.events.ReplicationAirbyteMessage
 import io.airbyte.workers.internal.sync_persistence.SyncPersistence;
 import io.airbyte.workers.internal.sync_persistence.SyncPersistenceFactory;
 import io.airbyte.workers.process.AirbyteIntegrationLauncherFactory;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Singleton;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -122,6 +125,9 @@ public class ReplicationWorkerFactory {
         featureFlagClient, syncInput);
     final RecordSchemaValidator recordSchemaValidator = createRecordSchemaValidator(syncInput);
 
+    // Enable concurrent stream reads for testing purposes
+    maybeEnableConcurrentStreamReads(sourceLauncherConfig, syncInput);
+
     log.info("Setting up source...");
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = syncInput.getIsReset()
@@ -148,6 +154,24 @@ public class ReplicationWorkerFactory {
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient,
         jobRunConfig, syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
+  }
+
+  private void maybeEnableConcurrentStreamReads(final IntegrationLauncherConfig sourceLauncherConfig, final StandardSyncInput syncInput) {
+    final Map<String, String> concurrentReadEnvVars = Map.of("CONCURRENT_SOURCE_STREAM_READ",
+        shouldEnableConcurrentSourceRead(sourceLauncherConfig, syncInput).toString());
+    if (CollectionUtils.isNotEmpty(sourceLauncherConfig.getAdditionalEnvironmentVariables())) {
+      sourceLauncherConfig.getAdditionalEnvironmentVariables().putAll(concurrentReadEnvVars);
+    } else {
+      sourceLauncherConfig.setAdditionalEnvironmentVariables(concurrentReadEnvVars);
+    }
+  }
+
+  private Boolean shouldEnableConcurrentSourceRead(final IntegrationLauncherConfig sourceLauncherConfig, final StandardSyncInput syncInput) {
+    if (sourceLauncherConfig.getDockerImage().startsWith("airbyte/source-mysql")) {
+      return featureFlagClient.boolVariation(ConcurrentSourceStreamRead.INSTANCE, new Connection(syncInput.getConnectionId()));
+    } else {
+      return false;
+    }
   }
 
   /**
