@@ -6,6 +6,7 @@ package io.airbyte.server.handlers;
 
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.model.generated.StreamStatusRead;
@@ -17,6 +18,7 @@ import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams;
 import io.airbyte.server.repositories.domain.StreamStatus;
 import io.micronaut.data.model.Page;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +91,22 @@ class StreamStatusesHandlerTest {
         .thenReturn(apiItem);
 
     Assertions.assertEquals(apiResp, handler.listStreamStatus(apiReq));
+  }
+
+  @Test
+  void testListPerRunState() {
+    final var connectionId = UUID.randomUUID();
+    final var apiReq = new ConnectionIdRequestBody().connectionId(connectionId);
+    final var domainItem = StreamStatus.builder().build();
+    final var apiItem = new StreamStatusRead();
+    final var apiResp = new StreamStatusReadList().streamStatuses(List.of(apiItem));
+
+    when(repo.findAllPerRunStateByConnectionId(connectionId))
+        .thenReturn(List.of(domainItem));
+    when(mapper.map(domainItem))
+        .thenReturn(apiItem);
+
+    Assertions.assertEquals(apiResp, handler.listStreamStatusPerRunState(apiReq));
   }
 
 }

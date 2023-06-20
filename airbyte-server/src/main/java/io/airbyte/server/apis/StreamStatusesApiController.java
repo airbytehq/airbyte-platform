@@ -8,6 +8,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.StreamStatusesApi;
+import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause;
@@ -68,6 +69,15 @@ public class StreamStatusesApiController implements StreamStatusesApi {
     Validations.validate(req.getPagination());
 
     return handler.listStreamStatus(req);
+  }
+
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Post(uri = "/latest_per_run_state")
+  @Override
+  public StreamStatusReadList getStreamStatusesByRunState(final ConnectionIdRequestBody req) {
+    return handler.listStreamStatusPerRunState(req);
   }
 
   /**

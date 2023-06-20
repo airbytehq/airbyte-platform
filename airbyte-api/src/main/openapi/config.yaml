@@ -2652,6 +2652,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StreamStatusReadList"
+  /v1/stream_statuses/latest_per_run_state:
+    post:
+      summary: Gets a list of the latest stream status for each stream and run state for a connection.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: getStreamStatusesByRunState
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+      responses:
+        "200":
+          description: Successfully queried stream statuses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusReadList"
   /v1/stream_statuses/create:
     post:
       summary: Creates a stream status.

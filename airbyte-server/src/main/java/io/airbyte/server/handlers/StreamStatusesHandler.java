@@ -4,6 +4,7 @@
 
 package io.airbyte.server.handlers;
 
+import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.model.generated.StreamStatusRead;
@@ -50,6 +51,15 @@ public class StreamStatusesHandler {
     final var page = repo.findAllFiltered(filters);
 
     final var apiList = page.getContent()
+        .stream()
+        .map(mapper::map)
+        .toList();
+
+    return new StreamStatusReadList().streamStatuses(apiList);
+  }
+
+  public StreamStatusReadList listStreamStatusPerRunState(final ConnectionIdRequestBody req) {
+    final var apiList = repo.findAllPerRunStateByConnectionId(req.getConnectionId())
         .stream()
         .map(mapper::map)
         .toList();
