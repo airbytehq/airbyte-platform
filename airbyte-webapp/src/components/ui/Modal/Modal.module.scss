@@ -38,6 +38,8 @@
 
 .card {
   position: relative;
+  background: colors.$white;
+  border-radius: variables.$border-radius-lg;
   max-width: calc(100vw - #{variables.$width-size-menu} - #{variables.$spacing-lg} * 2);
   display: flex;
   flex-direction: column;
@@ -63,5 +65,25 @@
     max-width: 100%;
     width: calc(100vw - #{variables.$spacing-xl} * 2);
     height: calc(100vh - #{variables.$spacing-xl} * 2);
+  }
+
+  &__header {
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
+
+  &__closeButton {
+    background-color: transparent;
+    border: none;
+    padding: variables.$spacing-xl;
+    cursor: pointer;
+    color: colors.$dark-blue;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__content {
+    position: relative;
+    flex-grow: 1;
   }
 }

@@ -973,5 +973,7 @@
   "jobHistory.copyLinkToJob": "Copy link to job",
   "jobHistory.copyLinkToJob.success": "Link copied to clipboard",
   "jobHistory.viewLogs": "View logs",
-  "jobHistory.downloadLogs": "Download logs"
+  "jobHistory.downloadLogs": "Download logs",
+
+  "modal.closeButtonLabel": "Close dialog"
 }
