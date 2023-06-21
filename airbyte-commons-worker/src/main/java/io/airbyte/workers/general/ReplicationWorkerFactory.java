@@ -13,6 +13,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
@@ -132,7 +133,8 @@ public class ReplicationWorkerFactory {
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = syncInput.getIsReset()
         ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
-        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
+        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
+            getSourceResourceRequirements(sourceLauncherConfig, syncInput),
             syncInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
@@ -156,9 +158,40 @@ public class ReplicationWorkerFactory {
         jobRunConfig, syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
   }
 
+  /**
+   * Retrieves the {@link ResourceRequirements} for a source. This method exists to modify the
+   * resource requirements for experiments, such as parallel source reads, etc.
+   *
+   * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
+   * @param syncInput The input for the current sync.
+   * @return The potentially modified {@link ResourceRequirements} based on the current configuration.
+   */
+  private ResourceRequirements getSourceResourceRequirements(final IntegrationLauncherConfig sourceLauncherConfig,
+                                                             final StandardSyncInput syncInput) {
+    if (syncInput.getSourceResourceRequirements() != null && shouldEnableConcurrentSourceRead(sourceLauncherConfig, syncInput)) {
+      final ResourceRequirements updatedSourceResourceRequirements = new ResourceRequirements();
+      updatedSourceResourceRequirements.setCpuLimit("5.0");
+      updatedSourceResourceRequirements.setCpuRequest("5.0");
+      updatedSourceResourceRequirements.setMemoryLimit(syncInput.getSourceResourceRequirements().getMemoryLimit());
+      updatedSourceResourceRequirements.setMemoryRequest(syncInput.getSourceResourceRequirements().getMemoryRequest());
+      return updatedSourceResourceRequirements;
+    } else {
+      return syncInput.getSourceResourceRequirements();
+    }
+  }
+
+  /**
+   * Enables concurrent stream reads for the current sync if the correct configuration is present. If
+   * present, a environment variable ({@code CONCURRENT_SOURCE_STREAM_READ}) is added to the map of
+   * environment variables passed to the source.
+   *
+   * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
+   * @param syncInput The input for the current sync.
+   */
   private void maybeEnableConcurrentStreamReads(final IntegrationLauncherConfig sourceLauncherConfig, final StandardSyncInput syncInput) {
-    final Map<String, String> concurrentReadEnvVars = Map.of("CONCURRENT_SOURCE_STREAM_READ",
-        shouldEnableConcurrentSourceRead(sourceLauncherConfig, syncInput).toString());
+    final Boolean isEnabled = shouldEnableConcurrentSourceRead(sourceLauncherConfig, syncInput);
+    final Map<String, String> concurrentReadEnvVars = Map.of("CONCURRENT_SOURCE_STREAM_READ", isEnabled.toString());
+    log.info("Concurrent stream read enabled? {}", isEnabled);
     if (CollectionUtils.isNotEmpty(sourceLauncherConfig.getAdditionalEnvironmentVariables())) {
       sourceLauncherConfig.getAdditionalEnvironmentVariables().putAll(concurrentReadEnvVars);
     } else {
@@ -166,6 +199,14 @@ public class ReplicationWorkerFactory {
     }
   }
 
+  /**
+   * Tests whether the concurrent source reads are enabled by interpreting a feature flag for the
+   * feature, connection ID associated with the current sync and the associated source Docker image.
+   *
+   * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
+   * @param syncInput The input for the current sync.
+   * @return {@code true} if concurrent source reads should be enabled or {@code false} otherwise.
+   */
   private Boolean shouldEnableConcurrentSourceRead(final IntegrationLauncherConfig sourceLauncherConfig, final StandardSyncInput syncInput) {
     if (sourceLauncherConfig.getDockerImage().startsWith("airbyte/source-mysql")) {
       return featureFlagClient.boolVariation(ConcurrentSourceStreamRead.INSTANCE, new Connection(syncInput.getConnectionId()));
