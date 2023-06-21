@@ -51,6 +51,8 @@ object CheckConnectionUseChildWorkflowEnabled : Temporary<Boolean>(key = "check-
 
 object ShouldRunOnGkeDataplane : Temporary<Boolean>(key="should-run-on-gke-dataplane", default = false)
 
+object ShouldRunOnExpandedGkeDataplane : Temporary<Boolean>(key="should-run-on-expanded-gke-dataplane", default = false)
+
 object ShouldRunRefreshSchema : Temporary<Boolean>(key="should-run-refresh-schema", default = true)
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
