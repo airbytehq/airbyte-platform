@@ -41,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 public class EmptyAirbyteSource implements AirbyteSource {
 
   private final AtomicBoolean hasEmittedState;
+  private final AtomicBoolean hasEmittedStreamStatus;
   private final Queue<StreamDescriptor> streamsToReset = new LinkedList<>();
   private final Queue<AirbyteMessage> perStreamMessages = new LinkedList<>();
   private final boolean useStreamCapableState;
@@ -53,6 +54,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
 
   public EmptyAirbyteSource(final boolean useStreamCapableState) {
     hasEmittedState = new AtomicBoolean();
+    hasEmittedStreamStatus = new AtomicBoolean();
     this.useStreamCapableState = useStreamCapableState;
   }
 
@@ -115,7 +117,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public boolean isFinished() {
-    return hasEmittedState.get();
+    return hasEmittedState.get() && hasEmittedStreamStatus.get();
   }
 
   @Trace(operationName = WORKER_OPERATION_NAME)
@@ -127,6 +129,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
   @Trace(operationName = WORKER_OPERATION_NAME)
   @Override
   public Optional<AirbyteMessage> attemptRead() {
+
     if (!isStarted) {
       throw new IllegalStateException("The empty source has not been started.");
     }
@@ -157,6 +160,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
   private Optional<AirbyteMessage> emitPerStreamState() {
     if (streamsToReset.isEmpty() && perStreamMessages.isEmpty()) {
       hasEmittedState.compareAndSet(false, true);
+      hasEmittedStreamStatus.compareAndSet(false, true);
       return Optional.empty();
     }
 
@@ -194,6 +198,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
 
   private Optional<AirbyteMessage> emitStreamResetTraceMessagesForSingleStateTypes() {
     if (streamsToReset.isEmpty() && perStreamMessages.isEmpty()) {
+      hasEmittedStreamStatus.compareAndSet(false, true);
       return Optional.empty();
     }
 
