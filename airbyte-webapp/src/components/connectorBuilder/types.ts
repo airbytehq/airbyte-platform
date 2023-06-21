@@ -54,6 +54,7 @@ export interface BuilderFormInput {
   key: string;
   required: boolean;
   definition: AirbyteJSONSchema;
+  as_config_path?: boolean;
 }
 
 export type BuilderFormAuthenticator = (
@@ -397,10 +398,39 @@ export const authTypeToKeyToInferredInput = (
             airbyte_secret: true,
           },
         };
+        if ("refresh_token_updater" in authenticator && authenticator.refresh_token_updater) {
+          baseInputs.oauth_access_token = {
+            key: "oauth_access_token",
+            required: true,
+            definition: {
+              type: "string",
+              title: "Access token",
+              airbyte_secret: true,
+              description:
+                "The current access token. This field might be overridden by the connector based on the token refresh endpoint response.",
+            },
+            as_config_path: true,
+          };
+          baseInputs.oauth_token_expiry_date = {
+            key: "oauth_token_expiry_date",
+            required: true,
+            definition: {
+              type: "string",
+              title: "Token expiry date",
+              format: "date-time",
+              description:
+                "The date the current access token expires in. This field might be overridden by the connector based on the token refresh endpoint response.",
+            },
+            as_config_path: true,
+          };
+        }
       }
       return baseInputs;
   }
 };
+
+export const OAUTH_ACCESS_TOKEN_INPUT = "oauth_access_token";
+export const OAUTH_TOKEN_EXPIRY_DATE_INPUT = "oauth_token_expiry_date";
 
 export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Record<string, string> => {
   return Object.fromEntries(
@@ -427,6 +457,7 @@ export function getInferredInputList(
   const authKeys = Object.keys(authKeyToInferredInput);
   const inputs = authKeys.flatMap((authKey) => {
     if (
+      authKeyToInferredInput[authKey].as_config_path ||
       extractInterpolatedConfigKey(Reflect.get(global.authenticator, authKey)) === authKeyToInferredInput[authKey].key
     ) {
       return [authKeyToInferredInput[authKey]];
@@ -466,7 +497,7 @@ export function isInterpolatedConfigKey(str: string | undefined): boolean {
   return interpolatedConfigValueRegex.test(noWhitespaceString);
 }
 
-function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
+export function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
   if (str === undefined) {
     return undefined;
   }
@@ -522,6 +553,16 @@ export const builderFormValidationSchema = yup.object().shape({
       token_refresh_endpoint: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
         then: yup.string().required("form.empty.error"),
+        otherwise: (schema) => schema.strip(),
+      }),
+      refresh_token_updater: yup.mixed().when("type", {
+        is: OAUTH_AUTHENTICATOR,
+        then: yup
+          .object()
+          .shape({
+            refresh_token_name: yup.string(),
+          })
+          .default(undefined),
         otherwise: (schema) => schema.strip(),
       }),
       refresh_request_body: yup.mixed().when("type", {
@@ -759,6 +800,10 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
         globalSettings.authenticator.grant_type === "client_credentials"
           ? undefined
           : globalSettings.authenticator.refresh_token,
+      refresh_token_updater:
+        globalSettings.authenticator.grant_type === "client_credentials"
+          ? undefined
+          : globalSettings.authenticator.refresh_token_updater,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
     };
   }
