@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -163,7 +164,9 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
 
     configRepository.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification);
 
-    assertEquals(connectorSpecification, configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID).getSpec());
+    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
+    assertEquals(connectorSpecification, sourceDefinition.getSpec());
+    assertEquals(connectorSpecification, configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
     assertEquals(List.of(configInjection), configRepository.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
     assertEquals(declarativeManifest, configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
   }
@@ -214,7 +217,9 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
 
     configRepository.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID, A_VERSION, configInjection, connectorSpecification);
 
-    assertEquals(connectorSpecification, configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID).getSpec());
+    final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
+    assertEquals(connectorSpecification, sourceDefinition.getSpec());
+    assertEquals(connectorSpecification, configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
     assertEquals(List.of(configInjection), configRepository.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
     assertEquals(A_VERSION, configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion());
   }

@@ -689,10 +689,19 @@ public class ConfigRepository {
   private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
                                                 final ConnectorSpecification spec,
                                                 final DSLContext ctx) {
+    // TODO(pedro) this is currently double writing - this should stop updating the actor_definition
+    // table once those fields are gone. We are updating the same version since connector builder
+    // projects have a different concept of versioning.
+    ctx.update(ACTOR_DEFINITION_VERSION)
+        .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
+        .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
+        .execute();
+
     ctx.update(Tables.ACTOR_DEFINITION)
         .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .where(Tables.ACTOR_DEFINITION.ID.eq(configInjection.getActorDefinitionId()))
         .execute();
+
     writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
   }
 
