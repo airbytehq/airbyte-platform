@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 public class SlackNotificationClient extends NotificationClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SlackNotificationClient.class);
+  private static final String SLACK_CLIENT = "slack";
 
   private final SlackNotificationConfiguration config;
 
@@ -177,6 +178,11 @@ public class SlackNotificationClient extends NotificationClient {
       return notify(message);
     }
     return false;
+  }
+
+  @Override
+  public String getNotificationClientType() {
+    return SLACK_CLIENT;
   }
 
   /**

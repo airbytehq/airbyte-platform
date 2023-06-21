@@ -4,6 +4,9 @@
 
 package io.airbyte.persistence.job;
 
+import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_CLIENT;
+import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_TRIGGER;
+
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -20,6 +23,9 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.metrics.lib.MetricAttribute;
+import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.notification.CustomerioNotificationClient;
 import io.airbyte.notification.NotificationClient;
 import io.airbyte.notification.SlackNotificationClient;
@@ -107,22 +113,22 @@ public class JobNotifier {
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
         // We are not sending these to customerIO right now.
         notificationItem = notificationSettings.getSendOnFailure();
-        sendNotification(notificationItem,
+        sendNotification(notificationItem, FAILURE_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyJobFailure(sourceConnector, destinationConnector, jobDescription, logUrl, job.getId()));
       } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
         // We are not sending these to customerIO right now.
         notificationItem = notificationSettings.getSendOnFailure();
-        sendNotification(notificationItem,
+        sendNotification(notificationItem, SUCCESS_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyJobSuccess(sourceConnector, destinationConnector, jobDescription, logUrl, job.getId()));
       } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabled();
-        sendNotification(notificationItem,
+        sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyConnectionDisabled(workspace.getEmail(), sourceConnector, destinationConnector,
                 jobDescription,
                 workspaceId, connectionId));
       } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
-        sendNotification(notificationItem,
+        sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyConnectionDisableWarning(workspace.getEmail(), sourceConnector, destinationConnector,
                 jobDescription,
                 workspaceId, connectionId));
@@ -167,6 +173,13 @@ public class JobNotifier {
       }
     }
     return notificationMetadata.build();
+  }
+
+  private void submitToMetricClient(final String action, final String notificationClient) {
+    MetricAttribute metricTriggerAttribute = new MetricAttribute(NOTIFICATION_TRIGGER, action);
+    MetricAttribute metricClientAttribute = new MetricAttribute(NOTIFICATION_CLIENT, notificationClient);
+
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.NOTIFICATIONS_SENT, 1, metricClientAttribute, metricTriggerAttribute);
   }
 
   /**
@@ -225,6 +238,7 @@ public class JobNotifier {
   }
 
   private void sendNotification(final NotificationItem notificationItem,
+                                final String notificationTrigger,
                                 ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification) {
     if (notificationItem == null) {
       // Note: we may be able to implement a log notifier to log notification message only.
@@ -237,6 +251,7 @@ public class JobNotifier {
         if (!executeNotification.apply(notificationClient)) {
           LOGGER.warn("Failed to successfully notify: {}", notificationItem);
         }
+        submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType());
       } catch (Exception ex) {
         LOGGER.error("Failed to notify: {} due to an exception. Not blocking.", notificationItem, ex);
         // Do not block.

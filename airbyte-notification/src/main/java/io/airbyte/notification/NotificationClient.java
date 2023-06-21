@@ -73,6 +73,8 @@ public abstract class NotificationClient {
                                              final String url)
       throws IOException, InterruptedException;
 
+  public abstract String getNotificationClientType();
+
   /**
    * Create notification client.
    *

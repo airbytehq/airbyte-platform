@@ -302,7 +302,10 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       "whenever a message is read from the source"),
   WORKFLOWS_HEALED(MetricEmittingApps.CRON,
       "workflows_healed",
-      "number of workflow the self healing cron healed");
+      "number of workflow the self healing cron healed"),
+  NOTIFICATIONS_SENT(MetricEmittingApps.WORKER,
+      "notifications_sent",
+      "number of notifications sent");
 
   private final MetricEmittingApp application;
   private final String metricName;
