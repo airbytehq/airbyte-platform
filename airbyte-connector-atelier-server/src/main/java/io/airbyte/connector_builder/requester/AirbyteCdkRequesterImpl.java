@@ -90,6 +90,7 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
     response.setInferredSchema(data.get("inferred_schema"));
     response.setTestReadLimitReached(data.get("test_read_limit_reached").asBoolean());
     response.setLatestConfigUpdate(data.get("latest_config_update"));
+    response.setInferredDatetimeFormats(data.get("inferred_datetime_formats"));
     return response;
 
   }
