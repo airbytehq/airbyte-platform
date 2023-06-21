@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.EnvConfigs;
+import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ResourceRequirementsType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -30,6 +32,7 @@ import io.micronaut.context.env.Environment;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 // tests may be running on a real k8s environment, override the environment to something else for
@@ -120,6 +123,26 @@ class ContainerOrchestratorFactoryTest {
       caught = true;
     }
     assertTrue(caught, "invalid application name should have thrown an exception");
+  }
+
+  @Test
+  void checkDatabaseSourceResourceRequirements() {
+    final ResourceRequirements resourceRequirements =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database"));
+
+    assertEquals("1", resourceRequirements.getCpuRequest());
+    // This is verifying that we are inheriting the value from default.
+    assertEquals("1", resourceRequirements.getCpuLimit());
+  }
+
+  @Test
+  void checkSourceResourceRequirements() {
+    final ResourceRequirements resourceRequirements =
+        workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("any"));
+
+    assertEquals("0.5", resourceRequirements.getCpuRequest());
+    // This is verifying that we are inheriting the value from default.
+    assertEquals("1", resourceRequirements.getCpuLimit());
   }
 
 }

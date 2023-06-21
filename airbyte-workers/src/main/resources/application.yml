@@ -142,16 +142,6 @@ airbyte:
         cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
         memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
         memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
-      source:
-        cpu-limit: ${SOURCE_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${SOURCE_CONTAINER_CPU_REQUEST:0.5}
-        memory-limit: ${SOURCE_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${SOURCE_CONTAINER_MEMORY_REQUEST:}
-      source-database:
-        cpu-limit: ${SOURCE_DATABASE_CONTAINER_CPU_LIMIT:}
-        cpu-request: ${SOURCE_DATABASE_CONTAINER_CPU_REQUEST:1}
-        memory-limit: ${SOURCE_DATABASE_CONTAINER_MEMORY_LIMIT:}
-        memory-request: ${SOURCE_DATABASE_CONTAINER_MEMORY_REQUEST:}
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
