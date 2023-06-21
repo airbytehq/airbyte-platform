@@ -49,7 +49,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -293,17 +292,6 @@ public class SourceHandler {
     return new SourceReadList().sources(reads);
   }
 
-  public SourceReadList sourceReadListHasOAuthOverrides(final SourceReadList sourceReadList)
-      throws IOException {
-    final Map<UUID, Boolean> authOverrideStatusMap = configRepository.checkSourcesOAuthOverrideStatus(
-        sourceReadList.getSources().stream().map(SourceRead::getSourceId).toList());
-
-    for (final SourceRead source : sourceReadList.getSources()) {
-      source.setHasOAuthCredentialsOverride(authOverrideStatusMap.getOrDefault(source.getSourceId(), false));
-    }
-    return sourceReadList;
-  }
-
   public SourceReadList listSourcesForSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
@@ -465,8 +453,7 @@ public class SourceHandler {
         .sourceDefinitionId(sourceConnection.getSourceDefinitionId())
         .connectionConfiguration(sourceConnection.getConfiguration())
         .name(sourceConnection.getName())
-        .icon(SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()))
-        .hasOAuthCredentialsOverride(sourceConnection.getHasOAuthParameterOverride());
+        .icon(SourceDefinitionsHandler.loadIcon(standardSourceDefinition.getIcon()));
   }
 
   protected static SourceSnippetRead toSourceSnippetRead(final SourceConnection source, final StandardSourceDefinition sourceDefinition) {
@@ -481,8 +468,8 @@ public class SourceHandler {
   @VisibleForTesting
   JsonNode hydrateOAuthResponseSecret(final String secretId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
-    final JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
-    final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
+    JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
+    CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }
 
@@ -490,7 +477,7 @@ public class SourceHandler {
   JsonNode hydrateConnectionConfiguration(final UUID sourceDefinitionId,
                                           final UUID workspaceId,
                                           final String secretId,
-                                          final JsonNode dehydratedConnectionConfiguration)
+                                          JsonNode dehydratedConnectionConfiguration)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final JsonNode hydratedSecret = hydrateOAuthResponseSecret(secretId);
     final ConnectorSpecification spec =

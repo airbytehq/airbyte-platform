@@ -28,7 +28,6 @@ import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.groupConcat;
 import static org.jooq.impl.DSL.noCondition;
 import static org.jooq.impl.DSL.select;
-import static org.jooq.impl.DSL.when;
 import static org.jooq.impl.SQLDataType.VARCHAR;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -1055,12 +1054,7 @@ public class ConfigRepository {
 
   private Stream<SourceConnection> listSourceQuery(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(
-          asterisk(), when(ACTOR_OAUTH_PARAMETER.ID.isNull(), false).otherwise(true).as(Constants.HAS_OAUTH_PARAMETER_OVERRIDE))
-          .from(ACTOR)
-          .leftJoin(ACTOR_OAUTH_PARAMETER)
-          .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID))
-          .and(ACTOR.WORKSPACE_ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID));
+      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR);
       if (configId.isPresent()) {
         return query.where(ACTOR.ACTOR_TYPE.eq(ActorType.source), ACTOR.ID.eq(configId.get())).fetch();
       }
@@ -1161,17 +1155,11 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public List<SourceConnection> listWorkspaceSourceConnection(final UUID workspaceId) throws IOException {
-    final Result<Record> result = database.query(
-        ctx -> ctx.select(
-            asterisk(),
-            when(ACTOR_OAUTH_PARAMETER.ID.isNull(), false).otherwise(true).as(Constants.HAS_OAUTH_PARAMETER_OVERRIDE)))
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
-        .leftJoin(ACTOR_OAUTH_PARAMETER)
-        .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID))
-        .and(ACTOR.WORKSPACE_ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
         .and(ACTOR.WORKSPACE_ID.eq(workspaceId))
-        .andNot(ACTOR.TOMBSTONE).fetch();
+        .andNot(ACTOR.TOMBSTONE).fetch());
     return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
   }
 
@@ -1183,12 +1171,8 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public List<SourceConnection> listWorkspacesSourceConnections(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(
-        asterisk(), when(ACTOR_OAUTH_PARAMETER.ID.isNull(), false).otherwise(true).as(Constants.HAS_OAUTH_PARAMETER_OVERRIDE))
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
-        .leftJoin(ACTOR_OAUTH_PARAMETER)
-        .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID))
-        .and(ACTOR.WORKSPACE_ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
         .and(ACTOR.WORKSPACE_ID.in(resourcesQueryPaginated.workspaceIds()))
         .and(resourcesQueryPaginated.includeDeleted() ? noCondition() : ACTOR.TOMBSTONE.notEqual(true))
@@ -1196,23 +1180,6 @@ public class ConfigRepository {
         .offset(resourcesQueryPaginated.rowOffset())
         .fetch());
     return result.stream().map(DbConverter::buildSourceConnection).collect(Collectors.toList());
-  }
-
-  /**
-   * Check for OAuth override params based on list of source IDs; Returns a map of source ID :
-   * hasParamOverrideBoolean.
-   *
-   * @return sources
-   * @throws IOException - you never know when you IO
-   */
-  public Map<UUID, Boolean> checkSourcesOAuthOverrideStatus(final List<UUID> sourceIds) throws IOException {
-    final Result<Record2<UUID, UUID>> result = database.query(ctx -> ctx.select(ACTOR.ID, ACTOR_OAUTH_PARAMETER.ID)
-        .from(ACTOR)
-        .join(ACTOR_OAUTH_PARAMETER)
-        .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID)).and(ACTOR.WORKSPACE_ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
-        .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
-        .fetch());
-    return result.stream().collect(Collectors.toMap(record -> record.get(ACTOR.ID), record -> record.get(ACTOR_OAUTH_PARAMETER.ID) != null));
   }
 
   private Stream<DestinationConnection> listDestinationQuery(final Optional<UUID> configId) throws IOException {
@@ -1370,12 +1337,8 @@ public class ConfigRepository {
    * @throws IOException - exception while interacting with the db
    */
   public List<SourceConnection> listSourcesForDefinition(final UUID definitionId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx.select(
-        asterisk(), when(ACTOR_OAUTH_PARAMETER.ID.isNull(), false).otherwise(true).as(Constants.HAS_OAUTH_PARAMETER_OVERRIDE))
+    final Result<Record> result = database.query(ctx -> ctx.select(asterisk())
         .from(ACTOR)
-        .leftJoin(ACTOR_OAUTH_PARAMETER)
-        .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID))
-        .and(ACTOR.WORKSPACE_ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source))
         .and(ACTOR.ACTOR_DEFINITION_ID.eq(definitionId))
         .andNot(ACTOR.TOMBSTONE).fetch());
@@ -2106,17 +2069,10 @@ public class ConfigRepository {
    */
   public List<SourceAndDefinition> getSourceAndDefinitionsFromSourceIds(final List<UUID> sourceIds) throws IOException {
     final Result<Record> records = database.query(ctx -> ctx
-        .select(
-            ACTOR.asterisk(),
-            ACTOR_DEFINITION.asterisk(),
-            when(ACTOR_OAUTH_PARAMETER.ID.isNull(), false).otherwise(true).as(Constants.HAS_OAUTH_PARAMETER_OVERRIDE))
-
+        .select(ACTOR.asterisk(), ACTOR_DEFINITION.asterisk())
         .from(ACTOR)
         .join(ACTOR_DEFINITION)
         .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_DEFINITION.ID))
-        .leftJoin(ACTOR_OAUTH_PARAMETER)
-        .on(ACTOR.ACTOR_DEFINITION_ID.eq(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID))
-        .and(ACTOR.WORKSPACE_ID.eq(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
         .where(ACTOR.ACTOR_TYPE.eq(ActorType.source), ACTOR.ID.in(sourceIds))
         .fetch());
 
