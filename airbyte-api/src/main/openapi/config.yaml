@@ -2633,6 +2633,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/get_combined_stats:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For retrieving combined stats for a single attempt
+      operationId: getAttemptCombinedStats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetAttemptStatsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptStats"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
@@ -5993,6 +6015,16 @@ components:
           $ref: "#/components/schemas/AttemptNumber"
         syncConfig:
           $ref: "#/components/schemas/AttemptSyncConfig"
+    GetAttemptStatsRequestBody:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
     InternalOperationResult:
       type: object
       required:

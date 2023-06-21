@@ -678,6 +678,33 @@ class DefaultJobPersistenceTest {
       assertNotNull(jobPersistence.getAttemptStats(-1, -1));
     }
 
+    @Test
+    @DisplayName("Combined stats can be retrieved without per stream stats.")
+    void testGetAttemptCombinedStats() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG).orElseThrow();
+      final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
+      final var estimatedRecords = 1234L;
+      final var estimatedBytes = 5678L;
+      final var recordsEmitted = 9012L;
+      final var bytesEmitted = 3456L;
+      final var recordsCommitted = 7890L;
+      final var bytesCommitted = 1234L;
+
+      final var streamStats = List.of(
+          new StreamSyncStats().withStreamName("name1").withStreamNamespace("ns")
+              .withStats(new SyncStats().withBytesEmitted(500L).withRecordsEmitted(500L).withEstimatedBytes(10000L).withEstimatedRecords(2000L)));
+      jobPersistence.writeStats(
+          jobId, attemptNumber, estimatedRecords, estimatedBytes, recordsEmitted, bytesEmitted, recordsCommitted, bytesCommitted, streamStats);
+
+      final SyncStats stats = jobPersistence.getAttemptCombinedStats(jobId, attemptNumber);
+      assertEquals(estimatedRecords, stats.getEstimatedRecords());
+      assertEquals(estimatedBytes, stats.getEstimatedBytes());
+      assertEquals(recordsEmitted, stats.getRecordsEmitted());
+      assertEquals(bytesEmitted, stats.getBytesEmitted());
+      assertEquals(recordsCommitted, stats.getRecordsCommitted());
+      assertEquals(bytesCommitted, stats.getBytesCommitted());
+    }
+
   }
 
   @Test
