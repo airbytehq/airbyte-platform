@@ -37,19 +37,19 @@ import org.slf4j.LoggerFactory;
  * overrides from the Feature Flag client.
  */
 @Singleton
-public class DefaultFeatureFlagDefinitionVersionOverrideProvider implements FeatureFlagDefinitionVersionOverrideProvider {
+public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultFeatureFlagDefinitionVersionOverrideProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
 
   private final ConfigRepository configRepository;
   private final GcsBucketSpecFetcher gcsBucketSpecFetcher;
   private final FeatureFlagClient featureFlagClient;
   private final AirbyteProtocolVersionRange protocolVersionRange;
 
-  public DefaultFeatureFlagDefinitionVersionOverrideProvider(final ConfigRepository configRepository,
-                                                             final GcsBucketSpecFetcher gcsBucketSpecFetcher,
-                                                             final FeatureFlagClient featureFlagClient,
-                                                             final AirbyteProtocolVersionRange protocolVersionRange) {
+  public DefaultDefinitionVersionOverrideProvider(final ConfigRepository configRepository,
+                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher,
+                                                  final FeatureFlagClient featureFlagClient,
+                                                  final AirbyteProtocolVersionRange protocolVersionRange) {
     this.configRepository = configRepository;
     this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
     this.featureFlagClient = featureFlagClient;
