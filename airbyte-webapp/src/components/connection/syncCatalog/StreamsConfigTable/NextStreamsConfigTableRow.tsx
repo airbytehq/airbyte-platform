@@ -148,7 +148,7 @@ export const NextStreamsConfigTableRow: React.FC<NextStreamsConfigTableRowProps>
       window.clearTimeout(highlightTimeout);
       window.clearTimeout(openTimeout);
     };
-  }, [stream, rowRef, redirectionAction, doesStreamExist]);
+  }, [rowRef, redirectionAction, doesStreamExist]);
 
   return (
     <Row
