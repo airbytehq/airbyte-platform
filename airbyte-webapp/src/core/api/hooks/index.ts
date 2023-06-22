@@ -5,3 +5,4 @@ export * from "./logs";
 export * from "./notifications";
 export * from "./operations";
 export * from "./security";
+export * from "./streams";

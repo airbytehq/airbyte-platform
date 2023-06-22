@@ -519,8 +519,9 @@
   "connection.status.onTrack.failureDescription": "The previous sync encountered an issue but is expected to automatically recover in the next sync.",
   "connection.status.onTrack.delayedDescription": "The connection is delayed but is expected to catch up before the next sync.",
 
-  "connection.stream.status.actionRequired": "Action Required",
-  "connection.stream.status.upToDate": "Up to date",
+  "connection.stream.status.actionRequired": "Action required",
+  "connection.stream.status.onTime": "On time",
+  "connection.stream.status.onTrack": "On track",
   "connection.stream.status.disabled": "Disabled",
   "connection.stream.status.error": "Error",
   "connection.stream.status.late": "Late",

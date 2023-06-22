@@ -56,8 +56,12 @@ export interface UIConnectionStatus {
   status: ConnectionStatusIndicatorStatus;
   // status of the last completed sync job, useful for distinguishing between failed & delayed in OnTrack status
   lastSyncJobStatus: JobStatus | undefined;
+  // unix timestamp of the last successful sync job
+  lastSuccessfulSync: number | undefined;
   // expected time the next scheduled sync will start (basic schedule only)
   nextSync: dayjs.Dayjs | undefined;
+  // is the connection currently running a job
+  isRunning: boolean;
 }
 
 export const useConnectionStatus = (connectionId: string): UIConnectionStatus => {
@@ -75,6 +79,8 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   // to evaluate if a connection is OnTrack vs. Late/Error
   const lateMultiplier = useLateMultiplierExperiment();
   const errorMultiplier = useErrorMultiplierExperiment();
+
+  const isRunning = jobs[0]?.job?.status === JobStatus.running;
 
   // compute the connection sync status from the job history
   const lastCompletedSyncJob = jobs.find(
@@ -103,15 +109,33 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
   }
 
   if (hasBreakingSchemaChange) {
-    return { status: ConnectionStatusIndicatorStatus.ActionRequired, lastSyncJobStatus, nextSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.ActionRequired,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+    };
   }
 
   if (connection.status !== ConnectionStatus.active) {
-    return { status: ConnectionStatusIndicatorStatus.Disabled, lastSyncJobStatus, nextSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Disabled,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+    };
   }
 
   if (lastSyncJobStatus === JobStatus.incomplete || lastSyncJobStatus == null) {
-    return { status: ConnectionStatusIndicatorStatus.Pending, lastSyncJobStatus, nextSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Pending,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+    };
   }
 
   // The `error` value is based on the `connection.streamCentricUI.errorMultiplyer` experiment
@@ -122,19 +146,37 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       isConnectionLate(connection, lastSuccessfulSync, errorMultiplier) ||
       lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
   ) {
-    return { status: ConnectionStatusIndicatorStatus.Error, lastSyncJobStatus, nextSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.Error,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+    };
   }
 
   // The `late` value is based on the `connection.streamCentricUI.late` experiment
   if (isConnectionLate(connection, lastSuccessfulSync, lateMultiplier)) {
-    return { status: ConnectionStatusIndicatorStatus.Late, lastSyncJobStatus, nextSync };
+    return { status: ConnectionStatusIndicatorStatus.Late, lastSyncJobStatus, nextSync, lastSuccessfulSync, isRunning };
   } else if (isConnectionLate(connection, lastSuccessfulSync, 1)) {
-    return { status: ConnectionStatusIndicatorStatus.OnTrack, lastSyncJobStatus, nextSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.OnTrack,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+    };
   }
 
   if (lastSyncJobStatus === JobStatus.failed) {
-    return { status: ConnectionStatusIndicatorStatus.OnTrack, lastSyncJobStatus, nextSync };
+    return {
+      status: ConnectionStatusIndicatorStatus.OnTrack,
+      lastSyncJobStatus,
+      nextSync,
+      lastSuccessfulSync,
+      isRunning,
+    };
   }
 
-  return { status: ConnectionStatusIndicatorStatus.OnTime, lastSyncJobStatus, nextSync };
+  return { status: ConnectionStatusIndicatorStatus.OnTime, lastSyncJobStatus, nextSync, lastSuccessfulSync, isRunning };
 };

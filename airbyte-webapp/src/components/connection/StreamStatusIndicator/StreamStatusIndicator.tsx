@@ -6,49 +6,53 @@ import { ErrorIcon } from "components/icons/ErrorIcon";
 import { SimpleCircleIcon } from "components/icons/SimpleCircleIcon";
 import { SuccessIcon } from "components/icons/SuccessIcon";
 import { WarningCircleIcon } from "components/icons/WarningCircleIcon";
+import { FlexContainer } from "components/ui/Flex";
 
 import styles from "./StreamStatusIndicator.module.scss";
 import { StreamStatusLoadingSpinner } from "./StreamStatusLoadingSpinner";
-import { StreamStatusType } from "../StreamStatus/streamStatusUtils";
+import { ConnectionStatusIndicatorStatus } from "../ConnectionStatusIndicator";
 
-const ICON_BY_STATUS: Readonly<Record<StreamStatusType, JSX.Element>> = {
-  [StreamStatusType.ActionRequired]: <ErrorIcon />,
-  [StreamStatusType.Disabled]: <SimpleCircleIcon viewBox="2 2 20 20" />,
-  [StreamStatusType.Error]: <WarningCircleIcon />,
-  [StreamStatusType.Late]: <ClockIcon viewBox="2 2 20 20" />,
-  [StreamStatusType.Pending]: <SimpleCircleIcon viewBox="2 2 20 20" />,
-  [StreamStatusType.UpToDate]: <SuccessIcon />,
+const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
+  [ConnectionStatusIndicatorStatus.ActionRequired]: <ErrorIcon />,
+  [ConnectionStatusIndicatorStatus.Disabled]: <SimpleCircleIcon viewBox="1 1 22 22" />,
+  [ConnectionStatusIndicatorStatus.Error]: <WarningCircleIcon />,
+  [ConnectionStatusIndicatorStatus.Late]: <ClockIcon viewBox="1 1 22 22" />,
+  [ConnectionStatusIndicatorStatus.Pending]: <SimpleCircleIcon viewBox="0 0 24 24" />,
+  [ConnectionStatusIndicatorStatus.OnTime]: <SuccessIcon />,
+  [ConnectionStatusIndicatorStatus.OnTrack]: <SuccessIcon />,
 };
 
-const STYLE_BY_STATUS: Readonly<Record<StreamStatusType, string>> = {
-  [StreamStatusType.ActionRequired]: styles["status--actionRequired"],
-  [StreamStatusType.Disabled]: styles["status--disabled"],
-  [StreamStatusType.Error]: styles["status--error"],
-  [StreamStatusType.Late]: styles["status--late"],
-  [StreamStatusType.Pending]: styles["status--pending"],
-  [StreamStatusType.UpToDate]: styles["status--upToDate"],
+const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
+  [ConnectionStatusIndicatorStatus.ActionRequired]: styles["status--actionRequired"],
+  [ConnectionStatusIndicatorStatus.Disabled]: styles["status--disabled"],
+  [ConnectionStatusIndicatorStatus.Error]: styles["status--error"],
+  [ConnectionStatusIndicatorStatus.Late]: styles["status--late"],
+  [ConnectionStatusIndicatorStatus.Pending]: styles["status--pending"],
+  [ConnectionStatusIndicatorStatus.OnTime]: styles["status--upToDate"],
+  [ConnectionStatusIndicatorStatus.OnTrack]: styles["status--upToDate"],
 };
 
-const BOX_STYLE_BY_STATUS: Readonly<Record<StreamStatusType, string>> = {
-  [StreamStatusType.ActionRequired]: styles["status--actionRequired-withBox"],
-  [StreamStatusType.Disabled]: styles["status--disabled-withBox"],
-  [StreamStatusType.Error]: styles["status--error-withBox"],
-  [StreamStatusType.Late]: styles["status--late-withBox"],
-  [StreamStatusType.Pending]: styles["status--pending-withBox"],
-  [StreamStatusType.UpToDate]: styles["status--upToDate-withBox"],
+const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
+  [ConnectionStatusIndicatorStatus.ActionRequired]: styles["status--actionRequired-withBox"],
+  [ConnectionStatusIndicatorStatus.Disabled]: styles["status--disabled-withBox"],
+  [ConnectionStatusIndicatorStatus.Error]: styles["status--error-withBox"],
+  [ConnectionStatusIndicatorStatus.Late]: styles["status--late-withBox"],
+  [ConnectionStatusIndicatorStatus.Pending]: styles["status--pending-withBox"],
+  [ConnectionStatusIndicatorStatus.OnTime]: styles["status--upToDate-withBox"],
+  [ConnectionStatusIndicatorStatus.OnTrack]: styles["status--upToDate-withBox"],
 };
 
 interface StreamStatusIndicatorProps {
-  status: StreamStatusType;
+  status: ConnectionStatusIndicatorStatus;
   loading?: boolean;
   withBox?: boolean;
 }
 
 export const StreamStatusIndicator: React.FC<StreamStatusIndicatorProps> = ({ status, loading, withBox }) => (
   <div className={classNames(styles.status, STYLE_BY_STATUS[status], { [BOX_STYLE_BY_STATUS[status]]: withBox })}>
-    <div className={styles.icon}>
+    <FlexContainer justifyContent="center" alignItems="center" className={styles.icon}>
       {ICON_BY_STATUS[status]}
       {loading && <StreamStatusLoadingSpinner className={styles.spinner} />}
-    </div>
+    </FlexContainer>
   </div>
 );

@@ -5,6 +5,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { StatusIcon } from "components/ui/StatusIcon";
 import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
 
+import { useExperiment } from "hooks/services/Experiment";
+
 import { EntityNameCell } from "./EntityNameCell";
 import { Status } from "../types";
 
@@ -16,6 +18,7 @@ interface ConnectionStatusCellProps {
 
 export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ status, value, enabled }) => {
   const { formatMessage } = useIntl();
+  const isStreamCentricV2 = useExperiment("connection.streamCentricUI.v2", false);
   const statusIconStatus = useMemo<StatusIconStatus | undefined>(
     () =>
       status === Status.EMPTY
@@ -54,7 +57,7 @@ export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ stat
 
   return (
     <FlexContainer alignItems="center">
-      <StatusIcon title={title} status={statusIconStatus} />
+      {!isStreamCentricV2 && <StatusIcon title={title} status={statusIconStatus} />}
       <EntityNameCell value={value} enabled={enabled} />
     </FlexContainer>
   );
