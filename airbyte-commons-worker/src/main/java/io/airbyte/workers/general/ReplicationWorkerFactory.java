@@ -11,7 +11,6 @@ import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
@@ -75,7 +74,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ReplicationWorkerFactory {
 
   private final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory;
-  private final ConnectorConfigUpdater connectorConfigUpdater;
   private final SourceApi sourceApi;
   private final SourceDefinitionApi sourceDefinitionApi;
   private final DestinationApi destinationApi;
@@ -87,7 +85,6 @@ public class ReplicationWorkerFactory {
 
   public ReplicationWorkerFactory(
                                   final AirbyteIntegrationLauncherFactory airbyteIntegrationLauncherFactory,
-                                  final ConnectorConfigUpdater connectorConfigUpdater,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                   final SourceApi sourceApi,
                                   final SourceDefinitionApi sourceDefinitionApi,
@@ -97,7 +94,6 @@ public class ReplicationWorkerFactory {
                                   final FeatureFlags featureFlags,
                                   final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper) {
     this.airbyteIntegrationLauncherFactory = airbyteIntegrationLauncherFactory;
-    this.connectorConfigUpdater = connectorConfigUpdater;
     this.sourceApi = sourceApi;
     this.sourceDefinitionApi = sourceDefinitionApi;
     this.destinationApi = destinationApi;
@@ -154,8 +150,8 @@ public class ReplicationWorkerFactory {
     final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, syncInput);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
-        syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone, connectorConfigUpdater, featureFlagClient,
-        jobRunConfig, syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
+        syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
+        featureFlagClient, jobRunConfig, syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
   }
 
   /**
@@ -286,7 +282,6 @@ public class ReplicationWorkerFactory {
                                                            final RecordSchemaValidator recordSchemaValidator,
                                                            final FieldSelector fieldSelector,
                                                            final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone,
-                                                           final ConnectorConfigUpdater connectorConfigUpdater,
                                                            final FeatureFlagClient featureFlagClient,
                                                            final JobRunConfig jobRunConfig,
                                                            final StandardSyncInput syncInput,
@@ -305,9 +300,8 @@ public class ReplicationWorkerFactory {
         syncPersistence,
         recordSchemaValidator,
         fieldSelector,
-        connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(featureFlagClient),
+        new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationEventPublishingHelper);
   }
@@ -339,7 +333,6 @@ public class ReplicationWorkerFactory {
                                                                   final SyncPersistence syncPersistence,
                                                                   final RecordSchemaValidator recordSchemaValidator,
                                                                   final FieldSelector fieldSelector,
-                                                                  final ConnectorConfigUpdater connectorConfigUpdater,
                                                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
@@ -348,13 +341,13 @@ public class ReplicationWorkerFactory {
       MetricClientFactory.getMetricClient()
           .count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, workerImpl));
       return new BufferedReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
-          fieldSelector, connectorConfigUpdater, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
+          fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
           messageEventPublishingHelper);
     } else {
       MetricClientFactory.getMetricClient()
           .count(OssMetricsRegistry.REPLICATION_WORKER_CREATED, 1, new MetricAttribute(MetricTags.IMPLEMENTATION, "default"));
       return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
-          fieldSelector, connectorConfigUpdater, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
+          fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
           messageEventPublishingHelper);
     }
   }

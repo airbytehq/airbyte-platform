@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.general.performance;
 
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.general.DefaultReplicationWorker;
 import io.airbyte.workers.general.ReplicationFeatureFlagReader;
@@ -35,13 +34,12 @@ class DefaultReplicationWorkerPerformanceTest extends ReplicationWorkerPerforman
                                                 final SyncPersistence syncPersistence,
                                                 final RecordSchemaValidator recordSchemaValidator,
                                                 final FieldSelector fieldSelector,
-                                                final ConnectorConfigUpdater connectorConfigUpdater,
                                                 final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                 final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                 final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                 final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper) {
     return new DefaultReplicationWorker(jobId, attempt, source, mapper, destination, messageTracker, syncPersistence, recordSchemaValidator,
-        fieldSelector, connectorConfigUpdater, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
+        fieldSelector, srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, airbyteMessageDataExtractor,
         messageEventPublishingHelper);
   }
 

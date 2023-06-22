@@ -84,6 +84,8 @@ import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
+import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebhookConfigWrite;
@@ -593,6 +595,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJobWithRetries(connectionId, MAX_SCHEDULED_JOB_RETRIES);
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -624,6 +627,9 @@ class BasicAcceptanceTests {
       return "success"; // If the assertion throws after all the retries, then retryWithJitter will return null.
     }, "assert destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     assertEquals("success", retryAssertOutcome);
+
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+
     apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     // remove connection to avoid exception during tear down
@@ -650,6 +656,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(false);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -676,6 +683,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -707,6 +715,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
 
     testHarness.assertSourceAndDestinationDbInSync(WITH_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -725,6 +734,7 @@ class BasicAcceptanceTests {
 
     testHarness.assertRawDestinationContains(expectedRawRecords, new SchemaTableNamePair(PUBLIC, STREAM_NAME));
     testHarness.assertNormalizedDestinationContains(expectedNormalizedRecords);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -760,6 +770,7 @@ class BasicAcceptanceTests {
     LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -779,6 +790,7 @@ class BasicAcceptanceTests {
     LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(expectedRecords, new SchemaTableNamePair(PUBLIC, STREAM_NAME));
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // reset back to no data.
 
@@ -793,6 +805,9 @@ class BasicAcceptanceTests {
     waitWhileJobIsRunning(apiClient.getJobsApi(), jobInfoRead.getJob(), Duration.ofMinutes(1));
 
     LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    // TODO enable once stream status for resets has been fixed
+    // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
+    // StreamStatusJobType.RESET);
 
     // NOTE: this is a weird usage of retryWithJitter, but we've seen flakes where the destination still
     // has records even though the reset job is successful.
@@ -809,7 +824,7 @@ class BasicAcceptanceTests {
     LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
-
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -1034,6 +1049,9 @@ class BasicAcceptanceTests {
 
     // wait for the reset to complete
     waitForSuccessfulJob(apiClient.getJobsApi(), jobInfoRead.getJob());
+    // TODO enable once stream status for resets has been fixed
+    // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
+    // StreamStatusJobType.RESET);
   }
 
   @Test

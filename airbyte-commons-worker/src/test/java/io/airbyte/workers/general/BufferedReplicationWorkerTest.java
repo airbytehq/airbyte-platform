@@ -44,9 +44,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         syncPersistence,
         recordSchemaValidator,
         fieldSelector,
-        connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(featureFlagClient),
+        new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper);
   }
@@ -125,10 +124,10 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
       boolean isFinished = false;
 
       @Override
-      public void start(WorkerDestinationConfig destinationConfig, Path jobRoot) throws Exception {}
+      public void start(final WorkerDestinationConfig destinationConfig, final Path jobRoot) throws Exception {}
 
       @Override
-      public void accept(AirbyteMessage message) throws Exception {}
+      public void accept(final AirbyteMessage message) throws Exception {}
 
       @Override
       public void notifyEndOfInput() throws Exception {

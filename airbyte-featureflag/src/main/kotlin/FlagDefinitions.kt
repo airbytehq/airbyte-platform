@@ -64,8 +64,6 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
 
 object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOverrides", default = "")
 
-object HandleStreamStatus : Temporary<Boolean>(key = "handle.stream.status", default = false)
-
 object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
