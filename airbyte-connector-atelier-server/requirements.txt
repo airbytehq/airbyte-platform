@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.40.5
+airbyte-cdk==0.43.0
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -15,6 +15,8 @@ attrs==23.1.0
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
+bracex==2.3.post1
+    # via wcmatch
 cachetools==5.3.1
     # via airbyte-cdk
 cattrs==23.1.2
@@ -45,7 +47,7 @@ markupsafe==2.1.3
     # via jinja2
 pendulum==2.1.2
     # via airbyte-cdk
-platformdirs==3.5.3
+platformdirs==3.7.0
     # via requests-cache
 pydantic==1.9.2
     # via
@@ -83,6 +85,8 @@ urllib3==2.0.3
     # via
     #   requests
     #   requests-cache
+wcmatch==8.4
+    # via airbyte-cdk
 wrapt==1.15.0
     # via deprecated
 
