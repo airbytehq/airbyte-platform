@@ -27,8 +27,10 @@ public abstract class NotificationClient {
   }
 
   public NotificationClient() {
-    sendOnFailure = false;
-    sendOnSuccess = false;
+    // Actual sendOnFailure/Success should be read from notificationSettings; this is just to
+    // accommodate legacy Notification configuration.
+    sendOnFailure = true;
+    sendOnSuccess = true;
   }
 
   public abstract boolean notifyJobFailure(
