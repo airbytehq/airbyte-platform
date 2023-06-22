@@ -1,0 +1,20 @@
+{
+  "transactional_message_id": "%s",
+  "to": "%s",
+  "identifiers": {
+    "email": "%s"
+  },
+  "message_data": {
+    "source_name": "%s",
+    "destination_name": "%s",
+    "connection_name": "%s",
+    "details": "%s",
+    "logUrl": "%s",
+    "jobId": "%s"
+  },
+  "disable_message_retention": false,
+  "send_to_unsubscribed": true,
+  "tracked": true,
+  "queue_draft": false,
+  "disable_css_preprocessing": true
+}

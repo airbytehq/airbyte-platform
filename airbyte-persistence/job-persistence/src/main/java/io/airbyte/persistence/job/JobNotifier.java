@@ -114,12 +114,14 @@ public class JobNotifier {
         // We are not sending these to customerIO right now.
         notificationItem = notificationSettings.getSendOnFailure();
         sendNotification(notificationItem, FAILURE_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobFailure(sourceConnector, destinationConnector, jobDescription, logUrl, job.getId()));
+            (notificationClient) -> notificationClient.notifyJobFailure(workspace.getEmail(), sourceConnector, destinationConnector,
+                standardSync.getName(), jobDescription, logUrl, job.getId()));
       } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
         // We are not sending these to customerIO right now.
         notificationItem = notificationSettings.getSendOnFailure();
         sendNotification(notificationItem, SUCCESS_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobSuccess(sourceConnector, destinationConnector, jobDescription, logUrl, job.getId()));
+            (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector, destinationConnector,
+                standardSync.getName(), jobDescription, logUrl, job.getId()));
       } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabled();
         sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,

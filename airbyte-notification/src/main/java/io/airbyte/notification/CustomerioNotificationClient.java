@@ -36,6 +36,11 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String AUTO_DISABLE_TRANSACTION_MESSAGE_ID = "7";
   private static final String AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID = "8";
 
+  private static final String SYNC_SUCCEED_MESSAGE_ID = "18";
+  private static final String SYNC_SUCCEED_TEMPLATE_PATH = "customerio/sync_succeed_template.json";
+  private static final String SYNC_FAILURE_MESSAGE_ID = "19";
+  private static final String SYNC_FAILURE_TEMPLATE_PATH = "customerio/sync_failure_template.json";
+
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "https://api.customer.io/v1/send/email";
   private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
 
@@ -75,23 +80,33 @@ public class CustomerioNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobFailure(final String sourceConnector,
+  public boolean notifyJobFailure(
+                                  final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
-    throw new NotImplementedException();
+    final String requestBody = renderTemplate(SYNC_FAILURE_TEMPLATE_PATH, SYNC_FAILURE_MESSAGE_ID, receiverEmail,
+        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
+    return notifyByEmail(requestBody);
   }
 
   @Override
-  public boolean notifyJobSuccess(final String sourceConnector,
+  public boolean notifyJobSuccess(
+                                  final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
-    throw new NotImplementedException();
+    final String requestBody = renderTemplate(SYNC_SUCCEED_TEMPLATE_PATH, SYNC_SUCCEED_MESSAGE_ID, receiverEmail,
+        receiverEmail, sourceConnector, destinationConnector, connectionName, jobDescription, logUrl, jobId.toString());
+    return notifyByEmail(requestBody);
   }
 
   // Once the configs are editable through the UI, the reciever email should be stored in

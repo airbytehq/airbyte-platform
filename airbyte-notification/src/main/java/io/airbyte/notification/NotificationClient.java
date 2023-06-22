@@ -34,19 +34,23 @@ public abstract class NotificationClient {
   }
 
   public abstract boolean notifyJobFailure(
-                                           String sourceConnector,
-                                           String destinationConnector,
-                                           String jobDescription,
-                                           String logUrl,
-                                           Long jobId)
+                                           final String receiverEmail,
+                                           final String sourceConnector,
+                                           final String destinationConnector,
+                                           final String connectionName,
+                                           final String jobDescription,
+                                           final String logUrl,
+                                           final Long jobId)
       throws IOException, InterruptedException;
 
   public abstract boolean notifyJobSuccess(
-                                           String sourceConnector,
-                                           String destinationConnector,
-                                           String jobDescription,
-                                           String logUrl,
-                                           Long jobId)
+                                           final String receiverEmail,
+                                           final String sourceConnector,
+                                           final String destinationConnector,
+                                           final String connectionName,
+                                           final String jobDescription,
+                                           final String logUrl,
+                                           final Long jobId)
       throws IOException, InterruptedException;
 
   public abstract boolean notifyConnectionDisabled(String receiverEmail,

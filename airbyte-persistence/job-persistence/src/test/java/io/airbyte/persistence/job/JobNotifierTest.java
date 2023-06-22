@@ -105,7 +105,8 @@ class JobNotifierTest {
     when(configRepository.getStandardDestinationDefinition(any())).thenReturn(destinationDefinition);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(getWorkspace());
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId())).thenReturn(WORKSPACE_ID);
-    when(notificationClient.notifyJobFailure(anyString(), anyString(), anyString(), anyString(), anyLong())).thenReturn(true);
+    when(notificationClient.notifyJobFailure(anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyLong()))
+        .thenReturn(true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(actorDefinitionVersion);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(actorDefinitionVersion);
   }
@@ -115,8 +116,10 @@ class JobNotifierTest {
     jobNotifier.failJob("JobNotifierTest was running", job);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
     verify(notificationClient).notifyJobFailure(
+        null,
         "source-test",
         "destination-test",
+        null,
         String.format("sync started on %s, running for 1 day 10 hours 17 minutes 36 seconds, as the JobNotifierTest was running.",
             formatter.format(Instant.ofEpochSecond(job.getStartedAtInSecond().get()))),
         String.format("http://localhost:8000/workspaces/%s/connections/%s", WORKSPACE_ID, job.getScope()),
