@@ -253,9 +253,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
     final Map<String, String> metadataLabels = new HashMap<>();
     metadataLabels.put(PROCESS_ID_LABEL_KEY, processId.toString());
     metadataLabels.put(SYNC_STEP_KEY, ORCHESTRATOR_STEP);
-    if (connectionId != null) {
-      metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
-    }
+    metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
     return metadataLabels;
   }
 
@@ -302,7 +300,7 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private List<Pod> getNonTerminalPodsWithLabels() {
     return containerOrchestratorConfig.kubernetesClient().pods()
         .inNamespace(containerOrchestratorConfig.namespace())
-        .withLabels(Map.of(PROCESS_ID_LABEL_KEY, processId.toString()))
+        .withLabels(Map.of(CONNECTION_ID_LABEL_KEY, connectionId.toString()))
         .list()
         .getItems()
         .stream()
