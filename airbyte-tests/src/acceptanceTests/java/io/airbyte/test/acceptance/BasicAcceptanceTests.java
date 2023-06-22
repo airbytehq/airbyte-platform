@@ -1850,6 +1850,9 @@ class BasicAcceptanceTests {
   }
 
   @Test
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = "Cloud GKE environment is preventing unsecured http requests")
   void testConnectorBuilderPublish() throws Exception {
     final UUID sourceDefinitionId = publishSourceDefinitionThroughConnectorBuilder();
     final SourceRead sourceRead = createSource(sourceDefinitionId);
