@@ -15,7 +15,7 @@ import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable"));
 
-export const SourceOverviewPage = () => {
+export const SourceConnectionsPage = () => {
   const source = useGetSourceFromParams();
   const { workspaceId } = useCurrentWorkspace();
   const { connections } = useConnectionList({ sourceId: [source.sourceId] });

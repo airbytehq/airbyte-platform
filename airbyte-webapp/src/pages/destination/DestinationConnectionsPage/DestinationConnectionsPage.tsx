@@ -14,7 +14,7 @@ import { useSourceList } from "hooks/services/useSourceHook";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
-export const DestinationOverviewPage = () => {
+export const DestinationConnectionsPage = () => {
   const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
 
@@ -73,5 +73,3 @@ export const DestinationOverviewPage = () => {
     </>
   );
 };
-
-export default DestinationOverviewPage;

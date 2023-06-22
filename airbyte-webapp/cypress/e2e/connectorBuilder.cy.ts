@@ -33,7 +33,7 @@ import {
   startFromScratch,
   testStream,
 } from "pages/connectorBuilderPage";
-import { goToSourcePage, openSourceOverview } from "pages/sourcePage";
+import { goToSourcePage, openSourceConnectionsPage } from "pages/sourcePage";
 
 describe("Connector builder", { testIsolation: false }, () => {
   const connectorName = appendRandomString("dummy_api");
@@ -169,7 +169,7 @@ describe("Connector builder", { testIsolation: false }, () => {
 
 const sync = (sourceName: string, destinationName: string) => {
   goToSourcePage();
-  openSourceOverview(sourceName);
+  openSourceConnectionsPage(sourceName);
   connectionSettings.openConnectionOverviewByDestinationName(destinationName);
   startManualSync();
 };

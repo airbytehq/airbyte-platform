@@ -12,8 +12,9 @@ export const goToDestinationPage = () => {
   cy.visit("/destination");
 };
 
-export const openDestinationOverview = (destinationName: string) => {
+export const openDestinationConnectionsPage = (destinationName: string) => {
   clickOnCellInTable(destinationsTable, destinationNameColumn, destinationName);
+  cy.get("a[data-testid='connections-step']").click();
 };
 
 export const openNewDestinationForm = () => {

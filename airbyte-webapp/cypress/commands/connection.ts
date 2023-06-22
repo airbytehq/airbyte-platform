@@ -60,6 +60,7 @@ export const createTestConnection = (sourceName: string, destinationName: string
   // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(5000);
 
+  cy.get("a[data-testid='connections-step']").click();
   openCreateConnection();
 
   cy.get("div").contains(sourceName).click();

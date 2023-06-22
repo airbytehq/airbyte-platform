@@ -7,19 +7,18 @@ import { Text } from "../Text";
 
 interface LinkTabProps extends LinkTabInnerProps {
   to: string;
+  id: string;
 }
 
 interface LinkTabInnerProps {
-  id: string;
   name: string | React.ReactNode;
   isActive?: boolean;
   disabled?: boolean;
 }
 
-const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, id, isActive, disabled = false }) => {
+const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, isActive, disabled = false }) => {
   return (
     <div
-      data-id={`${id.toLowerCase()}-step`}
       className={classNames(styles.tabContainer, {
         [styles["tabContainer--active"]]: isActive,
         [styles["tabContainer--inactive"]]: !isActive,
@@ -35,10 +34,10 @@ const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, id, isActive, disable
 
 export const LinkTab: React.FC<LinkTabProps> = ({ name, id, isActive, to, disabled = false }) => {
   return disabled ? (
-    <LinkTabInner name={name} id={id} isActive={isActive} disabled={disabled} />
+    <LinkTabInner name={name} isActive={isActive} disabled={disabled} />
   ) : (
-    <Link to={to} className={styles.link}>
-      <LinkTabInner name={name} id={id} isActive={isActive} disabled={disabled} />
+    <Link to={to} className={styles.link} data-testid={`${id.toLowerCase()}-step`}>
+      <LinkTabInner name={name} isActive={isActive} disabled={disabled} />
     </Link>
   );
 };

@@ -573,8 +573,6 @@
   "tables.disabled": "Disabled",
   "tables.sourceConnectWithNum": "{num} destinations",
   "tables.destinationConnectWithNum": "{num} sources",
-  "tables.overview": "Overview",
-  "tables.settings": "Settings",
   "tables.sourceDelete": "Delete this source",
   "tables.destinationDelete": "Delete this destination",
   "tables.connectionDelete": "Delete this connection",
@@ -705,6 +703,8 @@
   "connector.oauthError": "OAuth login failed: {message}",
   "connector.oauthRevocationError": "OAuth revocation failed: {message}",
   "connector.testLogs": "Connection test logs",
+  "connector.settings": "Settings",
+  "connector.connections": "Connections",
 
   "credits.credits": "Credits",
   "credits.whatAreCredits": "What are credits?",

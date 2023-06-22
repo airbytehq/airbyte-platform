@@ -39,14 +39,14 @@ const AllDestinationsPage = React.lazy(() => import("pages/destination/AllDestin
 const CreateDestinationPage = React.lazy(() => import("pages/destination/CreateDestinationPage"));
 const SelectDestinationPage = React.lazy(() => import("pages/destination/SelectDestinationPage"));
 const DestinationItemPage = React.lazy(() => import("pages/destination/DestinationItemPage"));
-const DestinationOverviewPage = React.lazy(() => import("pages/destination/DestinationOverviewPage"));
+const DestinationConnectionsPage = React.lazy(() => import("pages/destination/DestinationConnectionsPage"));
 const DestinationSettingsPage = React.lazy(() => import("pages/destination/DestinationSettingsPage"));
 
 const AllSourcesPage = React.lazy(() => import("pages/source/AllSourcesPage"));
 const CreateSourcePage = React.lazy(() => import("pages/source/CreateSourcePage"));
 const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"));
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
-const SourceOverviewPage = React.lazy(() => import("pages/source/SourceOverviewPage"));
+const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
 
 const CloudSettingsPage = React.lazy(() => import("./views/settings/CloudSettingsPage"));
@@ -72,8 +72,8 @@ const MainRoutes: React.FC = () => {
           <Route path={DestinationPaths.SelectDestinationNew} element={<SelectDestinationPage />} />
           <Route path={DestinationPaths.DestinationNew} element={<CreateDestinationPage />} />
           <Route path={DestinationPaths.Root} element={<DestinationItemPage />}>
-            <Route index element={<DestinationOverviewPage />} />
-            <Route path={DestinationPaths.Settings} element={<DestinationSettingsPage />} />
+            <Route index element={<DestinationSettingsPage />} />
+            <Route path={DestinationPaths.Connections} element={<DestinationConnectionsPage />} />
           </Route>
         </Route>
         <Route path={RoutePaths.Source}>
@@ -81,8 +81,8 @@ const MainRoutes: React.FC = () => {
           <Route path={SourcePaths.SelectSourceNew} element={<SelectSourcePage />} />
           <Route path={SourcePaths.SourceNew} element={<CreateSourcePage />} />
           <Route path={SourcePaths.Root} element={<SourceItemPage />}>
-            <Route index element={<SourceOverviewPage />} />
-            <Route path={SourcePaths.Settings} element={<SourceSettingsPage />} />
+            <Route index element={<SourceSettingsPage />} />
+            <Route path={SourcePaths.Connections} element={<SourceConnectionsPage />} />
           </Route>
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
