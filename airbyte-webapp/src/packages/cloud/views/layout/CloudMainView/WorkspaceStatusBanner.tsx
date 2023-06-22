@@ -4,10 +4,13 @@ import { FormattedMessage } from "react-intl";
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
+import { useGetCloudWorkspace } from "core/api/cloud";
+import {
+  CloudWorkspaceReadCreditStatus as CreditStatus,
+  CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus,
+} from "core/api/types/CloudApi";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { CreditStatus, WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import styles from "./WorkspaceStatusBanner.module.scss";
@@ -18,22 +21,20 @@ export const WorkspaceStatusBanner: React.FC = () => {
   const isNewTrialPolicyEnabled = useExperiment("billing.newTrialPolicy", false);
 
   const isWorkspacePreTrial = isNewTrialPolicyEnabled
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.PRE_TRIAL
+    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
     : false;
 
   const isWorkspaceInTrial = isNewTrialPolicyEnabled
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.IN_TRIAL
+    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.in_trial
     : !!cloudWorkspace.trialExpiryTimestamp;
 
   const negativeCreditStatus = useMemo(() => {
     // these remain the same regardless of the new trial policy
     return (
       cloudWorkspace.creditStatus &&
-      [
-        CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
-        CreditStatus.NEGATIVE_MAX_THRESHOLD,
-        CreditStatus.NEGATIVE_WITHIN_GRACE_PERIOD,
-      ].includes(cloudWorkspace.creditStatus)
+      (cloudWorkspace.creditStatus === CreditStatus.negative_beyond_grace_period ||
+        cloudWorkspace.creditStatus === CreditStatus.negative_max_threshold ||
+        cloudWorkspace.creditStatus === CreditStatus.negative_within_grace_period)
     );
   }, [cloudWorkspace.creditStatus]);
 

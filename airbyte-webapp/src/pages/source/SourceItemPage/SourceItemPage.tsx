@@ -11,11 +11,8 @@ import LoadingPage from "components/LoadingPage";
 import { NextPageHeaderWithNavigation } from "components/ui/PageHeader/NextPageHeaderWithNavigation";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import InlineEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/InlineEnrollmentCallout";
-import { isSourceDefinitionEligibleForFCP } from "packages/cloud/components/experiments/FreeConnectorProgram/lib/model";
 import { RoutePaths } from "pages/routePaths";
 import { useSourceDefinition } from "services/connector/SourceDefinitionService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -28,7 +25,6 @@ export const SourceItemPage: React.FC = () => {
   const source = useGetSourceFromParams();
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const { formatMessage } = useIntl();
-  const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Source}`;
 
@@ -48,7 +44,6 @@ export const SourceItemPage: React.FC = () => {
         <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
         <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
           <ConnectorTitleBlock connector={source} connectorDefinition={sourceDefinition} />
-          {fcpEnabled && isSourceDefinitionEligibleForFCP(sourceDefinition) && <InlineEnrollmentCallout />}
           <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
         </NextPageHeaderWithNavigation>
         <Suspense fallback={<LoadingPage />}>

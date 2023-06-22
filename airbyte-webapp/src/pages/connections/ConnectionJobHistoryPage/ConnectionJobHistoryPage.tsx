@@ -41,7 +41,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       pageSize: jobPageSize,
     },
   });
-  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", false);
+  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
   const moreJobPagesAvailable = !linkedJobNotFound && jobPageSize < totalJobCount;

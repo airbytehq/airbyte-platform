@@ -158,6 +158,39 @@ describe("Conversion throws error when", () => {
     };
     await expect(convert).rejects.toThrow("OAuthAuthenticator contains a refresh_request_body with non-string values");
   });
+
+  it("manifest has an OAuthAuthenticator with non-standard access token or token expiry date config path", async () => {
+    const convert = () => {
+      const manifest: ConnectorManifest = {
+        ...baseManifest,
+        streams: [
+          merge({}, stream1, {
+            retriever: {
+              requester: {
+                authenticator: {
+                  type: "OAuthAuthenticator",
+                  client_id: "{{ config['client_id'] }}",
+                  client_secret: "{{ config['client_secret'] }}",
+                  refresh_token: "{{ config['client_refresh_token'] }}",
+                  token_refresh_endpoint: "https://api.com/refresh_token",
+                  grant_type: "client_credentials",
+                  refresh_token_updater: {
+                    access_token_config_path: ["credentials", "access_token"],
+                    refresh_token_config_path: ["client_refresh_token"],
+                    token_expiry_date_config_path: ["oauth_token_expiry_date"],
+                  },
+                },
+              },
+            },
+          }),
+        ],
+      };
+      return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    };
+    await expect(convert).rejects.toThrow(
+      "OAuthAuthenticator access token config path needs to be [oauth_access_token]"
+    );
+  });
 });
 
 describe("Conversion successfully results in", () => {
@@ -532,6 +565,50 @@ describe("Conversion successfully results in", () => {
       ],
       token_refresh_endpoint: "https://api.com/refresh_token",
       grant_type: "refresh_token",
+    });
+  });
+
+  it("OAuthAuthenticator with refresh token updater is converted", async () => {
+    const manifest: ConnectorManifest = {
+      ...baseManifest,
+      streams: [
+        merge({}, stream1, {
+          retriever: {
+            requester: {
+              authenticator: {
+                type: "OAuthAuthenticator",
+                client_id: "{{ config['client_id'] }}",
+                client_secret: "{{ config['client_secret'] }}",
+                refresh_token: "{{ config['client_refresh_token'] }}",
+                token_refresh_endpoint: "https://api.com/refresh_token",
+                grant_type: "refresh_token",
+                refresh_token_updater: {
+                  refresh_token_name: "refresh_token",
+                  access_token_config_path: ["oauth_access_token"],
+                  refresh_token_config_path: ["client_refresh_token"],
+                  token_expiry_date_config_path: ["oauth_token_expiry_date"],
+                },
+              },
+            },
+          },
+        }),
+      ],
+    };
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.global.authenticator).toEqual({
+      type: "OAuthAuthenticator",
+      client_id: "{{ config['client_id'] }}",
+      client_secret: "{{ config['client_secret'] }}",
+      refresh_token: "{{ config['client_refresh_token'] }}",
+      refresh_request_body: [],
+      token_refresh_endpoint: "https://api.com/refresh_token",
+      grant_type: "refresh_token",
+      refresh_token_updater: {
+        refresh_token_name: "refresh_token",
+        access_token_config_path: ["oauth_access_token"],
+        refresh_token_config_path: ["client_refresh_token"],
+        token_expiry_date_config_path: ["oauth_token_expiry_date"],
+      },
     });
   });
 });

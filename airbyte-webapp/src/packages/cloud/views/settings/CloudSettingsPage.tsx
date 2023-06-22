@@ -14,7 +14,7 @@ import {
   SourcesPage as SettingsSourcesPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 // import ConfigurationsPage from "pages/SettingsPage/pages/ConfigurationsPage";
-import NotificationPage from "pages/SettingsPage/pages/NotificationPage";
+import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { PageConfig } from "pages/SettingsPage/SettingsPage";
 import { isOsanoActive, showOsanoDrawer } from "utils/dataPrivacy";
 

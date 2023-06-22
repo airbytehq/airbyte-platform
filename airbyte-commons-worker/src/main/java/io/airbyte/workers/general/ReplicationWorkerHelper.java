@@ -7,6 +7,7 @@ package io.airbyte.workers.general;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
@@ -128,7 +129,7 @@ class ReplicationWorkerHelper {
 
     try {
       destination.start(destinationConfig, jobRoot);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException(e);
     }
   }
@@ -139,17 +140,16 @@ class ReplicationWorkerHelper {
       fieldSelector.populateFields(sourceConfig.getCatalog());
       timeTracker.trackSourceReadStartTime();
       source.start(sourceConfig, jobRoot);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException(e);
     }
   }
 
   public void endOfReplication() {
     // Publish a complete status event for all streams associated with the connection.
-    // This is to ensure that all streams end up in a complete state and is necessary for
+    // This is to ensure that all streams end up in a terminal state and is necessary for
     // connections with destinations that do not emit messages to trigger the completion.
-    replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
-        AirbyteMessageOrigin.INTERNAL);
+    publishEndOfReplicationStreamStatusEvent();
     timeTracker.trackReplicationEndTime();
   }
 
@@ -185,8 +185,8 @@ class ReplicationWorkerHelper {
    */
   private void handleReplicationFailure(final AirbyteMessageOrigin failureOrigin, final Supplier<StreamDescriptor> streamSupplier) {
     if (replicationFeatureFlags.shouldHandleStreamStatus()) {
-      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(),
-          replicationContext, failureOrigin);
+      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(), replicationContext, failureOrigin,
+          Optional.of(StreamStatusIncompleteRunCause.FAILED));
     }
   }
 
@@ -357,6 +357,21 @@ class ReplicationWorkerHelper {
                                        final AirbyteControlMessage controlMessage) {
     if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
       connectorConfigUpdater.updateDestination(destinationId, controlMessage.getConnectorConfig().getConfig());
+    }
+  }
+
+  private void publishEndOfReplicationStreamStatusEvent() {
+    /*
+     * If the sync has been cancelled, publish an incomplete event so that any streams in a non-terminal
+     * status will be moved to incomplete/cancelled. Otherwise, publish a complete event to move those
+     * streams to a complete status.
+     */
+    if (cancelled.get()) {
+      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(new StreamDescriptor(), replicationContext,
+          AirbyteMessageOrigin.INTERNAL, Optional.of(StreamStatusIncompleteRunCause.CANCELED));
+    } else {
+      replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(new StreamDescriptor(), replicationContext,
+          AirbyteMessageOrigin.INTERNAL);
     }
   }
 

@@ -3,9 +3,12 @@ import { Suspense } from "react";
 import { TestWrapper } from "test-utils";
 import { mockExperiments } from "test-utils/mockExperiments";
 
+import { useGetCloudWorkspace } from "core/api/cloud";
+import {
+  CloudWorkspaceReadCreditStatus as CreditStatus,
+  CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus,
+} from "core/api/types/CloudApi";
 import { I18nProvider } from "core/i18n";
-import { CreditStatus, WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import cloudLocales from "../../../locales/en.json";
@@ -16,7 +19,7 @@ jest.mock("services/workspaces/WorkspacesService", () => ({
   }),
 }));
 
-jest.mock("packages/cloud/services/workspaces/CloudWorkspacesService");
+jest.mock("core/api/cloud");
 const mockUseGetCloudWorkspace = useGetCloudWorkspace as unknown as jest.Mock<Partial<typeof useGetCloudWorkspace>>;
 
 const workspaceBannerWithFlagTrue = (
@@ -50,8 +53,8 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render credits problem banner for credits problem pre-trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          workspaceTrialStatus: WorkspaceTrialStatus.PRE_TRIAL,
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
+          workspaceTrialStatus: WorkspaceTrialStatus.pre_trial,
+          creditStatus: CreditStatus.negative_beyond_grace_period,
         };
       });
 
@@ -61,8 +64,8 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render credits problem banner for credits problem during trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          workspaceTrialStatus: WorkspaceTrialStatus.IN_TRIAL,
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
+          workspaceTrialStatus: WorkspaceTrialStatus.in_trial,
+          creditStatus: CreditStatus.negative_beyond_grace_period,
         };
       });
 
@@ -73,8 +76,8 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render credits problem banner for credits problem after trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          workspaceTrialStatus: WorkspaceTrialStatus.OUT_OF_TRIAL,
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
+          workspaceTrialStatus: WorkspaceTrialStatus.out_of_trial,
+          creditStatus: CreditStatus.negative_beyond_grace_period,
         };
       });
 
@@ -85,8 +88,8 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render pre-trial banner if user's trial has not started", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          creditStatus: CreditStatus.POSITIVE,
-          workspaceTrialStatus: WorkspaceTrialStatus.PRE_TRIAL,
+          creditStatus: CreditStatus.positive,
+          workspaceTrialStatus: WorkspaceTrialStatus.pre_trial,
           trialExpiryTimestamp: null,
         };
       });
@@ -101,8 +104,8 @@ describe("WorkspaceCreditsBanner", () => {
 
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          creditStatus: CreditStatus.POSITIVE,
-          workspaceTrialStatus: WorkspaceTrialStatus.IN_TRIAL,
+          creditStatus: CreditStatus.positive,
+          workspaceTrialStatus: WorkspaceTrialStatus.in_trial,
           trialExpiryTimestamp: oneDayFromNow,
         };
       });
@@ -114,8 +117,8 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render an empty div if user is out of trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          creditStatus: CreditStatus.POSITIVE,
-          workspaceTrialStatus: WorkspaceTrialStatus.OUT_OF_TRIAL,
+          creditStatus: CreditStatus.positive,
+          workspaceTrialStatus: WorkspaceTrialStatus.out_of_trial,
         };
       });
 
@@ -131,7 +134,7 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render credits problem banner for credits problem during trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
+          creditStatus: CreditStatus.negative_beyond_grace_period,
           trialExpiryTimestamp: oneDayFromNow,
         };
       });
@@ -143,7 +146,7 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render credits problem banner for credits problem after trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          creditStatus: CreditStatus.NEGATIVE_BEYOND_GRACE_PERIOD,
+          creditStatus: CreditStatus.negative_beyond_grace_period,
           trialExpiryTimestamp: null,
         };
       });
@@ -155,7 +158,7 @@ describe("WorkspaceCreditsBanner", () => {
     it("should render trial banner if user is in trial", () => {
       mockUseGetCloudWorkspace.mockImplementationOnce(() => {
         return {
-          creditStatus: CreditStatus.POSITIVE,
+          creditStatus: CreditStatus.positive,
           trialExpiryTimestamp: oneDayFromNow,
         };
       });

@@ -106,13 +106,15 @@ public class DefaultSyncJobFactory implements SyncJobFactory {
           destinationConnection,
           standardSync,
           sourceImageName,
-          new Version(sourceDefinition.getProtocolVersion()),
+          new Version(sourceVersion.getProtocolVersion()),
           destinationImageName,
-          new Version(destinationDefinition.getProtocolVersion()),
+          new Version(destinationVersion.getProtocolVersion()),
           standardSyncOperations,
           workspace.getWebhookOperationConfigs(),
           sourceDefinition,
           destinationDefinition,
+          sourceVersion,
+          destinationVersion,
           workspace.getWorkspaceId())
           .orElseThrow(() -> new IllegalStateException("We shouldn't be trying to create a new sync job if there is one running already."));
 

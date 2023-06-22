@@ -207,7 +207,9 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       CompletableFuture.allOf(readSrcAndWriteDstThread, readFromDstThread).get();
       LOGGER.info("Source and destination threads complete.");
 
-      replicationWorkerHelper.endOfReplication();
+      if (!cancelled.get()) {
+        replicationWorkerHelper.endOfReplication();
+      }
     } catch (final Exception e) {
       hasFailed.set(true);
       replicationWorkerHelper.markFailed();
@@ -361,6 +363,8 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addExceptionToTrace(e);
       LOGGER.info("Error cancelling source: ", e);
     }
+
+    replicationWorkerHelper.endOfReplication();
   }
 
 }

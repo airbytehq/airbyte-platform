@@ -31,7 +31,7 @@
   @include header-background(colors.$white, colors.$grey-30);
 
   border-bottom: 1px solid colors.$grey-50;
-  padding: 0 variables.$spacing-xl 0 0;
+  padding: 0 variables.$spacing-xl 0 variables.$spacing-md;
   margin-bottom: 1px;
   gap: variables.$spacing-md;
   min-height: 50px;
@@ -85,4 +85,12 @@
 .arrowCell {
   width: 20px;
   text-align: center;
+}
+
+.dataDestinationCell {
+  width: 170px;
+}
+
+.undefinedField {
+  font-style: italic;
 }

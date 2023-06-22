@@ -53,7 +53,7 @@ public class ConfigWriter {
    */
   static Set<String> getConnectorRepositoriesInUse(final DSLContext ctx) {
     return getActorDefinitionsInUse(ctx)
-        .map(r -> r.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
+        .map(r -> r.get(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY))
         .collect(Collectors.toSet());
   }
 
@@ -66,15 +66,18 @@ public class ConfigWriter {
         .collect(Collectors.toMap(r -> r.get(ACTOR_DEFINITION.ID),
             r -> Map.entry(
                 r.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source ? io.airbyte.config.ActorType.SOURCE : io.airbyte.config.ActorType.DESTINATION,
-                AirbyteProtocolVersion.getWithDefault(r.get(ACTOR_DEFINITION.PROTOCOL_VERSION))),
+                AirbyteProtocolVersion.getWithDefault(r.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION))),
             // We may have duplicated entries from the data. We can pick any values in the merge function
             (lhs, rhs) -> lhs));
   }
 
   private static Stream<Record4<UUID, String, ActorType, String>> getActorDefinitionsInUse(final DSLContext ctx) {
-    return ctx.select(ACTOR_DEFINITION.ID, ACTOR_DEFINITION.DOCKER_REPOSITORY, ACTOR_DEFINITION.ACTOR_TYPE, ACTOR_DEFINITION.PROTOCOL_VERSION)
+    return ctx
+        .selectDistinct(ACTOR_DEFINITION.ID, ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, ACTOR_DEFINITION.ACTOR_TYPE,
+            ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)
         .from(ACTOR_DEFINITION)
         .join(ACTOR).on(ACTOR.ACTOR_DEFINITION_ID.equal(ACTOR_DEFINITION.ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.equal(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .fetch()
         .stream();
   }

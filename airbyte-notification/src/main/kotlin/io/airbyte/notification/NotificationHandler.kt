@@ -1,5 +1,9 @@
 package io.airbyte.notification
 
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClientFactory
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -56,6 +60,10 @@ open class NotificationHandler(
                             !!.slackConfiguration
                             !!.webhook)
                     maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)
+                    MetricClientFactory.getMetricClient().count(
+                            OssMetricsRegistry.NOTIFICATIONS_SENT, 1,
+                            MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, notificationEvent.name),
+                            MetricAttribute(MetricTags.NOTIFICATION_CLIENT, "slack"))
                 }
 
                 if (maybeCustomerIoNotificationSender != null
@@ -63,6 +71,11 @@ open class NotificationHandler(
                         maybeCustomerIoNotificationSender
                             .sendNotification(notificationItemWithCustomerIoEmailConfig
                             !!.customerIoEmailConfig, subject, message)
+                    MetricClientFactory.getMetricClient().count(
+                            OssMetricsRegistry.NOTIFICATIONS_SENT, 1,
+                            MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, notificationEvent.name),
+                            MetricAttribute(MetricTags.NOTIFICATION_CLIENT, "customerio"))
+
                 }
             }
         }

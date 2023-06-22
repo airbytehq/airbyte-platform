@@ -568,6 +568,17 @@ public class DefaultJobPersistence implements JobPersistence {
     });
   }
 
+  @Override
+  public SyncStats getAttemptCombinedStats(final long jobId, final int attemptNumber) throws IOException {
+    return jobDatabase
+        .query(ctx -> {
+          final Long attemptId = getAttemptId(jobId, attemptNumber, ctx);
+          return ctx.select(DSL.asterisk()).from(SYNC_STATS).where(SYNC_STATS.ATTEMPT_ID.eq(attemptId))
+              .orderBy(SYNC_STATS.UPDATED_AT.desc())
+              .fetchOne(getSyncStatsRecordMapper());
+        });
+  }
+
   private static Map<JobAttemptPair, AttemptStats> hydrateSyncStats(final String jobIdsStr, final DSLContext ctx) {
     final var attemptStats = new HashMap<JobAttemptPair, AttemptStats>();
     final var syncResults = ctx.fetch(
@@ -1076,18 +1087,6 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static long getEpoch(final Record record, final String fieldName) {
     return record.get(fieldName, LocalDateTime.class).toEpochSecond(ZoneOffset.UTC);
-  }
-
-  private static final String SECRET_MIGRATION_STATUS = "secretMigration";
-
-  @Override
-  public boolean isSecretMigrated() throws IOException {
-    return getMetadata(SECRET_MIGRATION_STATUS).count() == 1;
-  }
-
-  @Override
-  public void setSecretMigrationDone() throws IOException {
-    setMetadata(SECRET_MIGRATION_STATUS, "true");
   }
 
   @Override

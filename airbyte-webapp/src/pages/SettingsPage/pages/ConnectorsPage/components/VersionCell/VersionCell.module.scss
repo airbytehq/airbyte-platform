@@ -1,22 +1,22 @@
 @use "scss/colors";
 
-.errorMessage {
-  color: colors.$red;
-}
-
 .versionCell {
-  width: 450px;
-}
-
-.versionInput {
-  max-width: 145px;
-  margin-right: 19px;
+  width: 340px;
 }
 
 .inputField {
   display: inline-block;
   position: relative;
   background: colors.$white;
+
+  .inputContainer {
+    padding-bottom: 0; // overwrite default FormControl style
+
+    .versionInput {
+      max-width: 145px;
+      margin-right: 19px;
+    }
+  }
 
   &::after {
     position: absolute;

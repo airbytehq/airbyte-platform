@@ -12,10 +12,13 @@ import {
   BuilderTransformation,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_BUILDER_STREAM_VALUES,
+  extractInterpolatedConfigKey,
   hasIncrementalSyncUserInput,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   incrementalSyncInferredInputs,
   isInterpolatedConfigKey,
+  OAUTH_ACCESS_TOKEN_INPUT,
+  OAUTH_TOKEN_EXPIRY_DATE_INPUT,
   RequestOptionOrPathInject,
 } from "./types";
 import { formatJson } from "./utils";
@@ -111,8 +114,8 @@ const RELEVANT_AUTHENTICATOR_KEYS = [
   "scopes",
   "token_expiry_date",
   "token_expiry_date_format",
-  "inject_into",
   "refresh_token_updater",
+  "inject_into",
 ] as const;
 
 // This type is a union of all keys of the supported authenticators
@@ -604,6 +607,31 @@ function manifestAuthenticatorToBuilder(
       );
     }
 
+    const refreshTokenUpdater = manifestAuthenticator.refresh_token_updater;
+    if (refreshTokenUpdater) {
+      if (!isEqual(refreshTokenUpdater?.access_token_config_path, [OAUTH_ACCESS_TOKEN_INPUT])) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          `OAuthAuthenticator access token config path needs to be [${OAUTH_ACCESS_TOKEN_INPUT}]`
+        );
+      }
+      if (!isEqual(refreshTokenUpdater?.token_expiry_date_config_path, [OAUTH_TOKEN_EXPIRY_DATE_INPUT])) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          `OAuthAuthenticator token expiry date config path needs to be [${OAUTH_TOKEN_EXPIRY_DATE_INPUT}]`
+        );
+      }
+      if (
+        !isEqual(refreshTokenUpdater?.refresh_token_config_path, [
+          extractInterpolatedConfigKey(manifestAuthenticator.refresh_token),
+        ])
+      ) {
+        throw new ManifestCompatibilityError(
+          streamName,
+          "OAuthAuthenticator refresh_token_config_path needs to match the config value used for refresh_token"
+        );
+      }
+    }
     if (
       manifestAuthenticator.grant_type &&
       manifestAuthenticator.grant_type !== "refresh_token" &&
@@ -623,10 +651,14 @@ function manifestAuthenticatorToBuilder(
 
   // verify that all auth keys which require a user input have a {{config[]}} value
 
-  const userInputAuthKeys = Object.keys(authTypeToKeyToInferredInput(builderAuthenticator));
+  const inferredInputs = authTypeToKeyToInferredInput(builderAuthenticator);
+  const userInputAuthKeys = Object.keys(inferredInputs);
 
   for (const userInputAuthKey of userInputAuthKeys) {
-    if (!isInterpolatedConfigKey(Reflect.get(builderAuthenticator, userInputAuthKey))) {
+    if (
+      !inferredInputs[userInputAuthKey].as_config_path &&
+      !isInterpolatedConfigKey(Reflect.get(builderAuthenticator, userInputAuthKey))
+    ) {
       throw new ManifestCompatibilityError(
         undefined,
         `Authenticator's ${userInputAuthKey} value must be of the form {{ config['key'] }}`

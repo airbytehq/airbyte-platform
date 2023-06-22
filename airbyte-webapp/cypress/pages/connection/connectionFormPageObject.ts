@@ -2,16 +2,16 @@ import { getTestId } from "utils/selectors";
 
 const connectionNameInput = getTestId("connectionName");
 const expandConfigurationIcon = getTestId("configuration-card-expand-arrow");
-const scheduleDropdown = getTestId("scheduleData");
+export const scheduleDropdown = getTestId("scheduleData");
 
-const destinationPrefixEditButton = getTestId("destination-stream-prefix-edit-button");
+export const destinationPrefixEditButton = getTestId("destination-stream-prefix-edit-button");
 const destinationPrefixApplyButton = getTestId("destination-stream-names-apply-button");
 // const destinationPrefixCancelButton = getTestId("destination-stream-names-cancel-button");
 // const destinationMirror = getTestId("destination-stream-names-mirror-radio");
 const destinationPrefix = getTestId("destination-stream-names-prefix-radio");
 const destinationPrefixInput = getTestId("destination-stream-names-prefix-input");
 
-const destinationNamespaceEditButton = getTestId("destination-namespace-edit-button");
+export const destinationNamespaceEditButton = getTestId("destination-namespace-edit-button");
 // const destinationNamespaceCancelButton = getTestId("namespace-definition-cancel-button");
 const destinationNamespaceApplyButton = getTestId("namespace-definition-apply-button");
 const destinationNamespaceCustom = getTestId("namespace-definition-custom-format-radio");

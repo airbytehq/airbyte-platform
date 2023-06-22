@@ -4,8 +4,6 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.featureflag.ContextKt.ANONYMOUS;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
@@ -20,8 +18,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.SeedActorDefinitionVersions;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
@@ -168,7 +164,7 @@ public class ActorDefinitionMigrator {
                                                   final Set<String> connectorRepositoriesInUse,
                                                   final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap,
                                                   final boolean updateAll)
-      throws IOException, JsonValidationException {
+      throws IOException {
     int newCount = 0;
     int updatedCount = 0;
 
@@ -216,31 +212,23 @@ public class ActorDefinitionMigrator {
 
   private <T> void writeOrUpdateConnectorRegistryDefinition(final AirbyteConfig configType,
                                                             final T definition)
-      throws IOException, JsonValidationException {
+      throws IOException {
     if (configType == ConfigSchema.STANDARD_SOURCE_DEFINITION) {
       final ConnectorRegistrySourceDefinition registryDef = (ConnectorRegistrySourceDefinition) definition;
       registryDef.withProtocolVersion(getProtocolVersion(registryDef.getSpec()));
 
       final StandardSourceDefinition stdSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(registryDef);
 
-      if (featureFlagClient.boolVariation(SeedActorDefinitionVersions.INSTANCE, new Workspace(ANONYMOUS))) {
-        final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
-        configRepository.writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion);
-      } else {
-        configRepository.writeStandardSourceDefinition(stdSourceDef);
-      }
+      final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+      configRepository.writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion);
     } else if (configType == ConfigSchema.STANDARD_DESTINATION_DEFINITION) {
       final ConnectorRegistryDestinationDefinition registryDef = (ConnectorRegistryDestinationDefinition) definition;
       registryDef.withProtocolVersion(getProtocolVersion(registryDef.getSpec()));
 
       final StandardDestinationDefinition stdDestDef = ConnectorRegistryConverters.toStandardDestinationDefinition(registryDef);
 
-      if (featureFlagClient.boolVariation(SeedActorDefinitionVersions.INSTANCE, new Workspace(ANONYMOUS))) {
-        final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
-        configRepository.writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion);
-      } else {
-        configRepository.writeStandardDestinationDefinition(stdDestDef);
-      }
+      final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+      configRepository.writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion);
     } else {
       throw new IllegalArgumentException(UNKNOWN_CONFIG_TYPE + configType);
     }

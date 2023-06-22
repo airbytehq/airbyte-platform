@@ -42,6 +42,9 @@ public class MetricTags {
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
 
+  public static final String NOTIFICATION_TRIGGER = "notification_trigger";
+  public static final String NOTIFICATION_CLIENT = "notification_client";
+
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.getLiteral() : UNKNOWN;
   }

@@ -140,11 +140,13 @@ export const CreateConnectionTitleBlock: React.FC = () => {
   return (
     <Box pb="lg">
       <FlexContainer direction="column" gap="xl">
-        <FlexContainer alignItems="center">
-          <SourceBlock source={source} />
-          <Icon type="arrowRight" />
-          <DestinationBlock destination={destination} />
-        </FlexContainer>
+        {(source || destination) && (
+          <FlexContainer alignItems="center">
+            <SourceBlock source={source} />
+            <Icon type="arrowRight" />
+            <DestinationBlock destination={destination} />
+          </FlexContainer>
+        )}
         <FlexContainer gap="lg" alignItems="center">
           {(Object.keys(stepStatuses) as Array<keyof ConnectionSteps>).map((step, idx) => {
             return (

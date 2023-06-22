@@ -23,3 +23,7 @@ flags:
     serve: false
   - name: refreshSchema.period.hours
     serve: 24
+  - name: concurrent.source.stream.read
+    serve: false
+  - name: platform.add-scheduling-jitter
+    serve: false

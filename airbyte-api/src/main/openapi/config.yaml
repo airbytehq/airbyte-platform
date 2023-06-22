@@ -261,13 +261,37 @@ paths:
     post:
       tags:
         - notifications
-      summary: Try sending a notifications
+      summary: Try sending a notifications; to be deprecated
       operationId: tryNotificationConfig
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/Notification"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/notifications/try_webhook:
+    post:
+      tags:
+        - notifications
+      summary: Try sending a notifications to webhook
+      operationId: tryNotificationWebhookConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationWebhookConfigValidationRequestBody"
         required: true
       responses:
         "200":
@@ -2609,6 +2633,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/attempt/get_combined_stats:
+    post:
+      tags:
+        - attempt
+        - internal
+      summary: For retrieving combined stats for a single attempt
+      operationId: getAttemptCombinedStats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetAttemptStatsRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptStats"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/stream_statuses/list:
     post:
       summary: Gets a list of stream statuses filtered by parameters (with AND semantics).
@@ -2621,6 +2667,25 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/StreamStatusListRequestBody"
+      responses:
+        "200":
+          description: Successfully queried stream statuses.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamStatusReadList"
+  /v1/stream_statuses/latest_per_run_state:
+    post:
+      summary: Gets a list of the latest stream status for each stream and run state for a connection.
+      tags:
+        - stream_statuses
+        - streams
+      operationId: getStreamStatusesByRunState
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
       responses:
         "200":
           description: Successfully queried stream statuses.
@@ -2792,6 +2857,15 @@ components:
         - slack
         - customerio
         # - webhook
+    NotificationTrigger:
+      type: string
+      enum:
+        - sync_success
+        - sync_failure
+        - sync_disabled
+        - sync_disabled_warning
+        - connection_update
+        - connection_update_action_required
     NotificationRead:
       type: object
       required:
@@ -5941,6 +6015,16 @@ components:
           $ref: "#/components/schemas/AttemptNumber"
         syncConfig:
           $ref: "#/components/schemas/AttemptSyncConfig"
+    GetAttemptStatsRequestBody:
+      type: object
+      required:
+        - jobId
+        - attemptNumber
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        attemptNumber:
+          $ref: "#/components/schemas/AttemptNumber"
     InternalOperationResult:
       type: object
       required:
@@ -6114,6 +6198,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StreamStatusRead"
+    NotificationWebhookConfigValidationRequestBody:
+      type: object
+      required:
+        - NotificationTrigger
+        - slackConfiguration
+      properties:
+        slackConfiguration:
+          $ref: "#/components/schemas/SlackNotificationConfiguration"
+        notificationTrigger:
+          $ref: "#/components/schemas/NotificationTrigger"
     InvalidInputProperty:
       type: object
       required:

@@ -443,12 +443,20 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const streamName =
     editorView === "ui" ? builderFormValues.streams[testStreamIndex]?.name : streams[testStreamIndex]?.name;
 
-  const streamRead = useReadStream(projectId, {
-    manifest,
-    stream: streamName,
-    config: testInputWithDefaults,
-    record_limit: 1000,
-  });
+  const streamRead = useReadStream(
+    projectId,
+    {
+      manifest,
+      stream: streamName,
+      config: testInputWithDefaults,
+      record_limit: 1000,
+    },
+    (data) => {
+      if (data.latest_config_update) {
+        setTestInputJson(data.latest_config_update);
+      }
+    }
+  );
 
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 

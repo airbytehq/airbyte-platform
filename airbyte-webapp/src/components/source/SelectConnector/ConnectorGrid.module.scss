@@ -15,5 +15,6 @@
     display: flex;
     flex-direction: column;
     gap: variables.$spacing-lg;
+    padding-bottom: variables.$spacing-xl;
   }
 }

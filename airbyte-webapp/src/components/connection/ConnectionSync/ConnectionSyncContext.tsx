@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useMemo } from "react";
 
 import { useCancelJob, useListJobsForConnectionStatus, useSetConnectionJobsData } from "core/api";
 import {
-  JobRead,
   ConnectionStatus,
   ConnectionStream,
   JobWithAttemptsRead,
@@ -25,7 +24,6 @@ interface ConnectionSyncContext {
   resetStreams: (streams?: ConnectionStream[]) => Promise<void>;
   resetStarting: boolean;
   jobResetRunning: boolean;
-  activeJob?: JobRead;
   lastCompletedSyncJob?: JobWithAttemptsRead;
 }
 
@@ -135,7 +133,6 @@ const useConnectionSyncContextInit = (connection: WebBackendConnectionRead): Con
     resetStreams,
     resetStarting,
     jobResetRunning,
-    activeJob,
     lastCompletedSyncJob,
   };
 };

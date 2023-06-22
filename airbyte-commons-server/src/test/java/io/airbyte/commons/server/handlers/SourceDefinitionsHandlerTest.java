@@ -109,6 +109,7 @@ class SourceDefinitionsHandlerTest {
 
     return new StandardSourceDefinition()
         .withSourceDefinitionId(sourceDefinitionId)
+        .withDefaultVersionId(UUID.randomUUID())
         .withName("presto")
         .withDocumentationUrl("https://netflix.com")
         .withDockerRepository("dockerstuff")
@@ -126,6 +127,7 @@ class SourceDefinitionsHandlerTest {
 
   private ActorDefinitionVersion generateVersionFromSourceDefinition(final StandardSourceDefinition sourceDefinition) {
     return new ActorDefinitionVersion()
+        .withVersionId(sourceDefinition.getDefaultVersionId())
         .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
         .withDockerRepository(sourceDefinition.getDockerRepository())
         .withDockerImageTag(sourceDefinition.getDockerImageTag())
@@ -142,8 +144,12 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("listSourceDefinition should return the right list")
   void testListSourceDefinitions() throws JsonValidationException, IOException, URISyntaxException {
     final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition);
+    final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
 
     when(configRepository.listStandardSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition, sourceDefinition2));
+    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
+        .thenReturn(Lists.newArrayList(sourceDefinitionVersion, sourceDefinitionVersion2));
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -187,6 +193,9 @@ class SourceDefinitionsHandlerTest {
 
     when(configRepository.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
     when(configRepository.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
+    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
+        .thenReturn(Lists.newArrayList(generateVersionFromSourceDefinition(sourceDefinition),
+            generateVersionFromSourceDefinition(sourceDefinition2)));
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -233,6 +242,9 @@ class SourceDefinitionsHandlerTest {
         Lists.newArrayList(
             Map.entry(sourceDefinition, false),
             Map.entry(sourceDefinition2, true)));
+    when(configRepository.getActorDefinitionVersions(List.of(sourceDefinition.getDefaultVersionId(), sourceDefinition2.getDefaultVersionId())))
+        .thenReturn(Lists.newArrayList(generateVersionFromSourceDefinition(sourceDefinition),
+            generateVersionFromSourceDefinition(sourceDefinition2)));
 
     final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -281,6 +293,8 @@ class SourceDefinitionsHandlerTest {
   void testGetSourceDefinition() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromSourceDefinition(sourceDefinition));
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -324,6 +338,8 @@ class SourceDefinitionsHandlerTest {
         .thenReturn(true);
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromSourceDefinition(sourceDefinition));
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -437,7 +453,8 @@ class SourceDefinitionsHandlerTest {
             .withProtocolVersion(DEFAULT_PROTOCOL_VERSION)
             .withAllowedHosts(null)
             .withSuggestedStreams(null)
-            .withCustom(true),
+            .withCustom(true)
+            .withDefaultVersionId(null),
         generateVersionFromSourceDefinition(sourceDefinition),
         workspaceId);
   }
@@ -480,6 +497,8 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
   void testUpdateSourceDefinition() throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromSourceDefinition(sourceDefinition));
     final String newDockerImageTag = "averydifferenttag";
     final String newProtocolVersion = "0.2.1";
     final SourceDefinitionRead sourceDefinition = sourceDefinitionsHandler
@@ -496,7 +515,7 @@ class SourceDefinitionsHandlerTest {
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
     final StandardSourceDefinition updatedSource = Jsons.clone(this.sourceDefinition)
-        .withDockerImageTag(newDockerImageTag).withSpec(newSpec).withProtocolVersion(newProtocolVersion);
+        .withDockerImageTag(newDockerImageTag).withSpec(newSpec).withProtocolVersion(newProtocolVersion).withDefaultVersionId(null);
 
     final SourceDefinitionRead sourceDefinitionRead = sourceDefinitionsHandler
         .updateSourceDefinition(
@@ -514,6 +533,8 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("updateSourceDefinition should not update a sourceDefinition with an invalid protocol version")
   void testUpdateSourceDefinitionWithInvalidProtocol() throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromSourceDefinition(sourceDefinition));
     final String newDockerImageTag = "averydifferenttag";
     final String newProtocolVersion = "132.2.1";
     final SourceDefinitionRead sourceDefinition = sourceDefinitionsHandler
@@ -566,6 +587,8 @@ class SourceDefinitionsHandlerTest {
   void testGrantSourceDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(configRepository.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
+    when(configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromSourceDefinition(sourceDefinition));
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -614,7 +637,7 @@ class SourceDefinitionsHandlerTest {
 
     @Test
     @DisplayName("should return the latest list")
-    void testCorrect() {
+    void testCorrect() throws IOException {
       final ConnectorRegistrySourceDefinition registrySourceDefinition = new ConnectorRegistrySourceDefinition()
           .withSourceDefinitionId(UUID.randomUUID())
           .withName("some-source")
@@ -635,13 +658,14 @@ class SourceDefinitionsHandlerTest {
 
       final var sourceDefinitionRead = sourceDefinitionReadList.get(0);
       assertEquals(
-          SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition)),
+          SourceDefinitionsHandler.buildSourceDefinitionRead(ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
+              ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition)),
           sourceDefinitionRead);
     }
 
     @Test
     @DisplayName("returns empty collection if cannot find latest definitions")
-    void testHttpTimeout() {
+    void testHttpTimeout() throws IOException {
       assertEquals(0, sourceDefinitionsHandler.listLatestSourceDefinitions().getSourceDefinitions().size());
     }
 

@@ -75,6 +75,13 @@ public interface JobPersistence {
    */
   Map<JobAttemptPair, AttemptStats> getAttemptStats(List<Long> jobIds) throws IOException;
 
+  /**
+   * Retrieve only the combined stats for a single attempt.
+   *
+   * @return {@link AttemptStats}
+   */
+  SyncStats getAttemptCombinedStats(long jobId, int attemptNumber) throws IOException;
+
   List<NormalizationSummary> getNormalizationSummary(long jobId, int attemptNumber) throws IOException;
 
   Job getJob(long jobId) throws IOException;
@@ -169,7 +176,7 @@ public interface JobPersistence {
   Optional<String> getAttemptTemporalWorkflowId(long jobId, int attemptNumber) throws IOException;
 
   /**
-   * When the output is a StandardSyncOutput, caller of this method should persiste
+   * When the output is a StandardSyncOutput, caller of this method should persist
    * StandardSyncOutput#state in the configs database by calling
    * ConfigRepository#updateConnectionState, which takes care of persisting the connection state.
    */
@@ -350,16 +357,6 @@ public interface JobPersistence {
    * Purges job history while ensuring that the latest saved-state information is maintained.
    */
   void purgeJobHistory();
-
-  /**
-   * Check if the secret has been migrated to a new secret store from a plain text values.
-   */
-  boolean isSecretMigrated() throws IOException;
-
-  /**
-   * Set that the secret migration has been performed.
-   */
-  void setSecretMigrationDone() throws IOException;
 
   List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 

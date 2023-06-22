@@ -11,7 +11,7 @@ import { goToSourcePage } from "@cy/pages/sourcePage";
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { appendRandomString, submitButtonClick } from "commands/common";
+import { appendRandomString, submitButtonClick, getSubmitButton } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createUsersTableQuery,
@@ -235,27 +235,36 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
   describe("Stream", () => {
     const usersStreamRow = new StreamRowPageObject("public", "users");
 
-    it("should have checked sync switch by default", () => {
-      // filter table to have only one stream
+    it("should have no streams checked by default", () => {
+      getSubmitButton().should("be.disabled");
+      newConnectionPage.getNoStreamsSelectedError().should("exist");
+
+      // filter table for an sample stream
       streamsTable.searchStream("users");
       newConnectionPage.checkAmountOfStreamTableRows(1);
 
-      usersStreamRow.isStreamSyncEnabled(true);
-    });
-
-    it("should have unchecked sync switch after click", () => {
-      usersStreamRow.toggleStreamSync();
       usersStreamRow.isStreamSyncEnabled(false);
     });
 
-    it("should have removed stream style after click", () => {
-      usersStreamRow.hasRemovedStyle(true);
-    });
-
-    it("should have checked sync switch after click and default stream style", () => {
+    it("should have checked sync switch after click", () => {
       usersStreamRow.toggleStreamSync();
       usersStreamRow.isStreamSyncEnabled(true);
-      usersStreamRow.hasRemovedStyle(false);
+    });
+
+    it("should have added stream style after click", () => {
+      usersStreamRow.hasAddedStyle(true);
+    });
+
+    it("should have unchecked sync switch after click and default stream style", () => {
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.isStreamSyncEnabled(false);
+      usersStreamRow.hasAddedStyle(false);
+    });
+
+    it("should enable form submit after a stream is selected", () => {
+      usersStreamRow.toggleStreamSync();
+      newConnectionPage.getNoStreamsSelectedError().should("not.exist");
+      getSubmitButton().should("be.enabled");
     });
 
     it("should have source namespace name", () => {

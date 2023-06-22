@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 public class SlackNotificationClient extends NotificationClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SlackNotificationClient.class);
+  private static final String SLACK_CLIENT = "slack";
 
   private final SlackNotificationConfiguration config;
 
@@ -174,6 +175,22 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyFailure(final String message) throws IOException, InterruptedException {
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl) && sendOnFailure) {
+      return notify(message);
+    }
+    return false;
+  }
+
+  @Override
+  public String getNotificationClientType() {
+    return SLACK_CLIENT;
+  }
+
+  /**
+   * Used when user tries to test the notification webhook settings on UI.
+   */
+  public boolean notifyTest(final String message) throws IOException, InterruptedException {
+    final String webhookUrl = config.getWebhook();
+    if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;

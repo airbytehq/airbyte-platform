@@ -94,6 +94,7 @@ export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> =
           onChange={onToggleAllStreamsSyncSwitch}
           disabled={syncSwitchDisabled || !streams.length || mode === "readonly"}
           id="all-streams-sync-switch"
+          data-testid="all-streams-sync-switch"
         />
         <Text size="sm" color="grey300">
           <FormattedMessage id="sources.sync" />

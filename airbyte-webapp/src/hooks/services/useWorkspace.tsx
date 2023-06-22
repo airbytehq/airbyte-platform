@@ -37,9 +37,9 @@ const useWorkspace = () => {
 
   const updatePreferences = async (data: {
     email?: string;
-    anonymousDataCollection: boolean;
-    news: boolean;
-    securityUpdates: boolean;
+    anonymousDataCollection?: boolean;
+    news?: boolean;
+    securityUpdates?: boolean;
   }) =>
     await updateWorkspace({
       workspaceId: workspace.workspaceId,

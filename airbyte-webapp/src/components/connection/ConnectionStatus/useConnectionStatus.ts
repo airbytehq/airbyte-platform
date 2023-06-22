@@ -4,8 +4,6 @@ import {
   useErrorMultiplierExperiment,
   useLateMultiplierExperiment,
 } from "components/connection/StreamStatus/streamStatusUtils";
-import { Status as ConnectionSyncStatus } from "components/EntityTable/types";
-import { getConnectionSyncStatus } from "components/EntityTable/utils";
 
 import { useListJobsForConnectionStatus } from "core/api";
 import {
@@ -84,7 +82,6 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
       job && job.configType === JobConfigType.sync && jobStatusesIndicatingFinishedExecution.includes(job.status)
   );
   const lastSyncJobStatus = lastCompletedSyncJob?.job?.status || connection.latestSyncJobStatus;
-  const connectionSyncStatus = getConnectionSyncStatus(connection.status, lastSyncJobStatus);
 
   // find the last successful sync job & its timestamp
   const lastSuccessfulSyncJob = jobs.find(
@@ -113,14 +110,14 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     return { status: ConnectionStatusIndicatorStatus.Disabled, lastSyncJobStatus, nextSync };
   }
 
-  if (connectionSyncStatus === ConnectionSyncStatus.EMPTY) {
+  if (lastSyncJobStatus === JobStatus.incomplete || lastSyncJobStatus == null) {
     return { status: ConnectionStatusIndicatorStatus.Pending, lastSyncJobStatus, nextSync };
   }
 
   // The `error` value is based on the `connection.streamCentricUI.errorMultiplyer` experiment
   if (
     !hasBreakingSchemaChange &&
-    connectionSyncStatus === ConnectionSyncStatus.FAILED &&
+    lastSyncJobStatus === JobStatus.failed &&
     (!isHandleableScheduledConnection(connection.scheduleType) ||
       isConnectionLate(connection, lastSuccessfulSync, errorMultiplier) ||
       lastSuccessfulSync == null) // edge case: if the number of jobs we have loaded isn't enough to find the last successful sync
@@ -135,7 +132,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     return { status: ConnectionStatusIndicatorStatus.OnTrack, lastSyncJobStatus, nextSync };
   }
 
-  if (connectionSyncStatus === ConnectionSyncStatus.FAILED) {
+  if (lastSyncJobStatus === JobStatus.failed) {
     return { status: ConnectionStatusIndicatorStatus.OnTrack, lastSyncJobStatus, nextSync };
   }
 

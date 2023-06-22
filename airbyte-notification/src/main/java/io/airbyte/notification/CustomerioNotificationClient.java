@@ -39,6 +39,8 @@ public class CustomerioNotificationClient extends NotificationClient {
   private static final String CUSTOMERIO_EMAIL_API_ENDPOINT = "https://api.customer.io/v1/send/email";
   private static final String AUTO_DISABLE_NOTIFICATION_TEMPLATE_PATH = "customerio/auto_disable_notification_template.json";
 
+  private static final String CUSTOMERIO_TYPE = "customerio";
+
   private final HttpClient httpClient;
   private final String apiToken;
   private final String emailApiEndpoint;
@@ -137,6 +139,11 @@ public class CustomerioNotificationClient extends NotificationClient {
                                     final SlackNotificationConfiguration config,
                                     final String url) {
     throw new NotImplementedException();
+  }
+
+  @Override
+  public String getNotificationClientType() {
+    return CUSTOMERIO_TYPE;
   }
 
   private boolean notifyByEmail(final String requestBody) throws IOException, InterruptedException {

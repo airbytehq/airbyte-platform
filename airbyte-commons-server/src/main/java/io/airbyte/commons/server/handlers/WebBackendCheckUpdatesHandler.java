@@ -8,7 +8,6 @@ import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead;
 import io.airbyte.commons.server.services.AirbyteRemoteOssCatalog;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
-import io.airbyte.config.persistence.ConfigRepository;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
@@ -32,13 +31,15 @@ public class WebBackendCheckUpdatesHandler {
 
   private static final int NO_CHANGES_FOUND = 0;
 
-  // todo (cgardens) - this handler should NOT have access to the db. only access via handler.
-  @Deprecated
-  final ConfigRepository configRepositoryDoNotUse;
+  final SourceDefinitionsHandler sourceDefinitionsHandler;
+  final DestinationDefinitionsHandler destinationDefinitionsHandler;
   final AirbyteRemoteOssCatalog remoteOssCatalog;
 
-  public WebBackendCheckUpdatesHandler(final ConfigRepository configRepositoryDoNotUse, final AirbyteRemoteOssCatalog remoteOssCatalog) {
-    this.configRepositoryDoNotUse = configRepositoryDoNotUse;
+  public WebBackendCheckUpdatesHandler(final SourceDefinitionsHandler sourceDefinitionsHandler,
+                                       final DestinationDefinitionsHandler destinationDefinitionsHandler,
+                                       final AirbyteRemoteOssCatalog remoteOssCatalog) {
+    this.sourceDefinitionsHandler = sourceDefinitionsHandler;
+    this.destinationDefinitionsHandler = destinationDefinitionsHandler;
     this.remoteOssCatalog = remoteOssCatalog;
   }
 
@@ -57,7 +58,7 @@ public class WebBackendCheckUpdatesHandler {
     final Map<UUID, String> newActorDefToDockerImageTag;
 
     try {
-      currentActorDefToDockerImageTag = configRepositoryDoNotUse.listStandardDestinationDefinitions(false)
+      currentActorDefToDockerImageTag = destinationDefinitionsHandler.listDestinationDefinitions().getDestinationDefinitions()
           .stream()
           .map(def -> Map.entry(def.getDestinationDefinitionId(), def.getDockerImageTag()))
           .toList();
@@ -79,7 +80,7 @@ public class WebBackendCheckUpdatesHandler {
     final Map<UUID, String> newActorDefToDockerImageTag;
 
     try {
-      currentActorDefToDockerImageTag = configRepositoryDoNotUse.listStandardSourceDefinitions(false)
+      currentActorDefToDockerImageTag = sourceDefinitionsHandler.listSourceDefinitions().getSourceDefinitions()
           .stream()
           .map(def -> Map.entry(def.getSourceDefinitionId(), def.getDockerImageTag()))
           .toList();

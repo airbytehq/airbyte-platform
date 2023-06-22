@@ -36,11 +36,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
   }
 
   @Override
-  public boolean forceSecretMigration() {
-    return Boolean.parseBoolean(System.getenv("FORCE_MIGRATE_SECRET_STORE"));
-  }
-
-  @Override
   public boolean useStreamCapableState() {
     return getEnvOrDefault(USE_STREAM_CAPABLE_STATE, false, Boolean::parseBoolean);
   }

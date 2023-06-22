@@ -1,10 +1,11 @@
 import { Navigate } from "react-router-dom";
 
+import { useListCloudWorkspaces } from "core/api/cloud";
+
 import { RoutePaths } from "../../../pages/routePaths";
-import { useListCloudWorkspaces } from "../services/workspaces/CloudWorkspacesService";
 
 export const DefaultView: React.FC = () => {
-  const workspaces = useListCloudWorkspaces();
+  const { workspaces } = useListCloudWorkspaces();
 
   // Only show the workspace creation list if there is more than one workspace
   // otherwise redirect to the single workspace

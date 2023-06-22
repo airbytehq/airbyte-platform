@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from "react";
+import React, { PropsWithChildren, Suspense, useMemo } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
@@ -110,9 +110,11 @@ const CloudMainViewRoutes = () => {
       <Route
         path={`${RoutePaths.Workspaces}/:workspaceId/*`}
         element={
-          <CloudMainView>
-            <MainRoutes />
-          </CloudMainView>
+          <CloudWorkspaceDataPrefetcher>
+            <CloudMainView>
+              <MainRoutes />
+            </CloudMainView>
+          </CloudWorkspaceDataPrefetcher>
         }
       />
       <Route path="*" element={<DefaultView />} />
@@ -120,9 +122,9 @@ const CloudMainViewRoutes = () => {
   );
 };
 
-const CloudWorkspaceDataPrefetcher = () => {
+const CloudWorkspaceDataPrefetcher: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   usePrefetchCloudWorkspaceData();
-  return null;
+  return <>{children}</>;
 };
 
 export const Routing: React.FC = () => {
@@ -160,7 +162,6 @@ export const Routing: React.FC = () => {
   return (
     <WorkspaceServiceProvider>
       <LDExperimentServiceProvider>
-        {workspaceId && user && <CloudWorkspaceDataPrefetcher />}
         <Suspense fallback={<LoadingPage />}>
           <Routes>
             {/*

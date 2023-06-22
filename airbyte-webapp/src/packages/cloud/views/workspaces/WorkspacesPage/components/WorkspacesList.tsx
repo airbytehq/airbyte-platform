@@ -4,12 +4,12 @@ import { FormattedMessage } from "react-intl";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useListCloudWorkspaces } from "packages/cloud/services/workspaces/CloudWorkspacesService";
+import { useListCloudWorkspaces } from "core/api/cloud";
 
 import { WorkspaceItem } from "./WorkspaceItem";
 
 export const WorkspacesList: React.FC = () => {
-  const workspaces = useListCloudWorkspaces();
+  const { workspaces } = useListCloudWorkspaces();
 
   if (!workspaces.length) {
     return (
@@ -25,7 +25,7 @@ export const WorkspacesList: React.FC = () => {
         <WorkspaceItem
           key={workspace.workspaceId}
           workspaceId={workspace.workspaceId}
-          workspaceName={workspace.name}
+          workspaceName={workspace.name ?? ""}
           testId={`select-workspace-${index}`}
         />
       ))}

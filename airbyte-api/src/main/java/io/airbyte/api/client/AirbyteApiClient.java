@@ -183,7 +183,7 @@ public class AirbyteApiClient {
                                       final int maxTries) {
     try {
       return retryWithJitterThrows(call, desc, jitterMaxIntervalSecs, finalIntervalSecs, maxTries);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // Swallowing exception on purpose
       return null;
     }

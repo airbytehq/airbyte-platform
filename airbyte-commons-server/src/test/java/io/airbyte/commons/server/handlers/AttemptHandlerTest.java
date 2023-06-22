@@ -6,13 +6,17 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
@@ -21,6 +25,8 @@ import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SetWorkflowInAttemptRequestBody;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.config.SyncStats;
 import io.airbyte.persistence.job.JobPersistence;
 import java.io.IOException;
 import java.util.Map;
@@ -130,6 +136,35 @@ class AttemptHandlerTest {
     assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.getValue());
     assertEquals(JOB_ID, jobIdCapture.getValue());
     assertEquals(expectedAttemptSyncConfig, attemptSyncConfigCapture.getValue());
+  }
+
+  @Test
+  void getAttemptCombinedStatsThrowsNotFound() throws Exception {
+    when(jobPersistence.getAttemptCombinedStats(anyLong(), anyInt())).thenReturn(null);
+
+    assertThrows(IdNotFoundKnownException.class, () -> handler.getAttemptCombinedStats(1L, 2));
+  }
+
+  @Test
+  void getAttemptCombinedStatsReturnsStats() throws Exception {
+    final var stats = new SyncStats();
+    stats.setRecordsEmitted(123L);
+    stats.setBytesEmitted(123L);
+    stats.setBytesCommitted(123L);
+    stats.setRecordsCommitted(123L);
+    stats.setEstimatedRecords(123L);
+    stats.setEstimatedBytes(123L);
+
+    when(jobPersistence.getAttemptCombinedStats(anyLong(), anyInt())).thenReturn(stats);
+
+    final AttemptStats result = handler.getAttemptCombinedStats(1L, 2);
+    assertEquals(stats.getRecordsEmitted(), result.getRecordsEmitted());
+    assertEquals(stats.getBytesEmitted(), result.getBytesEmitted());
+    assertEquals(stats.getBytesCommitted(), result.getBytesCommitted());
+    assertEquals(stats.getRecordsCommitted(), result.getRecordsCommitted());
+    assertEquals(stats.getEstimatedRecords(), result.getEstimatedRecords());
+    assertEquals(stats.getEstimatedBytes(), result.getEstimatedBytes());
+    assertNull(result.getStateMessagesEmitted()); // punting on this for now
   }
 
 }

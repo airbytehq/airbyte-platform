@@ -24,6 +24,7 @@ import org.apache.http.client.utils.URIBuilder;
 public class GitlabOAuthFlow extends BaseOAuth2Flow {
 
   private static final String ACCESS_TOKEN_URL = "https://%s/oauth/token";
+  private static final String DEFAULT_GITLAB_DOMAIN = "gitlab.com";
 
   public GitlabOAuthFlow(final HttpClient httpClient) {
     super(httpClient);
@@ -33,12 +34,14 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
     super(httpClient, stateSupplier);
   }
 
-  protected static String getDomain(JsonNode inputOAuthConfiguration) throws IOException {
-    final var url = inputOAuthConfiguration.get("domain");
-    if (url == null) {
-      throw new IOException("Domain field is empty.");
+  protected static String getDomain(JsonNode inputOAuthConfiguration) {
+    String stringURL = DEFAULT_GITLAB_DOMAIN;
+    if (inputOAuthConfiguration.has("domain")) {
+      String url = inputOAuthConfiguration.get("domain").asText();
+      if (!url.isEmpty()) {
+        stringURL = url;
+      }
     }
-    final String stringURL = url.asText();
     // this could be `https://gitlab.com` or `gitlab.com`
     // because the connector supports storing hostname with and without schema
     final String[] parts = stringURL.split("//");
@@ -66,17 +69,8 @@ public class GitlabOAuthFlow extends BaseOAuth2Flow {
 
   @Override
   protected String getAccessTokenUrl(final JsonNode inputOAuthConfiguration) {
-    final var url = inputOAuthConfiguration.get("domain");
-    final String stringURL;
-    if (url == null) {
-      stringURL = "gitlab.com";
-    } else {
-      stringURL = url.asText();
-    }
-    // this could be `https://gitlab.com` or `gitlab.com`
-    // because the connector supports storing hostname with and without schema
-    final String[] parts = stringURL.split("//");
-    return String.format(ACCESS_TOKEN_URL, parts[parts.length - 1]);
+    final var domain = getDomain(inputOAuthConfiguration);
+    return String.format(ACCESS_TOKEN_URL, domain);
   }
 
   @Override

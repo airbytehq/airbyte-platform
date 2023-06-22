@@ -28,7 +28,7 @@ export interface Experiments {
   "connection.streamCentricUI.numberOfLogsToLoad": number;
   "connection.searchableJobLogs": boolean;
   "connector.showRequestSchemabutton": boolean;
-  "connection.syncCatalogConfig.disabledStreams": boolean;
+  "connection.syncCatalog.simplifiedCatalogRow": boolean;
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connector.allowlistIpBanner": boolean;

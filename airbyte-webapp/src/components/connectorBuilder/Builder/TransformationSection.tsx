@@ -1,8 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
 
-import { ControlLabels } from "components/LabeledControl";
-
 import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
@@ -57,12 +55,8 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
   return (
     <BuilderCard
       docLink={links.connectorBuilderTransformations}
-      label={
-        <ControlLabels
-          label={getLabelByManifest("DeclarativeStream.properties.transformations")}
-          infoTooltipContent={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
-        />
-      }
+      label={getLabelByManifest("DeclarativeStream.properties.transformations")}
+      tooltip={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
       toggleConfig={{
         path: streamFieldPath("transformations"),
         defaultValue: [

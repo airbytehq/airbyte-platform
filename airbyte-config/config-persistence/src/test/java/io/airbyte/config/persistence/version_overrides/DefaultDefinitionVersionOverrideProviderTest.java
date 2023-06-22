@@ -5,6 +5,7 @@
 package io.airbyte.config.persistence.version_overrides;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,6 +16,8 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AllowedHosts;
@@ -41,7 +44,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
+class DefaultDefinitionVersionOverrideProviderTest {
 
   private static final UUID ACTOR_DEFINITION_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -51,9 +54,11 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
   private static final String DOCKER_IMAGE_TAG_2 = "2.0.2";
   private static final String DOCKER_IMG_FORMAT = "%s:%s";
   private static final ConnectorSpecification SPEC = new ConnectorSpecification()
+      .withProtocolVersion("0.2.0")
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "key", "value")));
   private static final ConnectorSpecification SPEC_2 = new ConnectorSpecification()
+      .withProtocolVersion("0.2.0")
       .withConnectionSpecification(Jsons.jsonNode(Map.of(
           "theSpec", "goesHere")));
   private static final String DOCS_URL = "https://airbyte.io/docs/";
@@ -68,10 +73,10 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSpec(SPEC)
+      .withProtocolVersion(SPEC.getProtocolVersion())
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withProtocolVersion(DOCKER_IMAGE_TAG)
       .withAllowedHosts(ALLOWED_HOSTS)
       .withSupportsDbt(true)
       .withNormalizationConfig(NORMALIZATION_CONFIG);
@@ -80,15 +85,17 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerImageTag(DOCKER_IMAGE_TAG_2)
       .withSpec(SPEC_2)
+      .withProtocolVersion(SPEC_2.getProtocolVersion())
       .withDocumentationUrl(DOCS_URL)
       .withReleaseStage(ReleaseStage.BETA)
       .withSuggestedStreams(SUGGESTED_STREAMS)
-      .withProtocolVersion(DOCKER_IMAGE_TAG)
       .withAllowedHosts(ALLOWED_HOSTS)
       .withSupportsDbt(true)
       .withNormalizationConfig(NORMALIZATION_CONFIG);
+  private static final AirbyteProtocolVersionRange PROTOCOL_VERSION_RANGE =
+      new AirbyteProtocolVersionRange(new Version("0.0.0"), new Version("0.3.0"));
 
-  private DefaultFeatureFlagDefinitionVersionOverrideProvider overrideProvider;
+  private DefaultDefinitionVersionOverrideProvider overrideProvider;
   private GcsBucketSpecFetcher mGcsBucketSpecFetcher;
   private ConfigRepository mConfigRepository;
   private FeatureFlagClient mFeatureFlagClient;
@@ -98,7 +105,8 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
     mGcsBucketSpecFetcher = mock(GcsBucketSpecFetcher.class);
     mConfigRepository = mock(ConfigRepository.class);
     mFeatureFlagClient = mock(TestClient.class);
-    overrideProvider = new DefaultFeatureFlagDefinitionVersionOverrideProvider(mConfigRepository, mGcsBucketSpecFetcher, mFeatureFlagClient);
+    overrideProvider =
+        new DefaultDefinitionVersionOverrideProvider(mConfigRepository, mGcsBucketSpecFetcher, mFeatureFlagClient, PROTOCOL_VERSION_RANGE);
     when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn("");
   }
 
@@ -130,6 +138,7 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
     final ActorDefinitionVersion persistedADV = new ActorDefinitionVersion()
         .withVersionId(UUID.randomUUID())
         .withSpec(SPEC)
+        .withProtocolVersion(SPEC.getProtocolVersion())
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withActorDefinitionId(ACTOR_DEFINITION_ID);
@@ -209,6 +218,20 @@ class DefaultFeatureFlagDefinitionVersionOverrideProviderTest {
         new DestinationDefinition(ACTOR_DEFINITION_ID));
 
     assertEquals(expectedContexts, contexts);
+  }
+
+  @Test
+  void testGetVersionWithInvalidProtocolVersion() throws IOException {
+    when(mFeatureFlagClient.stringVariation(eq(ConnectorVersionOverride.INSTANCE), any())).thenReturn(DOCKER_IMAGE_TAG_2);
+    when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2)).thenReturn(Optional.of(Jsons.clone(OVERRIDE_VERSION)
+        .withProtocolVersion("131.1.2")));
+
+    assertThrows(RuntimeException.class,
+        () -> overrideProvider.getOverride(ActorType.SOURCE, ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID, DEFAULT_VERSION));
+
+    verifyNoInteractions(mGcsBucketSpecFetcher);
+    verify(mConfigRepository).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG_2);
+    verifyNoMoreInteractions(mConfigRepository);
   }
 
 }

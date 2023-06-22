@@ -112,6 +112,7 @@ class DestinationDefinitionsHandlerTest {
 
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(UUID.randomUUID())
+        .withDefaultVersionId(UUID.randomUUID())
         .withName("presto")
         .withDockerImageTag("12.3")
         .withDockerRepository("repo")
@@ -153,10 +154,15 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinition should return the right list")
-  void testListDestinations() throws JsonValidationException, IOException, URISyntaxException {
+  void testListDestinations() throws IOException, URISyntaxException {
+    final ActorDefinitionVersion destinationDefinitionVersion = generateVersionFromDestinationDefinition(destinationDefinition);
+    final ActorDefinitionVersion destinationDefinitionVersionWNorm = generateVersionFromDestinationDefinition(destinationDefinitionWithNormalization);
 
     when(configRepository.listStandardDestinationDefinitions(false))
         .thenReturn(Lists.newArrayList(destinationDefinition, destinationDefinitionWithNormalization));
+    when(configRepository.getActorDefinitionVersions(
+        List.of(destinationDefinition.getDefaultVersionId(), destinationDefinitionWithNormalization.getDefaultVersionId())))
+            .thenReturn(Lists.newArrayList(destinationDefinitionVersion, destinationDefinitionVersionWNorm));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -205,10 +211,13 @@ class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
   void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException {
-
     when(configRepository.listPublicDestinationDefinitions(false)).thenReturn(Lists.newArrayList(destinationDefinition));
     when(configRepository.listGrantedDestinationDefinitions(workspaceId, false))
         .thenReturn(Lists.newArrayList(destinationDefinitionWithNormalization));
+    when(configRepository.getActorDefinitionVersions(
+        List.of(destinationDefinition.getDefaultVersionId(), destinationDefinitionWithNormalization.getDefaultVersionId())))
+            .thenReturn(Lists.newArrayList(generateVersionFromDestinationDefinition(destinationDefinition),
+                generateVersionFromDestinationDefinition(destinationDefinitionWithNormalization)));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -263,6 +272,11 @@ class DestinationDefinitionsHandlerTest {
         Lists.newArrayList(
             Map.entry(destinationDefinition, false),
             Map.entry(destinationDefinitionWithNormalization, true)));
+    when(configRepository.getActorDefinitionVersions(
+        List.of(destinationDefinition.getDefaultVersionId(), destinationDefinitionWithNormalization.getDefaultVersionId())))
+            .thenReturn(Lists.newArrayList(
+                generateVersionFromDestinationDefinition(destinationDefinition),
+                generateVersionFromDestinationDefinition(destinationDefinitionWithNormalization)));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead1 = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -321,6 +335,8 @@ class DestinationDefinitionsHandlerTest {
   void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromDestinationDefinition(destinationDefinition));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -369,6 +385,8 @@ class DestinationDefinitionsHandlerTest {
         .thenReturn(true);
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromDestinationDefinition(destinationDefinition));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -436,7 +454,7 @@ class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomDestinationDefinition should correctly create a destinationDefinition")
-  void testCreateCustomDestinationDefinition() throws URISyntaxException, IOException, JsonValidationException {
+  void testCreateCustomDestinationDefinition() throws URISyntaxException, IOException {
     final StandardDestinationDefinition destination = generateDestinationDefinition();
     final String imageName = destination.getDockerRepository() + ":" + destination.getDockerImageTag();
 
@@ -486,7 +504,8 @@ class DestinationDefinitionsHandlerTest {
             .withReleaseDate(null)
             .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
             .withAllowedHosts(null)
-            .withCustom(true),
+            .withCustom(true)
+            .withDefaultVersionId(null),
         generateVersionFromDestinationDefinition(destination),
         workspaceId);
   }
@@ -529,6 +548,8 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
   void testUpdateDestination() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromDestinationDefinition(destinationDefinition));
     final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
         .getDestinationDefinition(
             new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
@@ -546,8 +567,8 @@ class DestinationDefinitionsHandlerTest {
         newSpec,
         SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
-    final StandardDestinationDefinition updatedDestination =
-        Jsons.clone(destinationDefinition).withDockerImageTag(newDockerImageTag).withSpec(newSpec).withProtocolVersion(newProtocolVersion);
+    final StandardDestinationDefinition updatedDestination = Jsons.clone(destinationDefinition)
+        .withDockerImageTag(newDockerImageTag).withSpec(newSpec).withProtocolVersion(newProtocolVersion).withDefaultVersionId(null);
 
     final DestinationDefinitionRead destinationRead = destinationDefinitionsHandler.updateDestinationDefinition(
         new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
@@ -566,6 +587,8 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("updateDestinationDefinition should not update a destinationDefinition if protocol version is out of range")
   void testOutOfProtocolRangeUpdateDestination() throws ConfigNotFoundException, IOException, JsonValidationException {
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromDestinationDefinition(destinationDefinition));
     final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
         .getDestinationDefinition(
             new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
@@ -620,6 +643,8 @@ class DestinationDefinitionsHandlerTest {
   void testGrantDestinationDefinitionToWorkspace() throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(configRepository.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
+    when(configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+        .thenReturn(generateVersionFromDestinationDefinition(destinationDefinition));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -693,7 +718,8 @@ class DestinationDefinitionsHandlerTest {
 
       final var destinationDefinitionRead = destinationDefinitionReadList.get(0);
       assertEquals(DestinationDefinitionsHandler.buildDestinationDefinitionRead(
-          ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDefinition)), destinationDefinitionRead);
+          ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDefinition),
+          ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDefinition)), destinationDefinitionRead);
     }
 
     @Test

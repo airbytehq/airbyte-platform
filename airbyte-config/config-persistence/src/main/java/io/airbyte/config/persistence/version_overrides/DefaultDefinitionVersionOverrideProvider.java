@@ -4,6 +4,9 @@
 
 package io.airbyte.config.persistence.version_overrides;
 
+import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -34,20 +37,23 @@ import org.slf4j.LoggerFactory;
  * overrides from the Feature Flag client.
  */
 @Singleton
-public class DefaultFeatureFlagDefinitionVersionOverrideProvider implements FeatureFlagDefinitionVersionOverrideProvider {
+public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultFeatureFlagDefinitionVersionOverrideProvider.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
 
   private final ConfigRepository configRepository;
   private final GcsBucketSpecFetcher gcsBucketSpecFetcher;
   private final FeatureFlagClient featureFlagClient;
+  private final AirbyteProtocolVersionRange protocolVersionRange;
 
-  public DefaultFeatureFlagDefinitionVersionOverrideProvider(final ConfigRepository configRepository,
-                                                             final GcsBucketSpecFetcher gcsBucketSpecFetcher,
-                                                             final FeatureFlagClient featureFlagClient) {
+  public DefaultDefinitionVersionOverrideProvider(final ConfigRepository configRepository,
+                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher,
+                                                  final FeatureFlagClient featureFlagClient,
+                                                  final AirbyteProtocolVersionRange protocolVersionRange) {
     this.configRepository = configRepository;
     this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
     this.featureFlagClient = featureFlagClient;
+    this.protocolVersionRange = protocolVersionRange;
     LOGGER.info("Initialized feature flag definition version overrides");
   }
 
@@ -112,8 +118,7 @@ public class DefaultFeatureFlagDefinitionVersionOverrideProvider implements Feat
           .withReleaseDate(defaultVersion.getReleaseDate())
           .withReleaseStage(defaultVersion.getReleaseStage())
           .withSuggestedStreams(defaultVersion.getSuggestedStreams())
-          .withSupportsDbt(defaultVersion.getSupportsDbt())
-          .withProtocolVersion(defaultVersion.getProtocolVersion());
+          .withSupportsDbt(defaultVersion.getSupportsDbt());
 
       final Optional<ConnectorSpecification> spec = gcsBucketSpecFetcher.attemptFetch(
           String.format("%s:%s", newVersion.getDockerRepository(), newVersion.getDockerImageTag()));
@@ -121,6 +126,7 @@ public class DefaultFeatureFlagDefinitionVersionOverrideProvider implements Feat
       if (spec.isPresent()) {
         LOGGER.info("Fetched spec from remote cache for {}:{}.", newVersion.getDockerRepository(), newVersion.getDockerImageTag());
         newVersion.setSpec(spec.get());
+        newVersion.setProtocolVersion(AirbyteProtocolVersion.getWithDefault(spec.get().getProtocolVersion()).serialize());
       } else {
         LOGGER.error("Failed to fetch spec from remote cache for version override {}:{}", newVersion.getDockerRepository(),
             newVersion.getDockerImageTag());
@@ -148,6 +154,14 @@ public class DefaultFeatureFlagDefinitionVersionOverrideProvider implements Feat
     final String overrideTag = featureFlagClient.stringVariation(ConnectorVersionOverride.INSTANCE, new Multi(contexts));
     final Optional<ActorDefinitionVersion> version = resolveVersionForTag(actorDefinitionId, overrideTag, defaultVersion);
     if (version.isPresent()) {
+      final Version protocolVersion = new Version(version.get().getProtocolVersion());
+      if (!protocolVersionRange.isSupported(protocolVersion)) {
+        throw new RuntimeException(String.format(
+            "Connector version override for definition %s with tag %s is not supported by the current version of Airbyte. "
+                + "Required protocol version: %s. Supported range: %s - %s.",
+            actorDefinitionId, overrideTag, protocolVersion.serialize(),
+            protocolVersionRange.min().serialize(), protocolVersionRange.max().serialize()));
+      }
       LOGGER.info("Using connector version override for definition {} with tag {}", actorDefinitionId, overrideTag);
     }
 

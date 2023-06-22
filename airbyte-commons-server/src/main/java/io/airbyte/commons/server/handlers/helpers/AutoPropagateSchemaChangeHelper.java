@@ -50,11 +50,10 @@ public class AutoPropagateSchemaChangeHelper {
       final StreamDescriptor streamDescriptor = transformation.getStreamDescriptor();
       switch (transformation.getTransformType()) {
         case UPDATE_STREAM -> {
-          if (!oldCatalogPerStream.containsKey(streamDescriptor)) {
-            LOGGER.error("Attempting to update a stream that does not exist in the old catalog: {}", streamDescriptor);
+          if (oldCatalogPerStream.containsKey(streamDescriptor)) {
+            oldCatalogPerStream.get(streamDescriptor)
+                .stream(newCatalogPerStream.get(streamDescriptor).getStream());
           }
-          oldCatalogPerStream.get(streamDescriptor)
-              .stream(newCatalogPerStream.get(streamDescriptor).getStream());
         }
         case ADD_STREAM -> {
           if (nonBreakingChangesPreference.equals(NonBreakingChangesPreference.PROPAGATE_FULLY)) {
