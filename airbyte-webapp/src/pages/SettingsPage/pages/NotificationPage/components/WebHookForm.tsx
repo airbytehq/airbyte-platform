@@ -10,7 +10,9 @@ import { Label, LabeledSwitch } from "components";
 import { DocsIcon } from "components/icons/DocsIcon";
 import { PlayIcon } from "components/icons/PlayIcon";
 import { Cell, Row } from "components/SimpleTableComponents";
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 import { Input } from "components/ui/Input";
 import { Text } from "components/ui/Text";
@@ -24,7 +26,6 @@ import { links } from "utils/links";
 
 import help from "./help.png";
 import styles from "./WebHookForm.module.scss";
-import { Content, SettingsCard } from "../../SettingsComponents";
 
 const enum WebhookAction {
   Test = "test",
@@ -128,8 +129,8 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
     >
       {({ dirty, errors, values }) => (
         <Form>
-          <SettingsCard title={<FormattedMessage id="settings.notificationSettings" />}>
-            <Content>
+          <Card title={<FormattedMessage id="settings.notificationSettings" />}>
+            <Box p="xl">
               <div className={classNames(styles.webhookGuide, { [styles.active]: webhookViewGuide })}>
                 <div className={styles.webhookGuideTitle}>
                   <Heading as="h5">
@@ -266,8 +267,8 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
                   </Field>
                 </Cell>
               </Row>
-            </Content>
-          </SettingsCard>
+            </Box>
+          </Card>
           <div className={styles.action}>
             <Button
               type="submit"

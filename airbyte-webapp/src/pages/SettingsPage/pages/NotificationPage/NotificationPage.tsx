@@ -7,7 +7,7 @@ import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
 import { WebHookForm } from "./components/WebHookForm";
 
-const NotificationPage: React.FC = () => {
+export const NotificationPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_NOTIFICATION);
 
   const workspace = useCurrentWorkspace();
@@ -28,5 +28,3 @@ const NotificationPage: React.FC = () => {
     </>
   );
 };
-
-export default NotificationPage;

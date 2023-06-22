@@ -2,15 +2,16 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { HeadTitle } from "components/common/HeadTitle";
+import { Box } from "components/ui/Box";
+import { Card } from "components/ui/Card";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import MetricsForm from "./components/MetricsForm";
 import useWorkspaceEditor from "../../components/useWorkspaceEditor";
-import { Content, SettingsCard } from "../SettingsComponents";
 
-const MetricsPage: React.FC = () => {
+export const MetricsPage: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const { errorMessage, successMessage, loading, updateData } = useWorkspaceEditor();
 
@@ -22,8 +23,8 @@ const MetricsPage: React.FC = () => {
   return (
     <>
       <HeadTitle titles={[{ id: "sidebar.settings" }, { id: "settings.metrics" }]} />
-      <SettingsCard title={<FormattedMessage id="settings.metricsSettings" />}>
-        <Content>
+      <Card title={<FormattedMessage id="settings.metricsSettings" />}>
+        <Box p="xl">
           <MetricsForm
             onChange={onChange}
             anonymousDataCollection={workspace.anonymousDataCollection}
@@ -31,10 +32,8 @@ const MetricsPage: React.FC = () => {
             errorMessage={errorMessage}
             isLoading={loading}
           />
-        </Content>
-      </SettingsCard>
+        </Box>
+      </Card>
     </>
   );
 };
-
-export default MetricsPage;
