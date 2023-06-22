@@ -59,6 +59,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.text.StringEscapeUtils;
@@ -103,6 +104,7 @@ import org.slf4j.MDC;
 // it is required for the connectors
 @SuppressWarnings("PMD.AvoidPrintStackTrace")
 // TODO(Davin): Better test for this. See https://github.com/airbytehq/airbyte/issues/3700.
+@Slf4j
 public class KubePodProcess implements KubePod {
 
   private static final Configs configs = new EnvConfigs();
@@ -883,26 +885,47 @@ public class KubePodProcess implements KubePod {
    */
   public static ResourceRequirementsBuilder getResourceRequirementsBuilder(final ResourceRequirements resourceRequirements) {
     if (resourceRequirements != null) {
+      Quantity cpuLimit = null;
+      Quantity memoryLimit = null;
+      final Map<String, Quantity> limitMap = new HashMap<>();
+      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuLimit())) {
+        cpuLimit = Quantity.parse(resourceRequirements.getCpuLimit());
+        limitMap.put("cpu", cpuLimit);
+      }
+      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryLimit())) {
+        memoryLimit = Quantity.parse(resourceRequirements.getMemoryLimit());
+        limitMap.put("memory", memoryLimit);
+      }
       final Map<String, Quantity> requestMap = new HashMap<>();
       // if null then use unbounded resource allocation
       if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuRequest())) {
-        requestMap.put("cpu", Quantity.parse(resourceRequirements.getCpuRequest()));
+        final Quantity cpuRequest = Quantity.parse(resourceRequirements.getCpuRequest());
+        requestMap.put("cpu", min(cpuRequest, cpuLimit));
       }
       if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryRequest())) {
-        requestMap.put("memory", Quantity.parse(resourceRequirements.getMemoryRequest()));
-      }
-      final Map<String, Quantity> limitMap = new HashMap<>();
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuLimit())) {
-        limitMap.put("cpu", Quantity.parse(resourceRequirements.getCpuLimit()));
-      }
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryLimit())) {
-        limitMap.put("memory", Quantity.parse(resourceRequirements.getMemoryLimit()));
+        final Quantity memoryRequest = Quantity.parse(resourceRequirements.getMemoryRequest());
+        requestMap.put("memory", min(memoryRequest, memoryLimit));
       }
       return new ResourceRequirementsBuilder()
           .withRequests(requestMap)
           .withLimits(limitMap);
     }
     return new ResourceRequirementsBuilder();
+  }
+
+  private static Quantity min(final Quantity request, final Quantity limit) {
+    if (limit == null) {
+      return request;
+    }
+    if (request == null) {
+      return limit;
+    }
+    if (request.getNumericalAmount().compareTo(limit.getNumericalAmount()) <= 0) {
+      return request;
+    } else {
+      log.info("Invalid resource requirements detected, requested {} while limit is {}, falling back to requesting {}.", request, limit, limit);
+      return limit;
+    }
   }
 
   private static String prependPodInfo(final String message, final String podNamespace, final String podName) {
