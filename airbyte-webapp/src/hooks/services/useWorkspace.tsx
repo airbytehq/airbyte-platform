@@ -3,7 +3,7 @@ import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
 import { NotificationSettings } from "core/request/AirbyteClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { useCurrentWorkspace, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
+import { useCurrentWorkspace, useCurrentWorkspaceId, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
 
 export interface WebhookPayload {
   webhook?: string;
@@ -108,6 +108,17 @@ const useWorkspace = () => {
     updatePreferences,
     updateWebhook,
   };
+};
+
+export const useUpdateNotificationSettings = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
+
+  return (notificationSettings: NotificationSettings) =>
+    updateWorkspace({
+      workspaceId,
+      notificationSettings,
+    });
 };
 
 export { useCurrentWorkspace, useWorkspace };

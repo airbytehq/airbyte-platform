@@ -78,6 +78,7 @@ exports[`CreateConnectionForm should render 1`] = `
                   data-testid="input-container"
                 >
                   <input
+                    aria-invalid="false"
                     class="<removed-for-snapshot-test>"
                     data-testid="connectionName"
                     name="name"
