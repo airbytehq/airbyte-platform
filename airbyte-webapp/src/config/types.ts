@@ -17,9 +17,7 @@ export interface AirbyteWebappConfig {
     authDomain?: string;
     authEmulatorHost?: string;
   };
-  intercom: {
-    appId?: string;
-  };
+  zendeskKey?: string;
   launchDarkly?: string;
   datadog: {
     applicationId?: string;
