@@ -1,6 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import classNames from "classnames";
-import { Suspense } from "react";
+import React, { Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { AirbyteStreamAndConfigurationWithEnforcedStream } from "area/connection/utils/computeStreamStatus";
@@ -13,8 +13,6 @@ import {
 import { StreamWithStatus, sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusIndicator, StreamStatusLoadingSpinner } from "components/connection/StreamStatusIndicator";
 import { Tooltip } from "components/ui/Tooltip";
-
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./StreamStatusCell.module.scss";
 import { ConnectionTableDataItem } from "../types";
@@ -85,8 +83,8 @@ const StreamsPerStatus: React.FC<{
   );
 };
 
-const StreamStatusPopover = ({ workspaceId, connectionId }: { workspaceId: string; connectionId: string }) => {
-  const { streamStatuses, enabledStreams } = useStreamsStatuses({ workspaceId, connectionId });
+const StreamStatusPopover: React.FC<{ connectionId: string }> = ({ connectionId }) => {
+  const { streamStatuses, enabledStreams } = useStreamsStatuses(connectionId);
   const sortedStreamsMap = sortStreams(enabledStreams, streamStatuses);
   const filteredAndSortedStreamsMap = Object.entries(sortedStreamsMap).filter(([, streams]) => !!streams.length);
   return (
@@ -99,13 +97,12 @@ const StreamStatusPopover = ({ workspaceId, connectionId }: { workspaceId: strin
 
 export const StreamsStatusCell: React.FC<CellContext<ConnectionTableDataItem, unknown>> = ({ row }) => {
   const connectionId = row.original.connectionId;
-  const workspaceId = useCurrentWorkspaceId();
   const { status, isRunning } = useConnectionStatus(connectionId);
 
   return (
     <Tooltip theme="light" control={<ConnectionStatusIndicator status={status} loading={isRunning} />}>
       <Suspense fallback={null}>
-        <StreamStatusPopover workspaceId={workspaceId} connectionId={connectionId} />
+        <StreamStatusPopover connectionId={connectionId} />
       </Suspense>
     </Tooltip>
   );

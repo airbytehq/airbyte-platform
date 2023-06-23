@@ -6,16 +6,14 @@ import { sortStreams } from "components/connection/StreamStatus/streamStatusUtil
 
 import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 const useStreamsContextInit = (connectionId: string) => {
   const {
     data: { jobs },
   } = useListJobsForConnectionStatus(connectionId);
-  const workspaceId = useCurrentWorkspaceId();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { enabledStreams, streamStatuses } = useStreamsStatuses({ workspaceId, connectionId });
+  const { enabledStreams, streamStatuses } = useStreamsStatuses(connectionId);
   const sortedStreams = sortStreams(enabledStreams, streamStatuses);
 
   const streams = Object.entries(sortedStreams)

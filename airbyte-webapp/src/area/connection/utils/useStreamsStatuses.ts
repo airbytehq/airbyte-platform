@@ -9,6 +9,7 @@ import {
 } from "components/connection/StreamStatus/streamStatusUtils";
 
 import { useListStreamsStatuses } from "core/api";
+import { StreamStatusRead } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnection } from "hooks/services/useConnectionHook";
@@ -21,13 +22,19 @@ import {
 
 const createEmptyStreamsStatuses = (): ReturnType<typeof useListStreamsStatuses> => ({ streamStatuses: [] });
 
-export const useStreamsStatuses = ({
-  workspaceId,
-  connectionId,
-}: {
-  workspaceId: string;
-  connectionId: string;
-}): {
+const sortStreamStatuses = (a: StreamStatusRead, b: StreamStatusRead) => {
+  if (a.transitionedAt > b.transitionedAt) {
+    return -1;
+  }
+  if (a.transitionedAt < b.transitionedAt) {
+    return 1;
+  }
+  return 0;
+};
+
+export const useStreamsStatuses = (
+  connectionId: string
+): {
   streamStatuses: Map<string, StreamWithStatus>;
   enabledStreams: AirbyteStreamAndConfigurationWithEnforcedStream[];
 } => {
@@ -40,17 +47,7 @@ export const useStreamsStatuses = ({
     doUseStreamStatuses ? useListStreamsStatuses : createEmptyStreamsStatuses
   );
 
-  const data = useStreamStatusesFunction({
-    workspaceId,
-    connectionId,
-    pagination: {
-      // obnoxiously high for now, the endpoint returns statuses by timestamp ASC so most recent is at the end
-      // we are using this to validate the approach and inform API changes
-      // while in this state, we are not enabling the flag outside of well-known workspaces
-      pageSize: 25000,
-      rowOffset: 0,
-    },
-  });
+  const data = useStreamStatusesFunction({ connectionId });
 
   const connection = useGetConnection(connectionId);
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
@@ -66,24 +63,13 @@ export const useStreamsStatuses = ({
   const streamStatuses = new Map<string, StreamWithStatus>();
 
   if (data.streamStatuses) {
-    // using transitionedAt, sort most recent first
-    const orderedStreamStatuses = [...data.streamStatuses].sort((a, b) => {
-      if (a.transitionedAt > b.transitionedAt) {
-        return -1;
-      }
-      if (a.transitionedAt < b.transitionedAt) {
-        return 1;
-      }
-      return 0;
-    });
-
     // if there are no stream statuses, we fallback to connection status
     // in the case of a new connection that _will_ have stream statuses
     // this Just Works as the connection status will be Pending
     // and that's correct for new streams; as soon as one statuses exists
     // each stream status will be initialized with Pending - instead of the
     // connection status - and it has its individual stream status computed
-    const hasPerStreamStatuses = orderedStreamStatuses.length > 0;
+    const hasPerStreamStatuses = data.streamStatuses.length > 0;
 
     // map stream statuses to enabled streams
     // naively, this is O(m*n) where m=enabledStreams and n=streamStatuses
@@ -91,20 +77,12 @@ export const useStreamsStatuses = ({
     //   for streamStatus:
     //     if streamStatus.streamName === enabledStream.name then processStatusForStream
     //
-    // instead we can approach O(n) where n=streamStatuses
-    // by keeping track of # of "finalized" streams:
-    // we can stop processing when finalizedStreamCount === enabledStreams.length
-    // OR reaching the end of streamStatuses
-    //
-    // a stream is "finalized" when enough statuses have been processed to determine its final state:
-    // 1. encountering a successful sync (SUCCESS)
-    // 2. encountering a reset of the stream (PENDING)
-    // 3. encountered enough historical sync data to determine if a failure/error is systemic or transient
+    // instead, we can reduce each stream status into a map of <Stream, StatusEntry[]>
+    // and process each stream's history in one shot
 
     // initialize enabled streams as Pending with 0 history
     // (with fallback to connection status when hasPerStreamStatuses === false)
-    for (let i = 0; i < enabledStreams.length; i++) {
-      const enabledStream = enabledStreams[i];
+    enabledStreams.reduce((streamStatuses, enabledStream) => {
       const streamKey = getStreamKey(enabledStream.stream);
 
       const streamStatus: StreamWithStatus = {
@@ -124,22 +102,27 @@ export const useStreamsStatuses = ({
       }
 
       streamStatuses.set(streamKey, streamStatus);
-    }
 
-    const finalizedStreams = new Set<string>();
+      return streamStatuses;
+    }, streamStatuses);
 
-    for (let i = 0; i < orderedStreamStatuses.length; i++) {
-      const streamStatus = orderedStreamStatuses[i];
+    // push each stream status entry into to the corresponding stream's history
+    data.streamStatuses.reduce((streamStatuses, streamStatus) => {
       const streamKey = getStreamKey(streamStatus);
-
-      if (finalizedStreams.has(streamKey)) {
-        // no need to process this status
-        continue;
-      }
-
       const mappedStreamStatus = streamStatuses.get(streamKey);
       if (mappedStreamStatus) {
         mappedStreamStatus.relevantHistory.push(streamStatus); // intentionally mutate the array inside the map
+      }
+      return streamStatuses;
+    }, streamStatuses);
+
+    // compute the final status for each stream
+    enabledStreams.reduce((streamStatuses, enabledStream) => {
+      const streamKey = getStreamKey(enabledStream.stream);
+      const mappedStreamStatus = streamStatuses.get(streamKey);
+
+      if (mappedStreamStatus) {
+        mappedStreamStatus.relevantHistory.sort(sortStreamStatuses); // put the histories are in order
         const detectedStatus = computeStreamStatus({
           statuses: mappedStreamStatus.relevantHistory,
           scheduleType: connection.scheduleType,
@@ -151,13 +134,15 @@ export const useStreamsStatuses = ({
 
         if (detectedStatus.status != null) {
           // we have enough history to determine the final status
+          // otherwise it will be left in Pending
           mappedStreamStatus.status = detectedStatus.status;
-          mappedStreamStatus.isRunning = detectedStatus.isRunning;
-          mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
-          finalizedStreams.add(streamKey);
         }
+        mappedStreamStatus.isRunning = detectedStatus.isRunning;
+        mappedStreamStatus.lastSuccessfulSyncAt = detectedStatus.lastSuccessfulSync?.transitionedAt;
       }
-    }
+
+      return streamStatuses;
+    }, streamStatuses);
   }
 
   return {

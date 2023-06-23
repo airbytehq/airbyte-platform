@@ -39,7 +39,9 @@ export const ConnectionStatusOverview: React.FC = () => {
     <FlexContainer alignItems="center" gap="sm">
       <ConnectionStatusIndicator status={status} withBox loading={isLoading} />
       <Box ml="md">
-        <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
+        <span data-testid="connection-status-text">
+          <FormattedMessage id={MESSAGE_BY_STATUS[status]} />
+        </span>
         {status === ConnectionStatusIndicatorStatus.OnTrack && (
           <Tooltip control={<Icon type="info" color="action" className={styles.onTrackInfo} />} placement="top">
             <FormattedMessage

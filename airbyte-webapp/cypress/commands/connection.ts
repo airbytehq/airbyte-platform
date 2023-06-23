@@ -78,6 +78,11 @@ export const startManualSync = () => {
   cy.get("[data-testid='manual-sync-button']").click();
 };
 
+export const startManualReset = () => {
+  cy.get("[data-testid='manual-reset-button']").click();
+  cy.get("[data-id='reset']").click();
+};
+
 export const createPokeApiSourceViaApi = () => {
   let source: SourceRead;
   return requestWorkspaceId().then(() => {

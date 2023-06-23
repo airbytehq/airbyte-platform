@@ -1,16 +1,15 @@
 import { SCOPE_WORKSPACE } from "services/Scope";
 
-import { getStreamStatuses } from "../generated/AirbyteClient";
-import { StreamStatusListRequestBody } from "../generated/AirbyteClient.schemas";
+import { getStreamStatusesByRunState } from "../generated/AirbyteClient";
+import { ConnectionIdRequestBody } from "../generated/AirbyteClient.schemas";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
-export const useListStreamsStatuses = (listParams: StreamStatusListRequestBody, keepPreviousData = true) => {
+export const useListStreamsStatuses = (listParams: ConnectionIdRequestBody, keepPreviousData = true) => {
   const requestOptions = useRequestOptions();
-  const { workspaceId, connectionId, pagination, ...queryKey } = listParams;
   return useSuspenseQuery(
-    [SCOPE_WORKSPACE, "stream_statuses", "list", workspaceId, connectionId, pagination, queryKey],
-    () => getStreamStatuses(listParams, requestOptions),
+    [SCOPE_WORKSPACE, "stream_statuses", "by_run_state", listParams.connectionId],
+    () => getStreamStatusesByRunState(listParams, requestOptions),
     {
       // 2.5 second refresh
       refetchInterval: 2500,

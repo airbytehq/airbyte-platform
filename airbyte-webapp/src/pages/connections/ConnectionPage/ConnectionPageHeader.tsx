@@ -9,15 +9,12 @@ import { Tabs } from "components/ui/Tabs";
 import { LinkTab } from "components/ui/Tabs/LinkTab";
 
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
 
 export const ConnectionPageHeader = () => {
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);
-
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Connections}/${params.connectionId}`;
   const { formatMessage } = useIntl();
@@ -41,6 +38,12 @@ export const ConnectionPageHeader = () => {
         disabled: schemaRefreshing,
       },
       {
+        id: ConnectionRoutePaths.JobHistory,
+        name: <FormattedMessage id="connectionForm.jobHistory" />,
+        to: `${basePath}/${ConnectionRoutePaths.JobHistory}`,
+        disabled: schemaRefreshing,
+      },
+      {
         id: ConnectionRoutePaths.Replication,
         name: (
           <FlexContainer gap="sm" as="span">
@@ -57,26 +60,16 @@ export const ConnectionPageHeader = () => {
         to: `${basePath}/${ConnectionRoutePaths.Transformation}`,
         disabled: schemaRefreshing,
       },
+      {
+        id: ConnectionRoutePaths.Settings,
+        name: <FormattedMessage id="sources.settings" />,
+        to: `${basePath}/${ConnectionRoutePaths.Settings}`,
+        disabled: schemaRefreshing,
+      },
     ];
 
-    if (streamCentricUIEnabled) {
-      tabs.splice(1, 0, {
-        id: ConnectionRoutePaths.JobHistory,
-        name: <FormattedMessage id="connectionForm.jobHistory" />,
-        to: `${basePath}/${ConnectionRoutePaths.JobHistory}`,
-        disabled: schemaRefreshing,
-      });
-    }
-
-    tabs.push({
-      id: ConnectionRoutePaths.Settings,
-      name: <FormattedMessage id="sources.settings" />,
-      to: `${basePath}/${ConnectionRoutePaths.Settings}`,
-      disabled: schemaRefreshing,
-    });
-
     return tabs;
-  }, [basePath, connection.schemaChange, schemaRefreshing, streamCentricUIEnabled]);
+  }, [basePath, connection.schemaChange, schemaRefreshing]);
 
   return (
     <NextPageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>

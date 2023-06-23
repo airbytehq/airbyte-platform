@@ -137,6 +137,7 @@ describe("Connector builder", { testIsolation: false }, () => {
     createTestConnection(sourceName, destinationName);
     startManualSync();
 
+    cy.get("[data-testid='job-history-step']").click();
     cy.get("span").contains("2 committed records", { timeout: 60000 }).should("exist");
 
     // release new connector version
@@ -146,12 +147,14 @@ describe("Connector builder", { testIsolation: false }, () => {
     publishProject();
     sync(sourceName, destinationName);
 
+    cy.get("[data-testid='job-history-step']").click();
     cy.get("span").contains("4 committed records", { timeout: 60000 }).should("exist");
 
     goToConnectorBuilderProjectsPage();
     selectActiveVersion(connectorName, 1);
     sync(sourceName, destinationName);
 
+    cy.get("[data-testid='job-history-step']").click();
     cy.get('span:contains("2 committed records")', { timeout: 60000 }).should("have.length", 2);
 
     goToConnectorBuilderProjectsPage();
