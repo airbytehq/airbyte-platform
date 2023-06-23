@@ -13,11 +13,11 @@ import { DropDown } from "components/ui/DropDown";
 import { Input } from "components/ui/Input";
 import { Modal } from "components/ui/Modal";
 
+import { useUserHook } from "core/api/cloud";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useUserHook } from "packages/cloud/services/users/UseUserHook";
 
 import styles from "./InviteUsersModal.module.scss";
 

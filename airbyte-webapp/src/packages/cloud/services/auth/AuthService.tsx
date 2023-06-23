@@ -5,6 +5,8 @@ import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { Observable, Subject } from "rxjs";
 
+import { useGetUserService } from "core/api/cloud";
+import { UserRead } from "core/api/types/CloudApi";
 import { isCommonRequestError } from "core/request/CommonRequestError";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
@@ -12,8 +14,6 @@ import { useNotificationService } from "hooks/services/Notification";
 import useTypesafeReducer from "hooks/useTypesafeReducer";
 import { AuthProviders, OAuthProviders } from "packages/cloud/lib/auth/AuthProviders";
 import { GoogleAuthService } from "packages/cloud/lib/auth/GoogleAuthService";
-import { User } from "packages/cloud/lib/domain/users";
-import { useGetUserService } from "packages/cloud/services/users/UserService";
 import { useAuth } from "packages/firebaseReact";
 import { useInitService } from "services/useInitService";
 import { trackSignup } from "utils/fathom";
@@ -53,7 +53,7 @@ export enum FirebaseAuthMessageId {
 }
 
 interface AuthContextApi {
-  user: User | null;
+  user: UserRead | null;
   inited: boolean;
   emailVerified: boolean;
   isLoading: boolean;
@@ -97,7 +97,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
   const createAirbyteUser = async (
     firebaseUser: FirebaseUser,
     userData: { name?: string; companyName?: string; news?: boolean } = {}
-  ): Promise<User> => {
+  ): Promise<UserRead> => {
     // Create the Airbyte user on our server
     const user = await userService.create({
       authProvider: AuthProviders.GoogleIdentityPlatform,
@@ -125,7 +125,7 @@ export const AuthenticationProvider: React.FC<React.PropsWithChildren<unknown>> 
   };
 
   const onAfterAuth = useCallback(
-    async (currentUser: FirebaseUser, user?: User) => {
+    async (currentUser: FirebaseUser, user?: UserRead) => {
       try {
         user ??= await userService.getByAuthId(currentUser.uid, AuthProviders.GoogleIdentityPlatform);
         loggedIn({
@@ -342,7 +342,7 @@ export const useAuthService = (): AuthContextApi => {
   return authService;
 };
 
-export const useCurrentUser = (): User => {
+export const useCurrentUser = (): UserRead => {
   const { user } = useAuthService();
   if (!user) {
     throw new Error("useCurrentUser must be used only within authorised flow");

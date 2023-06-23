@@ -1,6 +1,6 @@
 import { v4 as uuidV4 } from "uuid";
 
-import { User } from "packages/cloud/lib/domain/users";
+import { UserRead } from "core/api/types/CloudApi";
 
 import { createLDContext, createMultiContext, createUserContext, getSingleContextsFromMulti } from "./contexts";
 
@@ -17,12 +17,14 @@ describe(`${createUserContext.name}`, () => {
   });
 
   it("creates an identified user context", () => {
-    const mockUser: User = {
+    const mockUser: UserRead = {
       userId: uuidV4(),
       name: "John Doe",
       email: "john.doe@airbyte.io",
       intercomHash: "intercom_hash_string",
       authUserId: "auth_user_id_string",
+      authProvider: "google_identity_platform",
+      defaultWorkspaceId: "123",
     };
     const context = createUserContext(mockUser, mockLocale);
     expect(context).toEqual({

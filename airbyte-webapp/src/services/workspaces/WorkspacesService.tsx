@@ -5,13 +5,14 @@ import { useNavigate, useMatch } from "react-router-dom";
 import {
   getCloudWorkspaceQueryKey,
   getListCloudWorkspacesAsyncQueryKey,
+  getListUsersQueryKey,
   useGetCloudWorkspaceQuery,
   useListCloudWorkspacesAsyncQuery,
+  useListUsersQuery,
 } from "core/api/cloud";
 import { Workspace, WorkspaceService } from "core/domain/workspace";
 import { getConnectionListQueryKey, useConnectionListQuery } from "hooks/services/useConnectionHook";
 import { useCurrentUser } from "packages/cloud/services/auth/AuthService";
-import { getListUsersQueryKey, useListUsersQuery } from "packages/cloud/services/users/UseUserHook";
 import { RoutePaths } from "pages/routePaths";
 
 import { useConfig } from "../../config";
