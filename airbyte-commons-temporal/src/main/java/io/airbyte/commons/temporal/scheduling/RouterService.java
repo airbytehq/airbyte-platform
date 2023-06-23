@@ -48,7 +48,11 @@ public class RouterService {
     final Geography geography = configRepository.getGeographyForConnection(connectionId);
     final UUID workspaceId = configRepository.getStandardWorkspaceFromConnection(connectionId, false).getWorkspaceId();
     if (featureFlagClient.boolVariation(ShouldRunOnGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
-      return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
+      if (featureFlagClient.boolVariation(ShouldRunOnExpandedGkeDataplane.INSTANCE, new Workspace(workspaceId))) {
+        return taskQueueMapper.getTaskQueueExpanded(geography, jobType);
+      } else {
+        return taskQueueMapper.getTaskQueueFlagged(geography, jobType);
+      }
     } else {
       return taskQueueMapper.getTaskQueue(geography, jobType);
     }
