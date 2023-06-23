@@ -118,7 +118,7 @@ public class JobNotifier {
                 standardSync.getName(), jobDescription, logUrl, job.getId()));
       } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
         // We are not sending these to customerIO right now.
-        notificationItem = notificationSettings.getSendOnFailure();
+        notificationItem = notificationSettings.getSendOnSuccess();
         sendNotification(notificationItem, SUCCESS_NOTIFICATION,
             (notificationClient) -> notificationClient.notifyJobSuccess(workspace.getEmail(), sourceConnector, destinationConnector,
                 standardSync.getName(), jobDescription, logUrl, job.getId()));
