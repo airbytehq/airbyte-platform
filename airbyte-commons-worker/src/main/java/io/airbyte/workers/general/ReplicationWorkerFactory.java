@@ -12,7 +12,6 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.commons.features.FeatureFlags;
-import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.ConcurrentSourceStreamRead;
 import io.airbyte.featureflag.Connection;
@@ -129,8 +128,7 @@ public class ReplicationWorkerFactory {
     // reset jobs use an empty source to induce resetting all data in destination.
     final var airbyteSource = syncInput.getIsReset()
         ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
-        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig,
-            getSourceResourceRequirements(sourceLauncherConfig, syncInput),
+        : airbyteIntegrationLauncherFactory.createAirbyteSource(sourceLauncherConfig, syncInput.getSourceResourceRequirements(),
             syncInput.getCatalog(), heartbeatMonitor);
 
     log.info("Setting up destination...");
@@ -152,28 +150,6 @@ public class ReplicationWorkerFactory {
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
         featureFlagClient, jobRunConfig, syncInput, airbyteMessageDataExtractor, replicationAirbyteMessageEventPublishingHelper);
-  }
-
-  /**
-   * Retrieves the {@link ResourceRequirements} for a source. This method exists to modify the
-   * resource requirements for experiments, such as parallel source reads, etc.
-   *
-   * @param sourceLauncherConfig The {@link IntegrationLauncherConfig} for the source.
-   * @param syncInput The input for the current sync.
-   * @return The potentially modified {@link ResourceRequirements} based on the current configuration.
-   */
-  private ResourceRequirements getSourceResourceRequirements(final IntegrationLauncherConfig sourceLauncherConfig,
-                                                             final StandardSyncInput syncInput) {
-    if (syncInput.getSourceResourceRequirements() != null && shouldEnableConcurrentSourceRead(sourceLauncherConfig, syncInput)) {
-      final ResourceRequirements updatedSourceResourceRequirements = new ResourceRequirements();
-      updatedSourceResourceRequirements.setCpuLimit("5.0");
-      updatedSourceResourceRequirements.setCpuRequest("5.0");
-      updatedSourceResourceRequirements.setMemoryLimit(syncInput.getSourceResourceRequirements().getMemoryLimit());
-      updatedSourceResourceRequirements.setMemoryRequest(syncInput.getSourceResourceRequirements().getMemoryRequest());
-      return updatedSourceResourceRequirements;
-    } else {
-      return syncInput.getSourceResourceRequirements();
-    }
   }
 
   /**
