@@ -62,6 +62,21 @@ create table "public"."normalization_summaries" (
   constraint "normalization_summaries_pkey"
     primary key ("id")
 );
+create table "public"."retry_states" (
+  "id" uuid not null,
+  "connection_id" uuid not null,
+  "job_id" bigint not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "successive_complete_failures" int not null,
+  "total_complete_failures" int not null,
+  "successive_partial_failures" int not null,
+  "total_partial_failures" int not null,
+  constraint "retry_states_pkey"
+    primary key ("id"),
+  constraint "uniq_job_id"
+    unique ("job_id")
+);
 create table "public"."stream_stats" (
   "id" uuid not null,
   "attempt_id" bigint not null,
@@ -121,6 +136,10 @@ alter table "public"."normalization_summaries"
   add constraint "normalization_summaries_attempt_id_fkey"
     foreign key ("attempt_id")
     references "public"."attempts" ("id");
+alter table "public"."retry_states"
+  add constraint "retry_states_job_id_fkey"
+    foreign key ("job_id")
+    references "public"."jobs" ("id");
 alter table "public"."stream_stats"
   add constraint "stream_stats_attempt_id_fkey"
     foreign key ("attempt_id")
@@ -140,6 +159,8 @@ create index "jobs_config_type_idx" on "public"."jobs"("config_type" asc);
 create index "jobs_scope_idx" on "public"."jobs"("scope" asc);
 create index "jobs_status_idx" on "public"."jobs"("status" asc);
 create index "normalization_summary_attempt_id_idx" on "public"."normalization_summaries"("attempt_id" asc);
+create index "retry_state_connection_id_idx" on "public"."retry_states"("connection_id" asc);
+create index "retry_state_job_id_idx" on "public"."retry_states"("job_id" asc);
 create index "index" on "public"."stream_stats"("attempt_id" asc);
 create index "stream_status_connection_id_idx" on "public"."stream_statuses"("connection_id" asc);
 create index "stream_status_job_id_idx" on "public"."stream_statuses"("job_id" asc);

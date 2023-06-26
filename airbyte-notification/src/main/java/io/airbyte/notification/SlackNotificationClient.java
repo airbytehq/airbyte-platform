@@ -49,14 +49,17 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobFailure(final String sourceConnector,
+  public boolean notifyJobFailure(final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
     return notifyFailure(renderTemplate(
         "slack/failure_slack_notification_template.txt",
+        connectionName,
         sourceConnector,
         destinationConnector,
         jobDescription,
@@ -65,14 +68,17 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobSuccess(final String sourceConnector,
+  public boolean notifyJobSuccess(final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
     return notifySuccess(renderTemplate(
         "slack/success_slack_notification_template.txt",
+        connectionName,
         sourceConnector,
         destinationConnector,
         jobDescription,

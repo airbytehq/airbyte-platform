@@ -14,6 +14,7 @@ export enum FeatureItem {
   AllowSyncSubOneHourCronExpressions = "ALLOW_SYNC_SUB_ONE_HOUR_CRON_EXPRESSIONS",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   FreeConnectorProgram = "FREE_CONNECTOR_PROGRAM",
+  EmailNotifications = "EMAIL_NOTIFICATIONS",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

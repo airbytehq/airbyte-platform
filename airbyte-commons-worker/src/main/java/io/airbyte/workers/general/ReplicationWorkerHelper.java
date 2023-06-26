@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.FailureReason;
@@ -20,7 +19,6 @@ import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.protocol.models.AirbyteControlMessage;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
@@ -48,7 +46,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
@@ -72,7 +69,6 @@ class ReplicationWorkerHelper {
   private final AirbyteMapper mapper;
   private final MessageTracker messageTracker;
   private final SyncPersistence syncPersistence;
-  private final ConnectorConfigUpdater connectorConfigUpdater;
   private final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private final ThreadedTimeTracker timeTracker;
   private long recordsRead;
@@ -93,7 +89,6 @@ class ReplicationWorkerHelper {
                                  final AirbyteMapper mapper,
                                  final MessageTracker messageTracker,
                                  final SyncPersistence syncPersistence,
-                                 final ConnectorConfigUpdater connectorConfigUpdater,
                                  final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper,
                                  final ThreadedTimeTracker timeTracker) {
     this.airbyteMessageDataExtractor = airbyteMessageDataExtractor;
@@ -101,7 +96,6 @@ class ReplicationWorkerHelper {
     this.mapper = mapper;
     this.messageTracker = messageTracker;
     this.syncPersistence = syncPersistence;
-    this.connectorConfigUpdater = connectorConfigUpdater;
     this.replicationAirbyteMessageEventPublishingHelper = replicationAirbyteMessageEventPublishingHelper;
     this.timeTracker = timeTracker;
 
@@ -164,7 +158,7 @@ class ReplicationWorkerHelper {
   public void endOfDestination() {
     // Publish the completed state for the last stream, if present
     final StreamDescriptor currentStream = getCurrentDestinationStream();
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && currentStream != null) {
+    if (currentStream != null) {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentStream, replicationContext,
           AirbyteMessageOrigin.DESTINATION);
     }
@@ -184,10 +178,8 @@ class ReplicationWorkerHelper {
    *        the reported incomplete replication event.
    */
   private void handleReplicationFailure(final AirbyteMessageOrigin failureOrigin, final Supplier<StreamDescriptor> streamSupplier) {
-    if (replicationFeatureFlags.shouldHandleStreamStatus()) {
-      replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(), replicationContext, failureOrigin,
-          Optional.of(StreamStatusIncompleteRunCause.FAILED));
-    }
+    replicationAirbyteMessageEventPublishingHelper.publishIncompleteStatusEvent(streamSupplier.get(), replicationContext, failureOrigin,
+        Optional.of(StreamStatusIncompleteRunCause.FAILED));
   }
 
   /**
@@ -207,17 +199,9 @@ class ReplicationWorkerHelper {
 
     messageTracker.acceptFromSource(message);
 
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(airbyteMessage)) {
+    if (shouldPublishMessage(airbyteMessage)) {
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, message, replicationContext));
-    } else {
-      try {
-        if (message.getType() == Type.CONTROL) {
-          acceptSrcControlMessage(replicationContext.sourceId(), message.getControl());
-        }
-      } catch (final Exception e) {
-        LOGGER.error("Error updating source configuration", e);
-      }
     }
 
     recordsRead += 1;
@@ -240,7 +224,7 @@ class ReplicationWorkerHelper {
 
     // If the worker has moved on to the next stream, ensure that a completed status is sent
     // for the previously tracked stream.
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && previousStream != null && !previousStream.equals(currentDestinationStream)) {
+    if (previousStream != null && !previousStream.equals(currentDestinationStream)) {
       replicationAirbyteMessageEventPublishingHelper.publishCompleteStatusEvent(currentDestinationStream, replicationContext,
           AirbyteMessageOrigin.DESTINATION);
     }
@@ -250,18 +234,10 @@ class ReplicationWorkerHelper {
       syncPersistence.persist(replicationContext.connectionId(), message.getState());
     }
 
-    if (replicationFeatureFlags.shouldHandleStreamStatus() && shouldPublishMessage(message)) {
+    if (shouldPublishMessage(message)) {
       LOGGER.debug("Publishing destination event for stream {}:{}...", currentDestinationStream.getNamespace(), currentDestinationStream.getName());
       replicationAirbyteMessageEventPublishingHelper
           .publishStatusEvent(new ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.DESTINATION, message, replicationContext));
-    } else {
-      try {
-        if (message.getType() == Type.CONTROL) {
-          acceptDstControlMessage(replicationContext.destinationId(), message.getControl());
-        }
-      } catch (final Exception e) {
-        LOGGER.error("Error updating destination configuration", e);
-      }
     }
   }
 
@@ -344,20 +320,6 @@ class ReplicationWorkerHelper {
       output.setFailures(failures);
     }
     return failures;
-  }
-
-  private void acceptSrcControlMessage(final UUID sourceId,
-                                       final AirbyteControlMessage controlMessage) {
-    if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
-      connectorConfigUpdater.updateSource(sourceId, controlMessage.getConnectorConfig().getConfig());
-    }
-  }
-
-  private void acceptDstControlMessage(final UUID destinationId,
-                                       final AirbyteControlMessage controlMessage) {
-    if (controlMessage.getType() == AirbyteControlMessage.Type.CONNECTOR_CONFIG) {
-      connectorConfigUpdater.updateDestination(destinationId, controlMessage.getConnectorConfig().getConfig());
-    }
   }
 
   private void publishEndOfReplicationStreamStatusEvent() {

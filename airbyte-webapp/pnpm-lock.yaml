@@ -140,7 +140,6 @@ specifiers:
   react-select-event: ^5.5.0
   react-slick: ^0.29.0
   react-use: ^17.4.0
-  react-use-intercom: ^1.5.2
   react-virtualized-auto-sizer: ^1.0.17
   react-widgets: ^4.6.1
   react-window: ^1.8.9
@@ -240,7 +239,6 @@ dependencies:
   react-select: 5.7.0_ro4ku5z46nsxvn4dbg2mnhgwbu
   react-slick: 0.29.0_sfoxds7t5ydpegc3knd667wn6m
   react-use: 17.4.0_sfoxds7t5ydpegc3knd667wn6m
-  react-use-intercom: 1.5.2_sfoxds7t5ydpegc3knd667wn6m
   react-virtualized-auto-sizer: 1.0.17_sfoxds7t5ydpegc3knd667wn6m
   react-widgets: 4.6.1_sfoxds7t5ydpegc3knd667wn6m
   react-window: 1.8.9_sfoxds7t5ydpegc3knd667wn6m
@@ -14311,17 +14309,6 @@ packages:
     dependencies:
       react: 17.0.2
       tslib: 2.4.1
-    dev: false
-
-  /react-use-intercom/1.5.2_sfoxds7t5ydpegc3knd667wn6m:
-    resolution: {integrity: sha512-5bK3TtsZ9S18vWuagncc1tJA/+2WouIjMHtVlgcrvECYbDhOwFNMb1h1XDDcOIk4gZv+eDx/oiWLbNHFAR7lIA==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      react: '>=16.8.0'
-      react-dom: '>=16.8.0'
-    dependencies:
-      react: 17.0.2
-      react-dom: 17.0.2_react@17.0.2
     dev: false
 
   /react-use/17.4.0_sfoxds7t5ydpegc3knd667wn6m:

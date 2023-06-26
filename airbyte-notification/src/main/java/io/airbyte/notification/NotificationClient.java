@@ -27,24 +27,30 @@ public abstract class NotificationClient {
   }
 
   public NotificationClient() {
-    sendOnFailure = false;
-    sendOnSuccess = false;
+    // Actual sendOnFailure/Success should be read from notificationSettings; this is just to
+    // accommodate legacy Notification configuration.
+    sendOnFailure = true;
+    sendOnSuccess = true;
   }
 
   public abstract boolean notifyJobFailure(
-                                           String sourceConnector,
-                                           String destinationConnector,
-                                           String jobDescription,
-                                           String logUrl,
-                                           Long jobId)
+                                           final String receiverEmail,
+                                           final String sourceConnector,
+                                           final String destinationConnector,
+                                           final String connectionName,
+                                           final String jobDescription,
+                                           final String logUrl,
+                                           final Long jobId)
       throws IOException, InterruptedException;
 
   public abstract boolean notifyJobSuccess(
-                                           String sourceConnector,
-                                           String destinationConnector,
-                                           String jobDescription,
-                                           String logUrl,
-                                           Long jobId)
+                                           final String receiverEmail,
+                                           final String sourceConnector,
+                                           final String destinationConnector,
+                                           final String connectionName,
+                                           final String jobDescription,
+                                           final String logUrl,
+                                           final Long jobId)
       throws IOException, InterruptedException;
 
   public abstract boolean notifyConnectionDisabled(String receiverEmail,

@@ -5,7 +5,6 @@
 package io.airbyte.workers.general;
 
 import io.airbyte.commons.concurrency.BoundedConcurrentLinkedQueue;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
@@ -90,7 +89,6 @@ public class BufferedReplicationWorker implements ReplicationWorker {
                                    final SyncPersistence syncPersistence,
                                    final RecordSchemaValidator recordSchemaValidator,
                                    final FieldSelector fieldSelector,
-                                   final ConnectorConfigUpdater connectorConfigUpdater,
                                    final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                    final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                    final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
@@ -100,7 +98,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
     this.source = source;
     this.destination = destination;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        connectorConfigUpdater, replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
     this.replicationFeatureFlagReader = replicationFeatureFlagReader;
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
@@ -125,7 +123,7 @@ public class BufferedReplicationWorker implements ReplicationWorker {
 
     try {
       final ReplicationContext replicationContext = getReplicationContext(syncInput);
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationContext, syncInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
       replicationWorkerHelper.initialize(replicationContext, flags);
 
       // note: resources are closed in the opposite order in which they are declared. thus source will be

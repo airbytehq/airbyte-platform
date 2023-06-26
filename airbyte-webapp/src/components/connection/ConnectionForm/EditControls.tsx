@@ -5,8 +5,6 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
-import { isCloudApp } from "utils/app";
-
 import styles from "./EditControls.module.scss";
 import { ResponseMessage } from "./ResponseMessage";
 
@@ -38,7 +36,7 @@ const EditControls: React.FC<EditControlProps> = ({
       alignItems="center"
       direction="row"
       gap="lg"
-      className={classNames(styles.container, { [styles.cloud]: isCloudApp(), [styles.hidden]: hidden })}
+      className={classNames(styles.container, { [styles.hidden]: hidden })}
     >
       <ResponseMessage dirty={dirty} successMessage={successMessage} errorMessage={errorMessage} />
       <FlexContainer gap="md">

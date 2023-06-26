@@ -227,7 +227,7 @@ export const WebHookForm: React.FC<WebHookFormProps> = ({ webhook }) => {
                         disabled={!values.webhook || !!errors.webhook || formAction.save}
                         onClick={() => webhookAction(WebhookAction.Test, values)}
                       >
-                        <FormattedMessage id="settings.test" />
+                        <FormattedMessage id="settings.notifications.testWebhookButtonLabel" />
                       </Button>
                     }
                   >

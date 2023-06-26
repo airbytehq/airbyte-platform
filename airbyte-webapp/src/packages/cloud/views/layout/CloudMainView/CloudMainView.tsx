@@ -15,7 +15,6 @@ import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
 import { RoutePaths } from "pages/routePaths";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
@@ -36,7 +35,6 @@ import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/componen
 import { WorkspacePopout } from "../../workspaces/WorkspacePopout";
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
-  useIntercom();
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);

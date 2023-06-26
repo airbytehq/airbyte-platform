@@ -3,11 +3,12 @@
 @use "scss/connection/stream-status-colors";
 
 .status {
-  position: relative;
-
   @each $name, $color, $bg-color in stream-status-colors.$by-stream-status {
     &--#{$name} {
       .icon {
+        position: relative; // for positioning the spinner
+        width: 24px; // toss out slight differences from svg files
+        height: 24px;
         color: $color;
       }
 
@@ -24,4 +25,5 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  line-height: 0;
 }

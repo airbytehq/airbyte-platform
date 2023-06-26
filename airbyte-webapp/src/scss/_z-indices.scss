@@ -1,15 +1,13 @@
-$intercom: 2147483001; // Liable to change if intercom updates their CSS
-
 $base: 0;
 $bulkEdit: 1000;
-$tooltip: $intercom + 4;
-$notification: $intercom + 3;
-$datepicker: $intercom + 2;
+$sidebar: 9999;
+$tooltip: $sidebar + 4;
+$notification: $sidebar + 3;
+$datepicker: $sidebar + 2;
 $mainPageWithScrollEdge: 1;
-$modal: $intercom + 1;
+$modal: $sidebar + 1;
 $overlay: 2;
 $pageHeader: 2;
-$sidebar: $intercom;
 $schemaChangesBackdropContent: 4;
 $schemaChangesBackdrop: 3;
 $dropdownMenu: 2;

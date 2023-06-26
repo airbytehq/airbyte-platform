@@ -24,10 +24,10 @@
   }
 }
 
-$contentPadding: 40px;
+$contentPadding: 10px;
 
 .tooltipContainer {
-  width: 248px;
+  width: 195px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -53,6 +53,11 @@ $contentPadding: 40px;
     .syncContainer {
       display: flex;
       align-items: center;
+
+      .loadingSpinner {
+        transform: scale(82%); // ~18px, matching the status indicators
+        margin-right: variables.$spacing-sm;
+      }
     }
   }
 }

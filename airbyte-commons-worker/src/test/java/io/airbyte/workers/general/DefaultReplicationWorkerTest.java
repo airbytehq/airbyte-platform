@@ -27,9 +27,8 @@ class DefaultReplicationWorkerTest extends ReplicationWorkerTest {
         syncPersistence,
         recordSchemaValidator,
         fieldSelector,
-        connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(featureFlagClient),
+        new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper);
   }

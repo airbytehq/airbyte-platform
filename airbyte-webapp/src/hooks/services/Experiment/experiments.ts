@@ -21,7 +21,6 @@ export interface Experiments {
   "connection.onboarding.destinations": string;
   "connection.autoDetectSchemaChanges": boolean;
   "connection.columnSelection": boolean;
-  "connection.streamCentricUI.v1": boolean;
   "connection.streamCentricUI.v2": boolean;
   "connection.streamCentricUI.lateMultiplier": number;
   "connection.streamCentricUI.errorMultiplier": number;
@@ -32,4 +31,5 @@ export interface Experiments {
   "upcomingFeaturesPage.url": string;
   "billing.newTrialPolicy": boolean;
   "connector.allowlistIpBanner": boolean;
+  "settings.emailNotifications": boolean;
 }

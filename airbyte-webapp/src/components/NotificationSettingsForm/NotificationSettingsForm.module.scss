@@ -1,0 +1,13 @@
+@use "scss/variables";
+
+.inputGrid {
+  display: grid;
+  grid-template-columns: 2fr 60px 60px 4fr 62px;
+  align-items: center;
+  gap: variables.$spacing-lg;
+  row-gap: variables.$spacing-2xl;
+
+  &--withoutEmail {
+    grid-template-columns: 2fr 60px 4fr 62px;
+  }
+}

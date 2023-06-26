@@ -6,7 +6,6 @@ import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
 
 import logoUrl from "./components/workspaceHeaderLogo.svg";
 import { WorkspacesCreateControl } from "./components/WorkspacesCreateControl";
@@ -15,7 +14,6 @@ import styles from "./WorkspacesPage.module.scss";
 
 const WorkspacesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.WORKSPACES);
-  useIntercom();
 
   return (
     <div className={styles.container}>

@@ -7,7 +7,6 @@ package io.airbyte.workers.general;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 
 import datadog.trace.api.Trace;
-import io.airbyte.commons.converters.ConnectorConfigUpdater;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.ReplicationOutput;
@@ -87,7 +86,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
                                   final SyncPersistence syncPersistence,
                                   final RecordSchemaValidator recordSchemaValidator,
                                   final FieldSelector fieldSelector,
-                                  final ConnectorConfigUpdater connectorConfigUpdater,
                                   final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                   final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
@@ -95,7 +93,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
     this.jobId = jobId;
     this.attempt = attempt;
     this.replicationWorkerHelper = new ReplicationWorkerHelper(airbyteMessageDataExtractor, fieldSelector, mapper, messageTracker, syncPersistence,
-        connectorConfigUpdater, replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
+        replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker());
     this.source = source;
     this.destination = destination;
     this.syncPersistence = syncPersistence;
@@ -139,7 +137,7 @@ public class DefaultReplicationWorker implements ReplicationWorker {
               attempt, syncInput.getWorkspaceId());
       ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(replicationContext, syncInput);
+      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
       LOGGER.info("Committing states from " + (flags.shouldCommitStateAsap() ? "replication" : "persistState") + " activity");
       if (flags.shouldCommitStatsAsap()) {
         LOGGER.info("Committing stats from replication activity");

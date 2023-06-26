@@ -1,6 +1,6 @@
 {
   "name": "airbyte-webapp",
-  "version": "0.50.4",
+  "version": "0.50.5",
   "private": true,
   "engines": {
     "node": "18.15.0",
@@ -109,7 +109,6 @@
     "react-select": "^5.4.0",
     "react-slick": "^0.29.0",
     "react-use": "^17.4.0",
-    "react-use-intercom": "^1.5.2",
     "react-virtualized-auto-sizer": "^1.0.17",
     "react-widgets": "^4.6.1",
     "react-window": "^1.8.9",

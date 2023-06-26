@@ -33,7 +33,7 @@ import {
   startFromScratch,
   testStream,
 } from "pages/connectorBuilderPage";
-import { goToSourcePage, openSourceOverview } from "pages/sourcePage";
+import { goToSourcePage, openSourceConnectionsPage } from "pages/sourcePage";
 
 describe("Connector builder", { testIsolation: false }, () => {
   const connectorName = appendRandomString("dummy_api");
@@ -137,6 +137,7 @@ describe("Connector builder", { testIsolation: false }, () => {
     createTestConnection(sourceName, destinationName);
     startManualSync();
 
+    cy.get("[data-testid='job-history-step']").click();
     cy.get("span").contains("2 committed records", { timeout: 60000 }).should("exist");
 
     // release new connector version
@@ -146,12 +147,14 @@ describe("Connector builder", { testIsolation: false }, () => {
     publishProject();
     sync(sourceName, destinationName);
 
+    cy.get("[data-testid='job-history-step']").click();
     cy.get("span").contains("4 committed records", { timeout: 60000 }).should("exist");
 
     goToConnectorBuilderProjectsPage();
     selectActiveVersion(connectorName, 1);
     sync(sourceName, destinationName);
 
+    cy.get("[data-testid='job-history-step']").click();
     cy.get('span:contains("2 committed records")', { timeout: 60000 }).should("have.length", 2);
 
     goToConnectorBuilderProjectsPage();
@@ -169,7 +172,7 @@ describe("Connector builder", { testIsolation: false }, () => {
 
 const sync = (sourceName: string, destinationName: string) => {
   goToSourcePage();
-  openSourceOverview(sourceName);
+  openSourceConnectionsPage(sourceName);
   connectionSettings.openConnectionOverviewByDestinationName(destinationName);
   startManualSync();
 };

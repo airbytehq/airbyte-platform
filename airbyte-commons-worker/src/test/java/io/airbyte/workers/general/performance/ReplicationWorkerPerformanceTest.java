@@ -78,7 +78,6 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                          final SyncPersistence syncPersistence,
                                                          final RecordSchemaValidator recordSchemaValidator,
                                                          final FieldSelector fieldSelector,
-                                                         final ConnectorConfigUpdater connectorConfigUpdater,
                                                          final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
                                                          final ReplicationFeatureFlagReader replicationFeatureFlagReader,
                                                          final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
@@ -169,9 +168,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         syncPersistence,
         validator,
         fieldSelector,
-        connectorConfigUpdater,
         heartbeatTimeoutChaperone,
-        new ReplicationFeatureFlagReader(featureFlagClient),
+        new ReplicationFeatureFlagReader(),
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();

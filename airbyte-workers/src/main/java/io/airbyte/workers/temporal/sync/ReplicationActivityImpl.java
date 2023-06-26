@@ -33,7 +33,7 @@ import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -72,6 +72,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
   private final OrchestratorHandleFactory orchestratorHandleFactory;
+  private final MetricClient metricClient;
 
   public ReplicationActivityImpl(final SecretsHydrator secretsHydrator,
                                  @Named("workspaceRoot") final Path workspaceRoot,
@@ -81,7 +82,8 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                  final AirbyteConfigValidator airbyteConfigValidator,
                                  final TemporalUtils temporalUtils,
                                  final AirbyteApiClient airbyteApiClient,
-                                 final OrchestratorHandleFactory orchestratorHandleFactory) {
+                                 final OrchestratorHandleFactory orchestratorHandleFactory,
+                                 final MetricClient metricClient) {
     this.secretsHydrator = secretsHydrator;
     this.workspaceRoot = workspaceRoot;
     this.workerEnvironment = workerEnvironment;
@@ -91,6 +93,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
     this.orchestratorHandleFactory = orchestratorHandleFactory;
+    this.metricClient = metricClient;
   }
 
   // Marking task queue as nullable because we changed activity signature; thus runs started before
@@ -103,7 +106,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
                                       final IntegrationLauncherConfig destinationLauncherConfig,
                                       final StandardSyncInput syncInput,
                                       @Nullable final String taskQueue) {
-    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
+    metricClient.count(OssMetricsRegistry.ACTIVITY_REPLICATION, 1);
 
     final Map<String, Object> traceAttributes =
         Map.of(
@@ -115,7 +118,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     ApmTraceUtils
         .addTagsToTrace(traceAttributes);
     if (syncInput.getIsReset()) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.RESET_REQUEST, 1);
+      metricClient.count(OssMetricsRegistry.RESET_REQUEST, 1);
     }
     final ActivityExecutionContext context = Activity.getExecutionContext();
     return temporalUtils.withBackgroundHeartbeat(
@@ -168,7 +171,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
         () -> context);
   }
 
-  private static StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final Map<String, Object> metricAttributes) {
+  private StandardSyncOutput reduceReplicationOutput(final ReplicationOutput output, final Map<String, Object> metricAttributes) {
     final StandardSyncOutput standardSyncOutput = new StandardSyncOutput();
     final StandardSyncSummary syncSummary = new StandardSyncSummary();
     final ReplicationAttemptSummary replicationSummary = output.getReplicationAttemptSummary();
@@ -191,7 +194,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     return standardSyncOutput;
   }
 
-  private static void traceReplicationSummary(final ReplicationAttemptSummary replicationSummary, final Map<String, Object> metricAttributes) {
+  private void traceReplicationSummary(final ReplicationAttemptSummary replicationSummary, final Map<String, Object> metricAttributes) {
     if (replicationSummary == null) {
       return;
     }
@@ -202,11 +205,11 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     final Map<String, Object> tags = new HashMap<>();
     if (replicationSummary.getBytesSynced() != null) {
       tags.put(REPLICATION_BYTES_SYNCED_KEY, replicationSummary.getBytesSynced());
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.REPLICATION_BYTES_SYNCED, replicationSummary.getBytesSynced(), attributes);
+      metricClient.count(OssMetricsRegistry.REPLICATION_BYTES_SYNCED, replicationSummary.getBytesSynced(), attributes);
     }
     if (replicationSummary.getRecordsSynced() != null) {
       tags.put(REPLICATION_RECORDS_SYNCED_KEY, replicationSummary.getRecordsSynced());
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.REPLICATION_RECORDS_SYNCED, replicationSummary.getRecordsSynced(), attributes);
+      metricClient.count(OssMetricsRegistry.REPLICATION_RECORDS_SYNCED, replicationSummary.getRecordsSynced(), attributes);
     }
     if (replicationSummary.getStatus() != null) {
       tags.put(REPLICATION_STATUS_KEY, replicationSummary.getStatus().value());

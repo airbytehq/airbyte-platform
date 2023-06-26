@@ -11,9 +11,8 @@ export const updateField = (field: string, value: string) => {
   cy.get(`input[name='${field}']`).type(value);
 };
 
-export const openSettingForm = (name: string) => {
+export const openConnectorPage = (name: string) => {
   cy.get("div").contains(name).click();
-  cy.get("div[data-id='settings-step']").click();
 };
 
 export const deleteEntity = () => {
