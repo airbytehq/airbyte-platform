@@ -20,7 +20,6 @@ import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverride
 import io.airbyte.featureflag.ConnectorVersionOverridesEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.featureflag.UseActorDefinitionVersionTableDefaults;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
@@ -52,19 +51,23 @@ class ActorDefinitionVersionHelperTest {
           "key", "value",
           "key2", "value2")));
 
+  private static final UUID DEFAULT_VERSION_ID = UUID.randomUUID();
+
   private static final ActorDefinitionVersion DEFAULT_VERSION = new ActorDefinitionVersion()
+      .withVersionId(DEFAULT_VERSION_ID)
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSpec(SPEC);
   private static final ActorDefinitionVersion OVERRIDDEN_VERSION = new ActorDefinitionVersion()
+      .withVersionId(UUID.randomUUID())
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG_2)
       .withSpec(SPEC_2);
 
   @BeforeEach
-  void setup() {
+  void setup() throws ConfigNotFoundException, IOException {
     mOverrideProvider = mock(DefinitionVersionOverrideProvider.class);
     when(mOverrideProvider.getOverride(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
 
@@ -72,6 +75,7 @@ class ActorDefinitionVersionHelperTest {
     when(mFeatureFlagClient.boolVariation(ConnectorVersionOverridesEnabled.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     mConfigRepository = mock(ConfigRepository.class);
+    when(mConfigRepository.getActorDefinitionVersion(DEFAULT_VERSION_ID)).thenReturn(DEFAULT_VERSION);
     actorDefinitionVersionHelper =
         new ActorDefinitionVersionHelper(mConfigRepository, mOverrideProvider, mFeatureFlagClient);
   }
@@ -80,9 +84,7 @@ class ActorDefinitionVersionHelperTest {
   void testGetSourceVersion() throws ConfigNotFoundException, IOException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(DEFAULT_VERSION, actual);
@@ -95,9 +97,7 @@ class ActorDefinitionVersionHelperTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
@@ -112,9 +112,7 @@ class ActorDefinitionVersionHelperTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(DEFAULT_VERSION, actual);
@@ -122,20 +120,12 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetSourceVersionForWorkspace() throws ConfigNotFoundException, IOException {
-    final ActorDefinitionVersion expected = new ActorDefinitionVersion()
-        .withActorDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withSpec(SPEC);
-
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withSpec(SPEC);
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID);
-    assertEquals(expected, actual);
+    assertEquals(DEFAULT_VERSION, actual);
   }
 
   @Test
@@ -145,9 +135,7 @@ class ActorDefinitionVersionHelperTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
@@ -155,20 +143,12 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersion() throws ConfigNotFoundException, IOException {
-    final ActorDefinitionVersion expected = new ActorDefinitionVersion()
-        .withActorDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withSpec(SPEC);
-
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withSpec(SPEC);
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(expected, actual);
+    assertEquals(DEFAULT_VERSION, actual);
   }
 
   @Test
@@ -178,9 +158,7 @@ class ActorDefinitionVersionHelperTest {
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
@@ -188,20 +166,12 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersionForWorkspace() throws ConfigNotFoundException, IOException {
-    final ActorDefinitionVersion expected = new ActorDefinitionVersion()
-        .withActorDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withSpec(SPEC);
-
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
-        .withSpec(SPEC);
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID);
-    assertEquals(expected, actual);
+    assertEquals(DEFAULT_VERSION, actual);
   }
 
   @Test
@@ -211,21 +181,18 @@ class ActorDefinitionVersionHelperTest {
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(DEFAULT_VERSION.getDockerRepository())
-        .withDockerImageTag(DEFAULT_VERSION.getDockerImageTag())
-        .withSpec(DEFAULT_VERSION.getSpec());
+        .withDefaultVersionId(DEFAULT_VERSION_ID);
 
     final ActorDefinitionVersion actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID);
     assertEquals(OVERRIDDEN_VERSION, actual);
   }
 
   @Test
-  void testGetDefaultSourceVersionFromDb() throws ConfigNotFoundException, IOException {
+  void testGetDefaultSourceVersion() throws ConfigNotFoundException, IOException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID);
 
-    when(mFeatureFlagClient.boolVariation(UseActorDefinitionVersionTableDefaults.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(DEFAULT_VERSION);
 
     final ActorDefinitionVersion result = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID);
@@ -233,12 +200,11 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDefaultDestinationVersionFromDb() throws ConfigNotFoundException, IOException {
+  void testGetDefaultDestinationVersion() throws ConfigNotFoundException, IOException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID);
 
-    when(mFeatureFlagClient.boolVariation(UseActorDefinitionVersionTableDefaults.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
     when(mConfigRepository.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(DEFAULT_VERSION);
 
     final ActorDefinitionVersion result = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID);
@@ -246,11 +212,9 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDefaultVersionFromDbWithNoDefaultThrows() {
+  void testGetDefaultVersionWithNoDefaultThrows() {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID);
-
-    when(mFeatureFlagClient.boolVariation(UseActorDefinitionVersionTableDefaults.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     final RuntimeException exception =
         assertThrows(RuntimeException.class, () -> actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID));
@@ -258,11 +222,9 @@ class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  void testGetDefaultDestinationVersionFromDbWithNoDefaultThrows() {
+  void testGetDefaultDestinationVersionWithNoDefaultThrows() {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID);
-
-    when(mFeatureFlagClient.boolVariation(UseActorDefinitionVersionTableDefaults.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(true);
 
     final RuntimeException exception =
         assertThrows(RuntimeException.class, () -> actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID));
