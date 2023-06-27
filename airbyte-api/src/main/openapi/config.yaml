@@ -2781,6 +2781,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StreamStatusRead"
+  /v1/jobs/retry_states/create_or_update:
+    post:
+      summary: Creates or updates a retry state for a job.
+      tags:
+        - job_retry_states
+      operationId: createOrUpdate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRetryStateRequestBody"
+      responses:
+        "204":
+          description: Successfully put retry state.
+  /v1/jobs/retry_states/get:
+    post:
+      summary: Gets a retry state.
+      tags:
+        - job_retry_states
+      operationId: get
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved retry state for a job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetryStateRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -6262,6 +6296,57 @@ components:
           $ref: "#/components/schemas/SlackNotificationConfiguration"
         notificationTrigger:
           $ref: "#/components/schemas/NotificationTrigger"
+    RetryStateRead:
+      type: object
+      required:
+        - id
+        - jobId
+        - connectionId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
+    JobRetryStateRequestBody:
+      type: object
+      required:
+        - connectionId
+        - jobId
+        - successiveCompleteFailures
+        - totalCompleteFailures
+        - successivePartialFailures
+        - totalPartialFailures
+      properties:
+        id:
+          type: string
+          format: uuid
+        connectionId:
+          $ref: "#/components/schemas/ConnectionId"
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        successiveCompleteFailures:
+          type: integer
+        totalCompleteFailures:
+          type: integer
+        successivePartialFailures:
+          type: integer
+        totalPartialFailures:
+          type: integer
     InvalidInputProperty:
       type: object
       required:

@@ -155,6 +155,62 @@ class RetryStatesRepositoryTest {
     Assertions.assertEquals(s3, found3.get());
   }
 
+  @Test
+  void testExistsByJobId() {
+    final var s = Fixtures.state()
+        .jobId(Fixtures.jobId3)
+        .build();
+
+    repo.save(s);
+
+    final var exists1 = repo.existsByJobId(Fixtures.jobId3);
+    final var exists2 = repo.existsByJobId(Fixtures.jobId2);
+
+    Assertions.assertTrue(exists1);
+    Assertions.assertFalse(exists2);
+  }
+
+  @Test
+  void testCreateOrUpdateByJobIdUpdate() {
+    final var s = Fixtures.state()
+        .jobId(Fixtures.jobId2)
+        .build();
+
+    final var inserted = repo.save(s);
+    final var id = inserted.getId();
+    final var found1 = repo.findById(id);
+
+    final var updated = Fixtures.stateFrom(inserted)
+        .successiveCompleteFailures(s.getSuccessiveCompleteFailures() + 1)
+        .totalCompleteFailures(s.getTotalCompleteFailures() + 1)
+        .successivePartialFailures(0)
+        .build();
+
+    repo.createOrUpdateByJobId(Fixtures.jobId2, updated);
+
+    final var found2 = repo.findById(id);
+
+    Assertions.assertTrue(found1.isPresent());
+    Assertions.assertEquals(s, found1.get());
+
+    Assertions.assertTrue(found2.isPresent());
+    Assertions.assertEquals(updated, found2.get());
+  }
+
+  @Test
+  void testCreateOrUpdateByJobIdCreate() {
+    final var s = Fixtures.state()
+        .jobId(Fixtures.jobId4)
+        .build();
+
+    repo.createOrUpdateByJobId(Fixtures.jobId4, s);
+
+    final var found1 = repo.findByJobId(Fixtures.jobId4);
+
+    Assertions.assertTrue(found1.isPresent());
+    Assertions.assertEquals(s, found1.get());
+  }
+
   private static class Fixtures {
 
     static UUID connectionId1 = UUID.randomUUID();
@@ -163,6 +219,7 @@ class RetryStatesRepositoryTest {
     static Long jobId1 = ThreadLocalRandom.current().nextLong();
     static Long jobId2 = ThreadLocalRandom.current().nextLong();
     static Long jobId3 = ThreadLocalRandom.current().nextLong();
+    static Long jobId4 = ThreadLocalRandom.current().nextLong();
 
     static RetryStateBuilder state() {
       return RetryState.builder()
