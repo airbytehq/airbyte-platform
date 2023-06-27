@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import React, { useCallback, useContext, useLayoutEffect, useMemo } from "react";
 import { useNavigate, useMatch } from "react-router-dom";
 
+import { useSuspenseQuery } from "core/api";
 import {
   getCloudWorkspaceQueryKey,
   getListCloudWorkspacesAsyncQueryKey,
@@ -17,7 +18,6 @@ import { RoutePaths } from "pages/routePaths";
 
 import { useConfig } from "../../config";
 import { WorkspaceUpdate } from "../../core/request/AirbyteClient";
-import { useSuspenseQuery } from "../connector/useSuspenseQuery";
 import { SCOPE_USER, SCOPE_WORKSPACE } from "../Scope";
 import { useDefaultRequestMiddlewares } from "../useDefaultRequestMiddlewares";
 import { useInitService } from "../useInitService";

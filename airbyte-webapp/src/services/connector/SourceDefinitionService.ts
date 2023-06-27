@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useConfig } from "config";
+import { useSuspenseQuery } from "core/api";
 import { SourceDefinitionService } from "core/domain/connector/SourceDefinitionService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
@@ -8,7 +9,6 @@ import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { isDefined } from "utils/common";
 
 import { connectorDefinitionKeys } from "./ConnectorDefinitions";
-import { useSuspenseQuery } from "./useSuspenseQuery";
 import {
   SourceDefinitionCreate,
   SourceDefinitionRead,

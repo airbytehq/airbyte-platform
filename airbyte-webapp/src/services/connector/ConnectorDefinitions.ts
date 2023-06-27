@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { useSuspenseQuery } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
 import { SCOPE_WORKSPACE } from "services/Scope";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
@@ -7,7 +8,6 @@ import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { useConnectorService } from "./ConnectorService";
 import { useGetDestinationDefinitionService } from "./DestinationDefinitionService";
 import { useGetSourceDefinitionService } from "./SourceDefinitionService";
-import { useSuspenseQuery } from "./useSuspenseQuery";
 
 interface ConnectorSpecifications {
   sourceDefinitions: SourceDefinitionRead[];

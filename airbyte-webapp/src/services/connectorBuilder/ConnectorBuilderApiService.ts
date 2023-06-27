@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
 import { useConfig } from "config";
+import { useSuspenseQuery } from "core/api";
 import { ConnectorBuilderServerRequestService } from "core/domain/connectorBuilder/ConnectorBuilderServerRequestService";
 import {
   ConnectorConfig,
@@ -12,7 +13,6 @@ import {
   StreamsListRequestBody,
 } from "core/request/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 

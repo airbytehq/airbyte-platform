@@ -1,7 +1,6 @@
-import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
-
 import { getSpeakeasyCallbackUrl } from "../../generated/AirbyteApi";
 import { useRequestOptions } from "../../useRequestOptions";
+import { useSuspenseQuery } from "../../useSuspenseQuery";
 
 export const useSpeakeasyRedirect = () => {
   const requestOptions = useRequestOptions();

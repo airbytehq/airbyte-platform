@@ -1,6 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useConfig } from "config";
+import { useSuspenseQuery } from "core/api";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
 import {
   ConnectorBuilderProjectIdWithWorkspaceId,
@@ -9,7 +10,6 @@ import {
   SourceDefinitionIdBody,
 } from "core/request/AirbyteClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
