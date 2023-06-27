@@ -22,7 +22,7 @@ import {
 
 const createEmptyStreamsStatuses = (): ReturnType<typeof useListStreamsStatuses> => ({ streamStatuses: [] });
 
-const sortStreamStatuses = (a: StreamStatusRead, b: StreamStatusRead) => {
+export const sortStreamStatuses = (a: StreamStatusRead, b: StreamStatusRead) => {
   if (a.transitionedAt > b.transitionedAt) {
     return -1;
   }
