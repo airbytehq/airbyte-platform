@@ -70,6 +70,8 @@ tags:
     description: Interactions with attempt related resources.
   - name: state
     description: Interactions with state related resources.
+  - name: actor_definition_version
+    description: Interactions with actor definition version related resources.
 
 paths:
   /v1/workspaces/create:
@@ -519,6 +521,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_source:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a source.
+      operationId: getActorDefinitionVersionForSourceId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/source_definition_specifications/get:
     post:
       tags:
@@ -1257,6 +1280,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definition_versions/get_for_destination:
+    post:
+      tags:
+        - actor_definition_version
+      summary: Get actor definition version for a destination.
+      operationId: getActorDefinitionVersionForDestinationId
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorDefinitionVersionRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/destination_definition_specifications/get:
     post:
       tags:
@@ -4040,7 +4084,17 @@ components:
           type: string
         destinationName:
           type: string
-    # SOURCE / DESTINATION RELEASE STAGE ENUM
+    # ACTOR DEFINITION VERSION
+    ActorDefinitionVersionRead:
+      type: object
+      required:
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
     ReleaseStage:
       type: string
       enum:

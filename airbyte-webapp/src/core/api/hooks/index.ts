@@ -1,3 +1,4 @@
+export * from "./actorDefinitionVersions";
 export * from "./geographies";
 export * from "./health";
 export * from "./jobs";
