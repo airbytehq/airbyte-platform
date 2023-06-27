@@ -23,7 +23,7 @@ class VaultSecretPersistenceTest {
 
   @BeforeEach
   void setUp() {
-    vaultContainer = new VaultContainer("vault").withVaultToken("vault-dev-token-id");
+    vaultContainer = new VaultContainer("hashicorp/vault").withVaultToken("vault-dev-token-id");
     vaultContainer.start();
 
     val vaultAddress = "http://" + vaultContainer.getHost() + ":" + vaultContainer.getFirstMappedPort();
