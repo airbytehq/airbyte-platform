@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
@@ -20,6 +21,7 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,8 +48,6 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final StandardSourceDefinition SOURCE_DEFINITION = new StandardSourceDefinition()
       .withName(SOURCE_NAME)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_IMAGE_TAG)
       .withSourceDefinitionId(ACTOR_DEFINITION_ID);
 
   private static ActorDefinitionVersion baseActorDefinitionVersion() {
@@ -153,6 +153,36 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(advForTag2, newADV.withVersionId(advForTag2.getVersionId()));
     assertNotEquals(advForTag2.getVersionId(), advForTag.getVersionId());
     assertNotEquals(advForTag2.getSpec(), advForTag.getSpec());
+  }
+
+  @Test
+  void testAlwaysGetWithProtocolVersion() throws IOException {
+    final List<ActorDefinitionVersion> allActorDefVersions = List.of(
+        baseActorDefinitionVersion().withDockerImageTag("5.0.0").withProtocolVersion(null),
+        baseActorDefinitionVersion().withDockerImageTag("5.0.1")
+            .withProtocolVersion(null)
+            .withSpec(new ConnectorSpecification().withProtocolVersion("0.3.1")),
+        baseActorDefinitionVersion().withDockerImageTag("5.0.2")
+            .withProtocolVersion("0.4.0")
+            .withSpec(new ConnectorSpecification().withProtocolVersion("0.4.1")),
+        baseActorDefinitionVersion().withDockerImageTag("5.0.3")
+            .withProtocolVersion("0.5.0")
+            .withSpec(new ConnectorSpecification()));
+
+    final List<UUID> versionIds = new ArrayList<>();
+    for (final ActorDefinitionVersion actorDefVersion : allActorDefVersions) {
+      versionIds.add(configRepository.writeActorDefinitionVersion(actorDefVersion).getVersionId());
+    }
+
+    final List<ActorDefinitionVersion> actorDefinitionVersions = configRepository.getActorDefinitionVersions(versionIds);
+    final List<String> protocolVersions = actorDefinitionVersions.stream().map(ActorDefinitionVersion::getProtocolVersion).toList();
+    assertEquals(
+        List.of(
+            AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
+            AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
+            "0.4.0",
+            "0.5.0"),
+        protocolVersions);
   }
 
 }

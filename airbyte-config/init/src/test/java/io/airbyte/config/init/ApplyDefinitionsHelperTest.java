@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
-import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -55,16 +54,7 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
   public static final StandardSourceDefinition SOURCE_DEF1 = new StandardSourceDefinition()
       .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME1)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
-  public static final ActorDefinitionVersion SOURCE_DEF1_ADV = new ActorDefinitionVersion()
-      .withActorDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
+      .withName(CONNECT_NAME1);
 
   public static final ConnectorRegistrySourceDefinition REGISTRY_SOURCE_DEF2 = new ConnectorRegistrySourceDefinition()
       .withSourceDefinitionId(SOURCE_DEF_ID1)
@@ -75,11 +65,7 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
   public static final StandardSourceDefinition SOURCE_DEF2 = new StandardSourceDefinition()
       .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME2)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
+      .withName(CONNECT_NAME2);
 
   public static final ConnectorRegistryDestinationDefinition REGISTRY_DEST_DEF1 = new ConnectorRegistryDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
@@ -90,11 +76,7 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
   public static final StandardDestinationDefinition DEST_DEF1 = new StandardDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME1)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
+      .withName(CONNECT_NAME1);
   public static final ConnectorRegistryDestinationDefinition REGISTRY_DEST_DEF2 = new ConnectorRegistryDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -104,12 +86,7 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
   public static final StandardDestinationDefinition DEST_DEF2 = new StandardDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME2)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
-
+      .withName(CONNECT_NAME2);
   private ConfigRepository configRepository;
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;

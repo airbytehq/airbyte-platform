@@ -478,9 +478,7 @@ public class ConfigRepository {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()))
-        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
-        .map(def -> def.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(def.getProtocolVersion()).serialize()));
+        .map(record -> DbConverter.buildStandardSourceDefinition(record, heartbeatMaxSecondBetweenMessageSupplier.get()));
   }
 
   /**
@@ -504,28 +502,25 @@ public class ConfigRepository {
   }
 
   /**
-   * Get connector definition info.
+   * Get connector definition current version info.
    *
-   * @return A list of information about current connectors (both sources and destinations).
+   * @return A list of information about current connectors (both sources and destinations), excluding
+   *         custom connectors.
    **/
   public List<ActorDefinitionMigrator.ConnectorInfo> getCurrentConnectorInfo() throws IOException {
-    return database.query(ctx -> ctx.select(asterisk())
+    return database.query(ctx -> ctx.select(ACTOR_DEFINITION.ID,
+        ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY,
+        ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG)
         .from(ACTOR_DEFINITION)
-        .where(ACTOR_DEFINITION.RELEASE_STAGE.isNull()
-            .or(ACTOR_DEFINITION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM.isFalse())))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION.DEFAULT_VERSION_ID.eq(ACTOR_DEFINITION_VERSION.ID))
+        .where(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.isNull()
+            .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM.isFalse())))
         .fetch())
         .stream()
-        .map(row -> {
-          final JsonNode jsonNode;
-          if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source) {
-            jsonNode = Jsons.jsonNode(DbConverter.buildStandardSourceDefinition(row, 10800L));
-          } else if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.destination) {
-            jsonNode = Jsons.jsonNode(DbConverter.buildStandardDestinationDefinition(row));
-          } else {
-            throw new RuntimeException("Unknown Actor Type " + row.get(ACTOR_DEFINITION.ACTOR_TYPE));
-          }
-          return new ActorDefinitionMigrator.ConnectorInfo(row.getValue(ACTOR_DEFINITION.ID).toString(), jsonNode);
-        })
+        .map(row -> new ActorDefinitionMigrator.ConnectorInfo(
+            row.getValue(ACTOR_DEFINITION.ID).toString(),
+            row.getValue(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY),
+            row.getValue(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG)))
         .collect(Collectors.toList());
   }
 
@@ -688,17 +683,11 @@ public class ConfigRepository {
   private void updateDeclarativeActorDefinition(final ActorDefinitionConfigInjection configInjection,
                                                 final ConnectorSpecification spec,
                                                 final DSLContext ctx) {
-    // TODO(pedro) this is currently double writing - this should stop updating the actor_definition
-    // table once those fields are gone. We are updating the same version since connector builder
-    // projects have a different concept of versioning.
+    // We are updating the same version since connector builder projects have a different concept of
+    // versioning.
     ctx.update(ACTOR_DEFINITION_VERSION)
         .set(ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .where(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(configInjection.getActorDefinitionId()))
-        .execute();
-
-    ctx.update(Tables.ACTOR_DEFINITION)
-        .set(Tables.ACTOR_DEFINITION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
-        .where(Tables.ACTOR_DEFINITION.ID.eq(configInjection.getActorDefinitionId()))
         .execute();
 
     writeActorDefinitionConfigInjectionForPath(configInjection, ctx);
@@ -712,9 +701,7 @@ public class ConfigRepository {
         .and(includeTombstone ? noCondition() : ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
         .fetch())
         .stream()
-        .map(DbConverter::buildStandardDestinationDefinition)
-        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
-        .map(def -> def.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(def.getProtocolVersion()).serialize()));
+        .map(DbConverter::buildStandardDestinationDefinition);
   }
 
   /**
@@ -2513,12 +2500,13 @@ public class ConfigRepository {
    * @return boolean indicating if an alpha or beta connector exists within the workspace
    */
   public boolean getWorkspaceHasAlphaOrBetaConnector(final UUID workspaceId) throws IOException {
-    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.alpha)
-        .or(ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.beta));
+    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.alpha)
+        .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.beta));
 
     final Integer countResult = database.query(ctx -> ctx.selectCount()
         .from(ACTOR)
         .join(ACTOR_DEFINITION).on(ACTOR_DEFINITION.ID.eq(ACTOR.ACTOR_DEFINITION_ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.eq(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .where(ACTOR.WORKSPACE_ID.eq(workspaceId))
         .and(ACTOR.TOMBSTONE.notEqual(true))
         .and(releaseStageAlphaOrBeta))
@@ -2541,13 +2529,14 @@ public class ConfigRepository {
    * @return boolean indicating if an alpha or beta connector is used by the connection
    */
   public boolean getConnectionHasAlphaOrBetaConnector(final UUID connectionId) throws IOException {
-    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.alpha)
-        .or(ACTOR_DEFINITION.RELEASE_STAGE.eq(ReleaseStage.beta));
+    final Condition releaseStageAlphaOrBeta = ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.alpha)
+        .or(ACTOR_DEFINITION_VERSION.RELEASE_STAGE.eq(ReleaseStage.beta));
 
     final Integer countResult = database.query(ctx -> ctx.selectCount()
         .from(CONNECTION)
         .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID).or(ACTOR.ID.eq(CONNECTION.DESTINATION_ID)))
         .join(ACTOR_DEFINITION).on(ACTOR_DEFINITION.ID.eq(ACTOR.ACTOR_DEFINITION_ID))
+        .join(ACTOR_DEFINITION_VERSION).on(ACTOR_DEFINITION_VERSION.ID.eq(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
         .where(CONNECTION.ID.eq(connectionId))
         .and(releaseStageAlphaOrBeta))
         .fetchOneInto(Integer.class);
@@ -3240,7 +3229,9 @@ public class ConfigRepository {
         .fetch()
         .stream()
         .findFirst()
-        .map(DbConverter::buildActorDefinitionVersion);
+        .map(DbConverter::buildActorDefinitionVersion)
+        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
+        .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()));
   }
 
   /**
@@ -3272,6 +3263,8 @@ public class ConfigRepository {
         .fetch()
         .stream()
         .map(DbConverter::buildActorDefinitionVersion)
+        // Ensure version is set. Needed for connectors not upgraded since we added versioning.
+        .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()))
         .collect(Collectors.toList());
   }
 

@@ -165,7 +165,6 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.createDeclarativeManifestAsActiveVersion(declarativeManifest, configInjection, connectorSpecification);
 
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
-    assertEquals(connectorSpecification, sourceDefinition.getSpec());
     assertEquals(connectorSpecification, configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
     assertEquals(List.of(configInjection), configRepository.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
     assertEquals(declarativeManifest, configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID));
@@ -218,7 +217,6 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     configRepository.setDeclarativeSourceActiveVersion(AN_ACTOR_DEFINITION_ID, A_VERSION, configInjection, connectorSpecification);
 
     final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID);
-    assertEquals(connectorSpecification, sourceDefinition.getSpec());
     assertEquals(connectorSpecification, configRepository.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec());
     assertEquals(List.of(configInjection), configRepository.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList());
     assertEquals(A_VERSION, configRepository.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion());
