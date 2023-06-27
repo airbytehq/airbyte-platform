@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
@@ -23,11 +24,14 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
 import io.airbyte.protocol.models.ConnectorSpecification;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ActorDefinitionVersionHelperTest {
 
@@ -229,6 +233,14 @@ class ActorDefinitionVersionHelperTest {
     final RuntimeException exception =
         assertThrows(RuntimeException.class, () -> actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID));
     assertTrue(exception.getMessage().contains("has no default version"));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"alpha,generally_available,true", "beta,generally_available,true", "generally_available,generally_available,false", "alpha,beta,true"})
+  void testHasAlphaOrBeta(final String sourceReleaseStageStr, final String destinationReleaseStageStr, final boolean expected) {
+    final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion().withReleaseStage(ReleaseStage.fromValue(sourceReleaseStageStr));
+    final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion().withReleaseStage(ReleaseStage.fromValue(destinationReleaseStageStr));
+    assertEquals(expected, ActorDefinitionVersionHelper.hasAlphaOrBetaVersion(List.of(sourceDefVersion, destDefVersion)));
   }
 
 }

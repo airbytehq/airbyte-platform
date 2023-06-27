@@ -2505,6 +2505,10 @@ public class ConfigRepository {
    * sign up for the program. This check is performed on nearly every page load so the query needs to
    * be as efficient as possible.
    *
+   * This should only be used for efficiently determining eligibility for the Free Connector Program.
+   * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
+   * the ReleaseStages.
+   *
    * @param workspaceId ID of the workspace to check connectors for
    * @return boolean indicating if an alpha or beta connector exists within the workspace
    */
@@ -2528,6 +2532,10 @@ public class ConfigRepository {
    * Program. If a connection has at least one Alpha or Beta connector, it will be free to use as long
    * as the workspace is enrolled in the Free Connector Program. This check is used to allow free
    * connections to continue running even when a workspace runs out of credits.
+   *
+   * This should only be used for efficiently determining eligibility for the Free Connector Program.
+   * Anything that involves billing should instead use the ActorDefinitionVersionHelper to determine
+   * the ReleaseStages.
    *
    * @param connectionId ID of the connection to check connectors for
    * @return boolean indicating if an alpha or beta connector is used by the connection
