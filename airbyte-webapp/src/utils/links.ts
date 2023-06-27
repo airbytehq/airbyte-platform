@@ -15,7 +15,7 @@ export const links = {
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
   productReleaseStages: `${BASE_DOCS_LINK}/project-overview/product-release-stages`,
   slackLink: "https://slack.airbyte.com",
-  supportTicketLink: "https://support.airbyte.com",
+  supportTicketLink: "https://www.airbyte.com",
   docsLink: BASE_DOCS_LINK,
   configurationArchiveLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte/`,
   normalizationLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections#airbyte-basic-normalization`,
