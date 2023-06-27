@@ -4,11 +4,15 @@
 
 package io.airbyte.workers.orchestrator;
 
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_LIMIT;
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_REQUEST;
+
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.functional.CheckedSupplier;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.ConcurrentSocatResources;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.ContainerOrchestratorDevImage;
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts;
@@ -23,6 +27,7 @@ import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.core.util.StringUtils;
 import io.temporal.activity.ActivityExecutionContext;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -107,6 +112,14 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
     final var envMap = new HashMap<>(containerOrchestratorConfig.environmentVariables());
     if (!injectedJavaOpts.isEmpty()) {
       envMap.put("JAVA_OPTS", injectedJavaOpts);
+    }
+
+    // Allow for the override of the socat pod CPU resources as part of the concurrent source read
+    // experimentation
+    final String socatResources = client.stringVariation(ConcurrentSocatResources.INSTANCE, new Connection(connectionId));
+    if (StringUtils.isNotEmpty(socatResources)) {
+      envMap.put(SOCAT_KUBE_CPU_LIMIT, socatResources);
+      envMap.put(SOCAT_KUBE_CPU_REQUEST, socatResources);
     }
 
     // This is messy because the ContainerOrchestratorConfig is immutable, so we alwasy have to create
