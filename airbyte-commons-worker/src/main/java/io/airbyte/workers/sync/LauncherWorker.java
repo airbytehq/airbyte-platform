@@ -7,8 +7,6 @@ package io.airbyte.workers.sync;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.PROCESS_EXIT_VALUE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
-import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_STEP;
-import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
 
 import com.google.common.base.Stopwatch;
 import datadog.trace.api.Trace;
@@ -55,17 +53,17 @@ import lombok.extern.slf4j.Slf4j;
  * @param <OUTPUT> either {@link Void} or a json-serializable output class for the worker
  */
 @Slf4j
-public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
+public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
 
   private static final Duration MAX_DELETION_TIMEOUT = Duration.ofSeconds(45);
 
   /**
    * Pod label used to unique identify the pod launched by this worker.
    */
-  private static final String PROCESS_ID_LABEL_KEY = "process_id";
+  static final String PROCESS_ID_LABEL_KEY = "process_id";
 
-  private final UUID connectionId;
-  private final UUID processId;
+  final UUID connectionId;
+  final UUID processId;
   private final String application;
   private final String podNamePrefix;
   private final JobRunConfig jobRunConfig;
@@ -252,10 +250,14 @@ public class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
   private Map<String, String> generateMetadataLabels() {
     final Map<String, String> metadataLabels = new HashMap<>();
     metadataLabels.put(PROCESS_ID_LABEL_KEY, processId.toString());
-    metadataLabels.put(SYNC_STEP_KEY, ORCHESTRATOR_STEP);
-    metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
+    metadataLabels.putAll(generateCustomMetadataLabels());
+    if (connectionId != null) {
+      metadataLabels.put(CONNECTION_ID_LABEL_KEY, connectionId.toString());
+    }
     return metadataLabels;
   }
+
+  protected abstract Map<String, String> generateCustomMetadataLabels();
 
   /**
    * It is imperative that we do not run multiple replications, normalizations, syncs, etc. at the

@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_REPLICATION_STEP;
+import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
+
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ReplicationOutput;
@@ -56,6 +59,11 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
         temporalUtils,
         workerConfigs,
         sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector());
+  }
+
+  @Override
+  protected Map<String, String> generateCustomMetadataLabels() {
+    return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_REPLICATION_STEP);
   }
 
 }

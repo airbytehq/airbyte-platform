@@ -4,6 +4,9 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_NORMALIZATION_STEP;
+import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
+
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.NormalizationInput;
@@ -52,6 +55,11 @@ public class NormalizationLauncherWorker extends LauncherWorker<NormalizationInp
         // thus they are not going to be run under custom connectors. Setting this to false.
         false);
 
+  }
+
+  @Override
+  protected Map<String, String> generateCustomMetadataLabels() {
+    return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_NORMALIZATION_STEP);
   }
 
 }
