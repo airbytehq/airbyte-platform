@@ -1,10 +1,9 @@
 import { renderHook } from "@testing-library/react-hooks";
 import { TestWrapper } from "test-utils";
 
-import { useGetCloudWorkspace } from "core/api/cloud";
+import { useFreeConnectorProgram, useGetCloudWorkspace } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { useExperiment } from "hooks/services/Experiment";
-import { useFreeConnectorProgram } from "packages/cloud/components/experiments/FreeConnectorProgram";
 import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { useBillingPageBanners } from "./useBillingPageBanners";
