@@ -76,7 +76,6 @@ import io.airbyte.db.instance.configs.jooq.generated.tables.records.Notification
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.metrics.lib.MetricQueries;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -2363,30 +2362,6 @@ public class ConfigRepository {
         .where(ACTOR.WORKSPACE_ID.equal(workspaceId))
         .and(ACTOR.ACTOR_TYPE.eq(ActorType.destination))
         .andNot(ACTOR.TOMBSTONE)).fetchOne().into(int.class);
-  }
-
-  /**
-   * The following methods are present to allow the JobCreationAndStatusUpdateActivity class to emit
-   * metrics without exposing the underlying database connection.
-   *
-   * @param srcId source id
-   * @param dstId destination id
-   * @return release stages of source and destination
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  public List<ReleaseStage> getSrcIdAndDestIdToReleaseStages(final UUID srcId, final UUID dstId) throws IOException {
-    return database.query(ctx -> MetricQueries.srcIdAndDestIdToReleaseStages(ctx, srcId, dstId));
-  }
-
-  /**
-   * Get release stages for job id.
-   *
-   * @param jobId job id
-   * @return release stages
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  public List<ReleaseStage> getJobIdToReleaseStages(final long jobId) throws IOException {
-    return database.query(ctx -> MetricQueries.jobIdToReleaseStages(ctx, jobId));
   }
 
   private Condition includeTombstones(final Field<Boolean> tombstoneField, final boolean includeTombstones) {
