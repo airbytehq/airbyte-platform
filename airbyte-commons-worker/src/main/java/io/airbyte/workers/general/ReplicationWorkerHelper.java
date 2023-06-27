@@ -74,7 +74,7 @@ class ReplicationWorkerHelper {
   private long recordsRead;
   private StreamDescriptor currentDestinationStream = null;
   private ReplicationContext replicationContext = null;
-  private ReplicationFeatureFlags replicationFeatureFlags = null;
+  private ReplicationFeatureFlags replicationFeatureFlags = null; // NOPMD - keeping this as a placeholder
   private WorkerDestinationConfig destinationConfig = null;
 
   // We expect the number of operations on failures to be low, so synchronizedList should be
@@ -230,7 +230,7 @@ class ReplicationWorkerHelper {
     }
 
     messageTracker.acceptFromDestination(message);
-    if (replicationFeatureFlags.shouldCommitStateAsap() && message.getType() == Type.STATE) {
+    if (message.getType() == Type.STATE) {
       syncPersistence.persist(replicationContext.connectionId(), message.getState());
     }
 

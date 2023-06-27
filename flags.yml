@@ -3,8 +3,6 @@ flags:
     serve: false
   - name: heartbeat.failSync
     serve: true
-  - name: platform.commitStatsAsap
-    serve: true
   - name: connectors.versionOverridesEnabled
     serve: true
   - name: billing.newTrialPolicy

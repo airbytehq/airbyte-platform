@@ -21,8 +21,6 @@ object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
-
 object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)

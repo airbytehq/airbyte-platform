@@ -145,7 +145,7 @@ public class ReplicationWorkerFactory {
 
     log.info("Setting up replication worker...");
     final SyncPersistence syncPersistence = createSyncPersistence(syncPersistenceFactory, syncInput, sourceLauncherConfig);
-    final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags, syncInput);
+    final MessageTracker messageTracker = createMessageTracker(syncPersistence, featureFlags);
 
     return createReplicationWorker(airbyteSource, airbyteDestination, messageTracker,
         syncPersistence, recordSchemaValidator, fieldSelector, heartbeatTimeoutChaperone,
@@ -221,12 +221,8 @@ public class ReplicationWorkerFactory {
    * Create MessageTracker.
    */
   private static MessageTracker createMessageTracker(final SyncPersistence syncPersistence,
-                                                     final FeatureFlags featureFlags,
-                                                     final StandardSyncInput syncInput) {
-    final boolean commitStatsAsap = ReplicationFeatureFlagReader.shouldCommitStatsAsap(syncInput);
-    final MessageTracker messageTracker =
-        commitStatsAsap ? new AirbyteMessageTracker(syncPersistence, featureFlags) : new AirbyteMessageTracker(featureFlags);
-    return messageTracker;
+                                                     final FeatureFlags featureFlags) {
+    return new AirbyteMessageTracker(syncPersistence, featureFlags);
   }
 
   /**
@@ -334,13 +330,8 @@ public class ReplicationWorkerFactory {
   private static SyncPersistence createSyncPersistence(final SyncPersistenceFactory syncPersistenceFactory,
                                                        final StandardSyncInput syncInput,
                                                        final IntegrationLauncherConfig sourceLauncherConfig) {
-    // TODO clean up the feature flag init once commitStates and commitStats have been rolled out
-    final boolean commitStatesAsap = ReplicationFeatureFlagReader.shouldCommitStateAsap(syncInput);
-    final SyncPersistence syncPersistence = commitStatesAsap
-        ? syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
-            sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog())
-        : null;
-    return syncPersistence;
+    return syncPersistenceFactory.get(syncInput.getConnectionId(), Long.parseLong(sourceLauncherConfig.getJobId()),
+        sourceLauncherConfig.getAttemptId().intValue(), syncInput.getCatalog());
   }
 
 }

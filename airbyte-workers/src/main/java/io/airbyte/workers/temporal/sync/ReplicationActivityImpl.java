@@ -155,7 +155,6 @@ public class ReplicationActivityImpl implements ReplicationActivity {
 
           final ReplicationOutput attemptOutput = temporalAttempt.get();
           final StandardSyncOutput standardSyncOutput = reduceReplicationOutput(attemptOutput, traceAttributes);
-          standardSyncOutput.setCommitStateAsap(syncInput.getCommitStateAsap());
 
           final String standardSyncOutputString = standardSyncOutput.toString();
           LOGGER.info("sync summary: {}", standardSyncOutputString);
