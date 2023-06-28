@@ -19,6 +19,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUI
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.OPERATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -57,6 +58,7 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.OperatorNormalization;
 import io.airbyte.config.OperatorWebhook;
+import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -154,7 +156,9 @@ public class ConfigRepository {
                                             List<UUID> destinationId,
                                             boolean includeDeleted,
                                             int pageSize,
-                                            int rowOffset) {}
+                                            int rowOffset) {
+
+  }
 
   /**
    * Query object for paginated querying of sources/destinations in multiple workspaces.
@@ -168,7 +172,25 @@ public class ConfigRepository {
                                         @Nonnull List<UUID> workspaceIds,
                                         boolean includeDeleted,
                                         int pageSize,
-                                        int rowOffset) {}
+                                        int rowOffset) {
+
+  }
+
+  /**
+   * Query object for paginated querying of resource in an organization.
+   *
+   * @param organizationId organization to fetch resources for
+   * @param includeDeleted include tombstoned resources
+   * @param pageSize limit
+   * @param rowOffset offset
+   */
+  public record ResourcesByOrganizationQueryPaginated(
+                                                      @Nonnull UUID organizationId,
+                                                      boolean includeDeleted,
+                                                      int pageSize,
+                                                      int rowOffset) {
+
+  }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigRepository.class);
   private static final String OPERATION_IDS_AGG_FIELD = "operation_ids_agg";
@@ -215,6 +237,95 @@ public class ConfigRepository {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Get organization.
+   *
+   * @param organizationId id to use to find the organization
+   * @return organization, if present.
+   * @throws IOException - you never know when you IO
+   */
+  public Optional<Organization> getOrganization(final UUID organizationId) throws IOException {
+    final Result<Record> result;
+    result = database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .where(ORGANIZATION.ID.eq(organizationId))).fetch();
+
+    return result.stream().findFirst().map(DbConverter::buildOrganization);
+  }
+
+  /**
+   * Write an Organization to the database.
+   *
+   * @param organization - The configuration of the organization
+   * @throws IOException - you never know when you IO
+   */
+  public void writeOrganization(final Organization organization) throws IOException {
+    database.transaction(ctx -> {
+      final OffsetDateTime timestamp = OffsetDateTime.now();
+      final boolean isExistingConfig = ctx.fetchExists(select()
+          .from(ORGANIZATION)
+          .where(ORGANIZATION.ID.eq(organization.getOrganizationId())));
+
+      if (isExistingConfig) {
+        ctx.update(ORGANIZATION)
+            .set(ORGANIZATION.ID, organization.getOrganizationId())
+            .set(ORGANIZATION.NAME, organization.getName())
+            .set(ORGANIZATION.EMAIL, organization.getEmail())
+            .set(ORGANIZATION.UPDATED_AT, timestamp)
+            .where(ORGANIZATION.ID.eq(organization.getOrganizationId()))
+            .execute();
+      } else {
+        ctx.insertInto(ORGANIZATION)
+            .set(ORGANIZATION.ID, organization.getOrganizationId())
+            .set(ORGANIZATION.NAME, organization.getName())
+            .set(ORGANIZATION.EMAIL, organization.getEmail())
+            .set(WORKSPACE.CREATED_AT, timestamp)
+            .set(WORKSPACE.UPDATED_AT, timestamp)
+            .execute();
+      }
+      return null;
+    });
+  }
+
+  /**
+   * List organizations.
+   *
+   * @return organizations
+   * @throws IOException - you never know when you IO
+   */
+  public List<Organization> listOrganizations() throws IOException {
+    return listOrganizationQuery(Optional.empty()).toList();
+  }
+
+  private Stream<Organization> listOrganizationQuery(final Optional<UUID> organizationId) throws IOException {
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .where(organizationId.map(ORGANIZATION.ID::eq).orElse(noCondition()))
+        .fetch())
+        .stream()
+        .map(DbConverter::buildOrganization);
+  }
+
+  /**
+   * List organizations (paginated).
+   *
+   * @param resourcesByOrganizationQueryPaginated - contains all the information we need to paginate
+   * @return A List of organizations objectjs
+   * @throws IOException you never know when you IO
+   */
+  public List<Organization> listOrganizationsPaginated(final ResourcesByOrganizationQueryPaginated resourcesByOrganizationQueryPaginated)
+      throws IOException {
+    return database.query(ctx -> ctx.select(ORGANIZATION.asterisk())
+        .from(ORGANIZATION)
+        .where(ORGANIZATION.ID.in(resourcesByOrganizationQueryPaginated.organizationId()))
+        .limit(resourcesByOrganizationQueryPaginated.pageSize())
+        .offset(resourcesByOrganizationQueryPaginated.rowOffset())
+        .fetch())
+        .stream()
+        .map(DbConverter::buildOrganization)
+        .toList();
   }
 
   /**
@@ -314,7 +425,7 @@ public class ConfigRepository {
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }.
-   *
+   * <p>
    * Write a StandardWorkspace to the database.
    *
    * @param workspace - The configuration of the workspace
@@ -1077,7 +1188,7 @@ public class ConfigRepository {
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
-   *
+   * <p>
    * Write a SourceConnection to the database. The configuration of the Source will be a partial
    * configuration (no secrets, just pointer to the secrets store).
    *
@@ -1208,7 +1319,7 @@ public class ConfigRepository {
 
   /**
    * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
-   *
+   * <p>
    * Write a DestinationConnection to the database. The configuration of the Destination will be a
    * partial configuration (no secrets, just pointer to the secrets store).
    *
@@ -2030,7 +2141,7 @@ public class ConfigRepository {
 
   /**
    * Pair of source and its associated definition.
-   *
+   * <p>
    * Data-carrier records to hold combined result of query for a Source or Destination and its
    * corresponding Definition. This enables the API layer to process combined information about a
    * Source/Destination/Definition pair without requiring two separate queries and in-memory join
@@ -2130,7 +2241,7 @@ public class ConfigRepository {
 
   /**
    * Store an Airbyte catalog in DB if it is not present already.
-   *
+   * <p>
    * Checks in the config DB if the catalog is present already, if so returns it identifier. It is not
    * present, it is inserted in DB with a new identifier and that identifier is returned.
    *
@@ -2269,7 +2380,7 @@ public class ConfigRepository {
 
   /**
    * Stores source catalog information.
-   *
+   * <p>
    * This function is called each time the schema of a source is fetched. This can occur because the
    * source is set up for the first time, because the configuration or version of the connector
    * changed or because the user explicitly requested a schema refresh. Schemas are stored separately
@@ -2751,7 +2862,7 @@ public class ConfigRepository {
   /**
    * Write name and draft of a builder project. The actor_definition is also updated to match the new
    * builder project name.
-   *
+   * <p>
    * Actor definition updated this way should always be private (i.e. public=false). As an additional
    * protection, we want to shield ourselves from users updating public actor definition and
    * therefore, the name of the actor definition won't be updated if the actor definition is not
@@ -2800,7 +2911,7 @@ public class ConfigRepository {
 
   /**
    * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   *
+   * <p>
    * Note that based on this signature, two problems might occur if the user of this method is not
    * diligent. This was done because we value more separation of concerns than consistency of the API
    * of this method. The problems are:
@@ -2811,17 +2922,17 @@ public class ConfigRepository {
    *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
    * </ul>
    * </pre>
-   *
+   * <p>
    * Since we decided not to validate this using the signature of the method, we will validate that
    * runtime and IllegalArgumentException if there is a mismatch.
-   *
+   * <p>
    * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
    * definition of the repository. Drawbacks: We will need a method
    * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
    * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
    * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
    * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   *
+   * <p>
    * Note that this is all in the context of data consistency i.e. that we want to do this in one
    * transaction. When we split this in many services, we will need to rethink data consistency.
    *
@@ -2878,7 +2989,7 @@ public class ConfigRepository {
 
   /**
    * Update an actor_definition, active_declarative_manifest and create declarative_manifest.
-   *
+   * <p>
    * Note that based on this signature, two problems might occur if the user of this method is not
    * diligent. This was done because we value more separation of concerns than consistency of the API
    * of this method. The problems are:
@@ -2889,16 +3000,16 @@ public class ConfigRepository {
    *   <li>DeclarativeManifest.spec could be different from ConnectorSpecification.connectionSpecification</li>
    * </ul>
    * </pre>
-   *
+   * <p>
    * At that point, we can only hope the user won't cause data consistency issue using this method
-   *
+   * <p>
    * The reasoning behind this reasoning is the following: Benefits: Alignment with platform's
    * definition of the repository. Drawbacks: We will need a method
    * configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version, manifest, spec);
    * where version and (manifest, spec) might not be consistent i.e. that a user of this method could
    * call it with configRepository.setDeclarativeSourceActiveVersion(sourceDefinitionId, version_10,
    * manifest_of_version_7, spec_of_version_12); However, we agreed that this was very unlikely.
-   *
+   * <p>
    * Note that this is all in the context of data consistency i.e. that we want to do this in one
    * transaction. When we split this in many services, we will need to rethink data consistency.
    *

@@ -15,6 +15,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_P
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
@@ -39,6 +40,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
 import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
@@ -174,6 +176,20 @@ public class DbConverter {
             Enums.toEnum(record.get(WORKSPACE.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()));
+  }
+
+  /**
+   * Build organization from db record.
+   *
+   * @param record db record
+   * @return organization
+   */
+  public static Organization buildOrganization(final Record record) {
+    return new Organization()
+        .withOrganizationId(record.get(ORGANIZATION.ID))
+        .withName(record.get(ORGANIZATION.NAME))
+        .withUserId(record.get(ORGANIZATION.USER_ID))
+        .withEmail(record.get(ORGANIZATION.EMAIL));
   }
 
   /**
