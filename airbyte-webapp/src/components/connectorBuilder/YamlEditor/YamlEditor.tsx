@@ -3,9 +3,10 @@ import { load, YAMLException } from "js-yaml";
 import debounce from "lodash/debounce";
 import isEqual from "lodash/isEqual";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import React from "react";
 import { useFormContext } from "react-hook-form";
+import { useUpdateEffect } from "react-use";
 
 import { CodeEditor } from "components/ui/CodeEditor";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -48,28 +49,24 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
 
   // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
   const debouncedSetJsonManifest = useMemo(() => debounce(setJsonManifest, 200), [setJsonManifest]);
-  const initialLoad = useRef(true);
 
   const monaco = useMonaco();
+  const monacoRef = useRef(monaco);
+  monacoRef.current = monaco;
 
-  useEffect(() => {
-    if (monaco && yamlEditorRef.current && yamlValue) {
+  useUpdateEffect(() => {
+    if (monacoRef.current && yamlEditorRef.current && yamlValue) {
       const errOwner = "yaml";
       const yamlEditorModel = yamlEditorRef.current.getModel();
 
       try {
         const json = load(yamlValue) as ConnectorManifest;
         setYamlIsValid(true);
-        // skip setting the manifest on the first load as it just got passed in and is synced already
-        if (initialLoad.current) {
-          initialLoad.current = false;
-        } else {
-          debouncedSetJsonManifest(json);
-        }
+        debouncedSetJsonManifest(json);
 
         // clear editor error markers
         if (yamlEditorModel) {
-          monaco.editor.setModelMarkers(yamlEditorModel, errOwner, []);
+          monacoRef.current.editor.setModelMarkers(yamlEditorModel, errOwner, []);
         }
       } catch (err) {
         if (err instanceof YAMLException) {
@@ -78,21 +75,21 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
 
           // set editor error markers
           if (yamlEditorModel) {
-            monaco.editor.setModelMarkers(yamlEditorModel, errOwner, [
+            monacoRef.current.editor.setModelMarkers(yamlEditorModel, errOwner, [
               {
                 startLineNumber: mark.line + 1,
                 startColumn: mark.column + 1,
                 endLineNumber: mark.line + 1,
                 endColumn: mark.column + 2,
                 message: err.message,
-                severity: monaco.MarkerSeverity.Error,
+                severity: monacoRef.current.MarkerSeverity.Error,
               },
             ]);
           }
         }
       }
     }
-  }, [yamlValue, monaco, debouncedSetJsonManifest, setYamlIsValid]);
+  }, [yamlValue, debouncedSetJsonManifest, setYamlIsValid]);
 
   const yamlIsDirty = useMemo(() => {
     return !isEqual(convertToManifest(builderFormValues), jsonManifest);
