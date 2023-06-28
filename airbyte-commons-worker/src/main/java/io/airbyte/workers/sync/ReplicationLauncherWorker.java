@@ -12,6 +12,7 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.StandardSyncInput;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -42,7 +43,8 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
                                    final Supplier<ActivityExecutionContext> activityContext,
                                    final Integer serverPort,
                                    final TemporalUtils temporalUtils,
-                                   final WorkerConfigs workerConfigs) {
+                                   final WorkerConfigs workerConfigs,
+                                   final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
         REPLICATION,
@@ -58,6 +60,7 @@ public class ReplicationLauncherWorker extends LauncherWorker<StandardSyncInput,
         serverPort,
         temporalUtils,
         workerConfigs,
+        featureFlagClient,
         sourceLauncherConfig.getIsCustomConnector() || destinationLauncherConfig.getIsCustomConnector());
   }
 

@@ -22,6 +22,6 @@ flags:
   - name: concurrent.source.stream.read
     serve: false
   - name: concurrent.socat.resources
-    serve: "0.5"
+    serve: ""
   - name: platform.add-scheduling-jitter
     serve: false

@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_LIMIT;
+import static io.airbyte.config.EnvConfigs.SOCAT_KUBE_CPU_REQUEST;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.PROCESS_EXIT_VALUE_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME;
 import static io.airbyte.workers.process.Metadata.CONNECTION_ID_LABEL_KEY;
@@ -15,6 +17,9 @@ import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.sync.OrchestratorConstants;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.featureflag.ConcurrentSocatResources;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -31,6 +36,7 @@ import io.airbyte.workers.process.KubeProcessFactory;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.micronaut.core.util.StringUtils;
 import io.temporal.activity.ActivityExecutionContext;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -44,6 +50,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coordinates configuring and managing the state of an async process. This is tied to the (job_id,
@@ -54,6 +62,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUTPUT> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(LauncherWorker.class);
 
   private static final Duration MAX_DELETION_TIMEOUT = Duration.ofSeconds(45);
 
@@ -79,6 +89,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
   private final boolean isCustomConnector;
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private AsyncOrchestratorPodProcess process;
+  private final FeatureFlagClient featureFlagClient;
 
   public LauncherWorker(final UUID connectionId,
                         final String application,
@@ -92,6 +103,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
                         final Integer serverPort,
                         final TemporalUtils temporalUtils,
                         final WorkerConfigs workerConfigs,
+                        final FeatureFlagClient featureFlagClient,
                         final boolean isCustomConnector) {
 
     this.connectionId = connectionId;
@@ -106,6 +118,7 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
     this.serverPort = serverPort;
     this.temporalUtils = temporalUtils;
     this.workerConfigs = workerConfigs;
+    this.featureFlagClient = featureFlagClient;
     this.isCustomConnector = isCustomConnector;
 
     // Generate a random UUID to unique identify the pod process
@@ -129,6 +142,15 @@ public abstract class LauncherWorker<INPUT, OUTPUT> implements Worker<INPUT, OUT
 
         // Merge in the env from the ContainerOrchestratorConfig
         containerOrchestratorConfig.environmentVariables().entrySet().stream().forEach(e -> envMap.putIfAbsent(e.getKey(), e.getValue()));
+
+        // Allow for the override of the socat pod CPU resources as part of the concurrent source read
+        // experimentation
+        final String socatResources = featureFlagClient.stringVariation(ConcurrentSocatResources.INSTANCE, new Connection(connectionId));
+        if (StringUtils.isNotEmpty(socatResources)) {
+          LOGGER.info("Overriding Socat CPU limit and request to {}.", socatResources);
+          envMap.put(SOCAT_KUBE_CPU_LIMIT, socatResources);
+          envMap.put(SOCAT_KUBE_CPU_REQUEST, socatResources);
+        }
 
         final Map<String, String> fileMap = new HashMap<>(additionalFileMap);
         fileMap.putAll(Map.of(
