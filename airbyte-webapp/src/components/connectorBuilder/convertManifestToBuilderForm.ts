@@ -330,17 +330,9 @@ function manifestErrorHandlerToBuilder(
       backoff_strategy: backoffStrategy,
     };
   });
-
-  return handlers as DefaultErrorHandler[];
 }
 
 function manifestPrimaryKeyToBuilder(manifestStream: DeclarativeStream): BuilderStream["primaryKey"] {
-  if (!isEqual(manifestStream.primary_key, manifestStream.primary_key)) {
-    throw new ManifestCompatibilityError(
-      manifestStream.name,
-      "primary_key is not consistent across stream and retriever levels"
-    );
-  }
   if (manifestStream.primary_key === undefined) {
     return [];
   } else if (Array.isArray(manifestStream.primary_key)) {

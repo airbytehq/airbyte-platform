@@ -399,9 +399,6 @@ describe("Conversion successfully results in", () => {
       streams: [
         merge({}, stream1, {
           primary_key: "id",
-          retriever: {
-            primary_key: "id",
-          },
         }),
       ],
     };
