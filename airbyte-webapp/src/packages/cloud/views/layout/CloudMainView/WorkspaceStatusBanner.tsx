@@ -82,7 +82,7 @@ export const WorkspaceStatusBanner: React.FC = () => {
   return (
     <>
       {!!workspaceCreditsBannerContent && (
-        <div className={styles.banner}>
+        <div className={styles.banner} data-testid="workspace-status-banner">
           <AlertBanner message={workspaceCreditsBannerContent} />
         </div>
       )}

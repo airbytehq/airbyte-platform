@@ -70,43 +70,46 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
           text: <FormattedMessage id="jobHistory.logs.logDownloadPending" values={{ jobId: jobWithAttempts.job.id }} />,
           id: notificationId,
         });
-        fetchJobLogs()
-          .then(({ data }) => {
-            if (!data) {
-              throw new Error("No logs returned from server");
-            }
-            const file = new Blob(
-              [
-                data.attempts
-                  .flatMap((info, index) => [
-                    `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
-                    ...info.logs.logLines,
-                    `\n\n\n`,
-                  ])
-                  .join("\n"),
-              ],
-              {
-                type: FILE_TYPE_DOWNLOAD,
+        // Promise.all() with a timeout is used to ensure that the notification is shown to the user for at least 1 second
+        Promise.all([
+          fetchJobLogs()
+            .then(({ data }) => {
+              if (!data) {
+                throw new Error("No logs returned from server");
               }
-            );
-            downloadFile(file, fileizeString(`${workspaceName}-logs-${jobWithAttempts.job.id}.txt`));
-          })
-          .catch((e) => {
-            trackError(e, { workspaceId, jobId: jobWithAttempts.job.id });
-            registerNotification({
-              type: "error",
-              text: formatMessage(
+              const file = new Blob(
+                [
+                  data.attempts
+                    .flatMap((info, index) => [
+                      `>> ATTEMPT ${index + 1}/${data.attempts.length}\n`,
+                      ...info.logs.logLines,
+                      `\n\n\n`,
+                    ])
+                    .join("\n"),
+                ],
                 {
-                  id: "jobHistory.logs.logDownloadFailed",
-                },
-                { jobId: jobWithAttempts.job.id }
-              ),
-              id: `download-logs-error-${jobWithAttempts.job.id}`,
-            });
-          })
-          .finally(() => {
-            unregisterNotificationById(notificationId);
-          });
+                  type: FILE_TYPE_DOWNLOAD,
+                }
+              );
+              downloadFile(file, fileizeString(`${workspaceName}-logs-${jobWithAttempts.job.id}.txt`));
+            })
+            .catch((e) => {
+              trackError(e, { workspaceId, jobId: jobWithAttempts.job.id });
+              registerNotification({
+                type: "error",
+                text: formatMessage(
+                  {
+                    id: "jobHistory.logs.logDownloadFailed",
+                  },
+                  { jobId: jobWithAttempts.job.id }
+                ),
+                id: `download-logs-error-${jobWithAttempts.job.id}`,
+              });
+            }),
+          new Promise((resolve) => setTimeout(resolve, 1000)),
+        ]).finally(() => {
+          unregisterNotificationById(notificationId);
+        });
         break;
       case ContextMenuOptions.OpenLogsModal:
         openModal({

@@ -122,8 +122,8 @@ describe("WorkspaceCreditsBanner", () => {
         };
       });
 
-      const { container } = render(workspaceBannerWithFlagTrue);
-      expect(container).toBeEmptyDOMElement();
+      const { queryByTestId } = render(workspaceBannerWithFlagTrue);
+      expect(queryByTestId("workspace-status-banner")).toBeNull();
     });
   });
 
@@ -174,8 +174,8 @@ describe("WorkspaceCreditsBanner", () => {
         };
       });
 
-      const { container } = render(workspaceBannerWithFlagDefault);
-      expect(container).toBeEmptyDOMElement();
+      const { queryByTestId } = render(workspaceBannerWithFlagDefault);
+      expect(queryByTestId("workspace-status-banner")).toBeNull();
     });
   });
 });
