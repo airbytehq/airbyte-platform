@@ -1,5 +1,5 @@
 import * as LDClient from "launchdarkly-js-client-sdk";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import { finalize, Subject } from "rxjs";
@@ -19,13 +19,8 @@ import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { isDevelopment } from "utils/isDevelopment";
 import { rejectAfter } from "utils/promises";
 
-import {
-  createLDContext,
-  createMultiContext,
-  createUserContext,
-  getSingleContextsFromMulti,
-  isMultiContext,
-} from "./contexts";
+import { contextReducer } from "./contextReducer";
+import { createLDContext, createMultiContext, createUserContext } from "./contexts";
 
 /**
  * This service hardcodes two conventions about the format of the LaunchDarkly feature
@@ -76,6 +71,41 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   const { setMessageOverwrite } = useI18nContext();
   const { trackAction } = useAppMonitoringService();
   const workspaceId = useCurrentWorkspaceId();
+  const [contextState, dispatchContextUpdate] = useReducer(contextReducer, {
+    context: createMultiContext(
+      createUserContext(user, locale),
+      ...(workspaceId ? [createLDContext("workspace", workspaceId)] : [])
+    ),
+  });
+
+  // Whenever the user or locale changes, we need to update our contexts
+  useEffect(() => {
+    const userContext = createUserContext(user, locale);
+    dispatchContextUpdate({ type: "add", context: userContext });
+  }, [user, locale]);
+
+  // Whenever the workspace changes, we need to update our contexts
+  useEffect(() => {
+    if (workspaceId) {
+      const workspaceContext = createLDContext("workspace", workspaceId);
+      dispatchContextUpdate({ type: "add", context: workspaceContext });
+    } else {
+      dispatchContextUpdate({ type: "remove", kind: "workspace" });
+    }
+  }, [workspaceId]);
+
+  const addContext = useCallback((kind: ContextKind, key: string) => {
+    dispatchContextUpdate({ type: "add", context: createLDContext(kind, key) });
+  }, []);
+
+  const removeContext = useCallback((kind: Exclude<ContextKind, "user">) => {
+    dispatchContextUpdate({ type: "remove", kind });
+  }, []);
+
+  // With any change of contexts, we need to re-identiy with the launch darkly
+  useEffect(() => {
+    ldClient.current?.identify(contextState.context, undefined, debugFlags);
+  }, [contextState, ldClient]);
 
   /**
    * This function checks for all experiments to find the ones beginning with "i18n_{locale}_"
@@ -112,11 +142,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   };
 
   if (!ldClient.current) {
-    const userContext = createUserContext(user, locale);
-    const contexts = workspaceId
-      ? createMultiContext(userContext, createLDContext("workspace", workspaceId))
-      : createMultiContext(userContext);
-    ldClient.current = LDClient.initialize(apiKey, contexts);
+    ldClient.current = LDClient.initialize(apiKey, contextState.context);
 
     // Wait for either LaunchDarkly to initialize or a specific timeout to pass first
     Promise.race([
@@ -160,49 +186,6 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
     ldClient.current?.on("change", onFeatureFlagsChanged);
     return () => ldClient.current?.off("change", onFeatureFlagsChanged);
   });
-
-  // Whenever the user, locale or workspaceId changes, we need to re-identify with launchdarkly
-  useEffect(() => {
-    const userContext = createUserContext(user, locale);
-    const contexts = workspaceId
-      ? createMultiContext(userContext, createLDContext("workspace", workspaceId))
-      : createMultiContext(userContext);
-    ldClient.current?.identify(contexts, undefined, debugFlags);
-  }, [workspaceId, locale, user]);
-
-  // Casting the type as LDMultiKindContext | LDSingleKindContext is necessary because the LD client still supports the deprecated LDUser.
-  // We don't use LDUser, but the type is still there, so we need to cast the type to the actual type we're using.
-  const getLDClientContext = () => ldClient.current?.getContext() as Exclude<LDClient.LDContext, LDClient.LDUser>;
-
-  // Adds a context and reidentifies with the ldClient if the context is not already present
-  const addContext = useCallback((kind: ContextKind, key: string) => {
-    const ldClientContext = getLDClientContext();
-    const existingContexts = isMultiContext(ldClientContext)
-      ? getSingleContextsFromMulti(ldClientContext)
-      : [ldClientContext];
-    if (!existingContexts.find((c) => c.kind === kind && c.key !== key)) {
-      ldClient.current?.identify(
-        createMultiContext(...existingContexts, createLDContext(kind, key)),
-        undefined,
-        debugFlags
-      );
-    }
-  }, []);
-
-  // Removes a context and reidentifies with the ldClient if the context is present
-  const removeContext = useCallback((kind: ContextKind) => {
-    const ldClientContext = getLDClientContext();
-    const existingContexts = isMultiContext(ldClientContext)
-      ? getSingleContextsFromMulti(ldClientContext)
-      : [ldClientContext];
-    if (existingContexts.some((c) => c.kind === kind)) {
-      ldClient.current?.identify(
-        createMultiContext(...existingContexts.filter((c) => c.kind !== kind)),
-        undefined,
-        debugFlags
-      );
-    }
-  }, []);
 
   const experimentService: ExperimentService = useMemo(
     () => ({
