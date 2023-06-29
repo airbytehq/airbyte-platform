@@ -47,16 +47,13 @@ open class NotificationHandler(
     open fun sendNotification(connectionId: UUID, subject: String, message: String, notificationEvent: NotificationEvent) {
         val notificationItemWithCustomerIoEmailConfig = maybeWorkspaceNotificationConfigFetcher?.fetchNotificationConfig(connectionId, notificationEvent)
 
-        if (notificationItemWithCustomerIoEmailConfig?.notificationItem == null) {
-            return;
-        }
-        notificationItemWithCustomerIoEmailConfig!!.notificationItem.notificationType!!.forEach { notificationType ->
+        var notificationItem = notificationItemWithCustomerIoEmailConfig?.getNotificationItem()
+        notificationItem?.notificationType?.forEach { notificationType ->
             runCatching {
                 if (maybeWebhookNotificationSender != null
                         && notificationType == io.airbyte.api.client.model.generated.NotificationType.SLACK) {
                     val webhookConfig = WebhookConfig(
-                        notificationItemWithCustomerIoEmailConfig
-                            !!.notificationItem
+                        notificationItem
                             !!.slackConfiguration
                             !!.webhook)
                     maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)

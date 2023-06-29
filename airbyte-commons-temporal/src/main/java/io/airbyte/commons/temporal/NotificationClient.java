@@ -30,6 +30,8 @@ public class NotificationClient {
   private final FeatureFlagClient featureFlagClient;
   private final WorkflowClient client;
 
+  private static final String SCHEMA_CHANGE_SUBJECT = "Schema Change Detected";
+
   public NotificationClient(final FeatureFlagClient featureFlagClient, WorkflowClient client) {
     this.featureFlagClient = featureFlagClient;
     this.client = client;
@@ -73,7 +75,7 @@ public class NotificationClient {
       throw new RuntimeException(e);
     }
     try {
-      notificationWorkflow.sendNotification(connectionId, "", message,
+      notificationWorkflow.sendNotification(connectionId, SCHEMA_CHANGE_SUBJECT, message,
           containsBreakingChange ? NotificationEvent.onBreakingChange : NotificationEvent.onNonBreakingChange);
     } catch (final RuntimeException e) {
       log.error("There was an error while sending a Schema Change Notification", e);
