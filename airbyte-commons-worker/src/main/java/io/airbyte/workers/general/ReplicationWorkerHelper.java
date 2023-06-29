@@ -11,6 +11,7 @@ import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause;
 import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.config.FailureReason;
+import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncInput;
@@ -245,7 +246,11 @@ class ReplicationWorkerHelper {
     return currentDestinationStream;
   }
 
-  public ReplicationOutput getReplicationOutput()
+  public ReplicationOutput getReplicationOutput() throws JsonProcessingException {
+    return getReplicationOutput(null);
+  }
+
+  public ReplicationOutput getReplicationOutput(final PerformanceMetrics performanceMetrics)
       throws JsonProcessingException {
     final ReplicationStatus outputStatus;
     // First check if the process was cancelled. Cancellation takes precedence over failures.
@@ -276,7 +281,8 @@ class ReplicationWorkerHelper {
         .withTotalStats(totalSyncStats)
         .withStreamStats(streamSyncStats)
         .withStartTime(timeTracker.getReplicationStartTime())
-        .withEndTime(System.currentTimeMillis());
+        .withEndTime(System.currentTimeMillis())
+        .withPerformanceMetrics(performanceMetrics);
 
     final ReplicationOutput output = new ReplicationOutput()
         .withReplicationAttemptSummary(summary)

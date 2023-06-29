@@ -184,6 +184,7 @@ public class ReplicationActivityImpl implements ReplicationActivity {
     syncSummary.setStatus(replicationSummary.getStatus());
     syncSummary.setTotalStats(replicationSummary.getTotalStats());
     syncSummary.setStreamStats(replicationSummary.getStreamStats());
+    syncSummary.setPerformanceMetrics(output.getReplicationAttemptSummary().getPerformanceMetrics());
 
     standardSyncOutput.setState(output.getState());
     standardSyncOutput.setOutputCatalog(output.getOutputCatalog());

@@ -802,6 +802,10 @@ abstract class ReplicationWorkerTest {
     final ReplicationWorker worker = getDefaultReplicationWorker();
 
     final ReplicationOutput actual = worker.run(syncInput, jobRoot);
+    // Remove performance metrics from the output, those are implementation specific and should be
+    // excluded from the test.
+    actual.getReplicationAttemptSummary().setPerformanceMetrics(null);
+
     final ReplicationOutput replicationOutput = new ReplicationOutput()
         .withReplicationAttemptSummary(new ReplicationAttemptSummary()
             .withRecordsSynced(12L)
