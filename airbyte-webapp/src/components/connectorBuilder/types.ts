@@ -169,6 +169,10 @@ export type BuilderRequestBody =
   | {
       type: "form_list";
       values: Array<[string, string]>;
+    }
+  | {
+      type: "string_freeform";
+      value: string;
     };
 
 export interface BuilderStream {
@@ -591,11 +595,16 @@ export const builderFormValidationSchema = yup.object().shape({
               then: keyValueListSchema,
               otherwise: (schema) => schema.strip(),
             }),
-            value: yup.mixed().when("type", {
-              is: (val: string) => val === "json_freeform",
-              then: jsonString,
-              otherwise: (schema) => schema.strip(),
-            }),
+            value: yup
+              .mixed()
+              .when("type", {
+                is: (val: string) => val === "json_freeform",
+                then: jsonString,
+              })
+              .when("type", {
+                is: (val: string) => val === "string_freeform",
+                then: yup.string(),
+              }),
           }),
         }),
         schema: jsonString,
@@ -1018,6 +1027,8 @@ function builderRequestBodyToStreamRequestBody(stream: BuilderStream) {
       request_body_data:
         stream.requestOptions.requestBody.type === "form_list"
           ? Object.fromEntries(stream.requestOptions.requestBody.values)
+          : stream.requestOptions.requestBody.type === "string_freeform"
+          ? stream.requestOptions.requestBody.value
           : undefined,
     };
   } catch {

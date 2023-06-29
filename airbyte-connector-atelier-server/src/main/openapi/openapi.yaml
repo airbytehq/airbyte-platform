@@ -201,7 +201,7 @@ components:
           type: object
           description: The request parameters that were set on the HTTP request, if any
         body:
-          type: object
+          type: string
           description: The body of the HTTP request, if present
         headers:
           type: object

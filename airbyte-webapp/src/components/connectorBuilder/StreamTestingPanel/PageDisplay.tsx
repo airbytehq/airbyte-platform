@@ -8,7 +8,12 @@ import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { StreamReadInferredSchema, StreamReadSlicesItemPagesItem } from "core/request/ConnectorBuilderClient";
+import {
+  HttpRequest,
+  HttpResponse,
+  StreamReadInferredSchema,
+  StreamReadSlicesItemPagesItem,
+} from "core/request/ConnectorBuilderClient";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
@@ -31,6 +36,27 @@ interface TabData {
   content: string;
 }
 
+function formatForDisplay(obj: HttpRequest | HttpResponse | undefined): string {
+  if (!obj) {
+    return "";
+  }
+
+  let parsedBody: unknown;
+  try {
+    // body is a string containing JSON most of the time, but not always.
+    // Attempt to parse and fall back to the raw string if unsuccessful.
+    parsedBody = obj.body ? JSON.parse(obj.body) : "";
+  } catch {
+    parsedBody = obj.body;
+  }
+
+  const unpackedObj = {
+    ...obj,
+    body: parsedBody,
+  };
+  return formatJson(unpackedObj);
+}
+
 export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
   const { formatMessage } = useIntl();
 
@@ -47,26 +73,8 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
-  const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
-  const formattedResponse = useMemo(() => {
-    if (!page.response || !page.response.body) {
-      return "";
-    }
-    let parsedBody: unknown;
-    try {
-      // body is a string containing JSON most of the time, but not always.
-      // Attempt to parse and fall back to the raw string if unsuccessfull.
-      parsedBody = JSON.parse(page.response.body);
-    } catch {
-      parsedBody = page.response.body;
-    }
-
-    const unpackedBodyResponse = {
-      ...page.response,
-      body: parsedBody,
-    };
-    return formatJson(unpackedBodyResponse);
-  }, [page.response]);
+  const formattedRequest = useMemo(() => formatForDisplay(page.request), [page.request]);
+  const formattedResponse = useMemo(() => formatForDisplay(page.response), [page.response]);
 
   let defaultTabIndex = 0;
   const tabs: TabData[] = [

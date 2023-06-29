@@ -391,7 +391,11 @@ describe("Conversion successfully results in", () => {
         }),
       ],
     };
-    await expect(() => convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME)).rejects.toThrow();
+    const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    expect(formValues.streams[0].requestOptions.requestBody).toEqual({
+      type: "string_freeform",
+      value: "abc def",
+    });
   });
 
   it("primary key string converted to array", async () => {

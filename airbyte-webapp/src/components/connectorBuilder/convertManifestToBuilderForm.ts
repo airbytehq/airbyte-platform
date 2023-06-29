@@ -176,7 +176,7 @@ const manifestStreamToBuilder = (
     requestOptions: {
       requestParameters: Object.entries(requester.request_parameters ?? {}),
       requestHeaders: Object.entries(requester.request_headers ?? {}),
-      requestBody: requesterToRequestBody(stream.name, requester),
+      requestBody: requesterToRequestBody(requester),
     },
     primaryKey: manifestPrimaryKeyToBuilder(stream),
     paginator: manifestPaginatorToBuilder(retriever.paginator, stream.name),
@@ -196,15 +196,12 @@ const manifestStreamToBuilder = (
   };
 };
 
-function requesterToRequestBody(
-  streamName: string | undefined,
-  requester: HttpRequester
-): BuilderStream["requestOptions"]["requestBody"] {
+function requesterToRequestBody(requester: HttpRequester): BuilderStream["requestOptions"]["requestBody"] {
   if (requester.request_body_data && typeof requester.request_body_data === "object") {
     return { type: "form_list", values: Object.entries(requester.request_body_data) };
   }
   if (requester.request_body_data && typeof requester.request_body_data === "string") {
-    throw new ManifestCompatibilityError(streamName, "request_body_data is a string, but should be an object");
+    return { type: "string_freeform", value: requester.request_body_data };
   }
   if (!requester.request_body_json) {
     return { type: "json_list", values: [] };

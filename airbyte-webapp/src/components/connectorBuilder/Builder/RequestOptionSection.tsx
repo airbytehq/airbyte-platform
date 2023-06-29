@@ -58,6 +58,21 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = ({ stre
         />
       ),
     },
+    {
+      label: "Text (Free form)",
+      typeValue: "string_freeform",
+      default: {
+        value: "",
+      },
+      children: (
+        <BuilderField
+          type="textarea"
+          path={streamFieldPath("requestOptions.requestBody.value")}
+          label="Request body as string"
+          manifestPath="HttpRequester.properties.request_body_data"
+        />
+      ),
+    },
   ];
 
   return (
