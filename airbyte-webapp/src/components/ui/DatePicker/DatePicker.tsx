@@ -163,6 +163,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       <div className={styles.datepickerButtonContainer}>
         <ReactDatePicker
           ref={datepickerRef}
+          showMonthDropdown
+          showYearDropdown
+          dropdownMode="select"
           showPopperArrow={false}
           showTimeSelect={withTime}
           disabled={disabled}
