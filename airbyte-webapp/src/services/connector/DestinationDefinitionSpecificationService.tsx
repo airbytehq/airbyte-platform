@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useConfig } from "config";
 import { useSuspenseQuery } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionSpecificationService } from "core/domain/connector/DestinationDefinitionSpecificationService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { isDefined } from "utils/common";
 
 import { DestinationDefinitionSpecificationRead } from "../../core/request/AirbyteClient";

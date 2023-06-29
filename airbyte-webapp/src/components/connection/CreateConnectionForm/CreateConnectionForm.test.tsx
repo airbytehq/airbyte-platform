@@ -33,9 +33,12 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
   useDestinationDefinition: () => mockDestinationDefinition,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
-  useCurrentWorkspace: () => ({}),
+jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
+}));
+
+jest.mock("core/api", () => ({
+  useCurrentWorkspace: () => ({}),
   useInvalidateWorkspaceStateQuery: () => () => null,
 }));
 

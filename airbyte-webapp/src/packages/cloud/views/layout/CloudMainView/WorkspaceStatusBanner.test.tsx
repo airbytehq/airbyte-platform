@@ -13,7 +13,7 @@ import { I18nProvider } from "core/i18n";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import cloudLocales from "../../../locales/en.json";
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({
     workspace: { workspaceId: "123" },
   }),

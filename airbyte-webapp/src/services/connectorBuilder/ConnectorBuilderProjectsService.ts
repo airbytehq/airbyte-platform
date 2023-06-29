@@ -1,5 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import { useConfig } from "config";
 import { useSuspenseQuery } from "core/api";
 import { ConnectorBuilderProjectsRequestService } from "core/domain/connectorBuilder/ConnectorBuilderProjectsRequestService";
@@ -12,7 +14,6 @@ import {
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { useConnectorBuilderService } from "./ConnectorBuilderApiService";
 import { SCOPE_WORKSPACE } from "../Scope";

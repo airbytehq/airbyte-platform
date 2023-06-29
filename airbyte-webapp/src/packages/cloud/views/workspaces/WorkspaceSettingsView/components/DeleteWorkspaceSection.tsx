@@ -6,11 +6,11 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useCurrentWorkspace } from "core/api";
 import { useRemoveCloudWorkspace } from "core/api/cloud";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 export const DeleteWorkspaceSection: React.FC = () => {
   const { formatMessage } = useIntl();

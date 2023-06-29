@@ -1,8 +1,8 @@
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useEffect } from "react";
 import { useEffectOnce } from "react-use";
 
 import { config } from "config";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { useAuthService } from "../../auth/AuthService";
 

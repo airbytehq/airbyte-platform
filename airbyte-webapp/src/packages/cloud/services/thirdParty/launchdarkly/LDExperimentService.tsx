@@ -1,3 +1,4 @@
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import * as LDClient from "launchdarkly-js-client-sdk";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useIntl } from "react-intl";
@@ -15,7 +16,6 @@ import { useAppMonitoringService, AppActionCodes } from "hooks/services/AppMonit
 import { ContextKind, ExperimentProvider, ExperimentService } from "hooks/services/Experiment";
 import type { Experiments } from "hooks/services/Experiment/experiments";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 import { isDevelopment } from "utils/isDevelopment";
 import { rejectAfter } from "utils/promises";
 

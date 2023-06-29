@@ -5,6 +5,7 @@ import { Suspense, useRef } from "react";
 import { FormattedDate, FormattedMessage, FormattedTimeParts, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { buildAttemptLink, useAttemptLink } from "components/JobItem/attemptLinkUtils";
 import { AttemptDetails } from "components/JobItem/components/AttemptDetails";
 import { getJobCreatedAt } from "components/JobItem/components/JobSummary";
@@ -18,12 +19,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { useGetDebugInfoJobManual } from "core/api";
+import { useCurrentWorkspace, useGetDebugInfoJobManual } from "core/api";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
-import { useCurrentWorkspaceId, useGetWorkspace } from "services/workspaces/WorkspacesService";
 import { copyToClipboard } from "utils/clipboard";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "utils/file";
 
@@ -51,7 +51,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { refetch: fetchJobLogs } = useGetDebugInfoJobManual(jobWithAttempts.job.id);
   const workspaceId = useCurrentWorkspaceId();
-  const { name: workspaceName } = useGetWorkspace(workspaceId);
+  const { name: workspaceName } = useCurrentWorkspace();
   const { trackError } = useAppMonitoringService();
   const { connection } = useConnectionEditService();
 

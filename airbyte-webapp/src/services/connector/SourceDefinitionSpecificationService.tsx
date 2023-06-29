@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useConfig } from "config";
 import { useSuspenseQuery } from "core/api";
+import { useCurrentWorkspace } from "core/api";
 import { SourceDefinitionSpecificationService } from "core/domain/connector/SourceDefinitionSpecificationService";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { isDefined } from "utils/common";
 
 import { SCOPE_WORKSPACE } from "../Scope";

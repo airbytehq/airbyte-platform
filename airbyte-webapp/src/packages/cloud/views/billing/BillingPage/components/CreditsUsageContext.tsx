@@ -3,10 +3,10 @@ import { Dispatch, SetStateAction, createContext, useContext, useMemo, useState 
 
 import { Option } from "components/ui/ListBox";
 
+import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspaceUsage } from "core/api/cloud";
 import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
 import { DestinationId, ReleaseStage, SourceId } from "core/request/AirbyteClient";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { calculateAvailableSourcesAndDestinations } from "./calculateAvailableSourcesAndDestinations";
 import {

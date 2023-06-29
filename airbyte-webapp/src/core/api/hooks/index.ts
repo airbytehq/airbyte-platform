@@ -7,3 +7,4 @@ export * from "./notifications";
 export * from "./operations";
 export * from "./security";
 export * from "./streams";
+export * from "./workspaces";

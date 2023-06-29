@@ -9,6 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { SearchInput } from "components/ui/SearchInput";
 
+import { useCurrentWorkspace } from "core/api";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -16,7 +17,6 @@ import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useModalService } from "hooks/services/Modal";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { SOURCE_ID_PARAM, SOURCE_TYPE_PARAM } from "./SelectSource";

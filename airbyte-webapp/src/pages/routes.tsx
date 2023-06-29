@@ -3,11 +3,11 @@ import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-rou
 
 import { ApiErrorBoundary } from "components/common/ApiErrorBoundary";
 
+import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "core/api";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useInvalidateAllWorkspaceScopeOnChange, useListWorkspaces } from "services/workspaces/WorkspacesService";
 import { CompleteOauthRequest } from "views/CompleteOauthRequest";
 import MainView from "views/layout/MainView";
 

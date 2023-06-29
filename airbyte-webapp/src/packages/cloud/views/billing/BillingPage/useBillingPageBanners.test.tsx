@@ -1,10 +1,10 @@
 import { renderHook } from "@testing-library/react-hooks";
 import { TestWrapper } from "test-utils";
 
+import { useCurrentWorkspace } from "core/api";
 import { useFreeConnectorProgram, useGetCloudWorkspace } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { useExperiment } from "hooks/services/Experiment";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { useBillingPageBanners } from "./useBillingPageBanners";
 
@@ -16,7 +16,7 @@ const mockUseFreeConnectorProgram = useFreeConnectorProgram as unknown as jest.M
   Partial<typeof useFreeConnectorProgram>
 >;
 
-jest.mock("services/workspaces/WorkspacesService");
+jest.mock("core/api");
 const mockGetCurrentWorkspace = useCurrentWorkspace as unknown as jest.Mock<Partial<typeof useCurrentWorkspace>>;
 
 jest.mock("core/api/cloud");

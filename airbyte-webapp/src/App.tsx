@@ -22,7 +22,6 @@ import LoadingPage from "./components/LoadingPage";
 import { ConfigServiceProvider } from "./config";
 import en from "./locales/en.json";
 import { Routing } from "./pages/routes";
-import { WorkspaceServiceProvider } from "./services/workspaces/WorkspacesService";
 import { theme } from "./theme";
 
 const StyleProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
@@ -33,21 +32,19 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <AnalyticsProvider>
     <AppMonitoringServiceProvider>
       <ApiErrorBoundary>
-        <WorkspaceServiceProvider>
-          <FeatureService features={defaultOssFeatures}>
-            <NotificationService>
-              <ConfirmationModalService>
-                <ModalServiceProvider>
-                  <FormChangeTrackerService>
-                    <ConnectorBuilderTestInputProvider>
-                      <HelmetProvider>{children}</HelmetProvider>
-                    </ConnectorBuilderTestInputProvider>
-                  </FormChangeTrackerService>
-                </ModalServiceProvider>
-              </ConfirmationModalService>
-            </NotificationService>
-          </FeatureService>
-        </WorkspaceServiceProvider>
+        <FeatureService features={defaultOssFeatures}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ModalServiceProvider>
+                <FormChangeTrackerService>
+                  <ConnectorBuilderTestInputProvider>
+                    <HelmetProvider>{children}</HelmetProvider>
+                  </ConnectorBuilderTestInputProvider>
+                </FormChangeTrackerService>
+              </ModalServiceProvider>
+            </ConfirmationModalService>
+          </NotificationService>
+        </FeatureService>
       </ApiErrorBoundary>
     </AppMonitoringServiceProvider>
   </AnalyticsProvider>

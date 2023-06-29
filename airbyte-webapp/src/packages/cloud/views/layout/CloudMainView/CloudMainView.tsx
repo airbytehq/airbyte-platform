@@ -6,6 +6,7 @@ import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
+import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspace } from "core/api/cloud";
 import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -16,7 +17,6 @@ import { useExperimentSpeedyConnection } from "packages/cloud/components/experim
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";

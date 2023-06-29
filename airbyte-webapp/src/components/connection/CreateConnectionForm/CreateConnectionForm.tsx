@@ -2,6 +2,7 @@ import { Form, Formik, FormikHelpers } from "formik";
 import React, { Suspense, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectionFormFields } from "components/connection/ConnectionForm/ConnectionFormFields";
 import { CreateControls } from "components/connection/ConnectionForm/CreateControls";
 import {
@@ -23,7 +24,6 @@ import { useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useCreateConnection } from "hooks/services/useConnectionHook";
 import { SchemaError as SchemaErrorType, useDiscoverSchema } from "hooks/services/useSourceHook";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./CreateConnectionForm.module.scss";
 import { CreateConnectionNameField } from "./CreateConnectionNameField";

@@ -11,13 +11,13 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { SearchInput } from "components/ui/SearchInput";
 
+import { useCurrentWorkspace } from "core/api";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useModalService } from "hooks/services/Modal";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./SelectDestination";

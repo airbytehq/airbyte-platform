@@ -5,8 +5,8 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 
+import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import MetricsForm from "./components/MetricsForm";
 import useWorkspaceEditor from "../../components/useWorkspaceEditor";
