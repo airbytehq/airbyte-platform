@@ -4,7 +4,7 @@ commons_io = "2.7"
 connectors-testcontainers = "1.15.3"
 datadog-version = "1.14.0"
 docker-java = "3.2.8"
-fasterxml_version = "2.14.2"
+fasterxml_version = "2.15.0"
 flyway = "7.14.0"
 glassfish_version = "2.31"
 hikaricp = "5.0.1"
@@ -15,7 +15,7 @@ jmh = "1.36"
 jooq = "3.17.8"
 junit-jupiter = "5.9.1"
 kotlin = "1.8.20"
-kubernetes-client = "6.5.1"
+kubernetes-client = "6.6.1"
 log4j = "2.17.2"
 lombok = "1.18.24"
 micronaut = "3.9.4"
@@ -24,10 +24,10 @@ micronaut-email = "1.5.0"
 micronaut-jaxrs = "3.4.0"
 micronaut-jdbc = "4.8.0"
 micronaut-micrometer = "4.8.3"
-micronaut-security = "3.11.1"
-micronaut-test = "3.8.2"
+micronaut-security = "3.11.0"
 mockito = "4.11.0"
 okhttp3 = "4.10.0"
+micronaut-test = "3.8.2"
 platform-testcontainers = "1.17.6"
 postgresql = "42.5.4"
 reactor = "3.5.5"
@@ -48,7 +48,7 @@ apache-commons-text = { module = "org.apache.commons:commons-text", version = "1
 apache-cxf-core = { module = "org.apache.cxf:cxf-core", version = "3.4.2" }
 appender-log4j2 = { module = "com.therealvan:appender-log4j2", version = "3.6.0" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
-aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.6" }
+aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.468" }
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.12.14" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons_io" }
 connectors-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "connectors-testcontainers" }
@@ -62,8 +62,8 @@ fasterxml = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "faste
 findsecbugs-plugin = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version = "1.12.0" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 glassfish = { module = "org.glassfish.jersey:jackson-bom", version.ref = "glassfish_version" }
-google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version = "2.17.2" }
-guava = { module = "com.google.guava:guava", version = "31.1-jre" }
+google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version = "2.22.5" }
+guava = { module = "com.google.guava:guava", version = "32.0.1-jre" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "fasterxml_version" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "fasterxml_version" }
@@ -83,6 +83,7 @@ jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
 jooq-meta = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
 json-path = { module = "com.jayway.jsonpath:json-path", version = "2.7.0" }
 json-assert = { module = "org.skyscreamer:jsonassert", version = "1.5.1" }
+jsonsmart = { module = 'net.minidev:json-smart', version = "2.4.10" }
 jul-to-slf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
@@ -91,14 +92,14 @@ junit-jupiter-system-stubs = { module = "uk.org.webcompere:system-stubs-jupiter"
 junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
-launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "6.0.1" }
+launchdarkly = { module = "com.launchdarkly:launchdarkly-java-server-sdk", version = "6.2.0" }
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 log4j-impl = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4j" }
 log4j-over-slf4j = { module = "org.slf4j:log4j-over-slf4j", version.ref = "slf4j" }
 log4j-web = { module = "org.apache.logging.log4j:log4j-web", version.ref = "log4j" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
-micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.9.3" }
+micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version = "1.11.1" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
@@ -117,7 +118,7 @@ postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" 
 quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
-s3 = { module = "software.amazon.awssdk:s3", version = "2.16.84" }
+s3 = { module = "software.amazon.awssdk:s3", version = "2.20.93" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
@@ -129,6 +130,7 @@ swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref =
 temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
 temporal-serviceclient = { module = "io.temporal:temporal-serviceclient", version.ref = "temporal" }
 temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "temporal" }
+jetbrains-annotations = { module = "org.realityforge.org.jetbrains.annotations:org.jetbrains.annotations", version = "1.7.0" }
 
 # Micronaut-related dependencies
 h2-database = { module = "com.h2database:h2", version = "2.1.214" }
@@ -191,6 +193,7 @@ temporal = ["temporal-sdk", "temporal-serviceclient"]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 js2p = { id = "com.github.eirnym.js2p", version = "1.0" }
+micronaut-minimal-application = { id = "io.micronaut.minimal.application", version = "3.7.3" }
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "8.1" }
 openapi-generator = { id = "org.openapi.generator", version = "6.2.1" }

@@ -4,7 +4,7 @@ plugins {
 
 configurations.all {
     resolutionStrategy {
-        force libs.flyway.core, libs.jooq
+        force libs.flyway.core, libs.jooq, libs.jsonsmart
     }
 }
 

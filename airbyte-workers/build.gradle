@@ -17,7 +17,7 @@ configurations.all {
     resolutionStrategy {
         // Ensure that the versions defined in deps.toml are used
         // instead of versions from transitive dependencies
-        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3
+        force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3, libs.jsonsmart
     }
 }
 
@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.temporal.sdk) {
         exclude module: 'guava'
     }
+    implementation libs.jetbrains.annotations
     implementation libs.apache.ant
     implementation libs.apache.commons.lang
     implementation libs.apache.commons.text

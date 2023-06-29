@@ -2,6 +2,12 @@ plugins {
     id 'application'
 }
 
+configurations.all {
+    resolutionStrategy {
+        force libs.jsonsmart
+    }
+}
+
 dependencies {
     implementation 'com.auth0:java-jwt:3.19.2'
     implementation libs.bundles.kubernetes.client
