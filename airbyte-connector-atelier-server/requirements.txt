@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.43.2
+airbyte-cdk==0.44.0
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -75,7 +75,7 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.6.3
+typing-extensions==4.7.0
     # via
     #   cattrs
     #   pydantic
