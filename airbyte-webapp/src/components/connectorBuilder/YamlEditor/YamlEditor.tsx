@@ -40,6 +40,8 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
     yamlIsValid,
     jsonManifest,
     builderFormValues,
+    displayedVersion,
+    formValuesValid,
     setYamlEditorIsMounted,
     setYamlIsValid,
     setJsonManifest,
@@ -96,39 +98,41 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
   }, [jsonManifest, builderFormValues]);
 
   const handleToggleYamlEditor = async () => {
-    if (yamlIsDirty) {
-      try {
-        const convertedFormValues = await convertToBuilderFormValues(
-          jsonManifest,
-          builderFormValues.global.connectorName
-        );
-        Object.entries(convertedFormValues).forEach(([key, value]) => {
-          setValue(key, value);
-        });
-        toggleYamlEditor();
-      } catch (e) {
-        openConfirmationModal({
-          text: "connectorBuilder.toggleModal.text",
-          textValues: { error: e.message as string },
-          title: "connectorBuilder.toggleModal.title",
-          submitButtonText: "connectorBuilder.toggleModal.submitButton",
-          onSubmit: () => {
-            setYamlIsValid(true);
-            toggleYamlEditor();
-            closeConfirmationModal();
-            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DISCARD_YAML_CHANGES, {
-              actionDescription: "YAML changes were discarded due to failure when converting from YAML to UI",
-            });
-          },
-        });
-        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.YAML_TO_UI_CONVERSION_FAILURE, {
-          actionDescription: "Failure occured when converting from YAML to UI",
-          error_message: e.message,
-        });
-      }
-    } else {
+    // if the displayed version is not a draft and the form values are valid, that means switching won't change the manifest so we don't need to update the form values even if they are dirty due
+    // to manifest conversion changes
+    if ((displayedVersion !== undefined && formValuesValid) || !yamlIsDirty) {
       setYamlIsValid(true);
       toggleYamlEditor();
+      return;
+    }
+    try {
+      const convertedFormValues = await convertToBuilderFormValues(
+        jsonManifest,
+        builderFormValues.global.connectorName
+      );
+      Object.entries(convertedFormValues).forEach(([key, value]) => {
+        setValue(key, value);
+      });
+      toggleYamlEditor();
+    } catch (e) {
+      openConfirmationModal({
+        text: "connectorBuilder.toggleModal.text",
+        textValues: { error: e.message as string },
+        title: "connectorBuilder.toggleModal.title",
+        submitButtonText: "connectorBuilder.toggleModal.submitButton",
+        onSubmit: () => {
+          setYamlIsValid(true);
+          toggleYamlEditor();
+          closeConfirmationModal();
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DISCARD_YAML_CHANGES, {
+            actionDescription: "YAML changes were discarded due to failure when converting from YAML to UI",
+          });
+        },
+      });
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.YAML_TO_UI_CONVERSION_FAILURE, {
+        actionDescription: "Failure occured when converting from YAML to UI",
+        error_message: e.message,
+      });
     }
   };
 

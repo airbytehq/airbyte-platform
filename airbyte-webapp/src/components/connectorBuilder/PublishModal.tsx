@@ -14,11 +14,7 @@ import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
-import {
-  useListVersions,
-  usePublishProject,
-  useReleaseNewVersion,
-} from "services/connectorBuilder/ConnectorBuilderProjectsService";
+import { useListVersions } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./Builder/BuilderField";
@@ -32,10 +28,9 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { projectId, lastValidJsonManifest, currentProject } = useConnectorBuilderFormState();
+  const { projectId, lastValidJsonManifest, currentProject, publishProject, releaseNewVersion } =
+    useConnectorBuilderFormState();
   const { data: versions, isLoading: isLoadingVersions } = useListVersions(currentProject);
-  const { mutateAsync: sendPublishRequest } = usePublishProject();
-  const { mutateAsync: sendNewVersionRequest } = useReleaseNewVersion();
   const connectorName = useBuilderWatch("global.connectorName");
   const { setValue } = useFormContext();
 
@@ -98,7 +93,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     unregisterNotificationById(NOTIFICATION_ID);
     try {
       if (currentProject.sourceDefinitionId) {
-        await sendNewVersionRequest({
+        await releaseNewVersion({
           manifest,
           description: values.description,
           sourceDefinitionId: currentProject.sourceDefinitionId,
@@ -112,7 +107,7 @@ export const PublishModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
           projectId: currentProject.id,
         });
       } else {
-        await sendPublishRequest({
+        await publishProject({
           manifest,
           name: values.name,
           description: values.description,

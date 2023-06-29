@@ -26,7 +26,7 @@ const connectorBuilderKeys = {
   resolve: (manifest?: unknown) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
 };
 
-function useConnectorBuilderService() {
+export function useConnectorBuilderService() {
   const config = useConfig();
   const middlewares = useDefaultRequestMiddlewares();
   return useInitService(

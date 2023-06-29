@@ -1,6 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import classnames from "classnames";
 import debounce from "lodash/debounce";
+import isEqual from "lodash/isEqual";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
@@ -23,12 +24,12 @@ import {
   ConnectorBuilderFormManagementStateProvider,
   ConnectorBuilderMainRHFContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { removeEmptyStrings } from "utils/form";
+import { removeEmptyProperties } from "utils/form";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
-  const { builderFormValues, editorView, setEditorView } = useConnectorBuilderFormState();
+  const { builderFormValues, editorView, setEditorView, stateKey } = useConnectorBuilderFormState();
   const analyticsService = useAnalyticsService();
 
   useEffect(() => {
@@ -41,13 +42,16 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const switchToYaml = useCallback(() => setEditorView("yaml"), [setEditorView]);
 
   const initialFormValues = useRef(builderFormValues);
+  initialFormValues.current = builderFormValues;
 
   return (
     <BaseForm
+      // key is used to force re-mount of the form when a different state version is loaded so the react-hook-form / YAML editor state is re-initialized with the new values
+      key={stateKey}
       editorView={editorView}
       switchToUI={switchToUI}
       switchToYaml={switchToYaml}
-      defaultValues={initialFormValues.current}
+      defaultValues={initialFormValues}
     />
   );
 });
@@ -76,12 +80,12 @@ const BaseForm = React.memo(
     editorView: string;
     switchToUI: () => void;
     switchToYaml: () => void;
-    defaultValues: BuilderFormValues;
+    defaultValues: React.MutableRefObject<BuilderFormValues>;
   }) => {
     // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
     // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
     const methods = useForm({
-      defaultValues,
+      defaultValues: defaultValues.current,
       mode: "onChange",
       resolver: yupResolver<AnyObjectSchema>(builderFormValidationSchema),
     });
@@ -98,6 +102,10 @@ const BaseForm = React.memo(
 
 BaseForm.displayName = "BaseForm";
 
+function cleanedFormValues(values: unknown) {
+  return builderFormValidationSchema.cast(removeEmptyProperties(values)) as unknown as BuilderFormValues;
+}
+
 const Panels = React.memo(
   ({
     editorView,
@@ -113,17 +121,26 @@ const Panels = React.memo(
 
     const values = useWatch();
 
+    const lastUpdatedValues = useRef<BuilderFormValues | null>(null);
+    if (lastUpdatedValues.current === null) {
+      lastUpdatedValues.current = cleanedFormValues(values);
+    }
+
     const debouncedSetBuilderFormValues = useMemo(
       () =>
         debounce((values) => {
+          const newFormValues = cleanedFormValues(values);
+          if (isEqual(lastUpdatedValues.current, newFormValues)) {
+            return;
+          }
+
+          lastUpdatedValues.current = newFormValues;
           // update upstream state
-          setBuilderFormValues(
-            builderFormValidationSchema.cast(removeEmptyStrings(values)) as unknown as BuilderFormValues,
-            builderFormValidationSchema.isValidSync(values)
-          );
+          setBuilderFormValues(newFormValues, builderFormValidationSchema.isValidSync(newFormValues));
         }, 200),
       [setBuilderFormValues]
     );
+
     useEffect(() => {
       debouncedSetBuilderFormValues(values);
     }, [values, debouncedSetBuilderFormValues]);

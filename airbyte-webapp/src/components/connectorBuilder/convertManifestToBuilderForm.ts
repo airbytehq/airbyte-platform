@@ -2,6 +2,8 @@ import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import pick from "lodash/pick";
 
+import { removeEmptyProperties } from "utils/form";
+
 import {
   authTypeToKeyToInferredInput,
   BuilderFormAuthenticator,
@@ -65,7 +67,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     builderFormValues.inferredInputOverrides = inferredInputOverrides;
     builderFormValues.inputOrder = inputOrder;
 
-    return builderFormValues;
+    return removeEmptyProperties(builderFormValues);
   }
 
   assertType<SimpleRetriever>(streams[0].retriever, "SimpleRetriever", streams[0].name);
@@ -94,7 +96,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.global.authenticator = auth;
   builderFormValues.inputOrder = inputOrder;
 
-  return builderFormValues;
+  return removeEmptyProperties(builderFormValues);
 };
 
 const RELEVANT_AUTHENTICATOR_KEYS = [
