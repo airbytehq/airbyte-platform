@@ -291,6 +291,7 @@ create table "public"."workspace" (
   "geography" geography_type not null default cast('AUTO' as geography_type),
   "webhook_operation_configs" jsonb,
   "notification_settings" jsonb,
+  "organization_id" uuid,
   constraint "workspace_pkey"
     primary key ("id")
 );
@@ -393,6 +394,10 @@ alter table "public"."user"
   add constraint "user_default_workspace_id_fkey"
     foreign key ("default_workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."workspace"
+  add constraint "workspace_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
 alter table "public"."workspace_service_account"
   add constraint "workspace_service_account_workspace_id_fkey"
     foreign key ("workspace_id")

@@ -1037,6 +1037,7 @@ public class ConfigRepository {
   }
 
   private int writeActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId, final DSLContext ctx) {
+    // todo edit for organizations
     return ctx.insertInto(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .set(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID, actorDefinitionId)
         .set(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID, workspaceId)
@@ -1052,6 +1053,7 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public boolean actorDefinitionWorkspaceGrantExists(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+    // todo edit for organizations
     final Integer count = database.query(ctx -> ctx.fetchCount(
         DSL.selectFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
             .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
@@ -1067,6 +1069,7 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public void deleteActorDefinitionWorkspaceGrant(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+    // todo edit for organizations
     database.query(ctx -> ctx.deleteFrom(ACTOR_DEFINITION_WORKSPACE_GRANT)
         .where(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
         .and(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID.eq(workspaceId))
@@ -1082,6 +1085,7 @@ public class ConfigRepository {
    * @throws IOException - you never know when you IO
    */
   public boolean workspaceCanUseDefinition(final UUID actorDefinitionId, final UUID workspaceId) throws IOException {
+    // todo edit for organizations
     final Result<Record> records = actorDefinitionsJoinedWithGrants(
         workspaceId,
         JoinType.LEFT_OUTER_JOIN,
@@ -1142,6 +1146,7 @@ public class ConfigRepository {
   private <T> Entry<T, Boolean> actorDefinitionWithGrantStatus(final Record outerJoinRecord,
                                                                final Function<Record, T> recordToActorDefinition) {
     final T actorDefinition = recordToActorDefinition.apply(outerJoinRecord);
+    // todo edit for organizations
     final boolean granted = outerJoinRecord.get(ACTOR_DEFINITION_WORKSPACE_GRANT.WORKSPACE_ID) != null;
     return Map.entry(actorDefinition, granted);
   }
@@ -1150,6 +1155,7 @@ public class ConfigRepository {
                                                           final JoinType joinType,
                                                           final Condition... conditions)
       throws IOException {
+    // todo edit for organizations
     return database.query(ctx -> ctx.select(asterisk()).from(ACTOR_DEFINITION)
         .join(ACTOR_DEFINITION_WORKSPACE_GRANT, joinType)
         .on(ACTOR_DEFINITION.ID.eq(ACTOR_DEFINITION_WORKSPACE_GRANT.ACTOR_DEFINITION_ID),
