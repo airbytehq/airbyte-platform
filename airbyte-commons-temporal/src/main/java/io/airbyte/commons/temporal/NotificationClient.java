@@ -43,17 +43,19 @@ public class NotificationClient {
    * @param url url to the connection in the airbyte web app
    */
   public void sendSchemaChangeNotification(final UUID connectionId,
+                                           final String sourceName,
                                            final String url,
                                            final boolean containsBreakingChange) {
 
     if (featureFlagClient.boolVariation(UseNotificationWorkflow.INSTANCE, new Connection(connectionId))) {
-      callNotificationWorkflow(connectionId, url, containsBreakingChange);
+      callNotificationWorkflow(connectionId, sourceName, url, containsBreakingChange);
     } else {
       callLegacyWorkflow(connectionId, url);
     }
   }
 
   private void callNotificationWorkflow(final UUID connectionId,
+                                        final String sourceName,
                                         final String url,
                                         final boolean containsBreakingChange) {
     final NotificationWorkflow notificationWorkflow =
@@ -64,7 +66,7 @@ public class NotificationClient {
       message = renderTemplate(
           containsBreakingChange ? "slack/breaking_schema_change_slack_notification_template.txt"
               : "slack/non_breaking_schema_change_slack_notification_template.txt",
-          connectionId.toString(), url);
+          connectionId.toString(), sourceName, url);
 
     } catch (final IOException e) {
       log.error("There was an error while rendering a Schema Change Notification", e);
