@@ -41,7 +41,6 @@ public class MetricTags {
   public static final String WORKSPACE_ID = "workspace_id";
   public static final String UNKNOWN = "unknown";
   public static final String USER_TYPE = "user_type"; // real user, service account, data plane user, etc
-  public static final String WILL_RETRY = "will_retry";
 
   public static final String NOTIFICATION_TRIGGER = "notification_trigger";
   public static final String NOTIFICATION_CLIENT = "notification_client";
