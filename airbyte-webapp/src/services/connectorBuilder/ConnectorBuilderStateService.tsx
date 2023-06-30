@@ -184,19 +184,6 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
     return convertedManifest;
   }, [storedEditorView, builderFormValues, jsonManifest]);
 
-  manifestRef.current = derivedJsonManifest;
-
-  const setEditorView = useCallback(
-    (view: EditorView) => {
-      if (view === "yaml" && manifestRef.current) {
-        // when switching to yaml, store the currently derived json manifest
-        setStoredJsonManifest(manifestRef.current);
-      }
-      setStoredEditorView(view);
-    },
-    [setStoredEditorView, setStoredJsonManifest]
-  );
-
   const [yamlIsValid, setYamlIsValid] = useState(true);
   const [yamlEditorIsMounted, setYamlEditorIsMounted] = useState(true);
 
@@ -221,6 +208,19 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
         ? derivedJsonManifest
         : convertToManifest(lastValidBuilderFormValues),
     [builderFormValues, storedEditorView, jsonManifest, derivedJsonManifest, lastValidBuilderFormValues]
+  );
+
+  manifestRef.current = lastValidJsonManifest;
+
+  const setEditorView = useCallback(
+    (view: EditorView) => {
+      if (view === "yaml" && manifestRef.current) {
+        // when switching to yaml, store the currently derived json manifest
+        setStoredJsonManifest(manifestRef.current);
+      }
+      setStoredEditorView(view);
+    },
+    [setStoredEditorView, setStoredJsonManifest]
   );
 
   const [persistedState, setPersistedState] = useState<BuilderProjectWithManifest>(() => ({
