@@ -43,7 +43,9 @@ import io.airbyte.protocol.models.StreamDescriptor;
 import io.airbyte.protocol.models.SyncMode;
 import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
+import io.airbyte.workers.internal.sync_persistence.SyncPersistenceImpl.RetryWithJitterConfig;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -92,12 +94,13 @@ class SyncPersistenceImplTest {
     final FeatureFlags featureFlags = mock(FeatureFlags.class);
     when(featureFlags.useStreamCapableState()).thenReturn(true);
     syncPersistence = new SyncPersistenceImpl(stateApi, attemptApi, new StateAggregatorFactory(featureFlags), syncStatsTracker, executorService,
-        flushPeriod);
+        flushPeriod, Optional.of(new RetryWithJitterConfig(1, 1, 4)));
     syncPersistence.setConnectionContext(connectionId, jobId, attemptNumber, null);
   }
 
   @AfterEach
-  void afterEach() {
+  void afterEach() throws Exception {
+    reset(stateApi, attemptApi);
     syncPersistence.close();
   }
 
@@ -234,7 +237,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testClose() throws InterruptedException, ApiException {
+  void testClose() throws Exception {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     final AirbyteStateMessage stateA2 = getStreamState("A", 2);
     syncPersistence.updateStats(new AirbyteRecordMessage());
@@ -249,7 +252,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testCloseMergeStatesFromPreviousFailure() throws ApiException, InterruptedException {
+  void testCloseMergeStatesFromPreviousFailure() throws Exception {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     final AirbyteStateMessage stateA2 = getStreamState("closeA", 2);
     syncPersistence.persist(connectionId, stateA2);
@@ -269,7 +272,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testCloseShouldAttemptToRetryFinalFlush() throws ApiException, InterruptedException {
+  void testCloseShouldAttemptToRetryFinalFlush() throws Exception {
     final AirbyteStateMessage state = getStreamState("final retry", 2);
     syncPersistence.updateStats(new AirbyteRecordMessage());
     syncPersistence.persist(connectionId, state);
@@ -287,7 +290,47 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testCloseWhenFailBecauseFlushTookTooLong() throws InterruptedException, ApiException {
+  void testBadFinalStateFlushThrowsAnException() throws ApiException, InterruptedException {
+    final AirbyteStateMessage state = getStreamState("final retry", 2);
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    syncPersistence.persist(connectionId, state);
+
+    // Setup some API failures
+    when(stateApi.createOrUpdateState(any()))
+        .thenThrow(new ApiException())
+        .thenThrow(new ApiException())
+        .thenThrow(new ApiException())
+        .thenThrow(new ApiException());
+
+    // Final flush
+    when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
+    assertThrows(Exception.class, () -> syncPersistence.close());
+    verify(stateApi, times(4)).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
+    verify(attemptApi, never()).saveStats(any());
+  }
+
+  @Test
+  void testBadFinalStatsFlushThrowsAnException() throws ApiException, InterruptedException {
+    final AirbyteStateMessage state = getStreamState("final retry", 2);
+    syncPersistence.updateStats(new AirbyteRecordMessage());
+    syncPersistence.persist(connectionId, state);
+
+    // Setup some API failures
+    when(attemptApi.saveStats(any()))
+        .thenThrow(new ApiException())
+        .thenThrow(new ApiException())
+        .thenThrow(new ApiException())
+        .thenThrow(new ApiException());
+
+    // Final flush
+    when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
+    assertThrows(Exception.class, () -> syncPersistence.close());
+    verify(stateApi).createOrUpdateState(buildStateRequest(connectionId, List.of(state)));
+    verify(attemptApi, times(4)).saveStats(any());
+  }
+
+  @Test
+  void testCloseWhenFailBecauseFlushTookTooLong() throws Exception {
     syncPersistence.persist(connectionId, getStreamState("oops", 42));
 
     // Simulates a flush taking too long to terminate
@@ -300,7 +343,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testCloseWhenFailBecauseThreadInterrupted() throws InterruptedException, ApiException {
+  void testCloseWhenFailBecauseThreadInterrupted() throws Exception {
     syncPersistence.persist(connectionId, getStreamState("oops", 42));
 
     // Simulates a flush taking too long to terminate
@@ -313,7 +356,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testCloseWithPendingFlushShouldCallTheApi() throws InterruptedException, ApiException {
+  void testCloseWithPendingFlushShouldCallTheApi() throws Exception {
     // Shutdown, we expect the executor service to be stopped and an stateApi to be called
     when(executorService.awaitTermination(anyLong(), any())).thenReturn(true);
     syncPersistence.close();
@@ -330,7 +373,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testLegacyStatesAreGettingIntoTheScheduledFlushLogic() throws ApiException, InterruptedException {
+  void testLegacyStatesAreGettingIntoTheScheduledFlushLogic() throws Exception {
     final ArgumentCaptor<ConnectionStateCreateOrUpdate> captor = ArgumentCaptor.forClass(ConnectionStateCreateOrUpdate.class);
 
     final AirbyteStateMessage message = getLegacyState("myFirstState");
@@ -353,7 +396,7 @@ class SyncPersistenceImplTest {
   }
 
   @Test
-  void testLegacyStateMigrationToStreamAreOnlyFlushedAtTheEnd() throws ApiException, InterruptedException {
+  void testLegacyStateMigrationToStreamAreOnlyFlushedAtTheEnd() throws Exception {
     // Migration is defined by current state returned from the API is LEGACY, and we are trying to
     // persist a non LEGACY state
     when(stateApi.getState(new ConnectionIdRequestBody().connectionId(connectionId)))

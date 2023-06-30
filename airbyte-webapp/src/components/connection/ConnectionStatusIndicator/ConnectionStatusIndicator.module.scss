@@ -23,6 +23,13 @@
         padding: variables.$border-radius-xl;
         border-radius: variables.$border-radius-xl;
         background-color: $bg-color;
+
+        .spinner {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          margin: -25%;
+        }
       }
     }
   }
@@ -30,7 +37,6 @@
 
 .spinner {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  margin: -25%;
+  top: -1px;
+  left: -1px;
 }

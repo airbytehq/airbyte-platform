@@ -6,7 +6,6 @@ import { MissingConfigError, useConfig } from "config";
 import { RequestMiddleware } from "core/request/RequestMiddleware";
 import { ServicesProvider, useGetService, useInjectServices } from "core/servicesProvider";
 import { RequestAuthMiddleware } from "packages/cloud/lib/auth/RequestAuthMiddleware";
-import { UserService } from "packages/cloud/lib/domain/users";
 import { useAuth } from "packages/firebaseReact";
 
 import { FirebaseSdkProvider } from "./FirebaseSdkProvider";
@@ -48,10 +47,9 @@ const ServiceOverrides: React.FC<React.PropsWithChildren<unknown>> = React.memo(
 
   const inject = useMemo(
     () => ({
-      UserService: new UserService(cloudApiUrl, middlewares),
       DefaultRequestMiddlewares: middlewares,
     }),
-    [cloudApiUrl, middlewares]
+    [middlewares]
   );
 
   useInjectServices(inject);

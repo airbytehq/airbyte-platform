@@ -1,6 +1,6 @@
 import classNames from "classnames";
-import { useField } from "formik";
 import { useEffect, useRef, useState } from "react";
+import { useController } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { Input } from "components/ui/Input";
@@ -9,8 +9,11 @@ import styles from "./NameInput.module.scss";
 
 export const NameInput = () => {
   const { formatMessage } = useIntl();
-  const [field, meta] = useField<string>("global.connectorName");
-  const hasError = Boolean(meta.error);
+  const {
+    field,
+    fieldState: { error },
+  } = useController({ name: "global.connectorName" });
+  const hasError = Boolean(error);
   const [showInput, setShowInput] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -37,11 +40,14 @@ export const NameInput = () => {
     <Input
       containerClassName={styles.inputContainer}
       className={styles.input}
-      ref={(el) => (inputRef.current = el)}
       {...field}
-      onBlur={(e) => {
+      ref={(el) => {
+        inputRef.current = el;
+        field.ref(el);
+      }}
+      onBlur={() => {
         setShowInput(false);
-        field.onBlur(e);
+        field.onBlur();
       }}
       type="text"
       value={field.value ?? ""}

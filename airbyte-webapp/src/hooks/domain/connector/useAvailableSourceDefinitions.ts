@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import { getExcludedConnectorIds } from "core/domain/connector/constants";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { useSourceDefinitionList } from "services/connector/SourceDefinitionService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 /**
  * Returns a list of source definitions that are available for the current workspace.

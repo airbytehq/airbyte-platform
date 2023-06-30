@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import io.airbyte.notification.NotificationEvent;
 import io.airbyte.notification.NotificationHandler;
 import io.airbyte.notification.NotificationType;
 import jakarta.inject.Singleton;
@@ -25,6 +26,11 @@ public class NotifyActivityImpl implements NotifyActivity {
   @Override
   public void sendNotification(UUID connectionId, String subject, String message, List<NotificationType> notificationType) {
     notificationHandler.sendNotification(connectionId, subject, message, notificationType);
+  }
+
+  @Override
+  public void sendNotificationWithEvent(UUID connectionId, String subject, String message, NotificationEvent notificationEvent) {
+    notificationHandler.sendNotification(connectionId, subject, message, notificationEvent);
   }
 
 }

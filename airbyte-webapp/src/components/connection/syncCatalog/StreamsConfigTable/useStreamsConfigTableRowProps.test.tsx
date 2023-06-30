@@ -4,7 +4,6 @@ import * as formik from "formik";
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 
 import { AirbyteStreamAndConfiguration } from "core/request/AirbyteClient";
-import * as bulkEditService from "hooks/services/BulkEdit/BulkEditService";
 import * as connectionFormService from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { useStreamsConfigTableRowProps } from "./useStreamsConfigTableRowProps";
@@ -43,9 +42,7 @@ const mockDisabledInitialValues: Partial<FormikConnectionFormValues> = {
   },
 };
 
-const testSetup = (initialValues: Partial<FormikConnectionFormValues>, isBulkEdit: boolean, error: unknown) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  jest.spyOn(bulkEditService, "useBulkEditSelect").mockImplementation(() => [isBulkEdit, () => null] as any); // not selected for bulk edit
+const testSetup = (initialValues: Partial<FormikConnectionFormValues>, error: unknown) => {
   jest.spyOn(connectionFormService, "useConnectionFormService").mockImplementation(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { initialValues } as any;
@@ -58,7 +55,7 @@ const testSetup = (initialValues: Partial<FormikConnectionFormValues>, isBulkEdi
 
 describe(`${useStreamsConfigTableRowProps.name}`, () => {
   it("should return default styles for a row that starts enabled", () => {
-    testSetup(mockInitialValues, false, undefined);
+    testSetup(mockInitialValues, undefined);
 
     const { result } = renderHook(() => useStreamsConfigTableRowProps(mockStream));
 
@@ -66,7 +63,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("grey");
   });
   it("should return disabled styles for a row that starts disabled", () => {
-    testSetup(mockDisabledInitialValues, false, undefined);
+    testSetup(mockDisabledInitialValues, undefined);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -80,7 +77,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("grey");
   });
   it("should return added styles for a row that is added", () => {
-    testSetup(mockDisabledInitialValues, false, undefined);
+    testSetup(mockDisabledInitialValues, undefined);
 
     const { result } = renderHook(() => useStreamsConfigTableRowProps(mockStream));
 
@@ -88,7 +85,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
     expect(result.current.pillButtonVariant).toEqual("green");
   });
   it("should return removed styles for a row that is removed", () => {
-    testSetup(mockInitialValues, false, undefined);
+    testSetup(mockInitialValues, undefined);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -103,7 +100,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
   });
   it("should return updated styles for a row that is updated", () => {
     // eslint-disable-next-line
-    testSetup(mockInitialValues, false, undefined);
+    testSetup(mockInitialValues, undefined);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -118,7 +115,7 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
   });
 
   it("should return added styles for a row that is both added and updated", () => {
-    testSetup(mockDisabledInitialValues, false, undefined);
+    testSetup(mockDisabledInitialValues, undefined);
 
     const { result } = renderHook(() =>
       useStreamsConfigTableRowProps({
@@ -129,18 +126,5 @@ describe(`${useStreamsConfigTableRowProps.name}`, () => {
 
     expect(result.current.streamHeaderContentStyle).toEqual("streamHeaderContent added");
     expect(result.current.pillButtonVariant).toEqual("green");
-  });
-  it("should return change background color if selected for bulk edit", () => {
-    testSetup(mockInitialValues, true, undefined);
-
-    const { result } = renderHook(() =>
-      useStreamsConfigTableRowProps({
-        ...mockStream,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        config: { ...mockStream.config!, selected: true }, // selected true, new sync, mode and destination sync mode
-      })
-    );
-    expect(result.current.streamHeaderContentStyle).toEqual("streamHeaderContent changed");
-    expect(result.current.pillButtonVariant).toEqual("blue");
   });
 });

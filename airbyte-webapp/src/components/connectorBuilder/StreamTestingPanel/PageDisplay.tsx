@@ -1,14 +1,19 @@
 import { Tab } from "@headlessui/react";
 import classNames from "classnames";
-import { useField } from "formik";
 import React, { ReactNode, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { StreamReadInferredSchema, StreamReadSlicesItemPagesItem } from "core/request/ConnectorBuilderClient";
+import {
+  HttpRequest,
+  HttpResponse,
+  StreamReadInferredSchema,
+  StreamReadSlicesItemPagesItem,
+} from "core/request/ConnectorBuilderClient";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
@@ -31,35 +36,45 @@ interface TabData {
   content: string;
 }
 
+function formatForDisplay(obj: HttpRequest | HttpResponse | undefined): string {
+  if (!obj) {
+    return "";
+  }
+
+  let parsedBody: unknown;
+  try {
+    // body is a string containing JSON most of the time, but not always.
+    // Attempt to parse and fall back to the raw string if unsuccessful.
+    parsedBody = obj.body ? JSON.parse(obj.body) : "";
+  } catch {
+    parsedBody = obj.body;
+  }
+
+  const unpackedObj = {
+    ...obj,
+    body: parsedBody,
+  };
+  return formatJson(unpackedObj);
+}
+
 export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, inferredSchema }) => {
   const { formatMessage } = useIntl();
 
-  const { editorView } = useConnectorBuilderFormState();
-  const { testStreamIndex, streamRead } = useConnectorBuilderTestRead();
-  const [field] = useField(`streams[${testStreamIndex}].schema`);
+  const {
+    editorView,
+    builderFormValues: { streams: builderFormStreams },
+  } = useConnectorBuilderFormState();
+  const {
+    streamRead,
+    schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
+    testStreamIndex,
+  } = useConnectorBuilderTestRead();
+
+  const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
 
   const formattedRecords = useMemo(() => formatJson(page.records), [page.records]);
-  const formattedRequest = useMemo(() => formatJson(page.request), [page.request]);
-  const formattedResponse = useMemo(() => {
-    if (!page.response || !page.response.body) {
-      return "";
-    }
-    let parsedBody: unknown;
-    try {
-      // body is a string containing JSON most of the time, but not always.
-      // Attempt to parse and fall back to the raw string if unsuccessfull.
-      parsedBody = JSON.parse(page.response.body);
-    } catch {
-      parsedBody = page.response.body;
-    }
-
-    const unpackedBodyResponse = {
-      ...page.response,
-      body: parsedBody,
-    };
-    return formatJson(unpackedBodyResponse);
-  }, [page.response]);
-  const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);
+  const formattedRequest = useMemo(() => formatForDisplay(page.request), [page.request]);
+  const formattedResponse = useMemo(() => formatForDisplay(page.response), [page.response]);
 
   let defaultTabIndex = 0;
   const tabs: TabData[] = [
@@ -116,7 +131,9 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
                 <Text className={classNames(styles.tabTitle, { [styles.selected]: selected })} as="div" size="xs">
                   <FlexContainer direction="row" justifyContent="center">
                     {formatMessage({ id: "connectorBuilder.schemaTab" })}
-                    {editorView === "ui" && field.value !== formattedSchema && <SchemaConflictIndicator />}
+                    {editorView === "ui" && schemaDifferences && !autoImportSchema && (
+                      <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
+                    )}
                   </FlexContainer>
                 </Text>
               )}
@@ -126,12 +143,16 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
         <Tab.Panels className={styles.tabPanelContainer}>
           {tabs.map((tab) => (
             <Tab.Panel className={styles.tabPanel} key={tab.key}>
-              <pre>{tab.content}</pre>
+              <Pre>{tab.content}</Pre>
             </Tab.Panel>
           ))}
           {inferredSchema && (
             <Tab.Panel className={styles.tabPanel}>
-              <SchemaDiffView inferredSchema={inferredSchema} />
+              <SchemaDiffView
+                inferredSchema={inferredSchema}
+                incompatibleErrors={incompatibleSchemaErrors}
+                key={testStreamIndex}
+              />
             </Tab.Panel>
           )}
         </Tab.Panels>

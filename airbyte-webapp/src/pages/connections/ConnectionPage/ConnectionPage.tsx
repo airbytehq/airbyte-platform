@@ -10,14 +10,17 @@ import {
   ConnectionEditServiceProvider,
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperimentContext } from "hooks/services/Experiment";
+import { ConnectionRoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
-import { ConnectionPageTitle } from "./ConnectionPageTitle";
-import { ConnectionRoutePaths } from "../types";
+import { ConnectionPageHeader } from "./ConnectionPageHeader";
 
 const ConnectionHeadTitle: React.FC = () => {
   const { connection } = useConnectionEditService();
+  useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
+  useExperimentContext("connection", connection.connectionId);
 
   return (
     <HeadTitle
@@ -53,7 +56,7 @@ export const ConnectionPage: React.FC = () => {
       <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
-          pageTitle={<ConnectionPageTitle />}
+          pageTitle={<ConnectionPageHeader />}
           noBottomPadding={isReplicationPage}
         >
           <Suspense fallback={<LoadingPage />}>

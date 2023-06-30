@@ -4,7 +4,7 @@ import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import { getIcon } from "utils/imageUtils";
 
 import styles from "./ConnectorCell.module.scss";
@@ -12,7 +12,7 @@ import { ConnectorsViewProps } from "./ConnectorsView";
 import { DestinationUpdateIndicator } from "./DestinationUpdateIndicator";
 import { SourceUpdateIndicator } from "./SourceUpdateIndicator";
 
-interface ConnectorCellProps {
+export interface ConnectorCellProps {
   connectorName: string;
   img?: string;
   releaseStage?: ReleaseStage;
@@ -33,7 +33,9 @@ const ConnectorCell: React.FC<ConnectorCellProps> = ({
 
   return (
     <FlexContainer alignItems="center" gap="lg">
-      {allowUpdateConnectors && type === "sources" && <SourceUpdateIndicator id={id} currentVersion={currentVersion} />}
+      {allowUpdateConnectors && type === "sources" && (
+        <SourceUpdateIndicator id={id} currentVersion={currentVersion} releaseStage={releaseStage} />
+      )}
       {allowUpdateConnectors && type === "destinations" && (
         <DestinationUpdateIndicator id={id} currentVersion={currentVersion} />
       )}

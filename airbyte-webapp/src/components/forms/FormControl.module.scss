@@ -6,37 +6,63 @@
 
   position: relative;
   padding-bottom: var(--space-below);
-}
 
-.label {
-  display: block;
-  font-weight: 500;
-  margin: 0;
-  padding-bottom: variables.$spacing-sm;
-}
+  &__label {
+    display: block;
+    font-weight: 500;
+    margin: 0;
+    padding-bottom: variables.$spacing-sm;
+  }
 
-.description {
-  font-size: variables.$font-size-sm;
-  color: colors.$grey-300;
-  margin: 0;
-}
+  &__description {
+    font-size: variables.$font-size-sm;
+    color: colors.$grey-300;
+    margin: 0;
+  }
 
-.errorMessage {
-  position: absolute;
-  width: 100%;
-  top: variables.$spacing-sm;
-  font-size: variables.$font-size-sm;
-  color: colors.$red;
-  margin: 0;
-  transition: transform variables.$transition ease-in, opacity variables.$transition ease-in-out;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  &__errorMessage {
+    position: absolute;
+    width: 100%;
+    top: variables.$spacing-sm;
+    font-size: variables.$font-size-sm;
+    color: colors.$red;
+    margin: 0;
+    transition: transform variables.$transition ease-in, opacity variables.$transition ease-in-out;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-  &__wrapper {
+  &__errorWrapper {
     position: absolute;
     width: 100%;
     height: var(--space-below);
     bottom: 0;
+    left: 0;
+  }
+
+  &--inline {
+    display: flex;
+    gap: variables.$spacing-md;
+
+    .control__label {
+      flex: 2 0 0;
+    }
+
+    .control__field {
+      flex: 1 0 0;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .control__errorMessage {
+      text-align: right;
+    }
+  }
+
+  &__optional {
+    color: colors.$grey-300;
+    font-style: oblique;
+    padding-left: variables.$spacing-sm;
   }
 }

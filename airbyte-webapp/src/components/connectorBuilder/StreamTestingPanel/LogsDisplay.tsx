@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { NumberBadge } from "components/ui/NumberBadge";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import { StreamReadLogsItem } from "core/request/ConnectorBuilderClient";
@@ -29,7 +30,7 @@ const Log: React.FC<{
         {logMessage.level}
       </div>
       <div className={styles.message}>
-        <pre>{logMessage.message}</pre>
+        <Pre>{logMessage.message}</Pre>
       </div>
     </FlexContainer>
   );

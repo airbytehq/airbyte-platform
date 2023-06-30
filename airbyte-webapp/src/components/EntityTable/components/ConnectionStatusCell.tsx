@@ -16,6 +16,7 @@ interface ConnectionStatusCellProps {
 
 export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ status, value, enabled }) => {
   const { formatMessage } = useIntl();
+  const isStreamCentricV2 = false;
   const statusIconStatus = useMemo<StatusIconStatus | undefined>(
     () =>
       status === Status.EMPTY
@@ -54,7 +55,7 @@ export const ConnectionStatusCell: React.FC<ConnectionStatusCellProps> = ({ stat
 
   return (
     <FlexContainer alignItems="center">
-      <StatusIcon title={title} status={statusIconStatus} />
+      {!isStreamCentricV2 && <StatusIcon title={title} status={statusIconStatus} />}
       <EntityNameCell value={value} enabled={enabled} />
     </FlexContainer>
   );

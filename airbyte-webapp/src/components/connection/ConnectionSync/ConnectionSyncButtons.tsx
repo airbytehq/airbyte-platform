@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { RotateIcon } from "components/icons/RotateIcon";
 import { Button, ButtonVariant } from "components/ui/Button";
+import { theme } from "theme";
 
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -57,6 +58,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
             variant="secondary"
             className={buttonClassName}
             isLoading={resetStarting}
+            data-testid="manual-reset-button"
             disabled={syncStarting || resetStarting || !connectionEnabled}
           >
             <FormattedMessage id="connection.resetData" />
@@ -64,7 +66,13 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
           <Button
             onClick={syncConnection}
             icon={
-              syncStarting ? undefined : <RotateIcon height={styles.syncIconHeight} width={styles.syncIconHeight} />
+              syncStarting ? undefined : (
+                <RotateIcon
+                  color={variant === "secondary" ? theme.grey300 : undefined}
+                  height={styles.syncIconHeight}
+                  width={styles.syncIconHeight}
+                />
+              )
             }
             variant={variant}
             className={buttonClassName}
@@ -79,7 +87,7 @@ export const ConnectionSyncButtons: React.FC<ConnectionSyncButtonsProps> = ({
       {(jobSyncRunning || jobResetRunning) && (
         <Button
           onClick={cancelJob}
-          disabled={syncStarting || resetStarting || !connectionEnabled}
+          disabled={syncStarting || resetStarting}
           isLoading={cancelStarting}
           variant="danger"
           className={buttonClassName}

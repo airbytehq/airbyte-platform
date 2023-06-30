@@ -284,6 +284,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/cloud_workspaces/get_light:
+    post:
+      tags:
+        - cloud_workspace
+      summary: Find cloud workspace by ID, excluding billing information
+      operationId: getCloudWorkspaceLight
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudWorkspaceLightRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/cloud_workspaces/update:
     post:
       tags:
@@ -354,7 +377,7 @@ paths:
     post:
       tags:
         - permission
-      summary: Creates a permission ressource
+      summary: Creates a permission resource
       operationId: createPermission
       requestBody:
         content:
@@ -588,19 +611,9 @@ paths:
         - web_backend
       summary: Revokes a user's session token.
       operationId: webBackendRevokeUserSession
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserIdRequestBody"
-        required: false
       responses:
         "204":
           description: The user's session token was expired successfully.
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/permissioned_cloud_workspace/create:
     post:
       tags:
@@ -1300,6 +1313,22 @@ components:
           format: int64
         userPaymentAccountId:
           $ref: "#/components/schemas/UserPaymentAccountId"
+    CloudWorkspaceLightRead:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        name:
+          type: string
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        creatorUserId:
+          $ref: "#/components/schemas/UserId"
+        tombstone:
+          description:
+            If not set or false, the configuration is active. If true, then this
+            configuration is permanently off.
+          type: boolean
     CloudWorkspaceReadList:
       type: object
       required:

@@ -21,6 +21,7 @@ dependencies {
     implementation libs.bundles.micronaut
     implementation libs.bundles.micronaut.data.jdbc
     implementation libs.micronaut.jaxrs.server
+    implementation libs.micronaut.security
     implementation libs.flyway.core
     implementation libs.s3
     implementation libs.aws.java.sdk.s3

@@ -1,4 +1,4 @@
-import { useMutation } from "react-query";
+import { useMutation } from "@tanstack/react-query";
 
 import { checkOperation } from "../generated/AirbyteClient";
 import { CheckOperationReadStatus, OperationCreate } from "../generated/AirbyteClient.schemas";

@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -32,9 +31,8 @@ public class DestinationSnowflakeOAuthFlow extends BaseOAuth2Flow {
   private static final String ACCESS_TOKEN_URL = "https://%s/oauth/token-request";
 
   public DestinationSnowflakeOAuthFlow(
-                                       final ConfigRepository configRepository,
                                        final HttpClient httpClient) {
-    super(configRepository, httpClient);
+    super(httpClient);
   }
 
   @Override

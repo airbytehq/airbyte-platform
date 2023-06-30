@@ -3,11 +3,9 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
-import { useExperiment } from "hooks/services/Experiment";
+import { ConnectionRoutePaths } from "../routePaths";
 
-import { ConnectionRoutePaths } from "./types";
-import { RoutePaths } from "../routePaths";
-
+const ConfigureConnectionPage = React.lazy(() => import("./ConfigureConnectionPage"));
 const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
@@ -18,20 +16,17 @@ const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
 
 export const ConnectionsRoutes: React.FC = () => {
-  const streamCentricUIEnabled = useExperiment("connection.streamCentricUI.v1", false);
   return (
     <Suspense fallback={<LoadingPage />}>
       <Routes>
-        <Route path={RoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
+        <Route
+          path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`}
+          element={<ConfigureConnectionPage />}
+        />
+        <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
-          {streamCentricUIEnabled ? (
-            <>
-              <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />
-              <Route path={ConnectionRoutePaths.JobHistory} element={<ConnectionJobHistoryPage />} />
-            </>
-          ) : (
-            <Route path={ConnectionRoutePaths.Status} element={<ConnectionJobHistoryPage />} />
-          )}
+          <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />
+          <Route path={ConnectionRoutePaths.JobHistory} element={<ConnectionJobHistoryPage />} />
           <Route path={ConnectionRoutePaths.Replication} element={<ConnectionReplicationPage />} />
           <Route path={ConnectionRoutePaths.Transformation} element={<ConnectionTransformationPage />} />
           <Route path={ConnectionRoutePaths.Settings} element={<ConnectionSettingsPage />} />

@@ -23,8 +23,10 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -34,7 +36,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Bootloader {
 
-  private static final AirbyteVersion VERSION_BREAK = new AirbyteVersion("0.32.0-alpha");
+  // Ordered list of version upgrades that must be completed before upgrading to latest.
+  private static final List<AirbyteVersion> REQUIRED_VERSION_UPGRADES = List.of(
+      new AirbyteVersion("0.32.0-alpha"),
+      new AirbyteVersion("0.37.0-alpha"));
 
   private final boolean autoUpgradeConnectors;
   private final ConfigRepository configRepository;
@@ -49,7 +54,6 @@ public class Bootloader {
   private final PostLoadExecutor postLoadExecution;
   private final ProtocolVersionChecker protocolVersionChecker;
   private final boolean runMigrationOnStartup;
-  private final SecretMigrator secretMigrator;
 
   public Bootloader(
                     @Value("${airbyte.bootloader.auto-upgrade-connectors}") final boolean autoUpgradeConnectors,
@@ -64,7 +68,6 @@ public class Bootloader {
                     final JobPersistence jobPersistence,
                     final ProtocolVersionChecker protocolVersionChecker,
                     @Value("${airbyte.bootloader.run-migration-on-startup}") final boolean runMigrationOnStartup,
-                    final SecretMigrator secretMigrator,
                     final PostLoadExecutor postLoadExecution) {
     this.autoUpgradeConnectors = autoUpgradeConnectors;
     this.configRepository = configRepository;
@@ -78,7 +81,6 @@ public class Bootloader {
     this.jobPersistence = jobPersistence;
     this.protocolVersionChecker = protocolVersionChecker;
     this.runMigrationOnStartup = runMigrationOnStartup;
-    this.secretMigrator = secretMigrator;
     this.postLoadExecution = postLoadExecution;
   }
 
@@ -134,15 +136,16 @@ public class Bootloader {
     // time the server is started.
     log.info("Checking for illegal upgrade...");
     final Optional<AirbyteVersion> initialAirbyteDatabaseVersion = jobPersistence.getVersion().map(AirbyteVersion::new);
-    if (!isLegalUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion)) {
+    final Optional<AirbyteVersion> requiredVersionUpgrade = getRequiredVersionUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion);
+    if (requiredVersionUpgrade.isPresent()) {
       final String attentionBanner = MoreResources.readResource("banner/attention-banner.txt");
       log.error(attentionBanner);
       final String message = String.format(
           "Cannot upgrade from version %s to version %s directly. First you must upgrade to version %s. "
-              + "After that upgrade is complete, you may upgrade to version %s",
+              + "After that upgrade is complete, you may upgrade to version %s.",
           initialAirbyteDatabaseVersion.get().serialize(),
           airbyteVersion.serialize(),
-          VERSION_BREAK.serialize(),
+          requiredVersionUpgrade.get().serialize(),
           airbyteVersion.serialize());
 
       log.error(message);
@@ -203,18 +206,25 @@ public class Bootloader {
   }
 
   @VisibleForTesting
-  boolean isLegalUpgrade(final AirbyteVersion airbyteDatabaseVersion, final AirbyteVersion airbyteVersion) {
+  Optional<AirbyteVersion> getRequiredVersionUpgrade(@Nullable final AirbyteVersion airbyteDatabaseVersion, final AirbyteVersion airbyteVersion) {
     // means there was no previous version so upgrade even needs to happen. always legal.
     if (airbyteDatabaseVersion == null) {
       log.info("No previous Airbyte Version set.");
-      return true;
+      return Optional.empty();
     }
 
     log.info("Current Airbyte version: {}", airbyteDatabaseVersion);
     log.info("Future Airbyte version: {}", airbyteVersion);
-    final var futureVersionIsAfterVersionBreak = airbyteVersion.greaterThan(VERSION_BREAK) || airbyteVersion.isDev();
-    final var isUpgradingThroughVersionBreak = airbyteDatabaseVersion.lessThan(VERSION_BREAK) && futureVersionIsAfterVersionBreak;
-    return !isUpgradingThroughVersionBreak;
+
+    for (final AirbyteVersion version : REQUIRED_VERSION_UPGRADES) {
+      final var futureVersionIsAfterVersionBreak = airbyteVersion.greaterThan(version) || airbyteVersion.isDev();
+      final var isUpgradingThroughVersionBreak = airbyteDatabaseVersion.lessThan(version) && futureVersionIsAfterVersionBreak;
+      if (isUpgradingThroughVersionBreak) {
+        return Optional.of(version);
+      }
+    }
+
+    return Optional.empty();
   }
 
   private void runFlywayMigration(final boolean runDatabaseMigrationOnStartup,

@@ -5,6 +5,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useGetDestinationFromParams } from "hooks/domain/connector/useGetDestinationFromParams";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import {
@@ -19,7 +20,6 @@ import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 import styles from "./DestinationSettings.module.scss";
-import { useGetDestinationFromParams } from "../useGetDestinationFromParams";
 
 export const DestinationSettingsPage: React.FC = () => {
   const destination = useGetDestinationFromParams();

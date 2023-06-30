@@ -1,19 +1,19 @@
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
-import { useFormikContext } from "formik";
+import { setIn, useFormikContext } from "formik";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { FormikConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Header } from "components/SimpleTableComponents";
 import { Button } from "components/ui/Button";
-import { CheckBox } from "components/ui/CheckBox";
+import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
+import { SyncSchemaStream } from "core/domain/catalog";
 import { NamespaceDefinitionType } from "core/request/AirbyteClient";
-import { useBulkEditService } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
@@ -33,18 +33,27 @@ import { CellText, CellTextProps } from "../CellText";
 
 const HeaderCell: React.FC<React.PropsWithChildren<CellTextProps>> = ({ children, ...tableCellProps }) => (
   <CellText {...tableCellProps} withOverflow>
-    <Text size="sm" className={styles.headerCellText}>
+    <Text size="sm" color="grey300">
       {children}
     </Text>
   </CellText>
 );
 
-export const StreamsConfigTableHeader: React.FC = () => {
+interface StreamsConfigTableHeaderProps {
+  streams: SyncSchemaStream[];
+  onStreamsChanged: (streams: SyncSchemaStream[]) => void;
+  syncSwitchDisabled?: boolean;
+}
+
+export const StreamsConfigTableHeader: React.FC<StreamsConfigTableHeaderProps> = ({
+  streams,
+  onStreamsChanged,
+  syncSwitchDisabled,
+}) => {
   const { mode } = useConnectionFormService();
   const { openModal, closeModal } = useModalService();
-  const { onCheckAll, selectedBatchNodeIds, allChecked } = useBulkEditService();
   const formikProps = useFormikContext<FormikConnectionFormValues>();
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
 
   const destinationNamespaceChange = (value: DestinationNamespaceFormValueType) => {
     formikProps.setFieldValue("namespaceDefinition", value.namespaceDefinition);
@@ -61,21 +70,36 @@ export const StreamsConfigTableHeader: React.FC = () => {
     );
   };
 
+  const onToggleAllStreamsSyncSwitch = ({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) =>
+    onStreamsChanged(
+      streams.map((stream) =>
+        setIn(stream, "config", {
+          ...stream.config,
+          selected: checked,
+        })
+      )
+    );
+  const isPartOfStreamsSyncEnabled = () =>
+    streams.some((stream) => stream.config?.selected) &&
+    streams.filter((stream) => stream.config?.selected).length !== streams.length;
+  const areAllStreamsSyncEnabled = () => streams.every((stream) => stream.config?.selected) && streams.length > 0;
+
   return (
     <Header className={classNames(styles.headerContainer)} data-testid="catalog-tree-table-header">
-      <CellText size="fixed" className={styles.checkboxCell}>
-        {mode !== "readonly" && (
-          <CheckBox
-            checkboxSize="sm"
-            onChange={onCheckAll}
-            indeterminate={selectedBatchNodeIds.length > 0 && !allChecked}
-            checked={allChecked}
-          />
-        )}
+      <CellText size="fixed" className={styles.syncCell} withOverflow>
+        <Switch
+          size="sm"
+          indeterminate={isPartOfStreamsSyncEnabled()}
+          checked={areAllStreamsSyncEnabled()}
+          onChange={onToggleAllStreamsSyncSwitch}
+          disabled={syncSwitchDisabled || !streams.length || mode === "readonly"}
+          id="all-streams-sync-switch"
+          data-testid="all-streams-sync-switch"
+        />
+        <Text size="sm" color="grey300">
+          <FormattedMessage id="sources.sync" />
+        </Text>
       </CellText>
-      <HeaderCell size="fixed" className={styles.syncCell}>
-        <FormattedMessage id="sources.sync" />
-      </HeaderCell>
       {isColumnSelectionEnabled && (
         <HeaderCell size="fixed" className={styles.fieldsCell}>
           <FormattedMessage id="form.fields" />
@@ -118,6 +142,7 @@ export const StreamsConfigTableHeader: React.FC = () => {
         <Button
           type="button"
           variant="clear"
+          disabled={mode === "readonly"}
           onClick={() =>
             openModal({
               size: "lg",
@@ -143,6 +168,7 @@ export const StreamsConfigTableHeader: React.FC = () => {
         <Button
           type="button"
           variant="clear"
+          disabled={mode === "readonly"}
           onClick={() =>
             openModal({
               size: "sm",

@@ -112,22 +112,28 @@ public class StatePersistence {
   }
 
   private static void clearLegacyState(final DSLContext ctx, final UUID connectionId) {
-    writeStateToDb(ctx, connectionId, null, null, StateType.LEGACY, null);
+    final StateUpdateBatch stateUpdateBatch = new StateUpdateBatch();
+    writeStateToDb(ctx, connectionId, null, null, StateType.LEGACY, null, stateUpdateBatch);
+    stateUpdateBatch.save(ctx);
   }
 
   private static void saveGlobalState(final DSLContext ctx, final UUID connectionId, final AirbyteGlobalState globalState) {
-    writeStateToDb(ctx, connectionId, null, null, StateType.GLOBAL, globalState.getSharedState());
+    final StateUpdateBatch stateUpdateBatch = new StateUpdateBatch();
+    writeStateToDb(ctx, connectionId, null, null, StateType.GLOBAL, globalState.getSharedState(), stateUpdateBatch);
     for (final AirbyteStreamState streamState : globalState.getStreamStates()) {
       writeStateToDb(ctx,
           connectionId,
           streamState.getStreamDescriptor().getName(),
           streamState.getStreamDescriptor().getNamespace(),
           StateType.GLOBAL,
-          streamState.getStreamState());
+          streamState.getStreamState(),
+          stateUpdateBatch);
     }
+    stateUpdateBatch.save(ctx);
   }
 
   private static void saveStreamState(final DSLContext ctx, final UUID connectionId, final List<AirbyteStateMessage> stateMessages) {
+    final StateUpdateBatch stateUpdateBatch = new StateUpdateBatch();
     for (final AirbyteStateMessage stateMessage : stateMessages) {
       final AirbyteStreamState streamState = stateMessage.getStream();
       writeStateToDb(ctx,
@@ -135,12 +141,16 @@ public class StatePersistence {
           streamState.getStreamDescriptor().getName(),
           streamState.getStreamDescriptor().getNamespace(),
           StateType.STREAM,
-          streamState.getStreamState());
+          streamState.getStreamState(),
+          stateUpdateBatch);
     }
+    stateUpdateBatch.save(ctx);
   }
 
   private static void saveLegacyState(final DSLContext ctx, final UUID connectionId, final JsonNode state) {
-    writeStateToDb(ctx, connectionId, null, null, StateType.LEGACY, state);
+    final StateUpdateBatch stateUpdateBatch = new StateUpdateBatch();
+    writeStateToDb(ctx, connectionId, null, null, StateType.LEGACY, state, stateUpdateBatch);
+    stateUpdateBatch.save(ctx);
   }
 
   /**
@@ -153,14 +163,13 @@ public class StatePersistence {
                              final String streamName,
                              final String namespace,
                              final StateType stateType,
-                             final JsonNode state) {
+                             final JsonNode state,
+                             final StateUpdateBatch stateUpdateBatch) {
     if (state != null) {
-      final boolean hasState = ctx.selectFrom(STATE)
-          .where(
-              STATE.CONNECTION_ID.eq(connectionId),
-              PersistenceHelpers.isNullOrEquals(STATE.STREAM_NAME, streamName),
-              PersistenceHelpers.isNullOrEquals(STATE.NAMESPACE, namespace))
-          .fetch().isNotEmpty();
+      final boolean hasState = ctx.fetchExists(STATE,
+          STATE.CONNECTION_ID.eq(connectionId),
+          PersistenceHelpers.isNullOrEquals(STATE.STREAM_NAME, streamName),
+          PersistenceHelpers.isNullOrEquals(STATE.NAMESPACE, namespace));
 
       // NOTE: the legacy code was storing a State object instead of just the State data field. We kept
       // the same behavior for consistency.
@@ -168,46 +177,46 @@ public class StatePersistence {
       final OffsetDateTime now = OffsetDateTime.now();
 
       if (!hasState) {
-        ctx.insertInto(STATE)
-            .columns(
-                STATE.ID,
-                STATE.CREATED_AT,
-                STATE.UPDATED_AT,
-                STATE.CONNECTION_ID,
-                STATE.STREAM_NAME,
-                STATE.NAMESPACE,
-                STATE.STATE_,
-                STATE.TYPE)
-            .values(
-                UUID.randomUUID(),
-                now,
-                now,
-                connectionId,
-                streamName,
-                namespace,
-                jsonbState,
-                Enums.convertTo(stateType, io.airbyte.db.instance.configs.jooq.generated.enums.StateType.class))
-            .execute();
+        stateUpdateBatch.getCreatedStreamStates().add(
+            ctx.insertInto(STATE)
+                .columns(
+                    STATE.ID,
+                    STATE.CREATED_AT,
+                    STATE.UPDATED_AT,
+                    STATE.CONNECTION_ID,
+                    STATE.STREAM_NAME,
+                    STATE.NAMESPACE,
+                    STATE.STATE_,
+                    STATE.TYPE)
+                .values(
+                    UUID.randomUUID(),
+                    now,
+                    now,
+                    connectionId,
+                    streamName,
+                    namespace,
+                    jsonbState,
+                    Enums.convertTo(stateType, io.airbyte.db.instance.configs.jooq.generated.enums.StateType.class)));
 
       } else {
-        ctx.update(STATE)
-            .set(STATE.UPDATED_AT, now)
-            .set(STATE.STATE_, jsonbState)
-            .where(
-                STATE.CONNECTION_ID.eq(connectionId),
-                PersistenceHelpers.isNullOrEquals(STATE.STREAM_NAME, streamName),
-                PersistenceHelpers.isNullOrEquals(STATE.NAMESPACE, namespace))
-            .execute();
+        stateUpdateBatch.getUpdatedStreamStates().add(
+            ctx.update(STATE)
+                .set(STATE.UPDATED_AT, now)
+                .set(STATE.STATE_, jsonbState)
+                .where(
+                    STATE.CONNECTION_ID.eq(connectionId),
+                    PersistenceHelpers.isNullOrEquals(STATE.STREAM_NAME, streamName),
+                    PersistenceHelpers.isNullOrEquals(STATE.NAMESPACE, namespace)));
       }
 
     } else {
       // If the state is null, we remove the state instead of keeping a null row
-      ctx.deleteFrom(STATE)
-          .where(
-              STATE.CONNECTION_ID.eq(connectionId),
-              PersistenceHelpers.isNullOrEquals(STATE.STREAM_NAME, streamName),
-              PersistenceHelpers.isNullOrEquals(STATE.NAMESPACE, namespace))
-          .execute();
+      stateUpdateBatch.getDeletedStreamStates().add(
+          ctx.deleteFrom(STATE)
+              .where(
+                  STATE.CONNECTION_ID.eq(connectionId),
+                  PersistenceHelpers.isNullOrEquals(STATE.STREAM_NAME, streamName),
+                  PersistenceHelpers.isNullOrEquals(STATE.NAMESPACE, namespace)));
     }
   }
 

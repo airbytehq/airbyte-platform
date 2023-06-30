@@ -7,7 +7,7 @@ type SwitchSize = "lg" | "sm" | "xs";
 
 type SwitchVariant = "default" | "strong-blue";
 
-interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+export interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   indeterminate?: boolean;
   loading?: boolean;
   size?: SwitchSize;

@@ -15,14 +15,14 @@ import { AttemptDetails } from "./AttemptDetails";
 import styles from "./JobSummary.module.scss";
 import { LinkToAttemptButton } from "./LinkToAttemptButton";
 import { ResetStreamsDetails } from "./ResetStreamDetails";
-import { JobsWithJobs } from "../types";
+import { JobWithAttempts } from "../types";
 import { getJobId, getJobStatus } from "../utils";
 
-const getJobConfig = (job: SynchronousJobRead | JobsWithJobs) =>
-  (job as SynchronousJobRead).configType ?? (job as JobsWithJobs).job.configType;
+const getJobConfig = (job: SynchronousJobRead | JobWithAttempts) =>
+  (job as SynchronousJobRead).configType ?? (job as JobWithAttempts).job.configType;
 
-const getJobCreatedAt = (job: SynchronousJobRead | JobsWithJobs) =>
-  (job as SynchronousJobRead).createdAt ?? (job as JobsWithJobs).job.createdAt;
+export const getJobCreatedAt = (job: SynchronousJobRead | JobWithAttempts) =>
+  (job as SynchronousJobRead).createdAt ?? (job as JobWithAttempts).job.createdAt;
 
 const partialSuccessCheck = (attempts: AttemptRead[]) => {
   if (attempts.length > 0 && attempts[attempts.length - 1].status === JobStatus.failed) {
@@ -32,7 +32,7 @@ const partialSuccessCheck = (attempts: AttemptRead[]) => {
 };
 
 interface JobSummaryProps {
-  job: SynchronousJobRead | JobsWithJobs;
+  job: SynchronousJobRead | JobWithAttempts;
   attempts?: AttemptRead[];
   isOpen?: boolean;
   onExpand: () => void;

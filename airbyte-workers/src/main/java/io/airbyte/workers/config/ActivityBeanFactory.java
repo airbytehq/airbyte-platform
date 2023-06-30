@@ -11,6 +11,7 @@ import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
 import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
+import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity;
@@ -26,7 +27,6 @@ import io.airbyte.workers.temporal.spec.SpecActivity;
 import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
-import io.airbyte.workers.temporal.sync.PersistStateActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
@@ -77,9 +77,10 @@ public class ActivityBeanFactory {
                                                   final StreamResetActivity streamResetActivity,
                                                   final RecordMetricActivity recordMetricActivity,
                                                   final WorkflowConfigActivity workflowConfigActivity,
-                                                  final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
+                                                  final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
                                                   final FeatureFlagFetchActivity featureFlagFetchActivity,
-                                                  final SubmitCheckConnectionActivity submitCheckConnectionActivity) {
+                                                  final SubmitCheckConnectionActivity submitCheckConnectionActivity,
+                                                  final CheckRunProgressActivity checkRunProgressActivity) {
     return List.of(generateInputActivity,
         jobCreationAndStatusUpdateActivity,
         configFetchActivity,
@@ -88,9 +89,10 @@ public class ActivityBeanFactory {
         streamResetActivity,
         recordMetricActivity,
         workflowConfigActivity,
-        routeToSyncTaskQueueActivity,
+        routeToTaskQueueActivity,
         featureFlagFetchActivity,
-        submitCheckConnectionActivity);
+        submitCheckConnectionActivity,
+        checkRunProgressActivity);
   }
 
   @Singleton
@@ -114,12 +116,11 @@ public class ActivityBeanFactory {
                                      final ReplicationActivity replicationActivity,
                                      final NormalizationActivity normalizationActivity,
                                      final DbtTransformationActivity dbtTransformationActivity,
-                                     final PersistStateActivity persistStateActivity,
                                      final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, persistStateActivity, normalizationSummaryCheckActivity,
+    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
         webhookOperationActivity, configFetchActivity, refreshSchemaActivity);
   }
 

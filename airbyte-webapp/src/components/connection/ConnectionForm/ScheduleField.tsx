@@ -14,7 +14,6 @@ import { ConnectionScheduleData, ConnectionScheduleType } from "core/request/Air
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
 import { isCloudApp } from "utils/app";
 import { links } from "utils/links";
 
@@ -30,13 +29,7 @@ const CRON_DEFAULT_VALUE = {
 };
 
 const CronErrorChatWithUsButton: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const { show } = useIntercom();
-
-  return (
-    <button type="button" className={styles.chatWithUsBtn} onClick={show}>
-      {children}
-    </button>
-  );
+  return <ExternalLink href={links.supportPortal}>{children}</ExternalLink>;
 };
 
 export const ScheduleField: React.FC = () => {

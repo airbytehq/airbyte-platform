@@ -7,7 +7,7 @@ import { TextWithHTML } from "components/ui/TextWithHTML";
 import styles from "./LabelInfo.module.scss";
 
 interface LabelInfoProps {
-  label: React.ReactNode;
+  label?: React.ReactNode;
   examples?: JSONSchema7Type;
   description?: string | React.ReactNode;
   options?: Array<{ title: string; description?: string }>;
@@ -21,7 +21,7 @@ const Description: React.FC<Pick<LabelInfoProps, "label" | "description">> = ({ 
   return (
     <div>
       {/* don't use <Text as=h4> here, because we want the default parent styling for this header */}
-      <h3 className={styles.descriptionHeader}>{label}</h3>
+      {label && <h3 className={styles.descriptionHeader}>{label}</h3>}
       {typeof description === "string" ? (
         <TextWithHTML className={styles.description} text={description} />
       ) : (
@@ -74,7 +74,11 @@ const Examples: React.FC<Pick<LabelInfoProps, "examples">> = ({ examples }) => {
       <div className={styles.exampleContainer}>
         {examplesArray.map((example, i) => (
           <span key={i} className={styles.exampleItem}>
-            {typeof example === "object" ? JSON.stringify(example) : String(example)}
+            {typeof example === "object"
+              ? Array.isArray(example)
+                ? example.join(", ")
+                : JSON.stringify(example)
+              : String(example)}
           </span>
         ))}
       </div>

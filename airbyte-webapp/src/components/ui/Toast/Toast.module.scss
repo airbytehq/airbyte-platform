@@ -1,33 +1,42 @@
 @use "scss/colors";
 @use "scss/variables";
-@use "scss/z-indices";
-@use "scss/mixins";
-
-$toast-bottom-margin: 27px;
-
-@keyframes slide-up-animations {
-  0% {
-    transform: translate(-50%, -100%);
-    bottom: -60px;
-  }
-
-  100% {
-    transform: translate(-50%, 0);
-    bottom: $toast-bottom-margin;
-  }
-}
 
 .toastContainer {
   box-shadow: variables.$box-shadow-raised;
   max-width: variables.$width-max-notification;
-  position: fixed;
-  bottom: $toast-bottom-margin;
-  margin-left: calc(variables.$width-size-menu / 2);
-  left: 50%;
-  transform: translate(-50%, 0);
-  z-index: z-indices.$notification;
   border-radius: variables.$border-radius-md;
   border-width: 1px;
   border-style: solid;
-  animation: slide-up-animations 0.25s ease-out;
+  position: relative;
+  overflow: hidden;
+
+
+  &--timeout {
+    &::after {
+      content: " ";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+
+      // Use as a background color the primary color of the message as set via the Message component
+      background-color: var(--message-color);
+      animation: timeout-bar forwards 5s linear;
+    }
+
+    &:hover::after {
+      animation-play-state: paused;
+    }
+  }
+}
+
+@keyframes timeout-bar {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0;
+  }
 }

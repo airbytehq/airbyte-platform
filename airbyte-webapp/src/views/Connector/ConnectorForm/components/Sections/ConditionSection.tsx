@@ -1,7 +1,6 @@
-import { useFormikContext, setIn, useField } from "formik";
 import clone from "lodash/clone";
-import get from "lodash/get";
 import React, { useCallback, useMemo } from "react";
+import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { DropDown, DropDownOptionDataItem } from "components/ui/DropDown";
@@ -12,9 +11,7 @@ import styles from "./ConditionSection.module.scss";
 import { FormSection } from "./FormSection";
 import { GroupLabel } from "./GroupLabel";
 import { SectionContainer } from "./SectionContainer";
-import { ConnectorFormValues } from "../../types";
 import { setDefaultValues } from "../../useBuildForm";
-import { useSshSslImprovements } from "../../useSshSslImprovements";
 
 interface ConditionSectionProps {
   formField: FormConditionItem;
@@ -26,16 +23,13 @@ interface ConditionSectionProps {
  * ConditionSection is responsible for handling oneOf sections of form
  */
 export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, path, disabled }) => {
-  const { values, setValues } = useFormikContext<ConnectorFormValues>();
-  const [, meta] = useField(path);
+  const { setValue, clearErrors } = useFormContext();
+  const value = useWatch({ name: path });
 
-  const { filterConditions, filterSelectionConstValues } = useSshSslImprovements(path);
-
-  const conditions = filterConditions(formField.conditions);
-  const selectionConstValues = filterSelectionConstValues(formField.selectionConstValues);
+  const { conditions, selectionConstValues } = formField;
 
   // the value at selectionPath determines which condition is selected
-  const currentSelectionValue = get(values, formField.selectionPath);
+  const currentSelectionValue = useWatch({ name: formField.selectionPath });
   let currentlySelectedCondition: number | undefined = selectionConstValues.indexOf(currentSelectionValue);
   if (currentlySelectedCondition === -1) {
     // there should always be a matching condition, but in some edge cases
@@ -47,13 +41,14 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
     (selectedItem: DropDownOptionDataItem) => {
       const newSelectedFormBlock = conditions[selectedItem.value];
 
-      const conditionValues = clone(get(values, path) || {});
+      const conditionValues = clone(value || {});
       conditionValues[formField.selectionKey] = selectionConstValues[selectedItem.value];
       setDefaultValues(newSelectedFormBlock, conditionValues, { respectExistingValues: true });
-
-      setValues(setIn(values, path, conditionValues));
+      // do not validate the new oneOf part of the form as the user didn't have a chance to fill it out yet.
+      setValue(path, conditionValues, { shouldDirty: true, shouldTouch: true });
+      clearErrors(path);
     },
-    [conditions, formField.selectionKey, selectionConstValues, values, path, setValues]
+    [conditions, value, formField.selectionKey, selectionConstValues, setValue, path, clearErrors]
   );
 
   const options = useMemo(
@@ -64,6 +59,8 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       })),
     [conditions]
   );
+
+  const error = get(useFormState({ name: path }).errors, path);
 
   return (
     <SectionContainer>
@@ -77,7 +74,7 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
             value={currentlySelectedCondition}
             name={formField.path}
             isDisabled={disabled}
-            error={typeof meta.error === "string" && !!meta.error}
+            error={!error?.types && !!error?.message}
           />
         }
         controlClassName={styles.dropdown}

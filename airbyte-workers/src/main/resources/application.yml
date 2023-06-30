@@ -108,6 +108,9 @@ airbyte:
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
+  protocol:
+    min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
+    max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
   worker:
     kube-job-configs:
       default:
@@ -139,6 +142,16 @@ airbyte:
         cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:}
         memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:}
         memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:}
+      source:
+        cpu-limit: ${SOURCE_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SOURCE_CONTAINER_CPU_REQUEST:0.5}
+        memory-limit: ${SOURCE_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SOURCE_CONTAINER_MEMORY_REQUEST:}
+      source-database:
+        cpu-limit: ${SOURCE_DATABASE_CONTAINER_CPU_LIMIT:}
+        cpu-request: ${SOURCE_DATABASE_CONTAINER_CPU_REQUEST:1}
+        memory-limit: ${SOURCE_DATABASE_CONTAINER_MEMORY_LIMIT:}
+        memory-request: ${SOURCE_DATABASE_CONTAINER_MEMORY_REQUEST:}
       spec:
         annotations: ${SPEC_JOB_KUBE_ANNOTATIONS:}
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:}
@@ -151,6 +164,19 @@ airbyte:
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
     connection:
       enabled: ${SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS:true}
+      schedule-jitter: # defines 'jitter buckets' depending on job frequency. prefers thresholds at the half-hour mark since most jobs run every X hours.
+        no-jitter-cutoff-minutes: ${SCHEDULE_NO_JITTER_CUTOFF_MINUTES:5} # anything less than every 5 minutes has no jitter
+        high-frequency-bucket:
+          jitter-amount-minutes: ${SCHEDULE_HIGH_JITTER_AMOUNT_MINUTES:2} # anything between every 5 minutes and 1.5 hours has +/- 2 minutes of jitter
+          threshold-minutes: ${SCHEDULE_HIGH_THRESHOLD_MINUTES:90} # 1.5 hours
+        medium-frequency-bucket:
+          jitter-amount-minutes: ${SCHEDULE_MEDIUM_JITTER_AMOUNT_MINUTES:5} # anything between every 1.5 hours and 2.5 hours has +/- 5 minutes of jitter
+          threshold-minutes: ${SCHEDULE_MEDIUM_THRESHOLD_MINUTES:150} # 2.5 hours
+        low-frequency-bucket:
+          jitter-amount-minutes: ${SCHEDULE_LOW_JITTER_AMOUNT_MINUTES:15} # anything between every 2.5 hours and 6.5 hours has +/- 15 minutes of jitter
+          threshold-minutes: ${SCHEDULE_LOW_THRESHOLD_MINUTES:390} # 6.5 hours
+        very-low-frequency-bucket:
+          jitter-amount-minutes: ${SCHEDULE_VERY_LOW_JITTER_AMOUNT_MINUTES:25} # anything greater than every 6.5 hours has +/- 25 minutes of jitter
     discover:
       enabled: ${SHOULD_RUN_DISCOVER_WORKFLOWS:true}
       max-workers: ${MAX_DISCOVER_WORKERS:5}
@@ -172,6 +198,7 @@ airbyte:
             image-pull-policy: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
             image-pull-secret: ${JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET:}
         namespace: ${JOB_KUBE_NAMESPACE:default}
+        serviceAccount: ${JOB_KUBE_SERVICEACCOUNT:airbyte-admin} # by default, Airbyte on Kube ships with the `airbyte-admin` service account. If that ever changes, this default should change with it
         sidecar:
           container:
             image-pull-policy: ${JOB_KUBE_SIDECAR_CONTAINER_IMAGE_PULL_POLICY:IfNotPresent}
@@ -194,6 +221,7 @@ airbyte:
       max-workers: ${MAX_SYNC_WORKERS:5}
       max-attempts: ${SYNC_JOB_MAX_ATTEMPTS:3}
       max-timeout: ${SYNC_JOB_MAX_TIMEOUT_DAYS:3}
+      max-init-timeout: ${SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES:3}
     notify:
       enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
@@ -231,7 +259,7 @@ datadog:
     port: ${DD_DOGSTATSD_PORT:}
   orchestrator:
     disabled:
-      integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:DD_INTEGRATION_GRPC_ENABLED,DD_INTEGRATION_GRPC_CLIENT_ENABLED,DD_INTEGRATION_GRPC_SERVER_ENABLED,DD_INTEGRATION_NETTY_ENABLED,DD_INTEGRATION_NETTY_4_1_ENABLED,DD_INTEGRATION_GOOGLE_HTTP_CLIENT_ENABLED}
+      integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
 
 docker:
   network: ${DOCKER_NETWORK:host}

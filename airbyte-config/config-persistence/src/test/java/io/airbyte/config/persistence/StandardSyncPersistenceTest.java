@@ -5,7 +5,9 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -17,6 +19,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
@@ -30,9 +33,12 @@ import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.protocol.models.AirbyteStream;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
@@ -60,6 +66,8 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   private static final AirbyteProtocolVersionRange protocolRange_0_1 = new AirbyteProtocolVersionRange(new Version("0.0.1"), new Version("1.0.0"));
   private static final AirbyteProtocolVersionRange protocolRange_1_1 = new AirbyteProtocolVersionRange(new Version("1.0.0"), new Version("1.10.0"));
 
+  private static final UUID workspaceId = UUID.randomUUID();
+
   private ConfigRepository configRepository;
   private StandardSyncPersistence standardSyncPersistence;
 
@@ -86,14 +94,16 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testReadWrite() throws IOException, ConfigNotFoundException, JsonValidationException {
+  void testReadWrite() throws IOException, ConfigNotFoundException, JsonValidationException, SQLException {
     createBaseObjects();
     final StandardSync sync = createStandardSync(source1, destination1);
     standardSyncPersistence.writeStandardSync(sync);
 
-    final StandardSync expectedSync = Jsons.clone(sync)
-        .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE);
+    final StandardSync expectedSync = Jsons.clone(sync);
     assertEquals(expectedSync, standardSyncPersistence.getStandardSync(sync.getConnectionId()));
+
+    final SchemaManagementRecord schemaManagementRecord = getSchemaManagementByConnectionId(sync.getConnectionId());
+    assertEquals(NonBreakingChangesPreference.IGNORE.value(), schemaManagementRecord.getAutoPropagationStatus().getLiteral());
   }
 
   @Test
@@ -277,6 +287,63 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void testCreateSchemaManagementIfNeeded() throws JsonValidationException, IOException, SQLException {
+    createBaseObjects();
+
+    final StandardSync sync = createStandardSync(source1, destination1);
+    standardSyncPersistence.writeStandardSync(sync);
+
+    final SchemaManagementRecord schemaManagementRecord = getSchemaManagementByConnectionId(sync.getConnectionId());
+    assertEquals(NonBreakingChangesPreference.IGNORE.value(), schemaManagementRecord.getAutoPropagationStatus().getLiteral());
+
+    sync.setNonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_FULLY);
+    standardSyncPersistence.writeStandardSync(sync);
+
+    final SchemaManagementRecord schemaManagementRecordAfterUpdate = getSchemaManagementByConnectionId(sync.getConnectionId());
+
+    assertEquals(schemaManagementRecord.getId(), schemaManagementRecordAfterUpdate.getId());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_FULLY.value(), schemaManagementRecordAfterUpdate.getAutoPropagationStatus().getLiteral());
+  }
+
+  @Test
+  void testCreateSchemaManagementAccessor() throws JsonValidationException, IOException, SQLException {
+    createBaseObjects();
+
+    final StandardSync sync = createStandardSync(source1, destination1);
+    sync.setNonBreakingChangesPreference(NonBreakingChangesPreference.PROPAGATE_COLUMNS);
+    standardSyncPersistence.writeStandardSync(sync);
+    final UUID operationId = writeOperationForConnection(sync.getConnectionId());
+
+    List<StandardSync> standardSyncs = configRepository.listStandardSyncsUsingOperation(operationId);
+    assertEquals(1, standardSyncs.size());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
+
+    standardSyncs = configRepository.listWorkspaceStandardSyncs(new ConfigRepository.StandardSyncQuery(
+        workspaceId,
+        null,
+        null,
+        true));
+    assertEquals(1, standardSyncs.size());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
+
+    standardSyncs = configRepository.listWorkspaceStandardSyncsPaginated(new ConfigRepository.StandardSyncsQueryPaginated(
+        List.of(workspaceId),
+        null,
+        null,
+        true,
+        1000,
+        0
+
+    )).values().stream().findFirst().get();
+    assertEquals(1, standardSyncs.size());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
+
+    standardSyncs = configRepository.listConnectionsBySource(sync.getSourceId(), true);
+    assertEquals(1, standardSyncs.size());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS, standardSyncs.get(0).getNonBreakingChangesPreference());
+  }
+
+  @Test
   void testDontUpdateIfNotNeeded() throws JsonValidationException, IOException, SQLException {
     createBaseObjects();
 
@@ -317,6 +384,14 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertTrue(StandardSyncPersistence.getNotificationEnabled(standardSync, NotificationType.email));
   }
 
+  @Test
+  void testEnumValues() {
+    assertEquals(NonBreakingChangesPreference.IGNORE.value(), AutoPropagationStatus.ignore.getLiteral());
+    assertEquals(NonBreakingChangesPreference.DISABLE.value(), AutoPropagationStatus.disable.getLiteral());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_COLUMNS.value(), AutoPropagationStatus.propagate_columns.getLiteral());
+    assertEquals(NonBreakingChangesPreference.PROPAGATE_FULLY.value(), AutoPropagationStatus.propagate_fully.getLiteral());
+  }
+
   private Set<StandardSyncProtocolVersionFlag> getProtocolVersionFlagForSyncs(final List<StandardSync> standardSync) throws SQLException {
     return database.query(ctx -> ctx
         .select(CONNECTION.ID, CONNECTION.UNSUPPORTED_PROTOCOL_VERSION)
@@ -351,7 +426,6 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   private void createBaseObjects() throws IOException, JsonValidationException {
-    final UUID workspaceId = UUID.randomUUID();
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
         .withName("Another Workspace")
@@ -387,18 +461,20 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSourceDefinitionId(sourceDefId)
         .withSourceType(SourceType.API)
         .withName("random-source-" + sourceDefId)
-        .withDockerImageTag("tag-1")
-        .withDockerRepository("repository-1")
-        .withDocumentationUrl("documentation-url-1")
         .withIcon("icon-1")
-        .withSpec(new ConnectorSpecification())
-        .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-    configRepository.writeStandardSourceDefinition(sourceDef);
+    final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(sourceDefId)
+        .withDockerImageTag("tag-1")
+        .withDockerRepository("repository-1")
+        .withDocumentationUrl("documentation-url-1")
+        .withSpec(new ConnectorSpecification())
+        .withProtocolVersion(protocolVersion)
+        .withReleaseStage(releaseStage);
+    configRepository.writeSourceDefinitionAndDefaultVersion(sourceDef, sourceDefVersion);
     return sourceDef;
   }
 
@@ -408,18 +484,20 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final StandardDestinationDefinition destDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(destDefId)
         .withName("random-destination-" + destDefId)
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
         .withIcon("icon-3")
-        .withSpec(new ConnectorSpecification())
-        .withProtocolVersion(protocolVersion)
-        .withReleaseStage(releaseStage)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
         .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
-    configRepository.writeStandardDestinationDefinition(destDef);
+    final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(destDefId)
+        .withDockerImageTag("tag-3")
+        .withDockerRepository("repository-3")
+        .withDocumentationUrl("documentation-url-3")
+        .withSpec(new ConnectorSpecification())
+        .withProtocolVersion(protocolVersion)
+        .withReleaseStage(releaseStage);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(destDef, destDefVersion);
     return destDef;
   }
 
@@ -469,6 +547,32 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withBreakingChange(false);
     standardSyncPersistence.writeStandardSync(sync);
     return sync;
+  }
+
+  private SchemaManagementRecord getSchemaManagementByConnectionId(final UUID connectionId) throws IOException, SQLException {
+    return database.query(ctx -> ctx.select(SCHEMA_MANAGEMENT.asterisk())
+        .from(SCHEMA_MANAGEMENT)
+        .where(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
+        .fetchInto(SchemaManagementRecord.class)
+        .stream().findFirst().get());
+  }
+
+  private UUID writeOperationForConnection(final UUID connectionId) throws SQLException, IOException {
+    final UUID operationId = UUID.randomUUID();
+    final UUID standardSyncOperationId = UUID.randomUUID();
+    configRepository.writeStandardSyncOperation(new StandardSyncOperation()
+        .withOperationId(standardSyncOperationId)
+        .withName("name")
+        .withWorkspaceId(workspaceId)
+        .withOperatorType(StandardSyncOperation.OperatorType.DBT));
+
+    database.transaction(ctx -> ctx.insertInto(CONNECTION_OPERATION)
+        .set(CONNECTION_OPERATION.ID, operationId)
+        .set(CONNECTION_OPERATION.CONNECTION_ID, connectionId)
+        .set(CONNECTION_OPERATION.OPERATION_ID, standardSyncOperationId)
+        .execute());
+
+    return standardSyncOperationId;
   }
 
 }

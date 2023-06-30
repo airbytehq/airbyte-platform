@@ -1,15 +1,15 @@
-import { Formik } from "formik";
 import React, { useCallback } from "react";
+import { AnyObjectSchema } from "yup";
 
-import { FormChangeTracker } from "components/common/FormChangeTracker";
+import { Form } from "components/forms";
 
 import {
   ConnectorDefinition,
   ConnectorDefinitionSpecification,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
-import { FormikPatch } from "core/form/FormikPatch";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
+import { removeEmptyProperties } from "utils/form";
 
 import { ConnectorFormContextProvider } from "./connectorFormContext";
 import { FormRootProps, FormRoot } from "./FormRoot";
@@ -28,6 +28,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   isEditMode?: boolean;
   formValues?: Partial<ConnectorFormValues>;
   connectorId?: string;
+  trackDirtyChanges?: boolean;
 }
 
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
@@ -53,7 +54,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
 
   const castValues = useCallback(
     (values: ConnectorFormValues) =>
-      validationSchema.cast(values, {
+      validationSchema.cast(removeEmptyProperties(values), {
         stripUnknown: true,
       }),
     [validationSchema]
@@ -64,35 +65,34 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
       const valuesToSend = castValues(values);
       await onSubmit(valuesToSend);
       clearFormChange(formId);
+      // do not reset form values to avoid casting oddities
+      return {
+        keepStateOptions: {
+          keepValues: true,
+        },
+      };
     },
-    [clearFormChange, formId, castValues, onSubmit]
+    [castValues, onSubmit, clearFormChange, formId]
   );
 
   return (
-    <Formik
-      validateOnBlur
-      validateOnChange
-      validateOnMount
-      initialValues={initialValues}
-      validationSchema={validationSchema}
+    <Form
+      trackDirtyChanges={props.trackDirtyChanges}
+      defaultValues={initialValues as ConnectorFormValues<object>}
+      schema={validationSchema as AnyObjectSchema}
       onSubmit={onFormSubmit}
-      enableReinitialize
     >
-      {({ dirty }) => (
-        <ConnectorFormContextProvider
-          formType={formType}
-          getValues={castValues}
-          selectedConnectorDefinition={selectedConnectorDefinition}
-          selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
-          isEditMode={isEditMode}
-          validationSchema={validationSchema}
-          connectorId={connectorId}
-        >
-          <FormikPatch />
-          <FormChangeTracker changed={dirty} formId={formId} />
-          <FormRoot {...props} formFields={formFields} castValues={castValues} groupStructure={groups} />
-        </ConnectorFormContextProvider>
-      )}
-    </Formik>
+      <ConnectorFormContextProvider
+        formType={formType}
+        getValues={castValues}
+        selectedConnectorDefinition={selectedConnectorDefinition}
+        selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
+        isEditMode={isEditMode}
+        validationSchema={validationSchema}
+        connectorId={connectorId}
+      >
+        <FormRoot {...props} formFields={formFields} castValues={castValues} groupStructure={groups} />
+      </ConnectorFormContextProvider>
+    </Form>
   );
 };

@@ -77,9 +77,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
-import io.airbyte.commons.server.helpers.DestinationDefinitionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
-import io.airbyte.commons.server.helpers.SourceDefinitionHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
@@ -91,13 +89,12 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.Field;
@@ -138,7 +135,7 @@ class WebBackendConnectionsHandlerTest {
   private WebBackendConnectionRead expectedNoDiscoveryWithNewSchema;
   private EventRunner eventRunner;
   private ConfigRepository configRepository;
-  private FeatureFlagClient featureFlagClient;
+  private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -162,8 +159,8 @@ class WebBackendConnectionsHandlerTest {
     final JobHistoryHandler jobHistoryHandler = mock(JobHistoryHandler.class);
     configRepository = mock(ConfigRepository.class);
     schedulerHandler = mock(SchedulerHandler.class);
-    featureFlagClient = mock(TestClient.class);
     eventRunner = mock(EventRunner.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     wbHandler = new WebBackendConnectionsHandler(
         connectionsHandler,
         stateHandler,
@@ -174,15 +171,19 @@ class WebBackendConnectionsHandlerTest {
         operationsHandler,
         eventRunner,
         configRepository,
-        featureFlagClient);
+        actorDefinitionVersionHelper);
 
-    final StandardSourceDefinition sourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
-    sourceDefinition.setIcon(SOURCE_ICON);
+    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("marketo")
+        .withIcon(SOURCE_ICON);
     final SourceConnection source = SourceHelpers.generateSource(sourceDefinition.getSourceDefinitionId());
     sourceRead = SourceHelpers.getSourceRead(source, sourceDefinition);
 
-    final StandardDestinationDefinition destinationDefinition = DestinationDefinitionHelpers.generateDestination();
-    destinationDefinition.setIcon(DESTINATION_ICON);
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("db2")
+        .withIcon(DESTINATION_ICON);
     final DestinationConnection destination = DestinationHelpers.generateDestination(destinationDefinition.getDestinationDefinitionId());
     final DestinationRead destinationRead = DestinationHelpers.getDestinationRead(destination, destinationDefinition);
 
@@ -1098,7 +1099,7 @@ class WebBackendConnectionsHandlerTest {
         .skipReset(false)
         .connectionId(expected.getConnectionId());
 
-    final UUID sourceId = UUID.randomUUID();
+    final UUID sourceId = sourceRead.getSourceId();
 
     // existing connection has a breaking change
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(

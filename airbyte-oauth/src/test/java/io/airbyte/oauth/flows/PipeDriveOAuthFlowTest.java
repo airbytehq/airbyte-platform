@@ -12,7 +12,7 @@ public class PipeDriveOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new PipeDriveOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new PipeDriveOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

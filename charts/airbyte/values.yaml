@@ -9,6 +9,7 @@ global:
   ##  deploymentMode -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
   deploymentMode: "oss"
 
+  env_vars: {}
   ##  database [object] -- Object used to overrite database configuration(to use external DB)
   ##  database.secretName -- secret name where DB creds are stored
   ##  database.secretValue -- secret value for database password
@@ -825,6 +826,11 @@ worker:
 
   hpa:
     enabled: false
+
+  debug:
+    enabled: false
+    remoteDebugPort:
+
   ## Container Orchestrator
   ## enabled -- Enable or disable Orchestrator
   ## image -- Orchestrator image
@@ -1486,6 +1492,38 @@ connector-builder-server:
   image:
     repository: airbyte/connector-atelier-server
     pullPolicy: IfNotPresent
+
+  ## Configure extra options for the server containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ##  server.livenessProbe.enabled Enable livenessProbe on the server
+  ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ##  server.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ##  server.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+
+  ##  server.readinessProbe.enabled Enable readinessProbe on the server
+  ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ##  server.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ##  server.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
 
   ## connector-builder-server resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/

@@ -1,54 +1,57 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
+import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
-import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateSource, useSourceList } from "hooks/services/useSourceHook";
-import ExistingEntityForm from "pages/connections/CreateConnectionPage/ExistingEntityForm";
-import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
+import { useSourceList } from "hooks/services/useSourceHook";
 
+import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
 import { RadioButtonTiles } from "./RadioButtonTiles";
+import { SelectExistingConnector } from "./SelectExistingConnector";
 
-type SourceType = "existing" | "new";
+export type SourceType = "existing" | "new";
 
-interface SelectSourceProps {
-  onSelectSource: (sourceId: string) => void;
-  initialSelectedSourceType?: SourceType;
-}
+export const EXISTING_SOURCE_TYPE = "existing";
+export const NEW_SOURCE_TYPE = "new";
+export const SOURCE_TYPE_PARAM = "sourceType";
+export const SOURCE_ID_PARAM = "sourceId";
 
-export const SelectSource: React.FC<SelectSourceProps> = ({
-  onSelectSource,
-  initialSelectedSourceType = "existing",
-}) => {
+export const SelectSource: React.FC = () => {
   const { sources } = useSourceList();
-  const [selectedSourceType, setSelectedSourceType] = useState<SourceType>(
-    sources.length === 0 ? "new" : initialSelectedSourceType
-  );
-  const sourceDefinitions = useAvailableSourceDefinitions();
-  const { clearAllFormChanges, hasFormChanges } = useFormChangeTrackerService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
-  const { mutateAsync: createSource } = useCreateSource();
-  const { trackAction } = useAppMonitoringService();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const onCreateSource = async (values: SourceFormValues) => {
-    const sourceConnector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
-    if (!sourceConnector) {
-      trackAction(AppActionCodes.CONNECTOR_NOT_FOUND, { sourceDefinitionId: values.serviceType });
-      throw new Error(AppActionCodes.CONNECTOR_NOT_FOUND);
+  if (!searchParams.get(SOURCE_TYPE_PARAM)) {
+    if (sources.length === 0) {
+      searchParams.set(SOURCE_TYPE_PARAM, NEW_SOURCE_TYPE);
+      setSearchParams(searchParams);
+    } else {
+      searchParams.set(SOURCE_TYPE_PARAM, EXISTING_SOURCE_TYPE);
+      setSearchParams(searchParams);
     }
-    const result = await createSource({ values, sourceConnector });
-    clearAllFormChanges();
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    onSelectSource(result.sourceId);
+  }
+  const selectedSourceType = useMemo(() => {
+    return searchParams.get(SOURCE_TYPE_PARAM) as SourceType;
+  }, [searchParams]);
+
+  const { hasFormChanges } = useFormChangeTrackerService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+
+  const selectSourceType = (sourceType: SourceType) => {
+    searchParams.delete(SOURCE_DEFINITION_PARAM);
+    searchParams.set(SOURCE_TYPE_PARAM, sourceType);
+    setSearchParams(searchParams);
+  };
+
+  const selectSource = (sourceId: string) => {
+    searchParams.delete(SOURCE_TYPE_PARAM);
+    searchParams.set(SOURCE_ID_PARAM, sourceId);
+    setSearchParams(searchParams);
   };
 
   const onSelectSourceType = (sourceType: SourceType) => {
@@ -59,55 +62,53 @@ export const SelectSource: React.FC<SelectSourceProps> = ({
         submitButtonText: "form.discardChanges",
         onSubmit: () => {
           closeConfirmationModal();
-          setSelectedSourceType(sourceType);
-          if (sourceType === "existing") {
-            setDocumentationPanelOpen(false);
-          }
+          selectSourceType(sourceType);
         },
         onClose: () => {
-          setSelectedSourceType(selectedSourceType);
+          selectSourceType(sourceType);
         },
       });
     } else {
-      setSelectedSourceType(sourceType);
-      if (sourceType === "existing") {
-        setDocumentationPanelOpen(false);
-      }
+      selectSourceType(sourceType);
     }
   };
 
   return (
     <>
-      <Card withPadding>
-        <Heading as="h2">
-          <FormattedMessage id="connectionForm.defineSource" />
-        </Heading>
-        <Box mt="md">
-          <RadioButtonTiles
-            name="sourceType"
-            options={[
-              {
-                value: "existing",
-                label: "connectionForm.sourceExisting",
-                description: "connectionForm.sourceExistingDescription",
-                disabled: sources.length === 0,
-              },
-              {
-                value: "new",
-                label: "onboarding.sourceSetUp",
-                description: "onboarding.sourceSetUp.description",
-              },
-            ]}
-            selectedValue={selectedSourceType}
-            onSelectRadioButton={(id) => onSelectSourceType(id)}
-          />
-        </Box>
-      </Card>
-      {selectedSourceType === "existing" && (
-        <ExistingEntityForm type="source" onSubmit={(sourceId) => onSelectSource(sourceId)} />
+      {!searchParams.get(SOURCE_DEFINITION_PARAM) && (
+        <Card withPadding>
+          <Heading as="h2">
+            <FormattedMessage id="connectionForm.defineSource" />
+          </Heading>
+          <Box mt="md">
+            <RadioButtonTiles
+              name="sourceType"
+              options={[
+                {
+                  value: EXISTING_SOURCE_TYPE,
+                  label: "connectionForm.sourceExisting",
+                  description: "connectionForm.sourceExistingDescription",
+                  disabled: sources.length === 0,
+                },
+                {
+                  value: NEW_SOURCE_TYPE,
+                  label: "onboarding.sourceSetUp",
+                  description: "onboarding.sourceSetUp.description",
+                },
+              ]}
+              selectedValue={selectedSourceType}
+              onSelectRadioButton={(id) => onSelectSourceType(id)}
+            />
+          </Box>
+        </Card>
       )}
-      {selectedSourceType === "new" && <SourceForm sourceDefinitions={sourceDefinitions} onSubmit={onCreateSource} />}
-      <CloudInviteUsersHint connectorType="source" />
+      <Box mt="xl">
+        {selectedSourceType === EXISTING_SOURCE_TYPE && (
+          <SelectExistingConnector connectors={sources} selectConnector={selectSource} />
+        )}
+        {selectedSourceType === NEW_SOURCE_TYPE && <CreateNewSource />}
+        <CloudInviteUsersHint connectorType="source" />
+      </Box>
     </>
   );
 };

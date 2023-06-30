@@ -17,12 +17,12 @@ import { AttemptRead, AttemptStatus, SynchronousJobRead } from "core/request/Air
 import styles from "./JobLogs.module.scss";
 import { LogsDetails } from "./LogsDetails";
 import { parseAttemptLink } from "../attemptLinkUtils";
-import { JobsWithJobs } from "../types";
+import { JobWithAttempts } from "../types";
 import { getJobId, isCancelledAttempt } from "../utils";
 
 interface JobLogsProps {
   jobIsFailed?: boolean;
-  job: SynchronousJobRead | JobsWithJobs;
+  job: SynchronousJobRead | JobWithAttempts;
 }
 
 const mapAttemptStatusToIcon = (attempt: AttemptRead): StatusIconStatus => {
@@ -48,14 +48,14 @@ const isPartialSuccess = (attempt: AttemptRead) => {
   return !!attempt.failureSummary?.partialSuccess;
 };
 
-const jobIsSynchronousJobRead = (job: SynchronousJobRead | JobsWithJobs): job is SynchronousJobRead => {
+const jobIsSynchronousJobRead = (job: SynchronousJobRead | JobWithAttempts): job is SynchronousJobRead => {
   return !!(job as SynchronousJobRead)?.logs?.logLines;
 };
 
 export const JobLogs: React.FC<JobLogsProps> = ({ job }) => {
   const isSynchronousJobRead = jobIsSynchronousJobRead(job);
 
-  const id: number | string = (job as JobsWithJobs).job?.id ?? (job as SynchronousJobRead).id;
+  const id: number | string = (job as JobWithAttempts).job?.id ?? (job as SynchronousJobRead).id;
 
   const debugInfo = useGetDebugInfoJob(id, typeof id === "number", true);
 

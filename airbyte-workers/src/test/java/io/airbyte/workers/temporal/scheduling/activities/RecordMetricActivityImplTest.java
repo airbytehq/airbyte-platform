@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 class RecordMetricActivityImplTest {
 
   private static final UUID CONNECTION_ID = UUID.randomUUID();
+  private static final UUID CONNECTION_ID_WITHOUT_WORKSPACE = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final OssMetricsRegistry METRIC_NAME = OssMetricsRegistry.TEMPORAL_WORKFLOW_ATTEMPT;
 
@@ -47,6 +48,8 @@ class RecordMetricActivityImplTest {
     when(connectionUpdaterInput.getConnectionId()).thenReturn(CONNECTION_ID);
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
         .thenReturn(new WorkspaceRead().workspaceId(WORKSPACE_ID));
+    when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(CONNECTION_ID_WITHOUT_WORKSPACE)))
+        .thenThrow(new ApiException(404, "Not Found"));
 
     activity = new RecordMetricActivityImpl(metricClient, workspaceApi);
   }
@@ -93,6 +96,20 @@ class RecordMetricActivityImplTest {
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))),
         eq(new MetricAttribute(MetricTags.RESET_WORKFLOW_FAILURE_CAUSE, failureCause.name())));
+  }
+
+  @Test
+  void testRecordingMetricCounterDoesntCrashOnApiNotFoundErrors() {
+    final ConnectionUpdaterInput inputForUnkwnownWorkspaceId = new ConnectionUpdaterInput();
+    inputForUnkwnownWorkspaceId.setConnectionId(CONNECTION_ID_WITHOUT_WORKSPACE);
+    final RecordMetricInput metricInput = new RecordMetricInput(inputForUnkwnownWorkspaceId, Optional.empty(), METRIC_NAME, null);
+
+    activity.recordWorkflowCountMetric(metricInput);
+
+    verify(metricClient).count(
+        eq(METRIC_NAME),
+        eq(1L),
+        eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID_WITHOUT_WORKSPACE))));
   }
 
 }

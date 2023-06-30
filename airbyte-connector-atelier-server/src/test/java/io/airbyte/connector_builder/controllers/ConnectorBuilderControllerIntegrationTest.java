@@ -22,6 +22,7 @@ import io.airbyte.connector_builder.command_runner.MockSynchronousPythonCdkComma
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
+import io.airbyte.connector_builder.exceptions.CdkUnknownException;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.MockAirbyteFileWriterImpl;
 import io.airbyte.connector_builder.handlers.HealthHandler;
@@ -158,8 +159,8 @@ class ConnectorBuilderControllerIntegrationTest {
     resolveManifestRequestBody.setManifest(validManifest);
 
     final Exception exception =
-        Assertions.assertThrows(AirbyteCdkInvalidInputException.class, () -> controller.resolveManifest(resolveManifestRequestBody));
-    assertTrue(exception.getMessage().contains("No records found"));
+        Assertions.assertThrows(CdkUnknownException.class, () -> controller.resolveManifest(resolveManifestRequestBody));
+    assertTrue(exception.getMessage().contains("no records nor trace were found"));
     assertNotNull(exception.getStackTrace());
   }
 
@@ -176,17 +177,41 @@ class ConnectorBuilderControllerIntegrationTest {
 
     final Exception exception =
         Assertions.assertThrows(AirbyteCdkInvalidInputException.class, () -> controller.resolveManifest(resolveManifestRequestBody));
-    assertTrue(exception.getMessage().contains("AirbyteTraceMessage response from CDK."));
+    assertTrue(exception.getMessage().contains("AirbyteTraceMessage response from CDK"));
     assertNotNull(exception.getStackTrace());
   }
 
   @Test
   void testResolveManifestNonzeroExitCodeReturnsError() {
-    final InputStream stream = new ByteArrayInputStream(
+    final InputStream errorStream = new ByteArrayInputStream(
         StandardCharsets.UTF_8.encode(cdkException).array());
 
     final ConnectorBuilderController controller = createControllerWithSynchronousRunner(
-        false, 1, null, stream, null);
+        false, 1, null, errorStream, null);
+
+    final ResolveManifestRequestBody resolveManifestRequestBody = new ResolveManifestRequestBody();
+    resolveManifestRequestBody.setManifest(validManifest);
+
+    final Exception exception = Assertions.assertThrows(CdkProcessException.class, () -> controller.resolveManifest(resolveManifestRequestBody));
+    assertTrue(exception.getMessage().contains("CDK subprocess for resolve_manifest finished with exit code 1."));
+    assertNotNull(exception.getStackTrace());
+  }
+
+  @Test
+  void testResolveManifestNonzeroExitCodeAndInputStreamReturnsError() {
+    final InputStream emptyInputStream = new InputStream() {
+
+      @Override
+      public int read() {
+        return -1;
+      }
+
+    };
+    final InputStream errorStream = new ByteArrayInputStream(
+        StandardCharsets.UTF_8.encode(cdkException).array());
+
+    final ConnectorBuilderController controller = createControllerWithSynchronousRunner(
+        false, 1, emptyInputStream, errorStream, null);
 
     final ResolveManifestRequestBody resolveManifestRequestBody = new ResolveManifestRequestBody();
     resolveManifestRequestBody.setManifest(validManifest);

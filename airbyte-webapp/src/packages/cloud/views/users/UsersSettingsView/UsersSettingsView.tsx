@@ -8,16 +8,16 @@ import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 
+import { useListUsers, useUserHook } from "core/api/cloud";
+import { WorkspaceUserRead } from "core/api/types/CloudApi";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { User } from "packages/cloud/lib/domain/users";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import {
   InviteUsersModalServiceProvider,
   useInviteUsersModalService,
 } from "packages/cloud/services/users/InviteUsersModalService";
-import { useListUsers, useUserHook } from "packages/cloud/services/users/UseUserHook";
 
 import styles from "./UsersSettingsView.module.scss";
 
@@ -68,10 +68,10 @@ const Header: React.VFC = () => {
 
 export const UsersTable: React.FC = () => {
   const { workspaceId } = useCurrentWorkspace();
-  const users = useListUsers();
+  const { users } = useListUsers();
   const { user } = useAuthService();
 
-  const columnHelper = createColumnHelper<User>();
+  const columnHelper = createColumnHelper<WorkspaceUserRead>();
 
   const columns = useMemo(
     () => [

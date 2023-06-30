@@ -1,3 +1,1 @@
-import MetricsPage from "./MetricsPage";
-
-export default MetricsPage;
+export { MetricsPage } from "./MetricsPage";

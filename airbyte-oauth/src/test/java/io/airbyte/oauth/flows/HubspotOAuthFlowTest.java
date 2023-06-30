@@ -11,7 +11,7 @@ public class HubspotOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new HubspotOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new HubspotOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

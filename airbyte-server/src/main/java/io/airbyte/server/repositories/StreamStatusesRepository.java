@@ -7,7 +7,9 @@ package io.airbyte.server.repositories;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.STREAM_STATUSES;
 
 import com.google.common.base.CaseFormat;
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType;
 import io.airbyte.server.repositories.domain.StreamStatus;
+import io.micronaut.data.annotation.Query;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Pageable;
@@ -15,6 +17,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.PageableRepository;
 import io.micronaut.data.repository.jpa.JpaSpecificationExecutor;
 import io.micronaut.data.repository.jpa.criteria.PredicateSpecification;
+import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
 import org.jooq.TableField;
@@ -53,6 +56,10 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
       spec = spec.and(Predicates.columnEquals(Columns.ATTEMPT_NUMBER, params.attemptNumber()));
     }
 
+    if (null != params.jobType()) {
+      spec = spec.and(Predicates.columnEquals(Columns.JOB_TYPE, params.jobType()));
+    }
+
     if (null != params.pagination()) {
       final var offset = params.pagination().offset();
       final var size = params.pagination().size();
@@ -61,6 +68,14 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
 
     return findAll(spec, pageable);
   }
+
+  /**
+   * Returns the latest stream status per run state (and job type) for a connection.
+   */
+  @Query("SELECT DISTINCT ON (stream_name, stream_namespace, run_state, incomplete_run_cause, job_type) * "
+      + "FROM stream_statuses WHERE connection_id = :connectionId "
+      + "ORDER BY job_type, stream_name, stream_namespace, run_state, incomplete_run_cause, transitioned_at DESC")
+  List<StreamStatus> findAllPerRunStateByConnectionId(final UUID connectionId);
 
   /**
    * Pagination params.
@@ -78,6 +93,7 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
                       String streamNamespace,
                       String streamName,
                       Integer attemptNumber,
+                      JobStreamStatusJobType jobType,
                       Pagination pagination) {}
 
   /**
@@ -111,6 +127,7 @@ public interface StreamStatusesRepository extends PageableRepository<StreamStatu
     static String STREAM_NAMESPACE = Predicates.formatJooqColumnName(STREAM_STATUSES.STREAM_NAMESPACE);
     static String STREAM_NAME = Predicates.formatJooqColumnName(STREAM_STATUSES.STREAM_NAME);
     static String ATTEMPT_NUMBER = Predicates.formatJooqColumnName(STREAM_STATUSES.ATTEMPT_NUMBER);
+    static String JOB_TYPE = Predicates.formatJooqColumnName(STREAM_STATUSES.JOB_TYPE);
 
   }
 

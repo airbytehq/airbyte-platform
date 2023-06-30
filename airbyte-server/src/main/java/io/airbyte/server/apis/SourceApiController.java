@@ -12,6 +12,8 @@ import io.airbyte.api.generated.SourceApi;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
+import io.airbyte.api.model.generated.PartialSourceUpdate;
+import io.airbyte.api.model.generated.SourceAutoPropagateChange;
 import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead;
@@ -46,6 +48,18 @@ public class SourceApiController implements SourceApi {
   public SourceApiController(final SchedulerHandler schedulerHandler, final SourceHandler sourceHandler) {
     this.schedulerHandler = schedulerHandler;
     this.sourceHandler = sourceHandler;
+  }
+
+  @Post("/apply_schema_changes")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @Override
+  public void applySchemaChangeForSource(final SourceAutoPropagateChange sourceAutoPropagateChange) {
+    ApiHelper.execute(() -> {
+      schedulerHandler.applySchemaChangeForSource(sourceAutoPropagateChange);
+      return null;
+    });
   }
 
   @Post("/check_connection")
@@ -144,6 +158,15 @@ public class SourceApiController implements SourceApi {
   @Override
   public SourceRead updateSource(final SourceUpdate sourceUpdate) {
     return ApiHelper.execute(() -> sourceHandler.updateSource(sourceUpdate));
+  }
+
+  @Post("/partial_update")
+  @Secured({EDITOR})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public SourceRead partialUpdateSource(final PartialSourceUpdate partialSourceUpdate) {
+    return ApiHelper.execute(() -> sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate));
   }
 
   @Post("/write_discover_catalog_result")

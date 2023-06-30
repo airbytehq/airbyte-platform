@@ -18,6 +18,7 @@ import static org.mockito.Mockito.spy;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.Geography;
@@ -33,7 +34,6 @@ import io.airbyte.config.persistence.ConfigRepository.DestinationAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.SourceAndDefinition;
 import io.airbyte.config.persistence.ConfigRepository.StandardSyncQuery;
 import io.airbyte.db.Database;
-import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.Field;
@@ -73,19 +73,21 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void setup() throws IOException, JsonValidationException, SQLException {
-    configRepository = spy(new ConfigRepository(
-        database,
-        new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
-        new StandardSyncPersistence(database),
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    configRepository = spy(new ConfigRepository(database, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       configRepository.writeStandardWorkspaceNoSecrets(workspace);
     }
     for (final StandardSourceDefinition sourceDefinition : MockData.standardSourceDefinitions()) {
-      configRepository.writeStandardSourceDefinition(sourceDefinition);
+      final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+          .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+          .withVersionId(sourceDefinition.getDefaultVersionId());
+      configRepository.writeSourceDefinitionAndDefaultVersion(sourceDefinition, actorDefinitionVersion);
     }
     for (final StandardDestinationDefinition destinationDefinition : MockData.standardDestinationDefinitions()) {
-      configRepository.writeStandardDestinationDefinition(destinationDefinition);
+      final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+          .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+          .withVersionId(destinationDefinition.getDefaultVersionId());
+      configRepository.writeDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion);
     }
     for (final SourceConnection source : MockData.sourceConnections()) {
       configRepository.writeSourceConnectionNoSecrets(source);
@@ -148,8 +150,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withSourceType(SourceType.DATABASE)
-        .withDockerRepository("docker-repo")
-        .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withName("sourceDefinition");
     configRepository.writeStandardSourceDefinition(sourceDefinition);
 
@@ -385,7 +385,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID workspaceId = MockData.standardWorkspaces().get(0).getWorkspaceId();
     final StandardDestinationDefinition grantableDefinition1 = MockData.grantableDestinationDefinition1();
     final StandardDestinationDefinition grantableDefinition2 = MockData.grantableDestinationDefinition2();
-    final StandardDestinationDefinition customDefinition = MockData.cusstomDestinationDefinition();
+    final StandardDestinationDefinition customDefinition = MockData.customDestinationDefinition();
 
     configRepository.writeActorDefinitionWorkspaceGrant(customDefinition.getDestinationDefinitionId(), workspaceId);
     configRepository.writeActorDefinitionWorkspaceGrant(grantableDefinition1.getDestinationDefinitionId(), workspaceId);

@@ -1,5 +1,5 @@
-import { useField } from "formik";
-import React, { ReactNode, useRef } from "react";
+import React, { ReactNode } from "react";
+import { useFieldArray } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import GroupControls from "components/GroupControls";
@@ -44,63 +44,37 @@ interface KeyValueListFieldProps {
   label?: string;
   tooltip?: ReactNode;
   manifestPath?: string;
+  optional?: boolean;
 }
 
-export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({ path, label, tooltip, manifestPath }) => {
-  const [{ value: keyValueList }, , { setValue: setKeyValueList }] = useField<Array<[string, string]>>(path);
+export const KeyValueListField: React.FC<KeyValueListFieldProps> = ({
+  path,
+  label,
+  tooltip,
+  manifestPath,
+  optional,
+}) => {
   const { label: finalLabel, tooltip: finalTooltip } = getLabelAndTooltip(label, tooltip, manifestPath, path);
-
-  // need to wrap the setter into a ref because it will be a new function on every formik state update
-  const setKeyValueListRef = useRef(setKeyValueList);
-  setKeyValueListRef.current = setKeyValueList;
+  const { fields: keyValueList, append, remove } = useFieldArray({ name: path });
 
   return (
-    <KeyValueList
-      label={finalLabel}
-      tooltip={finalTooltip}
-      keyValueList={keyValueList}
-      setKeyValueList={setKeyValueListRef}
-      path={path}
-    />
+    <GroupControls
+      label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} optional={optional} />}
+      control={
+        <Button type="button" variant="secondary" onClick={() => append([["", ""]])}>
+          <FormattedMessage id="connectorBuilder.addKeyValue" />
+        </Button>
+      }
+    >
+      {keyValueList.map((keyValue, keyValueIndex) => (
+        <KeyValueInput
+          key={keyValue.id}
+          path={`${path}.${keyValueIndex}`}
+          onRemove={() => {
+            remove(keyValueIndex);
+          }}
+        />
+      ))}
+    </GroupControls>
   );
 };
-
-const KeyValueList = React.memo(
-  ({
-    keyValueList,
-    setKeyValueList,
-    label,
-    tooltip,
-    path,
-  }: KeyValueListFieldProps & {
-    keyValueList: Array<[string, string]>;
-    setKeyValueList: React.MutableRefObject<(val: Array<[string, string]>) => void>;
-  }) => {
-    return (
-      <GroupControls
-        label={<ControlLabels label={label} infoTooltipContent={tooltip} />}
-        control={
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setKeyValueList.current([...keyValueList, ["", ""]])}
-          >
-            <FormattedMessage id="connectorBuilder.addKeyValue" />
-          </Button>
-        }
-      >
-        {keyValueList.map((_keyValue, keyValueIndex) => (
-          <KeyValueInput
-            key={keyValueIndex}
-            path={`${path}.${keyValueIndex}`}
-            onRemove={() => {
-              const updatedList = keyValueList.filter((_, index) => index !== keyValueIndex);
-              setKeyValueList.current(updatedList);
-            }}
-          />
-        ))}
-      </GroupControls>
-    );
-  }
-);
-KeyValueList.displayName = "KeyValueList";

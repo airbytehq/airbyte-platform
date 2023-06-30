@@ -15,6 +15,8 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_P
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 
@@ -37,6 +39,8 @@ import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.NormalizationDestinationDefinitionConfig;
 import io.airbyte.config.Notification;
+import io.airbyte.config.NotificationSettings;
+import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
@@ -53,6 +57,7 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.WorkspaceServiceAccount;
+import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.protocol.models.AirbyteCatalog;
@@ -63,6 +68,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.jooq.Record;
 
@@ -122,7 +128,8 @@ public class DbConverter {
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
         .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withNonBreakingChangesPreference(
-            Enums.toEnum(record.get(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, String.class), NonBreakingChangesPreference.class).orElseThrow())
+            Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
+                .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
         .withNotifySchemaChanges(isWebhookNotificationEnabled)
         .withNotifySchemaChangesByEmail(isEmailNotificationEnabled);
   }
@@ -161,12 +168,28 @@ public class DbConverter {
         .withDisplaySetupWizard(record.get(WORKSPACE.DISPLAY_SETUP_WIZARD))
         .withTombstone(record.get(WORKSPACE.TOMBSTONE))
         .withNotifications(notificationList)
+        .withNotificationSettings(record.get(WORKSPACE.NOTIFICATION_SETTINGS) == null ? null
+            : Jsons.deserialize(record.get(WORKSPACE.NOTIFICATION_SETTINGS).data(), NotificationSettings.class))
         .withFirstCompletedSync(record.get(WORKSPACE.FIRST_SYNC_COMPLETE))
         .withFeedbackDone(record.get(WORKSPACE.FEEDBACK_COMPLETE))
         .withDefaultGeography(
             Enums.toEnum(record.get(WORKSPACE.GEOGRAPHY, String.class), Geography.class).orElseThrow())
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()));
+  }
+
+  /**
+   * Build organization from db record.
+   *
+   * @param record db record
+   * @return organization
+   */
+  public static Organization buildOrganization(final Record record) {
+    return new Organization()
+        .withOrganizationId(record.get(ORGANIZATION.ID))
+        .withName(record.get(ORGANIZATION.NAME))
+        .withUserId(record.get(ORGANIZATION.USER_ID))
+        .withEmail(record.get(ORGANIZATION.EMAIL));
   }
 
   /**
@@ -211,31 +234,16 @@ public class DbConverter {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
-        .withDockerRepository(record.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-        .withDocumentationUrl(record.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
         .withSourceType(record.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
             : Enums.toEnum(record.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
-        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class))
-        .withProtocolVersion(record.get(ACTOR_DEFINITION.PROTOCOL_VERSION, String.class))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
-        .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
-        .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
-            : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
-        .withAllowedHosts(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS) == null
-            ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class))
-        .withSuggestedStreams(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS) == null
-            ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.SUGGESTED_STREAMS).data(), SuggestedStreams.class))
         .withMaxSecondsBetweenMessages(record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES) == null
             ? defaultMaxSecondsBetweenMessages
             : record.get(ACTOR_DEFINITION.MAX_SECONDS_BETWEEN_MESSAGES).longValue());
@@ -251,37 +259,14 @@ public class DbConverter {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(record.get(ACTOR_DEFINITION.ID))
         .withDefaultVersionId(record.get(ACTOR_DEFINITION.DEFAULT_VERSION_ID))
-        .withDockerImageTag(record.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
         .withIcon(record.get(ACTOR_DEFINITION.ICON))
-        .withDockerRepository(record.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-        .withDocumentationUrl(record.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
         .withName(record.get(ACTOR_DEFINITION.NAME))
-        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class))
-        .withProtocolVersion(record.get(ACTOR_DEFINITION.PROTOCOL_VERSION, String.class))
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
-        .withReleaseStage(record.get(ACTOR_DEFINITION.RELEASE_STAGE) == null ? null
-            : Enums.toEnum(record.get(ACTOR_DEFINITION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
-        .withReleaseDate(record.get(ACTOR_DEFINITION.RELEASE_DATE) == null ? null
-            : record.get(ACTOR_DEFINITION.RELEASE_DATE).toString())
-        .withSupportsDbt(record.get(ACTOR_DEFINITION.SUPPORTS_DBT) == null ? null
-            : record.get(ACTOR_DEFINITION.SUPPORTS_DBT))
-        .withNormalizationConfig(
-            Objects.nonNull(record.get(ACTOR_DEFINITION.NORMALIZATION_REPOSITORY)) && Objects.nonNull(record.get(ACTOR_DEFINITION.NORMALIZATION_TAG))
-                &&
-                Objects.nonNull(record.get(ACTOR_DEFINITION.NORMALIZATION_INTEGRATION_TYPE))
-                    ? new NormalizationDestinationDefinitionConfig()
-                        .withNormalizationRepository(record.get(ACTOR_DEFINITION.NORMALIZATION_REPOSITORY))
-                        .withNormalizationTag(record.get(ACTOR_DEFINITION.NORMALIZATION_TAG))
-                        .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION.NORMALIZATION_INTEGRATION_TYPE))
-                    : null)
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
-        .withAllowedHosts(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS) == null
-            ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.ALLOWED_HOSTS).data(), AllowedHosts.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
   }
 
   /**
@@ -462,7 +447,30 @@ public class DbConverter {
         .withActorDefinitionId(record.get(ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID))
         .withDockerRepository(record.get(ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY))
         .withDockerImageTag(record.get(ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG))
-        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class));
+        .withSpec(Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SPEC).data(), ConnectorSpecification.class))
+        .withDocumentationUrl(record.get(ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL))
+        .withProtocolVersion(record.get(ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION))
+        .withReleaseStage(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE) == null ? null
+            : Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.RELEASE_STAGE, String.class), ReleaseStage.class).orElseThrow())
+        .withReleaseDate(record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE) == null ? null
+            : record.get(ACTOR_DEFINITION_VERSION.RELEASE_DATE).toString())
+        .withAllowedHosts(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.ALLOWED_HOSTS).data(), AllowedHosts.class))
+        .withSuggestedStreams(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.SUGGESTED_STREAMS).data(),
+                SuggestedStreams.class))
+        .withSupportsDbt(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DBT))
+        .withNormalizationConfig(
+            Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
+                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
+                && Objects.nonNull(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
+                    ? new NormalizationDestinationDefinitionConfig()
+                        .withNormalizationRepository(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_REPOSITORY))
+                        .withNormalizationTag(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_TAG))
+                        .withNormalizationIntegrationType(record.get(ACTOR_DEFINITION_VERSION.NORMALIZATION_INTEGRATION_TYPE))
+                    : null);
   }
 
 }

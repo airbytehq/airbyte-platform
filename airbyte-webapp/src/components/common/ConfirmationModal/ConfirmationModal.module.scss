@@ -7,7 +7,7 @@
 .content {
   width: 585px;
   font-size: variables.$font-size-lg;
-  padding: 25px;
+  padding: variables.$spacing-xl;
   white-space: pre-line;
   overflow: auto;
 }

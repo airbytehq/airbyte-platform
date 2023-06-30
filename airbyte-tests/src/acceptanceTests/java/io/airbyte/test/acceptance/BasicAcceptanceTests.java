@@ -22,7 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -38,6 +40,7 @@ import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.AttemptStatus;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
+import io.airbyte.api.client.model.generated.ConnectionCreate;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionScheduleData;
@@ -47,7 +50,12 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.ConnectorBuilderProjectDetails;
+import io.airbyte.api.client.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
+import io.airbyte.api.client.model.generated.ConnectorBuilderProjectWithWorkspaceId;
+import io.airbyte.api.client.model.generated.ConnectorBuilderPublishRequestBody;
 import io.airbyte.api.client.model.generated.DataType;
+import io.airbyte.api.client.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
@@ -69,12 +77,15 @@ import io.airbyte.api.client.model.generated.OperatorWebhook;
 import io.airbyte.api.client.model.generated.OperatorWebhook.WebhookTypeEnum;
 import io.airbyte.api.client.model.generated.OperatorWebhookDbtCloud;
 import io.airbyte.api.client.model.generated.SelectedFieldInfo;
+import io.airbyte.api.client.model.generated.SourceCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.StreamDescriptor;
 import io.airbyte.api.client.model.generated.StreamState;
+import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebhookConfigWrite;
@@ -183,6 +194,98 @@ class BasicAcceptanceTests {
 
   private static final int MAX_SCHEDULED_JOB_RETRIES = 10;
 
+  private static final JsonNode A_DECLARATIVE_MANIFEST;
+  private static final JsonNode A_SPEC;
+
+  static {
+    try {
+      A_DECLARATIVE_MANIFEST =
+          new ObjectMapper().readTree("""
+                                      {
+                                        "version": "0.30.3",
+                                        "type": "DeclarativeSource",
+                                        "check": {
+                                          "type": "CheckStream",
+                                          "stream_names": [
+                                            "records"
+                                          ]
+                                        },
+                                        "streams": [
+                                          {
+                                            "type": "DeclarativeStream",
+                                            "name": "records",
+                                            "primary_key": [],
+                                            "schema_loader": {
+                                              "type": "InlineSchemaLoader",
+                                                "schema": {
+                                                  "type": "object",
+                                                  "$schema": "http://json-schema.org/schema#",
+                                                  "properties": {
+                                                    "id": {
+                                                    "type": "string"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "retriever": {
+                                              "type": "SimpleRetriever",
+                                              "requester": {
+                                                "type": "HttpRequester",
+                                                "url_base": "<url_base needs to be update in order to work since port is defined only in @BeforeAll>",
+                                                "path": "/",
+                                                "http_method": "GET",
+                                                "request_parameters": {},
+                                                "request_headers": {},
+                                                "request_body_json": "{\\"records\\":[{\\"id\\":1},{\\"id\\":2},{\\"id\\":3}]}",
+                                                "authenticator": {
+                                                  "type": "NoAuth"
+                                                }
+                                              },
+                                              "record_selector": {
+                                                "type": "RecordSelector",
+                                                "extractor": {
+                                                  "type": "DpathExtractor",
+                                                  "field_path": [
+                                                    "json",
+                                                    "records"
+                                                  ]
+                                                }
+                                              },
+                                              "paginator": {
+                                                "type": "NoPagination"
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "spec": {
+                                          "connection_specification": {
+                                            "$schema": "http://json-schema.org/draft-07/schema#",
+                                            "type": "object",
+                                            "required": [],
+                                            "properties": {},
+                                            "additionalProperties": true
+                                          },
+                                          "documentation_url": "https://example.org",
+                                          "type": "Spec"
+                                        }
+                                      }""");
+      A_SPEC = new ObjectMapper().readTree("""
+                                           {
+                                             "connectionSpecification": {
+                                               "$schema": "http://json-schema.org/draft-07/schema#",
+                                               "type": "object",
+                                               "required": [],
+                                               "properties": {},
+                                               "additionalProperties": true
+                                             },
+                                             "documentationUrl": "https://example.org",
+                                             "type": "Spec"
+                                           }""");
+    } catch (final JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private static final ConnectionScheduleData BASIC_SCHEDULE_DATA = new ConnectionScheduleData().basicSchedule(
       new ConnectionScheduleDataBasicSchedule().units(1L).timeUnit(TimeUnitEnum.HOURS));
 
@@ -241,6 +344,8 @@ class BasicAcceptanceTests {
 
     testHarness = new AirbyteAcceptanceTestHarness(apiClient, workspaceId);
     sourcePsql = testHarness.getSourcePsql();
+
+    testHarness.ensureCleanSlate();
   }
 
   @AfterAll
@@ -265,7 +370,7 @@ class BasicAcceptanceTests {
   @Order(-2)
   void testGetDestinationSpec() throws ApiException {
     final UUID destinationDefinitionId = testHarness.getPostgresDestinationDefinitionId();
-    final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId);
+    final DestinationDefinitionSpecificationRead spec = testHarness.getDestinationDefinitionSpec(destinationDefinitionId, workspaceId);
     assertEquals(destinationDefinitionId, spec.getDestinationDefinitionId());
     assertNotNull(spec.getConnectionSpecification());
   }
@@ -417,7 +522,8 @@ class BasicAcceptanceTests {
     final String name = "test-connection-" + UUID.randomUUID();
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).setFieldSelectionEnabled(false));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true).suggested(true)
+        .setFieldSelectionEnabled(false));
     final ConnectionRead createdConnection =
         testHarness.createConnection(name, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.BASIC, BASIC_SCHEDULE_DATA);
     createdConnection.getSyncCatalog().getStreams().forEach(s -> s.getConfig().setSuggested(true));
@@ -480,7 +586,7 @@ class BasicAcceptanceTests {
 
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true).syncMode(syncMode).destinationSyncMode(destinationSyncMode));
 
     final UUID connectionId =
         testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.BASIC,
@@ -489,6 +595,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJobWithRetries(connectionId, MAX_SCHEDULED_JOB_RETRIES);
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -504,7 +611,7 @@ class BasicAcceptanceTests {
         new ConnectionScheduleDataCron().cronExpression("* */2 * * * ?").cronTimeZone("UTC"));
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
 
     final UUID connectionId =
         testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.CRON,
@@ -520,6 +627,9 @@ class BasicAcceptanceTests {
       return "success"; // If the assertion throws after all the retries, then retryWithJitter will return null.
     }, "assert destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
     assertEquals("success", retryAssertOutcome);
+
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
+
     apiClient.getConnectionApi().deleteConnection(new ConnectionIdRequestBody().connectionId(connectionId));
 
     // remove connection to avoid exception during tear down
@@ -539,13 +649,14 @@ class BasicAcceptanceTests {
 
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
     final UUID connectionId = testHarness
         .createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
         .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(false);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -564,7 +675,7 @@ class BasicAcceptanceTests {
 
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
@@ -572,6 +683,7 @@ class BasicAcceptanceTests {
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -589,6 +701,7 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
@@ -602,6 +715,7 @@ class BasicAcceptanceTests {
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead1.getJob());
 
     testHarness.assertSourceAndDestinationDbInSync(WITH_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -620,6 +734,7 @@ class BasicAcceptanceTests {
 
     testHarness.assertRawDestinationContains(expectedRawRecords, new SchemaTableNamePair(PUBLIC, STREAM_NAME));
     testHarness.assertNormalizedDestinationContains(expectedNormalizedRecords);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -642,6 +757,7 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND;
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
@@ -654,6 +770,7 @@ class BasicAcceptanceTests {
     LOGGER.info(STATE_AFTER_SYNC_ONE, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // add new records and run again.
     final Database source = testHarness.getSourceDatabase();
@@ -673,6 +790,7 @@ class BasicAcceptanceTests {
     LOGGER.info(STATE_AFTER_SYNC_TWO, apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertRawDestinationContains(expectedRecords, new SchemaTableNamePair(PUBLIC, STREAM_NAME));
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
 
     // reset back to no data.
 
@@ -687,6 +805,9 @@ class BasicAcceptanceTests {
     waitWhileJobIsRunning(apiClient.getJobsApi(), jobInfoRead.getJob(), Duration.ofMinutes(1));
 
     LOGGER.info("state after reset: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
+    // TODO enable once stream status for resets has been fixed
+    // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
+    // StreamStatusJobType.RESET);
 
     // NOTE: this is a weird usage of retryWithJitter, but we've seen flakes where the destination still
     // has records even though the reset job is successful.
@@ -703,7 +824,7 @@ class BasicAcceptanceTests {
     LOGGER.info("state after sync 3: {}", apiClient.getStateApi().getState(new ConnectionIdRequestBody().connectionId(connectionId)));
 
     testHarness.assertSourceAndDestinationDbInSync(WITHOUT_SCD_TABLE);
-
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @Test
@@ -717,6 +838,7 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
@@ -777,6 +899,7 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
@@ -825,6 +948,7 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
         .primaryKey(List.of(List.of(COLUMN_NAME))));
@@ -867,6 +991,7 @@ class BasicAcceptanceTests {
     final UUID operationId = testHarness.createOperation().getOperationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     catalog.getStreams().forEach(s -> s.getConfig()
+        .selected(true)
         .syncMode(SyncMode.INCREMENTAL)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
@@ -904,7 +1029,7 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
@@ -924,6 +1049,9 @@ class BasicAcceptanceTests {
 
     // wait for the reset to complete
     waitForSuccessfulJob(apiClient.getJobsApi(), jobInfoRead.getJob());
+    // TODO enable once stream status for resets has been fixed
+    // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
+    // StreamStatusJobType.RESET);
   }
 
   @Test
@@ -955,7 +1083,7 @@ class BasicAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(
             TEST_CONNECTION, sourceId, destinationId, List.of(operationId, operationRead.getOperationId()), catalog, ConnectionScheduleType.MANUAL,
@@ -997,6 +1125,7 @@ class BasicAcceptanceTests {
 
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND));
     final UUID connectionId =
@@ -1095,6 +1224,7 @@ class BasicAcceptanceTests {
 
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(SyncMode.INCREMENTAL)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(DestinationSyncMode.APPEND));
     final UUID connectionId =
@@ -1176,6 +1306,7 @@ class BasicAcceptanceTests {
       final OperationRead operation = testHarness.createOperation();
       final String name = "test_reset_when_schema_is_modified_" + UUID.randomUUID();
 
+      catalog.getStreams().forEach(s -> s.getConfig().selected(true));
       LOGGER.info("Discovered catalog: {}", catalog);
 
       final ConnectionRead connection =
@@ -1226,6 +1357,7 @@ class BasicAcceptanceTests {
       });
 
       final AirbyteCatalog updatedCatalog = testHarness.discoverSourceSchemaWithoutCache(sourceId);
+      updatedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
       LOGGER.info("Discovered updated catalog: {}", updatedCatalog);
 
       // Update with refreshed catalog
@@ -1307,6 +1439,7 @@ class BasicAcceptanceTests {
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND;
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
+        .selected(true)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
@@ -1401,7 +1534,7 @@ class BasicAcceptanceTests {
 
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).selected(true).destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(TEST_CONNECTION, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
@@ -1439,6 +1572,7 @@ class BasicAcceptanceTests {
     final UUID operationId = operation.getOperationId();
     final String name = "test_reset_when_schema_is_modified_" + UUID.randomUUID();
 
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
     testHarness.setIncrementalAppendSyncMode(catalog, List.of(COLUMN_ID));
 
     final ConnectionRead connection =
@@ -1463,6 +1597,7 @@ class BasicAcceptanceTests {
 
     // Update with refreshed catalog
     AirbyteCatalog refreshedCatalog = testHarness.discoverSourceSchemaWithoutCache(sourceId);
+    refreshedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
     WebBackendConnectionUpdate update = testHarness.getUpdateInput(connection, refreshedCatalog, operation);
     webBackendApi.webBackendUpdateConnection(update);
 
@@ -1492,6 +1627,7 @@ class BasicAcceptanceTests {
 
     sourceId = testHarness.createPostgresSource().getSourceId();
     refreshedCatalog = testHarness.discoverSourceSchema(sourceId);
+    refreshedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
     update = testHarness.getUpdateInput(connection, refreshedCatalog, operation);
     webBackendApi.webBackendUpdateConnection(update);
 
@@ -1523,6 +1659,7 @@ class BasicAcceptanceTests {
 
     sourceId = testHarness.createPostgresSource().getSourceId();
     refreshedCatalog = testHarness.discoverSourceSchema(sourceId);
+    refreshedCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
     update = testHarness.getUpdateInput(connection, refreshedCatalog, operation);
     webBackendApi.webBackendUpdateConnection(update);
 
@@ -1553,6 +1690,7 @@ class BasicAcceptanceTests {
     final SyncMode syncMode = SyncMode.INCREMENTAL;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.APPEND_DEDUP;
     catalog.getStreams().forEach(s -> s.getConfig()
+        .selected(true)
         .syncMode(syncMode)
         .cursorField(List.of(COLUMN_ID))
         .destinationSyncMode(destinationSyncMode)
@@ -1709,6 +1847,74 @@ class BasicAcceptanceTests {
     } finally {
       apiClient.getJobsApi().cancelJob(jobId);
     }
+  }
+
+  @Test
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = "Cloud GKE environment is preventing unsecured http requests")
+  void testConnectorBuilderPublish() throws Exception {
+    final UUID sourceDefinitionId = publishSourceDefinitionThroughConnectorBuilder();
+    final SourceRead sourceRead = createSource(sourceDefinitionId);
+    try {
+      final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
+      final ConnectionRead connectionRead = createConnection(sourceRead.getSourceId(), destinationId);
+      runConnection(connectionRead.getConnectionId());
+
+      final Database destination = testHarness.getDestinationDatabase();
+      final Set<SchemaTableNamePair> destinationTables = testHarness.listAllTables(destination);
+      assertEquals(1, destinationTables.size());
+      assertEquals(3, testHarness.retrieveDestinationRecords(destination, destinationTables.iterator().next().getFullyQualifiedTableName()).size());
+    } finally {
+      // clean up
+      apiClient.getSourceDefinitionApi().deleteSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId));
+    }
+  }
+
+  private static UUID publishSourceDefinitionThroughConnectorBuilder() throws ApiException {
+    final JsonNode manifest = A_DECLARATIVE_MANIFEST.deepCopy();
+    ((ObjectNode) manifest.at("/streams/0/retriever/requester")).put("url_base", testHarness.getEchoServerUrl());
+
+    final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProject = apiClient.getConnectorBuilderProjectApi()
+        .createConnectorBuilderProject(new ConnectorBuilderProjectWithWorkspaceId()
+            .workspaceId(workspaceId)
+            .builderProject(new ConnectorBuilderProjectDetails().name("A custom declarative source")));
+    return apiClient.getConnectorBuilderProjectApi()
+        .publishConnectorBuilderProject(new ConnectorBuilderPublishRequestBody()
+            .workspaceId(workspaceId)
+            .builderProjectId(connectorBuilderProject.getBuilderProjectId())
+            .name("A custom declarative source")
+            .initialDeclarativeManifest(new DeclarativeSourceManifest()
+                .manifest(manifest)
+                .spec(A_SPEC)
+                .description("A description")
+                .version(1L)))
+        .getSourceDefinitionId();
+  }
+
+  private static SourceRead createSource(final UUID sourceDefinitionId) throws ApiException, JsonProcessingException {
+    return apiClient.getSourceApi().createSource(new SourceCreate()
+        .sourceDefinitionId(sourceDefinitionId)
+        .name("A custom declarative source")
+        .workspaceId(workspaceId)
+        .connectionConfiguration(new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}")));
+  }
+
+  private static ConnectionRead createConnection(final UUID sourceId, final UUID destinationId) throws ApiException {
+    final AirbyteCatalog syncCatalog = testHarness.discoverSourceSchemaWithoutCache(sourceId);
+    syncCatalog.getStreams().forEach(s -> s.getConfig().selected(true));
+    return apiClient.getConnectionApi().createConnection(new ConnectionCreate()
+        .name("name")
+        .sourceId(sourceId)
+        .destinationId(destinationId)
+        .status(ConnectionStatus.ACTIVE)
+        .syncCatalog(syncCatalog));
+  }
+
+  private static void runConnection(final UUID connectionId) throws ApiException, InterruptedException {
+    final JobInfoRead connectionSyncRead = apiClient.getConnectionApi()
+        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
+    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
   }
 
 }

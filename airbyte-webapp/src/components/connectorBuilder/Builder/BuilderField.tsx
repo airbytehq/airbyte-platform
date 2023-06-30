@@ -1,11 +1,12 @@
-import { FastField, FastFieldProps, FieldInputProps } from "formik";
 import isEqual from "lodash/isEqual";
 import toPath from "lodash/toPath";
 import { ReactNode, useEffect, useRef } from "react";
+import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
+import { CodeEditor } from "components/ui/CodeEditor";
 import { ComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
 import { DropDown } from "components/ui/DropDown";
@@ -34,6 +35,7 @@ interface ArrayFieldProps {
   setValue: (value: string[]) => void;
   error: boolean;
   itemType?: string;
+  directionalStyle?: boolean;
 }
 
 interface BaseFieldProps {
@@ -59,8 +61,9 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
-    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string }
+    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
+    | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
   );
@@ -79,9 +82,16 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType }) => {
+const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType, directionalStyle }) => {
   return (
-    <TagInput name={name} fieldValue={value} onChange={(value) => setValue(value)} itemType={itemType} error={error} />
+    <TagInput
+      name={name}
+      fieldValue={value}
+      onChange={(value) => setValue(value)}
+      itemType={itemType}
+      error={error}
+      directionalStyle={directionalStyle}
+    />
   );
 };
 
@@ -102,19 +112,17 @@ const handleScrollToField = (
   }
 };
 
-const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> = ({
+const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   path,
   optional = false,
   readOnly,
   pattern,
-  field,
-  meta,
-  form,
   adornment,
   manifestPath,
   ...props
 }) => {
-  const hasError = !!meta.error && (meta.touched || meta.error === "connectorBuilder.maxLength");
+  const { field, fieldState } = useController({ name: path });
+  const hasError = !!fieldState.error;
 
   const { label, tooltip } = getLabelAndTooltip(props.label, props.tooltip, manifestPath, path);
   const { scrollToField, setScrollToField } = useConnectorBuilderFormManagementState();
@@ -129,7 +137,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
   if (props.type === "boolean") {
     return (
       <LabeledSwitch
-        {...(field as FieldInputProps<string>)}
+        {...field}
         ref={(ref) => {
           elementRef.current = ref;
           // Call handler in here to make sure it handles new refs
@@ -147,7 +155,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
 
   const setValue = (newValue: unknown) => {
     props.onChange?.(newValue as string & string[]);
-    form.setFieldValue(path, newValue);
+    field.onChange(newValue);
   };
 
   return (
@@ -165,11 +173,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
         <Input
           {...field}
           onChange={(e) => {
-            field.onChange(e);
-            if (e.target.value === "") {
-              form.setFieldValue(path, undefined);
-            }
-            props.onChange?.(e.target.value);
+            setValue(e.target.value);
           }}
           className={props.className}
           type={props.type}
@@ -179,7 +183,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
           adornment={adornment}
           disabled={props.disabled}
           onBlur={(e) => {
-            field.onBlur(e);
+            field.onBlur();
             props.onBlur?.(e.target.value);
           }}
         />
@@ -188,31 +192,33 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
         <DatePicker
           error={hasError}
           withTime={props.type === "date-time"}
-          onChange={(value) => {
-            form.setFieldValue(path, value);
-            form.setFieldTouched(path, true);
-          }}
+          onChange={setValue}
           value={(field.value as string) ?? ""}
-          onBlur={() => {
-            form.setFieldTouched(path, true);
-          }}
+          onBlur={field.onBlur}
         />
       )}
       {props.type === "textarea" && (
         <TextArea
           {...field}
           onChange={(e) => {
-            field.onChange(e);
-            if (e.target.value === "") {
-              form.setFieldValue(path, undefined);
-            }
+            setValue(e.target.value);
           }}
           className={props.className}
           value={(field.value as string) ?? ""}
           error={hasError}
           readOnly={readOnly}
-          onBlur={(e) => {
-            field.onBlur(e);
+          onBlur={field.onBlur}
+        />
+      )}
+      {props.type === "jsoneditor" && (
+        <CodeEditor
+          height="300px"
+          key={path}
+          value={field.value || ""}
+          language="json"
+          theme="airbyte-light"
+          onChange={(val: string | undefined) => {
+            setValue(val);
           }}
         />
       )}
@@ -224,6 +230,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
             itemType={props.itemType}
             setValue={setValue}
             error={hasError}
+            directionalStyle={props.directionalStyle ?? true}
           />
         </div>
       )}
@@ -249,7 +256,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
             if (e.relatedTarget?.id.includes("headlessui-combobox-option")) {
               return;
             }
-            field.onBlur(e);
+            field.onBlur();
           }}
           filterOptions={false}
         />
@@ -257,8 +264,10 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
       {hasError && (
         <Text className={styles.error}>
           <FormattedMessage
-            id={meta.error}
-            values={meta.error === FORM_PATTERN_ERROR && pattern ? { pattern: String(pattern) } : undefined}
+            id={fieldState.error?.message}
+            values={
+              fieldState.error?.message === FORM_PATTERN_ERROR && pattern ? { pattern: String(pattern) } : undefined
+            }
           />
         </Text>
       )}
@@ -266,13 +275,4 @@ const InnerBuilderField: React.FC<BuilderFieldProps & FastFieldProps<unknown>> =
   );
 };
 
-export const BuilderField: React.FC<BuilderFieldProps> = (props) => {
-  return (
-    // The key is set to enforce a re-render of the component if the type change, otherwise changes in props might not be reflected correctly
-    <FastField name={props.path} key={`${props.type}_${props.label}`}>
-      {({ field, form, meta }: FastFieldProps<unknown>) => (
-        <InnerBuilderField {...props} field={field} form={form} meta={meta} />
-      )}
-    </FastField>
-  );
-};
+export const BuilderField: React.FC<BuilderFieldProps> = (props) => <InnerBuilderField {...props} key={props.path} />;

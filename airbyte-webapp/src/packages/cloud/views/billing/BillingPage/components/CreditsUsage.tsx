@@ -5,8 +5,6 @@ import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
-import { useExperiment } from "hooks/services/Experiment";
-
 import styles from "./CreditsUsage.module.scss";
 import { useCreditsContext } from "./CreditsUsageContext";
 import { CreditsUsageFilters } from "./CreditsUsageFilters";
@@ -14,17 +12,14 @@ import { EmptyState } from "./EmptyState";
 import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
-const CreditsUsage: React.FC = () => {
+export const CreditsUsage: React.FC = () => {
   const { freeAndPaidUsageByTimeChunk } = useCreditsContext();
-  const isBillingInsightsEnabled = useExperiment("billing.billingInsights", false);
 
   return (
     <Card className={styles.card}>
-      {isBillingInsightsEnabled && (
-        <Box pt="xl">
-          <CreditsUsageFilters />
-        </Box>
-      )}
+      <Box pt="xl">
+        <CreditsUsageFilters />
+      </Box>
       {freeAndPaidUsageByTimeChunk.length > 0 ? (
         <>
           <Box pt="xl">
@@ -50,5 +45,3 @@ const CreditsUsage: React.FC = () => {
     </Card>
   );
 };
-
-export default CreditsUsage;

@@ -10,9 +10,9 @@ import { ConfigServiceProvider, config } from "config";
 import { QueryProvider } from "core/api";
 import { I18nProvider } from "core/i18n";
 import { AnalyticsProvider } from "core/services/analytics";
+import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { AppMonitoringServiceProvider } from "hooks/services/AppMonitoringService";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { defaultCloudFeatures, FeatureService } from "hooks/services/Feature";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ModalServiceProvider } from "hooks/services/Modal";
 import { NotificationService } from "hooks/services/Notification";
@@ -24,7 +24,7 @@ import { theme } from "packages/cloud/theme";
 import { ConnectorBuilderTestInputProvider } from "services/connectorBuilder/ConnectorBuilderTestInputService";
 
 import { AppServicesProvider } from "./services/AppServicesProvider";
-import { IntercomProvider } from "./services/thirdParty/intercom/IntercomProvider";
+import { ZendeskProvider } from "./services/thirdParty/zendesk";
 
 const messages = { ...en, ...cloudLocales };
 
@@ -38,21 +38,21 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
       <ApiErrorBoundary>
         <NotificationService>
           <ConfirmationModalService>
-            <ModalServiceProvider>
-              <FormChangeTrackerService>
-                <FeatureService features={defaultCloudFeatures}>
-                  <AppServicesProvider>
+            <FormChangeTrackerService>
+              <FeatureService features={defaultCloudFeatures}>
+                <AppServicesProvider>
+                  <ModalServiceProvider>
                     <AuthenticationProvider>
                       <ConnectorBuilderTestInputProvider>
                         <HelmetProvider>
-                          <IntercomProvider>{children}</IntercomProvider>
+                          <ZendeskProvider>{children}</ZendeskProvider>
                         </HelmetProvider>
                       </ConnectorBuilderTestInputProvider>
                     </AuthenticationProvider>
-                  </AppServicesProvider>
-                </FeatureService>
-              </FormChangeTrackerService>
-            </ModalServiceProvider>
+                  </ModalServiceProvider>
+                </AppServicesProvider>
+              </FeatureService>
+            </FormChangeTrackerService>
           </ConfirmationModalService>
         </NotificationService>
       </ApiErrorBoundary>

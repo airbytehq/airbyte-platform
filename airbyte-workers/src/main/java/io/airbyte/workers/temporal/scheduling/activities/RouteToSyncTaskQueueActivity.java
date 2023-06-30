@@ -12,13 +12,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * RouteToSyncTaskQueueActivity.
+ * This is an activity runs routes for all types for jobs. Currently it will support both SYNC and
+ * CHECK. The naming is not perfect, but we tend to keep it here to avoid temporal versioning issue.
  */
 @ActivityInterface
 public interface RouteToSyncTaskQueueActivity {
 
   @ActivityMethod
   RouteToSyncTaskQueueOutput route(RouteToSyncTaskQueueInput input);
+
+  @ActivityMethod
+  RouteToSyncTaskQueueOutput routeToSync(RouteToSyncTaskQueueInput input);
+
+  @ActivityMethod
+  RouteToSyncTaskQueueOutput routeToCheckConnection(RouteToSyncTaskQueueInput input);
 
   /**
    * RouteToSyncTaskQueueInput.

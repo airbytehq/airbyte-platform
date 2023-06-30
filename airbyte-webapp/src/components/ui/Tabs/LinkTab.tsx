@@ -2,32 +2,42 @@ import classNames from "classnames";
 import React from "react";
 
 import styles from "./LinkTab.module.scss";
-import { Box } from "../Box";
 import { Link } from "../Link";
 import { Text } from "../Text";
 
-interface LinkTabProps {
-  id: string;
-  name: string | React.ReactNode;
+interface LinkTabProps extends LinkTabInnerProps {
   to: string;
-  isActive?: boolean;
+  id: string;
 }
 
-export const LinkTab: React.FC<LinkTabProps> = ({ name, id, isActive, to }) => {
+interface LinkTabInnerProps {
+  name: string | React.ReactNode;
+  isActive?: boolean;
+  disabled?: boolean;
+}
+
+const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, isActive, disabled = false }) => {
   return (
-    <Link to={to} className={styles.link}>
-      <Box
-        py="lg"
-        data-id={`${id.toLowerCase()}-step`}
-        className={classNames(styles.tabContainer, {
-          [styles["tabContainer--active"]]: isActive,
-          [styles["tabContainer--inactive"]]: !isActive,
-        })}
-      >
-        <Text color={isActive ? "darkBlue" : "grey"} className={styles.text} size="lg">
-          {name}
-        </Text>
-      </Box>
+    <div
+      className={classNames(styles.tabContainer, {
+        [styles["tabContainer--active"]]: isActive,
+        [styles["tabContainer--inactive"]]: !isActive,
+        [styles["tabContainer--disabled"]]: disabled,
+      })}
+    >
+      <Text color={disabled ? "grey300" : isActive ? "darkBlue" : "grey"} className={styles.text} size="lg">
+        {name}
+      </Text>
+    </div>
+  );
+};
+
+export const LinkTab: React.FC<LinkTabProps> = ({ name, id, isActive, to, disabled = false }) => {
+  return disabled ? (
+    <LinkTabInner name={name} isActive={isActive} disabled={disabled} />
+  ) : (
+    <Link to={to} className={styles.link} data-testid={`${id.toLowerCase()}-step`}>
+      <LinkTabInner name={name} isActive={isActive} disabled={disabled} />
     </Link>
   );
 };

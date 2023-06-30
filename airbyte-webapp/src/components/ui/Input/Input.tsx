@@ -87,6 +87,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         onBlur={onContainerBlur}
       >
         <input
+          aria-invalid={error}
           data-testid="input"
           {...props}
           ref={inputRef}

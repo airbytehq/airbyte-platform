@@ -11,8 +11,8 @@ import { Card } from "components/ui/Card";
 import { CollapsibleCard } from "components/ui/CollapsibleCard";
 import { FlexContainer } from "components/ui/Flex";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 import { ConnectionConfigurationFormPreview } from "./ConnectionConfigurationFormPreview";

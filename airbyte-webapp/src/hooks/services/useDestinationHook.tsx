@@ -1,6 +1,7 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { useMutation, useQueryClient } from "react-query";
 
+import { useSuspenseQuery } from "core/api";
 import { ConnectionConfiguration } from "core/domain/connection";
 import { DestinationService } from "core/domain/connector/DestinationService";
 import { Action, Namespace } from "core/services/analytics";
@@ -13,7 +14,6 @@ import { useRequestErrorHandler } from "./useRequestErrorHandler";
 import { useCurrentWorkspace } from "./useWorkspace";
 import { useConfig } from "../../config";
 import { DestinationRead, WebBackendConnectionListItem } from "../../core/request/AirbyteClient";
-import { useSuspenseQuery } from "../../services/connector/useSuspenseQuery";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
 import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 

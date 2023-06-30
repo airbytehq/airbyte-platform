@@ -8,4 +8,4 @@ root of the Airbyte monorepo. In other words it only uses dependencies that are 
 the `build.gradle` of `airbyte-commons` should always be empty.
 
 For other common java code that needs to be shared across modules that requires additional dependencies, we follow this
-convention: `airbyte-commons-<name of lib>`. See for example `airbyte-commons-cli`.
+convention: `airbyte-commons-<name of lib>`. See for example `airbyte-commons-micronaut`.

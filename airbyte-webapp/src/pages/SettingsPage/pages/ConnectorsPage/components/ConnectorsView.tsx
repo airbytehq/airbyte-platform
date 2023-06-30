@@ -10,7 +10,7 @@ import { Table } from "components/ui/Table";
 
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import { RoutePaths } from "pages/routePaths";
 import { BuilderProject } from "services/connectorBuilder/ConnectorBuilderProjectsService";
 
@@ -22,13 +22,14 @@ import ImageCell from "./ImageCell";
 import { UpdateDestinationConnectorVersionCell } from "./UpdateDestinationConnectorVersionCell";
 import { UpdateSourceConnectorVersionCell } from "./UpdateSourceConnectorVersionCell";
 import UpgradeAllButton from "./UpgradeAllButton";
+import { ConnectorVersionFormValues } from "./VersionCell";
 
 export interface ConnectorsViewProps {
   type: "sources" | "destinations";
   usedConnectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
   connectorsDefinitions: SourceDefinitionRead[] | DestinationDefinitionRead[];
   updatingDefinitionId?: string;
-  onUpdateVersion: ({ id, version }: { id: string; version: string }) => void;
+  onUpdateVersion: (values: ConnectorVersionFormValues) => Promise<void>;
   feedbackList: Record<string, string>;
   connectorBuilderProjects?: BuilderProject[];
 }
@@ -107,7 +108,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
       columnHelper.accessor("dockerImageTag", {
         header: () => <FormattedMessage id="admin.currentVersion" />,
         meta: {
-          thClassName: styles.thDockerImageTag,
+          thClassName: styles.thCurrentVersion,
         },
       }),
       ...(showVersionUpdateColumn
@@ -123,13 +124,14 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 allowUpdateConnectors || (allowUploadCustomImage && props.row.original.releaseStage === "custom") ? (
                   type === "sources" ? (
                     <UpdateSourceConnectorVersionCell
-                      id={Connector.id(props.row.original)}
+                      connectorDefinitionId={Connector.id(props.row.original)}
                       onChange={onUpdateVersion}
                       currentVersion={props.row.original.dockerImageTag}
+                      releaseStage={props.row.original.releaseStage}
                     />
                   ) : (
                     <UpdateDestinationConnectorVersionCell
-                      id={Connector.id(props.row.original)}
+                      connectorDefinitionId={Connector.id(props.row.original)}
                       onChange={onUpdateVersion}
                       currentVersion={props.row.original.dockerImageTag}
                     />
@@ -214,7 +216,7 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
                 </FlexItem>
                 {index === 0 && (
                   <FlexContainer>
-                    {allowUploadCustomImage && <CreateConnector type={type} />}
+                    <CreateConnector type={type} />
                     {allowUpdateConnectors && <UpgradeAllButton connectorType={type} />}
                   </FlexContainer>
                 )}

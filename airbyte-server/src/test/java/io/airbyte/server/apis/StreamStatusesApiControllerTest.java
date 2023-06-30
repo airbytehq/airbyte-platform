@@ -6,6 +6,7 @@ package io.airbyte.server.apis;
 
 import static org.mockito.Mockito.when;
 
+import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause;
@@ -54,6 +55,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
   static String PATH_CREATE = PATH_BASE + "/create";
   static String PATH_UPDATE = PATH_BASE + "/update";
   static String PATH_LIST = PATH_BASE + "/list";
+  static String PATH_LATEST_PER_RUN_STATE = PATH_BASE + "/latest_per_run_state";
 
   @Test
   void testCreateSuccessful() {
@@ -142,7 +144,6 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
 
   private static Stream<Arguments> validPaginationMatrix() {
     return Stream.of(
-        Arguments.of((Pagination) null),
         Arguments.of(Fixtures.validPagination()),
         Arguments.of(Fixtures.validPagination().rowOffset(30)),
         Arguments.of(Fixtures.validPagination().pageSize(100).rowOffset(300)),
@@ -167,6 +168,7 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
 
   private static Stream<Arguments> invalidListPaginationMatrix() {
     return Stream.of(
+        Arguments.of((Pagination) null),
         Arguments.of(Fixtures.validPagination().pageSize(0)),
         Arguments.of(Fixtures.validPagination().pageSize(-1)),
         Arguments.of(Fixtures.validPagination().rowOffset(-1)),
@@ -175,6 +177,20 @@ class StreamStatusesApiControllerTest extends BaseControllerTest {
         Arguments.of(Fixtures.validPagination().pageSize(10).rowOffset(23)),
         Arguments.of(Fixtures.validPagination().pageSize(20).rowOffset(10)),
         Arguments.of(Fixtures.validPagination().pageSize(100).rowOffset(50)));
+  }
+
+  @Test
+  void testListPerRunStateSuccessful() {
+    final var req = new ConnectionIdRequestBody().connectionId(UUID.randomUUID());
+
+    when(handler.listStreamStatusPerRunState(req))
+        .thenReturn(new StreamStatusReadList());
+
+    testEndpointStatus(
+        HttpRequest.POST(
+            PATH_LATEST_PER_RUN_STATE,
+            Jsons.serialize(req)),
+        HttpStatus.OK);
   }
 
   static class Fixtures {

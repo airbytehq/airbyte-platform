@@ -1,7 +1,10 @@
+import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
-import { useMutation, useQueryClient } from "react-query";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
+import { useInvalidateWorkspaceStateQuery, useSuspenseQuery } from "core/api";
 import { SyncSchema } from "core/domain/catalog";
 import { WebBackendConnectionService } from "core/domain/connection";
 import { ConnectionService } from "core/domain/connection/ConnectionService";
@@ -9,7 +12,6 @@ import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
 import { useInitService } from "services/useInitService";
-import { useCurrentWorkspaceId, useInvalidateWorkspaceStateQuery } from "services/workspaces/WorkspacesService";
 
 import { useAppMonitoringService } from "./AppMonitoringService";
 import { useNotificationService } from "./Notification";
@@ -31,7 +33,6 @@ import {
   WebBackendConnectionReadList,
   WebBackendConnectionUpdate,
 } from "../../core/request/AirbyteClient";
-import { useSuspenseQuery } from "../../services/connector/useSuspenseQuery";
 import { SCOPE_WORKSPACE } from "../../services/Scope";
 import { useDefaultRequestMiddlewares } from "../../services/useDefaultRequestMiddlewares";
 
@@ -121,7 +122,9 @@ export const useSyncConnection = () => {
 export const useResetConnection = () => {
   const service = useConnectionService();
 
-  return useMutation((connectionId: string) => service.reset(connectionId));
+  const mutation = useMutation(["useResetConnection"], (connectionId: string) => service.reset(connectionId));
+  const activeMutationsCount = useIsMutating(["useResetConnection"]);
+  return { ...mutation, isLoading: activeMutationsCount > 0 };
 };
 
 export const useResetConnectionStream = (connectionId: string) => {
@@ -286,16 +289,29 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
   );
 };
 
+export const getConnectionListQueryKey = (connectorIds?: string[]) => {
+  return connectionsKeys.lists(connectorIds);
+};
+
+export const useConnectionListQuery = (workspaceId: string, sourceId?: string[], destinationId?: string[]) => {
+  const service = useWebConnectionService();
+
+  return () => service.list({ workspaceId, sourceId, destinationId });
+};
+
 const useConnectionList = (payload: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId"> = {}) => {
   const workspace = useCurrentWorkspace();
-  const service = useWebConnectionService();
   const REFETCH_CONNECTION_LIST_INTERVAL = 60_000;
+  const connectorIds = [
+    ...(payload.destinationId ? payload.destinationId : []),
+    ...(payload.sourceId ? payload.sourceId : []),
+  ];
+  const queryKey = getConnectionListQueryKey(connectorIds);
+  const queryFn = useConnectionListQuery(workspace.workspaceId, payload.sourceId, payload.destinationId);
 
-  return useSuspenseQuery(
-    connectionsKeys.lists(payload.destinationId ?? payload.sourceId),
-    () => service.list({ ...payload, workspaceId: workspace.workspaceId }),
-    { refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL }
-  );
+  return useSuspenseQuery(queryKey, queryFn, {
+    refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
+  });
 };
 
 const useGetConnectionState = (connectionId: string) => {

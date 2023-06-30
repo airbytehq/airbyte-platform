@@ -80,7 +80,6 @@ jobs:
               - 'airbyte-connector-builder-server/CDK_VERSION'
               - 'airbyte-connector-builder-server/src/main/openapi/openapi.yaml'
               - 'airbyte-webapp/**'
-              - 'airbyte-webapp-e2e-tests/**'
 
   # Uncomment to debug.
   #  changes-output:
@@ -165,7 +164,7 @@ jobs:
           EOF
 
       - name: Build :airbyte-webapp
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./gradlew --no-daemon :airbyte-webapp:build --scan
           attempt_limit: 3
@@ -289,6 +288,7 @@ jobs:
       - name: Run End-to-End Frontend Tests
         env:
           CYPRESS_WEBAPP_KEY: ${{ secrets.CYPRESS_WEBAPP_KEY }}
+          CYPRESS_CACHE_FOLDER: "~/.cache/Cypress"
         run: ./tools/bin/e2e_test.sh
 
   # In case of self-hosted EC2 errors, remove this block.
@@ -398,7 +398,7 @@ jobs:
           EOF
 
       - name: Format
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./gradlew format --scan --info --stacktrace
           attempt_limit: 3
@@ -408,7 +408,7 @@ jobs:
         run: git --no-pager diff && test -z "$(git --no-pager diff)"
 
       - name: Build
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./gradlew build javadoc --scan
           attempt_limit: 3
@@ -425,7 +425,6 @@ jobs:
             ${{ github.workspace }}/airbyte-api/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-bootloader/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons/build/reports/jacoco/test/jacocoTestReport.xml,
-            ${{ github.workspace }}/airbyte-commons-cli/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons-protocol/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons-temporal/build/reports/jacoco/test/jacocoTestReport.xml,
             ${{ github.workspace }}/airbyte-commons-worker/build/reports/jacoco/test/jacocoTestReport.xml,
@@ -452,7 +451,7 @@ jobs:
           debug-mode: false
 
       - name: Test if Seed spec is updated
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./gradlew format && git --no-pager diff && test -z "$(git --no-pager diff)"
           attempt_limit: 3
@@ -468,14 +467,14 @@ jobs:
       #        run: docker run --rm busybox df -h
 
       - name: Run End-to-End Acceptance Tests
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./tools/bin/acceptance_test.sh
           attempt_limit: 3
           attempt_delay: 5000 # in ms
 
       - name: Automatic Migration Acceptance Test
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: ./gradlew :airbyte-tests:automaticMigrationAcceptanceTest --scan -i
           attempt_limit: 3
@@ -495,6 +494,8 @@ jobs:
           path: "/actions-runner/_work/airbyte-platform/airbyte-platform/*/build/test-results/*/*.xml,/actions-runner/_work/airbyte-platform/airbyte-platform/*/*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: "false"
+        env:
+          NODE_OPTIONS: '--max_old_space_size=8192'
 
   # In case of self-hosted EC2 errors, remove this block.
   stop-platform-build-runner:
@@ -587,7 +588,7 @@ jobs:
           fetch-depth: 0
 
       - name: Delete default old docker and replace it with a new one
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: |
             sudo apt-get remove docker.io || sudo apt-get remove docker
@@ -625,7 +626,7 @@ jobs:
 
       - name: Install tmate and it's dependencies
         if: inputs.debug_mode == 'true'
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: |
             sudo apt-get -y install tmate
@@ -651,7 +652,7 @@ jobs:
           extra-setup-args: --docker --kube-apiserver-arg service-node-port-range=6000-32767 --kubelet-arg=cgroup-driver=systemd
 
       - name: Try the cluster !
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: kubectl get pods -A
           attempt_limit: 3
@@ -671,7 +672,7 @@ jobs:
           EOF
 
       - name: Build Platform Docker Images
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: pwd && ./gradlew assemble -x test --scan
           attempt_limit: 3
@@ -688,7 +689,7 @@ jobs:
           SECRET_STORE_GCP_CREDENTIALS: ${{ secrets.SECRET_STORE_GCP_CREDENTIALS }}
           SECRET_STORE_GCP_PROJECT_ID: ${{ secrets.SECRET_STORE_GCP_PROJECT_ID }}
         timeout-minutes: 40
-        uses: Wandalen/wretry.action@master
+        uses: Wandalen/wretry.action@v1.0.36
         with:
           command: CI=true IS_MINIKUBE=true ./tools/bin/acceptance_test_kube_helm.sh
           attempt_limit: 3
@@ -702,6 +703,8 @@ jobs:
           path: "./*/build/test-results/*/*.xml"
           reporter: java-junit
           fail-on-error: "false"
+        env:
+          NODE_OPTIONS: '--max_old_space_size=8192'
 
       - name: "Display logs of k3s"
         if: failure()

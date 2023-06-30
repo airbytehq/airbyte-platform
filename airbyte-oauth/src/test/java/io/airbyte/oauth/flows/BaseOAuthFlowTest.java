@@ -48,6 +48,8 @@ public abstract class BaseOAuthFlowTest {
 
   private UUID workspaceId;
   private UUID definitionId;
+  private SourceOAuthParameter sourceOAuthParameter;
+  private DestinationOAuthParameter destinationOAuthParameter;
 
   protected HttpClient getHttpClient() {
     return httpClient;
@@ -65,14 +67,16 @@ public abstract class BaseOAuthFlowTest {
 
     workspaceId = UUID.randomUUID();
     definitionId = UUID.randomUUID();
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
-        .withConfiguration(getOAuthParamConfig())));
-    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(new DestinationOAuthParameter()
+        .withConfiguration(getOAuthParamConfig());
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    destinationOAuthParameter = new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
-        .withConfiguration(getOAuthParamConfig())));
+        .withConfiguration(getOAuthParamConfig());
+    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(destinationOAuthParameter));
   }
 
   /**
@@ -227,13 +231,14 @@ public abstract class BaseOAuthFlowTest {
   void testValidateInputOAuthConfigurationFailure() {
     final JsonNode invalidInputOAuthConfiguration = Jsons.jsonNode(Map.of("UnexpectedRandomField", 42));
     assertThrows(JsonValidationException.class,
-        () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, invalidInputOAuthConfiguration, getoAuthConfigSpecification()));
+        () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, invalidInputOAuthConfiguration, getoAuthConfigSpecification(),
+            Jsons.emptyObject()));
     assertThrows(JsonValidationException.class, () -> oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL,
-        invalidInputOAuthConfiguration, getoAuthConfigSpecification()));
+        invalidInputOAuthConfiguration, getoAuthConfigSpecification(), Jsons.emptyObject()));
     assertThrows(JsonValidationException.class, () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, Map.of(), REDIRECT_URL,
-        invalidInputOAuthConfiguration, getoAuthConfigSpecification()));
+        invalidInputOAuthConfiguration, getoAuthConfigSpecification(), sourceOAuthParameter.getConfiguration()));
     assertThrows(JsonValidationException.class, () -> oauthFlow.completeDestinationOAuth(workspaceId, definitionId, Map.of(), REDIRECT_URL,
-        invalidInputOAuthConfiguration, getoAuthConfigSpecification()));
+        invalidInputOAuthConfiguration, getoAuthConfigSpecification(), destinationOAuthParameter.getConfiguration()));
   }
 
   @Test
@@ -241,36 +246,42 @@ public abstract class BaseOAuthFlowTest {
     when(configRepository.listSourceOAuthParam()).thenReturn(List.of());
     when(configRepository.listDestinationOAuthParam()).thenReturn(List.of());
     assertThrows(ConfigNotFoundException.class,
-        () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification()));
+        () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
+            null));
     assertThrows(ConfigNotFoundException.class,
         () -> oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(),
-            getoAuthConfigSpecification()));
+            getoAuthConfigSpecification(), null));
   }
 
   @Test
   void testGetConsentUrlIncompleteOAuthParameters() throws IOException, JsonValidationException {
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
-        .withConfiguration(Jsons.emptyObject())));
-    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(new DestinationOAuthParameter()
+        .withConfiguration(Jsons.emptyObject());
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
+    DestinationOAuthParameter destinationOAuthParameter = new DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
-        .withConfiguration(Jsons.emptyObject())));
+        .withConfiguration(Jsons.emptyObject());
+    when(configRepository.listDestinationOAuthParam()).thenReturn(List.of(destinationOAuthParameter));
     assertThrows(IllegalArgumentException.class,
-        () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification()));
+        () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
+            sourceOAuthParameter.getConfiguration()));
     assertThrows(IllegalArgumentException.class,
         () -> oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(),
-            getoAuthConfigSpecification()));
+            getoAuthConfigSpecification(), destinationOAuthParameter.getConfiguration()));
   }
 
   @Test
   void testGetSourceConsentUrlEmptyOAuthSpec() throws IOException, ConfigNotFoundException, JsonValidationException {
     if (hasDependencyOnConnectorConfigValues()) {
-      assertThrows(IOException.class, () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null),
+      assertThrows(IOException.class, () -> oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+          sourceOAuthParameter.getConfiguration()),
           "OAuth Flow Implementations with dependencies on connector config can't be supported without OAuthConfigSpecifications");
     } else {
-      final String consentUrl = oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
+      final String consentUrl = oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+          sourceOAuthParameter.getConfiguration());
       assertEquals(getExpectedConsentUrl(), consentUrl);
     }
   }
@@ -278,10 +289,12 @@ public abstract class BaseOAuthFlowTest {
   @Test
   void testGetDestinationConsentUrlEmptyOAuthSpec() throws IOException, ConfigNotFoundException, JsonValidationException {
     if (hasDependencyOnConnectorConfigValues()) {
-      assertThrows(IOException.class, () -> oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null),
+      assertThrows(IOException.class, () -> oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+          destinationOAuthParameter.getConfiguration()),
           "OAuth Flow Implementations with dependencies on connector config can't be supported without OAuthConfigSpecifications");
     } else {
-      final String consentUrl = oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
+      final String consentUrl = oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+          destinationOAuthParameter.getConfiguration());
       assertEquals(getExpectedConsentUrl(), consentUrl);
     }
   }
@@ -289,21 +302,24 @@ public abstract class BaseOAuthFlowTest {
   @Test
   void testGetSourceConsentUrl() throws IOException, ConfigNotFoundException, JsonValidationException {
     final String consentUrl =
-        oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification());
+        oauthFlow.getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
+            sourceOAuthParameter.getConfiguration());
     assertEquals(getExpectedConsentUrl(), consentUrl);
   }
 
   @Test
   void testGetDestinationConsentUrl() throws IOException, ConfigNotFoundException, JsonValidationException {
     final String consentUrl =
-        oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification());
+        oauthFlow.getDestinationConsentUrl(workspaceId, definitionId, REDIRECT_URL, getInputOAuthConfiguration(), getoAuthConfigSpecification(),
+            destinationOAuthParameter.getConfiguration());
     assertEquals(getExpectedConsentUrl(), consentUrl);
   }
 
   @Test
   void testCompleteOAuthMissingCode() {
     final Map<String, Object> queryParams = Map.of();
-    assertThrows(IOException.class, () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL));
+    assertThrows(IOException.class,
+        () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter.getConfiguration()));
   }
 
   @Test
@@ -315,10 +331,12 @@ public abstract class BaseOAuthFlowTest {
     final Map<String, Object> queryParams = getQueryParams();
 
     if (hasDependencyOnConnectorConfigValues()) {
-      assertThrows(IOException.class, () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL),
+      assertThrows(IOException.class,
+          () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter.getConfiguration()),
           "OAuth Flow Implementations with dependencies on connector config can't be supported in the deprecated APIs");
     } else {
-      Map<String, Object> actualRawQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL);
+      Map<String, Object> actualRawQueryParams =
+          oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter.getConfiguration());
       for (final String node : getExpectedOutputPath()) {
         assertNotNull(actualRawQueryParams.get(node));
         actualRawQueryParams = (Map<String, Object>) actualRawQueryParams.get(node);
@@ -340,10 +358,12 @@ public abstract class BaseOAuthFlowTest {
     final Map<String, Object> queryParams = getQueryParams();
 
     if (hasDependencyOnConnectorConfigValues()) {
-      assertThrows(IOException.class, () -> oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL),
+      assertThrows(IOException.class, () -> oauthFlow.completeDestinationOAuth(
+          workspaceId, definitionId, queryParams, REDIRECT_URL, destinationOAuthParameter.getConfiguration()),
           "OAuth Flow Implementations with dependencies on connector config can't be supported in the deprecated APIs");
     } else {
-      Map<String, Object> actualRawQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL);
+      Map<String, Object> actualRawQueryParams = oauthFlow.completeDestinationOAuth(
+          workspaceId, definitionId, queryParams, REDIRECT_URL, destinationOAuthParameter.getConfiguration());
       for (final String node : getExpectedOutputPath()) {
         assertNotNull(actualRawQueryParams.get(node));
         actualRawQueryParams = (Map<String, Object>) actualRawQueryParams.get(node);
@@ -363,7 +383,7 @@ public abstract class BaseOAuthFlowTest {
     when(httpClient.send(any(), any())).thenReturn(response);
     final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        getInputOAuthConfiguration(), getEmptyOAuthConfigSpecification());
+        getInputOAuthConfiguration(), getEmptyOAuthConfigSpecification(), sourceOAuthParameter.getConfiguration());
     assertEquals(0, actualQueryParams.size(),
         String.format("Expected no values but got %s", actualQueryParams));
   }
@@ -375,7 +395,7 @@ public abstract class BaseOAuthFlowTest {
     when(httpClient.send(any(), any())).thenReturn(response);
     final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        getInputOAuthConfiguration(), getEmptyOAuthConfigSpecification());
+        getInputOAuthConfiguration(), getEmptyOAuthConfigSpecification(), destinationOAuthParameter.getConfiguration());
     assertEquals(0, actualQueryParams.size(),
         String.format("Expected no values but got %s", actualQueryParams));
   }
@@ -387,7 +407,7 @@ public abstract class BaseOAuthFlowTest {
     when(httpClient.send(any(), any())).thenReturn(response);
     final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        Jsons.emptyObject(), getoAuthConfigSpecification());
+        Jsons.emptyObject(), getoAuthConfigSpecification(), sourceOAuthParameter.getConfiguration());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
     assertEquals(expectedOutput.size(), actualQueryParams.size(),
         String.format(EXPECTED_BUT_GOT, expectedOutput.size(), actualQueryParams, expectedOutput));
@@ -401,7 +421,7 @@ public abstract class BaseOAuthFlowTest {
     when(httpClient.send(any(), any())).thenReturn(response);
     final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        Jsons.emptyObject(), getoAuthConfigSpecification());
+        Jsons.emptyObject(), getoAuthConfigSpecification(), destinationOAuthParameter.getConfiguration());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
     assertEquals(expectedOutput.size(), actualQueryParams.size(),
         String.format(EXPECTED_BUT_GOT, expectedOutput.size(), actualQueryParams, expectedOutput));
@@ -415,7 +435,7 @@ public abstract class BaseOAuthFlowTest {
     when(httpClient.send(any(), any())).thenReturn(response);
     final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        getInputOAuthConfiguration(), getoAuthConfigSpecification());
+        getInputOAuthConfiguration(), getoAuthConfigSpecification(), sourceOAuthParameter.getConfiguration());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
     assertEquals(expectedOutput.size(), actualQueryParams.size(),
         String.format(EXPECTED_BUT_GOT, expectedOutput.size(), actualQueryParams, expectedOutput));
@@ -429,7 +449,7 @@ public abstract class BaseOAuthFlowTest {
     when(httpClient.send(any(), any())).thenReturn(response);
     final Map<String, Object> queryParams = getQueryParams();
     final Map<String, Object> actualQueryParams = oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        getInputOAuthConfiguration(), getoAuthConfigSpecification());
+        getInputOAuthConfiguration(), getoAuthConfigSpecification(), destinationOAuthParameter.getConfiguration());
     final Map<String, String> expectedOutput = getExpectedFilteredOutput();
     assertEquals(expectedOutput.size(), actualQueryParams.size(),
         String.format(EXPECTED_BUT_GOT, expectedOutput.size(), actualQueryParams, expectedOutput));
@@ -444,9 +464,9 @@ public abstract class BaseOAuthFlowTest {
     final Map<String, Object> queryParams = getQueryParams();
     final OAuthConfigSpecification oAuthConfigSpecification = getOAuthConfigSpecification();
     assertThrows(JsonValidationException.class, () -> oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        getInputOAuthConfiguration(), oAuthConfigSpecification));
+        getInputOAuthConfiguration(), oAuthConfigSpecification, sourceOAuthParameter.getConfiguration()));
     assertThrows(JsonValidationException.class, () -> oauthFlow.completeDestinationOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL,
-        getInputOAuthConfiguration(), oAuthConfigSpecification));
+        getInputOAuthConfiguration(), oAuthConfigSpecification, destinationOAuthParameter.getConfiguration()));
   }
 
 }

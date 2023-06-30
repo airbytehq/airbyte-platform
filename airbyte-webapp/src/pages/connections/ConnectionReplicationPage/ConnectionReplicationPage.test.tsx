@@ -17,8 +17,8 @@ import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { WebBackendConnectionUpdate } from "core/request/AirbyteClient";
+import { defaultOssFeatures, FeatureItem } from "core/services/features";
 import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { defaultOssFeatures, FeatureItem } from "hooks/services/Feature";
 import * as connectionHook from "hooks/services/useConnectionHook";
 
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
@@ -41,9 +41,12 @@ jest.mock("services/connector/DestinationDefinitionService", () => ({
 
 jest.setTimeout(10000);
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
-  useCurrentWorkspace: () => mockWorkspace,
+jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => mockWorkspaceId,
+}));
+
+jest.mock("core/api", () => ({
+  useCurrentWorkspace: () => mockWorkspace,
 }));
 
 describe("ConnectionReplicationPage", () => {

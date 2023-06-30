@@ -1,7 +1,10 @@
 import { JSONSchema7 } from "json-schema";
 import merge from "lodash/merge";
+import { FieldPath, useWatch } from "react-hook-form";
 import semver from "semver";
 import * as yup from "yup";
+
+import { naturalComparator } from "utils/objects";
 
 import { CDK_VERSION } from "./cdk";
 import { formatJson } from "./utils";
@@ -42,6 +45,7 @@ import {
   DeclarativeStreamTransformationsItem,
   HttpResponseFilter,
   DefaultPaginator,
+  DeclarativeComponentSchemaMetadata,
 } from "../../core/request/ConnectorManifest";
 
 export type EditorView = "ui" | "yaml";
@@ -50,6 +54,7 @@ export interface BuilderFormInput {
   key: string;
   required: boolean;
   definition: AirbyteJSONSchema;
+  as_config_path?: boolean;
 }
 
 export type BuilderFormAuthenticator = (
@@ -70,6 +75,7 @@ export interface BuilderFormValues {
   };
   inputs: BuilderFormInput[];
   inferredInputOverrides: Record<string, Partial<AirbyteJSONSchema>>;
+  inputOrder: string[];
   streams: BuilderStream[];
   checkStreams: string[];
   version: string;
@@ -130,13 +136,7 @@ interface BuilderErrorHandler extends Omit<DefaultErrorHandler, "backoff_strateg
 export interface BuilderIncrementalSync
   extends Pick<
     DatetimeBasedCursor,
-    | "cursor_field"
-    | "datetime_format"
-    | "cursor_granularity"
-    | "step"
-    | "end_time_option"
-    | "start_time_option"
-    | "lookback_window"
+    "cursor_field" | "datetime_format" | "end_time_option" | "start_time_option" | "lookback_window"
   > {
   end_datetime:
     | {
@@ -149,9 +149,31 @@ export interface BuilderIncrementalSync
         type: "user_input";
       }
     | { type: "custom"; value: string; format?: string };
+  slicer?: {
+    step?: string;
+    cursor_granularity?: string;
+  };
 }
 
 export const INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ";
+
+export type BuilderRequestBody =
+  | {
+      type: "json_list";
+      values: Array<[string, string]>;
+    }
+  | {
+      type: "json_freeform";
+      value: string;
+    }
+  | {
+      type: "form_list";
+      values: Array<[string, string]>;
+    }
+  | {
+      type: "string_freeform";
+      value: string;
+    };
 
 export interface BuilderStream {
   id: string;
@@ -163,7 +185,7 @@ export interface BuilderStream {
   requestOptions: {
     requestParameters: Array<[string, string]>;
     requestHeaders: Array<[string, string]>;
-    requestBody: Array<[string, string]>;
+    requestBody: BuilderRequestBody;
   };
   paginator?: BuilderPaginator;
   transformations?: BuilderTransformation[];
@@ -171,7 +193,8 @@ export interface BuilderStream {
   partitionRouter?: Array<BuilderListPartitionRouter | BuilderSubstreamPartitionRouter>;
   errorHandler?: BuilderErrorHandler[];
   schema?: string;
-  unsupportedFields?: Record<string, unknown>;
+  unsupportedFields?: Record<string, object>;
+  autoImportSchema: boolean;
 }
 
 // 0.29.0 is the version where breaking changes got introduced - older states can't be supported
@@ -215,6 +238,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   inputs: [],
   inferredInputOverrides: {},
+  inputOrder: [],
   streams: [],
   checkStreams: [],
   version: CDK_VERSION,
@@ -244,8 +268,12 @@ export const DEFAULT_BUILDER_STREAM_VALUES: Omit<BuilderStream, "id"> = {
   requestOptions: {
     requestParameters: [],
     requestHeaders: [],
-    requestBody: [],
+    requestBody: {
+      type: "json_list",
+      values: [],
+    },
   },
+  autoImportSchema: true,
 };
 
 export const LIST_PARTITION_ROUTER: ListPartitionRouterType = "ListPartitionRouter";
@@ -283,84 +311,134 @@ export const incrementalSyncInferredInputs: Record<"start_date" | "end_date", Bu
   },
 };
 
-export const authTypeToKeyToInferredInput: Record<string, Record<string, BuilderFormInput>> = {
-  NoAuth: {},
-  ApiKeyAuthenticator: {
-    api_token: {
-      key: "api_key",
-      required: true,
-      definition: {
-        type: "string",
-        title: "API Key",
-        airbyte_secret: true,
-      },
-    },
-  },
-  BearerAuthenticator: {
-    api_token: {
-      key: "api_key",
-      required: true,
-      definition: {
-        type: "string",
-        title: "API Key",
-        airbyte_secret: true,
-      },
-    },
-  },
-  BasicHttpAuthenticator: {
-    username: {
-      key: "username",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Username",
-      },
-    },
-    password: {
-      key: "password",
-      required: false,
-      definition: {
-        type: "string",
-        title: "Password",
-        always_show: true,
-        airbyte_secret: true,
-      },
-    },
-  },
-  OAuthAuthenticator: {
-    client_id: {
-      key: "client_id",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Client ID",
-        airbyte_secret: true,
-      },
-    },
-    client_secret: {
-      key: "client_secret",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Client secret",
-        airbyte_secret: true,
-      },
-    },
-    refresh_token: {
-      key: "client_refresh_token",
-      required: true,
-      definition: {
-        type: "string",
-        title: "Refresh token",
-        airbyte_secret: true,
-      },
-    },
-  },
+export const DEFAULT_INFERRED_INPUT_ORDER = [
+  "api_key",
+  "username",
+  "password",
+  "client_id",
+  "client_secret",
+  "client_refresh_token",
+];
+
+export const authTypeToKeyToInferredInput = (
+  authenticator: BuilderFormAuthenticator | { type: BuilderFormAuthenticator["type"] }
+): Record<string, BuilderFormInput> => {
+  switch (authenticator.type) {
+    case "NoAuth":
+      return {};
+    case API_KEY_AUTHENTICATOR:
+      return {
+        api_token: {
+          key: "api_key",
+          required: true,
+          definition: {
+            type: "string",
+            title: "API Key",
+            airbyte_secret: true,
+          },
+        },
+      };
+    case BEARER_AUTHENTICATOR:
+      return {
+        api_token: {
+          key: "api_key",
+          required: true,
+          definition: {
+            type: "string",
+            title: "API Key",
+            airbyte_secret: true,
+          },
+        },
+      };
+    case BASIC_AUTHENTICATOR:
+      return {
+        username: {
+          key: "username",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Username",
+          },
+        },
+        password: {
+          key: "password",
+          required: false,
+          definition: {
+            type: "string",
+            title: "Password",
+            always_show: true,
+            airbyte_secret: true,
+          },
+        },
+      };
+    case OAUTH_AUTHENTICATOR:
+      const baseInputs: Record<string, BuilderFormInput> = {
+        client_id: {
+          key: "client_id",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Client ID",
+            airbyte_secret: true,
+          },
+        },
+        client_secret: {
+          key: "client_secret",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Client secret",
+            airbyte_secret: true,
+          },
+        },
+      };
+      if (!("grant_type" in authenticator) || authenticator.grant_type === "refresh_token") {
+        baseInputs.refresh_token = {
+          key: "client_refresh_token",
+          required: true,
+          definition: {
+            type: "string",
+            title: "Refresh token",
+            airbyte_secret: true,
+          },
+        };
+        if ("refresh_token_updater" in authenticator && authenticator.refresh_token_updater) {
+          baseInputs.oauth_access_token = {
+            key: "oauth_access_token",
+            required: true,
+            definition: {
+              type: "string",
+              title: "Access token",
+              airbyte_secret: true,
+              description:
+                "The current access token. This field might be overridden by the connector based on the token refresh endpoint response.",
+            },
+            as_config_path: true,
+          };
+          baseInputs.oauth_token_expiry_date = {
+            key: "oauth_token_expiry_date",
+            required: true,
+            definition: {
+              type: "string",
+              title: "Token expiry date",
+              format: "date-time",
+              description:
+                "The date the current access token expires in. This field might be overridden by the connector based on the token refresh endpoint response.",
+            },
+            as_config_path: true,
+          };
+        }
+      }
+      return baseInputs;
+  }
 };
+
+export const OAUTH_ACCESS_TOKEN_INPUT = "oauth_access_token";
+export const OAUTH_TOKEN_EXPIRY_DATE_INPUT = "oauth_token_expiry_date";
 
 export const inferredAuthValues = (type: BuilderFormAuthenticator["type"]): Record<string, string> => {
   return Object.fromEntries(
-    Object.entries(authTypeToKeyToInferredInput[type]).map(([authKey, inferredInput]) => {
+    Object.entries(authTypeToKeyToInferredInput({ type })).map(([authKey, inferredInput]) => {
       return [authKey, interpolateConfigKey(inferredInput.key)];
     })
   );
@@ -379,10 +457,11 @@ export function getInferredInputList(
   startDateInput: boolean,
   endDateInput: boolean
 ): BuilderFormInput[] {
-  const authKeyToInferredInput = authTypeToKeyToInferredInput[global.authenticator.type];
+  const authKeyToInferredInput = authTypeToKeyToInferredInput(global.authenticator);
   const authKeys = Object.keys(authKeyToInferredInput);
   const inputs = authKeys.flatMap((authKey) => {
     if (
+      authKeyToInferredInput[authKey].as_config_path ||
       extractInterpolatedConfigKey(Reflect.get(global.authenticator, authKey)) === authKeyToInferredInput[authKey].key
     ) {
       return [authKeyToInferredInput[authKey]];
@@ -422,7 +501,7 @@ export function isInterpolatedConfigKey(str: string | undefined): boolean {
   return interpolatedConfigValueRegex.test(noWhitespaceString);
 }
 
-function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
+export function extractInterpolatedConfigKey(str: string | undefined): string | undefined {
   if (str === undefined) {
     return undefined;
   }
@@ -448,19 +527,46 @@ const nonPathRequestOptionSchema = yup
 
 const keyValueListSchema = yup.array().of(yup.array().of(yup.string().required("form.empty.error")));
 
+const yupNumberOrEmptyString = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+
+const jsonString = yup.string().test({
+  test: (val: string | undefined) => {
+    if (!val) {
+      return true;
+    }
+    try {
+      JSON.parse(val);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  message: "connectorBuilder.invalidJSON",
+});
+
 export const builderFormValidationSchema = yup.object().shape({
   global: yup.object().shape({
     connectorName: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
     urlBase: yup.string().required("form.empty.error"),
     authenticator: yup.object({
-      header: yup.mixed().when("type", {
+      inject_into: yup.mixed().when("type", {
         is: (type: string) => type === API_KEY_AUTHENTICATOR,
-        then: yup.string().required("form.empty.error"),
+        then: nonPathRequestOptionSchema,
         otherwise: (schema) => schema.strip(),
       }),
       token_refresh_endpoint: yup.mixed().when("type", {
         is: OAUTH_AUTHENTICATOR,
         then: yup.string().required("form.empty.error"),
+        otherwise: (schema) => schema.strip(),
+      }),
+      refresh_token_updater: yup.mixed().when("type", {
+        is: OAUTH_AUTHENTICATOR,
+        then: yup
+          .object()
+          .shape({
+            refresh_token_name: yup.string(),
+          })
+          .default(undefined),
         otherwise: (schema) => schema.strip(),
       }),
       refresh_request_body: yup.mixed().when("type", {
@@ -483,22 +589,25 @@ export const builderFormValidationSchema = yup.object().shape({
         requestOptions: yup.object().shape({
           requestParameters: keyValueListSchema,
           requestHeaders: keyValueListSchema,
-          requestBody: keyValueListSchema,
+          requestBody: yup.object().shape({
+            values: yup.mixed().when("type", {
+              is: (val: string) => val === "form_list" || val === "json_list",
+              then: keyValueListSchema,
+              otherwise: (schema) => schema.strip(),
+            }),
+            value: yup
+              .mixed()
+              .when("type", {
+                is: (val: string) => val === "json_freeform",
+                then: jsonString,
+              })
+              .when("type", {
+                is: (val: string) => val === "string_freeform",
+                then: yup.string(),
+              }),
+          }),
         }),
-        schema: yup.string().test({
-          test: (val: string | undefined) => {
-            if (!val) {
-              return true;
-            }
-            try {
-              JSON.parse(val);
-              return true;
-            } catch {
-              return false;
-            }
-          },
-          message: "connectorBuilder.invalidSchema",
-        }),
+        schema: jsonString,
         paginator: yup
           .object()
           .shape({
@@ -517,11 +626,7 @@ export const builderFormValidationSchema = yup.object().shape({
             }),
             strategy: yup
               .object({
-                page_size: yup.mixed().when("type", {
-                  is: (val: string) => ([OFFSET_INCREMENT, PAGE_INCREMENT] as string[]).includes(val),
-                  then: yup.number().required("form.empty.error"),
-                  otherwise: yup.number(),
-                }),
+                page_size: yupNumberOrEmptyString,
                 cursor: yup.mixed().when("type", {
                   is: CURSOR_PAGINATION,
                   then: yup.object().shape({
@@ -545,7 +650,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 }),
                 start_from_page: yup.mixed().when("type", {
                   is: PAGE_INCREMENT,
-                  then: yup.string(),
+                  then: yupNumberOrEmptyString,
                   otherwise: (schema) => schema.strip(),
                 }),
               })
@@ -567,7 +672,7 @@ export const builderFormValidationSchema = yup.object().shape({
                 then: yup.object().shape({
                   value: yup.mixed().when("type", {
                     is: "list",
-                    then: yup.array().of(yup.string()),
+                    then: yup.array().of(yup.string()).min(1, "form.empty.error"),
                     otherwise: yup
                       .string()
                       .required("form.empty.error")
@@ -612,18 +717,18 @@ export const builderFormValidationSchema = yup.object().shape({
         errorHandler: yup
           .array(
             yup.object().shape({
-              max_retries: yup.number(),
+              max_retries: yupNumberOrEmptyString,
               backoff_strategy: yup
                 .object()
                 .shape({
                   backoff_time_in_seconds: yup.mixed().when("type", {
                     is: (val: string) => val === "ConstantBackoffStrategy",
-                    then: yup.string().required("form.empty.error"),
+                    then: yupNumberOrEmptyString.required("form.empty.error"),
                     otherwise: (schema) => schema.strip(),
                   }),
                   factor: yup.mixed().when("type", {
                     is: (val: string) => val === "ExponentialBackoffStrategy",
-                    then: yup.string(),
+                    then: yupNumberOrEmptyString,
                     otherwise: (schema) => schema.strip(),
                   }),
                   header: yup.mixed().when("type", {
@@ -662,7 +767,13 @@ export const builderFormValidationSchema = yup.object().shape({
           .object()
           .shape({
             cursor_field: yup.string().required("form.empty.error"),
-            cursor_granularity: yup.string().required("form.empty.error"),
+            slicer: yup
+              .object()
+              .shape({
+                cursor_granularity: yup.string().required("form.empty.error"),
+                step: yup.string().required("form.empty.error"),
+              })
+              .default(undefined),
             start_datetime: yup.object().shape({
               value: yup.mixed().when("type", {
                 is: (val: string) => val === "custom",
@@ -677,7 +788,6 @@ export const builderFormValidationSchema = yup.object().shape({
                 otherwise: (schema) => schema.strip(),
               }),
             }),
-            step: yup.string().required("form.empty.error"),
             datetime_format: yup.string().required("form.empty.error"),
             start_time_option: nonPathRequestOptionSchema,
             end_time_option: nonPathRequestOptionSchema,
@@ -695,7 +805,21 @@ function builderAuthenticatorToManifest(globalSettings: BuilderFormValues["globa
   if (globalSettings.authenticator.type === "OAuthAuthenticator") {
     return {
       ...globalSettings.authenticator,
+      refresh_token:
+        globalSettings.authenticator.grant_type === "client_credentials"
+          ? undefined
+          : globalSettings.authenticator.refresh_token,
+      refresh_token_updater:
+        globalSettings.authenticator.grant_type === "client_credentials"
+          ? undefined
+          : globalSettings.authenticator.refresh_token_updater,
       refresh_request_body: Object.fromEntries(globalSettings.authenticator.refresh_request_body),
+    };
+  }
+  if (globalSettings.authenticator.type === "ApiKeyAuthenticator") {
+    return {
+      ...globalSettings.authenticator,
+      header: undefined,
     };
   }
   return globalSettings.authenticator as HttpRequesterAuthenticator;
@@ -760,7 +884,7 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
     return undefined;
   }
 
-  const { start_datetime, end_datetime, ...regularFields } = formValues;
+  const { start_datetime, end_datetime, slicer, ...regularFields } = formValues;
   return {
     type: "DatetimeBasedCursor",
     ...regularFields,
@@ -780,6 +904,8 @@ function builderIncrementalToManifest(formValues: BuilderStream["incrementalSync
           : `{{ config['end_date'] }}`,
       datetime_format: end_datetime.type === "custom" ? end_datetime.format : INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
     },
+    step: slicer?.step,
+    cursor_granularity: slicer?.cursor_granularity,
   };
 }
 
@@ -889,6 +1015,27 @@ function parseSchemaString(schema?: string): DeclarativeStreamSchemaLoader {
   }
 }
 
+function builderRequestBodyToStreamRequestBody(stream: BuilderStream) {
+  try {
+    return {
+      request_body_json:
+        stream.requestOptions.requestBody.type === "json_list"
+          ? Object.fromEntries(stream.requestOptions.requestBody.values)
+          : stream.requestOptions.requestBody.type === "json_freeform"
+          ? JSON.parse(stream.requestOptions.requestBody.value)
+          : undefined,
+      request_body_data:
+        stream.requestOptions.requestBody.type === "form_list"
+          ? Object.fromEntries(stream.requestOptions.requestBody.values)
+          : stream.requestOptions.requestBody.type === "string_freeform"
+          ? stream.requestOptions.requestBody.value
+          : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function builderStreamToDeclarativeSteam(
   values: BuilderFormValues,
   stream: BuilderStream,
@@ -908,9 +1055,9 @@ function builderStreamToDeclarativeSteam(
         http_method: stream.httpMethod,
         request_parameters: Object.fromEntries(stream.requestOptions.requestParameters),
         request_headers: Object.fromEntries(stream.requestOptions.requestHeaders),
-        request_body_json: Object.fromEntries(stream.requestOptions.requestBody),
         authenticator: builderAuthenticatorToManifest(values.global),
         error_handler: buildCompositeErrorHandler(stream.errorHandler),
+        ...builderRequestBodyToStreamRequestBody(stream),
       },
       record_selector: {
         type: "RecordSelector",
@@ -932,26 +1079,77 @@ function builderStreamToDeclarativeSteam(
   return merge({}, declarativeStream, stream.unsupportedFields);
 }
 
+export const orderInputs = (
+  inputs: BuilderFormInput[],
+  inferredInputs: BuilderFormInput[],
+  storedInputOrder: string[]
+) => {
+  const keyToStoredOrder = storedInputOrder.reduce((map, key, index) => map.set(key, index), new Map<string, number>());
+
+  return inferredInputs
+    .map((input) => {
+      return { input, isInferred: true, id: input.key };
+    })
+    .concat(
+      inputs.map((input) => {
+        return { input, isInferred: false, id: input.key };
+      })
+    )
+    .sort((inputA, inputB) => {
+      const storedIndexA = keyToStoredOrder.get(inputA.id);
+      const storedIndexB = keyToStoredOrder.get(inputB.id);
+
+      if (storedIndexA !== undefined && storedIndexB !== undefined) {
+        return storedIndexA - storedIndexB;
+      }
+      if (storedIndexA !== undefined && storedIndexB === undefined) {
+        return inputB.isInferred ? 1 : -1;
+      }
+      if (storedIndexA === undefined && storedIndexB !== undefined) {
+        return inputA.isInferred ? -1 : 1;
+      }
+      // both indexes are undefined
+      if (inputA.isInferred && inputB.isInferred) {
+        return DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputA.id) - DEFAULT_INFERRED_INPUT_ORDER.indexOf(inputB.id);
+      }
+      if (inputA.isInferred && !inputB.isInferred) {
+        return -1;
+      }
+      if (!inputA.isInferred && inputB.isInferred) {
+        return 1;
+      }
+      return naturalComparator(inputA.id, inputB.id);
+    });
+};
+
+export const builderFormValuesToMetadata = (values: BuilderFormValues): DeclarativeComponentSchemaMetadata => {
+  return {
+    autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+  };
+};
+
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
     builderStreamToDeclarativeSteam(values, stream, [])
   );
 
-  const allInputs = [
-    ...values.inputs,
-    ...getInferredInputList(
+  const orderedInputs = orderInputs(
+    values.inputs,
+    getInferredInputList(
       values.global,
       values.inferredInputOverrides,
       hasIncrementalSyncUserInput(values.streams, "start_datetime"),
       hasIncrementalSyncUserInput(values.streams, "end_datetime")
     ),
-  ];
+    values.inputOrder
+  );
+  const allInputs = orderedInputs.map((orderedInput) => orderedInput.input);
 
   const specSchema: JSONSchema7 = {
     $schema: "http://json-schema.org/draft-07/schema#",
     type: "object",
     required: allInputs.filter((input) => input.required).map((input) => input.key),
-    properties: Object.fromEntries(allInputs.map((input) => [input.key, input.definition])),
+    properties: Object.fromEntries(allInputs.map((input, index) => [input.key, { ...input.definition, order: index }])),
     additionalProperties: true,
   };
 
@@ -975,7 +1173,15 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     },
     streams: manifestStreams,
     spec,
+    metadata: builderFormValuesToMetadata(values),
   });
 };
 
 export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
+
+export const useBuilderWatch = <TPath extends FieldPath<BuilderFormValues>>(
+  path: TPath,
+  options?: { exact: boolean }
+) => useWatch<BuilderFormValues, TPath>({ name: path, ...options });
+
+export type StreamPathFn = <T extends string>(fieldPath: T) => `streams.${number}.${T}`;

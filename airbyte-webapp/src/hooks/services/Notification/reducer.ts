@@ -14,8 +14,8 @@ function removeNotification(notifications: Notification[], notificationId: strin
   return notifications.filter((n) => n.id !== notificationId);
 }
 
-function findNotification(notifications: Notification[], notification: Notification): Notification | undefined {
-  return notifications.find((n) => n.id === notification.id);
+function findNotification(notifications: Notification[], notificationId: string | number): Notification | undefined {
+  return notifications.find((n) => n.id === notificationId);
 }
 
 export const initialState: NotificationServiceState = {
@@ -24,7 +24,7 @@ export const initialState: NotificationServiceState = {
 
 export const notificationServiceReducer = createReducer<NotificationServiceState, Actions>(initialState)
   .handleAction(actions.addNotification, (state, action): NotificationServiceState => {
-    if (findNotification(state.notifications, action.payload)) {
+    if (findNotification(state.notifications, action.payload.id)) {
       return state;
     }
 
@@ -35,6 +35,10 @@ export const notificationServiceReducer = createReducer<NotificationServiceState
     };
   })
   .handleAction(actions.deleteNotificationById, (state, action): NotificationServiceState => {
+    if (!findNotification(state.notifications, action.payload)) {
+      return state;
+    }
+
     const notifications = removeNotification(state.notifications, action.payload);
 
     return {

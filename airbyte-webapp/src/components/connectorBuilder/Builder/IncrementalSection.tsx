@@ -1,9 +1,12 @@
-import { useField } from "formik";
-import { useIntl } from "react-intl";
+import React from "react";
+import { useFormContext } from "react-hook-form";
+import { FormattedMessage, useIntl } from "react-intl";
 
-import { ControlLabels } from "components/LabeledControl";
+import { Message } from "components/ui/Message";
+import { Text } from "components/ui/Text";
 
 import { RequestOption } from "core/request/ConnectorManifest";
+import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
@@ -19,55 +22,42 @@ import {
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   LARGE_DURATION_OPTIONS,
   SMALL_DURATION_OPTIONS,
+  StreamPathFn,
+  useBuilderWatch,
 } from "../types";
 
 interface IncrementalSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+  streamFieldPath: StreamPathFn;
   currentStreamIndex: number;
 }
 
 export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderIncrementalSync | undefined>(streamFieldPath("incrementalSync"));
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      helpers.setValue({
-        datetime_format: "%Y-%m-%d %H:%M:%S.%f+00:00",
-        start_datetime: { type: "user_input" },
-        end_datetime: { type: "now" },
-        step: "P1M",
-        cursor_field: "",
-        cursor_granularity: "",
-        start_time_option: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-        end_time_option: {
-          inject_into: "request_parameter",
-          field_name: "",
-          type: "RequestOption",
-        },
-      });
-    } else {
-      helpers.setValue(undefined);
-    }
-  };
-  const toggledOn = field.value !== undefined;
-
   return (
     <BuilderCard
       docLink={links.connectorBuilderIncrementalSync}
-      label={
-        <ControlLabels
-          label="Incremental sync"
-          infoTooltipContent="Configure how to fetch data incrementally based on a time field in your data"
-        />
-      }
+      label="Incremental Sync"
+      tooltip="Configure how to fetch data incrementally based on a time field in your data"
       toggleConfig={{
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("incrementalSync"),
+        defaultValue: {
+          datetime_format: "",
+          start_datetime: { type: "user_input" },
+          end_datetime: { type: "now" },
+          step: "",
+          cursor_field: "",
+          cursor_granularity: "",
+          start_time_option: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+          end_time_option: {
+            inject_into: "request_parameter",
+            field_name: "",
+            type: "RequestOption",
+          },
+        },
       }}
       copyConfig={{
         path: "incrementalSync",
@@ -76,23 +66,8 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         copyToLabel: formatMessage({ id: "connectorBuilder.copyFromIncrementalTitle" }),
       }}
     >
-      <BuilderFieldWithInputs
-        type="string"
-        path={streamFieldPath("incrementalSync.cursor_field")}
-        manifestPath="DatetimeBasedCursor.properties.cursor_field"
-      />
-      <BuilderFieldWithInputs
-        type="combobox"
-        path={streamFieldPath("incrementalSync.datetime_format")}
-        manifestPath="DatetimeBasedCursor.properties.datetime_format"
-        options={DATETIME_FORMAT_OPTIONS}
-      />
-      <BuilderFieldWithInputs
-        type="combobox"
-        path={streamFieldPath("incrementalSync.cursor_granularity")}
-        manifestPath="DatetimeBasedCursor.properties.cursor_granularity"
-        options={SMALL_DURATION_OPTIONS}
-      />
+      <CursorField streamFieldPath={streamFieldPath} />
+      <DatetimeFormatField streamFieldPath={streamFieldPath} />
       <BuilderOneOf
         path={streamFieldPath("incrementalSync.start_datetime")}
         manifestPath="DatetimeBasedCursor.properties.start_datetime"
@@ -217,19 +192,97 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         />
       </ToggleGroupField>
       <BuilderOptional label={formatMessage({ id: "connectorBuilder.advancedFields" })}>
-        <BuilderFieldWithInputs
-          type="combobox"
-          path={streamFieldPath("incrementalSync.step")}
-          manifestPath="DatetimeBasedCursor.properties.step"
-          options={LARGE_DURATION_OPTIONS}
-        />
+        <ToggleGroupField<BuilderIncrementalSync["slicer"]>
+          label="Split up interval"
+          tooltip="Optionally split up the interval into smaller chunks to reduce the amount of data fetched in a single request and to make the sync more resilient to failures"
+          fieldPath={streamFieldPath("incrementalSync.slicer")}
+          initialValues={{
+            step: "",
+            cursor_granularity: "",
+          }}
+        >
+          <BuilderFieldWithInputs
+            type="combobox"
+            path={streamFieldPath("incrementalSync.slicer.step")}
+            manifestPath="DatetimeBasedCursor.properties.step"
+            options={LARGE_DURATION_OPTIONS}
+          />
+          <BuilderFieldWithInputs
+            type="combobox"
+            path={streamFieldPath("incrementalSync.slicer.cursor_granularity")}
+            manifestPath="DatetimeBasedCursor.properties.cursor_granularity"
+            options={SMALL_DURATION_OPTIONS}
+          />
+        </ToggleGroupField>
         <BuilderFieldWithInputs
           type="combobox"
           path={streamFieldPath("incrementalSync.lookback_window")}
           manifestPath="DatetimeBasedCursor.properties.lookback_window"
           options={LARGE_DURATION_OPTIONS}
+          optional
         />
       </BuilderOptional>
     </BuilderCard>
+  );
+};
+
+const DATETIME_FORMAT_PATH = "incrementalSync.datetime_format";
+const CURSOR_PATH = "incrementalSync.cursor_field";
+
+const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+  const {
+    streamRead: { data },
+  } = useConnectorBuilderTestRead();
+
+  const datetimeFields = Object.keys(data?.inferred_datetime_formats || {});
+
+  return (
+    <BuilderFieldWithInputs
+      type={datetimeFields.length > 0 ? "combobox" : "string"}
+      path={streamFieldPath(CURSOR_PATH)}
+      manifestPath="DatetimeBasedCursor.properties.cursor_field"
+      options={datetimeFields.map((field) => ({ label: field, value: field }))}
+    />
+  );
+};
+
+const DatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+  const { setValue } = useFormContext();
+  const datetimeFormat = useBuilderWatch(streamFieldPath(DATETIME_FORMAT_PATH));
+  const cursorField = useBuilderWatch(streamFieldPath(CURSOR_PATH));
+  const {
+    streamRead: { data },
+  } = useConnectorBuilderTestRead();
+  const detectedFormat = data?.inferred_datetime_formats?.[cursorField];
+  return (
+    <>
+      {datetimeFormat !== detectedFormat && cursorField && detectedFormat && (
+        <Message
+          type="info"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.matchingFormat"
+              values={{
+                format: (
+                  <Text as="span" bold>
+                    {detectedFormat}
+                  </Text>
+                ),
+              }}
+            />
+          }
+          actionBtnText={<FormattedMessage id="form.apply" />}
+          onAction={() => {
+            setValue(streamFieldPath(DATETIME_FORMAT_PATH), detectedFormat, { shouldValidate: true });
+          }}
+        />
+      )}
+      <BuilderFieldWithInputs
+        type="combobox"
+        path={streamFieldPath(DATETIME_FORMAT_PATH)}
+        manifestPath="DatetimeBasedCursor.properties.datetime_format"
+        options={DATETIME_FORMAT_OPTIONS}
+      />
+    </>
   );
 };

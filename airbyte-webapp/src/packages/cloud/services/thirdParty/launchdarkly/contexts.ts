@@ -1,8 +1,16 @@
 import { LDMultiKindContext, LDSingleKindContext } from "launchdarkly-js-client-sdk";
 
-import { User } from "packages/cloud/lib/domain/users/types";
+import { UserRead } from "core/api/types/CloudApi";
+import { ContextKind } from "hooks/services/Experiment";
 
-export function createUserContext(user: User | null, locale: string): LDSingleKindContext {
+export function createLDContext(kind: ContextKind, key: string): LDSingleKindContext {
+  return {
+    kind,
+    key,
+  };
+}
+
+export function createUserContext(user: UserRead | null, locale: string): LDSingleKindContext {
   const kind = "user";
 
   if (!user) {
@@ -26,21 +34,24 @@ export function createUserContext(user: User | null, locale: string): LDSingleKi
   };
 }
 
-export function createWorkspaceContext(workspaceId: string): LDSingleKindContext {
-  return {
-    kind: "workspace",
-    key: workspaceId,
-  };
-}
-
 export function createMultiContext(...args: LDSingleKindContext[]): LDMultiKindContext {
   const multiContext: LDMultiKindContext = {
     kind: "multi",
   };
 
-  args.forEach(({ kind, ...context }) => {
-    multiContext[kind] = { ...context };
+  args.forEach((context) => {
+    multiContext[context.kind] = context;
   });
 
   return multiContext;
+}
+
+export function isMultiContext(context: LDMultiKindContext | LDSingleKindContext): context is LDMultiKindContext {
+  return context.kind === "multi";
+}
+
+export function getSingleContextsFromMulti(multiContext: LDMultiKindContext): LDSingleKindContext[] {
+  return Object.entries(multiContext)
+    .filter(([key]) => key !== "kind")
+    .map(([_, context]) => context as LDSingleKindContext);
 }

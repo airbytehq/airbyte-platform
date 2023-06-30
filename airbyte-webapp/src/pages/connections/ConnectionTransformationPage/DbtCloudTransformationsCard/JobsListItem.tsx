@@ -6,7 +6,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
-import { DbtCloudJob } from "packages/cloud/services/dbtCloud";
+import { DbtCloudJob } from "core/api/cloud";
 
 import dbtLogo from "./dbt-bit_tm.svg";
 import styles from "./JobsListItem.module.scss";

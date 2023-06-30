@@ -59,6 +59,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.text.StringEscapeUtils;
@@ -103,6 +104,7 @@ import org.slf4j.MDC;
 // it is required for the connectors
 @SuppressWarnings("PMD.AvoidPrintStackTrace")
 // TODO(Davin): Better test for this. See https://github.com/airbytehq/airbyte/issues/3700.
+@Slf4j
 public class KubePodProcess implements KubePod {
 
   private static final Configs configs = new EnvConfigs();
@@ -118,6 +120,13 @@ public class KubePodProcess implements KubePod {
   private static final ResourceRequirements DEFAULT_SOCAT_RESOURCES = new ResourceRequirements()
       .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
       .withCpuLimit(configs.getSocatSidecarKubeCpuLimit()).withCpuRequest(configs.getSocatSidecarKubeCpuRequest());
+
+  // Stderr channel usually does not require much CPU resources. It's not on critical path nor it will
+  // impact performance.
+  // Thus, we will allocate much less CPU for these containers.
+  private static final ResourceRequirements LOW_SOCAT_RESOURCES = new ResourceRequirements()
+      .withMemoryLimit(configs.getSidecarKubeMemoryLimit()).withMemoryRequest(configs.getSidecarMemoryRequest())
+      .withCpuLimit("2").withCpuRequest("0.25");
   private static final String DD_SUPPORT_CONNECTOR_NAMES = "CONNECTOR_DATADOG_SUPPORT_NAMES";
 
   private static final String PIPES_DIR = "/pipes";
@@ -142,8 +151,9 @@ public class KubePodProcess implements KubePod {
   private static final double INIT_SLEEP_PERIOD_SECONDS = 0.1;
 
   // This timeout was initially 1 minute, but sync pods scheduled on newly-provisioned nodes
-  // are occasionally not able to start the copy within 1 minute, hence the increase to 5.
-  private static final Duration INIT_RETRY_TIMEOUT_MINUTES = Duration.ofMinutes(5);
+  // are occasionally not able to start the copy within 1 minute, hence the increase to 5 as default.
+  // Can be set in env
+  private static final Duration INIT_RETRY_TIMEOUT_MINUTES = Duration.ofMinutes(configs.getJobInitRetryTimeoutMinutes());
 
   private static final int INIT_RETRY_MAX_ITERATIONS = (int) (INIT_RETRY_TIMEOUT_MINUTES.toSeconds() / INIT_SLEEP_PERIOD_SECONDS);
 
@@ -394,6 +404,7 @@ public class KubePodProcess implements KubePod {
                         final KubernetesClient fabricClient,
                         final String podName,
                         final String namespace,
+                        final String serviceAccount,
                         final String image,
                         final String imagePullPolicy,
                         final String sidecarImagePullPolicy,
@@ -494,6 +505,9 @@ public class KubePodProcess implements KubePod {
       final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarResources =
           getResourceRequirementsBuilder(DEFAULT_SOCAT_RESOURCES).build();
 
+      final io.fabric8.kubernetes.api.model.ResourceRequirements socatSidecarLowCpuResources =
+          getResourceRequirementsBuilder(LOW_SOCAT_RESOURCES).build();
+
       final Container remoteStdin = new ContainerBuilder()
           .withName("remote-stdin")
           .withImage(socatImage)
@@ -517,7 +531,7 @@ public class KubePodProcess implements KubePod {
           .withImage(socatImage)
           .withCommand("sh", "-c", String.format("cat %s | socat -d -d -t 60 - TCP:%s:%s", STDERR_PIPE_FILE, processRunnerHost, stderrLocalPort))
           .withVolumeMounts(pipeVolumeMount, terminationVolumeMount)
-          .withResources(socatSidecarResources)
+          .withResources(socatSidecarLowCpuResources)
           .withImagePullPolicy(sidecarImagePullPolicy)
           .build();
 
@@ -548,7 +562,9 @@ public class KubePodProcess implements KubePod {
           .withLabels(labels)
           .withAnnotations(annotations)
           .endMetadata()
-          .withNewSpec();
+          .withNewSpec()
+          .withServiceAccount(serviceAccount)
+          .withAutomountServiceAccountToken(true);
 
       final List<LocalObjectReference> pullSecrets = imagePullSecrets
           .stream()
@@ -779,7 +795,11 @@ public class KubePodProcess implements KubePod {
     KubePortManagerSingleton.getInstance().offer(stdoutLocalPort);
     KubePortManagerSingleton.getInstance().offer(stderrLocalPort);
 
-    LOGGER.info(prependPodInfo("Closed all resources for pod", podDefinition.getMetadata().getNamespace(), podDefinition.getMetadata().getName()));
+    if (podDefinition != null) {
+      LOGGER.info(prependPodInfo("Closed all resources for pod", podDefinition.getMetadata().getNamespace(), podDefinition.getMetadata().getName()));
+    } else {
+      LOGGER.error("Unexpected: PodDefinition is null when closing in KubePodProcess. Log an error to help debugging but not blocking the process.");
+    }
   }
 
   private int getReturnCode() {
@@ -865,26 +885,47 @@ public class KubePodProcess implements KubePod {
    */
   public static ResourceRequirementsBuilder getResourceRequirementsBuilder(final ResourceRequirements resourceRequirements) {
     if (resourceRequirements != null) {
+      Quantity cpuLimit = null;
+      Quantity memoryLimit = null;
+      final Map<String, Quantity> limitMap = new HashMap<>();
+      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuLimit())) {
+        cpuLimit = Quantity.parse(resourceRequirements.getCpuLimit());
+        limitMap.put("cpu", cpuLimit);
+      }
+      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryLimit())) {
+        memoryLimit = Quantity.parse(resourceRequirements.getMemoryLimit());
+        limitMap.put("memory", memoryLimit);
+      }
       final Map<String, Quantity> requestMap = new HashMap<>();
       // if null then use unbounded resource allocation
       if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuRequest())) {
-        requestMap.put("cpu", Quantity.parse(resourceRequirements.getCpuRequest()));
+        final Quantity cpuRequest = Quantity.parse(resourceRequirements.getCpuRequest());
+        requestMap.put("cpu", min(cpuRequest, cpuLimit));
       }
       if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryRequest())) {
-        requestMap.put("memory", Quantity.parse(resourceRequirements.getMemoryRequest()));
-      }
-      final Map<String, Quantity> limitMap = new HashMap<>();
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getCpuLimit())) {
-        limitMap.put("cpu", Quantity.parse(resourceRequirements.getCpuLimit()));
-      }
-      if (!com.google.common.base.Strings.isNullOrEmpty(resourceRequirements.getMemoryLimit())) {
-        limitMap.put("memory", Quantity.parse(resourceRequirements.getMemoryLimit()));
+        final Quantity memoryRequest = Quantity.parse(resourceRequirements.getMemoryRequest());
+        requestMap.put("memory", min(memoryRequest, memoryLimit));
       }
       return new ResourceRequirementsBuilder()
           .withRequests(requestMap)
           .withLimits(limitMap);
     }
     return new ResourceRequirementsBuilder();
+  }
+
+  private static Quantity min(final Quantity request, final Quantity limit) {
+    if (limit == null) {
+      return request;
+    }
+    if (request == null) {
+      return limit;
+    }
+    if (request.getNumericalAmount().compareTo(limit.getNumericalAmount()) <= 0) {
+      return request;
+    } else {
+      log.info("Invalid resource requirements detected, requested {} while limit is {}, falling back to requesting {}.", request, limit, limit);
+      return limit;
+    }
   }
 
   private static String prependPodInfo(final String message, final String podNamespace, final String podName) {

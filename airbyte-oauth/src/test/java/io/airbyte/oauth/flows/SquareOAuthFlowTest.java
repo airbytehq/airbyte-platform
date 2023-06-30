@@ -11,7 +11,7 @@ public class SquareOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new SquareOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new SquareOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

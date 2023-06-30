@@ -20,6 +20,7 @@ dependencies {
     implementation project(':airbyte-json-validation')
     implementation project(':airbyte-notification')
     implementation project(':airbyte-analytics')
+    implementation project(':airbyte-metrics:metrics-lib')
 
     implementation libs.sentry.java
     implementation libs.otel.semconv

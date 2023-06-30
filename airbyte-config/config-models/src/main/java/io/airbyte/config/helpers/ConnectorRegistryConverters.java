@@ -4,6 +4,7 @@
 
 package io.airbyte.config.helpers;
 
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -27,21 +28,12 @@ public class ConnectorRegistryConverters {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(def.getSourceDefinitionId())
         .withName(def.getName())
-        .withDockerRepository(def.getDockerRepository())
-        .withDockerImageTag(def.getDockerImageTag())
-        .withDocumentationUrl(def.getDocumentationUrl())
         .withIcon(def.getIcon())
         .withSourceType(toStandardSourceType(def.getSourceType()))
-        .withSpec(def.getSpec())
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
-        .withReleaseDate(def.getReleaseDate())
-        .withReleaseStage(def.getReleaseStage())
         .withResourceRequirements(def.getResourceRequirements())
-        .withProtocolVersion(def.getProtocolVersion())
-        .withAllowedHosts(def.getAllowedHosts())
-        .withSuggestedStreams(def.getSuggestedStreams())
         .withMaxSecondsBetweenMessages(def.getMaxSecondsBetweenMessages());
   }
 
@@ -56,19 +48,54 @@ public class ConnectorRegistryConverters {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(def.getDestinationDefinitionId())
         .withName(def.getName())
-        .withDockerRepository(def.getDockerRepository())
-        .withDockerImageTag(def.getDockerImageTag())
-        .withDocumentationUrl(def.getDocumentationUrl())
         .withIcon(def.getIcon())
-        .withSpec(def.getSpec())
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withResourceRequirements(def.getResourceRequirements());
+  }
+
+  /**
+   * Convert the version-related fields of the ConnectorRegistrySourceDefinition into an
+   * ActorDefinitionVersion.
+   */
+  public static ActorDefinitionVersion toActorDefinitionVersion(@Nullable final ConnectorRegistrySourceDefinition def) {
+    if (def == null) {
+      return null;
+    }
+
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(def.getSourceDefinitionId())
+        .withDockerRepository(def.getDockerRepository())
+        .withDockerImageTag(def.getDockerImageTag())
+        .withSpec(def.getSpec())
+        .withAllowedHosts(def.getAllowedHosts())
+        .withDocumentationUrl(def.getDocumentationUrl())
+        .withProtocolVersion(def.getProtocolVersion())
         .withReleaseDate(def.getReleaseDate())
         .withReleaseStage(def.getReleaseStage())
-        .withResourceRequirements(def.getResourceRequirements())
-        .withProtocolVersion(def.getProtocolVersion())
+        .withSuggestedStreams(def.getSuggestedStreams());
+  }
+
+  /**
+   * Convert the version-related fields of the ConnectorRegistrySourceDefinition into an
+   * ActorDefinitionVersion.
+   */
+  public static ActorDefinitionVersion toActorDefinitionVersion(@Nullable final ConnectorRegistryDestinationDefinition def) {
+    if (def == null) {
+      return null;
+    }
+
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(def.getDestinationDefinitionId())
+        .withDockerRepository(def.getDockerRepository())
+        .withDockerImageTag(def.getDockerImageTag())
+        .withSpec(def.getSpec())
         .withAllowedHosts(def.getAllowedHosts())
+        .withDocumentationUrl(def.getDocumentationUrl())
+        .withProtocolVersion(def.getProtocolVersion())
+        .withReleaseDate(def.getReleaseDate())
+        .withReleaseStage(def.getReleaseStage())
         .withNormalizationConfig(def.getNormalizationConfig())
         .withSupportsDbt(def.getSupportsDbt());
   }

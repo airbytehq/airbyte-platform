@@ -1,5 +1,5 @@
-import { Form, useFormikContext } from "formik";
 import React, { ReactNode } from "react";
+import { useFormContext } from "react-hook-form";
 
 import { FlexContainer } from "components/ui/Flex";
 
@@ -41,7 +41,10 @@ export const FormRoot: React.FC<FormRootProps> = ({
   castValues,
   ...props
 }) => {
-  const { dirty, isSubmitting, isValid, values } = useFormikContext<ConnectorFormValues>();
+  const form = useFormContext<ConnectorFormValues>();
+  const isSubmitting = form.formState.isSubmitting;
+  const dirty = form.formState.isDirty;
+  const isValid = form.formState.isValid;
   const { resetConnectorForm, isEditMode, formType } = useConnectorForm();
 
   const formBody = (
@@ -62,20 +65,18 @@ export const FormRoot: React.FC<FormRootProps> = ({
     />
   );
   return (
-    <Form>
-      <FlexContainer direction="column" gap="xl">
-        <div className={bodyClassName}>{formBody}</div>
-        {renderFooter &&
-          renderFooter({
-            dirty,
-            isSubmitting,
-            isValid,
-            resetConnectorForm,
-            isEditMode,
-            formType,
-            getValues: () => castValues(values),
-          })}
-      </FlexContainer>
-    </Form>
+    <FlexContainer direction="column" gap="xl">
+      <div className={bodyClassName}>{formBody}</div>
+      {renderFooter &&
+        renderFooter({
+          dirty,
+          isSubmitting,
+          isValid,
+          resetConnectorForm,
+          isEditMode,
+          formType,
+          getValues: () => castValues(form.getValues()),
+        })}
+    </FlexContainer>
   );
 };

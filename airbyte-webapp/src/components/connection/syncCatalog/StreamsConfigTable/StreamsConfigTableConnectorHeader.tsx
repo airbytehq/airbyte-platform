@@ -1,4 +1,5 @@
 import classnames from "classnames";
+import React from "react";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Heading } from "components/ui/Heading";

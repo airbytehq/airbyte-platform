@@ -16,7 +16,7 @@ import {
 
 import { Text } from "components/ui/Text";
 
-import { useFreeConnectorProgram } from "packages/cloud/components/experiments/FreeConnectorProgram";
+import { useFreeConnectorProgram } from "core/api/cloud";
 
 import { UsagePerTimeChunk } from "./calculateUsageDataObjects";
 import { FormattedCredits } from "./FormattedCredits";
@@ -28,7 +28,7 @@ interface UsagePerDayGraphProps {
 }
 export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, minimized }) => {
   const {
-    enrollmentStatusQuery: { data: freeConnectorEnrollment },
+    programStatusQuery: { data: freeConnectorEnrollment },
   } = useFreeConnectorProgram();
   const isEnrolledInFreeConnectorProgram = freeConnectorEnrollment?.isEnrolled;
   const { formatMessage } = useIntl();

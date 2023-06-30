@@ -88,8 +88,6 @@ class DestinationHandlerTest {
     standardDestinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(UUID.randomUUID())
         .withName("db2")
-        .withDockerRepository("thebestrepo")
-        .withDocumentationUrl("https://wikipedia.org")
         .withIcon(ICON);
 
     destinationDefinitionVersion = new ActorDefinitionVersion()

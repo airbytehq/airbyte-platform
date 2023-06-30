@@ -1,56 +1,58 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
+import { useSearchParams } from "react-router-dom";
 
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
-import { DestinationForm, DestinationFormValues } from "components/destination/DestinationForm/DestinationForm";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
-import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { useCreateDestination, useDestinationList } from "hooks/services/useDestinationHook";
-import ExistingEntityForm from "pages/connections/CreateConnectionPage/ExistingEntityForm";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
+import { useDestinationList } from "hooks/services/useDestinationHook";
 
+import { CreateNewDestination, DESTINATION_DEFINITION_PARAM } from "./CreateNewDestination";
 import { RadioButtonTiles } from "./RadioButtonTiles";
+import { SelectExistingConnector } from "./SelectExistingConnector";
 
 type DestinationType = "existing" | "new";
 
-interface SelectDestinationProps {
-  onSelectDestination: (destinationId: string) => void;
-  initialSelectedDestinationType?: DestinationType;
-}
+export const EXISTING_DESTINATION_TYPE = "existing";
+export const NEW_DESTINATION_TYPE = "new";
+export const DESTINATION_TYPE_PARAM = "destinationType";
+export const DESTINATION_ID_PARAM = "destinationId";
 
-export const SelectDestination: React.FC<SelectDestinationProps> = ({
-  onSelectDestination,
-  initialSelectedDestinationType = "existing",
-}) => {
+export const SelectDestination: React.FC = () => {
   const { destinations } = useDestinationList();
-  const [selectedDestinationType, setSelectedDestinationType] = useState<DestinationType>(
-    destinations.length === 0 ? "new" : initialSelectedDestinationType
-  );
-  const destinationDefinitions = useAvailableDestinationDefinitions();
-  const { clearAllFormChanges, hasFormChanges } = useFormChangeTrackerService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
-  const { mutateAsync: createDestination } = useCreateDestination();
-  const { trackAction } = useAppMonitoringService();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const onCreateDestination = async (values: DestinationFormValues) => {
-    const destinationConnector = destinationDefinitions.find(
-      (item) => item.destinationDefinitionId === values.serviceType
-    );
-    if (!destinationConnector) {
-      trackAction(AppActionCodes.CONNECTOR_NOT_FOUND, { destinationDefinitionId: values.serviceType });
-      throw new Error(AppActionCodes.CONNECTOR_NOT_FOUND);
+  if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
+    if (destinations.length === 0) {
+      searchParams.set(DESTINATION_TYPE_PARAM, NEW_DESTINATION_TYPE);
+      setSearchParams(searchParams);
+    } else {
+      searchParams.set(DESTINATION_TYPE_PARAM, EXISTING_DESTINATION_TYPE);
+      setSearchParams(searchParams);
     }
-    const result = await createDestination({ values, destinationConnector });
-    clearAllFormChanges();
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    onSelectDestination(result.destinationId);
+  }
+
+  const selectedDestinationType = useMemo(() => {
+    return searchParams.get(DESTINATION_TYPE_PARAM) as DestinationType;
+  }, [searchParams]);
+
+  const { hasFormChanges } = useFormChangeTrackerService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+
+  const selectDestinationType = (destinationType: DestinationType) => {
+    searchParams.delete(DESTINATION_DEFINITION_PARAM);
+    searchParams.set(DESTINATION_TYPE_PARAM, destinationType);
+    setSearchParams(searchParams);
+  };
+
+  const selectDestination = (destinationId: string) => {
+    searchParams.delete(DESTINATION_TYPE_PARAM);
+    searchParams.set(DESTINATION_ID_PARAM, destinationId);
+    setSearchParams(searchParams);
   };
 
   const onSelectDestinationType = (destinationType: DestinationType) => {
@@ -61,56 +63,52 @@ export const SelectDestination: React.FC<SelectDestinationProps> = ({
         submitButtonText: "form.discardChanges",
         onSubmit: () => {
           closeConfirmationModal();
-          setSelectedDestinationType(destinationType);
-          if (destinationType === "existing") {
-            setDocumentationPanelOpen(false);
-          }
+          selectDestinationType(destinationType);
         },
         onClose: () => {
-          setSelectedDestinationType(selectedDestinationType);
+          selectDestinationType(destinationType);
         },
       });
     } else {
-      setSelectedDestinationType(destinationType);
-      if (destinationType === "existing") {
-        setDocumentationPanelOpen(false);
-      }
+      selectDestinationType(destinationType);
     }
   };
 
   return (
     <>
-      <Card withPadding>
-        <Heading as="h2">
-          <FormattedMessage id="connectionForm.defineDestination" />
-        </Heading>
-        <Box mt="md">
-          <RadioButtonTiles
-            name="destinationType"
-            options={[
-              {
-                value: "existing",
-                label: "connectionForm.destinationExisting",
-                description: "connectionForm.destinationExistingDescription",
-                disabled: destinations.length === 0,
-              },
-              {
-                value: "new",
-                label: "connectionForm.destinationNew",
-                description: "connectionForm.destinationNewDescription",
-              },
-            ]}
-            selectedValue={selectedDestinationType}
-            onSelectRadioButton={(id) => onSelectDestinationType(id)}
-          />
-        </Box>
-      </Card>
-      {selectedDestinationType === "existing" && (
-        <ExistingEntityForm type="destination" onSubmit={(destinationId) => onSelectDestination(destinationId)} />
+      {!searchParams.get(DESTINATION_DEFINITION_PARAM) && (
+        <Card withPadding>
+          <Heading as="h2">
+            <FormattedMessage id="connectionForm.defineDestination" />
+          </Heading>
+          <Box mt="md">
+            <RadioButtonTiles
+              name="destinationType"
+              options={[
+                {
+                  value: EXISTING_DESTINATION_TYPE,
+                  label: "connectionForm.destinationExisting",
+                  description: "connectionForm.destinationExistingDescription",
+                  disabled: destinations.length === 0,
+                },
+                {
+                  value: NEW_DESTINATION_TYPE,
+                  label: "connectionForm.destinationNew",
+                  description: "connectionForm.destinationNewDescription",
+                },
+              ]}
+              selectedValue={selectedDestinationType}
+              onSelectRadioButton={(id) => onSelectDestinationType(id)}
+            />
+          </Box>
+        </Card>
       )}
-      {selectedDestinationType === "new" && (
-        <DestinationForm destinationDefinitions={destinationDefinitions} onSubmit={onCreateDestination} />
-      )}
+      <Box mt="xl">
+        {selectedDestinationType === EXISTING_DESTINATION_TYPE && (
+          <SelectExistingConnector connectors={destinations} selectConnector={selectDestination} />
+        )}
+        {selectedDestinationType === NEW_DESTINATION_TYPE && <CreateNewDestination />}
+      </Box>
       <CloudInviteUsersHint connectorType="destination" />
     </>
   );
