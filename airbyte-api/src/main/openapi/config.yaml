@@ -2407,6 +2407,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/jobs/list_for_workspaces:
+    post:
+      tags:
+        - jobs
+      summary: Returns recent jobs for a connection. Jobs are returned in descending order by createdAt.
+      operationId: listJobsForWorkspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobListForWorkspacesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/jobs/get:
     post:
       tags:
@@ -4913,6 +4936,23 @@ components:
         includingJobId:
           description: If the job with this ID exists for the specified connection, returns the number of pages of jobs necessary to include this job. Returns an empty list if this job is specified and cannot be found in this connection.
           $ref: "#/components/schemas/JobId"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    JobListForWorkspacesRequestBody:
+      type: object
+      required:
+        - configTypes
+      properties:
+        configTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobConfigType"
+        configId:
+          type: string
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
         pagination:
           $ref: "#/components/schemas/Pagination"
     JobIdRequestBody:
