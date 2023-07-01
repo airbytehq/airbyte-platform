@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.JobDebugInfoRead;
 import io.airbyte.api.model.generated.JobIdRequestBody;
 import io.airbyte.api.model.generated.JobInfoLightRead;
 import io.airbyte.api.model.generated.JobInfoRead;
+import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.JobListRequestBody;
 import io.airbyte.api.model.generated.JobOptionalRead;
 import io.airbyte.api.model.generated.JobReadList;
@@ -111,6 +112,15 @@ public class JobsApiController implements JobsApi {
   @Override
   public JobReadList listJobsFor(final JobListRequestBody jobListRequestBody) {
     return ApiHelper.execute(() -> jobHistoryHandler.listJobsFor(jobListRequestBody));
+  }
+
+  @Post("/list_for_workspaces")
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public JobReadList listJobsForWorkspaces(final JobListForWorkspacesRequestBody requestBody) {
+    return ApiHelper.execute(() -> jobHistoryHandler.listJobsForWorkspaces(requestBody));
   }
 
 }

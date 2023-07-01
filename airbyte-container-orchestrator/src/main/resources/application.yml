@@ -10,6 +10,8 @@ micronaut:
     stream-status:
       type: fixed
       n-threads: ${STREAM_STATUS_EXECUTOR_THREADS:1}
+  security:
+    enabled: false
 
 airbyte:
   deployment-mode: ${DEPLOYMENT_MODE:OSS}

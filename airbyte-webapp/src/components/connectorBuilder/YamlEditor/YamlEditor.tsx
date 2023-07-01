@@ -111,7 +111,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({ toggleYamlEditor }) => {
         builderFormValues.global.connectorName
       );
       Object.entries(convertedFormValues).forEach(([key, value]) => {
-        setValue(key, value);
+        setValue(key, value, { shouldValidate: true });
       });
       toggleYamlEditor();
     } catch (e) {
