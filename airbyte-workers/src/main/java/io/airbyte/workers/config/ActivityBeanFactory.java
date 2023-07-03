@@ -26,7 +26,6 @@ import io.airbyte.workers.temporal.spec.SpecActivity;
 import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
-import io.airbyte.workers.temporal.sync.PersistStateActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
@@ -114,12 +113,11 @@ public class ActivityBeanFactory {
                                      final ReplicationActivity replicationActivity,
                                      final NormalizationActivity normalizationActivity,
                                      final DbtTransformationActivity dbtTransformationActivity,
-                                     final PersistStateActivity persistStateActivity,
                                      final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, persistStateActivity, normalizationSummaryCheckActivity,
+    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
         webhookOperationActivity, configFetchActivity, refreshSchemaActivity);
   }
 

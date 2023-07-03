@@ -1,9 +1,10 @@
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
 
+import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
 import { NotificationSettings } from "core/request/AirbyteClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { useCurrentWorkspace, useCurrentWorkspaceId, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
 
 export interface WebhookPayload {
   webhook?: string;

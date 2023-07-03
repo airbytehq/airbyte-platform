@@ -63,19 +63,10 @@ class ConnectorRegistryConvertersTest {
 
     final StandardSourceDefinition stdSourceDef = new StandardSourceDefinition()
         .withSourceDefinitionId(DEF_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_TAG)
         .withName(CONNECTOR_NAME)
-        .withDocumentationUrl(DOCS_URL)
-        .withSpec(SPEC)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
-        .withReleaseDate(RELEASE_DATE)
-        .withProtocolVersion(PROTOCOL_VERSION)
-        .withAllowedHosts(ALLOWED_HOSTS)
-        .withSuggestedStreams(suggestedStreams)
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withMaxSecondsBetweenMessages(10L);
 
@@ -122,21 +113,11 @@ class ConnectorRegistryConvertersTest {
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_TAG)
         .withName(CONNECTOR_NAME)
-        .withDocumentationUrl(DOCS_URL)
-        .withSpec(SPEC)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
-        .withReleaseDate(RELEASE_DATE)
-        .withProtocolVersion(PROTOCOL_VERSION)
-        .withAllowedHosts(ALLOWED_HOSTS)
-        .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withNormalizationConfig(normalizationConfig)
-        .withSupportsDbt(true);
+        .withResourceRequirements(RESOURCE_REQUIREMENTS);
 
     final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(DEF_ID)

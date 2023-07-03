@@ -4,14 +4,15 @@ import { useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { pollUntil } from "core/request/pollUntil";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+
 import { FeatureItem, useFeature } from "core/services/features";
+import { pollUntil } from "core/utils/pollUntil";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
-import { webBackendGetFreeConnectorProgramInfoForWorkspace } from "../lib/api";
+import { webBackendGetFreeConnectorProgramInfoForWorkspace } from "../../generated/CloudApi";
 
 export const STRIPE_SUCCESS_QUERY = "fcpEnrollmentSuccess";
 

@@ -710,6 +710,7 @@
   "connector.releaseStage.custom": "Custom",
   "connector.releaseStage.generally_available": "GA",
   "connector.releaseStage.generallyAvailable.expanded": "Generally Available",
+  "connector.connectorNameAndVersion": "{connectorName} v{version}",
   "connector.releaseStage.custom.description": "<b>Custom connectors</b> are added to the workspace manually by the user. Support is not provided.",
   "connector.releaseStage.alpha.description": "<b>Alpha connectors</b> are in development and support is not provided.",
   "connector.releaseStage.beta.description": "<b>Beta connectors</b> are in development but stable and reliable and support is provided.",
@@ -975,6 +976,11 @@
   "connectorBuilder.releaseNewVersionDescription": "Adds a new version of this custom connector to your workspace",
   "connectorBuilder.setAsActiveVersion.label": "Set as active version",
   "connectorBuilder.setAsActiveVersion.tooltip": "If enabled, will set this configuration as the new active version of your custom connector and update any Sources built on top of it. Only one version can be active per connector.",
+  "connectorBuilder.tableViewMode": "Show records as table",
+  "connectorBuilder.jsonViewMode": "Show records as JSON array",
+  "connectorBuilder.versionModal.title": "Load a configuration",
+  "connectorBuilder.versionModal.warning": "By loading and editing a version, your draft in progress will be lost",
+  "connectorBuilder.versionModal.draftLabel": "Draft in progress",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

@@ -1,3 +1,4 @@
+import { useSelectWorkspace } from "area/workspace/utils/useSelectWorkspace";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as yup from "yup";
@@ -8,14 +9,10 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useCurrentWorkspace, useInvalidateWorkspace } from "core/api";
 import { useUpdateCloudWorkspace } from "core/api/cloud";
 import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useNotificationService } from "hooks/services/Notification";
-import {
-  useCurrentWorkspace,
-  useInvalidateWorkspace,
-  useWorkspaceService,
-} from "services/workspaces/WorkspacesService";
 
 const ValidationSchema = yup.object().shape({
   name: yup.string().required("form.empty.error"),
@@ -30,7 +27,7 @@ export const GeneralSettingsSection: React.FC = () => {
   const { mutateAsync: updateCloudWorkspace } = useUpdateCloudWorkspace();
   const { registerNotification } = useNotificationService();
   const { trackError } = useAppMonitoringService();
-  const { exitWorkspace } = useWorkspaceService();
+  const selectWorkspace = useSelectWorkspace();
   const workspace = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspace.workspaceId);
 
@@ -66,7 +63,7 @@ export const GeneralSettingsSection: React.FC = () => {
       title={
         <FlexContainer justifyContent="space-between">
           <FormattedMessage id="settings.generalSettings" />
-          <Button type="button" onClick={exitWorkspace} data-testid="button.changeWorkspace">
+          <Button type="button" onClick={() => selectWorkspace(null)} data-testid="button.changeWorkspace">
             <FormattedMessage id="settings.generalSettings.changeWorkspace" />
           </Button>
         </FlexContainer>

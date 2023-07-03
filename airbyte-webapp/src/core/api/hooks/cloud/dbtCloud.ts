@@ -24,12 +24,11 @@ import {
 } from "core/request/AirbyteClient";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
-import { useUpdateWorkspace } from "services/workspaces/WorkspacesService";
 
 import { webBackendGetAvailableDbtJobsForWorkspace } from "../../generated/CloudApi";
 import { DbtCloudJobInfo, WorkspaceGetDbtJobsResponse } from "../../types/CloudApi";
+import { useCurrentWorkspace, useUpdateWorkspace } from "../workspaces";
 
 export interface DbtCloudJob {
   accountId: number;

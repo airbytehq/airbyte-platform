@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
+import { useCurrentWorkspace } from "core/api";
 import { useGetCloudWorkspace } from "core/api/cloud";
 import {
   CloudWorkspaceReadCreditStatus as CreditStatus,
@@ -11,7 +12,6 @@ import {
 } from "core/api/types/CloudApi";
 import { useExperiment } from "hooks/services/Experiment";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import styles from "./WorkspaceStatusBanner.module.scss";
 
@@ -82,7 +82,7 @@ export const WorkspaceStatusBanner: React.FC = () => {
   return (
     <>
       {!!workspaceCreditsBannerContent && (
-        <div className={styles.banner}>
+        <div className={styles.banner} data-testid="workspace-status-banner">
           <AlertBanner message={workspaceCreditsBannerContent} />
         </div>
       )}

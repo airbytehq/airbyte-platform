@@ -468,8 +468,8 @@ public class SourceHandler {
   @VisibleForTesting
   JsonNode hydrateOAuthResponseSecret(final String secretId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
-    JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
-    CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
+    final JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
+    final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }
 
@@ -477,7 +477,7 @@ public class SourceHandler {
   JsonNode hydrateConnectionConfiguration(final UUID sourceDefinitionId,
                                           final UUID workspaceId,
                                           final String secretId,
-                                          JsonNode dehydratedConnectionConfiguration)
+                                          final JsonNode dehydratedConnectionConfiguration)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final JsonNode hydratedSecret = hydrateOAuthResponseSecret(secretId);
     final ConnectorSpecification spec =

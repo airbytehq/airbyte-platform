@@ -5,9 +5,9 @@ import * as yup from "yup";
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
+import { useCurrentWorkspace } from "core/api";
 import { useNotificationService } from "hooks/services/Notification";
 import useWorkspace from "hooks/services/useWorkspace";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 const ACCOUNT_UPDATE_NOTIFICATION_ID = "account-update-notification";
 

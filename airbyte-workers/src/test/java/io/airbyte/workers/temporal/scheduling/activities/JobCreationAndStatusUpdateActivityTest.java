@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities;
 
+import static io.airbyte.config.JobConfig.ConfigType.RESET_CONNECTION;
 import static io.airbyte.config.JobConfig.ConfigType.SYNC;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,8 +23,10 @@ import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
+import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.NormalizationSummary;
+import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOutput;
@@ -35,7 +38,6 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -364,6 +366,7 @@ class JobCreationAndStatusUpdateActivityTest {
           .withDestinationDefinitionVersionId(UUID.randomUUID());
 
       final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
+      Mockito.when(mJobConfig.getConfigType()).thenReturn(SYNC);
       Mockito.when(mJobConfig.getSync()).thenReturn(jobSyncConfig);
 
       final Job mJob = Mockito.mock(Job.class);
@@ -489,13 +492,18 @@ class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     void ensureCleanJobState() throws IOException {
+      final JobConfig jobConfig = new JobConfig()
+          .withConfigType(SYNC)
+          .withSync(new JobSyncConfig()
+              .withSourceDefinitionVersionId(UUID.randomUUID())
+              .withDestinationDefinitionVersionId(UUID.randomUUID()));
       final Attempt failedAttempt = new Attempt(0, 1, Path.of(""), null, null, AttemptStatus.FAILED, null, null, 2L, 3L, 3L);
       final int runningAttemptNumber = 1;
       final Attempt runningAttempt = new Attempt(runningAttemptNumber, 1, Path.of(""), null, null, AttemptStatus.RUNNING, null, null, 4L, 5L, null);
-      final Job runningJob = new Job(1, ConfigType.SYNC, CONNECTION_ID.toString(), new JobConfig(), List.of(failedAttempt, runningAttempt),
+      final Job runningJob = new Job(1, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(failedAttempt, runningAttempt),
           JobStatus.RUNNING, 2L, 2L, 3L);
 
-      final Job pendingJob = new Job(2, ConfigType.SYNC, CONNECTION_ID.toString(), new JobConfig(), List.of(), JobStatus.PENDING, 4L, 4L, 5L);
+      final Job pendingJob = new Job(2, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 4L, 4L, 5L);
 
       Mockito.when(mJobPersistence.listJobsForConnectionWithStatuses(CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES))
           .thenReturn(List.of(runningJob, pendingJob));
@@ -521,11 +529,49 @@ class JobCreationAndStatusUpdateActivityTest {
 
   @Test
   void testReleaseStageOrdering() {
-    final List<ReleaseStage> input = List.of(ReleaseStage.alpha, ReleaseStage.custom, ReleaseStage.beta, ReleaseStage.generally_available);
-    final List<ReleaseStage> expected = List.of(ReleaseStage.custom, ReleaseStage.alpha, ReleaseStage.beta, ReleaseStage.generally_available);
+    final List<ReleaseStage> input = List.of(ReleaseStage.ALPHA, ReleaseStage.CUSTOM, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
+    final List<ReleaseStage> expected = List.of(ReleaseStage.CUSTOM, ReleaseStage.ALPHA, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE);
 
     Assertions.assertThat(JobCreationAndStatusUpdateActivityImpl.orderByReleaseStageAsc(input))
         .containsExactlyElementsOf(expected);
+  }
+
+  @Test
+  void testGetSyncJobToReleaseStages() throws IOException {
+    final UUID sourceDefVersionId = UUID.randomUUID();
+    final UUID destinationDefVersionId = UUID.randomUUID();
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(SYNC)
+        .withSync(new JobSyncConfig()
+            .withSourceDefinitionVersionId(sourceDefVersionId)
+            .withDestinationDefinitionVersionId(destinationDefVersionId));
+    final Job job = new Job(JOB_ID, ConfigType.SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
+
+    Mockito.when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId, sourceDefVersionId)))
+        .thenReturn(List.of(
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)));
+
+    final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);
+
+    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA, ReleaseStage.GENERALLY_AVAILABLE);
+  }
+
+  @Test
+  void testGetResetJobToReleaseStages() throws IOException {
+    final UUID destinationDefVersionId = UUID.randomUUID();
+    final JobConfig jobConfig = new JobConfig()
+        .withConfigType(RESET_CONNECTION)
+        .withResetConnection(new JobResetConnectionConfig()
+            .withDestinationDefinitionVersionId(destinationDefVersionId));
+    final Job job = new Job(JOB_ID, RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 0L, 0L, 0L);
+
+    Mockito.when(mConfigRepository.getActorDefinitionVersions(List.of(destinationDefVersionId)))
+        .thenReturn(List.of(
+            new ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA)));
+    final List<ReleaseStage> releaseStages = jobCreationAndStatusUpdateActivity.getJobToReleaseStages(job);
+
+    Assertions.assertThat(releaseStages).contains(ReleaseStage.ALPHA);
   }
 
 }

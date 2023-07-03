@@ -46,28 +46,15 @@ create table "public"."actor_catalog_fetch_event" (
 create table "public"."actor_definition" (
   "id" uuid not null,
   "name" varchar(256) not null,
-  "docker_repository" varchar(256) not null,
-  "docker_image_tag" varchar(256) not null,
-  "documentation_url" varchar(256),
   "icon" varchar(256),
   "actor_type" "public"."actor_type" not null,
   "source_type" "public"."source_type",
-  "spec" jsonb not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
-  "release_stage" "public"."release_stage",
-  "release_date" date,
   "resource_requirements" jsonb,
   "public" boolean not null default false,
   "custom" boolean not null default false,
-  "protocol_version" varchar(255),
-  "normalization_repository" varchar(255),
-  "normalization_tag" varchar(255),
-  "supports_dbt" boolean,
-  "normalization_integration_type" varchar(255),
-  "allowed_hosts" jsonb,
-  "suggested_streams" jsonb,
   "max_seconds_between_messages" int,
   "default_version_id" uuid,
   constraint "actor_definition_pkey"
@@ -215,6 +202,16 @@ create table "public"."operation" (
   constraint "operation_pkey"
     primary key ("id")
 );
+create table "public"."organization" (
+  "id" uuid not null,
+  "name" varchar(256) not null,
+  "user_id" uuid,
+  "email" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "organization_pkey"
+    primary key ("id")
+);
 create table "public"."permission" (
   "id" uuid not null,
   "user_id" uuid not null,
@@ -294,6 +291,7 @@ create table "public"."workspace" (
   "geography" geography_type not null default cast('AUTO' as geography_type),
   "webhook_operation_configs" jsonb,
   "notification_settings" jsonb,
+  "organization_id" uuid,
   constraint "workspace_pkey"
     primary key ("id")
 );
@@ -396,6 +394,10 @@ alter table "public"."user"
   add constraint "user_default_workspace_id_fkey"
     foreign key ("default_workspace_id")
     references "public"."workspace" ("id");
+alter table "public"."workspace"
+  add constraint "workspace_organization_id_fkey"
+    foreign key ("organization_id")
+    references "public"."organization" ("id");
 alter table "public"."workspace_service_account"
   add constraint "workspace_service_account_workspace_id_fkey"
     foreign key ("workspace_id")

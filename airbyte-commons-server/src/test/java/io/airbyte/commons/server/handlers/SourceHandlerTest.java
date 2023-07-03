@@ -115,11 +115,11 @@ class SourceHandlerTest {
     standardSourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(UUID.randomUUID())
         .withName("marketo")
-        .withDockerRepository("thebestrepo")
-        .withDocumentationUrl("https://wikipedia.org")
         .withIcon(ICON);
 
     sourceDefinitionVersion = new ActorDefinitionVersion()
+        .withDockerRepository("thebestrepo")
+        .withDocumentationUrl("https://wikipedia.org")
         .withDockerImageTag("thelatesttag")
         .withSpec(connectorSpecification);
 

@@ -1,9 +1,9 @@
 import { useIntl } from "react-intl";
 
+import { useFreeConnectorProgram } from "core/api/cloud";
 import { ReleaseStage } from "core/request/AirbyteClient";
 
 import styles from "./FreeTag.module.scss";
-import { useFreeConnectorProgram } from "./hooks/useFreeConnectorProgram";
 import { freeReleaseStages } from "./lib/model";
 
 interface FreeTagProps {

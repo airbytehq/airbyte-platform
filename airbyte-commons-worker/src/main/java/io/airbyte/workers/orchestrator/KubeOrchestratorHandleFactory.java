@@ -80,7 +80,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         activityContext,
         serverPort,
         temporalUtils,
-        workerConfigs);
+        workerConfigs,
+        featureFlagClient);
   }
 
   /**

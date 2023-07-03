@@ -3,6 +3,7 @@ import toPath from "lodash/toPath";
 import { ReactNode, useEffect, useRef } from "react";
 import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
+import { Rnd } from "react-rnd";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
@@ -35,6 +36,7 @@ interface ArrayFieldProps {
   setValue: (value: string[]) => void;
   error: boolean;
   itemType?: string;
+  directionalStyle?: boolean;
 }
 
 interface BaseFieldProps {
@@ -60,7 +62,7 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void }
-    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string }
+    | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
@@ -81,7 +83,7 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
   );
 };
 
-const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType }) => {
+const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, itemType, directionalStyle }) => {
   return (
     <TagInput
       name={name}
@@ -89,7 +91,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({ name, value, setValue, error, i
       onChange={(value) => setValue(value)}
       itemType={itemType}
       error={error}
-      directionalStyle
+      directionalStyle={directionalStyle}
     />
   );
 };
@@ -210,16 +212,40 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
         />
       )}
       {props.type === "jsoneditor" && (
-        <CodeEditor
-          height="300px"
-          key={path}
-          value={field.value || ""}
-          language="json"
-          theme="airbyte-light"
-          onChange={(val: string | undefined) => {
-            setValue(val);
-          }}
-        />
+        <div style={{ position: "relative" }}>
+          <Rnd
+            disableDragging
+            enableResizing={{
+              top: false,
+              right: false,
+              bottom: true,
+              left: false,
+              topRight: false,
+              bottomRight: false,
+              bottomLeft: false,
+              topLeft: false,
+            }}
+            default={{
+              x: 0,
+              y: 0,
+              width: "100%",
+              height: 300,
+            }}
+            resizeHandleClasses={{ bottom: styles.draghandle }}
+            style={{ position: "relative" }}
+          >
+            <CodeEditor
+              key={path}
+              automaticLayout
+              value={field.value || ""}
+              language="json"
+              theme="airbyte-light"
+              onChange={(val: string | undefined) => {
+                setValue(val);
+              }}
+            />
+          </Rnd>
+        </div>
       )}
       {props.type === "array" && (
         <div data-testid={`tag-input-${path}`}>
@@ -229,6 +255,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
             itemType={props.itemType}
             setValue={setValue}
             error={hasError}
+            directionalStyle={props.directionalStyle ?? true}
           />
         </div>
       )}

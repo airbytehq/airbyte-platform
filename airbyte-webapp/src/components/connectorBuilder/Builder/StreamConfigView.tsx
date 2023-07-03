@@ -88,7 +88,14 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
               manifestPath="DpathExtractor.properties.field_path"
               optional
             />
-            <BuilderField type="array" path={streamFieldPath("primaryKey")} manifestPath="PrimaryKey" optional />
+            <BuilderField
+              type="array"
+              path={streamFieldPath("primaryKey")}
+              label="Primary key"
+              tooltip="The field to be used to distinguish unique records. Can either be a single field or a list of fields representing a composite key."
+              directionalStyle={false}
+              optional
+            />
           </BuilderCard>
           <RequestOptionSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
           <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />

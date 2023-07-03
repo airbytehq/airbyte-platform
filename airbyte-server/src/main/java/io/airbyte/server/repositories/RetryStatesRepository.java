@@ -11,12 +11,24 @@ import io.micronaut.data.repository.PageableRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-@SuppressWarnings("MissingJavadocType")
+@SuppressWarnings({"MissingJavadocMethod", "MissingJavadocType"})
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public interface RetryStatesRepository extends PageableRepository<RetryState, UUID> {
 
   Optional<RetryState> findByJobId(final Long jobId);
 
   void updateByJobId(final Long jobId, final RetryState update);
+
+  boolean existsByJobId(final long jobId);
+
+  default void createOrUpdateByJobId(final long jobId, final RetryState payload) {
+    final var exists = existsByJobId(jobId);
+
+    if (exists) {
+      updateByJobId(jobId, payload);
+    } else {
+      save(payload);
+    }
+  }
 
 }

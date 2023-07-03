@@ -51,10 +51,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
       MetricEmittingApps.WORKER,
       "activity_normalization_summary_check",
       "increments when we start a normalization summary check activity"),
-  ACTIVITY_PERSIST_STATE(
-      MetricEmittingApps.WORKER,
-      "activity_persist_state",
-      "increments when we start a persist state activtiy"),
   ACTIVITY_REFRESH_SCHEMA(
       MetricEmittingApps.WORKER,
       "activity_refresh_schema",
@@ -247,11 +243,6 @@ public enum OssMetricsRegistry implements MetricsRegistry {
   STATS_COMMIT_ATTEMPT_FAILED(MetricEmittingApps.WORKER,
       "stats_commit_attempt_failed",
       "number of failed attempts to commit stats from the orchestrator/workers"),
-  @Deprecated
-  // To be deleted along with PersistStateActivity
-  STATE_COMMIT_ATTEMPT_FROM_PERSIST_STATE(MetricEmittingApps.WORKER,
-      "state_commit_attempt_from_persist_state",
-      "number of attempts to commit states from the PersistState activity"),
   STATS_COMMIT_ATTEMPT_SUCCESSFUL(MetricEmittingApps.WORKER,
       "stats_commit_attempt_successful",
       "number of successful attempts to commit stats from the orchestrator/workers"),

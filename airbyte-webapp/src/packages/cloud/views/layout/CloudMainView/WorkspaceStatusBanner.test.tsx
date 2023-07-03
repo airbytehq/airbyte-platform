@@ -13,7 +13,7 @@ import { I18nProvider } from "core/i18n";
 import { WorkspaceStatusBanner } from "./WorkspaceStatusBanner";
 import cloudLocales from "../../../locales/en.json";
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({
     workspace: { workspaceId: "123" },
   }),
@@ -122,8 +122,8 @@ describe("WorkspaceCreditsBanner", () => {
         };
       });
 
-      const { container } = render(workspaceBannerWithFlagTrue);
-      expect(container).toBeEmptyDOMElement();
+      const { queryByTestId } = render(workspaceBannerWithFlagTrue);
+      expect(queryByTestId("workspace-status-banner")).toBeNull();
     });
   });
 
@@ -174,8 +174,8 @@ describe("WorkspaceCreditsBanner", () => {
         };
       });
 
-      const { container } = render(workspaceBannerWithFlagDefault);
-      expect(container).toBeEmptyDOMElement();
+      const { queryByTestId } = render(workspaceBannerWithFlagDefault);
+      expect(queryByTestId("workspace-status-banner")).toBeNull();
     });
   });
 });

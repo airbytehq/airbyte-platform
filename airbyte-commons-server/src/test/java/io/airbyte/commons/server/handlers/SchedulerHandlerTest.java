@@ -352,7 +352,6 @@ class SchedulerHandlerTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
-        .withDockerRepository(SOURCE_DOCKER_REPO)
         .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
     when(configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
@@ -380,7 +379,6 @@ class SchedulerHandlerTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
-        .withDockerRepository(SOURCE_DOCKER_REPO)
         .withSourceDefinitionId(sourceDefinitionId);
     when(configRepository.getSourceConnection(sourceId)).thenReturn(
         new SourceConnection()
@@ -391,6 +389,7 @@ class SchedulerHandlerTest {
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId))
         .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(SOURCE_DOCKER_REPO)
             .withDockerImageTag(SOURCE_DOCKER_TAG)
             .withSpec(CONNECTOR_SPECIFICATION));
 
@@ -407,12 +406,12 @@ class SchedulerHandlerTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
-        .withDockerRepository(SOURCE_DOCKER_REPO)
         .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId());
     when(configRepository.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.getWorkspaceId()))
         .thenReturn(new ActorDefinitionVersion()
+            .withDockerRepository(SOURCE_DOCKER_REPO)
             .withDockerImageTag(SOURCE_DOCKER_TAG)
             .withSpec(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL));
 
@@ -430,7 +429,6 @@ class SchedulerHandlerTest {
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
-        .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
     when(configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
@@ -459,7 +457,6 @@ class SchedulerHandlerTest {
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
-        .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDestinationDefinitionId(destinationDefinitionId);
     when(configRepository.getDestinationConnection(destinationId)).thenReturn(
         new DestinationConnection()
@@ -772,12 +769,11 @@ class SchedulerHandlerTest {
     when(metadata.isSucceeded()).thenReturn(true);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
-        .withDockerRepository(SOURCE_DOCKER_REPO)
         .withSourceDefinitionId(source.getSourceDefinitionId());
     when(configRepository.getStandardSourceDefinition(source.getSourceDefinitionId()))
         .thenReturn(sourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId()))
-        .thenReturn(new ActorDefinitionVersion().withDockerImageTag(SOURCE_DOCKER_TAG));
+        .thenReturn(new ActorDefinitionVersion().withDockerRepository(SOURCE_DOCKER_REPO).withDockerImageTag(SOURCE_DOCKER_TAG));
     when(configRepository.getSourceConnection(source.getSourceId())).thenReturn(source);
     final ActorCatalog actorCatalog = new ActorCatalog()
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
@@ -908,6 +904,7 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).connectionId(connectionId)
+            .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
@@ -927,7 +924,7 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, source.getName(), CONNECTION_URL, false);
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDef, source.getWorkspaceId(), source.getSourceId());
   }
 
@@ -968,7 +965,8 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).notifySchemaChanges(true);
+            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
+            .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -988,7 +986,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, source.getName(), CONNECTION_URL, false);
   }
 
   @Test
@@ -1028,7 +1026,7 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).connectionId(connectionId).notifySchemaChanges(false);
+            NonBreakingChangesPreference.DISABLE).connectionId(connectionId).sourceId(source.getSourceId()).notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -1092,6 +1090,7 @@ class SchedulerHandlerTest {
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).status(ConnectionStatus.ACTIVE)
             .connectionId(connectionId)
+            .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
@@ -1115,7 +1114,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, true);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, source.getName(), CONNECTION_URL, true);
   }
 
   @Test
@@ -1156,6 +1155,7 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).connectionId(connectionId)
+            .sourceId(source.getSourceId())
             .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
@@ -1179,7 +1179,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, true);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, source.getName(), CONNECTION_URL, true);
   }
 
   @Test
@@ -1216,7 +1216,8 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.INACTIVE).connectionId(connectionId).notifySchemaChanges(false);
+            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.INACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
+            .notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -1291,15 +1292,18 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).notifySchemaChanges(true);
+            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).sourceId(source.getSourceId())
+            .notifySchemaChanges(true);
 
     final ConnectionRead connectionRead2 =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId2).notifySchemaChanges(true);
+            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId2).sourceId(source.getSourceId())
+            .notifySchemaChanges(true);
 
     final ConnectionRead connectionRead3 =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent, sourceVersion)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId3).notifySchemaChanges(false);
+            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId3).sourceId(source.getSourceId())
+            .notifySchemaChanges(false);
 
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead, connectionRead2, connectionRead3);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff1, catalogDiff2, catalogDiff3);
@@ -1329,9 +1333,9 @@ class SchedulerHandlerTest {
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(0).getStatus());
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(1).getStatus());
     assertEquals(ConnectionStatus.INACTIVE, connectionUpdateValues.get(2).getStatus());
-    verify(eventRunner).sendSchemaChangeNotification(connectionId, CONNECTION_URL, false);
-    verify(eventRunner).sendSchemaChangeNotification(connectionId2, CONNECTION_URL, false);
-    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, CONNECTION_URL, false);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId, source.getName(), CONNECTION_URL, false);
+    verify(eventRunner).sendSchemaChangeNotification(connectionId2, source.getName(), CONNECTION_URL, false);
+    verify(eventRunner, times(0)).sendSchemaChangeNotification(connectionId3, source.getName(), CONNECTION_URL, false);
   }
 
   @Test

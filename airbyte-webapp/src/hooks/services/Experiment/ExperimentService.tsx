@@ -27,7 +27,7 @@ const experimentContext = createContext<ExperimentService | null>(null);
  */
 export interface ExperimentService {
   addContext: (kind: ContextKind, key: string) => void;
-  removeContext: (kind: ContextKind) => void;
+  removeContext: (kind: Exclude<ContextKind, "user">) => void;
   getExperiment<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K];
   getExperimentChanges$<K extends keyof Experiments>(key: K): Observable<Experiments[K]>;
 }
@@ -39,7 +39,7 @@ const debugContext = isDevelopment() ? (msg: string) => console.debug(`%c${msg}`
  * potentialy causing new flags to be fetched. The context will be removed when the component unmounts,
  * or when a falsy key is passed.
  */
-export const useExperimentContext = (kind: ContextKind, key: string | undefined) => {
+export const useExperimentContext = (kind: Exclude<ContextKind, "user">, key: string | undefined) => {
   const experimentService = useContext(experimentContext);
 
   useEffect(() => {

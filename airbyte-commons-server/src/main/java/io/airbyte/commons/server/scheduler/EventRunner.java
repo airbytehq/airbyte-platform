@@ -31,6 +31,6 @@ public interface EventRunner {
 
   void update(final UUID connectionId);
 
-  void sendSchemaChangeNotification(final UUID connectionId, final String url, final boolean containsBreakingChange);
+  void sendSchemaChangeNotification(final UUID connectionId, final String connectionName, final String url, final boolean containsBreakingChange);
 
 }

@@ -234,6 +234,16 @@ public interface JobPersistence {
   List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, String configId, int limit, int offset) throws IOException;
 
   /**
+   * List jobs of a connection. Pageable.
+   *
+   * @param configTypes - type of config, e.g. sync
+   * @param workspaceIds - ids of requested workspaces
+   * @return lists job in descending order by created_at
+   * @throws IOException - what you do when you IO
+   */
+  List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, List<UUID> workspaceIds, int limit, int offset) throws IOException;
+
+  /**
    * List jobs of a config type after a certain time.
    *
    * @param configType The type of job

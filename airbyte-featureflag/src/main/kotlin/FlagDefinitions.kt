@@ -21,8 +21,6 @@ object NeedStateValidation : EnvVar(envVar = "NEED_STATE_VALIDATION")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object CommitStatsAsap : Temporary<Boolean>(key = "platform.commitStatsAsap", default = true)
-
 object NormalizationInDestination : Temporary<String>(key = "connectors.normalizationInDestination", default = "")
 
 object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
@@ -30,8 +28,6 @@ object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelect
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
 object ConnectorVersionOverridesEnabled : Temporary<Boolean>(key = "connectors.versionOverridesEnabled", default = false)
-
-object UseActorDefinitionVersionTableDefaults : Temporary<Boolean>(key = "connectors.useActorDefinitionVersionTableDefaults", default = false)
 
 object MinimumCreditQuantity : Temporary<Int>(key = "minimum-credit-quantity", default = 100)
 
@@ -67,6 +63,8 @@ object ConnectorVersionOverride : Permanent<String>(key = "connectors.versionOve
 object RefreshSchemaPeriod : Temporary<Int>(key= "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
+
+object ConcurrentSocatResources : Temporary<String>(key = "concurrent.socat.resources", default = "")
 
 object ReplicationWorkerImpl : Permanent<String>(key = "platform.replication-worker-impl", default = "default")
 

@@ -138,10 +138,6 @@ public class DefaultReplicationWorker implements ReplicationWorker {
       ApmTraceUtils.addTagsToTrace(replicationContext.connectionId(), jobId, jobRoot);
 
       final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags(syncInput);
-      LOGGER.info("Committing states from " + (flags.shouldCommitStateAsap() ? "replication" : "persistState") + " activity");
-      if (flags.shouldCommitStatsAsap()) {
-        LOGGER.info("Committing stats from replication activity");
-      }
       replicationWorkerHelper.initialize(replicationContext, flags);
 
       replicate(jobRoot, syncInput);

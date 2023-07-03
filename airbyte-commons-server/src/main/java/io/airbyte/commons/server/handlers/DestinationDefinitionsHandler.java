@@ -216,12 +216,6 @@ public class DestinationDefinitionsHandler {
         .withDestinationDefinitionId(id)
         .withName(destinationDefCreate.getName())
         .withIcon(destinationDefCreate.getIcon())
-        .withDockerRepository(actorDefinitionVersion.getDockerRepository())
-        .withDockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .withDocumentationUrl(actorDefinitionVersion.getDocumentationUrl())
-        .withSpec(actorDefinitionVersion.getSpec())
-        .withProtocolVersion(actorDefinitionVersion.getProtocolVersion())
-        .withReleaseStage(actorDefinitionVersion.getReleaseStage())
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
@@ -295,22 +289,12 @@ public class DestinationDefinitionsHandler {
 
     final StandardDestinationDefinition newDestination = new StandardDestinationDefinition()
         .withDestinationDefinitionId(currentDestination.getDestinationDefinitionId())
-        .withDockerImageTag(newVersion.getDockerImageTag())
-        .withDockerRepository(newVersion.getDockerRepository())
         .withName(currentDestination.getName())
-        .withDocumentationUrl(newVersion.getDocumentationUrl())
         .withIcon(currentDestination.getIcon())
-        .withNormalizationConfig(newVersion.getNormalizationConfig())
-        .withSupportsDbt(newVersion.getSupportsDbt())
-        .withSpec(newVersion.getSpec())
-        .withProtocolVersion(newVersion.getProtocolVersion())
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())
-        .withReleaseStage(newVersion.getReleaseStage())
-        .withReleaseDate(newVersion.getReleaseDate())
-        .withResourceRequirements(updatedResourceReqs)
-        .withAllowedHosts(newVersion.getAllowedHosts());
+        .withResourceRequirements(updatedResourceReqs);
 
     configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion);
     configRepository.clearUnsupportedProtocolVersionFlag(newDestination.getDestinationDefinitionId(), ActorType.DESTINATION, protocolVersionRange);

@@ -53,7 +53,7 @@ export const useBuildUpdateCheck = () => {
             registerNotification({
               id: "webapp-updated",
               text: formatMessage({ id: "notifications.airbyteUpdated" }),
-              nonClosable: true,
+              timeout: false,
               actionBtnText: formatMessage({ id: "notifications.airbyteUpdated.reload" }),
               onAction: () => window.location.reload(),
             });
