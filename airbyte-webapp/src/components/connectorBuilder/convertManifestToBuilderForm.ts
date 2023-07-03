@@ -520,19 +520,15 @@ function manifestPaginatorToBuilder(
     return undefined;
   }
 
-  if (manifestPaginator.page_token_option === undefined) {
-    throw new ManifestCompatibilityError(streamName, "paginator does not define a page_token_option");
-  }
-
   if (manifestPaginator.pagination_strategy.type === "CustomPaginationStrategy") {
     throw new ManifestCompatibilityError(streamName, "paginator.pagination_strategy uses a CustomPaginationStrategy");
   }
 
   let pageTokenOption: RequestOptionOrPathInject | undefined = undefined;
 
-  if (manifestPaginator.page_token_option.type === "RequestPath") {
+  if (manifestPaginator.page_token_option?.type === "RequestPath") {
     pageTokenOption = { inject_into: "path" };
-  } else {
+  } else if (manifestPaginator.page_token_option?.type === "RequestOption") {
     pageTokenOption = {
       inject_into: manifestPaginator.page_token_option.inject_into,
       field_name: manifestPaginator.page_token_option.field_name,

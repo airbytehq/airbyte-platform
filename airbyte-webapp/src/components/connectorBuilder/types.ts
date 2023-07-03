@@ -96,7 +96,7 @@ export interface BuilderCursorPagination extends Omit<CursorPagination, "cursor_
 
 export interface BuilderPaginator {
   strategy: PageIncrement | OffsetIncrement | BuilderCursorPagination;
-  pageTokenOption: RequestOptionOrPathInject;
+  pageTokenOption?: RequestOptionOrPathInject;
   pageSizeOption?: RequestOption;
 }
 
@@ -616,14 +616,19 @@ export const builderFormValidationSchema = yup.object().shape({
               then: nonPathRequestOptionSchema,
               otherwise: (schema) => schema.strip(),
             }),
-            pageTokenOption: yup.object().shape({
-              inject_into: yup.mixed().oneOf(injectIntoValues),
-              field_name: yup.mixed().when("inject_into", {
-                is: "path",
-                then: (schema) => schema.strip(),
-                otherwise: yup.string().required("form.empty.error"),
-              }),
-            }),
+            pageTokenOption: yup
+              .object()
+              .shape({
+                inject_into: yup.mixed().oneOf(injectIntoValues),
+                field_name: yup.mixed().when("inject_into", {
+                  is: "path",
+                  then: (schema) => schema.strip(),
+                  otherwise: yup.string().required("form.empty.error"),
+                }),
+              })
+              .notRequired()
+              .default(undefined),
+
             strategy: yup
               .object({
                 page_size: yupNumberOrEmptyString,
@@ -861,8 +866,10 @@ function builderPaginatorToManifest(paginator: BuilderStream["paginator"]): Simp
     return { type: "NoPagination" };
   }
 
-  let pageTokenOption: DefaultPaginatorPageTokenOption;
-  if (paginator?.pageTokenOption.inject_into === "path") {
+  let pageTokenOption: DefaultPaginatorPageTokenOption | undefined;
+  if (!paginator.pageTokenOption) {
+    pageTokenOption = undefined;
+  } else if (paginator?.pageTokenOption.inject_into === "path") {
     pageTokenOption = { type: "RequestPath" };
   } else {
     pageTokenOption = {
