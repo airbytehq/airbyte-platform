@@ -976,6 +976,8 @@
   "connectorBuilder.releaseNewVersionDescription": "Adds a new version of this custom connector to your workspace",
   "connectorBuilder.setAsActiveVersion.label": "Set as active version",
   "connectorBuilder.setAsActiveVersion.tooltip": "If enabled, will set this configuration as the new active version of your custom connector and update any Sources built on top of it. Only one version can be active per connector.",
+  "connectorBuilder.tableViewMode": "Show records as table",
+  "connectorBuilder.jsonViewMode": "Show records as JSON array",
   "connectorBuilder.versionModal.title": "Load a configuration",
   "connectorBuilder.versionModal.warning": "By loading and editing a version, your draft in progress will be lost",
   "connectorBuilder.versionModal.draftLabel": "Draft in progress",
