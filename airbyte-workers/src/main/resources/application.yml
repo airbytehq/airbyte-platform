@@ -113,6 +113,17 @@ airbyte:
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
+  retries:
+    complete—failures:
+      max-successive: 5
+      max-total: 1000
+      backoff:
+        min-interval-s: 10
+        max-interval-s: 1800 # 30 minutes
+        base: 3 # 10s, 30s, 90s, 13.5m, 121.5m (capped to 30)
+    partial—failures:
+      max-successive: 1000
+      max-total: 10
   worker:
     kube-job-configs:
       default:
