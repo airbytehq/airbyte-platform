@@ -126,7 +126,7 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
                 </div>
               }
             >
-              <JobLogsModalContent jobId={jobWithAttempts.job.id} job={jobWithAttempts} />
+              <JobLogsModalContent jobId={jobWithAttempts.job.id} />
             </Suspense>
           ),
         });
@@ -200,9 +200,20 @@ export const NewJobItem: React.FC<NewJobItemProps> = ({ jobWithAttempts }) => {
       <DropdownMenu
         placement="bottom-end"
         options={[
-          { displayName: formatMessage({ id: "jobHistory.copyLinkToJob" }), value: ContextMenuOptions.CopyLinkToJob },
-          { displayName: formatMessage({ id: "jobHistory.viewLogs" }), value: ContextMenuOptions.OpenLogsModal },
-          { displayName: formatMessage({ id: "jobHistory.downloadLogs" }), value: ContextMenuOptions.DownloadLogs },
+          {
+            displayName: formatMessage({ id: "jobHistory.copyLinkToJob" }),
+            value: ContextMenuOptions.CopyLinkToJob,
+          },
+          {
+            displayName: formatMessage({ id: "jobHistory.viewLogs" }),
+            value: ContextMenuOptions.OpenLogsModal,
+            disabled: jobWithAttempts.attempts.length === 0,
+          },
+          {
+            displayName: formatMessage({ id: "jobHistory.downloadLogs" }),
+            value: ContextMenuOptions.DownloadLogs,
+            disabled: jobWithAttempts.attempts.length === 0,
+          },
         ]}
         onChange={handleClick}
       >
