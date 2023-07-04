@@ -60,6 +60,17 @@ create table "public"."actor_definition" (
   constraint "actor_definition_pkey"
     primary key ("id")
 );
+create table "public"."actor_definition_breaking_change" (
+  "actor_definition_id" uuid not null,
+  "version" varchar(256) not null,
+  "migration_documentation_url" varchar(256) not null,
+  "upgrade_deadline" date not null,
+  "message" varchar(256) not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "actor_definition_breaking_change_pkey"
+    primary key ("actor_definition_id", "version")
+);
 create table "public"."actor_definition_config_injection" (
   "json_to_inject" jsonb not null,
   "injection_path" varchar(2147483647) not null,
@@ -330,6 +341,10 @@ alter table "public"."actor_definition"
   add constraint "actor_definition_default_version_id_fkey"
     foreign key ("default_version_id")
     references "public"."actor_definition_version" ("id");
+alter table "public"."actor_definition_breaking_change"
+  add constraint "actor_definition_breaking_change_actor_definition_id_fkey"
+    foreign key ("actor_definition_id")
+    references "public"."actor_definition" ("id");
 alter table "public"."actor_definition_config_injection"
   add constraint "actor_definition_config_injection_actor_definition_id_fkey"
     foreign key ("actor_definition_id")
