@@ -2,7 +2,7 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { createColumnHelper } from "@tanstack/react-table";
 import React, { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
@@ -12,14 +12,12 @@ import { useListUsers, useUserHook } from "core/api/cloud";
 import { WorkspaceUserRead } from "core/api/types/CloudApi";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useModalService } from "hooks/services/Modal";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import {
-  InviteUsersModalServiceProvider,
-  useInviteUsersModalService,
-} from "packages/cloud/services/users/InviteUsersModalService";
 
 import styles from "./UsersSettingsView.module.scss";
+import { InviteUsersModal } from "../InviteUsersModal";
 
 const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ workspaceId, email }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -47,16 +45,23 @@ const RemoveUserSection: React.VFC<{ workspaceId: string; email: string }> = ({ 
 };
 
 const Header: React.VFC = () => {
-  const { toggleInviteUsersModalOpen } = useInviteUsersModalService();
+  const { openModal } = useModalService();
+  const { formatMessage } = useIntl();
+
+  const onOpenInviteUsersModal = () =>
+    openModal({
+      title: formatMessage({ id: "modals.addUser.title" }),
+      content: () => <InviteUsersModal invitedFrom="user.settings" />,
+      size: "md",
+    });
+
   return (
     <div className={styles.header}>
       <Heading as="h1" size="sm">
         <FormattedMessage id="userSettings.table.title" />
       </Heading>
       <Button
-        onClick={() => {
-          toggleInviteUsersModalOpen();
-        }}
+        onClick={onOpenInviteUsersModal}
         icon={<FontAwesomeIcon icon={faPlus} />}
         data-testid="userSettings.button.addNewUser"
       >
@@ -116,9 +121,9 @@ export const UsersSettingsView: React.VFC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ACCESS_MANAGEMENT);
 
   return (
-    <InviteUsersModalServiceProvider invitedFrom="user.settings">
+    <>
       <Header />
       <UsersTable />
-    </InviteUsersModalServiceProvider>
+    </>
   );
 };

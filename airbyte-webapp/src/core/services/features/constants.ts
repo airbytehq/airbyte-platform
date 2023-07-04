@@ -15,4 +15,5 @@ export const defaultCloudFeatures = [
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.FreeConnectorProgram,
   FeatureItem.EmailNotifications,
+  FeatureItem.ShowInviteUsersHint,
 ];

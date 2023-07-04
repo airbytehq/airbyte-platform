@@ -138,7 +138,6 @@
   "userSettings.button.addNewUser": "New user",
   "userSettings.user.remove": "Remove",
   "modals.addUser.title": "Add new users",
-  "modals.addUser.email.label": "Email address",
   "modals.addUser.role.label": "Role",
   "modals.addUser.role.placeholder": "Select a role",
   "modals.addUser.button.addUser": "Add another user",
@@ -152,7 +151,8 @@
   "settings.accessManagement.roleEditors": "<b>Editors</b> can edit connections",
   "settings.accessManagement.roleAdmin": "<b>Admin</b> can also manage users",
 
-  "addUsers.success.title": "Invitations sent!",
+  "inviteUsers.invitationsSentSuccess": "Invitations sent!",
+  "inviteUsers.invitationsSentError": "Something went wrong. Please try again.",
 
   "credits.date": "Date",
   "credits.amount": "Credits",
