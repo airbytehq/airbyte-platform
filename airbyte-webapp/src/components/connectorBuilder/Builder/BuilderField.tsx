@@ -24,7 +24,7 @@ import styles from "./BuilderField.module.scss";
 import { getLabelAndTooltip } from "./manifestHelpers";
 
 interface EnumFieldProps {
-  options: string[];
+  options: string[] | Array<{ label: string; value: string }>;
   value: string;
   setValue: (value: string) => void;
   error: boolean;
@@ -65,7 +65,11 @@ export type BuilderFieldProps = BaseFieldProps &
     | { type: "array"; onChange?: (newValue: string[]) => void; itemType?: string; directionalStyle?: boolean }
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
-    | { type: "enum"; onChange?: (newValue: string) => void; options: string[] }
+    | {
+        type: "enum";
+        onChange?: (newValue: string) => void;
+        options: string[] | Array<{ label: string; value: string }>;
+      }
     | { type: "combobox"; onChange?: (newValue: string) => void; options: Option[] }
   );
 
@@ -73,9 +77,13 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
   return (
     <DropDown
       {...props}
-      options={options.map((option) => {
-        return { label: option, value: option };
-      })}
+      options={
+        typeof options[0] === "string"
+          ? (options as string[]).map((option) => {
+              return { label: option, value: option };
+            })
+          : (options as Array<{ label: string; value: string }>)
+      }
       onChange={(selected) => selected && setValue(selected.value)}
       value={value}
       error={error}
