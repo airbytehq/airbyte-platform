@@ -16,10 +16,10 @@ import { SortableTableHeader } from "components/ui/Table";
 import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCurrentWorkspace } from "core/api";
 import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
 import { useQuery } from "hooks/useQuery";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
 import { useCreditsContext } from "./CreditsUsageContext";
@@ -83,7 +83,7 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   const columnHelper = useMemo(() => createColumnHelper<ConnectionFreeAndPaidUsage>(), []);
 
-  const billingInsightsColumns = React.useMemo(() => {
+  const columns = React.useMemo(() => {
     return [
       columnHelper.accessor("connection.connectionName", {
         header: () => (
@@ -275,7 +275,7 @@ export const UsagePerConnectionTable: React.FC = () => {
     <div className={styles.content}>
       <Table
         variant="white"
-        columns={billingInsightsColumns}
+        columns={columns}
         sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
         data={sortingData}
       />

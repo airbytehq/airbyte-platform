@@ -14,7 +14,7 @@ public class GithubOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new GithubOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new GithubOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

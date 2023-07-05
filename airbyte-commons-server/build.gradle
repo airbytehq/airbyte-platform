@@ -39,6 +39,7 @@ dependencies {
     implementation project(':airbyte-oauth')
     implementation libs.airbyte.protocol
     implementation project(':airbyte-persistence:job-persistence')
+    implementation project(':airbyte-notification')
 
     implementation libs.slugify
     implementation libs.quartz.scheduler

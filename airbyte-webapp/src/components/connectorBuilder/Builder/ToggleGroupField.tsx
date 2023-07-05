@@ -1,4 +1,4 @@
-import { useField } from "formik";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import GroupControls from "components/GroupControls";
 import { ControlLabels } from "components/LabeledControl";
@@ -21,18 +21,20 @@ export function ToggleGroupField<T>({
   fieldPath,
   initialValues,
 }: React.PropsWithChildren<ToggleGroupFieldProps<T>>) {
-  const [field, , helpers] = useField(fieldPath);
-  const enabled = field.value !== undefined;
+  const value = useWatch({ name: fieldPath, exact: false }) as T | undefined;
+  const { setValue, unregister } = useFormContext();
+  const enabled = value !== undefined;
 
   const labelComponent = (
     <div className={styles.label}>
       <CheckBox
+        id={fieldPath}
         checked={enabled}
         onChange={(event) => {
-          event.target.checked ? helpers.setValue(initialValues) : helpers.setValue(undefined);
+          event.target.checked ? setValue(fieldPath, initialValues) : unregister(fieldPath);
         }}
       />
-      <ControlLabels label={label} infoTooltipContent={tooltip} />
+      <ControlLabels label={label} infoTooltipContent={tooltip} htmlFor={fieldPath} />
     </div>
   );
 

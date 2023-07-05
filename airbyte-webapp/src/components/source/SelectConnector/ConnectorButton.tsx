@@ -1,8 +1,10 @@
 import { ConnectorIcon } from "components/common/ConnectorIcon";
+import { BuilderPrompt } from "components/connectorBuilder/BuilderPrompt";
 import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { Text } from "components/ui/Text";
 
 import { ConnectorDefinition } from "core/domain/connector";
+import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectorButton.module.scss";
 
@@ -24,5 +26,16 @@ export const ConnectorButton = <T extends ConnectorDefinition>({ definition, onC
         <ReleaseStageBadge stage={definition.releaseStage} />
       </span>
     </button>
+  );
+};
+
+export const BuilderConnectorButton: React.FC = () => {
+  return (
+    <BuilderPrompt
+      className={styles.button}
+      shortDescription
+      renderAsButton
+      builderRoutePath={`../../${RoutePaths.ConnectorBuilder}`}
+    />
   );
 };

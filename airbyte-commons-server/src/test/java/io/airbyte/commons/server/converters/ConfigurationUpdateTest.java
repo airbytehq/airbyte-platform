@@ -28,6 +28,7 @@ import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,9 +53,9 @@ class ConfigurationUpdateTest {
       .put(JdbcUtils.USERNAME_KEY, "airbyte")
       .put(JdbcUtils.PASSWORD_KEY, "xyz")
       .build());
-  private static final StandardSourceDefinition SOURCE_DEFINITION = new StandardSourceDefinition()
-      .withDockerRepository(IMAGE_REPOSITORY);
+  private static final StandardSourceDefinition SOURCE_DEFINITION = new StandardSourceDefinition();
   private static final ActorDefinitionVersion DEFINITION_VERSION = new ActorDefinitionVersion()
+      .withDockerRepository(IMAGE_REPOSITORY)
       .withDockerImageTag(IMAGE_TAG)
       .withSpec(CONNECTOR_SPECIFICATION);
   private static final SourceConnection ORIGINAL_SOURCE_CONNECTION = new SourceConnection()
@@ -67,10 +68,7 @@ class ConfigurationUpdateTest {
       .withSourceDefinitionId(UUID2)
       .withWorkspaceId(WORKSPACE_ID)
       .withConfiguration(NEW_CONFIGURATION);
-  private static final StandardDestinationDefinition DESTINATION_DEFINITION = new StandardDestinationDefinition()
-      .withDockerRepository(IMAGE_REPOSITORY)
-      .withDockerImageTag(IMAGE_TAG)
-      .withSpec(CONNECTOR_SPECIFICATION);
+  private static final StandardDestinationDefinition DESTINATION_DEFINITION = new StandardDestinationDefinition();
   private static final DestinationConnection ORIGINAL_DESTINATION_CONNECTION = new DestinationConnection()
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)
@@ -122,6 +120,51 @@ class ConfigurationUpdateTest {
 
     assertEquals(NEW_DESTINATION_CONNECTION, actual);
     Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1);
+  }
+
+  @Test
+  void testPartialUpdateSourceNoUpdate() throws JsonValidationException, IOException, ConfigNotFoundException {
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(configRepository.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
+
+    // Test updating nothing
+    final SourceConnection noUpdate = configurationUpdate.partialSource(UUID1, null, null);
+    assertEquals(ORIGINAL_SOURCE_CONNECTION, noUpdate);
+  }
+
+  @Test
+  void testPartialUpdateSourceName() throws JsonValidationException, IOException, ConfigNotFoundException {
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(configRepository.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
+
+    // Test only giving a name
+    final SourceConnection updatedName = configurationUpdate.partialSource(UUID1, "TEST", null);
+    assertEquals(Jsons.clone(ORIGINAL_SOURCE_CONNECTION).withName("TEST"), updatedName);
+  }
+
+  @Test
+  void testPartialUpdateSourceConfig() throws JsonValidationException, IOException, ConfigNotFoundException {
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(configRepository.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
+
+    // Test updating only configuration
+    final SourceConnection updatedConfiguration = configurationUpdate.partialSource(UUID1, null, NEW_CONFIGURATION);
+    assertEquals(NEW_SOURCE_CONNECTION, updatedConfiguration);
+  }
+
+  @Test
+  void testPartialUpdateSourcePartialConfig() throws JsonValidationException, IOException, ConfigNotFoundException {
+    when(secretsRepositoryReader.getSourceConnectionWithSecrets(UUID1)).thenReturn(Jsons.clone(ORIGINAL_SOURCE_CONNECTION));
+    when(configRepository.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION);
+
+    // Test partial configuration update
+    final JsonNode partialConfig = Jsons.jsonNode(Map.of(JdbcUtils.PASSWORD_KEY, "123"));
+    final JsonNode expectedConfiguration = Jsons.jsonNode(ImmutableMap.builder()
+        .put(JdbcUtils.USERNAME_KEY, "airbyte")
+        .put(JdbcUtils.PASSWORD_KEY, "123")
+        .build());
+    final SourceConnection partialUpdateConfiguration = configurationUpdate.partialSource(UUID1, null, partialConfig);
+    assertEquals(Jsons.clone(NEW_SOURCE_CONNECTION).withConfiguration(expectedConfiguration), partialUpdateConfiguration);
   }
 
 }

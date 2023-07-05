@@ -16,7 +16,7 @@ public class InstagramOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new InstagramOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new InstagramOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

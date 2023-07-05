@@ -11,6 +11,7 @@
   padding: variables.$spacing-xl;
   background-color: colors.$grey-50;
   border-radius: variables.$border-radius-md;
+  overflow-y: auto;
 }
 
 .inputFormModalFooter {

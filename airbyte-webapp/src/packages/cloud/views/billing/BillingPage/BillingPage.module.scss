@@ -2,11 +2,7 @@
 @forward "src/components/ui/Button/Button.module.scss";
 
 .content {
-  height: 100%;
-}
-
-.emailVerificationHint {
-  margin-bottom: variables.$spacing-md;
+  min-width: variables.$min-width-wide-table-container;
 }
 
 .creditUsageLoading {

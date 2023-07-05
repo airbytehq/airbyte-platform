@@ -18,6 +18,8 @@ import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
 import io.airbyte.workers.Worker;
 import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.sync.ReplicationLauncherWorker;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
@@ -41,31 +43,32 @@ import java.util.function.Supplier;
 public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory {
 
   private final ContainerOrchestratorConfig containerOrchestratorConfig;
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final FeatureFlagClient featureFlagClient;
   private final TemporalUtils temporalUtils;
   private final Integer serverPort;
 
   public KubeOrchestratorHandleFactory(@Named("containerOrchestratorConfig") final ContainerOrchestratorConfig containerOrchestratorConfig,
-                                       @Named("replicationWorkerConfigs") final WorkerConfigs workerConfigs,
+                                       final WorkerConfigsProvider workerConfigsProvider,
                                        final FeatureFlagClient featureFlagClient,
                                        final TemporalUtils temporalUtils,
                                        @Value("${micronaut.server.port}") final Integer serverPort) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.featureFlagClient = featureFlagClient;
     this.temporalUtils = temporalUtils;
     this.serverPort = serverPort;
   }
 
   @Override
-  public CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(IntegrationLauncherConfig sourceLauncherConfig,
-                                                                                         IntegrationLauncherConfig destinationLauncherConfig,
-                                                                                         JobRunConfig jobRunConfig,
-                                                                                         StandardSyncInput syncInput,
+  public CheckedSupplier<Worker<StandardSyncInput, ReplicationOutput>, Exception> create(final IntegrationLauncherConfig sourceLauncherConfig,
+                                                                                         final IntegrationLauncherConfig destinationLauncherConfig,
+                                                                                         final JobRunConfig jobRunConfig,
+                                                                                         final StandardSyncInput syncInput,
                                                                                          final Supplier<ActivityExecutionContext> activityContext) {
     final ContainerOrchestratorConfig finalConfig = injectContainerOrchestratorConfig(featureFlagClient, containerOrchestratorConfig,
         syncInput.getConnectionId());
+    final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(ResourceType.REPLICATION);
 
     return () -> new ReplicationLauncherWorker(
         syncInput.getConnectionId(),
@@ -77,7 +80,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         activityContext,
         serverPort,
         temporalUtils,
-        workerConfigs);
+        workerConfigs,
+        featureFlagClient);
   }
 
   /**
@@ -121,7 +125,8 @@ public class KubeOrchestratorHandleFactory implements OrchestratorHandleFactory 
         orchestratorImage,
         containerOrchestratorConfig.containerOrchestratorImagePullPolicy(),
         containerOrchestratorConfig.googleApplicationCredentials(),
-        containerOrchestratorConfig.workerEnvironment());
+        containerOrchestratorConfig.workerEnvironment(),
+        containerOrchestratorConfig.serviceAccount());
   }
 
 }

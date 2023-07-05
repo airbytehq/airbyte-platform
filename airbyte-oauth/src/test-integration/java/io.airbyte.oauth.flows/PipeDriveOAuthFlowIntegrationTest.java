@@ -44,7 +44,7 @@ public class PipeDriveOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest 
 
   @Override
   protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
-    return new PipeDriveOAuthFlow(configRepository, httpClient);
+    return new PipeDriveOAuthFlow(httpClient);
   }
 
   @Test
@@ -53,21 +53,22 @@ public class PipeDriveOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest 
     final UUID definitionId = UUID.randomUUID();
     final String fullConfigAsString = Files.readString(getCredentialsPath());
     final JsonNode credentialsJson = Jsons.deserialize(fullConfigAsString);
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(Map.of("authorization", ImmutableMap.builder()
             .put("client_id", credentialsJson.get("client_id").asText())
             .put("client_secret", credentialsJson.get("client_secret").asText())
-            .build())))));
+            .build())));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
     final String url = getFlowImplementation(configRepository, httpClient).getSourceConsentUrl(workspaceId, definitionId, getRedirectUrl(),
-        Jsons.emptyObject(), null);
+        Jsons.emptyObject(), null, sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     waitForResponse(20);
     assertTrue(serverHandler.isSucceeded(), "Failed to get User consent on time");
     final Map<String, Object> params = flow.completeSourceOAuth(workspaceId, definitionId,
-        Map.of("code", serverHandler.getParamValue()), getRedirectUrl());
+        Map.of("code", serverHandler.getParamValue()), getRedirectUrl(), sourceOAuthParameter.getConfiguration());
     LOGGER.info("Response from completing OAuth Flow is: {}", params.toString());
     assertTrue(params.containsKey("authorization"));
     final var creds = (Map<String, String>) params.get("authorization");

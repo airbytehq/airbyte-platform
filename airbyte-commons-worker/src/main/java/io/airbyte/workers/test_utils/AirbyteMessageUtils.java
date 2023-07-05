@@ -19,6 +19,8 @@ import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage;
 import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.AirbyteStreamState;
+import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
+import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
 import io.airbyte.protocol.models.AirbyteTraceMessage;
 import io.airbyte.protocol.models.Config;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -84,10 +86,12 @@ public class AirbyteMessageUtils {
         .withState(new AirbyteStateMessage().withData(Jsons.jsonNode(stateData)));
   }
 
-  public static AirbyteMessage createStateMessage(final String key, final String value) {
+  public static AirbyteMessage createStateMessage(final String streamName, final String key, final String value) {
     return new AirbyteMessage()
         .withType(Type.STATE)
-        .withState(new AirbyteStateMessage().withData(Jsons.jsonNode(ImmutableMap.of(key, value))));
+        .withState(new AirbyteStateMessage()
+            .withStream(createStreamState(streamName))
+            .withData(Jsons.jsonNode(ImmutableMap.of(key, value))));
   }
 
   public static AirbyteStateMessage createStreamStateMessage(final String streamName, final int stateData) {
@@ -118,7 +122,7 @@ public class AirbyteMessageUtils {
     return createEstimateMessage(AirbyteEstimateTraceMessage.Type.SYNC, null, null, byteEst, rowEst);
   }
 
-  public static AirbyteMessage createEstimateMessage(AirbyteEstimateTraceMessage.Type type,
+  public static AirbyteMessage createEstimateMessage(final AirbyteEstimateTraceMessage.Type type,
                                                      final String name,
                                                      final String namespace,
                                                      final long byteEst,
@@ -174,6 +178,21 @@ public class AirbyteMessageUtils {
             .withType(AirbyteControlMessage.Type.CONNECTOR_CONFIG)
             .withConnectorConfig(new AirbyteControlConnectorConfigMessage()
                 .withConfig(config)));
+  }
+
+  public static AirbyteMessage createStatusTraceMessage(final StreamDescriptor stream, final AirbyteStreamStatus status) {
+    final AirbyteStreamStatusTraceMessage airbyteStreamStatusTraceMessage = new AirbyteStreamStatusTraceMessage()
+        .withStatus(status)
+        .withStreamDescriptor(stream);
+
+    final AirbyteTraceMessage airbyteTraceMessage = new AirbyteTraceMessage()
+        .withEmittedAt(Long.valueOf(System.currentTimeMillis()).doubleValue())
+        .withType(AirbyteTraceMessage.Type.STREAM_STATUS)
+        .withStreamStatus(airbyteStreamStatusTraceMessage);
+
+    return new AirbyteMessage()
+        .withType(Type.TRACE)
+        .withTrace(airbyteTraceMessage);
   }
 
 }

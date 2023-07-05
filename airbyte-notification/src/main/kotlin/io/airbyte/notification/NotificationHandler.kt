@@ -1,10 +1,18 @@
 package io.airbyte.notification
 
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClientFactory
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import jakarta.inject.Singleton
 import java.util.UUID
 
 enum class NotificationType {
     webhook, customerio
+}
+
+enum class NotificationEvent {
+    onNonBreakingChange, onBreakingChange
 }
 
 @Singleton
@@ -13,6 +21,7 @@ open class NotificationHandler(
         private val maybeCustomerIoConfigFetcher: CustomerIoEmailConfigFetcher?,
         private val maybeWebhookNotificationSender: WebhookNotificationSender?,
         private val maybeCustomerIoNotificationSender: CustomerIoEmailNotificationSender?,
+        private val maybeWorkspaceNotificationConfigFetcher: WorkspaceNotificationConfigFetcher?,
 ) {
     /**
      * Send a notification with a subject and a message if a configuration is present
@@ -34,4 +43,39 @@ open class NotificationHandler(
             }
         }
     }
+
+    open fun sendNotification(connectionId: UUID, subject: String, message: String, notificationEvent: NotificationEvent) {
+        val notificationItemWithCustomerIoEmailConfig = maybeWorkspaceNotificationConfigFetcher?.fetchNotificationConfig(connectionId, notificationEvent)
+
+        var notificationItem = notificationItemWithCustomerIoEmailConfig?.getNotificationItem()
+        notificationItem?.notificationType?.forEach { notificationType ->
+            runCatching {
+                if (maybeWebhookNotificationSender != null
+                        && notificationType == io.airbyte.api.client.model.generated.NotificationType.SLACK) {
+                    val webhookConfig = WebhookConfig(
+                        notificationItem
+                            !!.slackConfiguration
+                            !!.webhook)
+                    maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)
+                    MetricClientFactory.getMetricClient().count(
+                            OssMetricsRegistry.NOTIFICATIONS_SENT, 1,
+                            MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, notificationEvent.name),
+                            MetricAttribute(MetricTags.NOTIFICATION_CLIENT, "slack"))
+                }
+
+                if (maybeCustomerIoNotificationSender != null
+                    && notificationType == io.airbyte.api.client.model.generated.NotificationType.CUSTOMERIO) {
+                        maybeCustomerIoNotificationSender
+                            .sendNotification(notificationItemWithCustomerIoEmailConfig
+                            !!.customerIoEmailConfig, subject, message)
+                    MetricClientFactory.getMetricClient().count(
+                            OssMetricsRegistry.NOTIFICATIONS_SENT, 1,
+                            MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, notificationEvent.name),
+                            MetricAttribute(MetricTags.NOTIFICATION_CLIENT, "customerio"))
+
+                }
+            }
+        }
+    }
 }
+

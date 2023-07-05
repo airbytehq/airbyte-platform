@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { JobsWithJobs } from "components/JobItem/types";
+import { JobWithAttempts } from "components/JobItem/types";
 import { getJobStatus } from "components/JobItem/utils";
 import { Text } from "components/ui/Text";
 
@@ -15,12 +15,12 @@ import { ProgressLine } from "./JobProgressLine";
 import { StreamProgress } from "./StreamProgress";
 import { progressBarCalculations } from "./utils";
 
-function isJobsWithJobs(job: JobsWithJobs | SynchronousJobRead): job is JobsWithJobs {
+function isJobsWithJobs(job: JobWithAttempts | SynchronousJobRead): job is JobWithAttempts {
   return "attempts" in job;
 }
 
 interface ProgressBarProps {
-  job: JobsWithJobs | SynchronousJobRead;
+  job: JobWithAttempts | SynchronousJobRead;
   expanded?: boolean;
 }
 

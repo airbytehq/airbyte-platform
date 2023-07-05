@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -20,7 +19,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -31,12 +29,8 @@ public class NotionOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTHORIZE_URL = "https://api.notion.com/v1/oauth/authorize";
   private static final String ACCESS_TOKEN_URL = "https://api.notion.com/v1/oauth/token";
 
-  public NotionOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
-  }
-
-  public NotionOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public NotionOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   /**

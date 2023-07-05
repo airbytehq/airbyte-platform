@@ -31,9 +31,9 @@
   @include header-background(colors.$white, colors.$grey-30);
 
   border-bottom: 1px solid colors.$grey-50;
-  padding: 0 variables.$spacing-xl 0 0;
+  padding: 0 variables.$spacing-xl 0 variables.$spacing-md;
   margin-bottom: 1px;
-  gap: variables.$spacing-sm;
+  gap: variables.$spacing-md;
   min-height: 50px;
   height: 50px;
   align-items: center;
@@ -59,32 +59,23 @@
     animation: highlight 2s ease-out;
   }
 }
-%streamRowCheckboxCell,
-.streamRowCheckboxCell {
-  height: 100%; // cover the parent so it can intercept & ignore row clicks
-  width: 53px;
-  text-align: center;
-  font-size: 10px;
-  line-height: 13px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: variables.$spacing-sm;
-  cursor: default;
-}
 
 .syncCell {
   height: 100%; // cover the parent so it can intercept & ignore row clicks
+  width: 75px;
+  text-align: center;
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  justify-content: center;
-  width: 35px;
+  gap: variables.$spacing-md;
   cursor: default;
 }
 
 .fieldsCell {
   width: 60px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .syncModeCell {
@@ -94,4 +85,12 @@
 .arrowCell {
   width: 20px;
   text-align: center;
+}
+
+.dataDestinationCell {
+  width: 170px;
+}
+
+.undefinedField {
+  font-style: italic;
 }

@@ -1,2 +1,2 @@
-export { useExperiment, ExperimentProvider } from "./ExperimentService";
-export type { ExperimentService } from "./ExperimentService";
+export { useExperiment, ExperimentProvider, useExperimentContext } from "./ExperimentService";
+export type { ExperimentService, ContextKind } from "./ExperimentService";

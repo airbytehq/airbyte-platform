@@ -31,18 +31,15 @@ public class DefaultPostLoadExecutor implements PostLoadExecutor {
   private final DeclarativeSourceUpdater declarativeSourceUpdater;
   private final FeatureFlags featureFlags;
   private final JobPersistence jobPersistence;
-  private final SecretMigrator secretMigrator;
 
   public DefaultPostLoadExecutor(final ApplyDefinitionsHelper applyDefinitionsHelper,
                                  final DeclarativeSourceUpdater declarativeSourceUpdater,
                                  final FeatureFlags featureFlags,
-                                 final JobPersistence jobPersistence,
-                                 final SecretMigrator secretMigrator) {
+                                 final JobPersistence jobPersistence) {
     this.applyDefinitionsHelper = applyDefinitionsHelper;
     this.declarativeSourceUpdater = declarativeSourceUpdater;
     this.featureFlags = featureFlags;
     this.jobPersistence = jobPersistence;
-    this.secretMigrator = secretMigrator;
   }
 
   @Override
@@ -50,12 +47,6 @@ public class DefaultPostLoadExecutor implements PostLoadExecutor {
     applyDefinitionsHelper.apply();
     declarativeSourceUpdater.apply();
 
-    if (featureFlags.forceSecretMigration() || !jobPersistence.isSecretMigrated()) {
-      if (this.secretMigrator != null) {
-        this.secretMigrator.migrateSecrets();
-        log.info("Secrets successfully migrated.");
-      }
-    }
     log.info("Loaded seed data.");
   }
 

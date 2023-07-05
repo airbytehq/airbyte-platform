@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
@@ -62,23 +63,27 @@ class ConnectorRegistryConvertersTest {
 
     final StandardSourceDefinition stdSourceDef = new StandardSourceDefinition()
         .withSourceDefinitionId(DEF_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_TAG)
         .withName(CONNECTOR_NAME)
-        .withDocumentationUrl(DOCS_URL)
-        .withSpec(SPEC)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withResourceRequirements(RESOURCE_REQUIREMENTS)
+        .withMaxSecondsBetweenMessages(10L);
+
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(DEF_ID)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_TAG)
+        .withSpec(SPEC)
+        .withDocumentationUrl(DOCS_URL)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
-        .withSuggestedStreams(suggestedStreams)
-        .withResourceRequirements(RESOURCE_REQUIREMENTS)
-        .withMaxSecondsBetweenMessages(10L);
+        .withSuggestedStreams(suggestedStreams);
 
     assertEquals(stdSourceDef, ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDef));
+    assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef));
   }
 
   @Test
@@ -108,23 +113,27 @@ class ConnectorRegistryConvertersTest {
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
-        .withDockerRepository(DOCKER_REPOSITORY)
-        .withDockerImageTag(DOCKER_TAG)
         .withName(CONNECTOR_NAME)
-        .withDocumentationUrl(DOCS_URL)
-        .withSpec(SPEC)
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
+        .withResourceRequirements(RESOURCE_REQUIREMENTS);
+
+    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(DEF_ID)
+        .withDockerRepository(DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_TAG)
+        .withSpec(SPEC)
+        .withDocumentationUrl(DOCS_URL)
         .withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE)
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
-        .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withNormalizationConfig(normalizationConfig)
         .withSupportsDbt(true);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
+    assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));
   }
 
 }

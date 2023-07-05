@@ -14,7 +14,7 @@ public class DriftOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new DriftOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new DriftOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override
@@ -26,19 +26,23 @@ public class DriftOAuthFlowTest extends BaseOAuthFlowTest {
   protected Map<String, String> getExpectedOutput() {
     return Map.of(
         "access_token", "access_token_response",
+        "refresh_token", "refresh_token_response",
         "client_id", MoreOAuthParameters.SECRET_MASK,
         "client_secret", MoreOAuthParameters.SECRET_MASK);
   }
 
   @Override
   protected JsonNode getCompleteOAuthOutputSpecification() {
-    return getJsonSchema(Map.of("access_token", Map.of("type", "string")));
+    return getJsonSchema(Map.of(
+        "access_token", Map.of("type", "string"),
+        "refresh_token", Map.of("type", "string")));
   }
 
   @Override
   protected Map<String, String> getExpectedFilteredOutput() {
     return Map.of(
         "access_token", "access_token_response",
+        "refresh_token", "refresh_token_response",
         "client_id", MoreOAuthParameters.SECRET_MASK);
   }
 

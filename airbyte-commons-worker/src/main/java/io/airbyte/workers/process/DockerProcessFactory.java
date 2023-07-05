@@ -17,10 +17,14 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerConfigs;
 import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -48,7 +52,7 @@ public class DockerProcessFactory implements ProcessFactory {
   public static final String JAVA_OPTS = "JAVA_OPTS";
 
   private final String workspaceMountSource;
-  private final WorkerConfigs workerConfigs;
+  private final WorkerConfigsProvider workerConfigsProvider;
   private final Path workspaceRoot;
   private final String localMountSource;
   private final String networkName;
@@ -62,12 +66,12 @@ public class DockerProcessFactory implements ProcessFactory {
    * @param localMountSource local volume
    * @param networkName docker network
    */
-  public DockerProcessFactory(final WorkerConfigs workerConfigs,
+  public DockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider,
                               final Path workspaceRoot,
                               final String workspaceMountSource,
                               final String localMountSource,
                               final String networkName) {
-    this.workerConfigs = workerConfigs;
+    this.workerConfigsProvider = workerConfigsProvider;
     this.workspaceRoot = workspaceRoot;
     this.workspaceMountSource = workspaceMountSource;
     this.localMountSource = localMountSource;
@@ -90,7 +94,8 @@ public class DockerProcessFactory implements ProcessFactory {
   }
 
   @Override
-  public Process create(final String jobType,
+  public Process create(final ResourceType resourceType,
+                        final String jobType,
                         final String jobId,
                         final int attempt,
                         final Path jobRoot,
@@ -104,6 +109,7 @@ public class DockerProcessFactory implements ProcessFactory {
                         final Map<String, String> labels,
                         final Map<String, String> jobMetadata,
                         final Map<Integer, Integer> internalToExternalPorts,
+                        Map<String, String> additionalEnvironmentVariables,
                         final String... args)
       throws WorkerException {
     try {
@@ -134,6 +140,7 @@ public class DockerProcessFactory implements ProcessFactory {
       cmd.add("--name");
       cmd.add(containerName);
       cmd.addAll(localDebuggingOptions(containerName, System.getenv("DEBUG_CONTAINER_IMAGE"), System.getenv("DEBUG_CONTAINER_JAVA_OPTS")));
+      cmd.addAll(includeAdditionalEnvironmentVariables(additionalEnvironmentVariables));
 
       if (networkName != null) {
         cmd.add("--network");
@@ -150,6 +157,7 @@ public class DockerProcessFactory implements ProcessFactory {
         cmd.add(String.format("%s:%s", localMountSource, LOCAL_MOUNT_DESTINATION));
       }
 
+      final WorkerConfigs workerConfigs = workerConfigsProvider.getConfig(resourceType);
       final Map<String, String> allEnvMap = MoreMaps.merge(jobMetadata, workerConfigs.getEnvMap());
       for (final Map.Entry<String, String> envEntry : allEnvMap.entrySet()) {
         cmd.add("-e");
@@ -190,6 +198,22 @@ public class DockerProcessFactory implements ProcessFactory {
   }
 
   /**
+   * Creates a list of environment variable flags for the docker run command from a map of additional
+   * environment variables.
+   *
+   * @param additionalEnvironmentVariables a map of environment variables to value
+   * @return a list where each entry in the map will be converted to ["-e", "KEY=VALUE"]
+   */
+  private static List<String> includeAdditionalEnvironmentVariables(final Map<String, String> additionalEnvironmentVariables) {
+    final List<String> envVarFlags = new ArrayList<>();
+    additionalEnvironmentVariables.forEach((k, v) -> {
+      envVarFlags.add("-e");
+      envVarFlags.add(String.join("=", k, v));
+    });
+    return envVarFlags;
+  }
+
+  /**
    * !! ONLY FOR DEBUGGING, SHOULD NOT BE USED IN PRODUCTION !! If you set the DEBUG_CONTAINER_IMAGE
    * environment variable, and it matches the image name of a spawned container, this method will add
    * the necessary params to connect a debugger. For example, to enable this for
@@ -207,7 +231,7 @@ public class DockerProcessFactory implements ProcessFactory {
     try {
       // See if the DEBUG_CONTAINER_IMAGE environment variable is set with a debugging port
       Map<String, String> debuggingConnectors = extractConnectorDebuggingInfo(debugContainer);
-      String shortName = ProcessFactory.extractShortImageName(containerName);
+      String shortName = DockerImageNameHelper.extractShortImageName(containerName);
       Optional<String> port = debuggingConnectors.keySet().stream()
           .filter(shortName::startsWith)
           .map(debuggingConnectors::get)

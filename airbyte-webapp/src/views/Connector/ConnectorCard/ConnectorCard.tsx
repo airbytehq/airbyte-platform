@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { Spinner } from "components/ui/Spinner";
 
@@ -11,9 +12,13 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { DestinationRead, SourceRead, SynchronousJobRead } from "core/request/AirbyteClient";
+import { DestinationRead, ReleaseStage, SourceRead, SynchronousJobRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
+import { useExperiment } from "hooks/services/Experiment";
+import { isCloudApp } from "utils/app";
+import { ConnectorIds } from "utils/connectors";
 import { generateMessageFromError } from "utils/errorStatusMessage";
+import { links } from "utils/links";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -22,17 +27,17 @@ import styles from "./ConnectorCard.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { useTestConnector } from "./useTestConnector";
 import { useDocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
-import { ConnectorDefinitionTypeControl } from "../ConnectorForm/components/Controls/ConnectorServiceTypeControl";
+import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 
 // TODO: need to clean up the ConnectorCard and ConnectorForm props,
 // since some of props are used in both components, and some of them used just as a prop-drill
 // https://github.com/airbytehq/airbyte/issues/18553
 interface ConnectorCardBaseProps {
   title?: React.ReactNode;
+  headerBlock?: React.ReactNode;
   description?: React.ReactNode;
   full?: boolean;
   jobInfo?: SynchronousJobRead | null;
-  additionalSelectorComponent?: React.ReactNode;
   onSubmit: (values: ConnectorCardValues) => Promise<void> | void;
   reloadConfig?: () => void;
   onDeleteClick?: () => void;
@@ -71,14 +76,14 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   jobInfo,
   onSubmit,
   onDeleteClick,
-  additionalSelectorComponent,
   selectedConnectorDefinitionId,
   fetchingConnectorError,
   reloadConfig,
+  headerBlock,
   ...props
 }) => {
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
-  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
+  const showAllowlistIpBanner = useExperiment("connector.allowlistIpBanner", false) && isCloudApp();
 
   const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
     useDocumentationPanelContext();
@@ -99,12 +104,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     setErrorStatusRequest(null);
   }, [props.selectedConnectorDefinitionSpecification, reset]);
 
-  const {
-    selectedConnectorDefinitionSpecification,
-    onConnectorDefinitionSelect,
-    availableConnectorDefinitions,
-    isEditMode,
-  } = props;
+  const { selectedConnectorDefinitionSpecification, availableConnectorDefinitions, isEditMode } = props;
 
   const selectedConnectorDefinitionSpecificationId =
     selectedConnectorDefinitionId ||
@@ -159,7 +159,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       return;
     }
     setErrorStatusRequest(null);
-    setIsFormSubmitting(true);
 
     //  combine the "ConnectorFormValues" and serviceType to make "ConnectorFormValues"
     const connectorCardValues: ConnectorCardValues = {
@@ -176,7 +175,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       }
     } catch (e) {
       setErrorStatusRequest(e);
-      setIsFormSubmitting(false);
       // keep throwing the exception to inform the component the submit did not go through
       throw e;
     }
@@ -194,20 +192,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 
   return (
     <ConnectorForm
+      trackDirtyChanges
       headerBlock={
-        <>
-          <div className={styles.connectorSelectControl}>
-            <ConnectorDefinitionTypeControl
-              formType={props.formType}
-              isEditMode={isEditMode}
-              disabled={isFormSubmitting}
-              availableConnectorDefinitions={availableConnectorDefinitions}
-              selectedConnectorDefinition={selectedConnectorDefinition}
-              selectedConnectorDefinitionSpecificationId={selectedConnectorDefinitionSpecificationId}
-              onChangeConnectorDefinition={onConnectorDefinitionSelect}
-            />
-          </div>
-          {additionalSelectorComponent}
+        <FlexContainer direction="column" className={styles.header}>
+          {headerBlock}
+          {selectedConnectorDefinition &&
+            (selectedConnectorDefinition.releaseStage === ReleaseStage.alpha ||
+              selectedConnectorDefinition.releaseStage === ReleaseStage.beta) && (
+              <WarningMessage stage={selectedConnectorDefinition.releaseStage} />
+            )}
           {props.isLoading && (
             <div className={styles.loaderContainer}>
               <Spinner />
@@ -223,12 +216,16 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               secondaryText={<FormattedMessage id="form.tryAgain" />}
             />
           )}
-        </>
+        </FlexContainer>
       }
       // Causes the whole ConnectorForm to be unmounted and a new instance mounted whenever the connector type changes.
       // That way we carry less state around inside it, preventing any state from one connector type from affecting another
       // connector type's form in any way.
-      key={selectedConnectorDefinition && Connector.id(selectedConnectorDefinition)}
+      // Also re-mount the connector form if the spec changes
+      key={
+        selectedConnectorDefinition &&
+        Connector.id(selectedConnectorDefinition) + (selectedConnectorDefinitionSpecification ? "true" : "false")
+      }
       {...props}
       selectedConnectorDefinition={selectedConnectorDefinition}
       selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
@@ -239,31 +236,52 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       connectorId={isEditMode ? getConnectorId(props.connector) : undefined}
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
         selectedConnectorDefinitionSpecification && (
-          <Controls
-            isEditMode={Boolean(isEditMode)}
-            isTestConnectionInProgress={isTestConnectionInProgress}
-            onCancelTesting={onStopTesting}
-            isSubmitting={isSubmitting || isTestConnectionInProgress}
-            errorMessage={error && generateMessageFromError(error)}
-            formType={props.formType}
-            hasDefinition={Boolean(selectedConnectorDefinitionId)}
-            onRetestClick={() => {
-              if (!selectedConnectorDefinitionId) {
-                return;
-              }
-              handleTestConnector(
-                isEditMode ? undefined : { ...getValues(), serviceType: selectedConnectorDefinitionId }
-              );
-            }}
-            onDeleteClick={onDeleteClick}
-            isValid={isValid}
-            dirty={dirty}
-            job={job ? job : undefined}
-            onCancelClick={() => {
-              resetConnectorForm();
-            }}
-            connectionTestSuccess={connectionTestSuccess}
-          />
+          <>
+            {(selectedConnectorDefinitionId === ConnectorIds.Sources.Postgres ||
+              selectedConnectorDefinitionId === ConnectorIds.Destinations.Postgres) &&
+              showAllowlistIpBanner && (
+                <Message
+                  type="info"
+                  text={
+                    <FormattedMessage
+                      id="connectorForm.allowlistIp"
+                      values={{
+                        a: (node: React.ReactNode) => (
+                          <a href={links.cloudAllowlistIPsLink} target="_blank" rel="noreferrer">
+                            {node}
+                          </a>
+                        ),
+                      }}
+                    />
+                  }
+                />
+              )}
+            <Controls
+              isEditMode={Boolean(isEditMode)}
+              isTestConnectionInProgress={isTestConnectionInProgress}
+              onCancelTesting={onStopTesting}
+              isSubmitting={isSubmitting || isTestConnectionInProgress}
+              errorMessage={error && generateMessageFromError(error)}
+              formType={props.formType}
+              hasDefinition={Boolean(selectedConnectorDefinitionId)}
+              onRetestClick={() => {
+                if (!selectedConnectorDefinitionId) {
+                  return;
+                }
+                handleTestConnector(
+                  isEditMode ? undefined : { ...getValues(), serviceType: selectedConnectorDefinitionId }
+                );
+              }}
+              onDeleteClick={onDeleteClick}
+              isValid={isValid}
+              dirty={dirty}
+              job={job ? job : undefined}
+              onCancelClick={() => {
+                resetConnectorForm();
+              }}
+              connectionTestSuccess={connectionTestSuccess}
+            />
+          </>
         )
       }
     />

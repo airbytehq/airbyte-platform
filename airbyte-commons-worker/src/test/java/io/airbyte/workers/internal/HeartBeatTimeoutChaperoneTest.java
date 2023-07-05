@@ -39,7 +39,7 @@ class HeartBeatTimeoutChaperoneTest {
 
   @Test
   void testFailHeartbeat() {
-    when(featureFlagClient.enabled(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
@@ -81,7 +81,7 @@ class HeartBeatTimeoutChaperoneTest {
 
   @Test
   void testNotFailingHeartbeatIfFalseFlag() {
-    when(featureFlagClient.enabled(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
@@ -108,7 +108,7 @@ class HeartBeatTimeoutChaperoneTest {
         workspaceId,
         connectionId,
         metricClient);
-    when(featureFlagClient.enabled(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
     assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));
     verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
@@ -124,7 +124,7 @@ class HeartBeatTimeoutChaperoneTest {
         workspaceId,
         connectionId,
         metricClient);
-    when(featureFlagClient.enabled(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
+    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(false));
 
     assertDoesNotThrow(() -> CompletableFuture.runAsync(() -> heartbeatTimeoutChaperone.monitor()).get(1000, TimeUnit.MILLISECONDS));

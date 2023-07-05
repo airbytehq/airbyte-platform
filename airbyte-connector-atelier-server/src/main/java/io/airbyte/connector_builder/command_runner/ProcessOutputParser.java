@@ -4,9 +4,12 @@
 
 package io.airbyte.connector_builder.command_runner;
 
+import datadog.trace.api.Trace;
 import io.airbyte.commons.io.IOs;
+import io.airbyte.connector_builder.ApmTraceConstants;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connector_builder.exceptions.CdkProcessException;
+import io.airbyte.connector_builder.exceptions.CdkUnknownException;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
 import io.airbyte.protocol.models.AirbyteMessage;
 import io.airbyte.protocol.models.AirbyteMessage.Type;
@@ -21,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +37,7 @@ public class ProcessOutputParser {
   private static final int timeOut = 30;
 
   @SuppressWarnings("PMD.AvoidCatchingNPE")
+  @Trace(operationName = ApmTraceConstants.CONNECTOR_BUILDER_OPERATION_NAME)
   AirbyteRecordMessage parse(
                              final Process process,
                              final AirbyteStreamFactory streamFactory,
@@ -42,12 +47,11 @@ public class ProcessOutputParser {
     try {
       messagesByType = WorkerUtils.getMessagesByType(process, streamFactory, timeOut);
     } catch (final NullPointerException exc) {
-      checkProcessError(process, cdkCommand);
+      throwCdkException(process, cdkCommand);
     }
 
-    if (messagesByType == null) {
-      throw new AirbyteCdkInvalidInputException(
-          String.format("No records found for %s request.", cdkCommand));
+    if (messagesByType == null || messagesByType.isEmpty()) {
+      throwCdkException(process, cdkCommand);
     }
 
     final Optional<AirbyteRecordMessage> record = messagesByType
@@ -70,27 +74,33 @@ public class ProcessOutputParser {
           "Error response from CDK: {}\n{}",
           traceMessage.getError().getMessage(),
           traceMessage.getError().getStackTrace());
-      throw new AirbyteCdkInvalidInputException("AirbyteTraceMessage response from CDK.", trace.get());
-    } else {
       throw new AirbyteCdkInvalidInputException(
-          String.format("No records found for %s request.", cdkCommand));
+          String.format("AirbyteTraceMessage response from CDK: %s", traceMessage.getError().getMessage()), traceMessage);
     }
+    throw generateError(process, cdkCommand);
   }
 
-  void checkProcessError(final Process process, final String cdkCommand)
-      throws CdkProcessException {
+  private void throwCdkException(final Process process, final String cdkCommand) {
+    throw generateError(process, cdkCommand);
+  }
+
+  private RuntimeException generateError(final Process process, final String cdkCommand)
+      throws CdkProcessException, CdkUnknownException {
     final int exitCode = process.exitValue();
     if (exitCode == 0) {
-      return;
+      final String errorMessage = String.format(
+          "The CDK command `%s` completed properly but no records nor trace were found. Logs were: %s.", cdkCommand, process.exitValue());
+      LOGGER.error(errorMessage);
+      return new CdkUnknownException(errorMessage);
     }
 
     final InputStream errStream = process.getErrorStream();
     final BufferedReader stderr = IOs.newBufferedReader(errStream);
-    final String error = stderr.toString();
+    final String error = stderr.lines().collect(Collectors.joining());
 
-    throw new CdkProcessException(
-        String.format("CDK subprocess for %s finished with exit code %d. error=%s",
-            cdkCommand, exitCode, error));
+    final String errorMessage = String.format("CDK subprocess for %s finished with exit code %d. error=%s", cdkCommand, exitCode, error);
+    LOGGER.error(errorMessage);
+    return new CdkProcessException(errorMessage);
   }
 
 }

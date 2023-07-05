@@ -70,7 +70,6 @@ dependencyResolutionManagement {
 include ':airbyte-commons'
 
 include ':airbyte-api'
-include ':airbyte-commons-cli'
 include ':airbyte-commons-protocol'
 include ':airbyte-config:specs'
 include ':airbyte-config:init'
@@ -94,6 +93,7 @@ include ':airbyte-persistence:job-persistence' // transitively used by airbyte-w
 include ':airbyte-worker-models'
 
 include ':airbyte-bootloader'
+include ':airbyte-commons-micronaut'
 include ':airbyte-commons-server'
 include ':airbyte-connector-atelier-server'
 include ':airbyte-connector-builder-server'
@@ -105,5 +105,4 @@ include ':airbyte-server'
 include ':airbyte-temporal'
 include ':airbyte-tests'
 include ':airbyte-webapp'
-include ':airbyte-webapp-e2e-tests'
 include ':airbyte-workers'

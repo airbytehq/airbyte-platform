@@ -7,13 +7,10 @@ import { SetupForm } from "components/settings/SetupForm";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import useWorkspace from "hooks/services/useWorkspace";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
 export const SetupPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.PREFERENCES);
-
-  const { setInitialSetupConfig } = useWorkspace();
 
   return (
     <PageViewContainer>
@@ -22,7 +19,7 @@ export const SetupPage: React.FC = () => {
         <FormattedMessage id="preferences.title" />
       </Heading>
       <Box mt="2xl">
-        <SetupForm onSubmit={setInitialSetupConfig} />
+        <SetupForm />
       </Box>
     </PageViewContainer>
   );

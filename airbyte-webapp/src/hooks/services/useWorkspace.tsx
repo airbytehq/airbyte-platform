@@ -1,8 +1,10 @@
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { SetupFormValues } from "components/settings/SetupForm/SetupForm";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
-import { useCurrentWorkspace, useUpdateWorkspace } from "services/workspaces/WorkspacesService";
+import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
+import { NotificationSettings } from "core/request/AirbyteClient";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 
 export interface WebhookPayload {
   webhook?: string;
@@ -28,8 +30,6 @@ const useWorkspace = () => {
       actionDescription: "Setup preferences set",
       email: data.email,
       anonymized: data.anonymousDataCollection,
-      subscribed_newsletter: data.news,
-      subscribed_security: data.securityUpdates,
       security_check_result: securityCheck,
     });
 
@@ -38,9 +38,9 @@ const useWorkspace = () => {
 
   const updatePreferences = async (data: {
     email?: string;
-    anonymousDataCollection: boolean;
-    news: boolean;
-    securityUpdates: boolean;
+    anonymousDataCollection?: boolean;
+    news?: boolean;
+    securityUpdates?: boolean;
   }) =>
     await updateWorkspace({
       workspaceId: workspace.workspaceId,
@@ -50,14 +50,47 @@ const useWorkspace = () => {
       ...data,
     });
 
-  const updateWebhook = async (data: WebhookPayload) =>
-    await updateWorkspace({
+  const updateWebhook = async (data: WebhookPayload) => {
+    const updatedNotificationSettings: NotificationSettings = {
+      sendOnSuccess: data.sendOnSuccess
+        ? {
+            notificationType: ["slack"],
+            slackConfiguration: {
+              webhook: data.webhook ?? "",
+            },
+          }
+        : { notificationType: [] },
+
+      sendOnFailure: data.sendOnFailure
+        ? {
+            notificationType: ["slack"],
+            slackConfiguration: {
+              webhook: data.webhook ?? "",
+            },
+          }
+        : { notificationType: [] },
+      sendOnConnectionUpdate: {
+        notificationType: ["customerio"],
+      },
+      sendOnSyncDisabled: {
+        notificationType: ["customerio"],
+      },
+      sendOnSyncDisabledWarning: {
+        notificationType: ["customerio"],
+      },
+      sendOnConnectionUpdateActionRequired: {
+        notificationType: ["customerio"],
+      },
+    };
+
+    return await updateWorkspace({
       workspaceId: workspace.workspaceId,
       initialSetupComplete: workspace.initialSetupComplete,
       displaySetupWizard: workspace.displaySetupWizard,
       anonymousDataCollection: !!workspace.anonymousDataCollection,
       news: !!workspace.news,
       securityUpdates: !!workspace.securityUpdates,
+      notificationSettings: updatedNotificationSettings,
       notifications: [
         {
           notificationType: "slack",
@@ -69,12 +102,24 @@ const useWorkspace = () => {
         },
       ],
     });
+  };
 
   return {
     setInitialSetupConfig,
     updatePreferences,
     updateWebhook,
   };
+};
+
+export const useUpdateNotificationSettings = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
+
+  return (notificationSettings: NotificationSettings) =>
+    updateWorkspace({
+      workspaceId,
+      notificationSettings,
+    });
 };
 
 export { useCurrentWorkspace, useWorkspace };

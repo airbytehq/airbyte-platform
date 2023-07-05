@@ -20,6 +20,7 @@ import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.OperatorDbt;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.workers.WorkerUtils;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.normalization.NormalizationRunner;
 import io.airbyte.workers.process.ProcessFactory;
@@ -112,6 +113,7 @@ public class DbtTransformationRunner implements AutoCloseable {
       Collections.addAll(dbtArguments, Commandline.translateCommandline(dbtConfig.getDbtArguments()));
       process =
           processFactory.create(
+              ResourceType.DEFAULT,
               CUSTOM_STEP,
               jobId,
               attempt,
@@ -126,7 +128,7 @@ public class DbtTransformationRunner implements AutoCloseable {
               Map.of(JOB_TYPE_KEY, SYNC_JOB, SYNC_STEP_KEY, CUSTOM_STEP),
               Collections.emptyMap(),
               Collections.emptyMap(),
-              dbtArguments.toArray(new String[0]));
+              Collections.emptyMap(), dbtArguments.toArray(new String[0]));
       LineGobbler.gobble(process.getInputStream(), LOGGER::info, CONTAINER_LOG_MDC_BUILDER);
       LineGobbler.gobble(process.getErrorStream(), LOGGER::error, CONTAINER_LOG_MDC_BUILDER);
 

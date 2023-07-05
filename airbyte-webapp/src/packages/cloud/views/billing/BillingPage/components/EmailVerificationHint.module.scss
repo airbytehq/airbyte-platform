@@ -1,0 +1,5 @@
+@use "scss/variables";
+
+.emailVerificationHint {
+  padding: variables.$spacing-xl;
+}

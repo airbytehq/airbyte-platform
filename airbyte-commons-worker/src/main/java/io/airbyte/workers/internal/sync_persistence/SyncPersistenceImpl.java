@@ -25,7 +25,9 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.metrics.lib.MetricAttribute;
 import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +69,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Prototype
 public class SyncPersistenceImpl implements SyncPersistence {
+
+  // For overriding the jitter config when testing
+  @VisibleForTesting
+  record RetryWithJitterConfig(int jitterMaxIntervalSecs, int finalIntervalSecs, int maxTries) {}
 
   final long runImmediately = 0;
   final long flushTerminationTimeoutInSeconds = 60;
@@ -86,6 +93,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
   private StateAggregator stateToFlush;
   private final ScheduledExecutorService stateFlushExecutorService;
   private ScheduledFuture<?> stateFlushFuture;
+  private final Optional<RetryWithJitterConfig> retryWithJitterConfig;
 
   private boolean onlyFlushAtTheEnd;
   private final long stateFlushPeriodInSeconds;
@@ -96,15 +104,18 @@ public class SyncPersistenceImpl implements SyncPersistence {
                              final StateAggregatorFactory stateAggregatorFactory,
                              @Named("syncPersistenceExecutorService") final ScheduledExecutorService scheduledExecutorService,
                              @Value("${airbyte.worker.replication.persistence-flush-period-sec}") final long stateFlushPeriodInSeconds) {
-    this(stateApi, attemptApi, stateAggregatorFactory, new DefaultSyncStatsTracker(), scheduledExecutorService, stateFlushPeriodInSeconds);
+    this(stateApi, attemptApi, stateAggregatorFactory, new DefaultSyncStatsTracker(), scheduledExecutorService, stateFlushPeriodInSeconds,
+        Optional.empty());
   }
 
-  public SyncPersistenceImpl(final StateApi stateApi,
-                             final AttemptApi attemptApi,
-                             final StateAggregatorFactory stateAggregatorFactory,
-                             final SyncStatsTracker syncStatsTracker,
-                             @Named("syncPersistenceExecutorService") final ScheduledExecutorService scheduledExecutorService,
-                             @Value("${airbyte.worker.replication.persistence-flush-period-sec}") final long stateFlushPeriodInSeconds) {
+  @VisibleForTesting
+  SyncPersistenceImpl(final StateApi stateApi,
+                      final AttemptApi attemptApi,
+                      final StateAggregatorFactory stateAggregatorFactory,
+                      final SyncStatsTracker syncStatsTracker,
+                      final ScheduledExecutorService scheduledExecutorService,
+                      final long stateFlushPeriodInSeconds,
+                      final Optional<RetryWithJitterConfig> retryWithJitterConfig) {
     this.stateApi = stateApi;
     this.attemptApi = attemptApi;
     this.stateAggregatorFactory = stateAggregatorFactory;
@@ -114,6 +125,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
     this.syncStatsTracker = syncStatsTracker;
     this.onlyFlushAtTheEnd = false;
     this.isReceivingStats = false;
+    this.retryWithJitterConfig = retryWithJitterConfig;
   }
 
   @Override
@@ -188,7 +200,7 @@ public class SyncPersistenceImpl implements SyncPersistence {
    * after this.
    */
   @Override
-  public void close() {
+  public void close() throws Exception {
     // stop the buffered refresh
     stateFlushExecutorService.shutdown();
 
@@ -197,7 +209,8 @@ public class SyncPersistenceImpl implements SyncPersistence {
       final boolean terminated = stateFlushExecutorService.awaitTermination(flushTerminationTimeoutInSeconds, TimeUnit.SECONDS);
       if (!terminated) {
         if (stateToFlush != null && !stateToFlush.isEmpty()) {
-          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+          emitFailedStateCloseMetrics();
+          emitFailedStatsCloseMetrics();
         }
 
         // Ongoing flush failed to terminate within the allocated time
@@ -209,7 +222,8 @@ public class SyncPersistenceImpl implements SyncPersistence {
       }
     } catch (final InterruptedException e) {
       if (stateToFlush != null && !stateToFlush.isEmpty()) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+        emitFailedStateCloseMetrics();
+        emitFailedStatsCloseMetrics();
       }
 
       // The current thread is getting interrupted
@@ -229,32 +243,65 @@ public class SyncPersistenceImpl implements SyncPersistence {
       }
 
       try {
-        AirbyteApiClient.retryWithJitter(() -> {
+        retryWithJitterThrows(() -> {
           doFlushState();
           return null;
         }, "Flush States from SyncPersistenceImpl");
       } catch (final Exception e) {
         if (stateToFlush != null && !stateToFlush.isEmpty()) {
-          MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1);
+          emitFailedStateCloseMetrics();
+          emitFailedStatsCloseMetrics();
         }
         throw e;
       }
     }
+
+    // At this point, the final state flush is either successful or there was no state left to flush.
+    // From a connection point of view, it should be considered a success since no state are lost.
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_CLOSE_SUCCESSFUL, 1);
 
     // On close, this check is independent of hasDataToFlush. We could be in a state where state flush
     // was successful but stats flush failed, so we should check for stats to flush regardless of the
     // states.
     if (hasStatsToFlush()) {
       try {
-        AirbyteApiClient.retryWithJitter(() -> {
+        retryWithJitterThrows(() -> {
           doFlushStats();
           return null;
         }, "Flush Stats from SyncPersistenceImpl");
       } catch (final Exception e) {
-        MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, 1);
+        emitFailedStatsCloseMetrics();
         throw e;
       }
     }
+
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATS_COMMIT_CLOSE_SUCCESSFUL, 1);
+  }
+
+  /**
+   * Wraps RetryWithJitterThrows for testing.
+   * <p>
+   * This is because retryWithJitterThrows is a static method, in order to avoid waiting 10min to test
+   * failures, we can override the config with some values more appropriate for testing.
+   */
+  private <T> T retryWithJitterThrows(final Callable<T> call, final String desc) throws Exception {
+    if (retryWithJitterConfig.isEmpty()) {
+      return AirbyteApiClient.retryWithJitterThrows(call, desc);
+    } else {
+      final RetryWithJitterConfig retryConfig = retryWithJitterConfig.get();
+      return AirbyteApiClient.retryWithJitterThrows(call, desc, retryConfig.jitterMaxIntervalSecs, retryConfig.finalIntervalSecs,
+          retryConfig.maxTries);
+    }
+  }
+
+  private void emitFailedStateCloseMetrics() {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
+  }
+
+  private void emitFailedStatsCloseMetrics() {
+    MetricClientFactory.getMetricClient().count(OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, 1,
+        new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
   }
 
   private boolean hasStatesToFlush() {

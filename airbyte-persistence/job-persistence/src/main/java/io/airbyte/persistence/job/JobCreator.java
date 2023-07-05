@@ -6,6 +6,7 @@ package io.airbyte.persistence.job;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -47,6 +48,8 @@ public interface JobCreator {
                                @Nullable JsonNode webhookOperationConfigs,
                                StandardSourceDefinition sourceDefinition,
                                StandardDestinationDefinition destinationDefinition,
+                               ActorDefinitionVersion sourceDefinitionVersion,
+                               ActorDefinitionVersion destinationDefinitionVersion,
                                UUID workspaceId)
       throws IOException;
 
@@ -62,6 +65,7 @@ public interface JobCreator {
    */
   Optional<Long> createResetConnectionJob(DestinationConnection destination,
                                           StandardSync standardSync,
+                                          ActorDefinitionVersion destinationDefinitionVersion,
                                           String destinationDockerImage,
                                           Version destinationProtocolVersion,
                                           boolean isCustom,

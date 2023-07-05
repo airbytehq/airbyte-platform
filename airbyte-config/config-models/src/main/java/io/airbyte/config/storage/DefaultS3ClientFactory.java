@@ -33,16 +33,18 @@ public class DefaultS3ClientFactory implements Supplier<S3Client> {
   }
 
   static void validateBase(final S3ApiWorkerStorageConfig s3BaseConfig) {
-    Preconditions.checkArgument(!s3BaseConfig.getAwsAccessKey().isBlank());
-    Preconditions.checkArgument(!s3BaseConfig.getAwsSecretAccessKey().isBlank());
-    Preconditions.checkArgument(!s3BaseConfig.getBucketName().isBlank());
     Preconditions.checkArgument(!s3BaseConfig.getBucketName().isBlank());
   }
 
   @Override
   public S3Client get() {
     final var builder = S3Client.builder();
-    builder.credentialsProvider(() -> AwsBasicCredentials.create(s3Config.getAwsAccessKey(), s3Config.getAwsSecretAccessKey()));
+
+    // If credentials are part of this config, specify them. Otherwise,
+    // let the SDK's default credential provider take over.
+    if (s3Config.getAwsAccessKey() != null && !s3Config.getAwsAccessKey().equals("")) {
+      builder.credentialsProvider(() -> AwsBasicCredentials.create(s3Config.getAwsAccessKey(), s3Config.getAwsSecretAccessKey()));
+    }
     builder.region(Region.of(s3Config.getRegion()));
     return builder.build();
   }

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -48,6 +49,7 @@ import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Cron;
@@ -92,12 +94,16 @@ class ConnectionsHandlerTest {
   private UUID workspaceId;
   private UUID sourceId;
   private UUID destinationId;
+  private UUID sourceDefinitionId;
+  private UUID destinationDefinitionId;
 
   private SourceConnection source;
   private DestinationConnection destination;
   private StandardSync standardSync;
+  private StandardSync standardSync2;
   private StandardSync standardSyncDeleted;
   private UUID connectionId;
+  private UUID connection2Id;
   private UUID operationId;
   private UUID otherOperationId;
   private WorkspaceHelper workspaceHelper;
@@ -119,6 +125,7 @@ class ConnectionsHandlerTest {
   private static final String AZKABAN_USERS = "azkaban_users";
   private static final String CRON_TIMEZONE_UTC = "UTC";
   private static final String CRON_EXPRESSION = "* */2 * * * ?";
+  private static final String STREAM_SELECTION_DATA = "null/users-data0";
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -127,7 +134,10 @@ class ConnectionsHandlerTest {
     workspaceId = UUID.randomUUID();
     sourceId = UUID.randomUUID();
     destinationId = UUID.randomUUID();
+    sourceDefinitionId = UUID.randomUUID();
+    destinationDefinitionId = UUID.randomUUID();
     connectionId = UUID.randomUUID();
+    connection2Id = UUID.randomUUID();
     operationId = UUID.randomUUID();
     otherOperationId = UUID.randomUUID();
     source = new SourceConnection()
@@ -147,7 +157,29 @@ class ConnectionsHandlerTest {
         .withPrefix(PRESTO_TO_HUDI_PREFIX)
         .withStatus(StandardSync.Status.ACTIVE)
         .withCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog())
-        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", false))
+        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, false))
+        .withSourceId(sourceId)
+        .withDestinationId(destinationId)
+        .withOperationIds(List.of(operationId))
+        .withManual(false)
+        .withSchedule(ConnectionHelpers.generateBasicSchedule())
+        .withScheduleType(ScheduleType.BASIC_SCHEDULE)
+        .withScheduleData(ConnectionHelpers.generateBasicScheduleData())
+        .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
+        .withSourceCatalogId(UUID.randomUUID())
+        .withGeography(Geography.AUTO)
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(true)
+        .withBreakingChange(false);
+    standardSync2 = new StandardSync()
+        .withConnectionId(connection2Id)
+        .withName(PRESTO_TO_HUDI)
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withNamespaceFormat(null)
+        .withPrefix(PRESTO_TO_HUDI_PREFIX)
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withCatalog(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog())
+        .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, false))
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
         .withOperationIds(List.of(operationId))
@@ -325,7 +357,7 @@ class ConnectionsHandlerTest {
 
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
-        standardSync.withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", true));
+        standardSync.withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true));
 
         verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
       }
@@ -353,7 +385,7 @@ class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
         standardSync
-            .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty("null/users-data0", true))
+            .withFieldSelectionData(new FieldSelectionData().withAdditionalProperty(STREAM_SELECTION_DATA, true))
             .getCatalog().getStreams().get(0).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH).withCursorField(null);
 
         verify(configRepository).writeStandardSync(standardSync.withNotifySchemaChanges(null).withNotifySchemaChangesByEmail(null));
@@ -831,6 +863,31 @@ class ConnectionsHandlerTest {
       assertEquals(
           ConnectionHelpers.generateExpectedConnectionRead(standardSync),
           actualConnectionReadList.getConnections().get(0));
+    }
+
+    @Test
+    void testListConnectionsByActorDefinition() throws IOException {
+      when(configRepository.listConnectionsByActorDefinitionIdAndType(sourceDefinitionId, ActorType.SOURCE.value(), false))
+          .thenReturn(Lists.newArrayList(standardSync));
+      when(configRepository.listConnectionsByActorDefinitionIdAndType(destinationDefinitionId, ActorType.DESTINATION.value(), false))
+          .thenReturn(Lists.newArrayList(standardSync2));
+
+      final ConnectionReadList connectionReadListForSourceDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
+          new ActorDefinitionRequestBody()
+              .actorDefinitionId(sourceDefinitionId)
+              .actorType(io.airbyte.api.model.generated.ActorType.SOURCE));
+
+      final ConnectionReadList connectionReadListForDestinationDefinitionId = connectionsHandler.listConnectionsForActorDefinition(
+          new ActorDefinitionRequestBody()
+              .actorDefinitionId(destinationDefinitionId)
+              .actorType(io.airbyte.api.model.generated.ActorType.DESTINATION));
+
+      assertEquals(
+          List.of(ConnectionHelpers.generateExpectedConnectionRead(standardSync)),
+          connectionReadListForSourceDefinitionId.getConnections());
+      assertEquals(
+          List.of(ConnectionHelpers.generateExpectedConnectionRead(standardSync2)),
+          connectionReadListForDestinationDefinitionId.getConnections());
     }
 
     @Test

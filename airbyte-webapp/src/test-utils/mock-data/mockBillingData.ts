@@ -1,12 +1,12 @@
 import dayjs from "dayjs";
 
-import { ConsumptionRead } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { ConsumptionRead } from "core/api/types/CloudApi";
 
 export const mockWorkspaceUsageConnection: ConsumptionRead["connection"] = {
   connectionId: "connection1",
   connectionName: "my connection",
   status: "active",
-  creditsConsumed: null,
+  creditsConsumed: undefined,
   destinationConnectionName: "my destination",
   destinationDefinitionId: "destinationA",
   destinationDefinitionName: "Test Destination",
@@ -18,8 +18,8 @@ export const mockWorkspaceUsageConnection: ConsumptionRead["connection"] = {
   sourceIcon: "",
   sourceId: "source1",
   connectionScheduleType: "manual",
-  connectionScheduleTimeUnit: null,
-  connectionScheduleUnits: null,
+  connectionScheduleTimeUnit: undefined,
+  connectionScheduleUnits: undefined,
   destinationReleaseStage: "alpha",
   sourceReleaseStage: "alpha",
 };

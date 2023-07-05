@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 public class SlackNotificationClient extends NotificationClient {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SlackNotificationClient.class);
+  private static final String SLACK_CLIENT = "slack";
 
   private final SlackNotificationConfiguration config;
 
@@ -42,15 +43,23 @@ public class SlackNotificationClient extends NotificationClient {
     this.config = notification.getSlackConfiguration();
   }
 
+  public SlackNotificationClient(final SlackNotificationConfiguration slackNotificationConfiguration) {
+    super();
+    this.config = slackNotificationConfiguration;
+  }
+
   @Override
-  public boolean notifyJobFailure(final String sourceConnector,
+  public boolean notifyJobFailure(final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
     return notifyFailure(renderTemplate(
         "slack/failure_slack_notification_template.txt",
+        connectionName,
         sourceConnector,
         destinationConnector,
         jobDescription,
@@ -59,14 +68,17 @@ public class SlackNotificationClient extends NotificationClient {
   }
 
   @Override
-  public boolean notifyJobSuccess(final String sourceConnector,
+  public boolean notifyJobSuccess(final String receiverEmail,
+                                  final String sourceConnector,
                                   final String destinationConnector,
+                                  final String connectionName,
                                   final String jobDescription,
                                   final String logUrl,
                                   final Long jobId)
       throws IOException, InterruptedException {
     return notifySuccess(renderTemplate(
         "slack/success_slack_notification_template.txt",
+        connectionName,
         sourceConnector,
         destinationConnector,
         jobDescription,
@@ -169,6 +181,22 @@ public class SlackNotificationClient extends NotificationClient {
   public boolean notifyFailure(final String message) throws IOException, InterruptedException {
     final String webhookUrl = config.getWebhook();
     if (!Strings.isEmpty(webhookUrl) && sendOnFailure) {
+      return notify(message);
+    }
+    return false;
+  }
+
+  @Override
+  public String getNotificationClientType() {
+    return SLACK_CLIENT;
+  }
+
+  /**
+   * Used when user tries to test the notification webhook settings on UI.
+   */
+  public boolean notifyTest(final String message) throws IOException, InterruptedException {
+    final String webhookUrl = config.getWebhook();
+    if (!Strings.isEmpty(webhookUrl)) {
       return notify(message);
     }
     return false;

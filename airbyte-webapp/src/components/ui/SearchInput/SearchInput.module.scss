@@ -1,0 +1,23 @@
+.searchInput {
+  display: block;
+  isolation: isolate;
+  position: relative;
+  --padding-left: 36px;
+
+  &__iconWrapper {
+    z-index: 2;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--padding-left);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__input {
+    padding-left: var(--padding-left);
+    z-index: 1;
+  }
+}

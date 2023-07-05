@@ -6,17 +6,17 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
+import { useBillingPageBanners } from "packages/cloud/views/billing/BillingPage/useBillingPageBanners";
+
 import { ReactComponent as ConnectorsBadges } from "./connectors-badges.svg";
 import { useShowEnrollmentModal } from "./EnrollmentModal";
-import { useFreeConnectorProgram } from "./hooks/useFreeConnectorProgram";
 import styles from "./LargeEnrollmentCallout.module.scss";
 
 export const LargeEnrollmentCallout: React.FC = () => {
   const { showEnrollmentModal } = useShowEnrollmentModal();
-  const { userDidEnroll, enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { showEnrollmentUi } = enrollmentStatusQuery.data || {};
+  const { showFCPBanner } = useBillingPageBanners();
 
-  if (userDidEnroll || !showEnrollmentUi) {
+  if (!showFCPBanner) {
     return null;
   }
 

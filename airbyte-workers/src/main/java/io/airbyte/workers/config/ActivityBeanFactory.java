@@ -8,6 +8,7 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.WorkerMode;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionActivity;
+import io.airbyte.workers.temporal.check.connection.SubmitCheckConnectionActivity;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogActivity;
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
@@ -25,7 +26,6 @@ import io.airbyte.workers.temporal.spec.SpecActivity;
 import io.airbyte.workers.temporal.sync.DbtTransformationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
-import io.airbyte.workers.temporal.sync.PersistStateActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
 import io.airbyte.workers.temporal.sync.WebhookOperationActivity;
@@ -76,8 +76,9 @@ public class ActivityBeanFactory {
                                                   final StreamResetActivity streamResetActivity,
                                                   final RecordMetricActivity recordMetricActivity,
                                                   final WorkflowConfigActivity workflowConfigActivity,
-                                                  final RouteToSyncTaskQueueActivity routeToSyncTaskQueueActivity,
-                                                  final FeatureFlagFetchActivity featureFlagFetchActivity) {
+                                                  final RouteToSyncTaskQueueActivity routeToTaskQueueActivity,
+                                                  final FeatureFlagFetchActivity featureFlagFetchActivity,
+                                                  final SubmitCheckConnectionActivity submitCheckConnectionActivity) {
     return List.of(generateInputActivity,
         jobCreationAndStatusUpdateActivity,
         configFetchActivity,
@@ -86,8 +87,9 @@ public class ActivityBeanFactory {
         streamResetActivity,
         recordMetricActivity,
         workflowConfigActivity,
-        routeToSyncTaskQueueActivity,
-        featureFlagFetchActivity);
+        routeToTaskQueueActivity,
+        featureFlagFetchActivity,
+        submitCheckConnectionActivity);
   }
 
   @Singleton
@@ -111,12 +113,11 @@ public class ActivityBeanFactory {
                                      final ReplicationActivity replicationActivity,
                                      final NormalizationActivity normalizationActivity,
                                      final DbtTransformationActivity dbtTransformationActivity,
-                                     final PersistStateActivity persistStateActivity,
                                      final NormalizationSummaryCheckActivity normalizationSummaryCheckActivity,
                                      final WebhookOperationActivity webhookOperationActivity,
                                      final ConfigFetchActivity configFetchActivity,
                                      final RefreshSchemaActivity refreshSchemaActivity) {
-    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, persistStateActivity, normalizationSummaryCheckActivity,
+    return List.of(replicationActivity, normalizationActivity, dbtTransformationActivity, normalizationSummaryCheckActivity,
         webhookOperationActivity, configFetchActivity, refreshSchemaActivity);
   }
 
@@ -130,9 +131,10 @@ public class ActivityBeanFactory {
 
   @Singleton
   @Named("checkActivityOptions")
-  public ActivityOptions checkActivityOptions() {
+  public ActivityOptions checkActivityOptions(@Property(name = "airbyte.activity.check-timeout",
+                                                        defaultValue = "5") final Integer checkTimeoutMinutes) {
     return ActivityOptions.newBuilder()
-        .setScheduleToCloseTimeout(Duration.ofMinutes(5))
+        .setScheduleToCloseTimeout(Duration.ofMinutes(checkTimeoutMinutes))
         .setRetryOptions(TemporalUtils.NO_RETRY)
         .build();
   }

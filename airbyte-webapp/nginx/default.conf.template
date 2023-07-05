@@ -11,7 +11,7 @@ server {
     listen  [::]:80;
     server_name  localhost;
 
-    add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src self blob:;";
+    add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src 'self' blob:;";
 
     location / {
         root   /usr/share/nginx/html;

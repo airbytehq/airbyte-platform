@@ -67,6 +67,16 @@ public class OAuthConfigSupplier {
   }
 
   /**
+   * Test if a connector spec has legacy oauth configuration.
+   *
+   * @param spec to check
+   * @return true if it has a legacy oauth config. otherwise, false.
+   */
+  public static boolean hasLegacyOAuthConfigSpecification(final ConnectorSpecification spec) {
+    return spec != null && spec.getAuthSpecification() != null && spec.getAuthSpecification().getOauth2Specification() != null;
+  }
+
+  /**
    * Mask secrets in OAuth params.
    *
    * @param sourceDefinitionId source definition id
@@ -84,7 +94,7 @@ public class OAuthConfigSupplier {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
       final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
-      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, false)
+      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> maskOauthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceConnectorConfig));
       return sourceConnectorConfig;
     } catch (final JsonValidationException | ConfigNotFoundException e) {
@@ -111,8 +121,7 @@ public class OAuthConfigSupplier {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId,
-          false)
+      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
           .ifPresent(destinationOAuthParameter -> maskOauthParameters(destinationDefinition.getName(), destinationVersion.getSpec(),
               destinationConnectorConfig));
       return destinationConnectorConfig;
@@ -139,7 +148,7 @@ public class OAuthConfigSupplier {
     try {
       final StandardSourceDefinition sourceDefinition = configRepository.getStandardSourceDefinition(sourceDefinitionId);
       final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId);
-      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId, false)
+      MoreOAuthParameters.getSourceOAuthParameter(configRepository.listSourceOAuthParam().stream(), workspaceId, sourceDefinitionId)
           .ifPresent(sourceOAuthParameter -> {
             if (injectOAuthParameters(sourceDefinition.getName(), sourceVersion.getSpec(), sourceOAuthParameter.getConfiguration(),
                 sourceConnectorConfig)) {
@@ -172,8 +181,7 @@ public class OAuthConfigSupplier {
       final StandardDestinationDefinition destinationDefinition = configRepository.getStandardDestinationDefinition(destinationDefinitionId);
       final ActorDefinitionVersion destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId,
-          false)
+      MoreOAuthParameters.getDestinationOAuthParameter(configRepository.listDestinationOAuthParam().stream(), workspaceId, destinationDefinitionId)
           .ifPresent(destinationOAuthParameter -> {
             if (injectOAuthParameters(destinationDefinition.getName(), destinationVersion.getSpec(), destinationOAuthParameter.getConfiguration(),
                 destinationConnectorConfig)) {

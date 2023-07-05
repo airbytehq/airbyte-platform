@@ -14,7 +14,7 @@ public class SlackOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new SlackOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new SlackOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

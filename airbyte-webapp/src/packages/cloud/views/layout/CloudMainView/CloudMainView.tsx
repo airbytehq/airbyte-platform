@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 import { Outlet } from "react-router-dom";
@@ -7,18 +6,18 @@ import { LoadingPage } from "components";
 import { CreditsIcon } from "components/icons/CreditsIcon";
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 
+import { useCurrentWorkspace } from "core/api";
+import { useGetCloudWorkspace } from "core/api/cloud";
+import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
+import { FeatureItem, useFeature } from "core/services/features";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { useExperimentSpeedyConnection } from "packages/cloud/components/experiments/SpeedyConnection/hooks/useExperimentSpeedyConnection";
 import { SpeedyConnectionBanner } from "packages/cloud/components/experiments/SpeedyConnection/SpeedyConnectionBanner";
-import { WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { useIntercom } from "packages/cloud/services/thirdParty/intercom";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import { ResourceNotFoundErrorBoundary } from "views/common/ResorceNotFoundErrorBoundary";
+import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";
 import { MenuContent } from "views/layout/SideBar/components/MenuContent";
@@ -36,26 +35,25 @@ import { LOW_BALANCE_CREDIT_THRESHOLD } from "../../billing/BillingPage/componen
 import { WorkspacePopout } from "../../workspaces/WorkspacePopout";
 
 const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
-  useIntercom();
   const workspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
-  const isAllowUpdateConnectorsEnabled = useFeature(FeatureItem.AllowUpdateConnectors);
   const isShowAdminWarningEnabled = useFeature(FeatureItem.ShowAdminWarningInWorkspace);
   const isNewTrialPolicy = useExperiment("billing.newTrialPolicy", false);
+  const { trackError } = useAppMonitoringService();
 
   // exp-speedy-connection
   const { isExperimentVariant } = useExperimentSpeedyConnection();
 
   const { hasCorporateEmail } = useAuthService();
   const isTrial = isNewTrialPolicy
-    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.IN_TRIAL ||
-      cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.PRE_TRIAL
+    ? cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.in_trial ||
+      cloudWorkspace.workspaceTrialStatus === WorkspaceTrialStatus.pre_trial
     : Boolean(cloudWorkspace.trialExpiryTimestamp);
   const showExperimentBanner = isExperimentVariant && isTrial && hasCorporateEmail();
 
   return (
     <div className={styles.mainContainer}>
-      <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />}>
+      <InsufficientPermissionsErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <SideBar>
           <AirbyteHomeLink />
           {isShowAdminWarningEnabled && <AdminWorkspaceWarning />}
@@ -74,26 +72,23 @@ const CloudMainView: React.FC<React.PropsWithChildren<unknown>> = (props) => {
                 icon={<CreditsIcon />}
                 label={<FormattedMessage id="sidebar.billing" />}
                 testId="creditsButton"
-                withNotification={cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD}
+                withNotification={
+                  !cloudWorkspace.remainingCredits || cloudWorkspace.remainingCredits <= LOW_BALANCE_CREDIT_THRESHOLD
+                }
               />
               <CloudResourcesDropdown /> <CloudSupportDropdown />
               <NavItem
                 label={<FormattedMessage id="sidebar.settings" />}
                 icon={<SettingsIcon />}
                 to={RoutePaths.Settings}
-                withNotification={isAllowUpdateConnectorsEnabled}
               />
             </MenuContent>
           </MenuContent>
         </SideBar>
-        <div
-          className={classNames(styles.content, {
-            [styles.speedyConnectionBanner]: showExperimentBanner,
-          })}
-        >
+        <div className={styles.content}>
           {showExperimentBanner ? <SpeedyConnectionBanner /> : <WorkspaceStatusBanner />}
           <div className={styles.dataBlock}>
-            <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />}>
+            <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
               <React.Suspense fallback={<LoadingPage />}>{props.children ?? <Outlet />}</React.Suspense>
             </ResourceNotFoundErrorBoundary>
           </div>

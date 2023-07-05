@@ -48,6 +48,7 @@ class GKEPostgresConfig {
     dbConfig.put(JdbcUtils.PORT_KEY, PORT);
     dbConfig.put(JdbcUtils.DATABASE_KEY, DB);
     dbConfig.put(JdbcUtils.USERNAME_KEY, USERNAME);
+    dbConfig.put(JdbcUtils.JDBC_URL_PARAMS, "connectTimeout=60");
 
     if (withSchema) {
       dbConfig.put(JdbcUtils.SCHEMA_KEY, "public");
@@ -61,7 +62,7 @@ class GKEPostgresConfig {
     // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
     // overrides that to MAX_INTEGER unless we explicitly specify it.
     return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
-        "jdbc:postgresql://localhost:4000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30"));
+        "jdbc:postgresql://localhost:4000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "60"));
   }
 
   static DataSource getSourceDataSource() {
@@ -69,7 +70,7 @@ class GKEPostgresConfig {
     // https://github.com/brettwooldridge/HikariCP#frequently-used -- but our DataSourceFactory
     // overrides that to MAX_INTEGER unless we explicitly specify it.
     return DataSourceFactory.create(USERNAME, PASSWORD, DatabaseDriver.POSTGRESQL.getDriverClassName(),
-        "jdbc:postgresql://localhost:2000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "30"));
+        "jdbc:postgresql://localhost:2000/postgresdb", Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "60"));
   }
 
   static void runSqlScript(final Path scriptFilePath, final Database db) throws SQLException, IOException {

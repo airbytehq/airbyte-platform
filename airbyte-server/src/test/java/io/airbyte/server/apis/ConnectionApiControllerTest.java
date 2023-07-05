@@ -12,9 +12,7 @@ import io.airbyte.api.model.generated.ConnectionStream;
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody;
 import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.commons.server.handlers.SchedulerHandler;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
-import io.micronaut.core.util.StringUtils;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import io.temporal.client.WorkflowClient;
@@ -28,9 +26,6 @@ import org.junit.jupiter.api.Test;
  * Micronaut-based test suite for the {@link ConnectionApiController} class.
  */
 @MicronautTest(environments = Environment.TEST)
-@Requires(property = "mockito.test.enabled",
-          defaultValue = StringUtils.FALSE,
-          value = StringUtils.TRUE)
 class ConnectionApiControllerTest {
 
   @Inject

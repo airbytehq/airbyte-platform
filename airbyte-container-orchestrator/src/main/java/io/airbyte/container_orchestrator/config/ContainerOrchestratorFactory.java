@@ -14,7 +14,7 @@ import io.airbyte.container_orchestrator.orchestrator.NoOpOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.NormalizationJobOrchestrator;
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.WorkerConfigs;
+import io.airbyte.workers.config.WorkerConfigsProvider;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.airbyte.workers.process.AsyncOrchestratorPodProcess;
@@ -55,18 +55,12 @@ class ContainerOrchestratorFactory {
     return new EnvConfigs(env);
   }
 
-  @Singleton
-  WorkerConfigs workerConfigs(final EnvConfigs envConfigs) {
-    return new WorkerConfigs(envConfigs);
-  }
-
   // This is currently needed for tests bceause the default env is docker
   @Singleton
-  @Named("replicationProcessFactory")
   @Requires(notEnv = Environment.KUBERNETES)
-  ProcessFactory dockerProcessFactory(final WorkerConfigs workerConfigs, final EnvConfigs configs) {
+  ProcessFactory dockerProcessFactory(final WorkerConfigsProvider workerConfigsProvider, final EnvConfigs configs) {
     return new DockerProcessFactory(
-        workerConfigs,
+        workerConfigsProvider,
         configs.getWorkspaceRoot(), // Path.of(workspaceRoot),
         configs.getWorkspaceDockerMount(), // workspaceDockerMount,
         configs.getLocalDockerMount(), // localDockerMount,
@@ -75,12 +69,12 @@ class ContainerOrchestratorFactory {
   }
 
   @Singleton
-  @Named("replicationProcessFactory")
   @Requires(env = Environment.KUBERNETES)
   ProcessFactory kubeProcessFactory(
-                                    final WorkerConfigs workerConfigs,
+                                    final WorkerConfigsProvider workerConfigsProvider,
                                     final EnvConfigs configs,
-                                    @Value("${micronaut.server.port}") final int serverPort)
+                                    @Value("${micronaut.server.port}") final int serverPort,
+                                    @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
     final var localIp = InetAddress.getLocalHost().getHostAddress();
     final var kubeHeartbeatUrl = localIp + ":" + serverPort;
@@ -90,11 +84,11 @@ class ContainerOrchestratorFactory {
     KubePortManagerSingleton.init(OrchestratorConstants.PORTS);
 
     return new KubeProcessFactory(
-        workerConfigs,
+        workerConfigsProvider,
         configs.getJobKubeNamespace(),
+        serviceAccount,
         new DefaultKubernetesClient(),
-        kubeHeartbeatUrl,
-        false);
+        kubeHeartbeatUrl);
   }
 
   @Singleton
@@ -102,13 +96,14 @@ class ContainerOrchestratorFactory {
                                      @Named("application") final String application,
                                      final EnvConfigs envConfigs,
                                      final ProcessFactory processFactory,
-                                     final WorkerConfigs workerConfigs,
+                                     final WorkerConfigsProvider workerConfigsProvider,
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig, replicationWorkerFactory);
+      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
+          replicationWorkerFactory);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig);
-      case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigs, processFactory, jobRunConfig);
+      case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
       default -> throw new IllegalStateException("Could not find job orchestrator for application: " + application);
     };

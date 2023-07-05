@@ -32,7 +32,16 @@ class AirbytePythonDockerPlugin implements Plugin<Project> {
             outputs.cacheIf { true }
             outputs.upToDateWhen { true }
 
-            commandLine "docker", "run", "-v", "${project.projectDir.getAbsolutePath()}:/home", "--entrypoint", "/bin/bash", "python:3.9-slim", "-c", "chmod +x /home/run_tests.sh && /home/run_tests.sh /home"
+            // HACK: This is a workaround for the local VM. The volume will be mounted into the container from the guest path, not the host.
+            def String d
+
+            if ( System.getenv("LOCAL_VM") == "true") {
+                d = "/srv/airbyte-platform-internal/oss/airbyte-connector-builder-server"
+            } else {
+                d = project.projectDir.getAbsolutePath()
+            }
+
+            commandLine "docker", "run", "-v", "${d}:/home", "--entrypoint", "/bin/bash", "python:3.9-slim", "-c", "chmod +x /home/run_tests.sh && /home/run_tests.sh /home"
         }
 
         project.assemble.dependsOn project.airbytePythonDockerApply

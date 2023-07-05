@@ -17,36 +17,21 @@
   padding: 0;
 }
 
-.body {
-  padding: variables.$spacing-md 0;
-}
-
-.tableContainer > *,
-.body > *:not(.tableContainer) {
-  padding: 0 variables.$spacing-xl;
+.search {
+  flex-basis: 400px;
 }
 
 .tableContainer {
-  .search {
-    top: 0;
-    position: sticky;
-    padding-top: variables.$spacing-lg;
-    padding-bottom: variables.$spacing-lg;
-    background: colors.$white;
-    z-index: z-indices.$mainPageWithScrollEdge;
-  }
-
-  .table {
-    background: colors.$white;
-    padding-top: 0;
-
-    thead {
-      top: (variables.$spacing-lg * 2 + 34px); // search padding top + bottom + height
-    }
-  }
-
   .syncing {
     background: none;
     @include mixins.striped-background(colors.$dark-blue-30, 30px);
+  }
+
+  .statusHeader {
+    width: 0; // makes the column width dynamic, matching the widest content in this column
+  }
+
+  .actionsHeader {
+    width: 50px;
   }
 }

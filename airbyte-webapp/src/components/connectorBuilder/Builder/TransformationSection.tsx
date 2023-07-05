@@ -1,36 +1,25 @@
-import { useField } from "formik";
+import React from "react";
 import { useIntl } from "react-intl";
 
-import { ControlLabels } from "components/LabeledControl";
+import { links } from "utils/links";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { BuilderList } from "./BuilderList";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
-import { BuilderStream } from "../types";
+import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 
-interface PartitionSectionProps {
-  streamFieldPath: (fieldPath: string) => string;
+interface TransformationSectionProps {
+  streamFieldPath: <T extends string>(fieldPath: T) => `streams.${number}.${T}`;
   currentStreamIndex: number;
 }
 
-export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
+export const TransformationSection: React.FC<TransformationSectionProps> = ({
+  streamFieldPath,
+  currentStreamIndex,
+}) => {
   const { formatMessage } = useIntl();
-  const [field, , helpers] = useField<BuilderStream["transformations"]>(streamFieldPath("transformations"));
-
-  const handleToggle = (newToggleValue: boolean) => {
-    if (newToggleValue) {
-      helpers.setValue([
-        {
-          type: "remove",
-          path: [],
-        },
-      ]);
-    } else {
-      helpers.setValue(undefined);
-    }
-  };
 
   const getTransformationOptions = (buildPath: (path: string) => string): OneOfOption[] => [
     {
@@ -52,30 +41,30 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
       },
       children: (
         <>
-          <BuilderField type="array" path={buildPath("path")} label="Path" tooltip="Path to the field to add" />
+          <BuilderField type="array" path={buildPath("path")} manifestPath="AddedFieldDefinition.properties.path" />
           <BuilderFieldWithInputs
             type="string"
             path={buildPath("value")}
-            label="Value"
-            tooltip="Value of the new field (use {{ record.existing_field }} syntax to reference to other fields in the same record"
+            manifestPath="AddedFieldDefinition.properties.value"
           />
         </>
       ),
     },
   ];
-  const toggledOn = field.value !== undefined;
 
   return (
     <BuilderCard
+      docLink={links.connectorBuilderTransformations}
+      label={getLabelByManifest("DeclarativeStream.properties.transformations")}
+      tooltip={getDescriptionByManifest("DeclarativeStream.properties.transformations")}
       toggleConfig={{
-        label: (
-          <ControlLabels
-            label="Transformations"
-            infoTooltipContent="Transform records before sending them to the destination by removing or changing fields."
-          />
-        ),
-        toggledOn,
-        onToggle: handleToggle,
+        path: streamFieldPath("transformations"),
+        defaultValue: [
+          {
+            type: "remove",
+            path: [],
+          },
+        ],
       }}
       copyConfig={{
         path: "transformations",
@@ -104,3 +93,5 @@ export const TransformationSection: React.FC<PartitionSectionProps> = ({ streamF
     </BuilderCard>
   );
 };
+
+TransformationSection.displayName = "TransformationSection";

@@ -15,7 +15,7 @@ class MicrosoftBingAdsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new MicrosoftBingAdsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new MicrosoftBingAdsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

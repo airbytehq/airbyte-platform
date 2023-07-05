@@ -21,25 +21,25 @@ import { Input } from "../Input";
  * 2022-01-01T10:00:00+01:00  - what react-datepicker might convert this date into and display (e.g. 10:00am - bad!)
  * 2022-01-01T09:00:00+01:00  - what we give react-datepicker instead, to trick it (User sees 9:00am - good!)
  */
-export const toEquivalentLocalTime = (input: string): Date | undefined => {
-  if (!input) {
+export const toEquivalentLocalTime = (utcString: string): Date | undefined => {
+  if (!utcString) {
     return undefined;
   }
 
-  const date = dayjs.utc(input);
+  const date = dayjs.utc(utcString);
 
   if (!date?.isValid()) {
     return undefined;
   }
 
-  // Get the user's UTC offset based on the local time
-  const browserUtcOffset = dayjs().utcOffset();
+  // Get the user's UTC offset based on the local timezone and the given date
+  const browserUtcOffset = dayjs(utcString).utcOffset();
 
   // Convert the selected date into a string which we can use to initialize a new date object.
   // The second parameter to utcOffset() keeps the same local time, only changing the timezone.
-  const dateInUtcAsString = date.utcOffset(browserUtcOffset, true).format();
+  const localDateAsString = date.utcOffset(browserUtcOffset, true).format();
 
-  const equivalentDate = dayjs(dateInUtcAsString);
+  const equivalentDate = dayjs(localDateAsString);
 
   // dayjs does not 0-pad years when formatting, so it's possible to have an invalid date here
   // https://github.com/iamkun/dayjs/issues/1745
@@ -55,6 +55,7 @@ export interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   withTime?: boolean;
+  withMilliseconds?: boolean;
   disabled?: boolean;
   onBlur?: () => void;
   placeholder?: string;
@@ -79,6 +80,11 @@ const DatepickerButton = React.forwardRef<HTMLButtonElement, DatePickerButtonTri
     />
   );
 });
+DatepickerButton.displayName = "DatepickerButton";
+
+const ISO8601_NO_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss[Z]";
+const ISO8601_WITH_MILLISECONDS = "YYYY-MM-DDTHH:mm:ss.SSS[Z]";
+const YEAR_MONTH_DAY_FORMAT = "YYYY-MM-DD";
 
 export const DatePicker: React.FC<DatePickerProps> = ({
   disabled,
@@ -88,6 +94,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   placeholder,
   value = "",
   withTime = false,
+  withMilliseconds = false,
 }) => {
   const { locale, formatMessage } = useIntl();
   const datepickerRef = useRef<ReactDatePicker>(null);
@@ -103,19 +110,27 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const datetimeFormat = useMemo(
+    () => (withMilliseconds ? ISO8601_WITH_MILLISECONDS : ISO8601_NO_MILLISECONDS),
+    [withMilliseconds]
+  );
+
   const handleDatepickerChange = useCallback(
     (val: Date | null) => {
+      // Workaround for a bug in react-datepicker where selecting a time does not zero out the millisecond value https://github.com/Hacker0x01/react-datepicker/issues/1991
+      val?.setMilliseconds(0);
       const date = dayjs(val);
       if (!date.isValid()) {
         onChange("");
         return;
       }
-
-      const formattedDate = withTime ? date.utcOffset(0, true).format() : date.format("YYYY-MM-DD");
+      const formattedDate = withTime
+        ? date.utcOffset(0, true).format(datetimeFormat)
+        : date.format(YEAR_MONTH_DAY_FORMAT);
       onChange(formattedDate);
       inputRef.current?.focus();
     },
-    [onChange, withTime]
+    [onChange, withTime, datetimeFormat]
   );
 
   const handleInputChange = useCallback(
@@ -148,6 +163,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       <div className={styles.datepickerButtonContainer}>
         <ReactDatePicker
           ref={datepickerRef}
+          showMonthDropdown
+          showYearDropdown
+          dropdownMode="select"
           showPopperArrow={false}
           showTimeSelect={withTime}
           disabled={disabled}
@@ -157,6 +175,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           customInput={<DatepickerButton />}
           popperClassName={styles.popup}
           timeCaption={formatMessage({ id: "form.datepickerTimeCaption" })}
+          portalId="react-datepicker"
+          popperPlacement="bottom-end"
         />
       </div>
     </div>

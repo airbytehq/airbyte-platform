@@ -10,6 +10,8 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.protocol.models.AirbyteRecordMessage;
 import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.validation.json.JsonSchemaValidator;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -24,9 +26,9 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
  * Validates that AirbyteRecordMessage data conforms to the JSON schema defined by the source's
  * configured catalog.
  */
-public class RecordSchemaValidator {
+public class RecordSchemaValidator implements Closeable {
 
-  private static final JsonSchemaValidator validator = new JsonSchemaValidator();
+  private final JsonSchemaValidator validator;
   private final ExecutorService validationExecutor;
   private final Map<AirbyteStreamNameNamespacePair, JsonNode> streams;
 
@@ -40,11 +42,19 @@ public class RecordSchemaValidator {
   }
 
   @VisibleForTesting
-  RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas, final ExecutorService validationExecutor) {
+  public RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas, final ExecutorService validationExecutor) {
+    this(streamNamesToSchemas, validationExecutor, new JsonSchemaValidator());
+  }
+
+  @VisibleForTesting
+  public RecordSchemaValidator(final Map<AirbyteStreamNameNamespacePair, JsonNode> streamNamesToSchemas,
+                               final ExecutorService validationExecutor,
+                               final JsonSchemaValidator jsonSchemaValidator) {
     // streams is Map of a stream source namespace + name mapped to the stream schema
     // for easy access when we check each record's schema
     this.streams = streamNamesToSchemas;
     this.validationExecutor = validationExecutor;
+    this.validator = jsonSchemaValidator;
     // initialize schema validator to avoid creating validators each time.
     for (final AirbyteStreamNameNamespacePair stream : streamNamesToSchemas.keySet()) {
       // We must choose a JSON validator version for validating the schema
@@ -99,6 +109,14 @@ public class RecordSchemaValidator {
         return new ImmutablePair<>(updatedErrorMessages, updatedCount);
       }
     });
+  }
+
+  /**
+   * Shuts down the ExecutorService used by this validator.
+   */
+  @Override
+  public void close() throws IOException {
+    validationExecutor.shutdownNow();
   }
 
 }

@@ -1,8 +1,9 @@
+import { yupResolver } from "@hookform/resolvers/yup";
 import classNames from "classnames";
-import { Form, Formik, useField } from "formik";
 import merge from "lodash/merge";
 import { useState } from "react";
 import React from "react";
+import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
 import * as yup from "yup";
@@ -10,21 +11,22 @@ import * as yup from "yup";
 import { Button } from "components/ui/Button";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { Action, Namespace } from "core/analytics";
-import { FormikPatch } from "core/form/FormikPatch";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AddStreamButton.module.scss";
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
 import { ReactComponent as PlusIcon } from "../../connection/ConnectionOnboarding/plusIcon.svg";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES } from "../types";
+import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA, useBuilderWatch } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 interface AddStreamValues {
   streamName: string;
   urlPath: string;
+  copyOtherStream?: boolean;
+  streamToCopy?: string;
 }
 
 interface AddStreamButtonProps {
@@ -32,6 +34,7 @@ interface AddStreamButtonProps {
   button?: React.ReactElement;
   initialValues?: Partial<BuilderStream>;
   "data-testid"?: string;
+  modalTitle?: string;
 }
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
@@ -39,21 +42,60 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   button,
   initialValues,
   "data-testid": testId,
+  modalTitle,
 }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { builderFormValues } = useConnectorBuilderFormState();
-  const { formatMessage } = useIntl();
   const [isOpen, setIsOpen] = useState(false);
-  const [streamsField, , helpers] = useField<BuilderStream[]>("streams");
-  const numStreams = streamsField.value.length;
+
+  const streams = useBuilderWatch("streams");
+  const { setValue } = useFormContext();
+  const numStreams = streams.length;
 
   const buttonClickHandler = () => {
     setIsOpen(true);
   };
 
   const shouldPulse =
-    numStreams === 0 && !hasErrors(false, ["global"]) && builderFormValues.global.authenticator.type !== "NoAuth";
+    numStreams === 0 && !hasErrors(["global"]) && builderFormValues.global.authenticator.type !== "NoAuth";
+
+  const handleSubmit = (values: AddStreamValues) => {
+    const otherStreamValues = values.copyOtherStream
+      ? streams.find((stream) => stream.name === values.streamToCopy)
+      : undefined;
+    const id = uuid();
+    setValue("streams", [
+      ...streams,
+      merge({}, DEFAULT_BUILDER_STREAM_VALUES, {
+        ...initialValues,
+        ...otherStreamValues,
+        name: values.streamName,
+        urlPath: values.urlPath,
+        schema: DEFAULT_SCHEMA,
+        id,
+      }),
+    ]);
+    setIsOpen(false);
+    onAddStream(numStreams);
+    if (initialValues) {
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_COPY, {
+        actionDescription: "Existing stream copied into a new stream",
+        existing_stream_id: initialValues.id,
+        existing_stream_name: initialValues.name,
+        new_stream_id: id,
+        new_stream_name: values.streamName,
+        new_stream_url_path: values.urlPath,
+      });
+    } else {
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
+        actionDescription: "New stream created from the Add Stream button",
+        stream_id: id,
+        stream_name: values.streamName,
+        url_path: values.urlPath,
+      });
+    }
+  };
 
   return (
     <>
@@ -64,91 +106,116 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         })
       ) : (
         <div className={classNames(styles.buttonContainer, { [styles["buttonContainer--pulse"]]: shouldPulse })}>
-          <Button className={styles.addButton} onClick={buttonClickHandler} icon={<PlusIcon />} data-testid={testId} />
+          <Button
+            type="button"
+            className={styles.addButton}
+            onClick={buttonClickHandler}
+            icon={<PlusIcon />}
+            data-testid={testId}
+          />
         </div>
       )}
       {isOpen && (
-        <Formik
-          initialValues={{ streamName: "", urlPath: "" }}
-          onSubmit={(values: AddStreamValues) => {
-            const id = uuid();
-            helpers.setValue([
-              ...streamsField.value,
-              merge({}, DEFAULT_BUILDER_STREAM_VALUES, {
-                ...initialValues,
-                name: values.streamName,
-                urlPath: values.urlPath,
-                id,
-              }),
-            ]);
+        <Modal
+          size="sm"
+          title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
+          onClose={() => {
             setIsOpen(false);
-            onAddStream(numStreams);
-            if (initialValues) {
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_COPY, {
-                actionDescription: "Existing stream copied into a new stream",
-                existing_stream_id: initialValues.id,
-                existing_stream_name: initialValues.name,
-                new_stream_id: id,
-                new_stream_name: values.streamName,
-                new_stream_url_path: values.urlPath,
-              });
-            } else {
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
-                actionDescription: "New stream created from the Add Stream button",
-                stream_id: id,
-                stream_name: values.streamName,
-                url_path: values.urlPath,
-              });
-            }
           }}
-          validationSchema={yup.object().shape({
-            streamName: yup.string().required("form.empty.error"),
-            urlPath: yup.string().required("form.empty.error"),
-          })}
         >
-          <>
-            <FormikPatch />
-            <Modal
-              size="sm"
-              title={<FormattedMessage id="connectorBuilder.addStreamModal.title" />}
-              onClose={() => {
-                setIsOpen(false);
-              }}
-            >
-              <Form>
-                <ModalBody className={styles.body}>
-                  <BuilderField
-                    path="streamName"
-                    type="string"
-                    label={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameLabel" })}
-                    tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameTooltip" })}
-                  />
-                  <BuilderFieldWithInputs
-                    path="urlPath"
-                    type="string"
-                    label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
-                    tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
-                  />
-                </ModalBody>
-                <ModalFooter>
-                  <Button
-                    variant="secondary"
-                    type="reset"
-                    onClick={() => {
-                      setIsOpen(false);
-                    }}
-                  >
-                    <FormattedMessage id="form.cancel" />
-                  </Button>
-                  <Button type="submit">
-                    <FormattedMessage id="form.create" />
-                  </Button>
-                </ModalFooter>
-              </Form>
-            </Modal>
-          </>
-        </Formik>
+          <AddStreamForm
+            onSubmit={handleSubmit}
+            onCancel={() => setIsOpen(false)}
+            showCopyFromStream={!initialValues && numStreams > 0}
+            streams={streams}
+          />
+        </Modal>
       )}
     </>
+  );
+};
+
+const AddStreamForm = ({
+  onSubmit,
+  onCancel,
+  showCopyFromStream,
+  streams,
+}: {
+  onSubmit: (values: AddStreamValues) => void;
+  onCancel: () => void;
+  showCopyFromStream: boolean;
+  streams: BuilderStream[];
+}) => {
+  const { formatMessage } = useIntl();
+  const methods = useForm({
+    defaultValues: { streamName: "", urlPath: "", copyOtherStream: false, streamToCopy: streams[0]?.name },
+    resolver: yupResolver(
+      yup.object().shape({
+        streamName: yup
+          .string()
+          .required("form.empty.error")
+          .notOneOf(
+            streams.map((stream) => stream.name),
+            "connectorBuilder.duplicateStreamName"
+          ),
+        urlPath: yup.string().required("form.empty.error"),
+      })
+    ),
+    mode: "onChange",
+  });
+
+  const useOtherStream = methods.watch("copyOtherStream");
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(onSubmit)}>
+        <ModalBody className={styles.body}>
+          <BuilderField
+            path="streamName"
+            type="string"
+            label={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameLabel" })}
+            tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.streamNameTooltip" })}
+          />
+          <BuilderFieldWithInputs
+            path="urlPath"
+            type="string"
+            label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
+            tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
+          />
+          {/* Only allow to copy from another stream within the modal if there aren't initial values set already and there are other streams */}
+          {showCopyFromStream && (
+            <>
+              <BuilderField
+                path="copyOtherStream"
+                type="boolean"
+                label={formatMessage({ id: "connectorBuilder.addStreamModal.copyOtherStreamLabel" })}
+              />
+              {useOtherStream && (
+                <BuilderField
+                  label={formatMessage({ id: "connectorBuilder.addStreamModal.streamLabel" })}
+                  path="streamToCopy"
+                  type="enum"
+                  options={streams.map((stream) => stream.name)}
+                />
+              )}
+            </>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="secondary"
+            type="reset"
+            onClick={() => {
+              onCancel();
+            }}
+          >
+            <FormattedMessage id="form.cancel" />
+          </Button>
+          <Button type="submit">
+            <FormattedMessage id="form.create" />
+          </Button>
+        </ModalFooter>
+      </form>
+    </FormProvider>
   );
 };

@@ -1,3 +1,3 @@
-import { Auth } from "./Auth";
+import { AuthLayout } from "./AuthLayout";
 
-export default Auth;
+export default AuthLayout;

@@ -19,11 +19,13 @@ import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspa
 import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.init.CdkVersionProvider;
@@ -195,28 +197,34 @@ public class ConnectorBuilderProjectsHandler {
         .withSpec(spec);
     configRepository.insertActiveDeclarativeManifest(declarativeManifest);
     configRepository.assignActorDefinitionToConnectorBuilderProject(connectorBuilderPublishRequestBody.getBuilderProjectId(), actorDefinitionId);
+    configRepository.deleteBuilderProjectDraft(connectorBuilderPublishRequestBody.getBuilderProjectId());
 
     return new SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId);
   }
 
   private UUID createActorDefinition(final String name, final UUID workspaceId, final JsonNode manifest, final JsonNode spec) throws IOException {
     final ConnectorSpecification connectorSpecification = manifestInjector.createDeclarativeManifestConnectorSpecification(spec);
+    final UUID actorDefinitionId = uuidSupplier.get();
     final StandardSourceDefinition source = new StandardSourceDefinition()
-        .withSourceDefinitionId(uuidSupplier.get())
+        .withSourceDefinitionId(actorDefinitionId)
         .withName(name)
+        .withSourceType(SourceType.CUSTOM)
+        .withTombstone(false)
+        .withPublic(false)
+        .withCustom(true);
+
+    final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefinitionId)
         .withDockerImageTag(cdkVersionProvider.getCdkVersion())
         .withDockerRepository("airbyte/source-declarative-manifest")
-        .withSourceType(SourceType.CUSTOM)
         .withSpec(connectorSpecification)
-        .withTombstone(false)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
-        .withPublic(false)
-        .withCustom(true)
         .withReleaseStage(ReleaseStage.CUSTOM)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
-    configRepository.writeCustomSourceDefinition(source, workspaceId);
 
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(source, defaultVersion, workspaceId, ScopeType.WORKSPACE.value());
     configRepository.writeActorDefinitionConfigInjectionForPath(manifestInjector.createConfigInjection(source.getSourceDefinitionId(), manifest));
+
     return source.getSourceDefinitionId();
   }
 

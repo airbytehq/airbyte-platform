@@ -11,6 +11,8 @@ import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
+import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
+import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import java.util.Map;
@@ -43,7 +45,8 @@ class FeatureFlagFetchActivityTest {
     final FeatureFlagFetchActivity.FeatureFlagFetchInput input = new FeatureFlagFetchActivity.FeatureFlagFetchInput(CONNECTION_ID);
 
     final FeatureFlagFetchActivity.FeatureFlagFetchOutput output = featureFlagFetchActivity.getFeatureFlags(input);
-    Assertions.assertEquals(output.getFeatureFlags(), Map.of());
+    Assertions.assertEquals(output.getFeatureFlags(), Map.of(CheckConnectionUseApiEnabled.INSTANCE.getKey(), false,
+        CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey(), false));
 
   }
 

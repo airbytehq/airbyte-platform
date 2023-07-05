@@ -8,6 +8,9 @@ airbyte:
       minimum-migration-version: "0.40.23.002"
   workspace:
     root: /tmp
+  shutdown:
+    delay_ms: 0
+
 
 datasources:
   config:

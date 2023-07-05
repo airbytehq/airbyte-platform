@@ -1,8 +1,7 @@
-import { Field, FieldProps, Formik, Form } from "formik";
+import { Formik, Form } from "formik";
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
-import styled from "styled-components";
 import * as yup from "yup";
 
 import { Button } from "components/ui/Button";
@@ -13,7 +12,6 @@ import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { isGdprCountry } from "utils/dataPrivacy";
 
 import styles from "./SignupForm.module.scss";
-import CheckBoxControl from "../../components/CheckBoxControl";
 import { BottomBlock, FieldItem, RowFieldItem } from "../../components/FormComponents";
 import { CompanyNameField, EmailField, NameField, PasswordField } from "../../components/FormFields/FormFields";
 
@@ -25,25 +23,13 @@ interface FormValues {
   news: boolean;
 }
 
-const MarginBlock = styled.div`
-  margin-bottom: 15px;
-`;
-
-export const NewsField: React.FC = () => (
-  <Field name="news">
-    {({ field }: FieldProps<string>) => (
-      <MarginBlock>
-        <CheckBoxControl {...field} checked={!!field.value} label={<FormattedMessage id="login.subscribe" />} />
-      </MarginBlock>
-    )}
-  </Field>
-);
-
 interface SignupButtonProps {
   isLoading: boolean;
   disabled: boolean;
   buttonMessageId?: string;
 }
+
+export const passwordSchema = yup.string().required("form.empty.error").min(12, "signup.password.minLength");
 
 export const SignupButton: React.FC<SignupButtonProps> = ({
   isLoading,
@@ -68,7 +54,7 @@ export const SignupForm: React.FC = () => {
   const validationSchema = useMemo(() => {
     const shape = {
       email: yup.string().email("form.email.error").required("form.empty.error"),
-      password: yup.string().min(12, "signup.password.minLength").required("form.empty.error"),
+      password: passwordSchema,
       name: yup.string(),
       companyName: yup.string(),
     };
@@ -120,9 +106,6 @@ export const SignupForm: React.FC = () => {
           </FieldItem>
           <FieldItem>
             <PasswordField />
-          </FieldItem>
-          <FieldItem>
-            <NewsField />
           </FieldItem>
           <BottomBlock>
             <SignupButton isLoading={isSubmitting} disabled={!isValid} />

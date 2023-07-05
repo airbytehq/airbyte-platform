@@ -5,76 +5,27 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useToggle } from "react-use";
 
-import {
-  AirbyteStreamWithStatusAndConfiguration,
-  FakeStreamConfigWithStatus,
-} from "components/connection/StreamStatus/getStreamsWithStatus";
-import { useGetStreamStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { TimeIcon } from "components/icons/TimeIcon";
+import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
-import { AttemptStatus, ConnectionStatus, JobStatus } from "core/request/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { moveTimeToFutureByPeriod } from "utils/time";
-
-import { ErrorMessage, StreamErrorMessage } from "./ErrorMessage";
+import { ConnectionStatusCard } from "./ConnectionStatusCard";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import { StreamSearchFiltering } from "./StreamSearchFiltering";
 import styles from "./StreamsList.module.scss";
 import { useStreamsListContext } from "./StreamsListContext";
-import { StreamStatusCard } from "./StreamStatusCard";
-import { StreamStatusHeader } from "./StreamStatusHeader";
 
-const NextSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined }> = ({ config }) => {
-  const { connection } = useConnectionEditService();
-
-  if (connection.status === ConnectionStatus.inactive || !config || !config.selected) {
-    return null;
-  }
-
-  if (config.isResetting) {
-    return <FormattedMessage id="connection.resetInProgress" />;
-  }
-
-  if (config.isSyncing) {
-    return <FormattedMessage id="connection.syncInProgress" />;
-  }
-
-  if (
-    !["cron", "manual"].includes(config.scheduleType ?? "") &&
-    config.scheduleData?.basicSchedule &&
-    config.latestAttemptCreatedAt
-  ) {
-    const latestSync = dayjs(config.latestAttemptCreatedAt * 1000);
-
-    const nextSync = moveTimeToFutureByPeriod(
-      latestSync.subtract(config.scheduleData?.basicSchedule.units, config.scheduleData?.basicSchedule.timeUnit),
-      config.scheduleData?.basicSchedule.units,
-      config.scheduleData?.basicSchedule.timeUnit
-    );
-
-    const attemptWasSuccessful =
-      config.latestAttemptStatus === AttemptStatus.succeeded || config.jobStatus === JobStatus.succeeded;
-
-    const id = `connection.stream.status.${attemptWasSuccessful ? "nextSync" : "nextTry"}`;
-
-    return <FormattedMessage id={id} values={{ sync: nextSync.fromNow() }} />;
-  }
-
-  return null;
-};
-
-const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showRelativeTime: boolean }> = ({
-  config,
+const LastSync: React.FC<{ transitionedAt: number | undefined; showRelativeTime: boolean }> = ({
+  transitionedAt,
   showRelativeTime,
 }) => {
   const lastSyncDisplayText = useMemo(() => {
-    if (config?.lastSuccessfulSync) {
-      const lastSync = dayjs(config.lastSuccessfulSync * 1000);
+    if (transitionedAt) {
+      const lastSync = dayjs(transitionedAt);
 
       if (showRelativeTime) {
         return lastSync.fromNow();
@@ -82,7 +33,7 @@ const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showR
       return lastSync.format("MM.DD.YY HH:mm:ss");
     }
     return null;
-  }, [config?.lastSuccessfulSync, showRelativeTime]);
+  }, [transitionedAt, showRelativeTime]);
   if (lastSyncDisplayText) {
     return (
       <Text size="xs" color="grey300">
@@ -96,28 +47,34 @@ const LastSync: React.FC<{ config: FakeStreamConfigWithStatus | undefined; showR
 export const StreamsList = () => {
   const [showRelativeTime, setShowRelativeTime] = useToggle(true);
 
-  const { streams, filteredStreams } = useStreamsListContext();
+  const { filteredStreams } = useStreamsListContext();
 
-  const columnHelper = useMemo(() => createColumnHelper<AirbyteStreamWithStatusAndConfiguration>(), []);
-  const getStreamStatus = useGetStreamStatus();
+  const streamEntries = filteredStreams.map((stream) => {
+    return {
+      name: stream.streamName,
+      state: stream,
+    };
+  });
 
+  const columnHelper = useMemo(() => createColumnHelper<(typeof streamEntries)[number]>(), []);
   const columns = useMemo(
     () => [
-      columnHelper.accessor("config", {
+      columnHelper.accessor("state", {
         id: "statusIcon",
-        header: () => null,
+        header: () => <FormattedMessage id="connection.stream.status.table.status" />,
         cell: (props) => (
-          <StreamStatusIndicator
-            status={getStreamStatus(props.cell.getValue())}
-            loading={props.cell.getValue()?.isSyncing || props.cell.getValue()?.isResetting}
-          />
+          <FlexContainer justifyContent="flex-start" gap="sm" alignItems="center">
+            <StreamStatusIndicator status={props.cell.getValue().status} loading={props.cell.getValue().isRunning} />
+            <FormattedMessage id={`connection.stream.status.${props.cell.getValue().status}`} />
+          </FlexContainer>
         ),
+        meta: { thClassName: styles.statusHeader },
       }),
-      columnHelper.accessor("stream.name", {
+      columnHelper.accessor("name", {
         header: () => <FormattedMessage id="connection.stream.status.table.streamName" />,
         cell: (props) => <>{props.cell.getValue()}</>,
       }),
-      columnHelper.accessor("config", {
+      columnHelper.accessor("state", {
         id: "lastSync",
         header: () => (
           <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
@@ -125,45 +82,47 @@ export const StreamsList = () => {
             <TimeIcon />
           </button>
         ),
-        cell: (props) => <LastSync config={props.cell.getValue()} showRelativeTime={showRelativeTime} />,
+        cell: (props) => (
+          <LastSync transitionedAt={props.cell.getValue()?.lastSuccessfulSyncAt} showRelativeTime={showRelativeTime} />
+        ),
       }),
-      columnHelper.accessor("config", {
-        id: "timeToNextSync",
-        header: () => null,
-        cell: (props) => <NextSync config={props.cell.getValue()} />,
-      }),
-      columnHelper.accessor("config", {
+      columnHelper.accessor("state", {
         header: () => null,
         id: "actions",
-        cell: (props) => <StreamActionsMenu stream={props.row.original.stream} />,
+        cell: (props) => <StreamActionsMenu streamState={props.cell.getValue()} />,
+        meta: {
+          thClassName: styles.actionsHeader,
+        },
       }),
     ],
-    [columnHelper, getStreamStatus, setShowRelativeTime, showRelativeTime]
+    [columnHelper, setShowRelativeTime, showRelativeTime]
   );
 
   return (
-    <Card title={<StreamStatusHeader streamCount={streams.length} />}>
-      <FlexContainer direction="column" gap="sm" className={styles.body}>
-        <StreamStatusCard />
-        <ErrorMessage />
-        <div className={styles.tableContainer}>
-          <StreamSearchFiltering className={styles.search} />
-          <Table
-            columns={columns}
-            data={filteredStreams}
-            variant="light"
-            className={styles.table}
-            getRowClassName={(data) =>
-              classNames({ [styles.syncing]: data.config?.isSyncing || data.config?.isResetting })
-            }
-            getIsRowExpanded={(data) =>
-              data?.original?.config?.jobStatus === JobStatus.failed ||
-              data?.original?.config?.latestAttemptStatus === AttemptStatus.failed
-            }
-            expandedRow={({ row }) => <StreamErrorMessage stream={row.original} />}
-          />
-        </div>
-      </FlexContainer>
-    </Card>
+    <>
+      <Box mb="md">
+        <ConnectionStatusCard />
+      </Box>
+      <Card
+        title={
+          <FlexContainer justifyContent="space-between" alignItems="center">
+            <FormattedMessage id="connection.stream.status.title" />
+            <StreamSearchFiltering className={styles.search} />
+          </FlexContainer>
+        }
+      >
+        <FlexContainer direction="column" gap="sm">
+          <div className={styles.tableContainer} data-survey="streamcentric">
+            <Table
+              columns={columns}
+              data={streamEntries}
+              variant="inBlock"
+              className={styles.table}
+              getRowClassName={(data) => classNames({ [styles.syncing]: data.state?.isRunning })}
+            />
+          </div>
+        </FlexContainer>
+      </Card>
+    </>
   );
 };

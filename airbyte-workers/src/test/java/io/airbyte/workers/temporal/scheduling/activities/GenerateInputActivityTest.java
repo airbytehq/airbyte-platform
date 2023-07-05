@@ -21,6 +21,7 @@ import io.airbyte.api.client.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.DestinationConnection;
@@ -35,6 +36,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
@@ -53,6 +55,7 @@ import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.S
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber;
 import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncJobCheckConnectionInputs;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -74,6 +77,7 @@ class GenerateInputActivityTest {
   private static Job job;
   private static FeatureFlagClient featureFlagClient;
   private static Map<String, Boolean> featureFlagMap;
+  private static ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   private static final JsonNode SOURCE_CONFIGURATION = Jsons.jsonNode(Map.of("source_key", "source_value"));
   private static final JsonNode SOURCE_CONFIG_WITH_OAUTH = Jsons.jsonNode(Map.of("source_key", "source_value", "oauth", "oauth_value"));
@@ -104,8 +108,9 @@ class GenerateInputActivityTest {
     jobPersistence = mock(JobPersistence.class);
     configRepository = mock(ConfigRepository.class);
     configInjector = mock(ConfigInjector.class);
+    actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     generateInputActivity = new GenerateInputActivityImpl(jobPersistence, configRepository, stateApi, attemptApi, featureFlags,
-        featureFlagClient, oAuthConfigSupplier, configInjector);
+        featureFlagClient, oAuthConfigSupplier, configInjector, actorDefinitionVersionHelper);
 
     job = mock(Job.class);
 
@@ -118,7 +123,10 @@ class GenerateInputActivityTest {
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withConfiguration(DESTINATION_CONFIGURATION);
     when(configRepository.getDestinationConnection(DESTINATION_ID)).thenReturn(destinationConnection);
-    when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(mock(StandardDestinationDefinition.class));
+    final StandardDestinationDefinition destinationDefinition = mock(StandardDestinationDefinition.class);
+    when(configRepository.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID)).thenReturn(destinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
+        .thenReturn(mock(ActorDefinitionVersion.class));
     when(oAuthConfigSupplier.injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION))
         .thenReturn(DESTINATION_CONFIG_WITH_OAUTH);
 
@@ -139,7 +147,6 @@ class GenerateInputActivityTest {
         .withWorkspaceId(WORKSPACE_ID)
         .withConfiguration(SOURCE_CONFIGURATION);
     when(configRepository.getSourceConnection(SOURCE_ID)).thenReturn(sourceConnection);
-    when(configRepository.getSourceDefinitionFromSource(SOURCE_ID)).thenReturn(mock(StandardSourceDefinition.class));
     when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
     when(configInjector.injectConfig(SOURCE_CONFIG_WITH_OAUTH, sourceDefinitionId))
@@ -172,8 +179,7 @@ class GenerateInputActivityTest {
         .withState(STATE)
         .withCatalog(jobSyncConfig.getConfiguredAirbyteCatalog())
         .withWorkspaceId(jobSyncConfig.getWorkspaceId())
-        .withCommitStateAsap(true)
-        .withCommitStatsAsap(true);
+        .withIsReset(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -187,7 +193,8 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage());
+        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
     final GeneratedJobInput expectedGeneratedJobInput = new GeneratedJobInput(
         expectedJobRunConfig,
@@ -215,9 +222,6 @@ class GenerateInputActivityTest {
   @Test
   void testGetResetSyncWorkflowInput() throws IOException, ApiException, JsonValidationException, ConfigNotFoundException {
     final SyncInput syncInput = new SyncInput(ATTEMPT_ID, JOB_ID);
-
-    when(configRepository.getSourceDefinitionFromSource(SOURCE_ID)).thenReturn(mock(StandardSourceDefinition.class));
-
     when(stateApi.getState(new ConnectionIdRequestBody().connectionId(CONNECTION_ID)))
         .thenReturn(new ConnectionState()
             .stateType(ConnectionStateType.LEGACY)
@@ -244,8 +248,8 @@ class GenerateInputActivityTest {
         .withState(STATE)
         .withCatalog(jobResetConfig.getConfiguredAirbyteCatalog())
         .withWorkspaceId(jobResetConfig.getWorkspaceId())
-        .withCommitStateAsap(true)
-        .withCommitStatsAsap(true);
+        .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
+        .withIsReset(true);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -259,7 +263,8 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobResetConfig.getDestinationDockerImage());
+        .withDockerImage(jobResetConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
     final GeneratedJobInput expectedGeneratedJobInput = new GeneratedJobInput(
         expectedJobRunConfig,
@@ -319,7 +324,8 @@ class GenerateInputActivityTest {
     final IntegrationLauncherConfig expectedDestinationLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))
         .withAttemptId((long) ATTEMPT_ID)
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage());
+        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
+        .withAdditionalEnvironmentVariables(Collections.emptyMap());
 
     final StandardCheckConnectionInput expectedDestinationCheckInput = new StandardCheckConnectionInput()
         .withActorId(DESTINATION_ID)

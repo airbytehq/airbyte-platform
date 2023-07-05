@@ -2,28 +2,27 @@ import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
-import { BuilderPrompt } from "components/connectorBuilder/BuilderPrompt";
-import { Card } from "components/ui/Card";
+import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBranding";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 
 import { ConnectionConfiguration } from "core/domain/connection";
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
 import { LogsRequestError } from "core/request/LogsRequestError";
-import { useExperiment } from "hooks/services/Experiment";
-import { RoutePaths } from "pages/routePaths";
 import { useGetSourceDefinitionSpecificationAsync } from "services/connector/SourceDefinitionSpecificationService";
 import { FormError } from "utils/errorStatusMessage";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
-import styles from "./SourceForm.module.scss";
+export interface SourceFormValues {
+  name: string;
+  serviceType: string;
+  sourceDefinitionId?: string;
+  connectionConfiguration?: ConnectionConfiguration;
+}
 
 interface SourceFormProps {
-  onSubmit: (values: {
-    name: string;
-    serviceType: string;
-    sourceDefinitionId?: string;
-    connectionConfiguration?: ConnectionConfiguration;
-  }) => Promise<void>;
+  onSubmit: (values: SourceFormValues) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
   error?: FormError | null;
   selectedSourceDefinitionId?: string;
@@ -64,28 +63,31 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       ...values,
       sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
     });
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
+
+  const HeaderBlock = () => {
+    return (
+      <FlexContainer justifyContent="space-between">
+        <Heading as="h3" size="sm">
+          <FormattedMessage id="onboarding.createSource" />
+        </Heading>
+        {selectedSourceDefinitionId && <ConnectorDefinitionBranding sourceDefinitionId={selectedSourceDefinitionId} />}
+      </FlexContainer>
+    );
+  };
 
   return (
-    <>
-      <ConnectorCard
-        formType="source"
-        title={<FormattedMessage id="onboarding.sourceSetUp" />}
-        description={<FormattedMessage id="sources.description" />}
-        isLoading={isLoading}
-        fetchingConnectorError={sourceDefinitionError instanceof Error ? sourceDefinitionError : null}
-        availableConnectorDefinitions={sourceDefinitions}
-        onConnectorDefinitionSelect={onDropDownSelect}
-        selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
-        selectedConnectorDefinitionId={sourceDefinitionId}
-        onSubmit={onSubmitForm}
-        jobInfo={LogsRequestError.extractJobInfo(error)}
-      />
-      {showBuilderNavigationLinks && !sourceDefinitionSpecification && (
-        <Card fullWidth className={styles.builderPrompt}>
-          <BuilderPrompt builderRoutePath={`../../${RoutePaths.ConnectorBuilder}`} />
-        </Card>
-      )}
-    </>
+    <ConnectorCard
+      formType="source"
+      description={<FormattedMessage id="sources.description" />}
+      headerBlock={<HeaderBlock />}
+      isLoading={isLoading}
+      fetchingConnectorError={sourceDefinitionError instanceof Error ? sourceDefinitionError : null}
+      availableConnectorDefinitions={sourceDefinitions}
+      onConnectorDefinitionSelect={onDropDownSelect}
+      selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
+      selectedConnectorDefinitionId={sourceDefinitionId}
+      onSubmit={onSubmitForm}
+      jobInfo={LogsRequestError.extractJobInfo(error)}
+    />
   );
 };

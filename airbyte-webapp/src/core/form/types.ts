@@ -1,6 +1,6 @@
 import { JSONSchema7Type, JSONSchema7TypeName } from "json-schema";
 
-import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { AirbyteJSONSchema } from "../jsonSchema/types";
 
 export interface GroupDetails {
   id: string;
@@ -73,3 +73,5 @@ export interface FormObjectArrayItem extends FormItem {
 }
 
 export type FormBlock = FormGroupItem | FormBaseItem | FormConditionItem | FormObjectArrayItem;
+
+export const FORM_PATTERN_ERROR = "form.pattern.error";

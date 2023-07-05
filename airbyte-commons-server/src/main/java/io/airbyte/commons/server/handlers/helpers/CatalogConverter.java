@@ -17,8 +17,8 @@ import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.text.Names;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.FieldSelectionData;
-import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.ArrayList;
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +56,8 @@ public class CatalogConverter {
    * @param fieldSelectionData field selection mask
    * @return api catalog model
    */
-  public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final ConfiguredAirbyteCatalog catalog, FieldSelectionData fieldSelectionData) {
+  public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final ConfiguredAirbyteCatalog catalog,
+                                                                    final FieldSelectionData fieldSelectionData) {
     final List<io.airbyte.api.model.generated.AirbyteStreamAndConfiguration> streams = catalog.getStreams()
         .stream()
         .map(configuredStream -> {
@@ -94,20 +96,20 @@ public class CatalogConverter {
    * Convert an internal model version of the catalog into an api model of the catalog.
    *
    * @param catalog internal catalog model
-   * @param sourceDefinition source definition for the catalog
+   * @param sourceVersion actor definition version for the source in use
    * @return api catalog model
    */
   public static io.airbyte.api.model.generated.AirbyteCatalog toApi(final io.airbyte.protocol.models.AirbyteCatalog catalog,
-                                                                    StandardSourceDefinition sourceDefinition) {
-    List<String> suggestedStreams = new ArrayList<>();
-    Boolean suggestingStreams;
+                                                                    @Nullable final ActorDefinitionVersion sourceVersion) {
+    final List<String> suggestedStreams = new ArrayList<>();
+    final Boolean suggestingStreams;
 
-    // There are occasions in tests where we have not seeded the sourceDefinition fully. This is to
+    // There are occasions in tests where we have not seeded the sourceVersion fully. This is to
     // prevent those tests from failing
-    if (sourceDefinition != null) {
-      suggestingStreams = sourceDefinition.getSuggestedStreams() != null;
+    if (sourceVersion != null) {
+      suggestingStreams = sourceVersion.getSuggestedStreams() != null;
       if (suggestingStreams) {
-        suggestedStreams.addAll(sourceDefinition.getSuggestedStreams().getStreams());
+        suggestedStreams.addAll(sourceVersion.getSuggestedStreams().getStreams());
       }
     } else {
       suggestingStreams = false;
@@ -119,12 +121,12 @@ public class CatalogConverter {
             .map(CatalogConverter::toApi)
             .map(s -> new io.airbyte.api.model.generated.AirbyteStreamAndConfiguration()
                 .stream(s)
-                .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams)))
+                .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams, catalog.getStreams().stream().count())))
             .collect(Collectors.toList()));
   }
 
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  private static io.airbyte.protocol.models.AirbyteStream toConfiguredProtocol(final AirbyteStream stream, AirbyteStreamConfiguration config)
+  private static io.airbyte.protocol.models.AirbyteStream toConfiguredProtocol(final AirbyteStream stream, final AirbyteStreamConfiguration config)
       throws JsonValidationException {
     if (config.getFieldSelectionEnabled() != null && config.getFieldSelectionEnabled()) {
       // Validate the selected field paths.
@@ -204,7 +206,7 @@ public class CatalogConverter {
                 .withDestinationSyncMode(Enums.convertTo(s.getConfig().getDestinationSyncMode(),
                     io.airbyte.protocol.models.DestinationSyncMode.class))
                 .withPrimaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()));
-          } catch (JsonValidationException e) {
+          } catch (final JsonValidationException e) {
             LOGGER.error("Error parsing catalog: {}", e);
             errors.add(e);
             return null;
@@ -220,23 +222,22 @@ public class CatalogConverter {
 
   @SuppressWarnings("LineLength")
   private static io.airbyte.api.model.generated.AirbyteStreamConfiguration generateDefaultConfiguration(final io.airbyte.api.model.generated.AirbyteStream stream,
-                                                                                                        Boolean suggestingStreams,
-                                                                                                        List<String> suggestedStreams) {
+                                                                                                        final Boolean suggestingStreams,
+                                                                                                        final List<String> suggestedStreams,
+                                                                                                        final Long totalStreams) {
     final io.airbyte.api.model.generated.AirbyteStreamConfiguration result = new io.airbyte.api.model.generated.AirbyteStreamConfiguration()
         .aliasName(Names.toAlphanumericAndUnderscore(stream.getName()))
         .cursorField(stream.getDefaultCursorField())
         .destinationSyncMode(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
-        .primaryKey(stream.getSourceDefinedPrimaryKey())
-        .selected(!suggestingStreams)
-        .suggested(true);
+        .primaryKey(stream.getSourceDefinedPrimaryKey());
 
-    if (suggestingStreams) {
-      if (suggestedStreams.contains(stream.getName())) {
-        result.setSelected(true);
-      } else {
-        result.setSuggested(false);
-      }
-    }
+    final boolean onlyOneStream = totalStreams == 1L;
+    final boolean isSelected = onlyOneStream || (suggestingStreams && suggestedStreams.contains(stream.getName()));
+
+    // In the case where this connection hasn't yet been configured, the suggested streams are also
+    // (pre)-selected
+    result.setSuggested(isSelected);
+    result.setSelected(isSelected);
 
     if (stream.getSupportedSyncModes().size() > 0) {
       result.setSyncMode(stream.getSupportedSyncModes().get(0));
@@ -247,7 +248,7 @@ public class CatalogConverter {
     return result;
   }
 
-  private static Boolean getStreamHasFieldSelectionEnabled(FieldSelectionData fieldSelectionData, StreamDescriptor streamDescriptor) {
+  private static Boolean getStreamHasFieldSelectionEnabled(final FieldSelectionData fieldSelectionData, final StreamDescriptor streamDescriptor) {
     if (fieldSelectionData == null
         || fieldSelectionData.getAdditionalProperties().get(streamDescriptorToStringForFieldSelection(streamDescriptor)) == null) {
       return false;
@@ -283,12 +284,12 @@ public class CatalogConverter {
       throws JsonValidationException {
     final ArrayList<JsonValidationException> errors = new ArrayList<>();
 
-    io.airbyte.protocol.models.AirbyteCatalog protoCatalog =
+    final io.airbyte.protocol.models.AirbyteCatalog protoCatalog =
         new io.airbyte.protocol.models.AirbyteCatalog();
-    var airbyteStream = catalog.getStreams().stream().map(stream -> {
+    final var airbyteStream = catalog.getStreams().stream().map(stream -> {
       try {
         return toConfiguredProtocol(stream.getStream(), stream.getConfig());
-      } catch (JsonValidationException e) {
+      } catch (final JsonValidationException e) {
         LOGGER.error("Error parsing catalog: {}", e);
         errors.add(e);
         return null;

@@ -1,13 +1,13 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
+import { useDbtIntegration, useAvailableDbtJobs } from "core/api/cloud";
 import { WebBackendConnectionRead } from "core/request/AirbyteClient";
 import { TrackErrorFn, useAppMonitoringService } from "hooks/services/AppMonitoringService";
-import { useDbtIntegration, useAvailableDbtJobs } from "packages/cloud/services/dbtCloud";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import styles from "./DbtCloudTransformationsCard/DbtCloudTransformationsCard.module.scss";
 import { DbtJobsForm } from "./DbtCloudTransformationsCard/DbtJobsForm";
@@ -34,7 +34,7 @@ class DbtCloudErrorBoundary extends React.Component<React.PropsWithChildren<DbtC
 
   componentDidCatch(error: Error) {
     const { trackError, workspaceId } = this.props;
-    trackError(error, { workspaceId });
+    trackError(error, { workspaceId, errorBoundary: this.constructor.name });
   }
 
   render() {

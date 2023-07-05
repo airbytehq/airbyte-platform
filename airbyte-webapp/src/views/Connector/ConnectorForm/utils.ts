@@ -57,33 +57,31 @@ export function serverProvidedOauthPaths(
   };
 }
 
-export function OrderComparator(checkRequiredProperty: boolean): (a: FormBlock, b: FormBlock) => number {
-  return (a, b) => {
-    const aIsNumber = Number.isInteger(a.order);
-    const bIsNumber = Number.isInteger(b.order);
-    // Treat being a formCondition as required, because a value must be selected for it regardless of being optional or required
-    // Treat formGroup as required, because the optional/required validations only apply to the nested fields inside of it
-    // Treat const values as required, since they aren't rendered anyway and otherwise can mess up ordering of optional fields
-    const aIsRequired =
-      a.isRequired || a._type === "formCondition" || a._type === "formGroup" || a.always_show || a.const !== undefined;
-    const bIsRequired =
-      b.isRequired || b._type === "formCondition" || b._type === "formGroup" || b.always_show || b.const !== undefined;
+export function OrderComparator(a: FormBlock, b: FormBlock): number {
+  const aIsNumber = Number.isInteger(a.order);
+  const bIsNumber = Number.isInteger(b.order);
+  // Treat being a formCondition as required, because a value must be selected for it regardless of being optional or required
+  // Treat formGroup as required, because the optional/required validations only apply to the nested fields inside of it
+  // Treat const values as required, since they aren't rendered anyway and otherwise can mess up ordering of optional fields
+  const aIsRequired =
+    a.isRequired || a._type === "formCondition" || a._type === "formGroup" || a.always_show || a.const !== undefined;
+  const bIsRequired =
+    b.isRequired || b._type === "formCondition" || b._type === "formGroup" || b.always_show || b.const !== undefined;
 
-    switch (true) {
-      case aIsNumber && bIsNumber:
-        return (a.order as number) - (b.order as number);
-      case aIsNumber && !bIsNumber:
-        return -1;
-      case bIsNumber && !aIsNumber:
-        return 1;
-      case checkRequiredProperty && aIsRequired && !bIsRequired:
-        return -1;
-      case checkRequiredProperty && !aIsRequired && bIsRequired:
-        return 1;
-      default:
-        return naturalComparator(a.fieldKey, b.fieldKey);
-    }
-  };
+  switch (true) {
+    case aIsRequired && !bIsRequired:
+      return -1;
+    case !aIsRequired && bIsRequired:
+      return 1;
+    case aIsNumber && bIsNumber:
+      return (a.order as number) - (b.order as number);
+    case aIsNumber && !bIsNumber:
+      return -1;
+    case bIsNumber && !aIsNumber:
+      return 1;
+    default:
+      return naturalComparator(a.fieldKey, b.fieldKey);
+  }
 }
 
 export function getPatternDescriptor(formItem: FormBaseItem): string | undefined {

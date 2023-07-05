@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useUpdateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
 import ConnectorsView from "./components/ConnectorsView";

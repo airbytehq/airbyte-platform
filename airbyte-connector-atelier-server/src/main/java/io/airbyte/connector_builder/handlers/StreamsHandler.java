@@ -36,7 +36,7 @@ public class StreamsHandler {
   public StreamsListRead listStreams(final StreamsListRequestBody streamsListRequestBody)
       throws AirbyteCdkInvalidInputException, ConnectorBuilderException {
     try {
-      LOGGER.info("Handling list_streams request.");
+      LOGGER.debug("Handling list_streams request.");
       return this.requester.listStreams(streamsListRequestBody.getManifest(), streamsListRequestBody.getConfig());
     } catch (final IOException exc) {
       LOGGER.error("Error handling list_streams request.", exc);

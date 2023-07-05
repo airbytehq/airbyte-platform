@@ -1,66 +1,43 @@
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import classNames from "classnames";
 import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage, FormattedNumber } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
-import styled from "styled-components";
 
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
+import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/analytics";
 import { useStripeCheckout } from "core/api/cloud";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { useGetCloudWorkspace, useInvalidateCloudWorkspace } from "core/api/cloud";
+import { CloudWorkspaceRead } from "core/api/types/CloudApi";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { CloudWorkspace } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import {
-  useGetCloudWorkspace,
-  useInvalidateCloudWorkspace,
-} from "packages/cloud/services/workspaces/CloudWorkspacesService";
+import { useAuthService } from "packages/cloud/services/auth/AuthService";
 import { links } from "utils/links";
 
+import { EmailVerificationHint } from "./EmailVerificationHint";
 import { LowCreditBalanceHint } from "./LowCreditBalanceHint";
-
-interface Props {
-  selfServiceCheckoutEnabled: boolean;
-}
-
-const Block = styled.div`
-  background: ${({ theme }) => theme.blue50};
-  border-radius: 8px;
-  padding: 15px 20px;
-  font-size: 13px;
-  line-height: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 10px 0;
-`;
-const CreditView = styled.div`
-  text-transform: uppercase;
-`;
-const Count = styled.div`
-  padding-top: 6px;
-  font-weight: bold;
-  font-size: 24px;
-  line-height: 29px;
-`;
-const Actions = styled.div`
-  display: flex;
-  gap: 12px;
-`;
+import styles from "./RemainingCredits.module.scss";
+import { useBillingPageBanners } from "../useBillingPageBanners";
 
 const STRIPE_SUCCESS_QUERY = "stripeCheckoutSuccess";
 
 /**
  * Checks whether the given cloud workspace had a recent increase in credits.
  */
-function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspace): boolean {
+function hasRecentCreditIncrease(cloudWorkspace: CloudWorkspaceRead): boolean {
   const lastIncrement = cloudWorkspace.lastCreditPurchaseIncrementTimestamp;
   return lastIncrement ? Date.now() - lastIncrement < 30000 : false;
 }
 
-const RemainingCredits: React.FC<Props> = ({ selfServiceCheckoutEnabled }) => {
+export const RemainingCredits: React.FC = () => {
   const retryIntervalId = useRef<number>();
   const currentWorkspace = useCurrentWorkspace();
   const cloudWorkspace = useGetCloudWorkspace(currentWorkspace.workspaceId);
@@ -69,15 +46,17 @@ const RemainingCredits: React.FC<Props> = ({ selfServiceCheckoutEnabled }) => {
   const { isLoading, mutateAsync: createCheckout } = useStripeCheckout();
   const analytics = useAnalyticsService();
   const [isWaitingForCredits, setIsWaitingForCredits] = useState(false);
+  const { bannerVariant } = useBillingPageBanners();
+  const { emailVerified } = useAuthService();
 
   useEffectOnce(() => {
-    // If we are coming back from a successfull stripe checkout ...
+    // If we are coming back from a successful stripe checkout ...
     if (searchParams.has(STRIPE_SUCCESS_QUERY)) {
       // Remove the stripe parameter from the URL
       setSearchParams({}, { replace: true });
       // If the workspace doesn't have a recent increase in credits our server has not yet
       // received the Stripe callback or updated the workspace information. We're going to
-      // switch into a loading mode and relaod the workspace every 3s from now on until
+      // switch into a loading mode and reload the workspace every 3s from now on until
       // the workspace has received the credit update (see useEffect below)
       if (!hasRecentCreditIncrease(cloudWorkspace)) {
         setIsWaitingForCredits(true);
@@ -119,41 +98,57 @@ const RemainingCredits: React.FC<Props> = ({ selfServiceCheckoutEnabled }) => {
   };
 
   return (
-    <>
-      <LowCreditBalanceHint
-        disableCheckout={!selfServiceCheckoutEnabled}
-        onBuy={startStripeCheckout}
-        isLoading={isLoading || isWaitingForCredits}
-      />
-      <Block>
-        <CreditView>
-          <FormattedMessage id="credits.remainingCredits" />
-          <Count>
-            <FormattedNumber
-              value={cloudWorkspace.remainingCredits}
-              maximumFractionDigits={2}
-              minimumFractionDigits={2}
-            />
-          </Count>
-        </CreditView>
-        <Actions>
-          <Button
-            disabled={!selfServiceCheckoutEnabled}
-            type="button"
-            size="xs"
-            onClick={startStripeCheckout}
-            isLoading={isLoading || isWaitingForCredits}
-            icon={<FontAwesomeIcon icon={faPlus} />}
-          >
-            <FormattedMessage id="credits.buyCredits" />
-          </Button>
-          <Button size="xs" onClick={() => window.open(links.contactSales, "_blank")}>
-            <FormattedMessage id="credits.talkToSales" />
-          </Button>
-        </Actions>
-      </Block>
-    </>
+    <Card
+      className={classNames({
+        [styles.error]: bannerVariant === "error",
+        [styles.warning]: bannerVariant === "warning",
+        [styles.info]: bannerVariant === "info",
+      })}
+    >
+      <Box p="xl">
+        <FlexContainer alignItems="center" justifyContent="space-between">
+          <FlexItem>
+            <FlexContainer alignItems="baseline">
+              <Text size="xl" as="span">
+                <FormattedMessage id="credits.remainingCredits" />
+              </Text>
+              <ExternalLink href={links.creditDescription} variant="primary">
+                <Text size="sm" as="span">
+                  <FormattedMessage id="credits.whatAre" />
+                </Text>
+              </ExternalLink>
+            </FlexContainer>
+
+            <Text size="xl" bold>
+              <FormattedNumber
+                value={cloudWorkspace.remainingCredits ?? 0}
+                maximumFractionDigits={2}
+                minimumFractionDigits={2}
+              />
+            </Text>
+          </FlexItem>
+          <FlexContainer>
+            <Button
+              variant="dark"
+              disabled={!emailVerified}
+              type="button"
+              size="xs"
+              onClick={startStripeCheckout}
+              isLoading={isLoading || isWaitingForCredits}
+              icon={<FontAwesomeIcon icon={faPlus} />}
+            >
+              <FormattedMessage id="credits.buyCredits" />
+            </Button>
+            <Button size="xs" onClick={() => window.open(links.contactSales, "_blank")} variant="dark">
+              <FormattedMessage id="credits.talkToSales" />
+            </Button>
+          </FlexContainer>
+        </FlexContainer>
+        <FlexContainer direction="column">
+          {!emailVerified && <EmailVerificationHint variant={bannerVariant} />}
+          <LowCreditBalanceHint variant={bannerVariant} />
+        </FlexContainer>
+      </Box>
+    </Card>
   );
 };
-
-export default RemainingCredits;

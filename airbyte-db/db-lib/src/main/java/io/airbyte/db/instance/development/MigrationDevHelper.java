@@ -211,7 +211,7 @@ public class MigrationDevHelper {
     // When the current airbyte version is greater, use the airbyte version.
     final MigrationVersion migrationVersion = lastMigrationVersion.get();
     final AirbyteVersion migrationAirbyteVersion = getAirbyteVersion(migrationVersion);
-    if (currentAirbyteVersion.patchVersionCompareTo(migrationAirbyteVersion) > 0) {
+    if (currentAirbyteVersion.versionCompareTo(migrationAirbyteVersion) > 0) {
       LOGGER.info(
           "Use the current airbyte version ({}), since it is greater than the last migration version ({})",
           currentAirbyteVersion,

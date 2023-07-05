@@ -1,18 +1,20 @@
 import { Field, FieldInputProps, FieldProps, FormikProps, useField } from "formik";
-import { ChangeEvent, useCallback, useMemo } from "react";
+import React, { ChangeEvent, useCallback, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { ControlLabels } from "components";
+import { Box } from "components/ui/Box";
 import { DropDown, DropDownOptionDataItem } from "components/ui/DropDown";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { Action, Namespace } from "core/analytics";
 import { ConnectionScheduleData, ConnectionScheduleType } from "core/request/AirbyteClient";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { isCloudApp } from "utils/app";
 import { links } from "utils/links";
 
 import availableCronTimeZones from "./availableCronTimeZones.json";
@@ -24,6 +26,10 @@ const CRON_DEFAULT_VALUE = {
   cronTimeZone: "UTC",
   // Fire at 12:00 PM (noon) every day
   cronExpression: "0 0 12 * * ?",
+};
+
+const CronErrorChatWithUsButton: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  return <ExternalLink href={links.supportPortal}>{children}</ExternalLink>;
 };
 
 export const ScheduleField: React.FC = () => {
@@ -199,9 +205,22 @@ export const ScheduleField: React.FC = () => {
                 />
               </FlexContainer>
               {cronValidationError && (
-                <Text className={styles.errorMessage} data-testid="cronExpressionError">
-                  <FormattedMessage id={cronValidationError} />
-                </Text>
+                <Box mt="sm">
+                  <Text color="red" data-testid="cronExpressionError">
+                    <FormattedMessage
+                      id={cronValidationError}
+                      {...(isCloudApp() && cronValidationError === "form.cronExpression.underOneHourNotAllowed"
+                        ? {
+                            values: {
+                              lnk: (btnText: React.ReactNode) => (
+                                <CronErrorChatWithUsButton>{btnText}</CronErrorChatWithUsButton>
+                              ),
+                            },
+                          }
+                        : {})}
+                    />
+                  </Text>
+                </Box>
               )}
             </FormFieldLayout>
           )}

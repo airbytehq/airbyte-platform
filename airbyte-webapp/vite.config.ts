@@ -1,5 +1,6 @@
 import path from "path";
 
+import viteYaml from "@modyfi/vite-plugin-yaml";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import react from "@vitejs/plugin-react";
 import { UserConfig } from "vite";
@@ -8,9 +9,13 @@ import checker from "vite-plugin-checker";
 import svgrPlugin from "vite-plugin-svgr";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 
-import { buildInfo, docMiddleware } from "./packages/vite-plugins";
-import { environmentVariables } from "./packages/vite-plugins/environment-variables";
-import { experimentOverwrites } from "./packages/vite-plugins/experiment-overwrites";
+import {
+  buildInfo,
+  compileFormatJsMessages,
+  docMiddleware,
+  environmentVariables,
+  experimentOverwrites,
+} from "./packages/vite-plugins";
 
 export default defineConfig(() => {
   const config: UserConfig = {
@@ -19,7 +24,9 @@ export default defineConfig(() => {
       basicSsl(),
       react(),
       buildInfo(),
+      compileFormatJsMessages(),
       viteTsconfigPaths(),
+      viteYaml(),
       svgrPlugin({
         svgrOptions: {
           titleProp: true,
@@ -32,7 +39,7 @@ export default defineConfig(() => {
           initialIsOpen: false,
           position: "br",
           // Align error popover button with the react-query dev tool button
-          badgeStyle: "transform: translate(-135px,-11px)",
+          badgeStyle: "transform: translate(-75px,-11px)",
         },
         eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx src` },
         stylelint: {
@@ -57,7 +64,7 @@ export default defineConfig(() => {
       port: Number(process.env.PORT) || 3000,
       strictPort: true,
       headers: {
-        "Content-Security-Policy": "script-src * 'unsafe-inline'; worker-src self blob:;",
+        "Content-Security-Policy": "script-src * 'unsafe-inline'; worker-src 'self' blob:;",
       },
     },
     css: {

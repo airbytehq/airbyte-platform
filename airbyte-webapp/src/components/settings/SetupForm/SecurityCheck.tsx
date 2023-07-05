@@ -1,5 +1,5 @@
-import { useFormikContext } from "formik";
-import { memo, useEffect } from "react";
+import React, { memo, useEffect } from "react";
+import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -11,27 +11,28 @@ import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { useOssSecurityCheck } from "core/api";
-import CheckBoxControl from "packages/cloud/views/auth/components/CheckBoxControl";
+import { CheckBoxControl } from "packages/cloud/views/auth/components/CheckBoxControl";
 import { links } from "utils/links";
 
 import { SetupFormValues } from "./SetupForm";
 
 export const SecurityCheck: React.FC = memo(() => {
   const { formatMessage } = useIntl();
-  const { setFieldValue, errors } = useFormikContext<SetupFormValues>();
+  const { errors } = useFormState<SetupFormValues>();
+  const { setValue } = useFormContext<SetupFormValues>();
   const { data, isLoading, isError } = useOssSecurityCheck(window.location.origin);
 
   useEffect(() => {
     if (isLoading) {
-      setFieldValue("securityCheck", "loading");
+      setValue("securityCheck", "loading");
     } else if (isError) {
-      setFieldValue("securityCheck", "check_failed");
+      setValue("securityCheck", "check_failed");
     } else if (data?.status === "closed") {
-      setFieldValue("securityCheck", "succeeded");
+      setValue("securityCheck", "succeeded");
     } else {
-      setFieldValue("securityCheck", "failed");
+      setValue("securityCheck", "failed", { shouldValidate: true }); // enforce validation since we set invalid value
     }
-  }, [data?.status, isError, isLoading, setFieldValue]);
+  }, [data?.status, isError, isLoading, setValue]);
 
   if (isLoading) {
     return (
@@ -80,9 +81,10 @@ export const SecurityCheck: React.FC = memo(() => {
             <CheckBoxControl
               label={formatMessage({ id: "setupForm.check.overwrite" })}
               data-testid="overwriteSecurityCheck"
+              name="overwriteSecurityCheck"
               checked={!errors.securityCheck}
-              onChange={(ev) => {
-                setFieldValue("securityCheck", ev.target.checked ? "ignored" : "failed");
+              onChange={({ target: { checked } }) => {
+                setValue("securityCheck", checked ? "ignored" : "failed", { shouldValidate: true });
               }}
             />
           </Collapsible>
@@ -107,3 +109,4 @@ export const SecurityCheck: React.FC = memo(() => {
     />
   );
 });
+SecurityCheck.displayName = "SecurityCheck";

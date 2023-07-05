@@ -3,8 +3,13 @@
 
 .icon {
   flex-shrink: 0;
+  width: 40px;
 }
 
 .description {
   color: colors.$grey-400;
+}
+
+.buttonText {
+  white-space: nowrap;
 }

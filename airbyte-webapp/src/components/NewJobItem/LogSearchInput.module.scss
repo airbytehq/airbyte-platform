@@ -1,0 +1,19 @@
+@use "scss/variables";
+
+.logSearchInput {
+  &__inputWrapper {
+    flex-grow: 1;
+    position: relative;
+  }
+
+  &__lineCount {
+    white-space: nowrap;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding-right: variables.$spacing-lg;
+  }
+}

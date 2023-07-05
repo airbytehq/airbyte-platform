@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.ReleaseStage;
@@ -22,7 +23,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.UUID;
@@ -46,11 +46,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
   @BeforeEach
   void setup() {
-    configRepository = spy(new ConfigRepository(
-        database,
-        new ActorDefinitionMigrator(new ExceptionWrappingDatabase(database)),
-        null,
-        MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
+    configRepository = spy(new ConfigRepository(database, null, MockData.MAX_SECONDS_BETWEEN_MESSAGE_SUPPLIER));
   }
 
   @Test
@@ -104,32 +100,38 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         .withWorkspaceId(WORKSPACE_ID);
   }
 
-  private static StandardSourceDefinition createSourceDefinition(final io.airbyte.config.ReleaseStage releaseStage) {
+  private static StandardSourceDefinition createSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID)
         .withTombstone(false)
-        .withName("source-definition-a")
+        .withName("source-definition-a");
+  }
+
+  private static ActorDefinitionVersion createActorDefinitionVersion(final UUID actorDefinitionId,
+                                                                     final io.airbyte.config.ReleaseStage releaseStage) {
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefinitionId)
         .withDockerRepository("dockerhub")
-        .withDockerImageTag("some-tag")
+        .withDockerImageTag(UUID.randomUUID().toString()) // random tag to force new ADV creation in the DB, since ADVs are not updated when writing
         .withReleaseStage(releaseStage);
   }
 
-  private static StandardDestinationDefinition createDestinationDefinition(final io.airbyte.config.ReleaseStage releaseStage) {
+  private static StandardDestinationDefinition createDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withTombstone(false)
-        .withName("destination-definition-a")
-        .withDockerRepository("dockerhub")
-        .withDockerImageTag("some-tag")
-        .withReleaseStage(releaseStage);
+        .withName("destination-definition-a");
   }
 
   private void persistConnectorsWithReleaseStages(final ReleaseStage sourceReleaseStage,
                                                   final ReleaseStage destinationReleaseStage)
-      throws JsonValidationException, IOException {
-
-    configRepository.writeStandardSourceDefinition(createSourceDefinition(sourceReleaseStage));
-    configRepository.writeStandardDestinationDefinition(createDestinationDefinition(destinationReleaseStage));
+      throws IOException {
+    configRepository.writeSourceDefinitionAndDefaultVersion(
+        createSourceDefinition(),
+        createActorDefinitionVersion(SOURCE_DEFINITION_ID, sourceReleaseStage));
+    configRepository.writeDestinationDefinitionAndDefaultVersion(
+        createDestinationDefinition(),
+        createActorDefinitionVersion(DESTINATION_DEFINITION_ID, destinationReleaseStage));
     configRepository.writeSourceConnectionNoSecrets(createBaseSource());
     configRepository.writeDestinationConnectionNoSecrets(createBaseDestination());
   }

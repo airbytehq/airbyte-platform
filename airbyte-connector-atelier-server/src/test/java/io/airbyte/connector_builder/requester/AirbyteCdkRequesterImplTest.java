@@ -96,7 +96,7 @@ class AirbyteCdkRequesterImplTest {
         "{\"test_read_limit_reached\": true, \"logs\":[{\"message\":\"log message1\"}, {\"message\":\"log message2\"}], "
             + "\"slices\": [{\"pages\": [{\"records\": [{\"record\": 1}]}], \"slice_descriptor\": {\"startDatetime\": "
             + "\"2023-11-01T00:00:00+00:00\", \"listItem\": \"item\"}, \"state\": {\"airbyte\": \"state\"}}, {\"pages\": []}],"
-            + "\"inferred_schema\": {\"schema\": 1}}");
+            + "\"inferred_schema\": {\"schema\": 1}, \"latest_config_update\": { \"config_key\": \"config_value\"}}");
     final ArgumentCaptor<String> configCaptor = ArgumentCaptor.forClass(String.class);
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), configCaptor.capture(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(response));
@@ -115,6 +115,7 @@ class AirbyteCdkRequesterImplTest {
     assertEquals(logs, streamRead.getLogs());
 
     assertEquals(response.get("inferred_schema"), streamRead.getInferredSchema());
+    assertEquals(mapper.readTree("{\"config_key\": \"config_value\"}"), streamRead.getLatestConfigUpdate());
 
     return configCaptor;
   }

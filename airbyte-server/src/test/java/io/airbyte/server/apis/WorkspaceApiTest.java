@@ -13,7 +13,6 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
-import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -22,9 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 @MicronautTest
-@Requires(property = "mockito.test.enabled",
-          defaultValue = StringUtils.TRUE,
-          value = StringUtils.TRUE)
 @Requires(env = {Environment.TEST})
 @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
 class WorkspaceApiTest extends BaseControllerTest {
@@ -136,11 +132,15 @@ class WorkspaceApiTest extends BaseControllerTest {
   @Test
   void testGetWorkspaceByConnectionId() throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(workspacesHandler.getWorkspaceByConnectionId(Mockito.any()))
-        .thenReturn(new WorkspaceRead());
+        .thenReturn(new WorkspaceRead())
+        .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/get_by_connection_id";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
         HttpStatus.OK);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpStatus.NOT_FOUND);
   }
 
 }

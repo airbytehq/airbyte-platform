@@ -12,9 +12,13 @@ import { NumberBadge } from "components/ui/NumberBadge";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { StreamReadRequestBodyConfig } from "core/request/ConnectorBuilderClient";
-import { useConnectorBuilderTestState } from "services/connectorBuilder/ConnectorBuilderStateService";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorConfig } from "core/request/ConnectorBuilderClient";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import styles from "./ConfigMenu.module.scss";
@@ -28,7 +32,14 @@ interface ConfigMenuProps {
 
 export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isOpen, setIsOpen }) => {
   const { jsonManifest, editorView, setEditorView } = useConnectorBuilderFormState();
-  const { testInputJson, setTestInputJson } = useConnectorBuilderTestState();
+  const {
+    testInputJson,
+    setTestInputJson,
+    testInputJsonDirty,
+    streamRead: { isFetching },
+  } = useConnectorBuilderTestRead();
+  const { trackError } = useAppMonitoringService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const [showInputsWarning, setShowInputsWarning] = useLocalStorage<boolean>("connectorBuilderInputsWarning", true);
 
@@ -59,6 +70,7 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
               data-testid="test-inputs"
               onClick={() => setIsOpen(true)}
               disabled={
+                isFetching ||
                 !jsonManifest.spec ||
                 Object.keys(jsonManifest.spec.connection_specification?.properties || {}).length === 0
               }
@@ -89,7 +101,11 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
           title={<FormattedMessage id="connectorBuilder.configMenuTitle" />}
         >
           <ModalBody>
-            <ConfigMenuErrorBoundaryComponent currentView={editorView} closeAndSwitchToYaml={switchToYaml}>
+            <ConfigMenuErrorBoundaryComponent
+              currentView={editorView}
+              closeAndSwitchToYaml={switchToYaml}
+              trackError={trackError}
+            >
               <FlexContainer direction="column">
                 {showInputsWarning && (
                   <Message
@@ -102,12 +118,14 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                   />
                 )}
                 <ConnectorForm
+                  // re-mount the form when the form values change from the outside to avoid stale data in the form
+                  key={testInputJsonDirty ? "with-testinput" : "without-testinput"}
                   formType="source"
                   bodyClassName={styles.formContent}
                   selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
                   formValues={{ connectionConfiguration: testInputJson }}
                   onSubmit={async (values) => {
-                    setTestInputJson(values.connectionConfiguration as StreamReadRequestBodyConfig);
+                    setTestInputJson(values.connectionConfiguration as ConnectorConfig);
                     setIsOpen(false);
                   }}
                   isEditMode
@@ -117,8 +135,16 @@ export const ConfigMenu: React.FC<ConfigMenuProps> = ({ testInputJsonErrors, isO
                         <FlexItem grow>
                           <Button
                             onClick={() => {
-                              resetConnectorForm();
-                              setTestInputJson(undefined);
+                              openConfirmationModal({
+                                title: "connectorBuilder.resetTestingValues.title",
+                                text: "connectorBuilder.resetTestingValues.text",
+                                submitButtonText: "connectorBuilder.resetTestingValues.submit",
+                                onSubmit: () => {
+                                  closeConfirmationModal();
+                                  setTestInputJson(undefined);
+                                  resetConnectorForm();
+                                },
+                              });
                             }}
                             type="button"
                             variant="danger"

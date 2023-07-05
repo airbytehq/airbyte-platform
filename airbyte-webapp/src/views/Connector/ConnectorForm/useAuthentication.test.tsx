@@ -1,8 +1,9 @@
 import { renderHook } from "@testing-library/react-hooks";
-import { useFormikContext } from "formik";
+import get from "lodash/get";
+import { FieldError, useFormContext } from "react-hook-form";
 
 import { SourceDefinitionSpecificationRead } from "core/request/AirbyteClient";
-import { FeatureItem, FeatureService } from "hooks/services/Feature";
+import { FeatureItem, FeatureService } from "core/services/features";
 
 import { useConnectorForm } from "./connectorFormContext";
 import { useAuthentication as useAuthenticationHook } from "./useAuthentication";
@@ -11,27 +12,29 @@ import { makeConnectionConfigurationPath } from "./utils";
 
 jest.mock("hooks/services/AppMonitoringService");
 jest.mock("./connectorFormContext");
-jest.mock("formik", () => ({
-  ...jest.requireActual("formik"),
-  useFormikContext: jest.fn(),
+jest.mock("react-hook-form", () => ({
+  ...jest.requireActual("react-hook-form"),
+  useFormContext: jest.fn(),
 }));
 
 const mockConnectorForm = useConnectorForm as unknown as jest.Mock<Partial<ReturnType<typeof useConnectorForm>>>;
-const mockFormikContext = useFormikContext as unknown as jest.Mock<Partial<ReturnType<typeof useFormikContext>>>;
+const mockFormContext = useFormContext as unknown as jest.Mock<Partial<ReturnType<typeof useFormContext>>>;
 
 interface MockParams {
   connector: Pick<SourceDefinitionSpecificationRead, "advancedAuth" | "authSpecification" | "connectionSpecification">;
   values: unknown;
   submitCount?: number;
-  fieldMeta?: Record<string, { error?: string }>;
+  fieldMeta?: Record<string, { error?: FieldError }>;
 }
 
 const mockContext = ({ connector, values, submitCount, fieldMeta = {} }: MockParams) => {
-  mockFormikContext.mockReturnValue({
-    values,
-    submitCount: submitCount ?? 0,
+  mockFormContext.mockReturnValue({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getFieldMeta: (field) => (fieldMeta[field] ?? {}) as any,
+    watch: ((field: string) => (field ? get(values, field) : values)) as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    formState: { submitCount: submitCount ?? 0 } as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getFieldState: (field) => (fieldMeta[field] ?? {}) as any,
   });
   mockConnectorForm.mockReturnValue({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,7 +93,7 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: noPredicateAdvancedAuth },
           values: {},
-          fieldMeta: { [accessTokenField]: { error: "form.empty.error" } },
+          fieldMeta: { [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } } },
           submitCount: 0,
         });
         const result = useAuthentication();
@@ -102,7 +105,7 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: noPredicateAdvancedAuth },
           values: {},
-          fieldMeta: { [accessTokenField]: { error: "form.empty.error" } },
+          fieldMeta: { [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } } },
           submitCount: 1,
         });
         const result = useAuthentication();
@@ -157,7 +160,10 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
-          fieldMeta: { [accessTokenField]: { error: "form.empty.error" }, [clientIdField]: { error: "another.error" } },
+          fieldMeta: {
+            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
+            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+          },
           submitCount: 0,
         });
         const result = useAuthentication();
@@ -170,7 +176,10 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } },
-          fieldMeta: { [accessTokenField]: { error: "form.empty.error" }, [clientIdField]: { error: "another.error" } },
+          fieldMeta: {
+            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
+            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+          },
           submitCount: 1,
         });
         const result = useAuthentication();
@@ -186,7 +195,10 @@ describe("useAuthentication", () => {
         mockContext({
           connector: { advancedAuth: predicateInsideConditional },
           values: { connectionConfiguration: { credentials: { auth_type: "token" } } },
-          fieldMeta: { [accessTokenField]: { error: "form.empty.error" }, [clientIdField]: { error: "another.error" } },
+          fieldMeta: {
+            [accessTokenField]: { error: { type: "validate", message: "form.empty.error" } },
+            [clientIdField]: { error: { type: "validate", message: "another.error" } },
+          },
           submitCount: 1,
         });
         const result = useAuthentication();

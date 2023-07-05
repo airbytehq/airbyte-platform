@@ -12,7 +12,7 @@ public class DestinationGoogleSheetsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new DestinationGoogleSheetsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new DestinationGoogleSheetsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

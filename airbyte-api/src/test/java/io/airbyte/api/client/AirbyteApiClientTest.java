@@ -4,6 +4,7 @@
 
 package io.airbyte.api.client;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -50,7 +51,6 @@ public class AirbyteApiClientTest {
       AirbyteApiClient.retryWithJitter(mockCallable, "test", TEST_JITTER_INTERVAL_SECS, TEST_FINAL_INTERVAL_SECS, TEST_MAX_RETRIES);
 
       verify(mockCallable, times(TEST_MAX_RETRIES)).call();
-
     }
 
     @Test
@@ -63,6 +63,50 @@ public class AirbyteApiClientTest {
           .thenReturn("Success!");
 
       AirbyteApiClient.retryWithJitter(mockCallable, "test", TEST_JITTER_INTERVAL_SECS, TEST_FINAL_INTERVAL_SECS, 3);
+
+      verify(mockCallable, times(2)).call();
+
+    }
+
+  }
+
+  @Nested
+  class RetryWithJitterThrows {
+
+    @Test
+    @DisplayName("Should not retry on success")
+    void ifSucceedShouldNotRetry() throws Exception {
+      mockCallable = mock(Callable.class);
+      when(mockCallable.call()).thenReturn("OK!");
+
+      AirbyteApiClient.retryWithJitterThrows(mockCallable, "testagain", TEST_JITTER_INTERVAL_SECS, TEST_FINAL_INTERVAL_SECS, TEST_MAX_RETRIES);
+
+      verify(mockCallable, times(1)).call();
+    }
+
+    @Test
+    @DisplayName("Should retry up to the configured max retries on continued errors and still throw the last error")
+    void onlyRetryTillMaxRetries() throws Exception {
+      mockCallable = mock(Callable.class);
+      when(mockCallable.call()).thenThrow(new RuntimeException("Boom!"));
+
+      assertThrows(RuntimeException.class,
+          () -> AirbyteApiClient.retryWithJitterThrows(mockCallable, "moretest", TEST_JITTER_INTERVAL_SECS, TEST_FINAL_INTERVAL_SECS,
+              TEST_MAX_RETRIES));
+
+      verify(mockCallable, times(TEST_MAX_RETRIES)).call();
+    }
+
+    @Test
+    @DisplayName("Should retry only if there are errors")
+    void onlyRetryOnErrors() throws Exception {
+      mockCallable = mock(Callable.class);
+      // Because we succeed on the second try, we should only call the method twice.
+      when(mockCallable.call())
+          .thenThrow(new RuntimeException("Boom!"))
+          .thenReturn("OK!");
+
+      AirbyteApiClient.retryWithJitterThrows(mockCallable, "testing", TEST_JITTER_INTERVAL_SECS, TEST_FINAL_INTERVAL_SECS, 3);
 
       verify(mockCallable, times(2)).call();
 

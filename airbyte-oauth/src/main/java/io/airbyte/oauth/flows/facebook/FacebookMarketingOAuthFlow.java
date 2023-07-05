@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows.facebook;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.config.persistence.ConfigRepository;
 import java.net.http.HttpClient;
 import java.util.function.Supplier;
 
@@ -16,13 +15,13 @@ public class FacebookMarketingOAuthFlow extends FacebookOAuthFlow {
 
   private static final String SCOPES = "ads_management,ads_read,read_insights,business_management";
 
-  public FacebookMarketingOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public FacebookMarketingOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  FacebookMarketingOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  FacebookMarketingOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

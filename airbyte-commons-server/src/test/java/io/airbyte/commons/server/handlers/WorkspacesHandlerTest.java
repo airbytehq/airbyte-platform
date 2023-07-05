@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,9 +36,12 @@ import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.NotificationConverter;
+import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.config.Geography;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
+import io.airbyte.config.NotificationItem;
+import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -117,6 +121,7 @@ class WorkspacesHandlerTest {
         .withSecurityUpdates(false)
         .withTombstone(false)
         .withNotifications(List.of(generateNotification()))
+        .withNotificationSettings(generateNotificationSettings())
         .withDefaultGeography(Geography.AUTO);
   }
 
@@ -127,11 +132,60 @@ class WorkspacesHandlerTest {
             .withWebhook(FAILURE_NOTIFICATION_WEBHOOK));
   }
 
+  private NotificationSettings generateNotificationSettings() {
+    return new NotificationSettings()
+        .withSendOnFailure(
+            new NotificationItem()
+                .withNotificationType(List.of(NotificationType.SLACK))
+                .withSlackConfiguration(new SlackNotificationConfiguration()
+                    .withWebhook(FAILURE_NOTIFICATION_WEBHOOK)));
+  }
+
   private io.airbyte.api.model.generated.Notification generateApiNotification() {
     return new io.airbyte.api.model.generated.Notification()
         .notificationType(io.airbyte.api.model.generated.NotificationType.SLACK)
         .slackConfiguration(new io.airbyte.api.model.generated.SlackNotificationConfiguration()
             .webhook(FAILURE_NOTIFICATION_WEBHOOK));
+  }
+
+  private io.airbyte.api.model.generated.NotificationSettings generateApiNotificationSettings() {
+    return new io.airbyte.api.model.generated.NotificationSettings()
+        .sendOnFailure(
+            new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of(io.airbyte.api.model.generated.NotificationType.SLACK))
+                .slackConfiguration(new io.airbyte.api.model.generated.SlackNotificationConfiguration()
+                    .webhook(FAILURE_NOTIFICATION_WEBHOOK)));
+  }
+
+  private io.airbyte.api.model.generated.NotificationSettings generateApiNotificationSettingsWithDefaultValue() {
+    return new io.airbyte.api.model.generated.NotificationSettings()
+        .sendOnFailure(
+            new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of(io.airbyte.api.model.generated.NotificationType.SLACK))
+                .slackConfiguration(new io.airbyte.api.model.generated.SlackNotificationConfiguration()
+                    .webhook(FAILURE_NOTIFICATION_WEBHOOK)))
+        .sendOnSuccess(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
+        .sendOnConnectionUpdate(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnConnectionUpdateActionRequired(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabledWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO));
+  }
+
+  private io.airbyte.api.model.generated.NotificationSettings generateDefaultApiNotificationSettings() {
+    return new io.airbyte.api.model.generated.NotificationSettings()
+        .sendOnSuccess(new io.airbyte.api.model.generated.NotificationItem().notificationType(List.of()))
+        .sendOnFailure(new io.airbyte.api.model.generated.NotificationItem()
+            .notificationType(List.of(io.airbyte.api.model.generated.NotificationType.CUSTOMERIO)))
+        .sendOnConnectionUpdate(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnConnectionUpdateActionRequired(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabled(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO))
+        .sendOnSyncDisabledWarning(new io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
+            io.airbyte.api.model.generated.NotificationType.CUSTOMERIO));
   }
 
   @Test
@@ -151,6 +205,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)));
 
@@ -167,8 +222,42 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigRead().id(uuid).name(TEST_NAME)));
+
+    assertEquals(expectedRead, actualRead);
+  }
+
+  @Test
+  void testCreateWorkspaceWithMinimumInput() throws JsonValidationException, IOException, ConfigNotFoundException {
+    when(configRepository.getStandardWorkspaceNoSecrets(any(), eq(false))).thenReturn(workspace);
+
+    final UUID uuid = UUID.randomUUID();
+    when(uuidSupplier.get()).thenReturn(uuid);
+
+    configRepository.writeStandardWorkspaceNoSecrets(workspace);
+
+    final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
+        .name(NEW_WORKSPACE)
+        .email(TEST_EMAIL);
+
+    final WorkspaceRead actualRead = workspacesHandler.createWorkspace(workspaceCreate);
+    final WorkspaceRead expectedRead = new WorkspaceRead()
+        .workspaceId(actualRead.getWorkspaceId())
+        .customerId(actualRead.getCustomerId())
+        .email(TEST_EMAIL)
+        .name(NEW_WORKSPACE)
+        .slug(actualRead.getSlug())
+        .initialSetupComplete(false)
+        .displaySetupWizard(false)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(List.of())
+        .notificationSettings(generateDefaultApiNotificationSettings())
+        .defaultGeography(GEOGRAPHY_AUTO)
+        .webhookConfigs(Collections.emptyList());
 
     assertEquals(expectedRead, actualRead);
   }
@@ -207,6 +296,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(Collections.emptyList())
+        .notificationSettings(generateDefaultApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
         .webhookConfigs(Collections.emptyList());
 
@@ -268,6 +358,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace.getAnonymousDataCollection())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO);
 
     final WorkspaceRead expectedWorkspaceRead2 = new WorkspaceRead()
@@ -282,6 +373,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace2.getAnonymousDataCollection())
         .securityUpdates(workspace2.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO);
 
     final WorkspaceReadList actualWorkspaceReadList = workspacesHandler.listWorkspaces();
@@ -309,6 +401,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO)
         .webhookConfigs(List.of(new WebhookConfigRead().id(WEBHOOK_CONFIG_ID).name(TEST_NAME)));
 
@@ -332,13 +425,14 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace.getAnonymousDataCollection())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO);
 
     assertEquals(workspaceRead, workspacesHandler.getWorkspaceBySlug(slugRequestBody));
   }
 
   @Test
-  void testGetWorkspaceByConnectionId() {
+  void testGetWorkspaceByConnectionId() throws ConfigNotFoundException {
     final UUID connectionId = UUID.randomUUID();
     when(configRepository.getStandardWorkspaceFromConnection(connectionId, false)).thenReturn(workspace);
     final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
@@ -354,9 +448,19 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace.getAnonymousDataCollection())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO);
 
     assertEquals(workspaceRead, workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
+  }
+
+  @Test
+  void testGetWorkspaceByConnectionIdOnConfigNotFound() throws ConfigNotFoundException {
+    final UUID connectionId = UUID.randomUUID();
+    when(configRepository.getStandardWorkspaceFromConnection(connectionId, false))
+        .thenThrow(new ConfigNotFoundException("something", connectionId.toString()));
+    final ConnectionIdRequestBody connectionIdRequestBody = new ConnectionIdRequestBody().connectionId(connectionId);
+    assertThrows(ConfigNotFoundException.class, () -> workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody));
   }
 
   @Test
@@ -371,6 +475,7 @@ class WorkspacesHandlerTest {
         .initialSetupComplete(true)
         .displaySetupWizard(false)
         .notifications(List.of(apiNotification))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigWrite().name(TEST_NAME).authToken("test-auth-token")));
 
@@ -389,6 +494,7 @@ class WorkspacesHandlerTest {
         .withDisplaySetupWizard(false)
         .withTombstone(false)
         .withNotifications(List.of(expectedNotification))
+        .withNotificationSettings(generateNotificationSettings())
         .withDefaultGeography(Geography.US)
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS);
 
@@ -414,6 +520,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .securityUpdates(false)
         .notifications(List.of(expectedNotificationRead))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(List.of(new WebhookConfigRead().name(TEST_NAME).id(WEBHOOK_CONFIG_ID)));
 
@@ -479,6 +586,7 @@ class WorkspacesHandlerTest {
         .withDisplaySetupWizard(workspace.getDisplaySetupWizard())
         .withTombstone(false)
         .withNotifications(workspace.getNotifications())
+        .withNotificationSettings(workspace.getNotificationSettings())
         .withDefaultGeography(Geography.AUTO);
 
     when(configRepository.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
@@ -499,6 +607,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(workspace.getAnonymousDataCollection())
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_AUTO);
 
     verify(configRepository).writeStandardWorkspaceNoSecrets(expectedWorkspace);
@@ -532,6 +641,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(true)
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
+        .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
         .defaultGeography(GEOGRAPHY_AUTO);
 
     final WorkspaceRead actualWorkspaceRead = workspacesHandler.updateWorkspace(workspaceUpdate);
@@ -565,6 +675,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
         .defaultGeography(GEOGRAPHY_US);
 
     final WorkspaceRead actualRead = workspacesHandler.createWorkspace(workspaceCreate);
@@ -580,6 +691,7 @@ class WorkspacesHandlerTest {
         .anonymousDataCollection(false)
         .securityUpdates(false)
         .notifications(List.of(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .defaultGeography(GEOGRAPHY_US)
         .webhookConfigs(Collections.emptyList());
 

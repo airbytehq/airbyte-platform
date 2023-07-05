@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 // import useConnector from "hooks/services/useConnector";
 import { DbtCloudSettingsView } from "packages/cloud/views/settings/integrations/DbtCloudSettingsView";
 import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsView";
@@ -14,7 +14,7 @@ import {
   SourcesPage as SettingsSourcesPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
 // import ConfigurationsPage from "pages/SettingsPage/pages/ConfigurationsPage";
-import NotificationPage from "pages/SettingsPage/pages/NotificationPage";
+import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { PageConfig } from "pages/SettingsPage/SettingsPage";
 import { isOsanoActive, showOsanoDrawer } from "utils/dataPrivacy";
 

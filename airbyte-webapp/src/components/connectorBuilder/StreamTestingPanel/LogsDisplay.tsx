@@ -3,20 +3,21 @@ import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { NumberBadge } from "components/ui/NumberBadge";
+import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { LogMessage } from "core/request/ConnectorBuilderClient";
+import { StreamReadLogsItem } from "core/request/ConnectorBuilderClient";
 
 import styles from "./LogsDisplay.module.scss";
 
 interface LogsDisplayProps {
-  logs: LogMessage[];
+  logs: StreamReadLogsItem[];
   error?: string;
   onTitleClick: () => void;
 }
 
 const Log: React.FC<{
-  logMessage: LogMessage;
+  logMessage: StreamReadLogsItem;
 }> = ({ logMessage }) => {
   return (
     <FlexContainer>
@@ -29,7 +30,7 @@ const Log: React.FC<{
         {logMessage.level}
       </div>
       <div className={styles.message}>
-        <pre>{logMessage.message}</pre>
+        <Pre>{logMessage.message}</Pre>
       </div>
     </FlexContainer>
   );

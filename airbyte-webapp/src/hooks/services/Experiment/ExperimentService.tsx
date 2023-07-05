@@ -1,8 +1,19 @@
 import type { Experiments } from "./experiments";
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { useObservable } from "react-use";
 import { EMPTY, Observable } from "rxjs";
+
+import { isDevelopment } from "utils/isDevelopment";
+
+export type ContextKind =
+  | "user"
+  | "workspace"
+  | "connection"
+  | "source"
+  | "destination"
+  | "source-definition"
+  | "destination-definition";
 
 const devOverwrites = process.env.REACT_APP_EXPERIMENT_OVERWRITES
   ? (process.env.REACT_APP_EXPERIMENT_OVERWRITES as unknown as Record<string, unknown>)
@@ -15,9 +26,41 @@ const experimentContext = createContext<ExperimentService | null>(null);
  * as well as update us about changes in the experiment.
  */
 export interface ExperimentService {
+  addContext: (kind: ContextKind, key: string) => void;
+  removeContext: (kind: Exclude<ContextKind, "user">) => void;
   getExperiment<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K];
   getExperimentChanges$<K extends keyof Experiments>(key: K): Observable<Experiments[K]>;
 }
+
+const debugContext = isDevelopment() ? (msg: string) => console.debug(`%c${msg}`, "color: SlateBlue") : () => undefined;
+
+/**
+ * Registers a context with the experiment service (usually the LaunchDarkly client on Cloud),
+ * potentialy causing new flags to be fetched. The context will be removed when the component unmounts,
+ * or when a falsy key is passed.
+ */
+export const useExperimentContext = (kind: Exclude<ContextKind, "user">, key: string | undefined) => {
+  const experimentService = useContext(experimentContext);
+
+  useEffect(() => {
+    if (!experimentService) {
+      // We're not running inside any experiment service so simply return;
+      return;
+    }
+    if (key) {
+      debugContext(`[Experiments] Registering context ${kind} with key ${key}`);
+      experimentService.addContext(kind, key);
+    } else {
+      debugContext(`[Experiments] Removing context ${kind} due to empty key`);
+      experimentService.removeContext(kind);
+    }
+
+    return () => {
+      debugContext(`[Experiments] Removing context ${kind}`);
+      experimentService.removeContext(kind);
+    };
+  }, [kind, key, experimentService]);
+};
 
 function useExperimentHook<K extends keyof Experiments>(key: K, defaultValue: Experiments[K]): Experiments[K] {
   const experimentService = useContext(experimentContext);

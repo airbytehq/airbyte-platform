@@ -5,7 +5,7 @@ import { GAIcon } from "components/icons/GAIcon";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ReleaseStage } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import { FreeTag } from "packages/cloud/components/experiments/FreeConnectorProgram";
 
 import styles from "./ReleaseStageBadge.module.scss";
