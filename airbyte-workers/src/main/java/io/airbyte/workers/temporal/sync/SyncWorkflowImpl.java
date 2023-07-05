@@ -33,7 +33,6 @@ import io.airbyte.metrics.lib.MetricTags;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.workers.temporal.annotations.TemporalActivityStub;
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity;
 import io.temporal.workflow.Workflow;
@@ -56,9 +55,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private static final int AUTO_DETECT_SCHEMA_VERSION = 2;
   private static final String USE_MINIMAL_NORM_INPUT = "use_minimal_norm_input";
   private static final int USE_MINIMAL_NORM_INPUT_VERSION = 1;
-  private static final String DEPRECATE_PERSIST_STATE_ACTIVITY = "deprecate_persist_state_activity";
-  private static final int DEPRECATE_PERSIST_STATE_ACTIVITY_VERSION = 1;
-
   private static final String USE_NORMALIZATION_WITH_CONNECTION = "use_normalization_with_connection";
   private static final int USE_NORMALIZATION_WITH_CONNECTION_VERSION = 1;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
@@ -67,8 +63,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   private NormalizationActivity normalizationActivity;
   @TemporalActivityStub(activityOptionsBeanName = "longRunActivityOptions")
   private DbtTransformationActivity dbtTransformationActivity;
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private PersistStateActivity persistActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -92,15 +86,11 @@ public class SyncWorkflowImpl implements SyncWorkflow {
             sourceLauncherConfig.getDockerImage(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage()));
 
-    final int version = Workflow.getVersion(VERSION_LABEL, Workflow.DEFAULT_VERSION, CURRENT_VERSION);
     final String taskQueue = Workflow.getInfo().getTaskQueue();
 
     final int autoDetectSchemaVersion =
         Workflow.getVersion(AUTO_DETECT_SCHEMA_TAG, Workflow.DEFAULT_VERSION,
             AUTO_DETECT_SCHEMA_VERSION);
-
-    final int deprecatePersistActivityVersion =
-        Workflow.getVersion(DEPRECATE_PERSIST_STATE_ACTIVITY, Workflow.DEFAULT_VERSION, DEPRECATE_PERSIST_STATE_ACTIVITY_VERSION);
 
     if (autoDetectSchemaVersion >= AUTO_DETECT_SCHEMA_VERSION) {
       final Optional<UUID> sourceId = configFetchActivity.getSourceId(connectionId);
@@ -116,7 +106,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
       final Optional<ConnectionStatus> status = configFetchActivity.getStatus(connectionId);
       if (!status.isEmpty() && ConnectionStatus.INACTIVE == status.get()) {
-        LOGGER.info("Connection is disabled. Cancelling run.");
+        LOGGER.info("Connection {} is disabled. Cancelling run.", connectionId);
         final StandardSyncOutput output =
             new StandardSyncOutput()
                 .withStandardSyncSummary(new StandardSyncSummary().withStatus(ReplicationStatus.CANCELLED).withTotalStats(new SyncStats()));
@@ -126,16 +116,6 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
     StandardSyncOutput syncOutput =
         replicationActivity.replicate(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput, taskQueue);
-
-    if (version > Workflow.DEFAULT_VERSION && deprecatePersistActivityVersion < DEPRECATE_PERSIST_STATE_ACTIVITY_VERSION) {
-      // the state is persisted immediately after the replication succeeded, because the
-      // state is a checkpoint of the raw data that has been copied to the destination;
-      // normalization & dbt does not depend on it
-      final ConfiguredAirbyteCatalog configuredCatalog = syncInput.getCatalog();
-      // TODO We are no longer using this, to ensure better migration behavior when we delete this code,
-      // we should fail hard to ensure older syncs are retried instead of failing to persist states.
-      persistActivity.persist(connectionId, syncOutput, configuredCatalog);
-    }
 
     if (syncInput.getOperationSequence() != null && !syncInput.getOperationSequence().isEmpty()) {
       for (final StandardSyncOperation standardSyncOperation : syncInput.getOperationSequence()) {
@@ -196,7 +176,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return normalizationActivity.generateNormalizationInput(syncInput, syncOutput);
     } else {
-      int withConnectionVersion =
+      final int withConnectionVersion =
           Workflow.getVersion(USE_NORMALIZATION_WITH_CONNECTION, Workflow.DEFAULT_VERSION, USE_NORMALIZATION_WITH_CONNECTION_VERSION);
       if (withConnectionVersion == Workflow.DEFAULT_VERSION) {
         return normalizationActivity.generateNormalizationInputWithMinimumPayload(syncInput.getDestinationConfiguration(),

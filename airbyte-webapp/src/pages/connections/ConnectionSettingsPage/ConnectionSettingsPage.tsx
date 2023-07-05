@@ -2,43 +2,146 @@ import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Disclosure } from "@headlessui/react";
 import React from "react";
-import { FormattedMessage } from "react-intl";
-import { Navigate } from "react-router-dom";
+import { FormattedMessage, useIntl } from "react-intl";
+import * as yup from "yup";
 
 import { DeleteBlock } from "components/common/DeleteBlock";
-import { UpdateConnectionDataResidency } from "components/connection/UpdateConnectionDataResidency";
-import { UpdateConnectionName } from "components/connection/UpdateConnectionName/UpdateConnectionName";
+import { Form } from "components/forms";
+import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
+import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { Spinner } from "components/ui/Spinner";
 
-import { ConnectionStatus } from "core/request/AirbyteClient";
+import { Geography, WebBackendConnectionUpdate } from "core/request/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
+import { useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useNotificationService } from "hooks/services/Notification";
 import { useDeleteConnection } from "hooks/services/useConnectionHook";
+import { links } from "utils/links";
 
 import styles from "./ConnectionSettingsPage.module.scss";
 import { SchemaUpdateNotifications } from "./SchemaUpdateNotifications";
 import { StateBlock } from "./StateBlock";
+import { UpdateConnectionName } from "./UpdateConnectionName";
 
-export const ConnectionSettingsPageInner: React.FC = () => {
-  const { connection } = useConnectionEditService();
+export interface ConnectionSettingsFormValues {
+  connectionName: string;
+  geography?: Geography;
+  notifySchemaChanges?: boolean;
+}
+
+const connectionSettingsFormSchema = yup.object({
+  connectionName: yup.string().trim().required("form.empty.error"),
+  geography: yup.mixed<Geography>().optional(),
+  notifySchemaChanges: yup.bool().optional(),
+});
+
+const dataResidencyDropdownDescription = (
+  <FormattedMessage
+    id="connection.geographyDescription"
+    values={{
+      ipLink: (node: React.ReactNode) => <ExternalLink href={links.cloudAllowlistIPsLink}>{node}</ExternalLink>,
+      docLink: (
+        <ExternalLink href={links.connectionDataResidency}>
+          <FormattedMessage id="ui.learnMore" />
+        </ExternalLink>
+      ),
+    }}
+  />
+);
+
+export const ConnectionSettingsPage: React.FC = () => {
+  const { connection, updateConnection } = useConnectionEditService();
+  const { mode } = useConnectionFormService();
   const { mutateAsync: deleteConnection } = useDeleteConnection();
   const canUpdateDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
   const canSendSchemaUpdateNotifications = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const isUpdatedConnectionFlow = useExperiment("connection.updatedConnectionFlow", false);
-
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
+  const { trackError } = useAppMonitoringService();
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
   const onDelete = () => deleteConnection(connection);
+
+  const onSuccess = () => {
+    registerNotification({
+      id: "connection_settings_change_success",
+      text: formatMessage({ id: "form.changesSaved" }),
+      type: "success",
+    });
+  };
+
+  const onError = (e: Error, { connectionName }: ConnectionSettingsFormValues) => {
+    trackError(e, { connectionName });
+    registerNotification({
+      id: "connection_settings_change_error",
+      text: formatMessage({ id: "connection.updateFailed" }),
+      type: "error",
+    });
+  };
+
+  const connectionSettingsDefaultValues = () => {
+    const defaultValues: ConnectionSettingsFormValues = {
+      connectionName: connection.name,
+    };
+    if (canSendSchemaUpdateNotifications) {
+      defaultValues.notifySchemaChanges = connection.notifySchemaChanges;
+    }
+    if (canUpdateDataResidency) {
+      defaultValues.geography = connection.geography;
+    }
+    return defaultValues;
+  };
 
   return (
     <div className={styles.container}>
       <FlexContainer direction="column" justifyContent="flex-start">
-        {isUpdatedConnectionFlow && <UpdateConnectionName />}
-        {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications />}
-        {canUpdateDataResidency && <UpdateConnectionDataResidency />}
+        <Card withPadding>
+          <Heading as="h2" size="sm" className={styles.heading}>
+            <FormattedMessage id="connectionForm.connectionSettings" />
+          </Heading>
+          <Form<ConnectionSettingsFormValues>
+            trackDirtyChanges
+            onSubmit={({ connectionName, geography, notifySchemaChanges }) => {
+              const connectionUpdates: WebBackendConnectionUpdate = {
+                name: connectionName,
+                connectionId: connection.connectionId,
+              };
+
+              if (canUpdateDataResidency) {
+                connectionUpdates.geography = geography;
+              }
+
+              if (canSendSchemaUpdateNotifications) {
+                connectionUpdates.notifySchemaChanges = notifySchemaChanges;
+              }
+
+              return updateConnection(connectionUpdates);
+            }}
+            onError={onError}
+            onSuccess={onSuccess}
+            schema={connectionSettingsFormSchema}
+            defaultValues={connectionSettingsDefaultValues()}
+          >
+            <UpdateConnectionName />
+            {canSendSchemaUpdateNotifications && <SchemaUpdateNotifications disabled={mode === "readonly"} />}
+            {canUpdateDataResidency && (
+              <DataResidencyDropdown<ConnectionSettingsFormValues>
+                labelId="connection.geographyTitle"
+                description={dataResidencyDropdownDescription}
+                name="geography"
+                disabled={mode === "readonly"}
+              />
+            )}
+            <FormSubmissionButtons submitKey="form.saveChanges" />
+          </Form>
+        </Card>
         {connection.status !== "deprecated" && <DeleteBlock type="connection" onDelete={onDelete} />}
       </FlexContainer>
       <Disclosure>
@@ -62,11 +165,4 @@ export const ConnectionSettingsPageInner: React.FC = () => {
       </Disclosure>
     </div>
   );
-};
-
-export const ConnectionSettingsPage: React.FC = () => {
-  const { connection } = useConnectionEditService();
-  const isConnectionDeleted = connection.status === ConnectionStatus.deprecated;
-
-  return isConnectionDeleted ? <Navigate replace to=".." /> : <ConnectionSettingsPageInner />;
 };

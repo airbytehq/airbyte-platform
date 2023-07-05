@@ -132,11 +132,15 @@ class WorkspaceApiTest extends BaseControllerTest {
   @Test
   void testGetWorkspaceByConnectionId() throws JsonValidationException, ConfigNotFoundException, IOException {
     Mockito.when(workspacesHandler.getWorkspaceByConnectionId(Mockito.any()))
-        .thenReturn(new WorkspaceRead());
+        .thenReturn(new WorkspaceRead())
+        .thenThrow(new ConfigNotFoundException("", ""));
     final String path = "/api/v1/workspaces/get_by_connection_id";
     testEndpointStatus(
         HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
         HttpStatus.OK);
+    testErrorEndpointStatus(
+        HttpRequest.POST(path, Jsons.serialize(new SourceIdRequestBody())),
+        HttpStatus.NOT_FOUND);
   }
 
 }

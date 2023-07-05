@@ -8,6 +8,9 @@ import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
 import io.airbyte.commons.features.FeatureFlags;
 import io.airbyte.commons.temporal.config.WorkerMode;
+import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy;
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.config.Configs.SecretPersistenceType;
 import io.airbyte.config.Configs.TrackingStrategy;
@@ -24,8 +27,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.workers.WorkerConfigs;
-import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.internal.state_aggregator.StateAggregatorFactory;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Prototype;
@@ -34,6 +35,7 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -74,10 +76,7 @@ public class ApplicationBeanFactory {
   @Singleton
   public DefaultJobCreator defaultJobCreator(final JobPersistence jobPersistence,
                                              final WorkerConfigsProvider workerConfigsProvider) {
-    final WorkerConfigs defaultWorkerConfigs = workerConfigsProvider.getConfig(ResourceType.DEFAULT);
-    return new DefaultJobCreator(
-        jobPersistence,
-        defaultWorkerConfigs.getResourceRequirements());
+    return new DefaultJobCreator(jobPersistence, workerConfigsProvider);
   }
 
   @Singleton
@@ -120,6 +119,13 @@ public class ApplicationBeanFactory {
   }
 
   @Singleton
+  public AirbyteProtocolVersionRange airbyteProtocolVersionRange(
+                                                                 @Value("${airbyte.protocol.min-version}") final String minVersion,
+                                                                 @Value("${airbyte.protocol.max-version}") final String maxVersion) {
+    return new AirbyteProtocolVersionRange(new Version(minVersion), new Version(maxVersion));
+  }
+
+  @Singleton
   @Requires(env = WorkerMode.CONTROL_PLANE)
   public WebUrlHelper webUrlHelper(@Value("${airbyte.web-app.url}") final String webAppUrl) {
     return new WebUrlHelper(webAppUrl);
@@ -156,6 +162,18 @@ public class ApplicationBeanFactory {
   @Singleton
   public StateAggregatorFactory stateAggregatorFactory(final FeatureFlags featureFlags) {
     return new StateAggregatorFactory(featureFlags);
+  }
+
+  @Singleton
+  @Named("completeFailureBackoffPolicy")
+  public BackoffPolicy completeFailureBackoffPolicy(@Value("${airbyte.retries.complete—failures.backoff.min-interval-s}") final Integer min,
+                                                    @Value("${airbyte.retries.complete—failures.backoff.max-interval-s}") final Integer max,
+                                                    @Value("${airbyte.retries.complete—failures.backoff.base}") final Integer base) {
+    return BackoffPolicy.builder()
+        .minInterval(Duration.ofSeconds(min))
+        .maxInterval(Duration.ofSeconds(max))
+        .base(base)
+        .build();
   }
 
 }

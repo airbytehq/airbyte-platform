@@ -15,6 +15,7 @@ import {
 } from "core/request/AirbyteClient";
 import { useDestinationNamespace } from "hooks/connection/useDestinationNamespace";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { naturalComparatorBy } from "utils/objects";
 
 import {
@@ -26,7 +27,8 @@ import {
 } from "./streamConfigHelpers";
 import { updateStreamSyncMode } from "./updateStreamSyncMode";
 import { StreamDetailsPanel } from "../StreamDetailsPanel/StreamDetailsPanel";
-import { StreamsConfigTableRow } from "../StreamsConfigTable/StreamsConfigTableRow";
+import { StreamsConfigTableRow } from "../StreamsConfigTable";
+import { NextStreamsConfigTableRow } from "../StreamsConfigTable/NextStreamsConfigTableRow";
 import { SyncModeValue } from "../SyncModeSelect";
 import { flattenSyncSchemaFields, getFieldPathType } from "../utils";
 
@@ -37,7 +39,6 @@ interface SyncCatalogRowProps {
   namespaceFormat: string;
   prefix: string;
   updateStream: (id: string | undefined, newConfiguration: Partial<AirbyteStreamConfiguration>) => void;
-  changedSelected: boolean;
 }
 
 const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
@@ -47,9 +48,9 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   namespaceFormat,
   prefix,
   errors,
-  changedSelected,
 }) => {
   const { stream, config } = streamNode;
+  const isSimplifiedCatalogRowEnabled = useExperiment("connection.syncCatalog.simplifiedCatalogRow", false);
 
   const fields = useMemo(() => {
     const traversedFields = traverseSchemaToField(stream?.jsonSchema, stream?.name);
@@ -66,7 +67,7 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   } = useConnectionFormService();
   const { mode } = useConnectionFormService();
 
-  const [isRowExpanded, onExpand] = useToggle(false);
+  const [isStreamDetailsPanelOpened, setIsStreamDetailsPanelOpened] = useToggle(false);
 
   const updateStreamWithConfig = useCallback(
     (config: Partial<AirbyteStreamConfiguration>) => updateStream(streamNode.id, config),
@@ -163,10 +164,13 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
   );
 
   const destNamespace =
-    useDestinationNamespace({
-      namespaceDefinition,
-      namespaceFormat,
-    }) ?? "";
+    useDestinationNamespace(
+      {
+        namespaceDefinition,
+        namespaceFormat,
+      },
+      stream?.namespace
+    ) ?? "";
 
   const flattenedFields = useMemo(() => flattenSyncSchemaFields(fields), [fields]);
 
@@ -185,31 +189,51 @@ const SyncCatalogRowInner: React.FC<SyncCatalogRowProps> = ({
 
   return (
     <>
-      <StreamsConfigTableRow
-        stream={streamNode}
-        destNamespace={destNamespace}
-        destName={destName}
-        availableSyncModes={availableSyncModes}
-        onSelectStream={onSelectStream}
-        onSelectSyncMode={onSelectSyncMode}
-        primitiveFields={primitiveFields}
-        pkType={pkType}
-        onPrimaryKeyChange={onPkUpdate}
-        cursorType={cursorType}
-        onCursorChange={onCursorSelect}
-        fields={fields}
-        onExpand={onExpand}
-        changedSelected={changedSelected}
-        hasError={hasError}
-        configErrors={configErrors}
-        disabled={disabled}
-      />
-      {isRowExpanded && hasFields && (
+      {isSimplifiedCatalogRowEnabled ? (
+        <NextStreamsConfigTableRow
+          stream={streamNode}
+          destNamespace={destNamespace}
+          destName={destName}
+          availableSyncModes={availableSyncModes}
+          onSelectStream={onSelectStream}
+          onSelectSyncMode={onSelectSyncMode}
+          primitiveFields={primitiveFields}
+          pkType={pkType}
+          onPrimaryKeyChange={onPkUpdate}
+          cursorType={cursorType}
+          onCursorChange={onCursorSelect}
+          fields={fields}
+          openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
+          hasError={hasError}
+          configErrors={configErrors}
+          disabled={disabled}
+        />
+      ) : (
+        <StreamsConfigTableRow
+          stream={streamNode}
+          destNamespace={destNamespace}
+          destName={destName}
+          availableSyncModes={availableSyncModes}
+          onSelectStream={onSelectStream}
+          onSelectSyncMode={onSelectSyncMode}
+          primitiveFields={primitiveFields}
+          pkType={pkType}
+          onPrimaryKeyChange={onPkUpdate}
+          cursorType={cursorType}
+          onCursorChange={onCursorSelect}
+          fields={fields}
+          openStreamDetailsPanel={setIsStreamDetailsPanelOpened}
+          hasError={hasError}
+          configErrors={configErrors}
+          disabled={disabled}
+        />
+      )}
+      {isStreamDetailsPanelOpened && hasFields && (
         <StreamDetailsPanel
           config={config}
           disabled={mode === "readonly"}
           syncSchemaFields={flattenedFields}
-          onClose={onExpand}
+          onClose={setIsStreamDetailsPanelOpened}
           onCursorSelect={onCursorSelect}
           onPkSelect={onPkSelect}
           onSelectedChange={onSelectStream}

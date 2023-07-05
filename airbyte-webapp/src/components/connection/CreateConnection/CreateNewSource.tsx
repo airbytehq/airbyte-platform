@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useSearchParams } from "react-router-dom";
 
 import { ConnectorGrid } from "components/source/SelectConnector/ConnectorGrid";
 import { Box } from "components/ui/Box";
@@ -8,6 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { SearchInput } from "components/ui/SearchInput";
 
+import { useCurrentWorkspace } from "core/api";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -15,17 +17,17 @@ import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useModalService } from "hooks/services/Modal";
 import { useCreateSource } from "hooks/services/useSourceHook";
 import { SourceForm, SourceFormValues } from "pages/source/CreateSourcePage/SourceForm";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
-interface CreateNewSourceProps {
-  onSourceCreated: (sourceId: string) => void;
-}
+import { SOURCE_ID_PARAM, SOURCE_TYPE_PARAM } from "./SelectSource";
 
-export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreated }) => {
+export const SOURCE_DEFINITION_PARAM = "sourceDefinitionId";
+
+export const CreateNewSource: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSourceDefinitionId, setSelectedSourceDefinitionId] = useState<string>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedSourceDefinitionId = searchParams.get(SOURCE_DEFINITION_PARAM);
+
   const sourceDefinitions = useAvailableSourceDefinitions();
   const { trackAction } = useAppMonitoringService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -33,13 +35,13 @@ export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreate
   const { openModal, closeModal } = useModalService();
   const { email } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
 
   const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
 
-  const onSelectSourceDefinitionId = (sourceDefinitionId: string | undefined) => {
+  const onSelectSourceDefinitionId = (sourceDefinitionId: string) => {
     setSearchTerm("");
-    setSelectedSourceDefinitionId(sourceDefinitionId);
+    searchParams.set(SOURCE_DEFINITION_PARAM, sourceDefinitionId);
+    setSearchParams(searchParams);
   };
 
   const onCreateSource = async (values: SourceFormValues) => {
@@ -51,7 +53,11 @@ export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreate
     const result = await createSource({ values, sourceConnector: sourceDefinition });
     clearAllFormChanges();
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    onSourceCreated(result.sourceId);
+
+    searchParams.set(SOURCE_ID_PARAM, result.sourceId);
+    searchParams.delete(SOURCE_TYPE_PARAM);
+    searchParams.delete(SOURCE_DEFINITION_PARAM);
+    setSearchParams(searchParams);
   };
 
   const onGoBack = () => {
@@ -62,16 +68,16 @@ export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreate
         submitButtonText: "form.discardChanges",
         onSubmit: () => {
           closeConfirmationModal();
-          onSelectSourceDefinitionId(undefined);
-          setDocumentationPanelOpen(false);
+          searchParams.delete(SOURCE_DEFINITION_PARAM);
+          setSearchParams(searchParams);
         },
         onClose: () => {
           closeConfirmationModal();
         },
       });
     } else {
-      onSelectSourceDefinitionId(undefined);
-      setDocumentationPanelOpen(false);
+      searchParams.delete(SOURCE_DEFINITION_PARAM);
+      setSearchParams(searchParams);
     }
   };
 
@@ -96,13 +102,11 @@ export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreate
   if (selectedSourceDefinitionId) {
     return (
       <>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
+        <Box mb="md">
+          <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+            <FormattedMessage id="connectorBuilder.backButtonLabel" />
+          </Button>
+        </Box>
         <SourceForm
           selectedSourceDefinitionId={selectedSourceDefinitionId}
           sourceDefinitions={sourceDefinitions}
@@ -119,6 +123,7 @@ export const CreateNewSource: React.FC<CreateNewSourceProps> = ({ onSourceCreate
         connectorDefinitions={filteredSourceDefinitions}
         onConnectorButtonClick={(sourceDefinition) => onSelectSourceDefinitionId(sourceDefinition.sourceDefinitionId)}
         onOpenRequestConnectorModal={onOpenRequestConnectorModal}
+        showConnectorBuilderButton
       />
     </FlexContainer>
   );

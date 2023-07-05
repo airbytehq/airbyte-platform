@@ -4,10 +4,9 @@
 
 package io.airbyte.commons.temporal.scheduling;
 
-import io.airbyte.notification.NotificationType;
+import io.airbyte.notification.NotificationEvent;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -17,6 +16,6 @@ import java.util.UUID;
 public interface NotificationWorkflow {
 
   @WorkflowMethod
-  public void sendNotification(UUID connectionId, String subject, String message, List<NotificationType> notificationType);
+  public void sendNotification(UUID connectionId, String subject, String message, NotificationEvent notificationEvent);
 
 }

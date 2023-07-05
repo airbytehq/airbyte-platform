@@ -7,7 +7,7 @@ import { Text } from "components/ui/Text";
 
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { ConnectionRoutePaths } from "pages/connections/types";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./SchemaChangesDetected.module.scss";
 

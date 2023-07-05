@@ -34,6 +34,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
         <br />
         <Button
           variant="link"
+          type="button"
           onClick={() => {
             setTestInputOpen(true);
           }}

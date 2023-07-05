@@ -10,16 +10,17 @@ import {
   ConnectionEditServiceProvider,
   useConnectionEditService,
 } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperimentContext } from "hooks/services/Experiment";
+import { ConnectionRoutePaths } from "pages/routePaths";
 import { ResourceNotFoundErrorBoundary } from "views/common/ResourceNotFoundErrorBoundary";
 import { StartOverErrorView } from "views/common/StartOverErrorView";
 
 import { ConnectionPageHeader } from "./ConnectionPageHeader";
-import { ConnectionPageTitle } from "./ConnectionPageTitle";
-import { ConnectionRoutePaths } from "../types";
 
 const ConnectionHeadTitle: React.FC = () => {
   const { connection } = useConnectionEditService();
+  useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
+  useExperimentContext("connection", connection.connectionId);
 
   return (
     <HeadTitle
@@ -47,7 +48,6 @@ export const ConnectionPage: React.FC = () => {
     [location.pathname]
   );
   const { trackError } = useAppMonitoringService();
-  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
 
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM);
 
@@ -56,7 +56,7 @@ export const ConnectionPage: React.FC = () => {
       <ResourceNotFoundErrorBoundary errorComponent={<StartOverErrorView />} trackError={trackError}>
         <MainPageWithScroll
           headTitle={<ConnectionHeadTitle />}
-          pageTitle={isNewConnectionFlowEnabled ? <ConnectionPageHeader /> : <ConnectionPageTitle />}
+          pageTitle={<ConnectionPageHeader />}
           noBottomPadding={isReplicationPage}
         >
           <Suspense fallback={<LoadingPage />}>

@@ -1,9 +1,9 @@
 import { useIntl } from "react-intl";
 
+import { useFreeConnectorProgram } from "core/api/cloud";
 import { ReleaseStage } from "core/request/AirbyteClient";
 
 import styles from "./FreeTag.module.scss";
-import { useFreeConnectorProgram } from "./hooks/useFreeConnectorProgram";
 import { freeReleaseStages } from "./lib/model";
 
 interface FreeTagProps {
@@ -13,8 +13,8 @@ interface FreeTagProps {
 // A tag labeling a release stage pill as free. Defined here for easy reuse between the
 // two release stage pill implementations (which should likely be refactored!)
 export const FreeTag: React.FC<FreeTagProps> = ({ releaseStage }) => {
-  const { enrollmentStatusQuery } = useFreeConnectorProgram();
-  const { isEnrolled } = enrollmentStatusQuery.data || {};
+  const { programStatusQuery } = useFreeConnectorProgram();
+  const { isEnrolled } = programStatusQuery.data || {};
   const { formatMessage } = useIntl();
 
   return isEnrolled && freeReleaseStages.includes(releaseStage) ? (

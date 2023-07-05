@@ -1,8 +1,8 @@
 import { v4 as uuidV4 } from "uuid";
 
-import { User } from "packages/cloud/lib/domain/users";
+import { UserRead } from "core/api/types/CloudApi";
 
-import { createMultiContext, createUserContext, createWorkspaceContext } from "./contexts";
+import { createLDContext, createMultiContext, createUserContext, getSingleContextsFromMulti } from "./contexts";
 
 const mockLocale = "en";
 
@@ -17,12 +17,14 @@ describe(`${createUserContext.name}`, () => {
   });
 
   it("creates an identified user context", () => {
-    const mockUser: User = {
+    const mockUser: UserRead = {
       userId: uuidV4(),
       name: "John Doe",
       email: "john.doe@airbyte.io",
       intercomHash: "intercom_hash_string",
       authUserId: "auth_user_id_string",
+      authProvider: "google_identity_platform",
+      defaultWorkspaceId: "123",
     };
     const context = createUserContext(mockUser, mockLocale);
     expect(context).toEqual({
@@ -37,10 +39,10 @@ describe(`${createUserContext.name}`, () => {
   });
 });
 
-describe(`${createWorkspaceContext.name}`, () => {
+describe(`${createLDContext.name}`, () => {
   it("creates a workspace context", () => {
     const mockWorkspaceId = uuidV4();
-    const context = createWorkspaceContext(mockWorkspaceId);
+    const context = createLDContext("workspace", mockWorkspaceId);
     expect(context).toEqual({
       kind: "workspace",
       key: mockWorkspaceId,
@@ -52,15 +54,24 @@ describe(`${createMultiContext.name}`, () => {
   it("creates a workspace context", () => {
     const mockWorkspaceId = uuidV4();
     const userContext = createUserContext(null, mockLocale);
-    const workspaceContext = createWorkspaceContext(mockWorkspaceId);
+    const workspaceContext = createLDContext("workspace", mockWorkspaceId);
     const multiContext = createMultiContext(userContext, workspaceContext);
-    const { kind: userKind, ...userContextWithoutKind } = userContext;
-    const { kind: workspaceKind, ...workspaceContextWithoutKind } = workspaceContext;
 
     expect(multiContext).toEqual({
       kind: "multi",
-      user: userContextWithoutKind,
-      workspace: workspaceContextWithoutKind,
+      user: userContext,
+      workspace: workspaceContext,
     });
+  });
+});
+
+describe(`${getSingleContextsFromMulti.name}`, () => {
+  it("gets single contexts from a multi context", () => {
+    const mockWorkspaceId = uuidV4();
+    const userContext = createUserContext(null, mockLocale);
+    const workspaceContext = createLDContext("workspace", mockWorkspaceId);
+    const multiContext = createMultiContext(userContext, workspaceContext);
+    const singleContexts = getSingleContextsFromMulti(multiContext);
+    expect(singleContexts).toEqual([userContext, workspaceContext]);
   });
 });

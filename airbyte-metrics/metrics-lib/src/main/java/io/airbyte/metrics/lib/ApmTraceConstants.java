@@ -70,6 +70,11 @@ public final class ApmTraceConstants {
     public static final String DESTINATION_DOCKER_IMAGE_KEY = "destination.docker_image";
 
     /**
+     * Name of the APM trace tag that holds the destination ID value associated with the trace.
+     */
+    public static final String DESTINATION_ID_KEY = "destination.id";
+
+    /**
      * Name of the APM trace tag that holds the Docker image value associated with the trace.
      */
     public static final String DOCKER_IMAGE_KEY = "docker_image";

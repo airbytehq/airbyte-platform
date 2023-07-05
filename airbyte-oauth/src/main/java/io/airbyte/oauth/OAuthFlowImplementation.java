@@ -21,18 +21,24 @@ public interface OAuthFlowImplementation {
                              UUID sourceDefinitionId,
                              String redirectUrl,
                              JsonNode inputOAuthConfiguration,
-                             OAuthConfigSpecification oauthConfigSpecification)
+                             OAuthConfigSpecification oauthConfigSpecification,
+                             JsonNode sourceOAuthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException;
 
   String getDestinationConsentUrl(UUID workspaceId,
                                   UUID destinationDefinitionId,
                                   String redirectUrl,
                                   JsonNode inputOAuthConfiguration,
-                                  OAuthConfigSpecification oauthConfigSpecification)
+                                  OAuthConfigSpecification oauthConfigSpecification,
+                                  JsonNode destinationOAuthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException;
 
   @Deprecated
-  Map<String, Object> completeSourceOAuth(UUID workspaceId, UUID sourceDefinitionId, Map<String, Object> queryParams, String redirectUrl)
+  Map<String, Object> completeSourceOAuth(UUID workspaceId,
+                                          UUID sourceDefinitionId,
+                                          Map<String, Object> queryParams,
+                                          String redirectUrl,
+                                          JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException;
 
   Map<String, Object> completeSourceOAuth(UUID workspaceId,
@@ -40,11 +46,16 @@ public interface OAuthFlowImplementation {
                                           Map<String, Object> queryParams,
                                           String redirectUrl,
                                           JsonNode inputOAuthConfiguration,
-                                          OAuthConfigSpecification oauthConfigSpecification)
+                                          OAuthConfigSpecification oauthConfigSpecification,
+                                          JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException;
 
   @Deprecated
-  Map<String, Object> completeDestinationOAuth(UUID workspaceId, UUID destinationDefinitionId, Map<String, Object> queryParams, String redirectUrl)
+  Map<String, Object> completeDestinationOAuth(UUID workspaceId,
+                                               UUID destinationDefinitionId,
+                                               Map<String, Object> queryParams,
+                                               String redirectUrl,
+                                               JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException;
 
   Map<String, Object> completeDestinationOAuth(UUID workspaceId,
@@ -52,7 +63,14 @@ public interface OAuthFlowImplementation {
                                                Map<String, Object> queryParams,
                                                String redirectUrl,
                                                JsonNode inputOAuthConfiguration,
-                                               OAuthConfigSpecification oauthConfigSpecification)
+                                               OAuthConfigSpecification oauthConfigSpecification,
+                                               JsonNode oauthParamConfig)
       throws IOException, ConfigNotFoundException, JsonValidationException;
+
+  default void revokeSourceOauth(UUID workspaceId,
+                                 UUID sourceDefinitionId,
+                                 JsonNode hydratedSourceConnectionConfiguration,
+                                 JsonNode oauthParamConfig)
+      throws IOException, ConfigNotFoundException, JsonValidationException {}
 
 }

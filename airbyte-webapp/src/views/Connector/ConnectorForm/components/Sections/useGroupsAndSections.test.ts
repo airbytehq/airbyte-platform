@@ -1,5 +1,3 @@
-import { FieldMetaProps } from "formik";
-
 import { FormGroupItem, FormBaseItem, FormBlock, GroupDetails } from "core/form/types";
 
 import { DisplayType, generateGroupsAndSections, Section } from "./useGroupsAndSections";
@@ -62,15 +60,13 @@ function section(blocks: FormBlock[], displayType: DisplayType = "expanded"): Se
   return {
     blocks,
     displayType,
-    hasError: false,
   };
 }
 
 const isHiddenAuthField = jest.fn(() => false);
-const getFieldMeta = jest.fn(() => ({ error: false, touched: false } as unknown as FieldMetaProps<unknown>));
 
-function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = [], featureFlag = true) {
-  return generateGroupsAndSections(blocks, groups, featureFlag, true, isHiddenAuthField, getFieldMeta);
+function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = []) {
+  return generateGroupsAndSections(blocks, groups, true, isHiddenAuthField);
 }
 
 describe("useGroupsAndSections", () => {
@@ -189,31 +185,6 @@ describe("useGroupsAndSections", () => {
         ),
       ]),
       sectionGroup([section([item("d", { group: "b", order: 1 })], "collapsed-group")]),
-    ]);
-  });
-
-  it("should ignore grouping and sectioning without feature flag, putting everything into a single section", () => {
-    expect(
-      generate(
-        [
-          object([item("b", { group: "b", order: 0 }), item("c", { required: true, group: "a" })], "z_group"),
-          item("d", { group: "a" }),
-          item("a", { group: "b", order: 1 }),
-        ],
-        [],
-        false
-      )
-    ).toEqual([
-      sectionGroup([
-        section(
-          [
-            item("a", { group: "b", order: 1 }),
-            item("d", { group: "a" }),
-            object([item("b", { group: "b", order: 0 }), item("c", { required: true, group: "a" })], "z_group"),
-          ],
-          "expanded"
-        ),
-      ]),
     ]);
   });
 

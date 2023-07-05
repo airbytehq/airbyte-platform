@@ -1,21 +1,31 @@
 import {
-  getConnectionCreateRequest,
-  getPostgresCreateDestinationBody,
-  getPostgresCreateSourceBody,
-  requestCreateConnection,
-  requestCreateDestination,
-  requestCreateSource,
+  createNewConnectionViaApi,
+  createPostgresDestinationViaApi,
+  createPostgresSourceViaApi,
+} from "@cy/commands/connection";
+import {
+  WebBackendConnectionRead,
+  DestinationRead,
+  DestinationSyncMode,
+  SourceRead,
+  SyncMode,
+} from "@src/core/api/types/AirbyteClient";
+import {
+  getPostgresToPostgresUpdateConnectionBody,
   requestDeleteConnection,
   requestDeleteDestination,
   requestDeleteSource,
   requestGetConnection,
-  requestSourceDiscoverSchema,
-  requestWorkspaceId,
+  requestUpdateConnection,
 } from "commands/api";
-import { Connection, Destination, DestinationSyncMode, Source, SourceSyncMode } from "commands/api/types";
-import { appendRandomString } from "commands/common";
-import { runDbQuery } from "commands/db/db";
-import { alterTable, createUsersTableQuery, dropUsersTableQuery } from "commands/db/queries";
+import {
+  cleanDBSource,
+  makeChangesInDBSource,
+  populateDBSource,
+  reverseChangesInDBSource,
+  runDbQuery,
+} from "commands/db/db";
+import { alterTable } from "commands/db/queries";
 
 import * as catalogDiffModal from "pages/connection/catalogDiffModalPageObject";
 import * as connectionForm from "pages/connection/connectionFormPageObject";
@@ -25,59 +35,45 @@ import * as replicationPage from "pages/connection/connectionReplicationPageObje
 import { streamsTable } from "pages/connection/StreamsTablePageObject";
 
 describe("Connection - Auto-detect schema changes", () => {
-  let source: Source;
-  let destination: Destination;
-  let connection: Connection;
+  let source: SourceRead;
+  let destination: DestinationRead;
+  let connection: WebBackendConnectionRead;
+
+  before(() => {
+    createPostgresDestinationViaApi().then((pgDestination) => {
+      destination = pgDestination;
+    });
+  });
 
   beforeEach(() => {
-    runDbQuery(dropUsersTableQuery);
-    runDbQuery(createUsersTableQuery);
-
-    requestWorkspaceId().then(() => {
-      const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Auto-detect schema Source"));
-      const destinationRequestBody = getPostgresCreateDestinationBody(
-        appendRandomString("Auto-detect schema Destination")
-      );
-
-      requestCreateSource(sourceRequestBody).then((sourceResponse) => {
-        source = sourceResponse;
-        requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
-          destination = destinationResponse;
-        });
-
-        requestSourceDiscoverSchema(source.sourceId).then(({ catalog, catalogId }) => {
-          const connectionRequestBody = getConnectionCreateRequest({
-            name: appendRandomString("Auto-detect schema test connection"),
-            sourceId: source.sourceId,
-            destinationId: destination.destinationId,
-            syncCatalog: catalog,
-            sourceCatalogId: catalogId,
-          });
-          requestCreateConnection(connectionRequestBody).then((connectionResponse) => {
-            connection = connectionResponse;
-          });
-        });
+    populateDBSource();
+    createPostgresSourceViaApi().then((pgSource) => {
+      source = pgSource;
+      createNewConnectionViaApi(source, destination, { enableAllStreams: true }).then((connectionResponse) => {
+        connection = connectionResponse;
       });
     });
   });
 
   afterEach(() => {
     if (connection) {
-      requestDeleteConnection(connection.connectionId);
+      requestDeleteConnection({ connectionId: connection.connectionId });
     }
     if (source) {
-      requestDeleteSource(source.sourceId);
+      requestDeleteSource({ sourceId: source.sourceId });
     }
-    if (destination) {
-      requestDeleteDestination(destination.destinationId);
-    }
+    cleanDBSource();
+  });
 
-    runDbQuery(dropUsersTableQuery);
+  after(() => {
+    if (destination) {
+      requestDeleteDestination({ destinationId: destination.destinationId });
+    }
   });
 
   describe("non-breaking changes", () => {
     beforeEach(() => {
-      runDbQuery(alterTable("public.users", { drop: ["updated_at"] }));
+      makeChangesInDBSource();
       requestGetConnection({ connectionId: connection.connectionId, withRefreshedCatalog: true });
     });
 
@@ -89,18 +85,29 @@ describe("Connection - Auto-detect schema changes", () => {
 
     it("shows non-breaking change that can be saved after refresh", () => {
       // Need to continue running but async breaks everything
+      // todo: i am not sure what that comment means ^
       connectionPage.visit(connection, "replication");
 
+      // check overlay panel
       replicationPage.checkSchemaChangesDetected({ breaking: false });
       replicationPage.clickSchemaChangesReviewButton();
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
 
+      // check modal content
       catalogDiffModal.shouldExist();
+      cy.get(catalogDiffModal.removedStreamsTable).should("contain", "users");
+
+      cy.get(catalogDiffModal.newStreamsTable).should("contain", "cars");
+
+      catalogDiffModal.toggleStreamWithChangesAccordion("cities");
+      cy.get(catalogDiffModal.removedFieldsTable).should("contain", "city_code");
+      cy.get(catalogDiffModal.newFieldsTable).children().should("contain", "country").and("contain", "state");
+
       catalogDiffModal.clickCloseButton();
 
       replicationPage.checkSchemaChangesDetectedCleared();
 
-      replicationPage.clickSaveButton();
+      replicationPage.saveChangesAndHandleResetModal();
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
     });
 
@@ -109,26 +116,35 @@ describe("Connection - Auto-detect schema changes", () => {
 
       replicationPage.checkSchemaChangesDetected({ breaking: false });
 
-      runDbQuery(alterTable("public.users", { add: ["updated_at TIMESTAMP"] }));
+      reverseChangesInDBSource();
+
       replicationPage.clickSchemaChangesReviewButton();
 
       replicationPage.checkSchemaChangesDetectedCleared();
+      catalogDiffModal.shouldNotExist();
       replicationPage.checkNoDiffToast();
     });
   });
 
   describe("breaking changes", () => {
     beforeEach(() => {
-      const streamName = "users";
-      connectionPage.visit(connection, "replication");
+      const streamToUpdate = connection.syncCatalog.streams.findIndex(
+        (stream) => stream.stream?.name === "users" && stream.stream.namespace === "public"
+      );
+      const newSyncCatalog = { streams: [...connection.syncCatalog.streams] };
 
-      // Change users sync mode
-      const row = streamsTable.getRow("public", streamName);
-      row.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
-      row.selectCursor("updated_at");
-      replicationPage.clickSaveButton();
+      newSyncCatalog.streams[streamToUpdate].config = {
+        ...newSyncCatalog.streams[streamToUpdate].config,
+        destinationSyncMode: DestinationSyncMode.append_dedup,
+        syncMode: SyncMode.incremental,
+        cursorField: ["updated_at"],
+      };
 
-      // Remove cursor from db and refreshs schema to force breaking change detection
+      requestUpdateConnection(
+        getPostgresToPostgresUpdateConnectionBody(connection.connectionId, { syncCatalog: newSyncCatalog })
+      );
+
+      // Remove cursor from db and refreshes schema to force breaking change detection
       runDbQuery(alterTable("public.users", { drop: ["updated_at"] }));
       requestGetConnection({ connectionId: connection.connectionId, withRefreshedCatalog: true });
       cy.reload();
@@ -145,23 +161,31 @@ describe("Connection - Auto-detect schema changes", () => {
 
       // Confirm that breaking changes are there
       replicationPage.checkSchemaChangesDetected({ breaking: true });
+      connectionPage.getSyncEnabledSwitch().should("be.disabled");
       replicationPage.clickSchemaChangesReviewButton();
       connectionPage.getSyncEnabledSwitch().should("be.disabled");
 
+      // confirm contents of the catalog diff modal
       catalogDiffModal.shouldExist();
+      cy.get(catalogDiffModal.removedStreamsTable).should("not.exist");
+      cy.get(catalogDiffModal.newStreamsTable).should("not.exist");
+      catalogDiffModal.toggleStreamWithChangesAccordion("users");
+      cy.get(catalogDiffModal.removedFieldsTable).should("contain", "updated_at");
+      cy.get(catalogDiffModal.newFieldsTable).should("not.exist");
       catalogDiffModal.clickCloseButton();
+
       replicationPage.checkSchemaChangesDetectedCleared();
 
       // Fix the conflict
       streamsTable.searchStream("users");
       const row = streamsTable.getRow("public", "users");
-      row.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+      row.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
 
-      replicationPage.clickSaveButton();
+      replicationPage.saveChangesAndHandleResetModal();
       connectionPage.getSyncEnabledSwitch().should("be.enabled");
     });
 
-    it("clears breaking change when db changes are restored", () => {
+    it("clears breaking change if db changes are restored", () => {
       connectionPage.visit(connection, "replication");
 
       replicationPage.checkSchemaChangesDetected({ breaking: true });
@@ -182,11 +206,20 @@ describe("Connection - Auto-detect schema changes", () => {
 
       cy.intercept("/api/v1/web_backend/connections/update").as("updatesNonBreakingPreference");
 
-      replicationPage.clickSaveButton({ confirm: false });
+      replicationPage.saveChangesAndHandleResetModal({ expectModal: false });
 
       cy.wait("@updatesNonBreakingPreference").then((interception) => {
-        assert.equal((interception.response?.body as Connection).nonBreakingChangesPreference, "disable");
+        assert.equal((interception.response?.body as WebBackendConnectionRead).nonBreakingChangesPreference, "disable");
       });
     });
+  });
+
+  it("shows no diff after refresh if there have been no changes", () => {
+    connectionPage.visit(connection, "replication");
+
+    replicationPage.clickRefreshSourceSchemaButton();
+
+    replicationPage.checkNoDiffToast();
+    catalogDiffModal.shouldNotExist();
   });
 });

@@ -1,3 +1,11 @@
+DOT_AIRBYTE_ROOT=${DOT_AIRBYTE_ROOT:=~/.airbyte}
+AIRBUILD_ROOT=$DOT_AIRBYTE_ROOT/airbuild
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+CLEAR='\033[0m'
+
 error() {
   echo -e "$@"
   exit 1
@@ -5,6 +13,19 @@ error() {
 
 assert_root() {
   [ -f .root ] || error "Must run from root"
+}
+
+project_root() {
+  git rev-parse --show-toplevel
+}
+
+ensure_image_exists() {
+  local image=$1
+  docker inspect $image &> /dev/null
+  if [[ $? != 0 ]]; then
+    echo "Image $image was not found. Please build or pull as necessary"
+    exit 1
+  fi
 }
 
 _script_directory() {
@@ -62,3 +83,5 @@ get_connector_version() {
 
 VERSION=$(cat .env | grep "^VERSION=" | cut -d = -f 2); export VERSION
 SCRIPT_DIRECTORY=$(_script_directory); export SCRIPT_DIRECTORY
+
+DOT_AIRBYTE_ROOT=${DOT_AIRBYTE_ROOT:=~/.airbyte}

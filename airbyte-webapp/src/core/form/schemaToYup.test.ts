@@ -57,7 +57,7 @@ it("should build schema for simple case", () => {
       .required("form.empty.error")
       .transform((val) => (isNaN(val) ? undefined : val)),
     user: yup.string().trim().required("form.empty.error").transform(String),
-    is_sandbox: yup.boolean().default(false),
+    is_sandbox: yup.boolean(),
     is_field_no_default: yup.boolean().required("form.empty.error"),
     dbname: yup.string().trim().required("form.empty.error").transform(String),
     password: yup.string().trim().transform(String),

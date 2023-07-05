@@ -1,5 +1,6 @@
-import { Form, Formik, useFormikContext } from "formik";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { useContext, useMemo } from "react";
+import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import * as yup from "yup";
@@ -8,11 +9,10 @@ import { Button } from "components/ui/Button";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
-import { FormikPatch } from "core/form/FormikPatch";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { ConnectorBuilderMainFormikContext } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
@@ -95,15 +95,13 @@ export const InputForm = ({
   onClose: (newInput?: BuilderFormInput) => void;
 }) => {
   const analyticsService = useAnalyticsService();
-  const { values, setFieldValue } = useContext(ConnectorBuilderMainFormikContext) || {};
-  if (!values || !setFieldValue) {
-    throw new Error("formik context not available");
+  const { setValue, watch } = useContext(ConnectorBuilderMainRHFContext) || {};
+  if (!setValue || !watch) {
+    throw new Error("rhf context not available");
   }
+  const inputs = watch("inputs");
   const inferredInputs = useInferredInputs();
-  const usedKeys = useMemo(
-    () => [...values.inputs, ...inferredInputs].map((input) => input.key),
-    [values.inputs, inferredInputs]
-  );
+  const usedKeys = useMemo(() => [...inputs, ...inferredInputs].map((input) => input.key), [inputs, inferredInputs]);
   const inputInEditValidation = useMemo(
     () =>
       yup.object().shape({
@@ -118,67 +116,69 @@ export const InputForm = ({
         definition: yup.object().shape({
           title: yup.string().required("form.empty.error"),
         }),
-      }),
+      }) as unknown as yup.SchemaOf<InputInEditing, never>,
     [inputInEditing?.isNew, inputInEditing?.key, usedKeys]
   );
+
+  const methods = useForm<InputInEditing>({
+    defaultValues: inputInEditing,
+    resolver: yupResolver(inputInEditValidation),
+    mode: "onChange",
+  });
+  const onSubmit = async (inputInEditing: InputInEditing) => {
+    if (inputInEditing.isInferredInputOverride) {
+      setValue(`inferredInputOverrides.${inputInEditing.key}`, inputInEditing.definition);
+      onClose();
+    } else {
+      const newInput = inputInEditingToFormInput(inputInEditing);
+      setValue(
+        "inputs",
+        inputInEditing.isNew
+          ? [...inputs, newInput]
+          : inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
+      );
+      onClose(newInput);
+    }
+    analyticsService.track(
+      Namespace.CONNECTOR_BUILDER,
+      inputInEditing.isNew ? Action.USER_INPUT_CREATE : Action.USER_INPUT_EDIT,
+      {
+        actionDescription: inputInEditing.isNew ? "New user input created" : "Existing user input edited",
+        user_input_id: inputInEditing.key,
+        user_input_name: inputInEditing.definition.title,
+        hint: inputInEditing.definition.description,
+        type: inputInEditing.type,
+        allowed_enum_values: inputInEditing.definition.enum,
+        secret_field: inputInEditing.definition.airbyte_secret,
+        required_field: inputInEditing.definition.required,
+        enable_default_value: inputInEditing.showDefaultValueField,
+        default_value: inputInEditing.definition.default,
+      }
+    );
+  };
+
   return (
-    <Formik
-      initialValues={inputInEditing}
-      validationSchema={inputInEditValidation}
-      onSubmit={(inputInEditing: InputInEditing) => {
-        if (inputInEditing.isInferredInputOverride) {
-          setFieldValue(`inferredInputOverrides.${inputInEditing.key}`, inputInEditing.definition);
-          onClose();
-        } else {
-          const newInput = inputInEditingToFormInput(inputInEditing);
-          setFieldValue(
+    <FormProvider {...methods}>
+      <InputModal
+        onSubmit={onSubmit}
+        inputInEditing={inputInEditing}
+        onDelete={() => {
+          setValue(
             "inputs",
-            inputInEditing.isNew
-              ? [...values.inputs, newInput]
-              : values.inputs.map((input) => (input.key === inputInEditing.previousKey ? newInput : input))
+            inputs.filter((input) => input.key !== inputInEditing.key)
           );
-          onClose(newInput);
-        }
-        analyticsService.track(
-          Namespace.CONNECTOR_BUILDER,
-          inputInEditing.isNew ? Action.USER_INPUT_CREATE : Action.USER_INPUT_EDIT,
-          {
-            actionDescription: inputInEditing.isNew ? "New user input created" : "Existing user input edited",
+          onClose();
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUT_DELETE, {
+            actionDescription: "User input deleted",
             user_input_id: inputInEditing.key,
             user_input_name: inputInEditing.definition.title,
-            hint: inputInEditing.definition.description,
-            type: inputInEditing.type,
-            allowed_enum_values: inputInEditing.definition.enum,
-            secret_field: inputInEditing.definition.airbyte_secret,
-            required_field: inputInEditing.definition.required,
-            enable_default_value: inputInEditing.showDefaultValueField,
-            default_value: inputInEditing.definition.default,
-          }
-        );
-      }}
-    >
-      <>
-        <FormikPatch />
-        <InputModal
-          inputInEditing={inputInEditing}
-          onDelete={() => {
-            setFieldValue(
-              "inputs",
-              values.inputs.filter((input) => input.key !== inputInEditing.key)
-            );
-            onClose();
-            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUT_DELETE, {
-              actionDescription: "User input deleted",
-              user_input_id: inputInEditing.key,
-              user_input_name: inputInEditing.definition.title,
-            });
-          }}
-          onClose={() => {
-            onClose();
-          }}
-        />
-      </>
-    </Formik>
+          });
+        }}
+        onClose={() => {
+          onClose();
+        }}
+      />
+    </FormProvider>
   );
 };
 
@@ -186,18 +186,25 @@ const InputModal = ({
   inputInEditing,
   onClose,
   onDelete,
+  onSubmit,
 }: {
   inputInEditing: InputInEditing;
   onDelete: () => void;
   onClose: () => void;
+  onSubmit: (inputInEditing: InputInEditing) => void;
 }) => {
   const isInferredInputOverride = inputInEditing.isInferredInputOverride;
-  const { isValid, values, setFieldValue, setTouched } = useFormikContext<InputInEditing>();
+  const {
+    formState: { isValid },
+    setValue,
+    handleSubmit,
+  } = useFormContext<InputInEditing>();
+  const values = useWatch<InputInEditing>();
 
   const { formatMessage } = useIntl();
   useEffectOnce(() => {
     // key input is always touched so errors are shown right away as it will be auto-set by the user changing the title
-    setTouched({ key: true });
+    setValue("key", inputInEditing.key, { shouldValidate: true });
   });
 
   return (
@@ -208,122 +215,129 @@ const InputModal = ({
           id={inputInEditing.isNew ? "connectorBuilder.inputModal.newTitle" : "connectorBuilder.inputModal.editTitle"}
         />
       }
-      wrapIn={Form}
       onClose={onClose}
     >
-      <ModalBody className={styles.inputFormBody}>
-        <BuilderField
-          path="definition.title"
-          type="string"
-          onChange={(newValue) => {
-            if (!isInferredInputOverride) {
-              setFieldValue("key", sluggify(newValue || ""), true);
-            }
-          }}
-          label={formatMessage({ id: "connectorBuilder.inputModal.inputName" })}
-          tooltip={formatMessage({ id: "connectorBuilder.inputModal.inputNameTooltip" })}
-        />
-        <BuilderField
-          path="key"
-          type="string"
-          readOnly
-          label={formatMessage({ id: "connectorBuilder.inputModal.fieldId" })}
-          tooltip={formatMessage(
-            { id: "connectorBuilder.inputModal.fieldIdTooltip" },
-            {
-              syntaxExample: `{{config['${values.key || "my_input"}']}}`,
-            }
-          )}
-        />
-        <BuilderField
-          path="definition.description"
-          optional
-          type="string"
-          label={formatMessage({ id: "connectorBuilder.inputModal.description" })}
-          tooltip={formatMessage({ id: "connectorBuilder.inputModal.descriptionTooltip" })}
-        />
-        {values.type !== "unknown" && !isInferredInputOverride ? (
-          <>
-            <BuilderField
-              path="type"
-              type="enum"
-              options={["string", "number", "integer", "array", "boolean", "enum", "date", "date-time"]}
-              onChange={() => {
-                setFieldValue("definition.default", undefined);
-                setFieldValue("definition.pattern", undefined);
-                setFieldValue("definition.format", undefined);
-              }}
-              label={formatMessage({ id: "connectorBuilder.inputModal.type" })}
-              tooltip={formatMessage({ id: "connectorBuilder.inputModal.typeTooltip" })}
-            />
-            {values.type === "enum" && (
-              <BuilderField
-                path="definition.enum"
-                type="array"
-                optional
-                label={formatMessage({ id: "connectorBuilder.inputModal.enum" })}
-                tooltip={formatMessage({ id: "connectorBuilder.inputModal.enumTooltip" })}
-              />
-            )}
-            <BuilderField
-              path="definition.airbyte_secret"
-              type="boolean"
-              optional
-              label={formatMessage({ id: "connectorBuilder.inputModal.secret" })}
-              tooltip={formatMessage({ id: "connectorBuilder.inputModal.secretTooltip" })}
-            />
-            <BuilderField
-              path="required"
-              type="boolean"
-              optional
-              label={formatMessage({ id: "connectorBuilder.inputModal.required" })}
-              tooltip={formatMessage({ id: "connectorBuilder.inputModal.requiredTooltip" })}
-            />
-            <BuilderField
-              path="showDefaultValueField"
-              type="boolean"
-              optional
-              label={formatMessage({ id: "connectorBuilder.inputModal.showDefaultValueField" })}
-              tooltip={formatMessage({ id: "connectorBuilder.inputModal.showDefaultValueFieldTooltip" })}
-            />
-            {values.showDefaultValueField && (
-              <BuilderField
-                path="definition.default"
-                type={values.type}
-                options={(values.definition.enum || []) as string[]}
-                optional
-                label={formatMessage({ id: "connectorBuilder.inputModal.default" })}
-              />
-            )}
-          </>
-        ) : (
-          <Message
-            type="info"
-            text={
-              isInferredInputOverride ? (
-                <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
-              ) : (
-                <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
-              )
-            }
+      <form
+        onSubmit={(e) => {
+          // stop propagation to avoid submitting the outer form as this form is nested
+          e.stopPropagation();
+          handleSubmit(onSubmit)(e);
+        }}
+      >
+        <ModalBody className={styles.inputFormBody}>
+          <BuilderField
+            path="definition.title"
+            type="string"
+            onChange={(newValue) => {
+              if (!isInferredInputOverride) {
+                setValue("key", sluggify(newValue || ""), { shouldValidate: true });
+              }
+            }}
+            label={formatMessage({ id: "connectorBuilder.inputModal.inputName" })}
+            tooltip={formatMessage({ id: "connectorBuilder.inputModal.inputNameTooltip" })}
           />
-        )}
-      </ModalBody>
-      <ModalFooter>
-        {!inputInEditing.isNew && !inputInEditing.isInferredInputOverride && (
-          <div className={styles.deleteButtonContainer}>
-            <Button variant="danger" type="button" onClick={onDelete}>
-              <FormattedMessage id="form.delete" />
-            </Button>
-          </div>
-        )}
-        <Button variant="secondary" type="reset" onClick={onClose}>
-          <FormattedMessage id="form.cancel" />
-        </Button>
-        <Button type="submit" disabled={!isValid}>
-          <FormattedMessage id={inputInEditing.isNew ? "form.create" : "form.saveChanges"} />
-        </Button>
-      </ModalFooter>
+          <BuilderField
+            path="key"
+            type="string"
+            readOnly
+            label={formatMessage({ id: "connectorBuilder.inputModal.fieldId" })}
+            tooltip={formatMessage(
+              { id: "connectorBuilder.inputModal.fieldIdTooltip" },
+              {
+                syntaxExample: `{{config['${values.key || "my_input"}']}}`,
+              }
+            )}
+          />
+          <BuilderField
+            path="definition.description"
+            optional
+            type="string"
+            label={formatMessage({ id: "connectorBuilder.inputModal.description" })}
+            tooltip={formatMessage({ id: "connectorBuilder.inputModal.descriptionTooltip" })}
+          />
+          {values.type !== "unknown" && !isInferredInputOverride ? (
+            <>
+              <BuilderField
+                path="type"
+                type="enum"
+                options={["string", "number", "integer", "array", "boolean", "enum", "date", "date-time"]}
+                onChange={() => {
+                  setValue("definition.default", undefined);
+                  setValue("definition.pattern", undefined);
+                  setValue("definition.format", undefined);
+                }}
+                label={formatMessage({ id: "connectorBuilder.inputModal.type" })}
+                tooltip={formatMessage({ id: "connectorBuilder.inputModal.typeTooltip" })}
+              />
+              {values.type === "enum" && (
+                <BuilderField
+                  path="definition.enum"
+                  type="array"
+                  optional
+                  label={formatMessage({ id: "connectorBuilder.inputModal.enum" })}
+                  tooltip={formatMessage({ id: "connectorBuilder.inputModal.enumTooltip" })}
+                />
+              )}
+              <BuilderField
+                path="definition.airbyte_secret"
+                type="boolean"
+                optional
+                label={formatMessage({ id: "connectorBuilder.inputModal.secret" })}
+                tooltip={formatMessage({ id: "connectorBuilder.inputModal.secretTooltip" })}
+              />
+              <BuilderField
+                path="required"
+                type="boolean"
+                optional
+                label={formatMessage({ id: "connectorBuilder.inputModal.required" })}
+                tooltip={formatMessage({ id: "connectorBuilder.inputModal.requiredTooltip" })}
+              />
+              <BuilderField
+                path="showDefaultValueField"
+                type="boolean"
+                optional
+                label={formatMessage({ id: "connectorBuilder.inputModal.showDefaultValueField" })}
+                tooltip={formatMessage({ id: "connectorBuilder.inputModal.showDefaultValueFieldTooltip" })}
+              />
+              {values.showDefaultValueField && values.type && (
+                <BuilderField
+                  path="definition.default"
+                  type={values.type}
+                  options={(values.definition?.enum || []) as string[]}
+                  optional
+                  label={formatMessage({ id: "connectorBuilder.inputModal.default" })}
+                />
+              )}
+            </>
+          ) : (
+            <Message
+              type="info"
+              text={
+                isInferredInputOverride ? (
+                  <FormattedMessage id="connectorBuilder.inputModal.inferredInputMessage" />
+                ) : (
+                  <FormattedMessage id="connectorBuilder.inputModal.unsupportedInput" />
+                )
+              }
+            />
+          )}
+        </ModalBody>
+        <ModalFooter>
+          {!inputInEditing.isNew && !inputInEditing.isInferredInputOverride && (
+            <div className={styles.deleteButtonContainer}>
+              <Button variant="danger" type="button" onClick={onDelete}>
+                <FormattedMessage id="form.delete" />
+              </Button>
+            </div>
+          )}
+          <Button variant="secondary" type="reset" onClick={onClose}>
+            <FormattedMessage id="form.cancel" />
+          </Button>
+          <Button type="submit" disabled={!isValid}>
+            <FormattedMessage id={inputInEditing.isNew ? "form.create" : "form.saveChanges"} />
+          </Button>
+        </ModalFooter>
+      </form>
     </Modal>
   );
 };

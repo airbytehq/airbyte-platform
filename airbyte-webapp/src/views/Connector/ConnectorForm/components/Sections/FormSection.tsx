@@ -1,12 +1,10 @@
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 
 import { Card } from "components/ui/Card";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Message } from "components/ui/Message";
-import { Text } from "components/ui/Text";
 
 import { FormBlock, GroupDetails } from "core/form/types";
 
@@ -16,10 +14,8 @@ import { ConditionSection } from "./ConditionSection";
 import styles from "./FormSection.module.scss";
 import { PropertySection } from "./PropertySection";
 import { SectionContainer } from "./SectionContainer";
-import { SshSslSwitcher } from "./SslSshSwitcher";
 import { DisplayType, useGroupsAndSections } from "./useGroupsAndSections";
 import { useAuthentication } from "../../useAuthentication";
-import { useSshSslImprovements } from "../../useSshSslImprovements";
 
 interface FormNodeProps {
   formField: FormBlock;
@@ -58,8 +54,6 @@ interface FormSectionProps {
   disabled?: boolean;
 }
 
-const sshTunnelDocId = "connect-via-ssh-tunnel";
-
 export const FormSection: React.FC<FormSectionProps> = ({
   blocks = [],
   groupStructure = [],
@@ -70,7 +64,6 @@ export const FormSection: React.FC<FormSectionProps> = ({
   headerBlock,
 }) => {
   const { shouldShowAuthButton } = useAuthentication();
-  const { showSshSslImprovements, dbHostIsLocalhost } = useSshSslImprovements();
 
   const groups = useGroupsAndSections(blocks, groupStructure, Boolean(rootLevel));
   const groupElements = groups.map((sectionGroup, index) => {
@@ -85,6 +78,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
         displayType={section.displayType}
         hasError={section.hasError}
         key={index}
+        initiallyOpen={section.initiallyOpen}
       >
         {section.blocks.map((formField) => {
           const sectionPath = path ? (skipAppend ? path : `${path}.${formField.fieldKey}`) : formField.path;
@@ -134,28 +128,6 @@ export const FormSection: React.FC<FormSectionProps> = ({
               {sectionGroup.title}
             </Heading>
           )}
-          {showSshSslImprovements && sectionGroup.title === "Security" && dbHostIsLocalhost && (
-            <Message
-              text={
-                <Text size="md">
-                  <FormattedMessage
-                    id="form.setupTunnel"
-                    values={{
-                      a: (node: React.ReactNode) => (
-                        <a
-                          href={`#${sshTunnelDocId}`}
-                          onClick={() => document.getElementById(sshTunnelDocId)?.scrollIntoView()}
-                        >
-                          {node}
-                        </a>
-                      ),
-                    }}
-                  />
-                </Text>
-              }
-            />
-          )}
-          {showSshSslImprovements && sectionGroup.title === "Security" && <SshSslSwitcher />}
           <FlexItem>{sectionElements}</FlexItem>
         </FlexContainer>
       </Card>
@@ -177,11 +149,18 @@ export const FormSection: React.FC<FormSectionProps> = ({
 
 interface SubSectionProps {
   displayType: DisplayType;
-  hasError: boolean;
+  hasError?: boolean;
   label?: string;
+  initiallyOpen?: boolean;
 }
 
-const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({ displayType, hasError, children, label }) => {
+const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({
+  displayType,
+  hasError,
+  children,
+  label,
+  initiallyOpen,
+}) => {
   const { formatMessage } = useIntl();
 
   if (displayType === "expanded") {
@@ -194,6 +173,7 @@ const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({ displa
       data-testid="optional-fields"
       showErrorIndicator={hasError}
       type={displayType === "collapsed-footer" ? "footer" : displayType === "collapsed-group" ? "section" : undefined}
+      initiallyOpen={initiallyOpen}
       hideWhenEmpty
     >
       {children}

@@ -8,6 +8,7 @@ const passwordInput = "input[name='connectionConfiguration.password']";
 const pokemonNameInput = "input[name='connectionConfiguration.pokemon_name']";
 const schemaInput = "[data-testid='tag-input'] input";
 const destinationPathInput = "input[name='connectionConfiguration.destination_path']";
+const optionalFieldsButton = "button[data-testid='optional-fields']";
 
 export const selectServiceType = (type: string) => cy.contains("button", type).click();
 
@@ -62,4 +63,8 @@ export const removeSchema = (value = "Remove public") => {
     return;
   }
   cy.get(`[aria-label*="${value}"]`).click();
+};
+
+export const openOptionalFields = () => {
+  cy.get(optionalFieldsButton).click();
 };

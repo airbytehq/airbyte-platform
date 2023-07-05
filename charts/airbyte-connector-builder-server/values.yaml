@@ -180,3 +180,7 @@ secrets: {}
 #   AIRBYTE_VERSION: 0.40.4
 
 env_vars: {}
+
+debug:
+  enabled: false
+  remoteDebugPort: 5005

@@ -1,3 +1,4 @@
+import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
 import { ConnectorIcon } from "components/common/ConnectorIcon";
@@ -7,16 +8,16 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { ReleaseStage } from "core/request/AirbyteClient";
+import { ConnectionStatus, ReleaseStage } from "core/request/AirbyteClient";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionTitleBlock.module.scss";
-import { ConnectionRoutePaths } from "../types";
 
 interface ConnectorBlockProps {
   name: string;
@@ -35,17 +36,18 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, stage, 
     <Link to={`${basePath}/${connectorTypePath}/${id}`} className={styles.link}>
       <FlexContainer gap="sm" alignItems="center">
         <ConnectorIcon icon={icon} />
-        <Text size="lg">{name}</Text>
-        {stage && <ReleaseStageBadge stage={stage} />}
+        <Text color="grey" size="lg">
+          {name}
+        </Text>
+        <ReleaseStageBadge stage={stage} />
       </FlexContainer>
     </Link>
   );
 };
 
 export const ConnectionTitleBlock = () => {
-  const {
-    connection: { name, source, destination, schemaChange },
-  } = useConnectionEditService();
+  const { connection } = useConnectionEditService();
+  const { name, source, destination, schemaChange, status } = connection;
   const { sourceDefinition, destDefinition } = useConnectionFormService();
   const { hasBreakingSchemaChange } = useSchemaChanges(schemaChange);
 
@@ -55,10 +57,10 @@ export const ConnectionTitleBlock = () => {
         <Heading as="h1" size="md">
           {name}
         </Heading>
-        <EnabledControl disabled={hasBreakingSchemaChange} />
+        <EnabledControl disabled={hasBreakingSchemaChange || status === ConnectionStatus.deprecated} />
       </FlexContainer>
       <FlexContainer>
-        <FlexContainer alignItems="center" gap="md">
+        <FlexContainer alignItems="center" gap="sm">
           <ConnectorBlock
             name={source.name}
             icon={source.icon}
@@ -76,6 +78,13 @@ export const ConnectionTitleBlock = () => {
           />
         </FlexContainer>
       </FlexContainer>
+      {status === ConnectionStatus.deprecated && (
+        <Message
+          className={styles.connectionDeleted}
+          type="warning"
+          text={<FormattedMessage id="connection.connectionDeletedView" />}
+        />
+      )}
     </FlexContainer>
   );
 };

@@ -6,10 +6,10 @@ import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 import { SearchInput } from "components/ui/SearchInput";
 
+import { useCurrentWorkspace } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useModalService } from "hooks/services/Modal";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
 import { ConnectorGrid } from "./ConnectorGrid";
@@ -56,6 +56,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           onClose={closeModal}
         />
       ),
+      size: "sm",
     });
 
   const filteredDefinitions = useMemo(

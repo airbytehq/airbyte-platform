@@ -1,17 +1,18 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
 
 import { useConfig } from "config";
+import { useSuspenseQuery } from "core/api";
 import { ConnectorBuilderServerRequestService } from "core/domain/connectorBuilder/ConnectorBuilderServerRequestService";
 import {
   ConnectorConfig,
   ConnectorManifest,
+  StreamRead,
   StreamReadRequestBody,
   StreamsListRequestBody,
 } from "core/request/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "core/request/ConnectorManifest";
-import { useSuspenseQuery } from "services/connector/useSuspenseQuery";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 
@@ -25,7 +26,7 @@ const connectorBuilderKeys = {
   resolve: (manifest?: unknown) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
 };
 
-function useConnectorBuilderService() {
+export function useConnectorBuilderService() {
   const config = useConfig();
   const middlewares = useDefaultRequestMiddlewares();
   return useInitService(
@@ -34,12 +35,17 @@ function useConnectorBuilderService() {
   );
 }
 
-export const useReadStream = (projectId: string, params: StreamReadRequestBody) => {
+export const useReadStream = (
+  projectId: string,
+  params: StreamReadRequestBody,
+  onSuccess: (data: StreamRead) => void
+) => {
   const service = useConnectorBuilderService();
 
   return useQuery(connectorBuilderKeys.read(projectId, params.stream), () => service.readStream(params), {
     refetchOnWindowFocus: false,
     enabled: false,
+    onSuccess,
   });
 };
 
@@ -70,7 +76,7 @@ export const useResolvedManifest = (manifest?: unknown) => {
     try {
       return (await service.resolveManifest({ manifest })).manifest as DeclarativeComponentSchema;
     } catch {
-      return undefined;
+      return null;
     }
   });
 };

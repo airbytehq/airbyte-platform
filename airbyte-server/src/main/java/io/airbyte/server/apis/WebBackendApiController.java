@@ -26,6 +26,7 @@ import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler;
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler;
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler;
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors;
+import io.airbyte.metrics.lib.TracingHelper;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -55,7 +56,10 @@ public class WebBackendApiController implements WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public ConnectionStateType getStateType(final ConnectionIdRequestBody connectionIdRequestBody) {
-    return ApiHelper.execute(() -> webBackendConnectionsHandler.getStateType(connectionIdRequestBody));
+    return ApiHelper.execute(() -> {
+      TracingHelper.addConnection(connectionIdRequestBody.getConnectionId());
+      return webBackendConnectionsHandler.getStateType(connectionIdRequestBody);
+    });
   }
 
   @Post("/check_updates")
@@ -72,7 +76,10 @@ public class WebBackendApiController implements WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @Override
   public WebBackendConnectionRead webBackendCreateConnection(final WebBackendConnectionCreate webBackendConnectionCreate) {
-    return ApiHelper.execute(() -> webBackendConnectionsHandler.webBackendCreateConnection(webBackendConnectionCreate));
+    return ApiHelper.execute(() -> {
+      TracingHelper.addSourceDestination(webBackendConnectionCreate.getSourceId(), webBackendConnectionCreate.getDestinationId());
+      return webBackendConnectionsHandler.webBackendCreateConnection(webBackendConnectionCreate);
+    });
   }
 
   @Post("/connections/get")
@@ -81,7 +88,10 @@ public class WebBackendApiController implements WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WebBackendConnectionRead webBackendGetConnection(final WebBackendConnectionRequestBody webBackendConnectionRequestBody) {
-    return ApiHelper.execute(() -> webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody));
+    return ApiHelper.execute(() -> {
+      TracingHelper.addConnection(webBackendConnectionRequestBody.getConnectionId());
+      return webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody);
+    });
   }
 
   @Post("/workspace/state")
@@ -90,7 +100,10 @@ public class WebBackendApiController implements WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WebBackendWorkspaceStateResult webBackendGetWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) {
-    return ApiHelper.execute(() -> webBackendConnectionsHandler.getWorkspaceState(webBackendWorkspaceState));
+    return ApiHelper.execute(() -> {
+      TracingHelper.addWorkspace(webBackendWorkspaceState.getWorkspaceId());
+      return webBackendConnectionsHandler.getWorkspaceState(webBackendWorkspaceState);
+    });
   }
 
   @SuppressWarnings("LineLength")
@@ -100,7 +113,10 @@ public class WebBackendApiController implements WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WebBackendConnectionReadList webBackendListConnectionsForWorkspace(final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody) {
-    return ApiHelper.execute(() -> webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody));
+    return ApiHelper.execute(() -> {
+      TracingHelper.addWorkspace(webBackendConnectionListRequestBody.getWorkspaceId());
+      return webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody);
+    });
   }
 
   @Post("/geographies/list")
@@ -117,7 +133,10 @@ public class WebBackendApiController implements WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Override
   public WebBackendConnectionRead webBackendUpdateConnection(final WebBackendConnectionUpdate webBackendConnectionUpdate) {
-    return ApiHelper.execute(() -> webBackendConnectionsHandler.webBackendUpdateConnection(webBackendConnectionUpdate));
+    return ApiHelper.execute(() -> {
+      TracingHelper.addConnection(webBackendConnectionUpdate.getConnectionId());
+      return webBackendConnectionsHandler.webBackendUpdateConnection(webBackendConnectionUpdate);
+    });
   }
 
 }

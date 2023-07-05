@@ -12,8 +12,6 @@ public interface FeatureFlags {
 
   boolean autoDisablesFailingConnections();
 
-  boolean forceSecretMigration();
-
   boolean useStreamCapableState();
 
   boolean autoDetectSchema();

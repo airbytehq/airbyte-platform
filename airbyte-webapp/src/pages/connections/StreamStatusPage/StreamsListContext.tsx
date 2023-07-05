@@ -1,38 +1,32 @@
 import { createContext, useContext, useMemo, useState } from "react";
 
-import { useStreamsWithStatus } from "components/connection/StreamStatus/getStreamsWithStatus";
-import {
-  filterEmptyStreamStatuses,
-  useSortStreams,
-  StreamStatusType,
-} from "components/connection/StreamStatus/streamStatusUtils";
+import { useStreamsStatuses } from "area/connection/utils/useStreamsStatuses";
+import { ConnectionStatusIndicatorStatus } from "components/connection/ConnectionStatusIndicator";
+import { sortStreams } from "components/connection/StreamStatus/streamStatusUtils";
 
-import { JobWithAttemptsRead } from "core/request/AirbyteClient";
+import { useListJobsForConnectionStatus } from "core/api";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
-const useStreamsContextInit = (jobs: JobWithAttemptsRead[]) => {
-  const { connection } = useConnectionEditService();
+const useStreamsContextInit = (connectionId: string) => {
+  const {
+    data: { jobs },
+  } = useListJobsForConnectionStatus(connectionId);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const streamsWithStatus = useStreamsWithStatus(connection, jobs);
-  const sortedStreams = useSortStreams(streamsWithStatus);
+  const { enabledStreams, streamStatuses } = useStreamsStatuses(connectionId);
+  const sortedStreams = sortStreams(enabledStreams, streamStatuses);
 
-  const streams = useMemo(
-    () =>
-      filterEmptyStreamStatuses(sortedStreams)
-        .filter(([status]) => status !== StreamStatusType.Disabled)
-        .flatMap(([_, stream]) => stream),
-    [sortedStreams]
-  );
+  const streams = Object.entries(sortedStreams)
+    .filter(([status]) => status !== ConnectionStatusIndicatorStatus.Disabled)
+    .flatMap(([_, stream]) => stream);
 
   const filteredStreams = useMemo(
-    () => streams.filter((stream) => stream.stream?.name.includes(searchTerm)),
+    () => streams.filter((stream) => stream.streamName.includes(searchTerm)),
     [searchTerm, streams]
   );
 
   return {
     setSearchTerm,
-    streams,
     filteredStreams,
     jobs,
   };
@@ -48,8 +42,9 @@ export const useStreamsListContext = () => {
   return context;
 };
 
-export const StreamsListContextProvider: React.FC<{ jobs: JobWithAttemptsRead[] }> = ({ children, jobs }) => {
-  const streamsContext = useStreamsContextInit(jobs);
+export const StreamsListContextProvider: React.FC = ({ children }) => {
+  const { connection } = useConnectionEditService();
+  const streamsContext = useStreamsContextInit(connection.connectionId);
 
   return <StreamsContext.Provider value={streamsContext}>{children}</StreamsContext.Provider>;
 };

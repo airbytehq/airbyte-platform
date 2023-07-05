@@ -4,6 +4,10 @@
   color: colors.$grey-300;
   text-underline-offset: 2px;
 
+  &:hover {
+    color: colors.$blue-300;
+  }
+
   &--primary {
     color: colors.$blue-400;
     text-decoration: none;

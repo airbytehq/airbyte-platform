@@ -12,7 +12,7 @@ public class GoogleAdsOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new GoogleAdsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new GoogleAdsOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.api.client.model.generated.ScopeType;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
@@ -15,7 +16,6 @@ import io.airbyte.api.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
-import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.server.ServerConstants;
@@ -31,8 +31,10 @@ import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.Configs;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.EnvConfigs;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.helpers.ConnectorRegistryConverters;
@@ -44,8 +46,8 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.UUID;
@@ -98,82 +100,87 @@ public class DestinationDefinitionsHandler {
   }
 
   @VisibleForTesting
-  static DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition) {
+  static DestinationDefinitionRead buildDestinationDefinitionRead(final StandardDestinationDefinition standardDestinationDefinition,
+                                                                  final ActorDefinitionVersion destinationVersion) {
     try {
 
       return new DestinationDefinitionRead()
           .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
           .name(standardDestinationDefinition.getName())
-          .dockerRepository(standardDestinationDefinition.getDockerRepository())
-          .dockerImageTag(standardDestinationDefinition.getDockerImageTag())
-          .documentationUrl(new URI(standardDestinationDefinition.getDocumentationUrl()))
+          .dockerRepository(destinationVersion.getDockerRepository())
+          .dockerImageTag(destinationVersion.getDockerImageTag())
+          .documentationUrl(new URI(destinationVersion.getDocumentationUrl()))
           .icon(loadIcon(standardDestinationDefinition.getIcon()))
-          .protocolVersion(standardDestinationDefinition.getProtocolVersion())
-          .releaseStage(getReleaseStage(standardDestinationDefinition))
-          .releaseDate(getReleaseDate(standardDestinationDefinition))
-          .supportsDbt(Objects.requireNonNullElse(standardDestinationDefinition.getSupportsDbt(), false))
+          .protocolVersion(destinationVersion.getProtocolVersion())
+          .releaseStage(ApiPojoConverters.toApiReleaseStage(destinationVersion.getReleaseStage()))
+          .releaseDate(ApiPojoConverters.toLocalDate(destinationVersion.getReleaseDate()))
+          .supportsDbt(Objects.requireNonNullElse(destinationVersion.getSupportsDbt(), false))
           .normalizationConfig(
-              ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(standardDestinationDefinition.getNormalizationConfig()))
+              ApiPojoConverters.normalizationDestinationDefinitionConfigToApi(destinationVersion.getNormalizationConfig()))
           .resourceRequirements(ApiPojoConverters.actorDefResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()));
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
     }
   }
 
-  private static ReleaseStage getReleaseStage(final StandardDestinationDefinition standardDestinationDefinition) {
-    if (standardDestinationDefinition.getReleaseStage() == null) {
-      return null;
-    }
-    return ReleaseStage.fromValue(standardDestinationDefinition.getReleaseStage().value());
+  public DestinationDefinitionReadList listDestinationDefinitions() throws IOException {
+    final List<StandardDestinationDefinition> standardDestinationDefinitions = configRepository.listStandardDestinationDefinitions(false);
+    final Map<UUID, ActorDefinitionVersion> destinationDefinitionVersionMap = getVersionsForDestinationDefinitions(standardDestinationDefinitions);
+    return toDestinationDefinitionReadList(standardDestinationDefinitions, destinationDefinitionVersionMap);
   }
 
-  private static LocalDate getReleaseDate(final StandardDestinationDefinition standardDestinationDefinition) {
-    if (standardDestinationDefinition.getReleaseDate() == null || standardDestinationDefinition.getReleaseDate().isBlank()) {
-      return null;
-    }
-
-    return LocalDate.parse(standardDestinationDefinition.getReleaseDate());
-  }
-
-  public DestinationDefinitionReadList listDestinationDefinitions() throws IOException, JsonValidationException {
-    return toDestinationDefinitionReadList(configRepository.listStandardDestinationDefinitions(false));
-  }
-
-  private static DestinationDefinitionReadList toDestinationDefinitionReadList(final List<StandardDestinationDefinition> defs) {
+  private static DestinationDefinitionReadList toDestinationDefinitionReadList(final List<StandardDestinationDefinition> defs,
+                                                                               final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<DestinationDefinitionRead> reads = defs.stream()
-        .map(DestinationDefinitionsHandler::buildDestinationDefinitionRead)
+        .map(d -> buildDestinationDefinitionRead(d, defIdToVersionMap.get(d.getDestinationDefinitionId())))
         .collect(Collectors.toList());
     return new DestinationDefinitionReadList().destinationDefinitions(reads);
   }
 
-  public DestinationDefinitionReadList listLatestDestinationDefinitions() {
-    return toDestinationDefinitionReadList(getLatestDestinations());
+  private Map<UUID, ActorDefinitionVersion> getVersionsForDestinationDefinitions(final List<StandardDestinationDefinition> destinationDefinitions)
+      throws IOException {
+    return configRepository.getActorDefinitionVersions(destinationDefinitions
+        .stream()
+        .map(StandardDestinationDefinition::getDefaultVersionId)
+        .collect(Collectors.toList()))
+        .stream().collect(Collectors.toMap(ActorDefinitionVersion::getActorDefinitionId, v -> v));
   }
 
-  private List<StandardDestinationDefinition> getLatestDestinations() {
-    return remoteOssCatalog.getDestinationDefinitions().stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList();
+  public DestinationDefinitionReadList listLatestDestinationDefinitions() {
+    final List<ConnectorRegistryDestinationDefinition> latestDestinations = remoteOssCatalog.getDestinationDefinitions();
+    final List<StandardDestinationDefinition> destinationDefs =
+        latestDestinations.stream().map(ConnectorRegistryConverters::toStandardDestinationDefinition).toList();
+    final Map<UUID, ActorDefinitionVersion> destinationDefVersions =
+        latestDestinations.stream().collect(Collectors.toMap(
+            ConnectorRegistryDestinationDefinition::getDestinationDefinitionId,
+            ConnectorRegistryConverters::toActorDefinitionVersion));
+    return toDestinationDefinitionReadList(destinationDefs, destinationDefVersions);
   }
 
   public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
-    return toDestinationDefinitionReadList(
-        Stream.concat(
-            configRepository.listPublicDestinationDefinitions(false).stream(),
-            configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList());
+    final List<StandardDestinationDefinition> destinationDefs = Stream.concat(
+        configRepository.listPublicDestinationDefinitions(false).stream(),
+        configRepository.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
+    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap = getVersionsForDestinationDefinitions(destinationDefs);
+    return toDestinationDefinitionReadList(destinationDefs, destinationDefVersionMap);
   }
 
   public PrivateDestinationDefinitionReadList listPrivateDestinationDefinitions(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws IOException {
     final List<Entry<StandardDestinationDefinition, Boolean>> standardDestinationDefinitionBooleanMap =
         configRepository.listGrantableDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false);
-    return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap);
+    final Map<UUID, ActorDefinitionVersion> destinationDefinitionVersionMap =
+        getVersionsForDestinationDefinitions(standardDestinationDefinitionBooleanMap.stream().map(Entry::getKey).toList());
+    return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap, destinationDefinitionVersionMap);
   }
 
   private static PrivateDestinationDefinitionReadList toPrivateDestinationDefinitionReadList(
-                                                                                             final List<Entry<StandardDestinationDefinition, Boolean>> defs) {
+                                                                                             final List<Entry<StandardDestinationDefinition, Boolean>> defs,
+                                                                                             final Map<UUID, ActorDefinitionVersion> defIdToVersionMap) {
     final List<PrivateDestinationDefinitionRead> reads = defs.stream()
         .map(entry -> new PrivateDestinationDefinitionRead()
-            .destinationDefinition(buildDestinationDefinitionRead(entry.getKey()))
+            .destinationDefinition(buildDestinationDefinitionRead(entry.getKey(), defIdToVersionMap.get(entry.getKey().getDestinationDefinitionId())))
             .granted(entry.getValue()))
         .collect(Collectors.toList());
     return new PrivateDestinationDefinitionReadList().destinationDefinitions(reads);
@@ -181,8 +188,10 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead getDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    return buildDestinationDefinitionRead(
-        configRepository.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId()));
+    final StandardDestinationDefinition destinationDefinition =
+        configRepository.getStandardDestinationDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId());
+    final ActorDefinitionVersion destinationVersion = configRepository.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId());
+    return buildDestinationDefinitionRead(destinationDefinition, destinationVersion);
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForWorkspace(
@@ -198,20 +207,41 @@ public class DestinationDefinitionsHandler {
 
   public DestinationDefinitionRead createCustomDestinationDefinition(final CustomDestinationDefinitionCreate customDestinationDefinitionCreate)
       throws IOException {
-    final StandardDestinationDefinition destinationDefinition = destinationDefinitionFromCreate(
-        customDestinationDefinitionCreate.getDestinationDefinition())
-            .withPublic(false)
-            .withCustom(true);
-    if (!protocolVersionRange.isSupported(new Version(destinationDefinition.getProtocolVersion()))) {
-      throw new UnsupportedProtocolVersionException(destinationDefinition.getProtocolVersion(), protocolVersionRange.min(),
+    final UUID id = uuidSupplier.get();
+
+    final DestinationDefinitionCreate destinationDefCreate = customDestinationDefinitionCreate.getDestinationDefinition();
+    final ActorDefinitionVersion actorDefinitionVersion = defaultDefinitionVersionFromCreate(destinationDefCreate)
+        .withActorDefinitionId(id);
+
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(id)
+        .withName(destinationDefCreate.getName())
+        .withIcon(destinationDefCreate.getIcon())
+        .withTombstone(false)
+        .withPublic(false)
+        .withCustom(true)
+        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
+
+    if (!protocolVersionRange.isSupported(new Version(actorDefinitionVersion.getProtocolVersion()))) {
+      throw new UnsupportedProtocolVersionException(actorDefinitionVersion.getProtocolVersion(), protocolVersionRange.min(),
           protocolVersionRange.max());
     }
-    configRepository.writeCustomDestinationDefinition(destinationDefinition, customDestinationDefinitionCreate.getWorkspaceId());
 
-    return buildDestinationDefinitionRead(destinationDefinition);
+    if (customDestinationDefinitionCreate.getWorkspaceId() != null) {
+      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(destinationDefinition, actorDefinitionVersion,
+          customDestinationDefinitionCreate.getWorkspaceId(), ScopeType.WORKSPACE.getValue());
+    } else {
+      configRepository.writeCustomDestinationDefinitionAndDefaultVersion(
+          destinationDefinition,
+          actorDefinitionVersion,
+          customDestinationDefinitionCreate.getScopeId(),
+          customDestinationDefinitionCreate.getScopeType().toString());
+    }
+
+    return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion);
   }
 
-  private StandardDestinationDefinition destinationDefinitionFromCreate(final DestinationDefinitionCreate destinationDefCreate) throws IOException {
+  private ActorDefinitionVersion defaultDefinitionVersionFromCreate(final DestinationDefinitionCreate destinationDefCreate) throws IOException {
     final ConnectorSpecification spec = getSpecForImage(
         destinationDefCreate.getDockerRepository(),
         destinationDefCreate.getDockerImageTag(),
@@ -220,34 +250,28 @@ public class DestinationDefinitionsHandler {
 
     final Version airbyteProtocolVersion = AirbyteProtocolVersion.getWithDefault(spec.getProtocolVersion());
 
-    final UUID id = uuidSupplier.get();
-    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
-        .withDestinationDefinitionId(id)
-        .withDockerRepository(destinationDefCreate.getDockerRepository())
+    return new ActorDefinitionVersion()
         .withDockerImageTag(destinationDefCreate.getDockerImageTag())
-        .withDocumentationUrl(destinationDefCreate.getDocumentationUrl().toString())
-        .withName(destinationDefCreate.getName())
-        .withIcon(destinationDefCreate.getIcon())
+        .withDockerRepository(destinationDefCreate.getDockerRepository())
         .withSpec(spec)
+        .withDocumentationUrl(destinationDefCreate.getDocumentationUrl().toString())
         .withProtocolVersion(airbyteProtocolVersion.serialize())
-        .withTombstone(false)
-        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM)
-        .withResourceRequirements(ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefCreate.getResourceRequirements()));
-    return destinationDefinition;
+        .withReleaseStage(io.airbyte.config.ReleaseStage.CUSTOM);
   }
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardDestinationDefinition currentDestination = configRepository
         .getStandardDestinationDefinition(destinationDefinitionUpdate.getDestinationDefinitionId());
+    final ActorDefinitionVersion currentVersion = configRepository.getActorDefinitionVersion(currentDestination.getDefaultVersionId());
 
     // specs are re-fetched from the container if the image tag has changed, or if the tag is "dev",
     // to allow for easier iteration of dev images
-    final boolean specNeedsUpdate = !currentDestination.getDockerImageTag().equals(destinationDefinitionUpdate.getDockerImageTag())
+    final boolean specNeedsUpdate = !currentVersion.getDockerImageTag().equals(destinationDefinitionUpdate.getDockerImageTag())
         || ServerConstants.DEV_IMAGE_TAG.equals(destinationDefinitionUpdate.getDockerImageTag());
     final ConnectorSpecification spec = specNeedsUpdate
-        ? getSpecForImage(currentDestination.getDockerRepository(), destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom())
-        : currentDestination.getSpec();
+        ? getSpecForImage(currentVersion.getDockerRepository(), destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom())
+        : currentVersion.getSpec();
     final ActorDefinitionResourceRequirements updatedResourceReqs = destinationDefinitionUpdate.getResourceRequirements() != null
         ? ApiPojoConverters.actorDefResourceReqsToInternal(destinationDefinitionUpdate.getResourceRequirements())
         : currentDestination.getResourceRequirements();
@@ -257,27 +281,31 @@ public class DestinationDefinitionsHandler {
       throw new UnsupportedProtocolVersionException(airbyteProtocolVersion, protocolVersionRange.min(), protocolVersionRange.max());
     }
 
+    final ActorDefinitionVersion newVersion = new ActorDefinitionVersion()
+        .withActorDefinitionId(currentVersion.getActorDefinitionId())
+        .withDockerRepository(currentVersion.getDockerRepository())
+        .withDockerImageTag(destinationDefinitionUpdate.getDockerImageTag())
+        .withSpec(spec)
+        .withDocumentationUrl(currentVersion.getDocumentationUrl())
+        .withProtocolVersion(airbyteProtocolVersion.serialize())
+        .withReleaseStage(currentVersion.getReleaseStage())
+        .withReleaseDate(currentVersion.getReleaseDate())
+        .withNormalizationConfig(currentVersion.getNormalizationConfig())
+        .withSupportsDbt(currentVersion.getSupportsDbt())
+        .withAllowedHosts(currentVersion.getAllowedHosts());
+
     final StandardDestinationDefinition newDestination = new StandardDestinationDefinition()
         .withDestinationDefinitionId(currentDestination.getDestinationDefinitionId())
-        .withDockerImageTag(destinationDefinitionUpdate.getDockerImageTag())
-        .withDockerRepository(currentDestination.getDockerRepository())
         .withName(currentDestination.getName())
-        .withDocumentationUrl(currentDestination.getDocumentationUrl())
         .withIcon(currentDestination.getIcon())
-        .withNormalizationConfig(currentDestination.getNormalizationConfig())
-        .withSupportsDbt(currentDestination.getSupportsDbt())
-        .withSpec(spec)
-        .withProtocolVersion(airbyteProtocolVersion.serialize())
         .withTombstone(currentDestination.getTombstone())
         .withPublic(currentDestination.getPublic())
         .withCustom(currentDestination.getCustom())
-        .withReleaseStage(currentDestination.getReleaseStage())
-        .withReleaseDate(currentDestination.getReleaseDate())
         .withResourceRequirements(updatedResourceReqs);
 
-    configRepository.writeStandardDestinationDefinition(newDestination);
+    configRepository.writeDestinationDefinitionAndDefaultVersion(newDestination, newVersion);
     configRepository.clearUnsupportedProtocolVersionFlag(newDestination.getDestinationDefinitionId(), ActorType.DESTINATION, protocolVersionRange);
-    return buildDestinationDefinitionRead(newDestination);
+    return buildDestinationDefinitionRead(newDestination, newVersion);
   }
 
   public void deleteDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
@@ -313,19 +341,23 @@ public class DestinationDefinitionsHandler {
     }
   }
 
+  // todo add feature flag here for organizations
   public PrivateDestinationDefinitionRead grantDestinationDefinitionToWorkspace(
                                                                                 final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final StandardDestinationDefinition standardDestinationDefinition =
         configRepository.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    final ActorDefinitionVersion actorDefinitionVersion =
+        configRepository.getActorDefinitionVersion(standardDestinationDefinition.getDefaultVersionId());
     configRepository.writeActorDefinitionWorkspaceGrant(
         destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId(),
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     return new PrivateDestinationDefinitionRead()
-        .destinationDefinition(buildDestinationDefinitionRead(standardDestinationDefinition))
+        .destinationDefinition(buildDestinationDefinitionRead(standardDestinationDefinition, actorDefinitionVersion))
         .granted(true);
   }
 
+  // todo add feature flag here for organizations
   public void revokeDestinationDefinitionFromWorkspace(final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId)
       throws IOException {
     configRepository.deleteActorDefinitionWorkspaceGrant(

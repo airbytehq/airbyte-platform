@@ -7,6 +7,7 @@ package io.airbyte.server.apis;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler;
 import io.airbyte.commons.server.handlers.AttemptHandler;
 import io.airbyte.commons.server.handlers.ConnectionsHandler;
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler;
@@ -14,6 +15,7 @@ import io.airbyte.commons.server.handlers.DestinationHandler;
 import io.airbyte.commons.server.handlers.HealthCheckHandler;
 import io.airbyte.commons.server.handlers.JobHistoryHandler;
 import io.airbyte.commons.server.handlers.LogsHandler;
+import io.airbyte.commons.server.handlers.NotificationsHandler;
 import io.airbyte.commons.server.handlers.OAuthHandler;
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler;
 import io.airbyte.commons.server.handlers.OperationsHandler;
@@ -64,6 +66,14 @@ import org.mockito.Mockito;
 @MicronautTest
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 abstract class BaseControllerTest {
+
+  ActorDefinitionVersionHandler actorDefinitionVersionHandler = Mockito.mock(ActorDefinitionVersionHandler.class);
+
+  @MockBean(ActorDefinitionVersionHandler.class)
+  @Replaces(ActorDefinitionVersionHandler.class)
+  ActorDefinitionVersionHandler mmActorDefinitionVersionHandler() {
+    return actorDefinitionVersionHandler;
+  }
 
   AttemptHandler attemptHandler = Mockito.mock(AttemptHandler.class);
 
@@ -119,6 +129,14 @@ abstract class BaseControllerTest {
   @Replaces(LogsHandler.class)
   LogsHandler mmLogsHandler() {
     return logsHandler;
+  }
+
+  NotificationsHandler notificationsHandler = Mockito.mock(NotificationsHandler.class);
+
+  @MockBean(NotificationsHandler.class)
+  @Replaces(NotificationsHandler.class)
+  NotificationsHandler mmNotificationsHandler() {
+    return notificationsHandler;
   }
 
   OAuthHandler oAuthHandler = Mockito.mock(OAuthHandler.class);

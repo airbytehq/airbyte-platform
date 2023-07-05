@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
+import { useDbtCloudServiceToken } from "core/api/cloud";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
-import { useDbtCloudServiceToken } from "packages/cloud/services/dbtCloud";
 
 import { cleanedErrorMessage } from "./DbtCloudSettingsView";
 
@@ -19,7 +19,7 @@ export const useDbtTokenRemovalModal = () => {
       title: "settings.integrationSettings.dbtCloudSettings.actions.delete.confirm",
       submitButtonText: "settings.integrationSettings.dbtCloudSettings.actions.delete",
       onSubmit: async () => {
-        deleteToken(void 0, {
+        await deleteToken(void 0, {
           onError: (e) => {
             registerNotification({
               id: "dbtCloud/delete-token-failure",

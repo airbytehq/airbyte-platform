@@ -19,11 +19,10 @@ import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.UseNotificationWorkflow;
-import io.airbyte.notification.NotificationType;
+import io.airbyte.notification.NotificationEvent;
 import io.airbyte.validation.json.JsonValidationException;
 import io.temporal.client.WorkflowClient;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +32,7 @@ import org.junit.jupiter.api.Test;
 class NotificationClientTest {
 
   private static final String WEBHOOK_URL = "url";
+  private static final String SOURCE_NAME = "SourceName";
 
   private final UUID connectionId = UUID.randomUUID();
 
@@ -49,9 +49,9 @@ class NotificationClientTest {
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, "", false);
+    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, "", false);
 
-    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(List.of(NotificationType.webhook, NotificationType.customerio)));
+    verify(notificationWorkflow).sendNotification(eq(connectionId), any(), any(), eq(NotificationEvent.onNonBreakingChange));
   }
 
   @Test
@@ -62,12 +62,14 @@ class NotificationClientTest {
     when(workflowClient.newWorkflowStub(NotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(notificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
+    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, WEBHOOK_URL, false);
     verify(notificationClient).renderTemplate("slack/non_breaking_schema_change_slack_notification_template.txt", connectionId.toString(),
+        SOURCE_NAME,
         WEBHOOK_URL);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, true);
-    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), WEBHOOK_URL);
+    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, WEBHOOK_URL, true);
+    verify(notificationClient).renderTemplate("slack/breaking_schema_change_slack_notification_template.txt", connectionId.toString(), SOURCE_NAME,
+        WEBHOOK_URL);
   }
 
   @Test
@@ -78,7 +80,7 @@ class NotificationClientTest {
     when(workflowClient.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
         .thenReturn(connectionNotificationWorkflow);
 
-    notificationClient.sendSchemaChangeNotification(connectionId, WEBHOOK_URL, false);
+    notificationClient.sendSchemaChangeNotification(connectionId, SOURCE_NAME, WEBHOOK_URL, false);
 
     verify(connectionNotificationWorkflow).sendSchemaChangeNotification(connectionId, WEBHOOK_URL);
   }

@@ -41,6 +41,7 @@ dependencies {
     testImplementation project(':airbyte-test-utils')
     testImplementation libs.apache.commons.lang
     testImplementation libs.platform.testcontainers.postgresql
+    testImplementation libs.json.assert
 }
 
 task(newConfigsMigration, dependsOn: 'classes', type: JavaExec) {

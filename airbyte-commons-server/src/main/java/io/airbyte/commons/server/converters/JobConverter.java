@@ -75,6 +75,12 @@ public class JobConverter {
         .attempts(job.getAttempts().stream().map(this::getAttemptInfoRead).collect(Collectors.toList()));
   }
 
+  public JobInfoRead getJobInfoWithoutLogsRead(final Job job) {
+    return new JobInfoRead()
+        .job(getJobWithAttemptsRead(job).getJob())
+        .attempts(job.getAttempts().stream().map(this::getAttemptInfoWithoutLogsRead).collect(Collectors.toList()));
+  }
+
   public JobInfoLightRead getJobInfoLightRead(final Job job) {
     return new JobInfoLightRead().job(getJobRead(job));
   }
@@ -146,6 +152,11 @@ public class JobConverter {
     return new AttemptInfoRead()
         .attempt(getAttemptRead(attempt))
         .logs(getLogRead(attempt.getLogPath()));
+  }
+
+  public AttemptInfoRead getAttemptInfoWithoutLogsRead(final Attempt attempt) {
+    return new AttemptInfoRead()
+        .attempt(getAttemptRead(attempt));
   }
 
   public static AttemptRead getAttemptRead(final Attempt attempt) {

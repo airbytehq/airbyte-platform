@@ -16,6 +16,7 @@ import io.airbyte.config.ConnectorRegistryDestinationDefinition;
 import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.persistence.ActorDefinitionMigrator;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -53,11 +54,8 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
   public static final StandardSourceDefinition SOURCE_DEF1 = new StandardSourceDefinition()
       .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME1)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
+      .withName(CONNECT_NAME1);
+
   public static final ConnectorRegistrySourceDefinition REGISTRY_SOURCE_DEF2 = new ConnectorRegistrySourceDefinition()
       .withSourceDefinitionId(SOURCE_DEF_ID1)
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -67,11 +65,7 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
   public static final StandardSourceDefinition SOURCE_DEF2 = new StandardSourceDefinition()
       .withSourceDefinitionId(SOURCE_DEF_ID1)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME2)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
+      .withName(CONNECT_NAME2);
 
   public static final ConnectorRegistryDestinationDefinition REGISTRY_DEST_DEF1 = new ConnectorRegistryDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
@@ -82,12 +76,7 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
   public static final StandardDestinationDefinition DEST_DEF1 = new StandardDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME1)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_2));
-
+      .withName(CONNECT_NAME1);
   public static final ConnectorRegistryDestinationDefinition REGISTRY_DEST_DEF2 = new ConnectorRegistryDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
       .withDockerRepository(DOCKER_REPOSITORY)
@@ -97,24 +86,21 @@ class ApplyDefinitionsHelperTest {
       .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
   public static final StandardDestinationDefinition DEST_DEF2 = new StandardDestinationDefinition()
       .withDestinationDefinitionId(DEST_DEF_ID2)
-      .withDockerRepository(DOCKER_REPOSITORY)
-      .withDockerImageTag(DOCKER_TAG)
-      .withName(CONNECT_NAME2)
-      .withDocumentationUrl(DOCUMENTATION_URL)
-      .withSpec(new ConnectorSpecification().withProtocolVersion(PROTOCOL_VERSION_1));
-
+      .withName(CONNECT_NAME2);
   private ConfigRepository configRepository;
   private DefinitionsProvider definitionsProvider;
   private JobPersistence jobPersistence;
   private ApplyDefinitionsHelper applyDefinitionsHelper;
+  private ActorDefinitionMigrator actorDefinitionMigrator;
 
   @BeforeEach
   void setup() throws IOException {
     configRepository = mock(ConfigRepository.class);
     definitionsProvider = mock(DefinitionsProvider.class);
     jobPersistence = mock(JobPersistence.class);
+    actorDefinitionMigrator = mock(ActorDefinitionMigrator.class);
 
-    applyDefinitionsHelper = new ApplyDefinitionsHelper(configRepository, Optional.of(definitionsProvider), jobPersistence);
+    applyDefinitionsHelper = new ApplyDefinitionsHelper(actorDefinitionMigrator, Optional.of(definitionsProvider), jobPersistence);
 
     // default calls to empty.
     when(configRepository.listStandardDestinationDefinitions(true)).thenReturn(Collections.emptyList());
@@ -130,11 +116,10 @@ class ApplyDefinitionsHelperTest {
 
     applyDefinitionsHelper.apply(true);
 
-    verify(configRepository).writeStandardSourceDefinition(SOURCE_DEF1);
-    verify(configRepository).writeStandardDestinationDefinition(DEST_DEF1);
+    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF1), List.of(REGISTRY_DEST_DEF1), true);
     verify(definitionsProvider).getDestinationDefinitions();
     verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(configRepository);
+    verifyNoMoreInteractions(actorDefinitionMigrator);
     verifyNoMoreInteractions(definitionsProvider);
   }
 
@@ -148,11 +133,10 @@ class ApplyDefinitionsHelperTest {
 
     applyDefinitionsHelper.apply(true);
 
-    verify(configRepository).writeStandardSourceDefinition(SOURCE_DEF1);
-    verify(configRepository).writeStandardDestinationDefinition(DEST_DEF1);
+    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF1), List.of(REGISTRY_DEST_DEF1), true);
     verify(definitionsProvider).getDestinationDefinitions();
     verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(configRepository);
+    verifyNoMoreInteractions(actorDefinitionMigrator);
     verifyNoMoreInteractions(definitionsProvider);
   }
 
@@ -163,9 +147,11 @@ class ApplyDefinitionsHelperTest {
 
     applyDefinitionsHelper.apply(true);
 
+    verify(actorDefinitionMigrator).migrate(List.of(), List.of(), true);
+
     verify(definitionsProvider).getDestinationDefinitions();
     verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(configRepository);
+    verifyNoMoreInteractions(actorDefinitionMigrator);
     verifyNoMoreInteractions(definitionsProvider);
   }
 
@@ -176,10 +162,10 @@ class ApplyDefinitionsHelperTest {
 
     applyDefinitionsHelper.apply();
 
-    verify(configRepository).seedActorDefinitions(List.of(SOURCE_DEF1), List.of(DEST_DEF1));
+    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF1), List.of(REGISTRY_DEST_DEF1), false);
     verify(definitionsProvider).getDestinationDefinitions();
     verify(definitionsProvider).getSourceDefinitions();
-    verifyNoMoreInteractions(configRepository);
+    verifyNoMoreInteractions(actorDefinitionMigrator);
     verifyNoMoreInteractions(definitionsProvider);
   }
 
@@ -194,18 +180,17 @@ class ApplyDefinitionsHelperTest {
 
     applyDefinitionsHelper.apply(updateAll);
 
-    if (updateAll) {
-      verify(configRepository).writeStandardSourceDefinition(SOURCE_DEF2);
-      verify(configRepository).writeStandardDestinationDefinition(DEST_DEF1);
-      verifyNoMoreInteractions(configRepository);
-    } else {
-      verify(configRepository).seedActorDefinitions(List.of(SOURCE_DEF2), List.of(DEST_DEF1));
-    }
+    verify(actorDefinitionMigrator).migrate(List.of(REGISTRY_SOURCE_DEF2), List.of(REGISTRY_DEST_DEF1), updateAll);
+
+    verify(definitionsProvider).getDestinationDefinitions();
+    verify(definitionsProvider).getSourceDefinitions();
+    verifyNoMoreInteractions(actorDefinitionMigrator);
+    verifyNoMoreInteractions(definitionsProvider);
   }
 
   @Test
   void testMissingDefinitionsProvider() {
-    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(configRepository, Optional.empty(), jobPersistence);
+    final ApplyDefinitionsHelper helper = new ApplyDefinitionsHelper(actorDefinitionMigrator, Optional.empty(), jobPersistence);
     assertDoesNotThrow(() -> helper.apply());
   }
 

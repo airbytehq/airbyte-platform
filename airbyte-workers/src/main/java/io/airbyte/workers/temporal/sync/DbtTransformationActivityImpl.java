@@ -22,6 +22,7 @@ import io.airbyte.config.OperatorDbtInput;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.helpers.LogConfigs;
 import io.airbyte.config.persistence.split_secrets.SecretsHydrator;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricClientFactory;
 import io.airbyte.metrics.lib.OssMetricsRegistry;
@@ -67,6 +68,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
   private final AirbyteConfigValidator airbyteConfigValidator;
   private final TemporalUtils temporalUtils;
   private final AirbyteApiClient airbyteApiClient;
+  private final FeatureFlagClient featureFlagClient;
 
   public DbtTransformationActivityImpl(@Named("containerOrchestratorConfig") final Optional<ContainerOrchestratorConfig> containerOrchestratorConfig,
                                        final WorkerConfigsProvider workerConfigsProvider,
@@ -79,7 +81,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
                                        @Value("${micronaut.server.port}") final Integer serverPort,
                                        final AirbyteConfigValidator airbyteConfigValidator,
                                        final TemporalUtils temporalUtils,
-                                       final AirbyteApiClient airbyteApiClient) {
+                                       final AirbyteApiClient airbyteApiClient,
+                                       final FeatureFlagClient featureFlagClient) {
     this.containerOrchestratorConfig = containerOrchestratorConfig;
     this.workerConfigsProvider = workerConfigsProvider;
     this.processFactory = processFactory;
@@ -92,6 +95,7 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
     this.airbyteConfigValidator = airbyteConfigValidator;
     this.temporalUtils = temporalUtils;
     this.airbyteApiClient = airbyteApiClient;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
@@ -173,7 +177,8 @@ public class DbtTransformationActivityImpl implements DbtTransformationActivity 
         containerOrchestratorConfig.get(),
         activityContext,
         serverPort,
-        temporalUtils);
+        temporalUtils,
+        featureFlagClient);
   }
 
 }

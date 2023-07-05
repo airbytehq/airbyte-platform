@@ -7,7 +7,6 @@ type: object
 additionalProperties: true
 required:
   - replicationAttemptSummary
-  - state
   - output_catalog
 properties:
   replicationAttemptSummary:

@@ -8,6 +8,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.StreamStatusesApi;
+import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.api.model.generated.StreamStatusCreateRequestBody;
 import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause;
@@ -70,6 +71,15 @@ public class StreamStatusesApiController implements StreamStatusesApi {
     return handler.listStreamStatus(req);
   }
 
+  @Secured({READER})
+  @SecuredWorkspace
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Post(uri = "/latest_per_run_state")
+  @Override
+  public StreamStatusReadList getStreamStatusesByRunState(final ConnectionIdRequestBody req) {
+    return handler.listStreamStatusPerRunState(req);
+  }
+
   /**
    * Stateless request body validations.
    */
@@ -90,9 +100,8 @@ public class StreamStatusesApiController implements StreamStatusesApi {
 
     static void validate(final Pagination pagination) {
       if (pagination == null) {
-        return;
+        throw new BadRequestException("Pagination params must be provided.");
       }
-
       if (pagination.getPageSize() < PAGE_MIN) {
         throw new BadRequestException("Page size must be at least 1.");
       }

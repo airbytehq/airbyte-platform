@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocalStorage } from "react-use";
 
@@ -10,7 +11,10 @@ import { Text } from "components/ui/Text";
 import { StreamsListReadStreamsItem } from "core/request/ConnectorBuilderClient";
 import { Action, Namespace } from "core/services/analytics";
 import { useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderTestRead,
+  useConnectorBuilderFormState,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 import { links } from "utils/links";
 
 import { LogsDisplay } from "./LogsDisplay";
@@ -18,6 +22,7 @@ import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
 import { useTestWarnings } from "./useTestWarnings";
+import { formatJson } from "../utils";
 
 export const StreamTester: React.FC<{
   hasTestInputJsonErrors: boolean;
@@ -41,6 +46,11 @@ export const StreamTester: React.FC<{
     },
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage<boolean>("connectorBuilderLimitWarning", true);
+  const {
+    editorView,
+    builderFormValues: { streams: builderFormStreams },
+  } = useConnectorBuilderFormState();
+  const { setValue } = useFormContext();
 
   const streamName = streams[testStreamIndex]?.name;
 
@@ -87,6 +97,17 @@ export const StreamTester: React.FC<{
       }
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
+
+  const autoImportSchema = builderFormStreams[testStreamIndex]?.autoImportSchema;
+  useEffect(() => {
+    if (editorView === "ui" && autoImportSchema && streamReadData?.inferred_schema) {
+      setValue(`streams.${testStreamIndex}.schema`, formatJson(streamReadData.inferred_schema, true), {
+        shouldValidate: true,
+        shouldTouch: true,
+        shouldDirty: true,
+      });
+    }
+  }, [editorView, autoImportSchema, testStreamIndex, streamReadData?.inferred_schema, setValue]);
 
   const testDataWarnings = useTestWarnings();
 

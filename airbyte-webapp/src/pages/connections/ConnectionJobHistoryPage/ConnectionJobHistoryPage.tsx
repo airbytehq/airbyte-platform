@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
@@ -15,6 +16,7 @@ import { getFrequencyFromScheduleData } from "core/services/analytics";
 import { Action, Namespace } from "core/services/analytics";
 import { useTrackPage, PageTrackingCodes, useAnalyticsService } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionJobHistoryPage.module.scss";
 import JobsList from "./JobsList";
@@ -29,8 +31,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   const { jobId: linkedJobId } = useAttemptLink();
   const { pathname } = useLocation();
   const {
-    jobs,
-    totalJobCount,
+    data: { jobs, totalJobCount },
     isPreviousData: isJobPageLoading,
   } = useListJobs({
     configId: connection.connectionId,
@@ -40,6 +41,7 @@ export const ConnectionJobHistoryPage: React.FC = () => {
       pageSize: jobPageSize,
     },
   });
+  const searchableJobLogsEnabled = useExperiment("connection.searchableJobLogs", true);
 
   const linkedJobNotFound = linkedJobId && jobs.length === 0;
   const moreJobPagesAvailable = !linkedJobNotFound && jobPageSize < totalJobCount;
@@ -60,39 +62,41 @@ export const ConnectionJobHistoryPage: React.FC = () => {
   };
 
   return (
-    <ConnectionSyncContextProvider jobs={jobs}>
-      <Card
-        title={
-          <div className={styles.title}>
-            <FormattedMessage id="sources.syncHistory" />
-            <div className={styles.actions}>
-              <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
+    <div className={classNames(searchableJobLogsEnabled && styles.narrowTable)}>
+      <ConnectionSyncContextProvider>
+        <Card
+          title={
+            <div className={styles.title}>
+              <FormattedMessage id="sources.syncHistory" />
+              <div className={styles.actions}>
+                <ConnectionSyncButtons buttonText={<FormattedMessage id="connection.startSync" />} />
+              </div>
             </div>
-          </div>
-        }
-      >
-        {jobs.length ? (
-          <JobsList jobs={jobs} />
-        ) : linkedJobNotFound ? (
-          <EmptyResourceBlock
-            text={<FormattedMessage id="connection.linkedJobNotFound" />}
-            description={
-              <Link to={pathname}>
-                <FormattedMessage id="connection.returnToSyncHistory" />
-              </Link>
-            }
-          />
-        ) : (
-          <EmptyResourceBlock text={<FormattedMessage id="sources.noSync" />} />
+          }
+        >
+          {jobs.length ? (
+            <JobsList jobs={jobs} />
+          ) : linkedJobNotFound ? (
+            <EmptyResourceBlock
+              text={<FormattedMessage id="connection.linkedJobNotFound" />}
+              description={
+                <Link to={pathname}>
+                  <FormattedMessage id="connection.returnToSyncHistory" />
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyResourceBlock text={<FormattedMessage id="sources.noSync" />} />
+          )}
+        </Card>
+        {(moreJobPagesAvailable || isJobPageLoading) && (
+          <footer className={styles.footer}>
+            <Button variant="secondary" isLoading={isJobPageLoading} onClick={onLoadMoreJobs}>
+              <FormattedMessage id="connection.loadMoreJobs" />
+            </Button>
+          </footer>
         )}
-      </Card>
-      {(moreJobPagesAvailable || isJobPageLoading) && (
-        <footer className={styles.footer}>
-          <Button variant="secondary" isLoading={isJobPageLoading} onClick={onLoadMoreJobs}>
-            <FormattedMessage id="connection.loadMoreJobs" />
-          </Button>
-        </footer>
-      )}
-    </ConnectionSyncContextProvider>
+      </ConnectionSyncContextProvider>
+    </div>
   );
 };

@@ -1,8 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React from "react";
-import { QueryClient, QueryClientProvider } from "react-query";
-import { ReactQueryDevtools } from "react-query/devtools";
-
-import { isCloudApp } from "utils/app";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -10,7 +8,6 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: 0,
-      notifyOnChangePropsExclusions: ["isStale"],
     },
   },
 });
@@ -21,7 +18,6 @@ export const QueryProvider: React.FC<React.PropsWithChildren<unknown>> = ({ chil
       initialIsOpen={false}
       position="bottom-right"
       toggleButtonProps={{
-        style: isCloudApp() ? { transform: "translate(-65px, -12px)" } : undefined,
         id: "react-query-devtool-btn",
       }}
     />

@@ -6,9 +6,11 @@ package io.airbyte.config.persistence;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
@@ -23,14 +25,16 @@ import io.airbyte.config.ActorType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.StandardSync;
-import io.airbyte.config.StandardSync.NonBreakingChangesPreference;
 import io.airbyte.config.helpers.ScheduleHelpers;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.Actor;
 import io.airbyte.db.instance.configs.jooq.generated.tables.ActorDefinition;
+import io.airbyte.db.instance.configs.jooq.generated.tables.ActorDefinitionVersion;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.protocol.models.CatalogHelpers;
 import io.airbyte.protocol.models.StreamDescriptor;
 import java.io.IOException;
@@ -137,12 +141,12 @@ public class StandardSyncPersistence {
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
               io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
-          .set(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, standardSync.getNonBreakingChangesPreference().value())
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
           .execute();
 
-      // TODO: update the notif conf table
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
+      updateOrCreateSchemaChangeNotificationPreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(), timestamp,
+          ctx);
 
       ctx.deleteFrom(CONNECTION_OPERATION)
           .where(CONNECTION_OPERATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
@@ -186,14 +190,13 @@ public class StandardSyncPersistence {
           .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
               io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
-          .set(CONNECTION.NON_BREAKING_CHANGE_PREFERENCE,
-              standardSync.getNonBreakingChangesPreference() == null ? NonBreakingChangesPreference.IGNORE.value()
-                  : standardSync.getNonBreakingChangesPreference().value())
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)
           .execute();
 
       updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx);
+      updateOrCreateSchemaChangeNotificationPreference(standardSync.getConnectionId(), standardSync.getNonBreakingChangesPreference(), timestamp,
+          ctx);
 
       for (final UUID operationIdFromStandardSync : standardSync.getOperationIds()) {
         ctx.insertInto(CONNECTION_OPERATION)
@@ -218,6 +221,41 @@ public class StandardSyncPersistence {
         .fetch();
     updateNotificationConfigurationIfNeeded(notificationConfigurations, NotificationType.webhook, standardSync, timestamp, ctx);
     updateNotificationConfigurationIfNeeded(notificationConfigurations, NotificationType.email, standardSync, timestamp, ctx);
+  }
+
+  /**
+   * Update the notification configuration for a give connection (StandardSync). It needs to have the
+   * standard sync to be persisted before being called because one column of the configuration is a
+   * foreign key on the Connection Table.
+   */
+  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
+  private void updateOrCreateSchemaChangeNotificationPreference(final UUID connectionId,
+                                                                final StandardSync.NonBreakingChangesPreference nonBreakingChangesPreference,
+                                                                final OffsetDateTime timestamp,
+                                                                final DSLContext ctx) {
+    if (nonBreakingChangesPreference == null) {
+      return;
+    }
+    final List<SchemaManagementRecord> schemaManagementConfigurations = ctx.selectFrom(SCHEMA_MANAGEMENT)
+        .where(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
+        .fetch();
+    if (schemaManagementConfigurations.isEmpty()) {
+      ctx.insertInto(SCHEMA_MANAGEMENT)
+          .set(SCHEMA_MANAGEMENT.ID, UUID.randomUUID())
+          .set(SCHEMA_MANAGEMENT.CONNECTION_ID, connectionId)
+          .set(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()))
+          .set(SCHEMA_MANAGEMENT.CREATED_AT, timestamp)
+          .set(SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
+          .execute();
+    } else if (schemaManagementConfigurations.size() == 1) {
+      ctx.update(SCHEMA_MANAGEMENT)
+          .set(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()))
+          .set(SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
+          .where(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
+          .execute();
+    } else {
+      throw new IllegalStateException("More than one schema management entry found for the connection: " + connectionId);
+    }
   }
 
   /**
@@ -317,7 +355,11 @@ public class StandardSyncPersistence {
 
   private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
-      final SelectJoinStep<Record> query = ctx.select(asterisk()).from(CONNECTION);
+      final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+          .from(CONNECTION)
+          // The schema management can be non-existent for a connection id, thus we need to do a left join
+          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
       if (configId.isPresent()) {
         return query.where(CONNECTION.ID.eq(configId.get())).fetch();
       }
@@ -372,16 +414,20 @@ public class StandardSyncPersistence {
     final Actor destination = ACTOR.as("destination");
     final ActorDefinition sourceDef = ACTOR_DEFINITION.as("sourceDef");
     final ActorDefinition destDef = ACTOR_DEFINITION.as("destDef");
+    final ActorDefinitionVersion sourceDefVersion = ACTOR_DEFINITION_VERSION.as("sourceDefVersion");
+    final ActorDefinitionVersion destDefVersion = ACTOR_DEFINITION_VERSION.as("destDefVersion");
 
     // Retrieve all the connections currently disabled due to a bad protocol version
     // where the actor definition is matching the one provided to this function
     final Stream<StandardSyncIdsWithProtocolVersions> results = ctx
-        .select(CONNECTION.ID, sourceDef.ID, sourceDef.PROTOCOL_VERSION, destDef.ID, destDef.PROTOCOL_VERSION)
+        .select(CONNECTION.ID, sourceDef.ID, sourceDefVersion.PROTOCOL_VERSION, destDef.ID, destDefVersion.PROTOCOL_VERSION)
         .from(CONNECTION)
         .join(source).on(CONNECTION.SOURCE_ID.eq(source.ID))
         .join(sourceDef).on(source.ACTOR_DEFINITION_ID.eq(sourceDef.ID))
+        .join(sourceDefVersion).on(sourceDef.DEFAULT_VERSION_ID.eq(sourceDefVersion.ID))
         .join(destination).on(CONNECTION.DESTINATION_ID.eq(destination.ID))
         .join(destDef).on(destination.ACTOR_DEFINITION_ID.eq(destDef.ID))
+        .join(destDefVersion).on(destDef.DEFAULT_VERSION_ID.eq(destDefVersion.ID))
         .where(
             CONNECTION.UNSUPPORTED_PROTOCOL_VERSION.eq(true).and(
                 (actorType == ActorType.DESTINATION ? destDef : sourceDef).ID.eq(actorDefId)))
@@ -390,9 +436,9 @@ public class StandardSyncPersistence {
         .map(r -> new StandardSyncIdsWithProtocolVersions(
             r.get(CONNECTION.ID),
             r.get(sourceDef.ID),
-            AirbyteProtocolVersion.getWithDefault(r.get(sourceDef.PROTOCOL_VERSION)),
+            AirbyteProtocolVersion.getWithDefault(r.get(sourceDefVersion.PROTOCOL_VERSION)),
             r.get(destDef.ID),
-            AirbyteProtocolVersion.getWithDefault(r.get(destDef.PROTOCOL_VERSION))));
+            AirbyteProtocolVersion.getWithDefault(r.get(destDefVersion.PROTOCOL_VERSION))));
     return results;
   }
 

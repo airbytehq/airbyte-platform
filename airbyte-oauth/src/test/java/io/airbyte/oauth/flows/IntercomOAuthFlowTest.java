@@ -15,7 +15,7 @@ public class IntercomOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new IntercomOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new IntercomOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

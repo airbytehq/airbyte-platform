@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { SchemaChange } from "core/request/AirbyteClient";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 
 export const useSchemaChanges = (schemaChange: SchemaChange) => {
   const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);

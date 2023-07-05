@@ -24,6 +24,7 @@ import {
   openTestInputs,
   selectAuthMethod,
   submitForm,
+  disableAutoImportSchema,
 } from "pages/connectorBuilderPage";
 
 export const configureGlobals = (name: string) => {
@@ -43,6 +44,7 @@ export const configureStream = () => {
   enterUrlPathFromForm("items/");
   submitForm();
   enterRecordSelector("items");
+  disableAutoImportSchema();
 };
 
 export const configureAuth = () => {
@@ -127,7 +129,9 @@ export const assertMaxNumberOfSlices = () => {
 
 export const assertMaxNumberOfSlicesAndPages = () => {
   for (let i = 0; i < MAX_NUMBER_OF_SLICES; i++) {
-    getSlicesFromDropdown().contains(`Partition ${i}`).click();
+    getSlicesFromDropdown()
+      .contains(`Partition ${i + 1}`)
+      .click();
     assertMaxNumberOfPages();
   }
 };

@@ -12,12 +12,14 @@ import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.DestinationDefinitionApi;
 import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.HealthApi;
+import io.airbyte.api.client.generated.JobRetryStatesApi;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.generated.OperationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.generated.SourceDefinitionApi;
 import io.airbyte.api.client.generated.SourceDefinitionSpecificationApi;
 import io.airbyte.api.client.generated.StateApi;
+import io.airbyte.api.client.generated.StreamStatusesApi;
 import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiClient;
 import java.util.Random;
@@ -52,6 +54,7 @@ public class AirbyteApiClient {
   private final DestinationApi destinationApi;
   private final DestinationDefinitionSpecificationApi destinationSpecificationApi;
   private final JobsApi jobsApi;
+  private final JobRetryStatesApi jobRetryStatesApi;
   private final PatchedLogsApi logsApi;
   private final OperationApi operationApi;
   private final SourceDefinitionApi sourceDefinitionApi;
@@ -61,6 +64,7 @@ public class AirbyteApiClient {
   private final HealthApi healthApi;
   private final AttemptApi attemptApi;
   private final StateApi stateApi;
+  private final StreamStatusesApi streamStatusesApi;
 
   public AirbyteApiClient(final ApiClient apiClient) {
     connectionApi = new ConnectionApi(apiClient);
@@ -69,6 +73,7 @@ public class AirbyteApiClient {
     destinationApi = new DestinationApi(apiClient);
     destinationSpecificationApi = new DestinationDefinitionSpecificationApi(apiClient);
     jobsApi = new JobsApi(apiClient);
+    jobRetryStatesApi = new JobRetryStatesApi(apiClient);
     logsApi = new PatchedLogsApi(apiClient);
     operationApi = new OperationApi(apiClient);
     sourceDefinitionApi = new SourceDefinitionApi(apiClient);
@@ -78,6 +83,7 @@ public class AirbyteApiClient {
     healthApi = new HealthApi(apiClient);
     attemptApi = new AttemptApi(apiClient);
     stateApi = new StateApi(apiClient);
+    streamStatusesApi = new StreamStatusesApi(apiClient);
   }
 
   public ConnectionApi getConnectionApi() {
@@ -102,6 +108,10 @@ public class AirbyteApiClient {
 
   public JobsApi getJobsApi() {
     return jobsApi;
+  }
+
+  public JobRetryStatesApi getJobRetryStatesApi() {
+    return jobRetryStatesApi;
   }
 
   public SourceDefinitionApi getSourceDefinitionApi() {
@@ -140,6 +150,10 @@ public class AirbyteApiClient {
     return stateApi;
   }
 
+  public StreamStatusesApi getStreamStatusesApi() {
+    return streamStatusesApi;
+  }
+
   /**
    * Default to 4 retries with a randomised 1 - 10 seconds interval between the first two retries and
    * an 10-minute wait for the last retry.
@@ -176,7 +190,7 @@ public class AirbyteApiClient {
                                       final int maxTries) {
     try {
       return retryWithJitterThrows(call, desc, jitterMaxIntervalSecs, finalIntervalSecs, maxTries);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // Swallowing exception on purpose
       return null;
     }

@@ -15,7 +15,7 @@ class PinterestOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new PinterestOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new PinterestOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

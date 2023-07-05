@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useSearchParams } from "react-router-dom";
 
 import { DestinationForm } from "components/destination/DestinationForm";
 import { DestinationFormValues } from "components/destination/DestinationForm/DestinationForm";
@@ -10,23 +11,24 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { SearchInput } from "components/ui/SearchInput";
 
+import { useCurrentWorkspace } from "core/api";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
 import { AppActionCodes, useAppMonitoringService } from "hooks/services/AppMonitoringService";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useModalService } from "hooks/services/Modal";
 import { useCreateDestination } from "hooks/services/useDestinationHook";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
 import RequestConnectorModal from "views/Connector/RequestConnectorModal";
 
-interface CreateNewDestinationProps {
-  onDestinationCreated: (destinationId: string) => void;
-}
+import { DESTINATION_ID_PARAM, DESTINATION_TYPE_PARAM } from "./SelectDestination";
 
-export const CreateNewDestination: React.FC<CreateNewDestinationProps> = ({ onDestinationCreated }) => {
+export const DESTINATION_DEFINITION_PARAM = "destinationDefinitionId";
+
+export const CreateNewDestination: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDestinationDefinitionId, setSelectedDestinationDefinitionId] = useState<string>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedDestinationDefinitionId = searchParams.get(DESTINATION_DEFINITION_PARAM);
+
   const destinationDefinitions = useAvailableDestinationDefinitions();
   const { trackAction } = useAppMonitoringService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -34,13 +36,13 @@ export const CreateNewDestination: React.FC<CreateNewDestinationProps> = ({ onDe
   const { openModal, closeModal } = useModalService();
   const { email } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
-  const { setDocumentationPanelOpen } = useDocumentationPanelContext();
 
   const { hasFormChanges, clearAllFormChanges } = useFormChangeTrackerService();
 
-  const onSelectDestinationDefinitionId = (destinationDefinitionId: string | undefined) => {
+  const onSelectDestinationDefinitionId = (destinationDefinitionId: string) => {
     setSearchTerm("");
-    setSelectedDestinationDefinitionId(destinationDefinitionId);
+    searchParams.set(DESTINATION_DEFINITION_PARAM, destinationDefinitionId);
+    setSearchParams(searchParams);
   };
 
   const onCreateDestination = async (values: DestinationFormValues) => {
@@ -54,7 +56,11 @@ export const CreateNewDestination: React.FC<CreateNewDestinationProps> = ({ onDe
     const result = await createDestination({ values, destinationConnector: destinationDefinition });
     clearAllFormChanges();
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    onDestinationCreated(result.destinationId);
+
+    searchParams.set(DESTINATION_ID_PARAM, result.destinationId);
+    searchParams.delete(DESTINATION_TYPE_PARAM);
+    searchParams.delete(DESTINATION_DEFINITION_PARAM);
+    setSearchParams(searchParams);
   };
 
   const onGoBack = () => {
@@ -65,16 +71,16 @@ export const CreateNewDestination: React.FC<CreateNewDestinationProps> = ({ onDe
         submitButtonText: "form.discardChanges",
         onSubmit: () => {
           closeConfirmationModal();
-          onSelectDestinationDefinitionId(undefined);
-          setDocumentationPanelOpen(false);
+          searchParams.delete(DESTINATION_DEFINITION_PARAM);
+          setSearchParams(searchParams);
         },
         onClose: () => {
           closeConfirmationModal();
         },
       });
     } else {
-      onSelectDestinationDefinitionId(undefined);
-      setDocumentationPanelOpen(false);
+      searchParams.delete(DESTINATION_DEFINITION_PARAM);
+      setSearchParams(searchParams);
     }
   };
 
@@ -100,13 +106,11 @@ export const CreateNewDestination: React.FC<CreateNewDestinationProps> = ({ onDe
   if (selectedDestinationDefinitionId) {
     return (
       <>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
+        <Box mb="md">
+          <Button variant="clear" onClick={onGoBack} icon={<Icon type="chevronLeft" size="lg" />}>
+            <FormattedMessage id="connectorBuilder.backButtonLabel" />
+          </Button>
+        </Box>
         <DestinationForm
           selectedDestinationDefinitionId={selectedDestinationDefinitionId}
           destinationDefinitions={destinationDefinitions}

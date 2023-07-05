@@ -5,22 +5,42 @@
 package io.airbyte.workers.temporal.scheduling.activities;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.client.generated.SourceApi;
+import io.airbyte.api.client.generated.WorkspaceApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.client.model.generated.AirbyteCatalog;
+import io.airbyte.api.client.model.generated.AirbyteStream;
+import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
+import io.airbyte.api.client.model.generated.CatalogDiff;
+import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceAutoPropagateChange;
+import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
+import io.airbyte.api.client.model.generated.SourceIdRequestBody;
+import io.airbyte.api.client.model.generated.SourceRead;
+import io.airbyte.api.client.model.generated.StreamDescriptor;
+import io.airbyte.api.client.model.generated.StreamTransform;
+import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.features.EnvVariableFeatureFlags;
+import io.airbyte.featureflag.AutoPropagateSchema;
 import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.RefreshSchemaPeriod;
 import io.airbyte.featureflag.ShouldRunRefreshSchema;
+import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.Workspace;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,21 +52,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class RefreshSchemaActivityTest {
 
   private SourceApi mSourceApi;
+  private WorkspaceApi mWorkspaceApi;
   private EnvVariableFeatureFlags mEnvVariableFeatureFlags;
   private TestClient mFeatureFlagClient;
 
   private RefreshSchemaActivityImpl refreshSchemaActivity;
 
   private static final UUID SOURCE_ID = UUID.randomUUID();
+  private static final UUID WORKSPACE_ID = UUID.randomUUID();
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws ApiException {
     mSourceApi = mock(SourceApi.class);
     mEnvVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     mSourceApi = mock(SourceApi.class);
     mFeatureFlagClient = mock(TestClient.class);
+    mWorkspaceApi = mock(WorkspaceApi.class);
     when(mEnvVariableFeatureFlags.autoDetectSchema()).thenReturn(true);
-    refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
+    refreshSchemaActivity = new RefreshSchemaActivityImpl(mSourceApi, mWorkspaceApi, mEnvVariableFeatureFlags, mFeatureFlagClient);
   }
 
   @Test
@@ -59,7 +82,11 @@ class RefreshSchemaActivityTest {
   void testShouldRefreshSchemaRecentRefreshOver24HoursAgo() throws ApiException {
     final Long twoDaysAgo = OffsetDateTime.now().minusHours(48L).toEpochSecond();
     final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twoDaysAgo);
+
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
+    when(mSourceApi.getSource(any())).thenReturn(new SourceRead().workspaceId(WORKSPACE_ID));
+    when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(24);
+
     Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
   }
 
@@ -67,28 +94,104 @@ class RefreshSchemaActivityTest {
   void testShouldRefreshSchemaRecentRefreshLessThan24HoursAgo() throws ApiException {
     final Long twelveHoursAgo = OffsetDateTime.now().minusHours(12L).toEpochSecond();
     final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twelveHoursAgo);
+
+    when(mSourceApi.getSource(any())).thenReturn(new SourceRead().workspaceId(WORKSPACE_ID));
+    when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(24);
     when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
+
     Assertions.assertThat(false).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
+  }
+
+  @Test
+  void testShouldRefreshSchemaRecentRefreshLessThanValueFromFF() throws ApiException {
+    final Long twelveHoursAgo = OffsetDateTime.now().minusHours(12L).toEpochSecond();
+    final ActorCatalogWithUpdatedAt actorCatalogWithUpdatedAt = new ActorCatalogWithUpdatedAt().updatedAt(twelveHoursAgo);
+
+    when(mSourceApi.getSource(any())).thenReturn(new SourceRead().workspaceId(WORKSPACE_ID));
+    when(mFeatureFlagClient.intVariation(RefreshSchemaPeriod.INSTANCE, new Workspace(WORKSPACE_ID))).thenReturn(10);
+    when(mSourceApi.getMostRecentSourceActorCatalog(any())).thenReturn(actorCatalogWithUpdatedAt);
+
+    Assertions.assertThat(true).isEqualTo(refreshSchemaActivity.shouldRefreshSchema(SOURCE_ID));
   }
 
   @Test
   void testRefreshSchema() throws ApiException {
     final UUID sourceId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();
-    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Connection(connectionId))).thenReturn(true);
-    refreshSchemaActivity.refreshSchema(sourceId, connectionId);
+    final UUID catalogId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
+
+    final AirbyteCatalog catalog = new AirbyteCatalog()
+        .addStreamsItem(new AirbyteStreamAndConfiguration()
+            .stream(new AirbyteStream().name("test stream")));
+    final CatalogDiff catalogDiff = new CatalogDiff()
+        .addTransformsItem(new StreamTransform()
+            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+            .streamDescriptor(new StreamDescriptor().name("test stream")));
+
+    when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId))).thenReturn(new SourceRead().sourceDefinitionId(sourceDefinitionId));
+    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(AutoPropagateSchema.INSTANCE, new Workspace(workspaceId))).thenReturn(true);
+
     final SourceDiscoverSchemaRequestBody requestBody =
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true).connectionId(connectionId).notifySchemaChange(true);
-    verify(mSourceApi, times(1)).discoverSchemaForSource(requestBody);
+    final SourceDiscoverSchemaRead discoveryResult = new SourceDiscoverSchemaRead()
+        .breakingChange(false)
+        .catalog(catalog)
+        .catalogDiff(catalogDiff)
+        .catalogId(catalogId);
+
+    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)))
+        .thenReturn(new WorkspaceRead().workspaceId(workspaceId));
+    when(mSourceApi.discoverSchemaForSource(requestBody))
+        .thenReturn(discoveryResult);
+
+    refreshSchemaActivity.refreshSchema(sourceId, connectionId);
+
+    verify(mSourceApi).discoverSchemaForSource(requestBody);
+    verify(mWorkspaceApi).getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId));
+    verify(mSourceApi).applySchemaChangeForSource(new SourceAutoPropagateChange()
+        .catalogId(catalogId)
+        .sourceId(sourceId)
+        .catalog(catalog)
+        .workspaceId(workspaceId));
   }
 
   @Test
-  void testRefreshSchemaWithFeatureFlagAsFalse() {
+  void testRefreshSchemaWithRefreshSchemaFeatureFlagAsFalse() throws ApiException {
     final UUID sourceId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();
-    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Connection(connectionId))).thenReturn(false);
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
+
+    when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId))).thenReturn(new SourceRead().sourceDefinitionId(sourceDefinitionId));
+    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(false);
+
     refreshSchemaActivity.refreshSchema(sourceId, connectionId);
-    verifyNoInteractions(mSourceApi);
+
+    verify(mSourceApi, times(0)).discoverSchemaForSource(any());
+    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
+  }
+
+  @Test
+  void testRefreshSchemaWithAutoPropagateFeatureFlagAsFalse() throws ApiException {
+    final UUID sourceId = UUID.randomUUID();
+    final UUID connectionId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    final UUID sourceDefinitionId = UUID.randomUUID();
+    final List<Context> expectedRefreshFeatureFlagContexts = List.of(new SourceDefinition(sourceDefinitionId), new Connection(connectionId));
+
+    when(mSourceApi.getSource(new SourceIdRequestBody().sourceId(sourceId))).thenReturn(new SourceRead().sourceDefinitionId(sourceDefinitionId));
+    when(mFeatureFlagClient.boolVariation(ShouldRunRefreshSchema.INSTANCE, new Multi(expectedRefreshFeatureFlagContexts))).thenReturn(true);
+    when(mFeatureFlagClient.boolVariation(eq(AutoPropagateSchema.INSTANCE), any())).thenReturn(false);
+    when(mWorkspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody().connectionId(connectionId)))
+        .thenReturn(new WorkspaceRead().workspaceId(workspaceId));
+
+    refreshSchemaActivity.refreshSchema(sourceId, connectionId);
+
+    verify(mSourceApi, times(0)).applySchemaChangeForSource(any());
   }
 
 }

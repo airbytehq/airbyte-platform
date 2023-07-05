@@ -14,7 +14,7 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 
 import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
@@ -37,7 +37,7 @@ export function setDefaultValues(
     if (property.const && (!options.respectExistingValues || !values[property.fieldKey])) {
       values[property.fieldKey] = property.const;
     }
-    if (property.default && (!options.respectExistingValues || !values[property.fieldKey])) {
+    if ("default" in property && (!options.respectExistingValues || !values[property.fieldKey])) {
       values[property.fieldKey] = property.default;
     }
     switch (property._type) {

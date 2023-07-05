@@ -12,7 +12,6 @@ import { match } from "ts-pattern";
 import { LoadingPage } from "components";
 import { Box } from "components/ui/Box";
 import { Markdown } from "components/ui/Markdown";
-import { StepsMenu } from "components/ui/StepsMenu";
 import { Tabs } from "components/ui/Tabs";
 import { ButtonTab } from "components/ui/Tabs/ButtonTab";
 
@@ -37,7 +36,6 @@ type TabsType = "setupGuide" | "schema" | "erd";
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
   const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
-  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
   const sourceType =
     selectedConnectorDefinition &&
     "sourceType" in selectedConnectorDefinition &&
@@ -71,7 +69,7 @@ export const DocumentationPanel: React.FC = () => {
 
   useUpdateEffect(() => {
     setDocumentationPanelOpen(false);
-  }, [setDocumentationPanelOpen, location.pathname]);
+  }, [setDocumentationPanelOpen, location.pathname, location.search]);
 
   const [activeTab, setActiveTab] = useState<TabsType>("setupGuide");
   const tabs: Array<{ id: TabsType; name: JSX.Element }> = [
@@ -94,38 +92,23 @@ export const DocumentationPanel: React.FC = () => {
   ) : (
     <div className={styles.container}>
       {selectedConnectorDefinition && isSourceDefinition(selectedConnectorDefinition) && showRequestSchemaButton && (
-        <>
-          {isNewConnectionFlowEnabled ? (
-            <Box pt="md" pl="lg">
-              <Tabs>
-                {tabs.map((tabItem) => {
-                  return (
-                    <ButtonTab
-                      id={tabItem.id}
-                      key={tabItem.id}
-                      name={tabItem.name}
-                      isActive={activeTab === tabItem.id}
-                      onSelect={(val) => {
-                        setActiveTab(val as TabsType);
-                      }}
-                    />
-                  );
-                })}
-              </Tabs>
-            </Box>
-          ) : (
-            <div className={styles.stepsContainer}>
-              <StepsMenu
-                lightMode
-                data={tabs}
-                onSelect={(val) => {
-                  setActiveTab(val as TabsType);
-                }}
-                activeStep={activeTab}
-              />
-            </div>
-          )}
-        </>
+        <Box pt="md" pl="lg">
+          <Tabs>
+            {tabs.map((tabItem) => {
+              return (
+                <ButtonTab
+                  id={tabItem.id}
+                  key={tabItem.id}
+                  name={tabItem.name}
+                  isActive={activeTab === tabItem.id}
+                  onSelect={(val) => {
+                    setActiveTab(val as TabsType);
+                  }}
+                />
+              );
+            })}
+          </Tabs>
+        </Box>
       )}
 
       {match(activeTab)

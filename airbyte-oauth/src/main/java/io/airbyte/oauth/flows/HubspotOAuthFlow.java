@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -23,12 +22,12 @@ public class HubspotOAuthFlow extends BaseOAuth2Flow {
 
   private static final String AUTHORIZE_URL = "https://app.hubspot.com/oauth/authorize";
 
-  public HubspotOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public HubspotOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  public HubspotOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier, TokenRequestContentType.JSON);
+  public HubspotOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   @Override

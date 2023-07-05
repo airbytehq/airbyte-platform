@@ -14,15 +14,16 @@ import CreatableSelect from "react-select/creatable";
 
 import styles from "./TagInput.module.scss";
 
-const customStyles: StylesConfig<Tag, true, GroupBase<Tag>> = {
+const customStyles = (directional?: boolean): StylesConfig<Tag, true, GroupBase<Tag>> => ({
   multiValue: (provided) => ({
     ...provided,
     maxWidth: "100%",
     display: "flex",
     background: `${styles.backgroundColor}`,
     color: `${styles.fontColor}`,
-    borderRadius: `${styles.borderRadius}`,
+    borderRadius: `${directional ? styles.borderRadiusDirectional : styles.borderRadius}`,
     paddingLeft: `${styles.paddingLeft}`,
+    border: `${styles.valueBorder}`,
   }),
   multiValueLabel: (provided) => ({
     ...provided,
@@ -31,7 +32,7 @@ const customStyles: StylesConfig<Tag, true, GroupBase<Tag>> = {
   }),
   multiValueRemove: (provided) => ({
     ...provided,
-    borderRadius: `${styles.borderRadius}`,
+    borderRadius: `${directional ? styles.borderRadiusDirectional : styles.borderRadius}`,
     cursor: "pointer",
   }),
   clearIndicator: (provided) => ({
@@ -53,7 +54,7 @@ const customStyles: StylesConfig<Tag, true, GroupBase<Tag>> = {
       },
     };
   },
-};
+});
 
 interface Tag {
   readonly label: string;
@@ -65,9 +66,11 @@ interface TagInputProps {
   fieldValue: string[];
   itemType?: string;
   onChange: (value: string[]) => void;
+  onBlur?: () => void;
   error?: boolean;
   disabled?: boolean;
   id?: string;
+  directionalStyle?: boolean;
 }
 
 const generateTagFromString = (inputValue: string): Tag => ({
@@ -79,7 +82,17 @@ const generateStringFromTag = (tag: Tag): string => tag.label;
 
 const delimiters = [",", ";"];
 
-export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, disabled, id, error, itemType }) => {
+export const TagInput: React.FC<TagInputProps> = ({
+  onChange,
+  fieldValue,
+  name,
+  disabled,
+  id,
+  error,
+  itemType,
+  onBlur,
+  directionalStyle,
+}) => {
   const [draftValue, setDraftValue] = useState("");
   const draftExists = draftValue.length > 0;
 
@@ -191,6 +204,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
    */
   const onBlurControl = () => {
     setDraftValue("");
+    onBlur?.();
   };
 
   const overwrittenComponents = useMemo(
@@ -221,7 +235,7 @@ export const TagInput: React.FC<TagInputProps> = ({ onChange, fieldValue, name, 
         onKeyDown={handleKeyDown}
         value={tags}
         isDisabled={disabled}
-        styles={customStyles}
+        styles={customStyles(directionalStyle)}
       />
     </div>
   );

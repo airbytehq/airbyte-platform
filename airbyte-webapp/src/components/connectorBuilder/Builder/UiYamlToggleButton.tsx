@@ -19,6 +19,7 @@ export const UiYamlToggleButton: React.FC<UiYamlToggleButtonProps> = ({ classNam
 
   return (
     <button
+      type="button"
       className={classnames(styles.button, className)}
       onClick={() => {
         onClick();

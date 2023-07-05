@@ -6,7 +6,9 @@ package io.airbyte.test.utils;
 
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,6 +18,8 @@ import com.google.common.io.Resources;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.generated.JobsApi;
 import io.airbyte.api.client.invoker.generated.ApiException;
+import io.airbyte.api.client.model.generated.ActorDefinitionRequestBody;
+import io.airbyte.api.client.model.generated.ActorType;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
@@ -54,6 +58,7 @@ import io.airbyte.api.client.model.generated.OperationRead;
 import io.airbyte.api.client.model.generated.OperatorConfiguration;
 import io.airbyte.api.client.model.generated.OperatorNormalization;
 import io.airbyte.api.client.model.generated.OperatorType;
+import io.airbyte.api.client.model.generated.Pagination;
 import io.airbyte.api.client.model.generated.SourceCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId;
@@ -63,6 +68,11 @@ import io.airbyte.api.client.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
+import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
+import io.airbyte.api.client.model.generated.StreamStatusRead;
+import io.airbyte.api.client.model.generated.StreamStatusReadList;
+import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
@@ -167,12 +177,20 @@ public class AirbyteAcceptanceTestHarness {
 
   // Used for bypassing SSL modification for db configs
   private static final String IS_TEST = "is_test";
+  public static final int JITTER_MAX_INTERVAL_SECS = 10;
+  public static final int FINAL_INTERVAL_SECS = 60;
+  public static final int MAX_TRIES = 3;
+
+  // NOTE: we include `INCOMPLETE` here because the job may still retry; see
+  // https://docs.airbyte.com/understanding-airbyte/jobs/.
+  public static final Set<JobStatus> IN_PROGRESS_JOB_STATUSES = Set.of(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING);
 
   private static boolean isKube;
   private static boolean isMinikube;
   private static boolean isGke;
   private static boolean isMac;
   private static boolean useExternalDeployment;
+  private static boolean ensureCleanSlate;
 
   /**
    * When the acceptance tests are run against a local instance of docker-compose or KUBE then these
@@ -278,7 +296,7 @@ public class AirbyteAcceptanceTestHarness {
         DataSourceFactory.close(sourceDataSource);
         DataSourceFactory.close(destinationDataSource);
       } catch (final Exception e) {
-        LOGGER.warn("Failed to close data sources: {}", e);
+        LOGGER.warn("Failed to close data sources", e);
       }
     }
 
@@ -311,28 +329,10 @@ public class AirbyteAcceptanceTestHarness {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   public void cleanup() {
     try {
       clearSourceDbData();
       clearDestinationDbData();
-
-      // wait until db data verified to be cleaned
-      int sourceTableCount = listAllTables(getSourceDatabase()).size();
-      int destinationTableCount = listAllTables(getDestinationDatabase()).size();
-      int iterations = 0;
-      while (sourceTableCount > 0 || destinationTableCount > 0) {
-        if (iterations > 100) {
-          throw new RuntimeException("databases tables aren't dropping after too long, exiting...");
-        }
-        iterations++;
-        LOGGER.warn("tableCount is still greater than 0! Source table count: {}. Destination table count: {}. iterations: {}", sourceTableCount,
-            destinationTableCount, iterations);
-        sleep(1000);
-        sourceTableCount = listAllTables(getSourceDatabase()).size();
-        destinationTableCount = listAllTables(getDestinationDatabase()).size();
-      }
-
       for (final UUID operationId : operationIds) {
         deleteOperation(operationId);
       }
@@ -357,12 +357,61 @@ public class AirbyteAcceptanceTestHarness {
         DataSourceFactory.close(destinationDataSource);
       }
       // TODO(mfsiega-airbyte): clean up created source definitions.
-
     } catch (final Exception e) {
-      LOGGER.error("Error tearing down test fixtures: {}", e);
+      LOGGER.error("Error tearing down test fixtures", e);
     }
   }
 
+  /**
+   * This method is intended to be called at the beginning of a new test run - it identifies and
+   * disables any pre-existing scheduled connections that could potentially interfere with a new test
+   * run.
+   */
+  public void ensureCleanSlate() {
+    if (!ensureCleanSlate) {
+      LOGGER.info("proceeding without cleaning up pre-existing connections.");
+      return;
+    }
+    LOGGER.info("ENSURE_CLEAN_SLATE was true, disabling all scheduled connections using postgres source or postgres destination...");
+    try {
+      final UUID sourceDefinitionId = getPostgresSourceDefinitionId();
+      final UUID destinationDefinitionId = getPostgresDestinationDefinitionId();
+
+      final List<ConnectionRead> sourceDefinitionConnections = this.apiClient.getConnectionApi()
+          .listConnectionsByActorDefinition(
+              new ActorDefinitionRequestBody().actorDefinitionId(sourceDefinitionId).actorType(ActorType.SOURCE))
+          .getConnections();
+
+      final List<ConnectionRead> destinationDefinitionConnections = this.apiClient.getConnectionApi()
+          .listConnectionsByActorDefinition(
+              new ActorDefinitionRequestBody().actorDefinitionId(destinationDefinitionId).actorType(ActorType.DESTINATION))
+          .getConnections();
+
+      final Set<ConnectionRead> allConnections = Sets.newHashSet();
+      allConnections.addAll(sourceDefinitionConnections);
+      allConnections.addAll(destinationDefinitionConnections);
+
+      final List<ConnectionRead> allConnectionsToDisable = allConnections.stream()
+          // filter out any connections that aren't active
+          .filter(connection -> connection.getStatus().equals(ConnectionStatus.ACTIVE))
+          // filter out any manual connections, since we only want to disable scheduled syncs
+          .filter(connection -> !connection.getScheduleType().equals(ConnectionScheduleType.MANUAL))
+          .toList();
+
+      LOGGER.info("Found {} existing connection(s) to clean up", allConnectionsToDisable.size());
+      if (!allConnectionsToDisable.isEmpty()) {
+        for (final ConnectionRead connection : allConnectionsToDisable) {
+          disableConnection(connection.getConnectionId());
+          LOGGER.info("disabled connection with ID {}", connection.getConnectionId());
+        }
+      }
+      LOGGER.info("ensureCleanSlate completed!");
+    } catch (final Exception e) {
+      LOGGER.warn("An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run.", e);
+    }
+  }
+
+  @SuppressWarnings("PMD.LiteralsFirstInComparisons")
   private void assignEnvVars() {
     isKube = System.getenv().containsKey("KUBE");
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
@@ -371,6 +420,8 @@ public class AirbyteAcceptanceTestHarness {
     useExternalDeployment =
         System.getenv("USE_EXTERNAL_DEPLOYMENT") != null
             && System.getenv("USE_EXTERNAL_DEPLOYMENT").equalsIgnoreCase("true");
+    ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
+        && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
   }
 
   private WorkflowClient getWorkflowClient() {
@@ -427,10 +478,11 @@ public class AirbyteAcceptanceTestHarness {
         new SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(true)).getCatalog(), "discover source schema no cache", 10, 60, 3);
   }
 
-  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId) throws ApiException {
+  public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId, final UUID workspaceId)
+      throws ApiException {
     return AirbyteApiClient.retryWithJitter(() -> apiClient.getDestinationDefinitionSpecificationApi()
         .getDestinationDefinitionSpecification(
-            new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(UUID.randomUUID())),
+            new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(workspaceId)),
         "get destination definition spec", 10, 60, 3);
   }
 
@@ -442,18 +494,27 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void assertSourceAndDestinationDbInSync(final boolean withScdTable) throws Exception {
-    final Database source = getSourceDatabase();
-    final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
-    final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
-    final Database destination = getDestinationDatabase();
-    final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
-    assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
-        String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
+    // NOTE: this is an unusual use of retry. The intention is to tolerate eventual consistency if e.g.,
+    // the sync is marked complete but the destination tables aren't finalized yet.
+    AirbyteApiClient.retryWithJitterThrows(() -> {
+      try {
+        final Database source = getSourceDatabase();
+        final Set<SchemaTableNamePair> sourceTables = listAllTables(source);
+        final Set<SchemaTableNamePair> sourceTablesWithRawTablesAdded = addAirbyteGeneratedTables(withScdTable, sourceTables);
+        final Database destination = getDestinationDatabase();
+        final Set<SchemaTableNamePair> destinationTables = listAllTables(destination);
+        assertEquals(sourceTablesWithRawTablesAdded, destinationTables,
+            String.format("streams did not match.\n source stream names: %s\n destination stream names: %s\n", sourceTables, destinationTables));
 
-    for (final SchemaTableNamePair pair : sourceTables) {
-      final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
-      assertRawDestinationContains(sourceRecords, pair);
-    }
+        for (final SchemaTableNamePair pair : sourceTables) {
+          final List<JsonNode> sourceRecords = retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName());
+          assertRawDestinationContains(sourceRecords, pair);
+        }
+      } catch (final Exception e) {
+        return e;
+      }
+      return null;
+    }, "assert source and destination in sync", JITTER_MAX_INTERVAL_SECS, FINAL_INTERVAL_SECS, MAX_TRIES);
   }
 
   public Database getSourceDatabase() {
@@ -568,6 +629,7 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public void runSqlScriptInSource(final String resourceName) throws URISyntaxException, SQLException, IOException {
+    LOGGER.debug("Running sql script in source: {}", resourceName);
     if (isGke) {
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(resourceName).toURI()), getSourceDatabase());
     } else {
@@ -818,7 +880,9 @@ public class AirbyteAcceptanceTestHarness {
   }
 
   public String getEchoServerUrl() {
-    if (isGke) {
+    if (isKube && isGke) {
+      return "http://acceptance-test-echo-server-source-svc.acceptance-tests.svc.cluster.local:8080";
+    } else if (isGke) {
       return "http://localhost:6000";
     }
     return String.format("http://%s:%s/", getHostname(), echoServer.getFirstMappedPort());
@@ -928,6 +992,7 @@ public class AirbyteAcceptanceTestHarness {
     final Database database = getSourceDatabase();
     final Set<SchemaTableNamePair> pairs = listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
+      LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s", pair.schemaName(), pair.tableName())));
     }
   }
@@ -936,6 +1001,7 @@ public class AirbyteAcceptanceTestHarness {
     final Database database = getDestinationDatabase();
     final Set<SchemaTableNamePair> pairs = listAllTables(database);
     for (final SchemaTableNamePair pair : pairs) {
+      LOGGER.debug("Clearing table {} {}", pair.schemaName(), pair.tableName());
       database.query(context -> context.execute(String.format("DROP TABLE %s.%s CASCADE", pair.schemaName(), pair.tableName())));
     }
   }
@@ -1054,10 +1120,10 @@ public class AirbyteAcceptanceTestHarness {
 
   /**
    * Wait until the sync succeeds by polling the Jobs API.
-   *
+   * <p>
    * NOTE: !!! THIS WILL POTENTIALLY POLL FOREVER !!! so make sure the calling code has a deadline;
    * for example, a test timeout.
-   *
+   * <p>
    * TODO: re-work the collection of polling helpers we have here into a sane set that rely on test
    * timeouts instead of implementing their own deadline logic.
    */
@@ -1071,12 +1137,12 @@ public class AirbyteAcceptanceTestHarness {
         sleep(5000);
         continue; // To the top of the loop.
       } catch (final ApiException e) {
-        LOGGER.info("Failed to query for job info: {}. Retrying...", e);
+        LOGGER.info("Failed to query for job info. Retrying...", e);
         sleep(3000);
         continue; // To the top of the loop.
       }
       try {
-        while (Set.of(JobStatus.PENDING, JobStatus.RUNNING).contains(job.getStatus())) {
+        while (IN_PROGRESS_JOB_STATUSES.contains(job.getStatus())) {
           job = this.apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(job.getId())).getJob();
           LOGGER.info("waiting: job id: {} config type: {} status: {}", job.getId(), job.getConfigType(), job.getStatus());
           sleep(3000);
@@ -1084,7 +1150,7 @@ public class AirbyteAcceptanceTestHarness {
         assertEquals(JobStatus.SUCCEEDED, job.getStatus());
         return; // Don't forget to return!
       } catch (final ApiException e) {
-        LOGGER.info("Caught exception {} while waiting for successful sync. Retrying...", e);
+        LOGGER.info("Caught exception while waiting for successful sync. Retrying...", e);
       }
     }
   }
@@ -1105,7 +1171,7 @@ public class AirbyteAcceptanceTestHarness {
     final boolean exceeded60seconds = count >= 60;
     if (exceeded60seconds) {
       // Fail because taking more than 60seconds to start a job is not expected
-      // Returning the current mostRecencSyncJob here could end up hiding some issues
+      // Returning the current mostRecentSyncJob here could end up hiding some issues
       Assertions.fail("unable to find the next job within 60seconds");
     }
 
@@ -1162,6 +1228,103 @@ public class AirbyteAcceptanceTestHarness {
         .status(connection.getStatus())
         .prefix(connection.getPrefix())
         .skipReset(false);
+  }
+
+  /**
+   * Asserts that all streams associated with the most recent job and attempt for the provided
+   * connection are the in expected state.
+   *
+   * @param workspaceId The workspace that contains the connection.
+   * @param connectionId The connection that just executed a sync or reset.
+   * @param expectedRunState The expected stream status for each stream in the connection for the most
+   *        recent job and attempt.
+   * @param expectedJobType The expected type of the stream status.
+   * @throws ApiException if unable to retrieve the stream status information via the API.
+   */
+  public void assertStreamStatuses(final UUID workspaceId,
+                                   final UUID connectionId,
+                                   final StreamStatusRunState expectedRunState,
+                                   final StreamStatusJobType expectedJobType)
+      throws ApiException {
+    final JobRead jobRead = getMostRecentSyncJobId(connectionId);
+    final JobInfoRead jobInfo = apiClient.getJobsApi().getJobInfo(new JobIdRequestBody().id(jobRead.getId()));
+    assertStreamStatuses(workspaceId, connectionId, jobInfo.getJob().getId(),
+        jobInfo.getAttempts().size() - 1, expectedRunState, expectedJobType);
+  }
+
+  /**
+   * Asserts that all streams associated with the most recent job and attempt for the provided
+   * connection are the in expected state.
+   *
+   * @param workspaceId The workspace that contains the connection.
+   * @param connectionId The connection that just executed a sync or reset.
+   * @param jobId The job ID associated with the sync execution.
+   * @param attemptNumber The attempt number associated with the sync execution.
+   * @param expectedRunState The expected stream status for each stream in the connection for the most
+   *        recent job and attempt.
+   * @param expectedJobType The expected type of the stream status.
+   * @throws ApiException if unable to retrieve the stream status information via the API.
+   */
+  public void assertStreamStatuses(final UUID workspaceId,
+                                   final UUID connectionId,
+                                   final Long jobId,
+                                   final Integer attemptNumber,
+                                   final StreamStatusRunState expectedRunState,
+                                   final StreamStatusJobType expectedJobType) {
+    final List<StreamStatusRead> streamStatuses = fetchStreamStatus(workspaceId, connectionId, jobId, attemptNumber);
+    assertNotNull(streamStatuses);
+    final List<StreamStatusRead> filteredStreamStatuses = streamStatuses.stream().filter(s -> expectedJobType.equals(s.getJobType())).collect(
+        Collectors.toList());
+    assertFalse(filteredStreamStatuses.isEmpty());
+    filteredStreamStatuses.forEach(status -> assertEquals(expectedRunState, status.getRunState()));
+
+  }
+
+  /**
+   * Fetches the stream status associated with the provided information, retrying for a set amount of
+   * attempts if the status is currently not available.
+   *
+   * @param workspaceId The workspace that contains the connection.
+   * @param connectionId The connection that has been executed by a test
+   * @param jobId The job ID associated with the sync execution.
+   * @param attempt The attempt number associated with the sync execution.
+   */
+  private List<StreamStatusRead> fetchStreamStatus(final UUID workspaceId,
+                                                   final UUID connectionId,
+                                                   final Long jobId,
+                                                   final Integer attempt) {
+    List<StreamStatusRead> results = List.of();
+    final StreamStatusListRequestBody streamStatusListRequestBody = new StreamStatusListRequestBody()
+        .connectionId(connectionId)
+        .jobId(jobId)
+        .attemptNumber(attempt)
+        .workspaceId(workspaceId)
+        .pagination(new Pagination().pageSize(100).rowOffset(0));
+
+    int count = 0;
+    while (count < 60 && results.isEmpty()) {
+      LOGGER.debug("Fetching stream status for {}...", streamStatusListRequestBody);
+      try {
+        final StreamStatusReadList result = apiClient.getStreamStatusesApi().getStreamStatuses(streamStatusListRequestBody);
+        if (result != null) {
+          LOGGER.debug("Stream status result for connection {}: {}", connectionId, result);
+          results = result.getStreamStatuses();
+        }
+      } catch (final ApiException e) {
+        LOGGER.info("Unable to call stream status API.", e);
+      }
+      count++;
+
+      if (results.isEmpty()) {
+        try {
+          sleep(5000);
+        } catch (final InterruptedException e) {
+          LOGGER.debug("Failed to sleep.", e);
+        }
+      }
+    }
+
+    return results;
   }
 
 }

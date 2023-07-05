@@ -4,9 +4,13 @@
 
 package io.airbyte.workers.sync;
 
+import static io.airbyte.workers.process.Metadata.ORCHESTRATOR_DBT_NORMALIZATION_STEP;
+import static io.airbyte.workers.process.Metadata.SYNC_STEP_KEY;
+
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.OperatorDbtInput;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.ContainerOrchestratorConfig;
@@ -32,7 +36,8 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
                            final ContainerOrchestratorConfig containerOrchestratorConfig,
                            final Supplier<ActivityExecutionContext> activityContext,
                            final Integer serverPort,
-                           final TemporalUtils temporalUtils) {
+                           final TemporalUtils temporalUtils,
+                           final FeatureFlagClient featureFlagClient) {
     super(
         connectionId,
         DBT,
@@ -47,9 +52,15 @@ public class DbtLauncherWorker extends LauncherWorker<OperatorDbtInput, Void> {
         serverPort,
         temporalUtils,
         workerConfigs,
+        featureFlagClient,
         // Custom connector does not use Dbt at this moment, thus this flag for runnning job under
         // isolated pool can be set to false.
         false);
+  }
+
+  @Override
+  protected Map<String, String> generateCustomMetadataLabels() {
+    return Map.of(SYNC_STEP_KEY, ORCHESTRATOR_DBT_NORMALIZATION_STEP);
   }
 
 }

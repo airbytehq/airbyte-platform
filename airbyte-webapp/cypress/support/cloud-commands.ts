@@ -3,8 +3,8 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 /// <reference types="cypress" />
+import type { FeatureSet } from "@src/core/services/features";
 import type { Experiments } from "@src/hooks/services/Experiment/experiments";
-import type { FeatureSet } from "@src/hooks/services/Feature/types";
 
 import { TestUserCredentials, testUser } from "./test-users";
 

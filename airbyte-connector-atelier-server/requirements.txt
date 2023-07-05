@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.36.5
+airbyte-cdk==0.44.0
     # via -r requirements.in
 airbyte-protocol-models==0.3.6
     # via airbyte-cdk
@@ -15,15 +15,17 @@ attrs==23.1.0
     #   requests-cache
 backoff==2.2.1
     # via airbyte-cdk
-cachetools==5.3.0
+bracex==2.3.post1
+    # via wcmatch
+cachetools==5.3.1
     # via airbyte-cdk
-cattrs==22.2.0
+cattrs==23.1.2
     # via requests-cache
 certifi==2023.5.7
     # via requests
 charset-normalizer==3.1.0
     # via requests
-deprecated==1.2.13
+deprecated==1.2.14
     # via airbyte-cdk
 dpath==2.0.8
     # via airbyte-cdk
@@ -41,11 +43,11 @@ jsonref==0.3.0
     # via airbyte-cdk
 jsonschema==3.2.0
     # via airbyte-cdk
-markupsafe==2.1.2
+markupsafe==2.1.3
     # via jinja2
 pendulum==2.1.2
     # via airbyte-cdk
-platformdirs==3.5.0
+platformdirs==3.8.0
     # via requests-cache
 pydantic==1.9.2
     # via
@@ -61,7 +63,7 @@ pytzdata==2020.1
     # via pendulum
 pyyaml==5.4.1
     # via airbyte-cdk
-requests==2.30.0
+requests==2.31.0
     # via
     #   airbyte-cdk
     #   requests-cache
@@ -73,14 +75,18 @@ six==1.16.0
     #   jsonschema
     #   python-dateutil
     #   url-normalize
-typing-extensions==4.5.0
-    # via pydantic
+typing-extensions==4.7.0
+    # via
+    #   cattrs
+    #   pydantic
 url-normalize==1.4.3
     # via requests-cache
-urllib3==2.0.2
+urllib3==2.0.3
     # via
     #   requests
     #   requests-cache
+wcmatch==8.4
+    # via airbyte-cdk
 wrapt==1.15.0
     # via deprecated
 

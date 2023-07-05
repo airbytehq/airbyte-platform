@@ -15,7 +15,7 @@ class XeroOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new XeroOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new XeroOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

@@ -31,3 +31,5 @@ properties:
     type: array
     items:
       "$ref": StreamSyncStats.yaml
+  performanceMetrics:
+    "$ref": PerformanceMetrics.yaml

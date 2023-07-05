@@ -9,8 +9,8 @@ import { Card } from "components/ui/Card";
 import { DropdownMenu } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
-import { DbtCloudJobInfo } from "packages/cloud/lib/domain/dbtCloud";
-import { DbtCloudJob, isSameJob } from "packages/cloud/services/dbtCloud";
+import { DbtCloudJob, isSameJob } from "core/api/cloud";
+import { DbtCloudJobInfo } from "core/api/types/CloudApi";
 import { links } from "utils/links";
 
 import styles from "./DbtJobsForm.module.scss";

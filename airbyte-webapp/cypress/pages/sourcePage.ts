@@ -13,8 +13,9 @@ export const openSourceDestinationFromGrid = (value: string) => {
   cy.get("div").contains(value).click();
 };
 
-export const openSourceOverview = (sourceName: string) => {
+export const openSourceConnectionsPage = (sourceName: string) => {
   clickOnCellInTable(sourcesTable, sourceNameColumn, sourceName);
+  cy.get("a[data-testid='connections-step']").click();
 };
 
 export const openNewSourcePage = () => {

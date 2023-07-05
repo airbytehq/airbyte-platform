@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.CatalogDiff;
@@ -38,6 +39,7 @@ import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
@@ -52,6 +54,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.featureflag.CheckWithCatalog;
@@ -64,6 +67,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -95,6 +99,8 @@ public class ConnectionsHandler {
   private final ConnectionHelper connectionHelper;
   @Inject
   FeatureFlagClient featureFlagClient;
+  @Inject
+  ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
   @VisibleForTesting
   ConnectionsHandler(final ConfigRepository configRepository,
@@ -542,8 +548,11 @@ public class ConnectionsHandler {
     }
     final ActorCatalog catalog = configRepository.getActorCatalogById(connection.getSourceCatalogId());
     final StandardSourceDefinition sourceDefinition = configRepository.getSourceDefinitionFromSource(connection.getSourceId());
+    final SourceConnection sourceConnection = configRepository.getSourceConnection(connection.getSourceId());
+    final ActorDefinitionVersion sourceVersion =
+        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), connection.getSourceId());
     final io.airbyte.protocol.models.AirbyteCatalog jsonCatalog = Jsons.object(catalog.getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
-    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceDefinition));
+    return Optional.of(CatalogConverter.toApi(jsonCatalog, sourceVersion));
   }
 
   public ConnectionReadList searchConnections(final ConnectionSearch connectionSearch)
@@ -646,6 +655,23 @@ public class ConnectionsHandler {
         connectionRead.setWorkspaceId(workspaceId);
         connectionReads.add(connectionRead);
       }
+    }
+    return new ConnectionReadList().connections(connectionReads);
+  }
+
+  public ConnectionReadList listConnectionsForActorDefinition(final ActorDefinitionRequestBody actorDefinitionRequestBody)
+      throws IOException {
+
+    final List<ConnectionRead> connectionReads = new ArrayList<>();
+
+    final List<StandardSync> standardSyncs = configRepository.listConnectionsByActorDefinitionIdAndType(
+        actorDefinitionRequestBody.getActorDefinitionId(),
+        actorDefinitionRequestBody.getActorType().toString(),
+        false);
+
+    for (final StandardSync standardSync : standardSyncs) {
+      final ConnectionRead connectionRead = ApiPojoConverters.internalToConnectionRead(standardSync);
+      connectionReads.add(connectionRead);
     }
     return new ConnectionReadList().connections(connectionReads);
   }

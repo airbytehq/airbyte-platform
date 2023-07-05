@@ -7,14 +7,12 @@ import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { PageHeader } from "components/ui/PageHeader";
 import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import LargeEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
 import { links } from "utils/links";
 
@@ -47,23 +45,19 @@ const StripePortalLink: React.FC = () => {
 export const BillingPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CREDITS);
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
-  const isNewConnectionFlowEnabled = useExperiment("connection.updatedConnectionFlow", false);
+
   return (
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "credits.billing" }]} />}
       pageTitle={
-        isNewConnectionFlowEnabled ? (
-          <NextPageHeader
-            leftComponent={
-              <Heading as="h1" size="lg">
-                <FormattedMessage id="credits.billing" />
-              </Heading>
-            }
-            endComponent={<StripePortalLink />}
-          />
-        ) : (
-          <PageHeader title={<FormattedMessage id="credits.billing" />} endComponent={<StripePortalLink />} />
-        )
+        <NextPageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="credits.billing" />
+            </Heading>
+          }
+          endComponent={<StripePortalLink />}
+        />
       }
     >
       <FlexContainer direction="column" className={styles.content}>

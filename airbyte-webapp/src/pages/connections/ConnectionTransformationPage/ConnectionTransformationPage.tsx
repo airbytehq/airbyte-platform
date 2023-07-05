@@ -12,9 +12,9 @@ import { Text } from "components/ui/Text";
 import { NormalizationType } from "core/domain/connection";
 import { OperationCreate, OperationRead, OperatorType } from "core/request/AirbyteClient";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { FormikOnSubmit } from "types/formik";
 

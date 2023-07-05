@@ -1,25 +1,17 @@
 import {
-  getConnectionCreateRequest,
-  getPostgresCreateDestinationBody,
-  getPostgresCreateSourceBody,
-  requestCreateConnection,
-  requestCreateDestination,
-  requestCreateSource,
-  requestDeleteConnection,
-  requestDeleteDestination,
-  requestDeleteSource,
-  requestSourceDiscoverSchema,
-  requestWorkspaceId,
-} from "commands/api";
+  createNewConnectionViaApi,
+  createPostgresDestinationViaApi,
+  createPostgresSourceViaApi,
+} from "@cy/commands/connection";
 import {
-  Connection,
-  Destination,
+  WebBackendConnectionRead,
+  DestinationRead,
   DestinationSyncMode,
-  Source,
-  SourceSyncMode,
-  SyncCatalogStreamConfig,
-} from "commands/api/types";
-import { appendRandomString } from "commands/common";
+  SourceRead,
+  SyncMode,
+  AirbyteStreamConfiguration,
+} from "@src/core/api/types/AirbyteClient";
+import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
 import { runDbQuery } from "commands/db/db";
 import {
   createAccountsTableQuery,
@@ -48,11 +40,12 @@ const dropTables = () => {
 
 const modifyAccountsTableInterceptHandler: RouteHandler = (request) => {
   request.reply((response) => {
-    const body: Connection = modifySyncCatalogStream({
+    const body: WebBackendConnectionRead = modifySyncCatalogStream({
       connection: response.body,
       namespace: "public",
       streamName: "accounts",
       modifyStream: (stream) => ({
+        // TODO we really shouldn't be modifying the stream here, but it's the only way to get the tests to pass with this source
         ...stream,
         sourceDefinedCursor: true,
         defaultCursorField: ["updated_at"],
@@ -64,14 +57,14 @@ const modifyAccountsTableInterceptHandler: RouteHandler = (request) => {
 };
 
 const saveConnectionAndAssertStreams = (
-  ...expectedSyncModes: Array<{ namespace: string; name: string; config: Partial<SyncCatalogStreamConfig> }>
+  ...expectedSyncModes: Array<{ namespace: string; name: string; config: Partial<AirbyteStreamConfiguration> }>
 ) => {
   replicationPage
-    .clickSaveButton({ interceptUpdateHandler: modifyAccountsTableInterceptHandler })
+    .saveChangesAndHandleResetModal({ interceptUpdateHandler: modifyAccountsTableInterceptHandler })
     .then((connection) => {
       expectedSyncModes.forEach((expected) => {
         const stream = connection.syncCatalog.streams.find(
-          ({ stream }) => stream.namespace === expected.namespace && stream.name === expected.name
+          ({ stream }) => stream?.namespace === expected.namespace && stream.name === expected.name
         );
 
         expect(stream).to.exist;
@@ -101,9 +94,9 @@ const USER_CARS_FIELD_DATA_TYPES = ["Integer", "Datetime", "Integer"];
 describe("Connection - sync modes", () => {
   const usersStreamRow = streamsTable.getRow("public", "users");
 
-  let source: Source;
-  let destination: Destination;
-  let connection: Connection;
+  let source: SourceRead;
+  let destination: DestinationRead;
+  let connection: WebBackendConnectionRead;
 
   before(() => {
     dropTables();
@@ -115,27 +108,12 @@ describe("Connection - sync modes", () => {
       createUserCarsTableQuery
     );
 
-    requestWorkspaceId().then(() => {
-      const sourceRequestBody = getPostgresCreateSourceBody(appendRandomString("Sync Mode Test Source"));
-      const destinationRequestBody = getPostgresCreateDestinationBody(appendRandomString("Sync Mode Test Destination"));
-
-      return requestCreateSource(sourceRequestBody).then((sourceResponse) => {
-        source = sourceResponse;
-        requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
-          destination = destinationResponse;
-        });
-
-        return requestSourceDiscoverSchema(source.sourceId).then(({ catalog, catalogId }) => {
-          const connectionRequestBody = getConnectionCreateRequest({
-            name: appendRandomString("Sync Mode Test connection"),
-            sourceId: source.sourceId,
-            destinationId: destination.destinationId,
-            syncCatalog: catalog,
-            sourceCatalogId: catalogId,
-          });
-          return requestCreateConnection(connectionRequestBody).then((connectionResponse) => {
-            connection = connectionResponse;
-          });
+    createPostgresSourceViaApi().then((pgSource) => {
+      source = pgSource;
+      createPostgresDestinationViaApi().then((pgDestination) => {
+        destination = pgDestination;
+        createNewConnectionViaApi(source, destination).then((connectionResponse) => {
+          connection = connectionResponse;
         });
       });
     });
@@ -143,13 +121,13 @@ describe("Connection - sync modes", () => {
 
   after(() => {
     if (connection) {
-      requestDeleteConnection(connection.connectionId);
+      requestDeleteConnection({ connectionId: connection.connectionId });
     }
     if (source) {
-      requestDeleteSource(source.sourceId);
+      requestDeleteSource({ sourceId: source.sourceId });
     }
     if (destination) {
-      requestDeleteDestination(destination.destinationId);
+      requestDeleteDestination({ destinationId: destination.destinationId });
     }
 
     dropTables();
@@ -161,7 +139,8 @@ describe("Connection - sync modes", () => {
 
   describe("Full refresh | Overwrite", () => {
     it("selects and saves", () => {
-      usersStreamRow.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Overwrite);
+      usersStreamRow.toggleStreamSync();
+      usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
 
       // Check cursor and primary key
       usersStreamRow.hasNoSourceDefinedCursor();
@@ -180,12 +159,13 @@ describe("Connection - sync modes", () => {
         namespace: "public",
         name: "users",
         config: {
-          syncMode: SourceSyncMode.FullRefresh,
-          destinationSyncMode: DestinationSyncMode.Overwrite,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.overwrite,
         },
       });
 
       // Confirm after save
+      usersStreamRow.hasSelectedSyncMode(SyncMode.full_refresh, DestinationSyncMode.overwrite);
       usersStreamRow.hasNoSourceDefinedCursor();
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
     });
@@ -193,7 +173,7 @@ describe("Connection - sync modes", () => {
 
   describe("Full refresh | Append", () => {
     it("selects and saves", () => {
-      usersStreamRow.selectSyncMode(SourceSyncMode.FullRefresh, DestinationSyncMode.Append);
+      usersStreamRow.selectSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
 
       // Verify primary key and cursor
       usersStreamRow.hasNoSourceDefinedCursor();
@@ -211,12 +191,13 @@ describe("Connection - sync modes", () => {
         namespace: "public",
         name: "users",
         config: {
-          syncMode: SourceSyncMode.FullRefresh,
-          destinationSyncMode: DestinationSyncMode.Append,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
         },
       });
 
       // Verify changes after save
+      usersStreamRow.hasSelectedSyncMode(SyncMode.full_refresh, DestinationSyncMode.append);
       usersStreamRow.hasNoSourceDefinedCursor();
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
     });
@@ -225,10 +206,11 @@ describe("Connection - sync modes", () => {
   describe("Incremental | Deduped + history", () => {
     it("selects and saves with source-defined primary keys", () => {
       const users2StreamRow = streamsTable.getRow("public", "users2");
-      const cursor = "updated_at";
-      const primaryKey = "id";
+      const cursor = "updated_at"; // todo: should we get this from syncCatalog.streams[??].config.defaultCursorField with sourceDefinedCursor === true? and/or
+      const primaryKey = "id"; // todo: should we get this from syncCatalog.streams[??].config.primaryKeys?
 
-      users2StreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      users2StreamRow.toggleStreamSync();
+      users2StreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Select cursor mode
       users2StreamRow.hasEmptyCursorSelect();
@@ -253,14 +235,15 @@ describe("Connection - sync modes", () => {
         namespace: "public",
         name: "users2",
         config: {
-          syncMode: SourceSyncMode.Incremental,
-          destinationSyncMode: DestinationSyncMode.AppendDedup,
+          syncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append_dedup,
           cursorField: [cursor],
           primaryKey: [[primaryKey]],
         },
       });
 
       // Verify changes after save
+      users2StreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
       users2StreamRow.hasSelectedCursorField(cursor);
       users2StreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
     });
@@ -270,7 +253,8 @@ describe("Connection - sync modes", () => {
       const cursor = "updated_at";
       const primaryKey = "id";
 
-      accountsStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      accountsStreamRow.toggleStreamSync();
+      accountsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Check cursor and primary key
       accountsStreamRow.hasSourceDefinedCursor(cursor);
@@ -292,14 +276,15 @@ describe("Connection - sync modes", () => {
         namespace: "public",
         name: "accounts",
         config: {
-          syncMode: SourceSyncMode.Incremental,
-          destinationSyncMode: DestinationSyncMode.AppendDedup,
+          syncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append_dedup,
           cursorField: ["updated_at"],
           primaryKey: [["id"]],
         },
       });
 
       // Verify after save
+      accountsStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
       accountsStreamRow.hasSourceDefinedCursor(cursor);
       accountsStreamRow.hasSourceDefinedPrimaryKeys(primaryKey);
     });
@@ -309,7 +294,8 @@ describe("Connection - sync modes", () => {
       const cursorValue = "created_at";
       const primaryKeyValue = ["car_id", "user_id"];
 
-      userCarsStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.AppendDedup);
+      userCarsStreamRow.toggleStreamSync();
+      userCarsStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
 
       // Check that cursor and primary key is required
       userCarsStreamRow.hasEmptyCursorSelect();
@@ -351,14 +337,15 @@ describe("Connection - sync modes", () => {
         namespace: "public",
         name: "user_cars",
         config: {
-          syncMode: SourceSyncMode.Incremental,
-          destinationSyncMode: DestinationSyncMode.AppendDedup,
+          syncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append_dedup,
           cursorField: [cursorValue],
           primaryKey: [primaryKeyValue],
         },
       });
 
       // Verify save
+      userCarsStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append_dedup);
       userCarsStreamRow.hasSelectedCursorField(cursorValue);
       userCarsStreamRow.hasSelectedPrimaryKeys(primaryKeyValue);
     });
@@ -368,7 +355,7 @@ describe("Connection - sync modes", () => {
     it("selects and saves", () => {
       const cursor = "updated_at";
 
-      usersStreamRow.selectSyncMode(SourceSyncMode.Incremental, DestinationSyncMode.Append);
+      usersStreamRow.selectSyncMode(SyncMode.incremental, DestinationSyncMode.append);
 
       // Cursor selection is required
       replicationPage.getSaveButton().should("be.disabled");
@@ -399,13 +386,14 @@ describe("Connection - sync modes", () => {
         namespace: "public",
         name: "users",
         config: {
-          syncMode: SourceSyncMode.Incremental,
-          destinationSyncMode: DestinationSyncMode.Append,
+          syncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append,
           cursorField: ["updated_at"],
         },
       });
 
       // Verify save
+      usersStreamRow.hasSelectedSyncMode(SyncMode.incremental, DestinationSyncMode.append);
       usersStreamRow.hasSelectedCursorField(cursor);
       usersStreamRow.hasNoSourceDefinedPrimaryKeys();
     });

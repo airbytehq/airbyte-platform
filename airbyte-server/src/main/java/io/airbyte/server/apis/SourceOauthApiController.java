@@ -11,6 +11,7 @@ import io.airbyte.api.generated.SourceOauthApi;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
 import io.airbyte.api.model.generated.OAuthConsentRead;
+import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest;
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody;
 import io.airbyte.api.model.generated.SourceOauthConsentRequest;
 import io.airbyte.commons.auth.SecuredWorkspace;
@@ -51,6 +52,17 @@ public class SourceOauthApiController implements SourceOauthApi {
   @Override
   public OAuthConsentRead getSourceOAuthConsent(@Body final SourceOauthConsentRequest sourceOauthConsentRequest) {
     return ApiHelper.execute(() -> oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest));
+  }
+
+  @Post("/revoke")
+  @Secured({EDITOR})
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Override
+  public void revokeSourceOAuthTokens(@Body final RevokeSourceOauthTokensRequest revokeSourceOauthTokensRequest) {
+    ApiHelper.execute(() -> {
+      oAuthHandler.revokeSourceOauthTokens(revokeSourceOauthTokensRequest);
+      return null;
+    });
   }
 
   @Post("/oauth_params/create")

@@ -5,6 +5,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useGetSourceFromParams } from "hooks/domain/connector/useGetSourceFromParams";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 import { useDeleteSource, useInvalidateSource, useUpdateSource } from "hooks/services/useSourceHook";
@@ -15,7 +16,6 @@ import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
 import styles from "./SourceSettingsPage.module.scss";
-import { useGetSourceFromParams } from "../SourceOverviewPage/useGetSourceFromParams";
 
 export const SourceSettingsPage: React.FC = () => {
   const source = useGetSourceFromParams();

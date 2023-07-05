@@ -28,10 +28,10 @@ export const cloudApiCall = async <T, U = unknown>(request: RequestOptions<U>, o
 };
 
 /**
- * Execute a call against the Cloud Public API (aka Airbyte API).
+ * Execute a call against the Airbyte API (previously known as Cloud Public API).
  */
-export const cloudPublicApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
-  if (!config.cloudPublicApiUrl) {
+export const cloudAirbyteApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
+  if (!isCloudApp() || !config.cloudPublicApiUrl) {
     throw new MissingConfigError(`Can't fetch ${request.url}, because cloudPublicApiUrl config isn't set.`);
   }
   return fetchApiCall<T>(request, options, config.cloudPublicApiUrl);

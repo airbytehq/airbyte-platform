@@ -1,6 +1,6 @@
 import { goToSourcePage, openNewSourcePage } from "pages/sourcePage";
 
-import { deleteEntity, openSettingForm, submitButtonClick, updateField } from "./common";
+import { deleteEntity, openConnectorPage, submitButtonClick, updateField } from "./common";
 import { fillDummyApiForm, fillPostgresForm, fillPokeAPIForm } from "./connector";
 
 export const createPostgresSource = (
@@ -55,7 +55,7 @@ export const updateSource = (name: string, field: string, value: string) => {
   cy.intercept("/api/v1/sources/update").as("updateSource");
 
   goToSourcePage();
-  openSettingForm(name);
+  openConnectorPage(name);
   updateField(field, value);
   submitButtonClick();
 
@@ -66,7 +66,7 @@ export const updateSource = (name: string, field: string, value: string) => {
 export const deleteSource = (name: string) => {
   cy.intercept("/api/v1/sources/delete").as("deleteSource");
   goToSourcePage();
-  openSettingForm(name);
+  openConnectorPage(name);
   deleteEntity();
   cy.wait("@deleteSource");
 };

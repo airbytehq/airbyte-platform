@@ -17,8 +17,6 @@ import io.airbyte.workers.temporal.sync.NormalizationActivity;
 import io.airbyte.workers.temporal.sync.NormalizationActivityImpl;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivity;
 import io.airbyte.workers.temporal.sync.NormalizationSummaryCheckActivityImpl;
-import io.airbyte.workers.temporal.sync.PersistStateActivity;
-import io.airbyte.workers.temporal.sync.PersistStateActivityImpl;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivity;
 import io.airbyte.workers.temporal.sync.RefreshSchemaActivityImpl;
 import io.airbyte.workers.temporal.sync.ReplicationActivity;
@@ -65,9 +63,6 @@ class DataPlaneActivityInitializationMicronautTest {
   NormalizationSummaryCheckActivity normalizationSummaryCheckActivity;
 
   @Inject
-  PersistStateActivity persistStateActivity;
-
-  @Inject
   RefreshSchemaActivity refreshSchemaActivity;
 
   @Inject
@@ -94,11 +89,6 @@ class DataPlaneActivityInitializationMicronautTest {
   @Test
   void testNormalizationSummaryCheckActivity() {
     assertEquals(NormalizationSummaryCheckActivityImpl.class, normalizationSummaryCheckActivity.getClass());
-  }
-
-  @Test
-  void testPersistStateActivity() {
-    assertEquals(PersistStateActivityImpl.class, persistStateActivity.getClass());
   }
 
   @Test

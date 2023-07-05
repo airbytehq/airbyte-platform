@@ -1,9 +1,5 @@
 @use "scss/variables";
 
-.connectorSelectControl {
-  margin-bottom: variables.$spacing-xl;
-}
-
 .loaderContainer {
   display: flex;
   justify-content: center;
@@ -14,4 +10,8 @@
 .loadingMessage {
   margin-top: variables.$spacing-md;
   margin-left: variables.$spacing-lg;
+}
+
+.header {
+  padding-bottom: variables.$spacing-lg;
 }

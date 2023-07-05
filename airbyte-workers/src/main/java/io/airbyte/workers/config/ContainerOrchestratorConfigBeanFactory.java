@@ -86,7 +86,8 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") final String containerOrchestratorDataPlaneCredsSecretMountPath,
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-name}") final String containerOrchestratorDataPlaneCredsSecretName,
                                                                            @Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode,
-                                                                           @Value("${datadog.orchestrator.disabled.integrations}") final String disabledIntegrations) {
+                                                                           @Value("${datadog.orchestrator.disabled.integrations}") final String disabledIntegrations,
+                                                                           @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount) {
     final var kubernetesClient = new DefaultKubernetesClient();
 
     final DocumentStoreClient documentStoreClient = StateClients.create(
@@ -157,7 +158,8 @@ public class ContainerOrchestratorConfigBeanFactory {
         StringUtils.isNotEmpty(containerOrchestratorImage) ? containerOrchestratorImage : "airbyte/container-orchestrator:" + airbyteVersion,
         containerOrchestratorImagePullPolicy,
         googleApplicationCredentials,
-        workerEnvironment);
+        workerEnvironment,
+        serviceAccount);
   }
 
 }

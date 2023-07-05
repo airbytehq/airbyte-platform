@@ -1,8 +1,8 @@
 import { faPlus, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useField } from "formik";
 import { useMemo, useState } from "react";
 import React from "react";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -18,23 +18,16 @@ import { InputForm, newInputInEditing } from "./InputsForm";
 import { useInferredInputs } from "../useInferredInputs";
 
 export const BuilderFieldWithInputs: React.FC<BuilderFieldProps> = (props) => {
-  const [field, , helpers] = useField(props.path);
-
   return (
-    <BuilderField
-      {...props}
-      adornment={<UserInputHelper setValue={helpers.setValue} currentValue={field.value} />}
-      className={styles.inputWithHelper}
-    />
+    <BuilderField {...props} adornment={<UserInputHelper path={props.path} />} className={styles.inputWithHelper} />
   );
 };
 
 interface UserInputHelperProps {
-  setValue: (value: string) => void;
-  currentValue: string;
+  path: string;
 }
 
-export const UserInputHelper = (props: UserInputHelperProps) => {
+const UserInputHelper = (props: UserInputHelperProps) => {
   const { builderFormValues } = useConnectorBuilderFormState();
   const inferredInputs = useInferredInputs();
   const listOptions = useMemo(() => {
@@ -50,11 +43,8 @@ export const UserInputHelper = (props: UserInputHelperProps) => {
 };
 
 const InnerUserInputHelper = React.memo(
-  ({
-    setValue,
-    currentValue,
-    listOptions,
-  }: UserInputHelperProps & { listOptions: Array<Option<string | undefined>> }) => {
+  ({ path, listOptions }: UserInputHelperProps & { listOptions: Array<Option<string | undefined>> }) => {
+    const { setValue, getValues } = useFormContext();
     const [modalOpen, setModalOpen] = useState(false);
     return (
       <>
@@ -67,10 +57,16 @@ const InnerUserInputHelper = React.memo(
           selectedValue={undefined}
           onSelect={(selectedValue) => {
             if (selectedValue) {
-              setValue(`${currentValue || ""}{{ config['${selectedValue}'] }}`);
+              setValue(path, `${getValues(path) || ""}{{ config['${selectedValue}'] }}`, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              });
             }
           }}
           options={listOptions}
+          adaptiveWidth={false}
+          placement="bottom-end"
           footerOption={
             <button
               type="button"
@@ -101,7 +97,11 @@ const InnerUserInputHelper = React.memo(
               if (!newInput) {
                 return;
               }
-              setValue(`${currentValue || ""}{{ config['${newInput.key}'] }}`);
+              setValue(path, `${getValues(path) || ""}{{ config['${newInput.key}'] }}`, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              });
             }}
           />
         )}

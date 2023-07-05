@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -23,12 +22,12 @@ public class MicrosoftTeamsOAuthFlow extends BaseOAuth2Flow {
 
   private static final String fieldName = "tenant_id";
 
-  public MicrosoftTeamsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public MicrosoftTeamsOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  public MicrosoftTeamsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier, TokenRequestContentType.JSON);
+  public MicrosoftTeamsOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier, TokenRequestContentType.JSON);
   }
 
   /**
@@ -114,7 +113,8 @@ public class MicrosoftTeamsOAuthFlow extends BaseOAuth2Flow {
   public Map<String, Object> completeSourceOAuth(final UUID workspaceId,
                                                  final UUID sourceDefinitionId,
                                                  final Map<String, Object> queryParams,
-                                                 final String redirectUrl)
+                                                 final String redirectUrl,
+                                                 JsonNode oauthParamConfig)
       throws IOException {
     throw new IOException("Using the deprecated OAuth methods is not supported. This OAuth flow depends on values defined in connector configs");
   }
@@ -124,7 +124,8 @@ public class MicrosoftTeamsOAuthFlow extends BaseOAuth2Flow {
   public Map<String, Object> completeDestinationOAuth(final UUID workspaceId,
                                                       final UUID destinationDefinitionId,
                                                       final Map<String, Object> queryParams,
-                                                      final String redirectUrl)
+                                                      final String redirectUrl,
+                                                      JsonNode oauthParamConfig)
       throws IOException {
     throw new IOException("Using the deprecated OAuth methods is not supported. This OAuth flow depends on values defined in connector configs");
   }

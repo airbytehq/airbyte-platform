@@ -37,27 +37,20 @@ public class MoreOAuthParameters {
    * @param stream oauth param stream
    * @param workspaceId workspace id
    * @param sourceDefinitionId source definition id
-   * @param throwIfOverridePresent Throw if we find an override oauth param?
    * @return oauth params
    */
   public static Optional<SourceOAuthParameter> getSourceOAuthParameter(final Stream<SourceOAuthParameter> stream,
                                                                        final UUID workspaceId,
-                                                                       final UUID sourceDefinitionId,
-                                                                       final boolean throwIfOverridePresent)
+                                                                       final UUID sourceDefinitionId)
       throws ConfigNotFoundException {
 
-    Optional<SourceOAuthParameter> sourceOAuthParameter = stream
+    final Optional<SourceOAuthParameter> sourceOAuthParameter = stream
         .filter(p -> sourceDefinitionId.equals(p.getSourceDefinitionId()))
         .filter(p -> p.getWorkspaceId() == null || workspaceId.equals(p.getWorkspaceId()))
         // we prefer params specific to a workspace before global ones (ie workspace is null)
         .min(Comparator.comparing(SourceOAuthParameter::getWorkspaceId, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(SourceOAuthParameter::getOauthParameterId));
 
-    if (throwIfOverridePresent) {
-      if (sourceOAuthParameter.filter(param -> param.getWorkspaceId() != null).isPresent()) {
-        throw new ConfigNotFoundException("OAuthParamOverride", String.format("[%s] [%s]", workspaceId, sourceDefinitionId));
-      }
-    }
     return sourceOAuthParameter;
   }
 
@@ -68,27 +61,20 @@ public class MoreOAuthParameters {
    * @param stream oauth param stream
    * @param workspaceId workspace id
    * @param destinationDefinitionId destination definition id
-   * @param throwIfOverridePresent Throw if we find an override oauth param?
    * @return oauth params
    */
   public static Optional<DestinationOAuthParameter> getDestinationOAuthParameter(
                                                                                  final Stream<DestinationOAuthParameter> stream,
                                                                                  final UUID workspaceId,
-                                                                                 final UUID destinationDefinitionId,
-                                                                                 boolean throwIfOverridePresent)
+                                                                                 final UUID destinationDefinitionId)
       throws ConfigNotFoundException {
-    Optional<DestinationOAuthParameter> destinationOAuthParameter = stream
+    final Optional<DestinationOAuthParameter> destinationOAuthParameter = stream
         .filter(p -> destinationDefinitionId.equals(p.getDestinationDefinitionId()))
         .filter(p -> p.getWorkspaceId() == null || workspaceId.equals(p.getWorkspaceId()))
         // we prefer params specific to a workspace before global ones (ie workspace is null)
         .min(Comparator.comparing(DestinationOAuthParameter::getWorkspaceId, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(DestinationOAuthParameter::getOauthParameterId));
 
-    if (throwIfOverridePresent) {
-      if (destinationOAuthParameter.filter(param -> param.getWorkspaceId() != null).isPresent()) {
-        throw new ConfigNotFoundException("OAuthParamOverride", String.format("[%s] [%s]", workspaceId, destinationDefinitionId));
-      }
-    }
     return destinationOAuthParameter;
   }
 
@@ -109,7 +95,7 @@ public class MoreOAuthParameters {
   private static ObjectNode flattenOAuthConfig(final ObjectNode flatConfig, final ObjectNode configToFlatten) {
     final List<String> keysToFlatten = new ArrayList<>();
     for (final String key : Jsons.keys(configToFlatten)) {
-      JsonNode currentNodeValue = configToFlatten.get(key);
+      final JsonNode currentNodeValue = configToFlatten.get(key);
       if (isSecretNode(currentNodeValue) && !flatConfig.has(key)) {
         // _secret keys are objects but we want to preserve them.
         flatConfig.set(key, currentNodeValue);
@@ -126,8 +112,8 @@ public class MoreOAuthParameters {
     return flatConfig;
   }
 
-  private static boolean isSecretNode(JsonNode node) {
-    JsonNode secretNode = node.get("_secret");
+  private static boolean isSecretNode(final JsonNode node) {
+    final JsonNode secretNode = node.get("_secret");
     return secretNode != null;
   }
 
@@ -140,7 +126,8 @@ public class MoreOAuthParameters {
    */
   public static JsonNode mergeJsons(final ObjectNode mainConfig, final ObjectNode fromConfig) {
     for (final String key : Jsons.keys(fromConfig)) {
-      if (fromConfig.get(key).getNodeType() == OBJECT) {
+      // keys with _secret Jsons are objects but we still want to merge those
+      if (fromConfig.get(key).getNodeType() == OBJECT && !isSecretNode(fromConfig.get(key))) {
         // nested objects are merged rather than overwrite the contents of the equivalent object in config
         if (mainConfig.get(key) == null) {
           mergeJsons(mainConfig.putObject(key), (ObjectNode) fromConfig.get(key));

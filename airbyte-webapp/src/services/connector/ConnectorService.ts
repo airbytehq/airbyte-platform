@@ -2,7 +2,7 @@ import { useConfig } from "config";
 import { webBackendCheckUpdates, WebBackendCheckUpdatesRead } from "core/request/AirbyteClient";
 import { AirbyteRequestService } from "core/request/AirbyteRequestService";
 import { RequestMiddleware } from "core/request/RequestMiddleware";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useDefaultRequestMiddlewares } from "services/useDefaultRequestMiddlewares";
 import { useInitService } from "services/useInitService";
 

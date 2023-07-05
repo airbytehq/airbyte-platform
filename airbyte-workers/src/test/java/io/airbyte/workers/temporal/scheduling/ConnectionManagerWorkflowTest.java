@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.temporal.TemporalJobType;
+import io.airbyte.commons.temporal.scheduling.CheckConnectionWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
@@ -27,6 +28,7 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardCheckConnectionOutput.Status;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.featureflag.CheckConnectionUseApiEnabled;
+import io.airbyte.featureflag.CheckConnectionUseChildWorkflowEnabled;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.workers.WorkerConstants;
@@ -54,6 +56,11 @@ import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueAct
 import io.airbyte.workers.temporal.scheduling.activities.RouteToSyncTaskQueueActivity.RouteToSyncTaskQueueOutput;
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
+import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionDestinationSystemErrorWorkflow;
+import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionFailedWorkflow;
+import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionSourceSuccessOnlyWorkflow;
+import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionSuccessWorkflow;
+import io.airbyte.workers.temporal.scheduling.testcheckworkflow.CheckConnectionSystemErrorWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.DbtFailureSyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.EmptySyncWorkflow;
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.NormalizationFailureSyncWorkflow;
@@ -137,6 +144,7 @@ class ConnectionManagerWorkflowTest {
   private static final FeatureFlagFetchActivity mFeatureFlagFetchActivity =
       mock(FeatureFlagFetchActivity.class, Mockito.withSettings().withoutAnnotations());
   private static final String EVENT = "event = ";
+  private static final String FAILED_CHECK_MESSAGE = "nope";
 
   private TestWorkflowEnvironment testEnv;
   private WorkflowClient client;
@@ -207,13 +215,16 @@ class ConnectionManagerWorkflowTest {
     when(mWorkflowConfigActivity.getWorkflowRestartDelaySeconds())
         .thenReturn(WORKFLOW_FAILURE_RESTART_DELAY);
 
-    // TODO: for now, always route to default 'SYNC' task queue. Add test for routing
-    // to a different task queue
     when(mRouteToSyncTaskQueueActivity.route(Mockito.any()))
         .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
+    when(mRouteToSyncTaskQueueActivity.routeToSync(Mockito.any()))
+        .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.SYNC.name()));
+    when(mRouteToSyncTaskQueueActivity.routeToCheckConnection(Mockito.any()))
+        .thenReturn(new RouteToSyncTaskQueueOutput(TemporalJobType.CHECK_CONNECTION.name()));
 
     when(mFeatureFlagFetchActivity.getFeatureFlags(Mockito.any()))
-        .thenReturn(new FeatureFlagFetchOutput(Map.of(CheckConnectionUseApiEnabled.INSTANCE.getKey(), true)));
+        .thenReturn(new FeatureFlagFetchOutput(Map.of(CheckConnectionUseApiEnabled.INSTANCE.getKey(), false,
+            CheckConnectionUseChildWorkflowEnabled.INSTANCE.getKey(), true)));
 
     activityOptions = ActivityOptions.newBuilder()
         .setHeartbeatTimeout(Duration.ofSeconds(30))
@@ -279,7 +290,7 @@ class ConnectionManagerWorkflowTest {
 
     @BeforeEach
     void setup() {
-      setupSpecificChildWorkflow(EmptySyncWorkflow.class);
+      setupSpecificChildWorkflow(EmptySyncWorkflow.class, CheckConnectionSuccessWorkflow.class);
     }
 
     @Test
@@ -591,7 +602,7 @@ class ConnectionManagerWorkflowTest {
 
     @BeforeEach
     void setup() {
-      setupSpecificChildWorkflow(SleepingSyncWorkflow.class);
+      setupSpecificChildWorkflow(SleepingSyncWorkflow.class, CheckConnectionSuccessWorkflow.class);
     }
 
     @Test
@@ -945,6 +956,9 @@ class ConnectionManagerWorkflowTest {
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(SourceAndDestinationFailureSyncWorkflow.class);
 
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
+
       testEnv.start();
 
       final UUID testId = UUID.randomUUID();
@@ -982,7 +996,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(EmptySyncWorkflow.class);
-
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
       testEnv.start();
 
       final UUID testId = UUID.randomUUID();
@@ -1047,8 +1062,52 @@ class ConnectionManagerWorkflowTest {
           .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
       when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource((Mockito.any())))
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("nope")));
+              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage(FAILED_CHECK_MESSAGE)));
 
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionFailedWorkflow.class);
+
+      testEnv.start();
+
+      final UUID testId = UUID.randomUUID();
+      final TestStateListener testStateListener = new TestStateListener();
+      final WorkflowState workflowState = new WorkflowState(testId, testStateListener);
+      final ConnectionUpdaterInput input = ConnectionUpdaterInput.builder()
+          .connectionId(UUID.randomUUID())
+          .jobId(JOB_ID)
+          .attemptId(ATTEMPT_ID)
+          .fromFailure(false)
+          .attemptNumber(1)
+          .workflowState(workflowState)
+          .build();
+
+      startWorkflowAndWaitUntilReady(workflow, input);
+
+      // wait for workflow to initialize
+      testEnv.sleep(Duration.ofMinutes(1));
+
+      workflow.submitManualSync();
+      Thread.sleep(500); // any time after no-waiting manual run
+
+      Mockito.verify(mJobCreationAndStatusUpdateActivity)
+          .attemptFailureWithAttemptNumber(Mockito.argThat(new HasFailureFromOriginWithType(FailureOrigin.SOURCE, FailureType.CONFIG_ERROR)));
+    }
+
+    @Test
+    @Timeout(value = 10,
+             unit = TimeUnit.SECONDS)
+    @DisplayName("Test that Source CHECK failures are recorded when running in child workflow")
+    void testSourceCheckInChildWorkflowFailuresRecorded() throws InterruptedException {
+      returnTrueForLastJobOrAttemptFailure();
+      when(mJobCreationAndStatusUpdateActivity.createNewJob(Mockito.any()))
+          .thenReturn(new JobCreationOutput(JOB_ID));
+      when(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(Mockito.any()))
+          .thenReturn(new AttemptNumberCreationOutput(ATTEMPT_ID));
+      when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource((Mockito.any())))
+          .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
+              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage(FAILED_CHECK_MESSAGE)));
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionFailedWorkflow.class);
       testEnv.start();
 
       final UUID testId = UUID.randomUUID();
@@ -1088,7 +1147,8 @@ class ConnectionManagerWorkflowTest {
       when(mSubmitCheckConnectionActivity.submitCheckConnectionToSource((Mockito.any())))
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withFailureReason(new FailureReason().withFailureType(FailureType.SYSTEM_ERROR)));
-
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSystemErrorWorkflow.class);
       testEnv.start();
 
       final UUID testId = UUID.randomUUID();
@@ -1132,7 +1192,9 @@ class ConnectionManagerWorkflowTest {
       when(mSubmitCheckConnectionActivity.submitCheckConnectionToDestination(Mockito.any()))
           // Second call (destination) fails
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("nope")));
+              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage(FAILED_CHECK_MESSAGE)));
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSourceSuccessOnlyWorkflow.class);
 
       testEnv.start();
 
@@ -1178,6 +1240,8 @@ class ConnectionManagerWorkflowTest {
           // Second call (destination) fails
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
               .withFailureReason(new FailureReason().withFailureType(FailureType.SYSTEM_ERROR)));
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionDestinationSystemErrorWorkflow.class);
 
       testEnv.start();
 
@@ -1233,7 +1297,9 @@ class ConnectionManagerWorkflowTest {
       when(mSubmitCheckConnectionActivity.submitCheckConnectionToDestination(Mockito.any()))
           // only call destination because because source check is skipped
           .thenReturn(new ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage("nope")));
+              .withCheckConnection(new StandardCheckConnectionOutput().withStatus(Status.FAILED).withMessage(FAILED_CHECK_MESSAGE)));
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionFailedWorkflow.class);
 
       testEnv.start();
 
@@ -1269,6 +1335,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(SourceAndDestinationFailureSyncWorkflow.class);
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
 
       testEnv.start();
 
@@ -1306,6 +1374,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(NormalizationFailureSyncWorkflow.class);
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
 
       testEnv.start();
 
@@ -1341,6 +1411,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(NormalizationTraceFailureSyncWorkflow.class);
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
 
       testEnv.start();
 
@@ -1376,6 +1448,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(DbtFailureSyncWorkflow.class);
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
 
       testEnv.start();
 
@@ -1411,6 +1485,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(PersistFailureSyncWorkflow.class);
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
 
       testEnv.start();
 
@@ -1446,6 +1522,8 @@ class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure();
       final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
       syncWorker.registerWorkflowImplementationTypes(ReplicateFailureSyncWorkflow.class);
+      final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+      checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow.class);
 
       testEnv.start();
 
@@ -1524,7 +1602,7 @@ class ConnectionManagerWorkflowTest {
 
     @BeforeEach
     void setup() {
-      setupSpecificChildWorkflow(SleepingSyncWorkflow.class);
+      setupSpecificChildWorkflow(SleepingSyncWorkflow.class, CheckConnectionSuccessWorkflow.class);
     }
 
     static Stream<Arguments> getSetupFailingActivity() {
@@ -1614,11 +1692,15 @@ class ConnectionManagerWorkflowTest {
     }
   }
 
-  private <T extends SyncWorkflow> void setupSpecificChildWorkflow(final Class<T> mockedSyncedWorkflow) {
+  private <T1 extends SyncWorkflow, T2 extends CheckConnectionWorkflow> void setupSpecificChildWorkflow(final Class<T1> mockedSyncedWorkflow,
+                                                                                                        final Class<T2> mockedCheckWorkflow) {
     testEnv = TestWorkflowEnvironment.newInstance();
 
     final Worker syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name());
     syncWorker.registerWorkflowImplementationTypes(mockedSyncedWorkflow);
+
+    final Worker checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name());
+    checkWorker.registerWorkflowImplementationTypes(mockedCheckWorkflow);
 
     final Worker managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name());
     managerWorker.registerWorkflowImplementationTypes(temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl.class));

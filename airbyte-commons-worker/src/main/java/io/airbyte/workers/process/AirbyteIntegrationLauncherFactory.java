@@ -12,13 +12,11 @@ import io.airbyte.commons.protocol.VersionedProtocolSerializer;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
-import io.airbyte.workers.WorkerConstants;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.DefaultAirbyteDestination;
 import io.airbyte.workers.internal.DefaultAirbyteSource;
-import io.airbyte.workers.internal.EmptyAirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
@@ -88,14 +86,11 @@ public class AirbyteIntegrationLauncherFactory {
                                            final HeartbeatMonitor heartbeatMonitor) {
     final IntegrationLauncher sourceLauncher = createIntegrationLauncher(sourceLauncherConfig, resourceRequirements);
 
-    // reset jobs use an empty source to induce resetting all data in destination.
-    return isResetJob(sourceLauncherConfig.getDockerImage())
-        ? new EmptyAirbyteSource(featureFlags.useStreamCapableState())
-        : new DefaultAirbyteSource(sourceLauncher,
-            getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
-            heartbeatMonitor,
-            getProtocolSerializer(sourceLauncherConfig),
-            featureFlags);
+    return new DefaultAirbyteSource(sourceLauncher,
+        getStreamFactory(sourceLauncherConfig, configuredAirbyteCatalog, SourceException.class, DefaultAirbyteSource.CONTAINER_LOG_MDC_BUILDER),
+        heartbeatMonitor,
+        getProtocolSerializer(sourceLauncherConfig),
+        featureFlags);
   }
 
   /**
@@ -128,10 +123,6 @@ public class AirbyteIntegrationLauncherFactory {
                                                 final MdcScope.Builder mdcScopeBuilder) {
     return new VersionedAirbyteStreamFactory<>(serDeProvider, migratorFactory, launcherConfig.getProtocolVersion(),
         Optional.of(configuredAirbyteCatalog), mdcScopeBuilder, Optional.of(exceptionClass));
-  }
-
-  private boolean isResetJob(final String dockerImage) {
-    return WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB.equalsIgnoreCase(dockerImage);
   }
 
 }

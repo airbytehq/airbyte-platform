@@ -8,14 +8,14 @@ export const links = {
   dbtCommandsReference: "https://docs.getdbt.com/reference/dbt-commands",
   dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
-  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting/on-deploying`,
+  technicalSupport: `${BASE_DOCS_LINK}/troubleshooting`,
   termsLink: "https://airbyte.com/terms",
   privacyLink: "https://airbyte.com/privacy-policy",
   helpLink: "https://airbyte.com/community",
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
   productReleaseStages: `${BASE_DOCS_LINK}/project-overview/product-release-stages`,
   slackLink: "https://slack.airbyte.com",
-  supportTicketLink: "https://airbyte.com/contact-support",
+  supportPortal: "https://support.airbyte.com",
   docsLink: BASE_DOCS_LINK,
   configurationArchiveLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte/`,
   normalizationLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections#airbyte-basic-normalization`,
@@ -47,8 +47,11 @@ export const links = {
   connectorBuilderErrorHandler: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/error-handling`,
   connectorBuilderPartitioning: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/partitioning`,
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
+  connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
+  interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: "https://airbyte.com/pricing#what-is-a-credit",
+  usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
 } as const;
 
 export type OutboundLinks = typeof links;

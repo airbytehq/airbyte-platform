@@ -159,7 +159,7 @@ containerSecurityContext: {}
 ##
 livenessProbe:
   enabled: true
-  initialDelaySeconds: 30
+  initialDelaySeconds: 50
   periodSeconds: 10
   timeoutSeconds: 1
   failureThreshold: 3
@@ -389,3 +389,7 @@ env_vars: {}
 extraSelectorLabels: {}
 ## extraLabels [object] - use to specify own additional labels for deployment
 extraLabels: {}
+
+debug:
+  enabled: false
+  remoteDebugPort: 5005

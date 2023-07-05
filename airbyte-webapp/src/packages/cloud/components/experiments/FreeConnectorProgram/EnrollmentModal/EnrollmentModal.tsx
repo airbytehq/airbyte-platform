@@ -8,6 +8,7 @@ import { Message } from "components/ui/Message";
 import { ModalFooter } from "components/ui/Modal/ModalFooter";
 import { Text } from "components/ui/Text";
 
+import { STRIPE_SUCCESS_QUERY } from "core/api/cloud";
 import { StripeCheckoutSessionCreate, StripeCheckoutSessionRead } from "core/api/types/CloudApi";
 
 import { ReactComponent as CardSVG } from "./cards.svg";
@@ -16,7 +17,6 @@ import styles from "./EnrollmentModal.module.scss";
 import { ReactComponent as FreeAlphaBetaPillsSVG } from "./free-alpha-beta-pills.svg";
 import { ReactComponent as FreeSVG } from "./free.svg";
 import { ReactComponent as MailSVG } from "./mail.svg";
-import { STRIPE_SUCCESS_QUERY } from "../hooks/useFreeConnectorProgram";
 
 interface EnrollmentModalContentProps {
   closeModal: () => void;

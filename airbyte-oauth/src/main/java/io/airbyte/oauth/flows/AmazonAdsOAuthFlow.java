@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -24,12 +23,12 @@ public class AmazonAdsOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTHORIZE_URL = "https://www.amazon.com/ap/oa";
   private static final String ACCESS_TOKEN_URL = "https://api.amazon.com/auth/o2/token";
 
-  public AmazonAdsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public AmazonAdsOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  public AmazonAdsOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public AmazonAdsOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   /**

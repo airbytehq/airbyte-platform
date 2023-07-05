@@ -30,8 +30,6 @@ import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Geography;
 import io.airbyte.config.SourceConnection;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
@@ -77,14 +75,6 @@ class SecretsRepositoryWriterTest {
   private static final DestinationConnection DESTINATION_WITH_FULL_CONFIG = new DestinationConnection()
       .withDestinationId(UUID1)
       .withConfiguration(FULL_CONFIG);
-
-  private static final StandardSourceDefinition SOURCE_DEF = new StandardSourceDefinition()
-      .withSourceDefinitionId(SOURCE_WITH_FULL_CONFIG.getSourceDefinitionId())
-      .withSpec(SPEC);
-
-  private static final StandardDestinationDefinition DEST_DEF = new StandardDestinationDefinition()
-      .withDestinationDefinitionId(DESTINATION_WITH_FULL_CONFIG.getDestinationDefinitionId())
-      .withSpec(SPEC);
 
   private static final String PASSWORD_PROPERTY_NAME = "password";
   private static final String PASSWORD_FIELD_NAME = "_secret";

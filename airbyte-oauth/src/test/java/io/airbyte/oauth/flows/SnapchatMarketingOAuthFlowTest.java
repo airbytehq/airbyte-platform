@@ -12,7 +12,7 @@ public class SnapchatMarketingOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new SnapchatMarketingOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new SnapchatMarketingOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

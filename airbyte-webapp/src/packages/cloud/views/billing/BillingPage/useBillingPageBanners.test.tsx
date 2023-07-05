@@ -1,11 +1,10 @@
 import { renderHook } from "@testing-library/react-hooks";
 import { TestWrapper } from "test-utils";
 
+import { useCurrentWorkspace } from "core/api";
+import { useFreeConnectorProgram, useGetCloudWorkspace } from "core/api/cloud";
+import { CloudWorkspaceReadWorkspaceTrialStatus as WorkspaceTrialStatus } from "core/api/types/CloudApi";
 import { useExperiment } from "hooks/services/Experiment";
-import { useFreeConnectorProgram } from "packages/cloud/components/experiments/FreeConnectorProgram";
-import { WorkspaceTrialStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { useBillingPageBanners } from "./useBillingPageBanners";
 
@@ -17,10 +16,10 @@ const mockUseFreeConnectorProgram = useFreeConnectorProgram as unknown as jest.M
   Partial<typeof useFreeConnectorProgram>
 >;
 
-jest.mock("services/workspaces/WorkspacesService");
+jest.mock("core/api");
 const mockGetCurrentWorkspace = useCurrentWorkspace as unknown as jest.Mock<Partial<typeof useCurrentWorkspace>>;
 
-jest.mock("packages/cloud/services/workspaces/CloudWorkspacesService");
+jest.mock("core/api/cloud");
 const mockUseGetCloudWorkspace = useGetCloudWorkspace as unknown as jest.Mock<Partial<typeof useGetCloudWorkspace>>;
 
 const mockHooks = (
@@ -43,9 +42,10 @@ const mockHooks = (
 
   mockUseFreeConnectorProgram.mockImplementation(() => {
     return {
-      connectionStatusQuery: { data: { hasEligibleConnections, hasNonEligibleConnections } },
       userDidEnroll: false,
-      enrollmentStatusQuery: { data: { isEnrolled, showEnrollmentUi: true } },
+      programStatusQuery: {
+        data: { isEnrolled, showEnrollmentUi: true, hasEligibleConnections, hasNonEligibleConnections },
+      },
     };
   });
 };
@@ -66,7 +66,7 @@ describe("useBillingPageBanners", () => {
     });
     describe("enrolled in FCP", () => {
       it("should show an info variant banner and no FCP materials", () => {
-        mockHooks(WorkspaceTrialStatus.PRE_TRIAL, 0, false, false, true);
+        mockHooks(WorkspaceTrialStatus.pre_trial, 0, false, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
@@ -75,7 +75,7 @@ describe("useBillingPageBanners", () => {
     });
     describe("not enrolled in FCP", () => {
       it("should show FCP enrollment materials + an info variant banner", () => {
-        mockHooks(WorkspaceTrialStatus.PRE_TRIAL, 0, false, false, false);
+        mockHooks(WorkspaceTrialStatus.pre_trial, 0, false, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
@@ -86,14 +86,14 @@ describe("useBillingPageBanners", () => {
   describe("out of trial with 0 connections enabled", () => {
     describe("enrolled in FCP", () => {
       it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, false, false, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, false, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show warning banners + no FCP enrollment materials if < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 5, false, false, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 5, false, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("warning");
@@ -101,7 +101,7 @@ describe("useBillingPageBanners", () => {
       });
 
       it("should show error banners + no FCP enrollment materials if 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, false, false, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, false, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
@@ -110,14 +110,14 @@ describe("useBillingPageBanners", () => {
     });
     describe("not enrolled in FCP", () => {
       it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, false, false, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, false, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show warning banners + no FCP enrollment materials if < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 5, false, false, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 5, false, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("warning");
@@ -125,7 +125,7 @@ describe("useBillingPageBanners", () => {
       });
 
       it("should show error banners + no FCP enrollment materials if 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, false, false, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, false, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
@@ -137,21 +137,21 @@ describe("useBillingPageBanners", () => {
   describe("out of trial with only eligible connections enabled", () => {
     describe("enrolled in FCP", () => {
       it("should show  info variant banner + no FCP banner if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, true, false, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, true, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
-      it("should show  info variant banner + no FCP banner if < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 10, true, false, true);
+      it("should show error variant banner + no FCP banner if < 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 10, true, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
-      it("should show info variant banner + no FCP banner if user is in 0 credits state", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, true, false, true);
+      it("should show error variant banner + no FCP banner if user is in 0 credits state", () => {
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, true, false, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
@@ -160,21 +160,21 @@ describe("useBillingPageBanners", () => {
     });
     describe("not enrolled in FCP", () => {
       it("should show FCP banner + info variant banner if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, true, false, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, true, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(true);
       });
-      it("should show FCP banner + info variant banner if user has < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 10, true, false, false);
+      it("should show FCP banner + warning variant banner if user has < 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 10, true, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(true);
       });
       it("should show FCP banner + error variant banner if user has 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, true, false, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, true, false, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
@@ -186,21 +186,21 @@ describe("useBillingPageBanners", () => {
   describe("out of trial with only non-eligible connections enabled", () => {
     describe("enrolled in FCP", () => {
       it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, false, true, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, false, true, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show warning banner + no FCP enrollment materials if < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 10, false, true, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 10, false, true, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("warning");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show error banner + no FCP enrollment materials if 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, false, true, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, false, true, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
@@ -209,21 +209,21 @@ describe("useBillingPageBanners", () => {
     });
     describe("not enrolled in FCP", () => {
       it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, false, true, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, false, true, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show warning banner + no FCP enrollment materials if < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 10, false, true, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 10, false, true, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("warning");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show error banner + no FCP enrollment materials if 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, false, true, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, false, true, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
@@ -234,21 +234,21 @@ describe("useBillingPageBanners", () => {
   describe("out of trial with eligible and non-eligible connections enabled", () => {
     describe("enrolled in FCP", () => {
       it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, true, true, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, true, true, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show warning banner + no FCP enrollment materials if < 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 10, true, true, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 10, true, true, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("warning");
         expect(result.current.showFCPBanner).toEqual(false);
       });
       it("should show error banner + no FCP enrollment materials if 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, true, true, true);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, true, true, true);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
@@ -257,25 +257,121 @@ describe("useBillingPageBanners", () => {
     });
     describe("not enrolled in FCP", () => {
       it("should show info banner + FCP enrollment materials if more than 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 100, true, true, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 100, true, true, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("info");
         expect(result.current.showFCPBanner).toEqual(true);
       });
       it("should show warning banner + FCP enrollment materials if fewer than 20 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 10, true, true, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 10, true, true, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("warning");
         expect(result.current.showFCPBanner).toEqual(true);
       });
       it("should show error banner + FCP enrollment materials if 0 credits", () => {
-        mockHooks(WorkspaceTrialStatus.OUT_OF_TRIAL, 0, true, true, false);
+        mockHooks(WorkspaceTrialStatus.out_of_trial, 0, true, true, false);
 
         const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
         expect(result.current.bannerVariant).toEqual("error");
         expect(result.current.showFCPBanner).toEqual(true);
+      });
+    });
+  });
+  describe("credit purchased with only eligible connections enabled", () => {
+    describe("enrolled in FCP", () => {
+      it("should show  info variant banner + no FCP banner if > 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 100, true, false, true);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+      it("should show  info variant banner + no FCP banner if < 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 10, true, false, true);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+      it("should show info variant banner + no FCP banner if user is in 0 credits state", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 0, true, false, true);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+    });
+    describe("not enrolled in FCP", () => {
+      it("should show FCP banner + info variant banner if > 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 100, true, false, false);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(true);
+      });
+      it("should show FCP banner + info variant banner if user has < 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 10, true, false, false);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(true);
+      });
+      it("should show FCP banner + error variant banner if user has 0 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 0, true, false, false);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("error");
+        expect(result.current.showFCPBanner).toEqual(true);
+      });
+    });
+  });
+  describe("credit purchased with only non-eligible connections enabled", () => {
+    describe("enrolled in FCP", () => {
+      it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 100, false, true, true);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+      it("should show warning banner + no FCP enrollment materials if < 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 10, false, true, true);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("warning");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+      it("should show error banner + no FCP enrollment materials if 0 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 0, false, true, true);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("error");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+    });
+    describe("not enrolled in FCP", () => {
+      it("should show info banner + no FCP enrollment materials if > 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 100, false, true, false);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("info");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+      it("should show warning banner + no FCP enrollment materials if < 20 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 10, false, true, false);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("warning");
+        expect(result.current.showFCPBanner).toEqual(false);
+      });
+      it("should show error banner + no FCP enrollment materials if 0 credits", () => {
+        mockHooks(WorkspaceTrialStatus.credit_purchased, 0, false, true, false);
+
+        const { result } = renderHook(() => useBillingPageBanners(), { wrapper: TestWrapper });
+        expect(result.current.bannerVariant).toEqual("error");
+        expect(result.current.showFCPBanner).toEqual(false);
       });
     });
   });

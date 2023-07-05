@@ -1,4 +1,4 @@
-import { QueryFunction, QueryKey, useQuery, UseQueryOptions } from "react-query";
+import { QueryFunction, QueryKey, useQuery, UseQueryOptions } from "@tanstack/react-query";
 
 interface Disabled {
   enabled: false;

@@ -4,7 +4,7 @@ import {
   mockConsumptionYear,
 } from "test-utils/mock-data/mockBillingData";
 
-import { ConsumptionTimeWindow } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { ConsumptionTimeWindow } from "core/api/types/CloudApi";
 
 import {
   calculateFreeAndPaidUsageByConnection,

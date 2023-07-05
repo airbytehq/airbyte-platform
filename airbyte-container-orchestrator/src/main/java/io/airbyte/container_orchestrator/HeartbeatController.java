@@ -8,8 +8,6 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Produces;
-import io.micronaut.security.annotation.Secured;
-import io.micronaut.security.rules.SecurityRule;
 import java.util.Map;
 
 /**
@@ -18,8 +16,6 @@ import java.util.Map;
  * This is intended to stay up as long as the Kube worker exists so pods spun up can check if the
  * spawning Kube worker still exists.
  */
-// @TODO remove this annotation
-@Secured(SecurityRule.IS_ANONYMOUS)
 @Controller
 public class HeartbeatController {
 

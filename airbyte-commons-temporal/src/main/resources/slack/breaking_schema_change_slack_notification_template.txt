@@ -1,6 +1,6 @@
 Your source schema has changed for connection ID: %s
 
-Airbyte has disabled this connection because this source schema change will cause broken syncs.
+Airbyte has disabled this connection because this source schema change will cause broken syncs. Source name: %s
 
 Visit your connection page here: %s
 

@@ -1,1 +1,1 @@
-export { populateDBSource, makeChangesInDBSource, cleanDBSource } from "./db";
+export { populateDBSource, makeChangesInDBSource, cleanDBSource, reverseChangesInDBSource } from "./db";

@@ -4,7 +4,9 @@
 .steps {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: variables.$spacing-md;
+  margin-bottom: variables.$spacing-lg;
 }
 
 .tooltip {

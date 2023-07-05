@@ -2,7 +2,9 @@ import classNames from "classnames";
 import React from "react";
 
 import { ClockIcon } from "components/icons/ClockIcon";
+import { SimpleCircleIcon } from "components/icons/SimpleCircleIcon";
 import { SuccessIcon } from "components/icons/SuccessIcon";
+import { WarningCircleIcon } from "components/icons/WarningCircleIcon";
 import { Icon } from "components/ui/Icon";
 
 import styles from "./ConnectionStatusIndicator.module.scss";
@@ -16,18 +18,16 @@ export enum ConnectionStatusIndicatorStatus {
   Error = "error",
   ActionRequired = "actionRequired",
   Disabled = "disabled",
-  Cancelled = "cancelled",
 }
 
 const ICON_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, JSX.Element>> = {
   onTime: <SuccessIcon />,
   onTrack: <SuccessIcon />,
-  error: <Icon type="cross" />,
+  error: <WarningCircleIcon />,
   disabled: <Icon type="pause" />,
-  pending: <ClockIcon />,
+  pending: <SimpleCircleIcon viewBox="2 2 20 20" />,
   late: <ClockIcon />,
-  actionRequired: <Icon type="cross" withBackground />,
-  cancelled: <Icon type="minus" color="action" withBackground />,
+  actionRequired: <Icon type="cross" withBackground size="sm" />,
 };
 
 const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -38,7 +38,6 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>>
   pending: styles["status--pending"],
   late: styles["status--late"],
   actionRequired: styles["status--actionRequired"],
-  cancelled: styles["status--cancelled"],
 };
 
 const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, string>> = {
@@ -49,7 +48,6 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionStatusIndicatorStatus, stri
   pending: styles["status--pending-withBox"],
   late: styles["status--late-withBox"],
   actionRequired: styles["status--actionRequired-withBox"],
-  cancelled: styles["status--cancelled-withBox"],
 };
 
 interface ConnectionStatusIndicatorProps {

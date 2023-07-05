@@ -1,4 +1,4 @@
-import { Connection } from "commands/api/types";
+import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 import { getWorkspaceId } from "commands/api/workspace";
 import { interceptGetConnectionRequest, waitForGetConnectionRequest } from "commands/interceptors";
 import { RouteHandler } from "cypress/types/net-stubbing";
@@ -10,7 +10,7 @@ interface VisitOptions {
   interceptGetHandler?: RouteHandler;
 }
 
-export const visit = (connection: Connection, tab = "", { interceptGetHandler }: VisitOptions = {}) => {
+export const visit = (connection: WebBackendConnectionRead, tab = "", { interceptGetHandler }: VisitOptions = {}) => {
   interceptGetConnectionRequest(interceptGetHandler);
 
   cy.visit(`/workspaces/${getWorkspaceId()}/connections/${connection.connectionId}/${tab}`);

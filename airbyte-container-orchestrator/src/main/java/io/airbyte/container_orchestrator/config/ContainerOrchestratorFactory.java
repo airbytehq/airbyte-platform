@@ -73,7 +73,8 @@ class ContainerOrchestratorFactory {
   ProcessFactory kubeProcessFactory(
                                     final WorkerConfigsProvider workerConfigsProvider,
                                     final EnvConfigs configs,
-                                    @Value("${micronaut.server.port}") final int serverPort)
+                                    @Value("${micronaut.server.port}") final int serverPort,
+                                    @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount)
       throws UnknownHostException {
     final var localIp = InetAddress.getLocalHost().getHostAddress();
     final var kubeHeartbeatUrl = localIp + ":" + serverPort;
@@ -85,6 +86,7 @@ class ContainerOrchestratorFactory {
     return new KubeProcessFactory(
         workerConfigsProvider,
         configs.getJobKubeNamespace(),
+        serviceAccount,
         new DefaultKubernetesClient(),
         kubeHeartbeatUrl);
   }
@@ -98,7 +100,8 @@ class ContainerOrchestratorFactory {
                                      final JobRunConfig jobRunConfig,
                                      final ReplicationWorkerFactory replicationWorkerFactory) {
     return switch (application) {
-      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig, replicationWorkerFactory);
+      case ReplicationLauncherWorker.REPLICATION -> new ReplicationJobOrchestrator(envConfigs, jobRunConfig,
+          replicationWorkerFactory);
       case NormalizationLauncherWorker.NORMALIZATION -> new NormalizationJobOrchestrator(envConfigs, processFactory, jobRunConfig);
       case DbtLauncherWorker.DBT -> new DbtJobOrchestrator(envConfigs, workerConfigsProvider, processFactory, jobRunConfig);
       case AsyncOrchestratorPodProcess.NO_OP -> new NoOpOrchestrator();
