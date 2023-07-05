@@ -29,8 +29,6 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncState;
@@ -41,6 +39,8 @@ import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatab
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.NamespaceDefinitionType;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.OperatorType;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.SourceType;
+import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardDestinationDefinition;
+import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StandardSourceDefinition;
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.StatusType;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConnectorSpecification;
@@ -155,20 +155,20 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
     Assertions.assertEquals(expectedDefinitions.size(), sourceDefinitions.size());
     Assertions.assertTrue(V0_32_8_001__AirbyteConfigDatabaseDenormalization.actorDefinitionDoesNotExist(UUID.randomUUID(), context));
     for (final Record sourceDefinition : sourceDefinitions) {
-      final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition()
-          .withSourceDefinitionId(sourceDefinition.get(id))
-          .withDockerImageTag(sourceDefinition.get(dockerImageTag))
-          .withIcon(sourceDefinition.get(icon))
-          .withDockerRepository(sourceDefinition.get(dockerRepository))
-          .withDocumentationUrl(sourceDefinition.get(documentationUrl))
-          .withName(sourceDefinition.get(name))
-          .withSourceType(Enums.toEnum(sourceDefinition.get(sourceType, String.class), StandardSourceDefinition.SourceType.class).orElseThrow())
-          .withSpec(Jsons.deserialize(sourceDefinition.get(spec).data(), ConnectorSpecification.class));
+      final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition(
+          sourceDefinition.get(id),
+          sourceDefinition.get(name),
+          sourceDefinition.get(dockerRepository),
+          sourceDefinition.get(dockerImageTag),
+          sourceDefinition.get(documentationUrl),
+          sourceDefinition.get(icon),
+          Enums.toEnum(sourceDefinition.get(sourceType, String.class), SourceType.class).orElseThrow(),
+          Jsons.deserialize(sourceDefinition.get(spec).data(), ConnectorSpecification.class));
       Assertions.assertTrue(expectedDefinitions.contains(standardSourceDefinition));
       Assertions.assertEquals(now(), sourceDefinition.get(createdAt).toInstant());
       Assertions.assertEquals(now(), sourceDefinition.get(updatedAt).toInstant());
       Assertions.assertFalse(
-          V0_32_8_001__AirbyteConfigDatabaseDenormalization.actorDefinitionDoesNotExist(standardSourceDefinition.getSourceDefinitionId(), context));
+          V0_32_8_001__AirbyteConfigDatabaseDenormalization.actorDefinitionDoesNotExist(standardSourceDefinition.sourceDefinitionId(), context));
     }
   }
 
@@ -193,20 +193,20 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
     Assertions.assertEquals(expectedDefinitions.size(), destinationDefinitions.size());
     Assertions.assertTrue(V0_32_8_001__AirbyteConfigDatabaseDenormalization.actorDefinitionDoesNotExist(UUID.randomUUID(), context));
     for (final Record record : destinationDefinitions) {
-      final StandardDestinationDefinition standardDestinationDefinition = new StandardDestinationDefinition()
-          .withDestinationDefinitionId(record.get(id))
-          .withDockerImageTag(record.get(dockerImageTag))
-          .withIcon(record.get(icon))
-          .withDockerRepository(record.get(dockerRepository))
-          .withDocumentationUrl(record.get(documentationUrl))
-          .withName(record.get(name))
-          .withSpec(Jsons.deserialize(record.get(spec).data(), ConnectorSpecification.class));
+      final StandardDestinationDefinition standardDestinationDefinition = new StandardDestinationDefinition(
+          record.get(id),
+          record.get(name),
+          record.get(dockerRepository),
+          record.get(dockerImageTag),
+          record.get(documentationUrl),
+          record.get(icon),
+          Jsons.deserialize(record.get(spec).data(), ConnectorSpecification.class));
       Assertions.assertTrue(expectedDefinitions.contains(standardDestinationDefinition));
       Assertions.assertNull(record.get(sourceType));
       Assertions.assertEquals(now(), record.get(createdAt).toInstant());
       Assertions.assertEquals(now(), record.get(updatedAt).toInstant());
       Assertions.assertFalse(V0_32_8_001__AirbyteConfigDatabaseDenormalization
-          .actorDefinitionDoesNotExist(standardDestinationDefinition.getDestinationDefinitionId(), context));
+          .actorDefinitionDoesNotExist(standardDestinationDefinition.destinationDefinitionId(), context));
     }
   }
 

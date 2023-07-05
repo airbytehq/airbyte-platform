@@ -1,4 +1,5 @@
 import { config, MissingConfigError } from "config";
+import { isCloudApp } from "utils/app";
 
 import { ApiCallOptions, fetchApiCall, RequestOptions } from "./apiCall";
 
@@ -20,17 +21,17 @@ export const connectorBuilderApiCall = async <T, U = unknown>(request: RequestOp
  * Execute a call against the Cloud API (cloud-server)
  */
 export const cloudApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
-  if (!config.cloudApiUrl) {
+  if (!isCloudApp() || !config.cloudApiUrl) {
     throw new MissingConfigError(`Can't fetch ${request.url}, because cloudApiUrl config isn't set.`);
   }
   return fetchApiCall<T>(request, options, config.cloudApiUrl);
 };
 
 /**
- * Execute a call against the Cloud Public API (aka Airbyte API).
+ * Execute a call against the Airbyte API (previously known as Cloud Public API).
  */
-export const cloudPublicApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
-  if (!config.cloudPublicApiUrl) {
+export const cloudAirbyteApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
+  if (!isCloudApp() || !config.cloudPublicApiUrl) {
     throw new MissingConfigError(`Can't fetch ${request.url}, because cloudPublicApiUrl config isn't set.`);
   }
   return fetchApiCall<T>(request, options, config.cloudPublicApiUrl);

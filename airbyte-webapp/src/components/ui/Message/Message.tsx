@@ -7,7 +7,7 @@ import { CrossIcon } from "components/icons/CrossIcon";
 import { Text } from "components/ui/Text";
 
 import styles from "./Message.module.scss";
-import { Button } from "../Button";
+import { Button, ButtonProps } from "../Button";
 
 export type MessageType = "warning" | "success" | "error" | "info";
 
@@ -19,8 +19,10 @@ export interface MessageProps {
   type?: MessageType;
   onAction?: () => void;
   actionBtnText?: string | React.ReactNode;
+  actionBtnProps?: Omit<ButtonProps, "variant" | "size">;
   onClose?: () => void;
   "data-testid"?: string;
+  hideIcon?: boolean;
 }
 
 const ICON_MAPPING = {
@@ -41,9 +43,11 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   type = "info",
   onAction,
   actionBtnText,
+  actionBtnProps,
   onClose,
   text,
   secondaryText,
+  hideIcon = false,
   "data-testid": testId,
   className,
   childrenClassName,
@@ -56,9 +60,11 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
       })}
       data-testid={testId}
     >
-      <div className={classNames(styles.iconContainer)}>
-        <FontAwesomeIcon icon={ICON_MAPPING[type]} className={styles.messageIcon} />
-      </div>
+      {!hideIcon && (
+        <div className={classNames(styles.iconContainer)}>
+          <FontAwesomeIcon icon={ICON_MAPPING[type]} className={styles.messageIcon} />
+        </div>
+      )}
       <div className={styles.textContainer}>
         {text && <span className={styles.text}>{text}</span>}
         {secondaryText && (
@@ -68,7 +74,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
         )}
       </div>
       {onAction && (
-        <Button variant="dark" onClick={onAction}>
+        <Button {...actionBtnProps} variant="dark" onClick={onAction} data-testid={`${testId}-button`}>
           {actionBtnText}
         </Button>
       )}

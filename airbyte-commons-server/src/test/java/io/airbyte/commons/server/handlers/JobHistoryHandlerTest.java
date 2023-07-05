@@ -38,9 +38,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
-import io.airbyte.commons.server.helpers.DestinationDefinitionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
-import io.airbyte.commons.server.helpers.SourceDefinitionHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -70,7 +68,6 @@ import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.ConfiguredAirbyteStream;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -344,12 +341,16 @@ class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return the right info to debug this job")
-  void testGetDebugJobInfo() throws IOException, JsonValidationException, ConfigNotFoundException, URISyntaxException {
-    final StandardSourceDefinition standardSourceDefinition = SourceDefinitionHelpers.generateSourceDefinition();
+  void testGetDebugJobInfo() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(UUID.randomUUID())
+        .withName("marketo");
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceRead sourceRead = SourceHelpers.getSourceRead(source, standardSourceDefinition);
 
-    final StandardDestinationDefinition standardDestinationDefinition = DestinationDefinitionHelpers.generateDestination();
+    final StandardDestinationDefinition standardDestinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("db2");
     final DestinationConnection destination = DestinationHelpers.generateDestination(UUID.randomUUID());
     final DestinationRead destinationRead = DestinationHelpers.getDestinationRead(destination, standardDestinationDefinition);
 

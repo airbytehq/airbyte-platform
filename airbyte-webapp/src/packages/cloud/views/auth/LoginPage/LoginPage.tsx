@@ -10,7 +10,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useQuery } from "hooks/useQuery";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
 import { FieldError } from "packages/cloud/lib/errors/FieldError";
@@ -83,6 +83,7 @@ export const LoginPage: React.FC = () => {
                     type="password"
                     error={!!meta.error && meta.touched}
                     message={meta.touched && meta.error && formatMessage({ id: meta.error })}
+                    data-testid="login.password"
                   />
                 )}
               </Field>
@@ -96,7 +97,7 @@ export const LoginPage: React.FC = () => {
                 >
                   <FormattedMessage id="login.forgotPassword" />
                 </Link>
-                <Button size="lg" type="submit" isLoading={isSubmitting}>
+                <Button size="lg" type="submit" isLoading={isSubmitting} data-testid="login.submit">
                   <FormattedMessage id="login.login" />
                 </Button>
               </>

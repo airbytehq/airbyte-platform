@@ -4,8 +4,6 @@
 @use "scss/z-indices";
 
 .selectConnector {
-  --grid-columns: 3;
-
   position: relative;
   z-index: z-indices.$base;
   display: grid;
@@ -13,13 +11,12 @@
 
   &__header {
     grid-column: 2 / 3;
-    padding: variables.$spacing-xl 0;
+    padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-sm;
     position: sticky;
     top: 0;
     background-color: colors.$grey-50;
     max-width: variables.$page-width;
-    z-index: 2;
-    padding-inline: variables.$spacing-md;
+    z-index: 1;
   }
 
   &__gutter {
@@ -36,25 +33,11 @@
     grid-column: 3 / 4;
   }
 
-  &__input {
-    margin-top: variables.$spacing-xl;
-  }
-
   &__grid {
     grid-column: 2 / 3;
-    max-width: variables.$page-width;
-    margin-top: variables.$spacing-xl;
-    display: grid;
-    grid-template-columns: repeat(var(--grid-columns), 1fr);
-    grid-auto-rows: 68px;
-    gap: variables.$spacing-xl;
     padding-inline: variables.$spacing-md;
-  }
-
-  &__noMatches {
-    grid-column: span var(--grid-columns);
-    display: flex;
-    flex-direction: column;
-    gap: variables.$spacing-lg;
+    margin-top: calc(
+      variables.$spacing-xl - variables.$spacing-sm
+    ); // When not scrolled, we want xl space between the sticky header and the grid
   }
 }

@@ -4,8 +4,6 @@ import io.airbyte.api.client.model.generated.NotificationType as ApiNotification
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -32,17 +30,4 @@ class WebhookConfigFetcher(private val workspaceApiClient: WorkspaceApi) : Confi
     override fun notificationType(): NotificationType = NotificationType.webhook
 }
 
-@Singleton
-@Requires(property = "airbyte.notification.webhook.url")
-data class SendGridEmailConfig(val from: String, val to: String)
-
-@Singleton
-@Requires(property = "airbyte.notification.sengrid.apikey")
-class SendGridEmailConfigFetcher(@Value("airbyte.notification.sengrid.senderEmail") private val senderEmail: String,
-                                 @Value("airbyte.notification.sengrid.recipientEmail") private val recipientEmail: String,
-        ): ConfigFetcher<SendGridEmailConfig> {
-
-    override fun fetchConfig(connectionId: UUID): SendGridEmailConfig? = SendGridEmailConfig(senderEmail, recipientEmail)
-
-    override fun notificationType(): NotificationType = NotificationType.email
-}
+data class CustomerIoEmailConfig(val to: String)

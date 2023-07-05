@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
+import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.model.generated.PartialSourceUpdate;
 import io.airbyte.api.model.generated.SourceCloneConfiguration;
 import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
@@ -23,6 +25,7 @@ import io.airbyte.api.model.generated.SourceSearch;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SourceUpdate;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
@@ -127,6 +130,23 @@ public class SourceHandler {
     return createSource(sourceCreate);
   }
 
+  public SourceRead updateSourceWithOptionalSecret(final PartialSourceUpdate partialSourceUpdate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final ConnectorSpecification spec = getSpecFromSourceId(partialSourceUpdate.getSourceId());
+    if (partialSourceUpdate.getSecretId() != null && !partialSourceUpdate.getSecretId().isBlank()) {
+      final JsonNode hydratedSecret = hydrateOAuthResponseSecret(partialSourceUpdate.getSecretId());
+      // add OAuth Response data to connection configuration
+      partialSourceUpdate.setConnectionConfiguration(
+          OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret,
+              Optional.ofNullable(partialSourceUpdate.getConnectionConfiguration()).orElse(Jsons.emptyObject())));
+    } else {
+      // We aren't using a secret to update the source so no server provided credentials should have been
+      // passed in.
+      OAuthSecretHelper.validateNoSecretsInConfiguration(spec, partialSourceUpdate.getConnectionConfiguration());
+    }
+    return partialUpdateSource(partialSourceUpdate);
+  }
+
   @VisibleForTesting
   public SourceRead createSource(final SourceCreate sourceCreate)
       throws ConfigNotFoundException, IOException, JsonValidationException {
@@ -144,6 +164,30 @@ public class SourceHandler {
         sourceId,
         false,
         sourceCreate.getConnectionConfiguration(),
+        spec);
+
+    // read configuration from db
+    return buildSourceRead(configRepository.getSourceConnection(sourceId), spec);
+  }
+
+  public SourceRead partialUpdateSource(final PartialSourceUpdate partialSourceUpdate)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+
+    final UUID sourceId = partialSourceUpdate.getSourceId();
+    final SourceConnection updatedSource = configurationUpdate
+        .partialSource(sourceId, partialSourceUpdate.getName(),
+            partialSourceUpdate.getConnectionConfiguration());
+    final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
+    validateSource(spec, updatedSource.getConfiguration());
+
+    // persist
+    persistSourceConnection(
+        updatedSource.getName(),
+        updatedSource.getSourceDefinitionId(),
+        updatedSource.getWorkspaceId(),
+        updatedSource.getSourceId(),
+        updatedSource.getTombstone(),
+        updatedSource.getConfiguration(),
         spec);
 
     // read configuration from db
@@ -424,8 +468,23 @@ public class SourceHandler {
   @VisibleForTesting
   JsonNode hydrateOAuthResponseSecret(final String secretId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.fromFullCoordinate(secretId);
-    return secretsRepositoryReader.fetchSecret(secretCoordinate);
+    final JsonNode secret = secretsRepositoryReader.fetchSecret(secretCoordinate);
+    final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
+    return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
+  }
 
+  @VisibleForTesting
+  JsonNode hydrateConnectionConfiguration(final UUID sourceDefinitionId,
+                                          final UUID workspaceId,
+                                          final String secretId,
+                                          final JsonNode dehydratedConnectionConfiguration)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
+    final JsonNode hydratedSecret = hydrateOAuthResponseSecret(secretId);
+    final ConnectorSpecification spec =
+        getSpecFromSourceDefinitionIdForWorkspace(sourceDefinitionId, workspaceId);
+    // add OAuth Response data to connection configuration
+
+    return OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret, dehydratedConnectionConfiguration);
   }
 
 }

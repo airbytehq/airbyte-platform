@@ -5,10 +5,10 @@
   @include mixins.shadow;
 
   border-radius: variables.$border-radius-2xl;
-  padding: variables.$spacing-xl;
+  padding: variables.$spacing-lg;
 
   svg {
-    width: 90px;
+    width: 60px;
     height: auto;
   }
 }

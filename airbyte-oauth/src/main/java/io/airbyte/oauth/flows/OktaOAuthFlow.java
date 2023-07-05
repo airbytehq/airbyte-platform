@@ -5,10 +5,8 @@
 package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -20,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -28,13 +25,8 @@ import org.apache.http.client.utils.URIBuilder;
  */
 public class OktaOAuthFlow extends BaseOAuth2Flow {
 
-  public OktaOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
-  }
-
-  @VisibleForTesting
-  public OktaOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public OktaOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @Override

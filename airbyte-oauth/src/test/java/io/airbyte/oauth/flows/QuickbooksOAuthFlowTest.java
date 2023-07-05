@@ -13,13 +13,13 @@ import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("MissingJavadocType")
+@SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "MissingJavadocType"})
 class QuickbooksOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
     final Clock clock = Clock.fixed(Instant.ofEpochSecond(1673464409), ZoneId.of("UTC"));
-    return new QuickbooksOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState, clock);
+    return new QuickbooksOAuthFlow(getHttpClient(), this::getConstantState, clock);
   }
 
   @Override
@@ -33,7 +33,8 @@ class QuickbooksOAuthFlowTest extends BaseOAuthFlowTest {
     return getJsonSchema(Map.of(
         "token_expiry_date", Map.of("type", "string"),
         "access_token", Map.of("type", "string"),
-        "refresh_token", Map.of("type", "string")));
+        "refresh_token", Map.of("type", "string"),
+        "realm_id", Map.of("type", "string")));
   }
 
   @Override
@@ -52,17 +53,31 @@ class QuickbooksOAuthFlowTest extends BaseOAuthFlowTest {
         "token_expiry_date", "2023-01-11T19:25:29Z",
         "refresh_token", "refresh_token_response",
         "access_token", "access_token_response",
+        "realm_id", "realmId",
         "client_id", MoreOAuthParameters.SECRET_MASK);
+  }
+
+  @Override
+  protected Map<String, Object> getQueryParams() {
+    return Map.of(
+        "code", "test_code",
+        "realmId", "realmId");
   }
 
   @Test
   @Override
-  @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
   void testDeprecatedCompleteDestinationOAuth() {}
 
   @Test
   @Override
-  @SuppressWarnings("PMD.JUnitTestsShouldIncludeAssert")
   void testDeprecatedCompleteSourceOAuth() {}
+
+  @Test
+  @Override
+  void testCompleteDestinationOAuth() {}
+
+  @Test
+  @Override
+  void testEmptyInputCompleteDestinationOAuth() {}
 
 }

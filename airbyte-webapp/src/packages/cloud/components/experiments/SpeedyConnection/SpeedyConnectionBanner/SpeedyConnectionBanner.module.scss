@@ -3,11 +3,6 @@
 
 .speedyConnectionbanner {
   &__container {
-    width: calc(100% - 93px);
-    position: fixed;
-    top: 0;
-    left: 93px;
-    z-index: 3;
     padding: variables.$spacing-md;
     background-color: colors.$blue;
     color: colors.$white;

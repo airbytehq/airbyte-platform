@@ -3,5 +3,5 @@
 $status-icon-width: 25px;
 
 .text {
-  width: calc(100% - #{$status-icon-width});
+  flex: 1;
 }

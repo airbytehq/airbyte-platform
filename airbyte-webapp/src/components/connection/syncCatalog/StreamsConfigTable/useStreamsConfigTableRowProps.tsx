@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import { PillButtonVariant } from "components/ui/PillSelect/PillButton";
 
 import { SyncSchemaStream } from "core/domain/catalog";
-import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./StreamsConfigTableRow.module.scss";
@@ -14,7 +13,6 @@ import styles from "./StreamsConfigTableRow.module.scss";
 export type StatusToDisplay = "disabled" | "added" | "removed" | "changed" | "unchanged";
 
 export const useStreamsConfigTableRowProps = (stream: SyncSchemaStream) => {
-  const [isSelected] = useBulkEditSelect(stream.id);
   const { initialValues } = useConnectionFormService();
 
   const isStreamEnabled = stream.config?.selected;
@@ -47,26 +45,25 @@ export const useStreamsConfigTableRowProps = (stream: SyncSchemaStream) => {
   }, [initialValues.syncCatalog.streams, isStreamEnabled, stream.config, stream.stream]);
 
   const pillButtonVariant = useMemo<PillButtonVariant>(() => {
-    if (statusToDisplay === "added" && !isSelected) {
+    if (statusToDisplay === "added") {
       return "green";
-    } else if (statusToDisplay === "removed" && !isSelected) {
+    } else if (statusToDisplay === "removed") {
       return "red";
-    } else if (statusToDisplay === "changed" || isSelected) {
+    } else if (statusToDisplay === "changed") {
       return "blue";
     }
     return "grey";
-  }, [isSelected, statusToDisplay]);
+  }, [statusToDisplay]);
 
   const streamHeaderContentStyle = classNames(styles.streamHeaderContent, {
-    [styles.added]: statusToDisplay === "added" && !isSelected,
-    [styles.removed]: statusToDisplay === "removed" && !isSelected,
-    [styles.changed]: statusToDisplay === "changed" || isSelected,
+    [styles.added]: statusToDisplay === "added",
+    [styles.removed]: statusToDisplay === "removed",
+    [styles.changed]: statusToDisplay === "changed",
     [styles.disabled]: statusToDisplay === "disabled",
   });
 
   return {
     streamHeaderContentStyle,
-    isSelected,
     statusToDisplay,
     pillButtonVariant,
   };

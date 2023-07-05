@@ -39,6 +39,8 @@ import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDiscoverCatalogInput;
 import io.airbyte.config.helpers.LogClientSingleton;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
 import io.airbyte.protocol.models.StreamDescriptor;
@@ -106,9 +108,11 @@ public class TemporalClientTest {
   private WorkflowServiceBlockingStub workflowServiceBlockingStub;
   private StreamResetPersistence streamResetPersistence;
   private ConnectionManagerUtils connectionManagerUtils;
-  private NotificationUtils notificationUtils;
+  private NotificationClient notificationClient;
   private StreamResetRecordsHelper streamResetRecordsHelper;
   private Path workspaceRoot;
+
+  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
 
   @BeforeEach
   void setup() throws IOException {
@@ -123,10 +127,11 @@ public class TemporalClientTest {
     streamResetPersistence = mock(StreamResetPersistence.class);
     mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
     connectionManagerUtils = spy(new ConnectionManagerUtils());
-    notificationUtils = spy(new NotificationUtils());
+    notificationClient = spy(new NotificationClient(featureFlagClient, workflowClient));
     streamResetRecordsHelper = mock(StreamResetRecordsHelper.class);
     temporalClient =
-        spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils, notificationUtils,
+        spy(new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, connectionManagerUtils,
+            notificationClient,
             streamResetRecordsHelper));
   }
 
@@ -134,15 +139,16 @@ public class TemporalClientTest {
   class RestartPerStatus {
 
     private ConnectionManagerUtils mConnectionManagerUtils;
-    private NotificationUtils mNotificationUtils;
+    private NotificationClient mNotificationClient;
 
     @BeforeEach
     void init() {
       mConnectionManagerUtils = mock(ConnectionManagerUtils.class);
-      mNotificationUtils = mock(NotificationUtils.class);
+      mNotificationClient = mock(NotificationClient.class);
 
       temporalClient = spy(
-          new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils, mNotificationUtils,
+          new TemporalClient(workspaceRoot, workflowClient, workflowServiceStubs, streamResetPersistence, mConnectionManagerUtils,
+              mNotificationClient,
               streamResetRecordsHelper));
     }
 

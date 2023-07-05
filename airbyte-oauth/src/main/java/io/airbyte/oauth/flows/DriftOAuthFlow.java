@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -27,13 +26,13 @@ public class DriftOAuthFlow extends BaseOAuth2Flow {
   private static final String ACCESS_TOKEN_URL = "https://driftapi.com/oauth2/token";
   private static final String CODE = "code";
 
-  public DriftOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public DriftOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  DriftOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  DriftOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override
@@ -88,6 +87,11 @@ public class DriftOAuthFlow extends BaseOAuth2Flow {
       result.put("access_token", data.get("access_token").asText());
     } else {
       throw new IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl));
+    }
+    if (data.has("refresh_token")) {
+      result.put("refresh_token", data.get("refresh_token").asText());
+    } else {
+      throw new IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl));
     }
     return result;
   }

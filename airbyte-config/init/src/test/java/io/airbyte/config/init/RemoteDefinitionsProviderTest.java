@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.io.Resources;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.util.MoreIterators;
-import io.airbyte.config.StandardDestinationDefinition;
-import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -55,7 +55,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider = new RemoteDefinitionsProvider(catalogUrl, TimeUnit.SECONDS.toMillis(30));
     final UUID stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de");
-    final StandardSourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
+    final ConnectorRegistrySourceDefinition stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId);
     assertEquals(stripeSourceId, stripeSource.getSourceDefinitionId());
     assertEquals("Stripe", stripeSource.getName());
     assertEquals("airbyte/source-stripe", stripeSource.getDockerRepository());
@@ -72,7 +72,7 @@ class RemoteDefinitionsProviderTest {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider = new RemoteDefinitionsProvider(catalogUrl, TimeUnit.SECONDS.toMillis(30));
     final UUID s3DestinationId = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362");
-    final StandardDestinationDefinition s3Destination = remoteDefinitionsProvider
+    final ConnectorRegistryDestinationDefinition s3Destination = remoteDefinitionsProvider
         .getDestinationDefinition(s3DestinationId);
     assertEquals(s3DestinationId, s3Destination.getDestinationDefinitionId());
     assertEquals("S3", s3Destination.getName());
@@ -103,7 +103,7 @@ class RemoteDefinitionsProviderTest {
   void testGetSourceDefinitions() throws Exception {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider = new RemoteDefinitionsProvider(catalogUrl, TimeUnit.SECONDS.toMillis(30));
-    final List<StandardSourceDefinition> sourceDefinitions = remoteDefinitionsProvider.getSourceDefinitions();
+    final List<ConnectorRegistrySourceDefinition> sourceDefinitions = remoteDefinitionsProvider.getSourceDefinitions();
     final int expectedNumberOfSources = MoreIterators.toList(jsonCatalog.get("sources").elements()).size();
     assertEquals(expectedNumberOfSources, sourceDefinitions.size());
     assertTrue(sourceDefinitions.stream().allMatch(sourceDef -> sourceDef.getProtocolVersion().length() > 0));
@@ -113,7 +113,7 @@ class RemoteDefinitionsProviderTest {
   void testGetDestinationDefinitions() throws Exception {
     webServer.enqueue(validCatalogResponse);
     final RemoteDefinitionsProvider remoteDefinitionsProvider = new RemoteDefinitionsProvider(catalogUrl, TimeUnit.SECONDS.toMillis(30));
-    final List<StandardDestinationDefinition> destinationDefinitions = remoteDefinitionsProvider.getDestinationDefinitions();
+    final List<ConnectorRegistryDestinationDefinition> destinationDefinitions = remoteDefinitionsProvider.getDestinationDefinitions();
     final int expectedNumberOfDestinations = MoreIterators.toList(jsonCatalog.get("destinations").elements()).size();
     assertEquals(expectedNumberOfDestinations, destinationDefinitions.size());
     assertTrue(destinationDefinitions.stream().allMatch(destDef -> destDef.getProtocolVersion().length() > 0));
@@ -126,7 +126,7 @@ class RemoteDefinitionsProviderTest {
       new RemoteDefinitionsProvider(catalogUrl, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
     });
 
-    assertTrue(ex.getMessage().contains("Failed to fetch remote definitions"));
+    assertTrue(ex.getMessage().contains("Failed to fetch remote connector registry"));
     assertTrue(ex.getCause() instanceof IOException);
   }
 
@@ -137,7 +137,7 @@ class RemoteDefinitionsProviderTest {
       new RemoteDefinitionsProvider(catalogUrl, TimeUnit.SECONDS.toMillis(1)).getDestinationDefinitions();
     });
 
-    assertTrue(ex.getMessage().contains("Failed to fetch remote definitions"));
+    assertTrue(ex.getMessage().contains("Failed to fetch remote connector registry"));
     assertTrue(ex.getCause() instanceof HttpTimeoutException);
   }
 

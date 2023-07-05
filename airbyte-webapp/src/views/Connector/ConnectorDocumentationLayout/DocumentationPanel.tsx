@@ -10,13 +10,14 @@ import urls from "rehype-urls";
 import { match } from "ts-pattern";
 
 import { LoadingPage } from "components";
+import { Box } from "components/ui/Box";
 import { Markdown } from "components/ui/Markdown";
-import { StepsMenu } from "components/ui/StepsMenu";
+import { Tabs } from "components/ui/Tabs";
+import { ButtonTab } from "components/ui/Tabs/ButtonTab";
 
-import { useConfig } from "config";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useExperiment } from "hooks/services/Experiment";
-import { useDocumentation } from "hooks/services/useDocumentation";
+import { EMBEDDED_DOCS_PATH, useDocumentation } from "hooks/services/useDocumentation";
 import { isCloudApp } from "utils/app";
 import { links } from "utils/links";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
@@ -34,9 +35,7 @@ type TabsType = "setupGuide" | "schema" | "erd";
 
 export const DocumentationPanel: React.FC = () => {
   const { formatMessage } = useIntl();
-  const config = useConfig();
   const { setDocumentationPanelOpen, documentationUrl, selectedConnectorDefinition } = useDocumentationPanelContext();
-
   const sourceType =
     selectedConnectorDefinition &&
     "sourceType" in selectedConnectorDefinition &&
@@ -54,7 +53,7 @@ export const DocumentationPanel: React.FC = () => {
       if (url.path?.startsWith("../../")) {
         if (element.tagName === "img") {
           // In images replace relative URLs with links to our bundled assets
-          return url.path.replace("../../", `${config.integrationUrl}/`);
+          return url.path.replace("../../", `${EMBEDDED_DOCS_PATH}/`);
         }
         // In links replace with a link to the external documentation instead
         // The external path is the markdown URL without the "../../" prefix and the .md extension
@@ -64,13 +63,13 @@ export const DocumentationPanel: React.FC = () => {
       return url.href;
     };
     return [[urls, sanitizeLinks], [rehypeSlug]];
-  }, [config.integrationUrl]);
+  }, []);
 
   const location = useLocation();
 
   useUpdateEffect(() => {
     setDocumentationPanelOpen(false);
-  }, [setDocumentationPanelOpen, location.pathname]);
+  }, [setDocumentationPanelOpen, location.pathname, location.search]);
 
   const [activeTab, setActiveTab] = useState<TabsType>("setupGuide");
   const tabs: Array<{ id: TabsType; name: JSX.Element }> = [
@@ -93,16 +92,23 @@ export const DocumentationPanel: React.FC = () => {
   ) : (
     <div className={styles.container}>
       {selectedConnectorDefinition && isSourceDefinition(selectedConnectorDefinition) && showRequestSchemaButton && (
-        <div className={styles.stepsContainer}>
-          <StepsMenu
-            lightMode
-            data={tabs}
-            onSelect={(val) => {
-              setActiveTab(val as TabsType);
-            }}
-            activeStep={activeTab}
-          />
-        </div>
+        <Box pt="md" pl="lg">
+          <Tabs>
+            {tabs.map((tabItem) => {
+              return (
+                <ButtonTab
+                  id={tabItem.id}
+                  key={tabItem.id}
+                  name={tabItem.name}
+                  isActive={activeTab === tabItem.id}
+                  onSelect={(val) => {
+                    setActiveTab(val as TabsType);
+                  }}
+                />
+              );
+            })}
+          </Tabs>
+        </Box>
       )}
 
       {match(activeTab)

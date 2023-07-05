@@ -8,6 +8,7 @@ $colorMap: (
   "success": colors.$green,
   "error": colors.$red,
   "warning": colors.$yellow,
+  "affordance": colors.$dark-blue,
 );
 
 $baseIconSize: 12px;
@@ -19,16 +20,20 @@ $iconClassname: "icon";
   width: $baseIconSize;
   vertical-align: -6%;
 
+  &.#{$iconClassname}--withBackground {
+    color: colors.$white;
+    box-sizing: content-box;
+    border-radius: variables.$border-radius-pill;
+    padding: 4px;
+    background-color: colors.$black; // default if color isn't specified
+  }
+
   @each $name, $color in $colorMap {
     &--#{$name} {
       color: $color;
 
       &.#{$iconClassname}--withBackground {
-        color: colors.$white;
         background-color: $color;
-        box-sizing: content-box;
-        border-radius: variables.$border-radius-pill;
-        padding: 4px;
       }
     }
   }

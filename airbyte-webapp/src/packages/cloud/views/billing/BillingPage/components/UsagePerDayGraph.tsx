@@ -1,5 +1,4 @@
 import classnames from "classnames";
-import dayjs from "dayjs";
 import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import {
@@ -17,19 +16,19 @@ import {
 
 import { Text } from "components/ui/Text";
 
-import { useFreeConnectorProgram } from "packages/cloud/components/experiments/FreeConnectorProgram";
-import { ConsumptionPerConnectionPerTimeframe } from "packages/cloud/lib/domain/cloudWorkspaces/types";
+import { useFreeConnectorProgram } from "core/api/cloud";
 
+import { UsagePerTimeChunk } from "./calculateUsageDataObjects";
 import { FormattedCredits } from "./FormattedCredits";
 import styles from "./UsagePerDayGraph.module.scss";
 
 interface UsagePerDayGraphProps {
-  chartData: Array<Omit<ConsumptionPerConnectionPerTimeframe, "connection">>;
+  chartData: UsagePerTimeChunk;
   minimized?: boolean;
 }
 export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, minimized }) => {
   const {
-    enrollmentStatusQuery: { data: freeConnectorEnrollment },
+    programStatusQuery: { data: freeConnectorEnrollment },
   } = useFreeConnectorProgram();
   const isEnrolledInFreeConnectorProgram = freeConnectorEnrollment?.isEnrolled;
   const { formatMessage } = useIntl();
@@ -74,10 +73,9 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
           )}
           {!minimized && <CartesianGrid vertical={false} stroke={chartLinesColor} />}
           <XAxis
-            dataKey="timeframe"
+            dataKey="timeChunkLabel"
             axisLine={false}
             tickLine={false}
-            tickFormatter={(value) => dayjs(value).format("MMM D")}
             stroke={chartTicksColor}
             tick={{ fontSize: "11px" }}
             tickSize={7}
@@ -98,7 +96,6 @@ export const UsagePerDayGraph: React.FC<UsagePerDayGraphProps> = ({ chartData, m
             <Tooltip
               cursor={{ fill: chartHoverFill }}
               wrapperStyle={{ outline: "none" }}
-              labelFormatter={(value) => dayjs(value).format("MMM D, YYYY")}
               formatter={(value: number, payload) => {
                 // The type cast is unfortunately necessary, due to broken typing in recharts.
                 // What we return is a [string, string], and the library accepts this as well, but the types

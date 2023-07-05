@@ -1,0 +1,16 @@
+@use "scss/variables";
+
+.webhookInput {
+  position: relative;
+
+  &__errorMessage {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    transform: translateY(calc(100% + variables.$spacing-xs));
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    width: 100%;
+  }
+}

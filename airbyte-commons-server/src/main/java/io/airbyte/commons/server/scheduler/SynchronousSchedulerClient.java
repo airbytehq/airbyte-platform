@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.scheduler;
 
-import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
@@ -19,21 +19,17 @@ import java.util.UUID;
 public interface SynchronousSchedulerClient {
 
   SynchronousResponse<StandardCheckConnectionOutput> createSourceCheckConnectionJob(SourceConnection source,
-                                                                                    String dockerImage,
-                                                                                    Version protocolVersion,
+                                                                                    ActorDefinitionVersion sourceVersion,
                                                                                     boolean isCustomConnector)
       throws IOException;
 
   SynchronousResponse<StandardCheckConnectionOutput> createDestinationCheckConnectionJob(DestinationConnection destination,
-                                                                                         String dockerImage,
-                                                                                         Version protocolVersion,
+                                                                                         ActorDefinitionVersion destinationVersion,
                                                                                          boolean isCustomConnector)
       throws IOException;
 
   SynchronousResponse<UUID> createDiscoverSchemaJob(SourceConnection source,
-                                                    String dockerImage,
-                                                    String connectorVersion,
-                                                    Version protocolVersion,
+                                                    ActorDefinitionVersion sourceVersion,
                                                     boolean isCustomConnector)
       throws IOException;
 

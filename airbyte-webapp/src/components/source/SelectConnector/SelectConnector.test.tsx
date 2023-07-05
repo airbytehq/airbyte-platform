@@ -8,11 +8,11 @@ import { SelectConnector } from "./SelectConnector";
 
 const mockTrackSelectConnector = jest.fn();
 
-jest.mock("core/analytics/useTrackSelectConnector", () => ({
+jest.mock("./useTrackSelectConnector", () => ({
   useTrackSelectConnector: () => mockTrackSelectConnector,
 }));
 
-jest.mock("services/workspaces/WorkspacesService", () => ({
+jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
 }));
 

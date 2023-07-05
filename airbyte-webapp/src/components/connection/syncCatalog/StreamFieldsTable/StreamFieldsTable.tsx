@@ -8,7 +8,7 @@ import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 import { Table } from "components/ui/Table";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { SyncSchemaField, SyncSchemaFieldObject } from "core/domain/catalog";
 import { AirbyteStreamConfiguration } from "core/request/AirbyteClient";
@@ -75,7 +75,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
   toggleAllFieldsSelected,
 }) => {
   const { formatMessage } = useIntl();
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const checkIsCursor = useCallback((path: string[]) => isCursor(config, path), [config]);
   const checkIsChildFieldCursor = useCallback((path: string[]) => isChildFieldCursor(config, path), [config]);
   const checkIsPrimaryKey = useCallback((path: string[]) => isPrimaryKey(config, path), [config]);
@@ -137,7 +137,7 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
           </FlexContainer>
         ),
         cell: ({ getValue, row }) => (
-          <CellText size="small" withTooltip>
+          <CellText size="small">
             <FlexContainer alignItems="center">
               {isColumnSelectionEnabled && (
                 <SyncFieldCell
@@ -153,9 +153,9 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
                   className={styles.columnSelectionSwitchContainer}
                 />
               )}
-              <Text size="sm" data-testid="stream-source-field-name">
+              <TextWithOverflowTooltip size="sm" data-testid="stream-source-field-name">
                 {getFieldPathDisplayName(getValue())}
-              </Text>
+              </TextWithOverflowTooltip>
             </FlexContainer>
           </CellText>
         ),
@@ -239,10 +239,10 @@ export const StreamFieldsTable: React.FC<StreamFieldsTableProps> = ({
         id: "destinationPath",
         header: () => <FormattedMessage id="form.field.name" />,
         cell: ({ getValue }) => (
-          <CellText size="small" withTooltip>
-            <Text size="sm" data-testid="stream-destination-field-name">
+          <CellText size="small">
+            <TextWithOverflowTooltip size="sm" data-testid="stream-destination-field-name">
               {getFieldPathDisplayName(getValue())}
-            </Text>
+            </TextWithOverflowTooltip>
           </CellText>
         ),
         meta: {

@@ -1,5 +1,3 @@
-import { FieldMetaProps } from "formik";
-
 import { FormGroupItem, FormBaseItem, FormBlock, GroupDetails } from "core/form/types";
 
 import { DisplayType, generateGroupsAndSections, Section } from "./useGroupsAndSections";
@@ -26,7 +24,13 @@ function object(
 
 function item(
   name: string,
-  { required, order, group, hidden }: { required?: boolean; order?: number; group?: string; hidden?: boolean } = {
+  {
+    required,
+    order,
+    group,
+    hidden,
+    always_show,
+  }: { required?: boolean; order?: number; group?: string; hidden?: boolean; always_show?: boolean } = {
     required: false,
     order: undefined,
     group: undefined,
@@ -40,6 +44,7 @@ function item(
     group,
     path: name,
     airbyte_hidden: hidden,
+    always_show,
     type: "string",
   };
 }
@@ -55,15 +60,13 @@ function section(blocks: FormBlock[], displayType: DisplayType = "expanded"): Se
   return {
     blocks,
     displayType,
-    hasError: false,
   };
 }
 
 const isHiddenAuthField = jest.fn(() => false);
-const getFieldMeta = jest.fn(() => ({ error: false, touched: false } as unknown as FieldMetaProps<unknown>));
 
-function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = [], featureFlag = true) {
-  return generateGroupsAndSections(blocks, groups, featureFlag, true, isHiddenAuthField, getFieldMeta);
+function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = []) {
+  return generateGroupsAndSections(blocks, groups, true, isHiddenAuthField);
 }
 
 describe("useGroupsAndSections", () => {
@@ -73,19 +76,34 @@ describe("useGroupsAndSections", () => {
     ]);
   });
 
-  it("should respect order collapse", () => {
+  it("should order optional fields in the back but respect order within collapsed section", () => {
     expect(
       generate([
-        item("a", { order: 0 }),
-        item("b", { order: 1 }),
+        item("a", { order: 1 }),
+        item("b", { order: 0 }),
         item("c", { required: true, order: 2 }),
         item("d", { order: 3 }),
       ])
     ).toEqual([
       sectionGroup([
-        section([item("a", { order: 0 }), item("b", { order: 1 })], "collapsed-inline"),
         section([item("c", { required: true, order: 2 })]),
-        section([item("d", { order: 3 })], "collapsed-footer"),
+        section([item("b", { order: 0 }), item("a", { order: 1 }), item("d", { order: 3 })], "collapsed-footer"),
+      ]),
+    ]);
+  });
+
+  it("should order optional fields with 'always_show: true' normally", () => {
+    expect(
+      generate([
+        item("a", { order: 1 }),
+        item("b", { order: 0, always_show: true }),
+        item("c", { required: true, order: 2 }),
+        item("d", { order: 3 }),
+      ])
+    ).toEqual([
+      sectionGroup([
+        section([item("b", { order: 0, always_show: true }), item("c", { required: true, order: 2 })]),
+        section([item("a", { order: 1 }), item("d", { order: 3 })], "collapsed-footer"),
       ]),
     ]);
   });
@@ -102,7 +120,6 @@ describe("useGroupsAndSections", () => {
       ])
     ).toEqual([
       sectionGroup([
-        section([item("a", { order: 0 })], "collapsed-inline"),
         section(
           [
             object([item("b", { order: 0 }), item("c", { required: true, order: 1 })], "group1", {
@@ -112,7 +129,7 @@ describe("useGroupsAndSections", () => {
           ],
           "expanded"
         ),
-        section([item("d", { order: 2 })], "collapsed-footer"),
+        section([item("a", { order: 0 }), item("d", { order: 2 })], "collapsed-footer"),
       ]),
     ]);
   });
@@ -168,31 +185,6 @@ describe("useGroupsAndSections", () => {
         ),
       ]),
       sectionGroup([section([item("d", { group: "b", order: 1 })], "collapsed-group")]),
-    ]);
-  });
-
-  it("should ignore grouping and sectioning without feature flag, putting everything into a single section", () => {
-    expect(
-      generate(
-        [
-          object([item("b", { group: "b", order: 0 }), item("c", { required: true, group: "a" })], "z_group"),
-          item("d", { group: "a" }),
-          item("a", { group: "b", order: 1 }),
-        ],
-        [],
-        false
-      )
-    ).toEqual([
-      sectionGroup([
-        section(
-          [
-            item("a", { group: "b", order: 1 }),
-            item("d", { group: "a" }),
-            object([item("b", { group: "b", order: 0 }), item("c", { required: true, group: "a" })], "z_group"),
-          ],
-          "expanded"
-        ),
-      ]),
     ]);
   });
 

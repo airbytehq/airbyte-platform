@@ -2,9 +2,10 @@
 @use "scss/colors";
 
 .container {
-  margin: variables.$spacing-lg 0;
   padding: variables.$spacing-lg variables.$spacing-xl;
   width: 100%;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$blue-200;
   background-image: url("./longtail-connectors.svg");
   background-repeat: no-repeat;
   background-position-y: center;

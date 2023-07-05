@@ -1,51 +1,36 @@
-import { faEnvelope } from "@fortawesome/free-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useState } from "react";
-import { FormattedMessage } from "react-intl";
-import styled from "styled-components";
+import { FormattedMessage, useIntl } from "react-intl";
 
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 
+import { useNotificationService } from "hooks/services/Notification";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
 
-interface Props {
-  className?: string;
+interface EmailVerificationHintProps {
+  variant: "info" | "warning" | "error";
 }
-
-const ResendEmailLink = styled.button`
-  appearance: none;
-  background: none;
-  border: none;
-  font-size: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
-  display: inline;
-  color: ${({ theme }) => theme.mediumPrimaryColor};
-`;
-
-export const EmailVerificationHint: React.FC<Props> = ({ className }) => {
+export const EmailVerificationHint: React.FC<EmailVerificationHintProps> = ({ variant }) => {
   const { sendEmailVerification } = useAuthService();
-  const [isEmailResend, setIsEmailResend] = useState(false);
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
 
   const onResendVerificationMail = async () => {
     // the shared error handling inside `sendEmailVerification` suffices
-    await sendEmailVerification();
-    setIsEmailResend(true);
+    try {
+      await sendEmailVerification();
+      registerNotification({
+        id: "workspace.emailVerificationResendSuccess",
+        text: formatMessage({ id: "credits.emailVerification.resendConfirmation" }),
+        type: "success",
+      });
+    } catch (e) {}
   };
 
   return (
-    <Callout className={className}>
-      <FontAwesomeIcon icon={faEnvelope} size="lg" />
-      <FormattedMessage id="credits.emailVerificationRequired" />{" "}
-      {isEmailResend ? (
-        <FormattedMessage id="credits.emailVerification.resendConfirmation" />
-      ) : (
-        <ResendEmailLink onClick={onResendVerificationMail}>
-          <FormattedMessage id="credits.emailVerification.resend" />
-        </ResendEmailLink>
-      )}
-    </Callout>
+    <Message
+      type={variant}
+      text={<FormattedMessage id="credits.emailVerificationRequired" />}
+      actionBtnText={<FormattedMessage id="credits.emailVerification.resend" />}
+      onAction={onResendVerificationMail}
+    />
   );
 };

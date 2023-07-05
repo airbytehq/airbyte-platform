@@ -32,11 +32,13 @@ import io.airbyte.api.model.generated.SourceDefinitionIdBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector;
 import io.airbyte.config.ActorDefinitionConfigInjection;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.ReleaseStage;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.init.CdkVersionProvider;
 import io.airbyte.config.persistence.ConfigNotFoundException;
@@ -346,7 +348,7 @@ class ConnectorBuilderProjectsHandlerTest {
             .withManifestVersion(A_VERSION)
             .withManifestDescription(A_DESCRIPTION));
 
-    ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
+    final ConnectorBuilderProjectRead response = connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
         new ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
 
     assertEquals(A_BUILDER_PROJECT_ID, response.getBuilderProject().getBuilderProjectId());
@@ -377,19 +379,23 @@ class ConnectorBuilderProjectsHandlerTest {
         .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
 
     verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
-    verify(configRepository, times(1)).writeCustomSourceDefinition(eq(new StandardSourceDefinition()
+    verify(configRepository, times(1)).writeCustomSourceDefinitionAndDefaultVersion(eq(new StandardSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .withDockerImageTag(CDK_VERSION)
-        .withDockerRepository("airbyte/source-declarative-manifest")
         .withName(A_SOURCE_NAME)
-        .withProtocolVersion("0.2.0")
         .withSourceType(SourceType.CUSTOM)
-        .withSpec(adaptedConnectorSpecification)
         .withTombstone(false)
         .withPublic(false)
-        .withCustom(true)
-        .withReleaseStage(ReleaseStage.CUSTOM)
-        .withDocumentationUrl(A_DOCUMENTATION_URL)), eq(workspaceId));
+        .withCustom(true)), eq(
+            new ActorDefinitionVersion()
+                .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+                .withDockerRepository("airbyte/source-declarative-manifest")
+                .withDockerImageTag(CDK_VERSION)
+                .withSpec(adaptedConnectorSpecification)
+                .withReleaseStage(ReleaseStage.CUSTOM)
+                .withDocumentationUrl(A_DOCUMENTATION_URL)
+                .withProtocolVersion("0.2.0")),
+        eq(workspaceId),
+        eq(ScopeType.WORKSPACE.value()));
     verify(configRepository, times(1)).writeActorDefinitionConfigInjectionForPath(eq(A_CONFIG_INJECTION));
   }
 
@@ -407,6 +413,14 @@ class ConnectorBuilderProjectsHandlerTest {
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)));
     verify(configRepository, times(1)).assignActorDefinitionToConnectorBuilderProject(A_BUILDER_PROJECT_ID, A_SOURCE_DEFINITION_ID);
+  }
+
+  @Test
+  void whenPublishConnectorBuilderProjectThenDraftDeleted() throws IOException {
+    connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
+        .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
+
+    verify(configRepository, times(1)).deleteBuilderProjectDraft(A_BUILDER_PROJECT_ID);
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

@@ -1,38 +1,81 @@
 package io.airbyte.notification
 
+import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.metrics.lib.MetricClientFactory
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.metrics.lib.OssMetricsRegistry
 import jakarta.inject.Singleton
-import java.util.*
+import java.util.UUID
 
 enum class NotificationType {
-    webhook, email
+    webhook, customerio
+}
+
+enum class NotificationEvent {
+    onNonBreakingChange, onBreakingChange
 }
 
 @Singleton
-class NotificationHandler(private val maybeSendGridEmailConfigFetchers: Optional<SendGridEmailConfigFetcher>,
-                          private val maybeWebhookConfigFetcher: Optional<WebhookConfigFetcher>,
-                          private val maybeSendGridEmailNotificationSender: Optional<SendGridEmailNotificationSender>,
-                          private val maybeWebhookNotificationSender: Optional<WebhookNotificationSender>) {
-
+open class NotificationHandler(
+        private val maybeWebhookConfigFetcher: WebhookConfigFetcher?,
+        private val maybeCustomerIoConfigFetcher: CustomerIoEmailConfigFetcher?,
+        private val maybeWebhookNotificationSender: WebhookNotificationSender?,
+        private val maybeCustomerIoNotificationSender: CustomerIoEmailNotificationSender?,
+        private val maybeWorkspaceNotificationConfigFetcher: WorkspaceNotificationConfigFetcher?,
+) {
     /**
      * Send a notification with a subject and a message if a configuration is present
      */
-    fun sendNotification(connectionId: UUID, title: String, message: String, notificationTypes: List<NotificationType>) {
+    open fun sendNotification(connectionId: UUID, title: String, message: String, notificationTypes: List<NotificationType>) {
         notificationTypes.forEach { notificationType ->
             runCatching {
-                if (maybeWebhookConfigFetcher.isPresent && maybeWebhookNotificationSender.isPresent && notificationType == NotificationType.webhook) {
-                    val config: WebhookConfig? = maybeWebhookConfigFetcher.get().fetchConfig(connectionId)
-                    if (config != null) {
-                        maybeWebhookNotificationSender.get().sendNotification(config, title, message)
+                if (maybeWebhookConfigFetcher != null && maybeWebhookNotificationSender != null && notificationType == NotificationType.webhook) {
+                    maybeWebhookConfigFetcher.fetchConfig(connectionId)?.let {
+                        maybeWebhookNotificationSender.sendNotification(it, title, message)
                     }
                 }
 
-                if (maybeSendGridEmailConfigFetchers.isPresent && maybeSendGridEmailNotificationSender.isPresent && notificationType == NotificationType.email) {
-                    val config: SendGridEmailConfig? = maybeSendGridEmailConfigFetchers.get().fetchConfig(connectionId)
-                    if (config != null) {
-                        maybeSendGridEmailNotificationSender.get().sendNotification(config, title, message)
+                if (maybeCustomerIoConfigFetcher != null && maybeCustomerIoNotificationSender != null && notificationType == NotificationType.customerio) {
+                    maybeCustomerIoConfigFetcher.fetchConfig(connectionId)?.let {
+                        maybeCustomerIoNotificationSender.sendNotification(it, title, message)
                     }
                 }
             }
         }
     }
+
+    open fun sendNotification(connectionId: UUID, subject: String, message: String, notificationEvent: NotificationEvent) {
+        val notificationItemWithCustomerIoEmailConfig = maybeWorkspaceNotificationConfigFetcher?.fetchNotificationConfig(connectionId, notificationEvent)
+
+        var notificationItem = notificationItemWithCustomerIoEmailConfig?.getNotificationItem()
+        notificationItem?.notificationType?.forEach { notificationType ->
+            runCatching {
+                if (maybeWebhookNotificationSender != null
+                        && notificationType == io.airbyte.api.client.model.generated.NotificationType.SLACK) {
+                    val webhookConfig = WebhookConfig(
+                        notificationItem
+                            !!.slackConfiguration
+                            !!.webhook)
+                    maybeWebhookNotificationSender.sendNotification(webhookConfig, subject, message)
+                    MetricClientFactory.getMetricClient().count(
+                            OssMetricsRegistry.NOTIFICATIONS_SENT, 1,
+                            MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, notificationEvent.name),
+                            MetricAttribute(MetricTags.NOTIFICATION_CLIENT, "slack"))
+                }
+
+                if (maybeCustomerIoNotificationSender != null
+                    && notificationType == io.airbyte.api.client.model.generated.NotificationType.CUSTOMERIO) {
+                        maybeCustomerIoNotificationSender
+                            .sendNotification(notificationItemWithCustomerIoEmailConfig
+                            !!.customerIoEmailConfig, subject, message)
+                    MetricClientFactory.getMetricClient().count(
+                            OssMetricsRegistry.NOTIFICATIONS_SENT, 1,
+                            MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, notificationEvent.name),
+                            MetricAttribute(MetricTags.NOTIFICATION_CLIENT, "customerio"))
+
+                }
+            }
+        }
+    }
 }
+

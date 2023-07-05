@@ -7,6 +7,7 @@ package io.airbyte.config.persistence;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
+import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.protocol.models.Jsons;
 import io.airbyte.validation.json.JsonValidationException;
@@ -157,10 +159,11 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   void whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() throws Exception {
     configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
-    configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition()
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
-        .withPublic(false), A_WORKSPACE_ID);
+        .withPublic(false),
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE.value());
 
     configRepository.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);
@@ -175,10 +178,11 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
   void givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() throws Exception {
     configRepository.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST);
     configRepository.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0).withWorkspaceId(A_WORKSPACE_ID));
-    configRepository.writeCustomSourceDefinition(MockData.customSourceDefinition()
+    configRepository.writeCustomSourceDefinitionAndDefaultVersion(MockData.customSourceDefinition()
         .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .withName(A_PROJECT_NAME)
-        .withPublic(true), A_WORKSPACE_ID);
+        .withPublic(true),
+        MockData.actorDefinitionVersion().withActorDefinitionId(A_SOURCE_DEFINITION_ID), A_WORKSPACE_ID, ScopeType.WORKSPACE.value());
 
     configRepository.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, ANOTHER_PROJECT_NAME, ANOTHER_MANIFEST, A_SOURCE_DEFINITION_ID);
@@ -243,6 +247,23 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(A_MANIFEST, versionedConnectorBuilderProject.getManifest());
   }
 
+  @Test
+  void testDeleteBuilderProjectDraft() throws IOException, ConfigNotFoundException {
+    createBaseObjects();
+    assertNotNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+    configRepository.deleteBuilderProjectDraft(project1.getBuilderProjectId());
+    assertNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+  }
+
+  @Test
+  void testDeleteManifestDraftForActorDefinitionId() throws IOException, ConfigNotFoundException, JsonValidationException {
+    createBaseObjects();
+    final StandardSourceDefinition sourceDefinition = linkSourceDefinition(project1.getBuilderProjectId());
+    assertNotNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+    configRepository.deleteManifestDraftForActorDefinition(sourceDefinition.getSourceDefinitionId(), project1.getWorkspaceId());
+    assertNull(configRepository.getConnectorBuilderProject(project1.getBuilderProjectId(), true).getManifestDraft());
+  }
+
   private DeclarativeManifest anyDeclarativeManifest() {
     try {
       return new DeclarativeManifest()
@@ -292,10 +313,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName("source-def-" + id)
-        .withDockerRepository("source-image-" + id)
-        .withDockerImageTag("0.0.1")
         .withSourceDefinitionId(id)
-        .withProtocolVersion("0.2.0")
         .withTombstone(false);
 
     configRepository.writeStandardSourceDefinition(sourceDefinition);

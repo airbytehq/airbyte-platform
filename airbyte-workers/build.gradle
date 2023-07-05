@@ -12,12 +12,15 @@ configurations {
 }
 
 configurations.all {
+    // The quartz-scheduler brings in a really old version of hikari, we do not want to inherit this version.
+    exclude group: "com.zaxxer", module: "HikariCP-java7"
     resolutionStrategy {
         // Ensure that the versions defined in deps.toml are used
         // instead of versions from transitive dependencies
         force libs.flyway.core, libs.jooq, libs.s3, libs.aws.java.sdk.s3
     }
 }
+
 dependencies {
     annotationProcessor platform(libs.micronaut.bom)
     annotationProcessor libs.bundles.micronaut.annotation.processor
@@ -50,12 +53,14 @@ dependencies {
     implementation project(':airbyte-api')
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-converters')
+    implementation project(':airbyte-commons-micronaut')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-commons-temporal')
     implementation project(':airbyte-commons-worker')
     implementation project(':airbyte-commons-server')
     implementation project(':airbyte-config:config-models')
     implementation project(':airbyte-config:config-persistence')
+    implementation project(':airbyte-config:specs')
     implementation project(':airbyte-config:init')
     implementation project(':airbyte-db:jooq')
     implementation project(':airbyte-db:db-lib')
@@ -63,10 +68,7 @@ dependencies {
     implementation project(':airbyte-metrics:metrics-lib')
     implementation project(':airbyte-json-validation')
     implementation libs.airbyte.protocol
-    implementation(project(':airbyte-notification')) {
-        // Incompatibility with some test acceptance test.
-        exclude group: 'org.bouncycastle'
-    }
+    implementation project(':airbyte-notification')
     implementation(project(':airbyte-persistence:job-persistence')) {
         // Temporary hack to avoid dependency conflicts
         exclude group: 'io.micronaut'

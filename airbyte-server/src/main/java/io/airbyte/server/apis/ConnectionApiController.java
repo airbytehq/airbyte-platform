@@ -8,6 +8,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.EDITOR;
 import static io.airbyte.commons.auth.AuthRoleConstants.READER;
 
 import io.airbyte.api.generated.ConnectionApi;
+import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -87,6 +88,13 @@ public class ConnectionApiController implements ConnectionApi {
   }
 
   @Override
+  @Post(uri = "/list_by_actor_definition")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  public ConnectionReadList listConnectionsByActorDefinition(@Body final ActorDefinitionRequestBody actorDefinitionRequestBody) {
+    return ApiHelper.execute(() -> connectionsHandler.listConnectionsForActorDefinition(actorDefinitionRequestBody));
+  }
+
+  @Override
   @Post(uri = "/search")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   public ConnectionReadList searchConnections(@Body final ConnectionSearch connectionSearch) {
@@ -139,7 +147,7 @@ public class ConnectionApiController implements ConnectionApi {
   @Secured({EDITOR})
   @SecuredWorkspace
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  public JobInfoRead resetConnectionStream(ConnectionStreamRequestBody connectionStreamRequestBody) {
+  public JobInfoRead resetConnectionStream(final ConnectionStreamRequestBody connectionStreamRequestBody) {
     return ApiHelper.execute(() -> schedulerHandler.resetConnectionStream(connectionStreamRequestBody));
   }
 

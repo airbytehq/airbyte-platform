@@ -5,10 +5,10 @@ import { useAsyncFn } from "react-use";
 
 import { Switch } from "components/ui/Switch";
 
-import { Action, Namespace } from "core/analytics";
-import { getFrequencyFromScheduleData } from "core/analytics/utils";
 import { ConnectionStatus } from "core/request/AirbyteClient";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { getFrequencyFromScheduleData } from "core/services/analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import styles from "./EnabledControl.module.scss";

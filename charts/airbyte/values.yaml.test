@@ -132,6 +132,20 @@ global:
       ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
       main_container_image_pull_secret: ""
 
+      images:
+        ## JOB_KUBE_BUSYBOX_IMAGE
+        ## busybox image used by the job pod
+        ##   jobs.kube.images.busybox [string] busybox image used by the job pod
+        busybox: ""
+        ## JOB_KUBE_SOCAT_IMAGE
+        ## socat image used by the job pod
+        ##   jobs.kube.images.socat [string] socat image used by the job pod
+        socat: ""
+        ## JOB_KUBE_CURL_IMAGE
+        ## curl image used by the job pod
+        ##   jobs.kube.images.curl [string] curl image used by the job pod
+        curl: ""
+
 ## @section Common Parameters
 
 ##  nameOverride -- String to partially override airbyte.fullname template with a string (will prepend the release name)
@@ -1200,6 +1214,11 @@ temporal:
 ##
 postgresql:
   enabled: true
+
+  ## image.repository Repository for airbyte-db statefulset
+  image:
+    repository: airbyte/db
+
   postgresqlUsername: airbyte
   postgresqlPassword: airbyte
   postgresqlDatabase: db-airbyte
@@ -1238,6 +1257,13 @@ externalDatabase:
 ##  minio.secretKey.password Minio Secret Key
 minio:
   enabled: true
+
+  ## image.repository Minio image used by Minio helm chart
+  ## image.tag Minio tag image
+  image:
+    repository: minio/minio
+    tag: latest
+
   auth:
     rootUser: minio
     rootPassword: minio123
@@ -1437,6 +1463,38 @@ connector-builder-server:
   image:
     repository: airbyte/connector-atelier-server
     pullPolicy: IfNotPresent
+
+  ## Configure extra options for the server containers' liveness and readiness probes
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+  ##  server.livenessProbe.enabled Enable livenessProbe on the server
+  ##  server.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  ##  server.livenessProbe.periodSeconds Period seconds for livenessProbe
+  ##  server.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  ##  server.livenessProbe.failureThreshold Failure threshold for livenessProbe
+  ##  server.livenessProbe.successThreshold Success threshold for livenessProbe
+  ##
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+
+  ##  server.readinessProbe.enabled Enable readinessProbe on the server
+  ##  server.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  ##  server.readinessProbe.periodSeconds Period seconds for readinessProbe
+  ##  server.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  ##  server.readinessProbe.failureThreshold Failure threshold for readinessProbe
+  ##  server.readinessProbe.successThreshold Success threshold for readinessProbe
+  ##
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
 
   ## connector-builder-server resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/

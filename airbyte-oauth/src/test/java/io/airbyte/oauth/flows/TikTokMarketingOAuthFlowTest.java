@@ -17,7 +17,7 @@ class TikTokMarketingOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new TikTokMarketingOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new TikTokMarketingOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

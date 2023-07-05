@@ -8,11 +8,10 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import {
   useConnectorBuilderFormState,
-  useConnectorBuilderTestState,
+  useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { PublishModal } from "./PublishModal";
-import { useBuilderErrors } from "./useBuilderErrors";
 
 interface PublishButtonProps {
   className?: string;
@@ -20,10 +19,9 @@ interface PublishButtonProps {
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const [isModalOpen, setModalOpen] = useState(false);
-  const { editorView, currentProject, yamlIsValid } = useConnectorBuilderFormState();
-  const { hasErrors } = useBuilderErrors();
+  const { editorView, currentProject, yamlIsValid, formValuesValid } = useConnectorBuilderFormState();
 
-  const { streamListErrorMessage } = useConnectorBuilderTestState();
+  const { streamListErrorMessage } = useConnectorBuilderTestRead();
 
   let buttonDisabled = false;
   let showWarningIcon = false;
@@ -35,7 +33,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlPublish" />;
   }
 
-  if (editorView === "ui" && hasErrors(true)) {
+  if (editorView === "ui" && !formValuesValid) {
     showWarningIcon = true;
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsPublish" />;

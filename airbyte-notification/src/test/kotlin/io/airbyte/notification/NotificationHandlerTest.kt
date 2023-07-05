@@ -6,47 +6,40 @@ import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import java.util.Optional
 import java.util.UUID
 
 class NotificationHandlerTest {
-    private val sendGridEmailConfigFetcher: SendGridEmailConfigFetcher = mockk()
     private val webhookConfigFetcher: WebhookConfigFetcher = mockk()
-    private val sendGridEmailNotificationSender: SendGridEmailNotificationSender = mockk()
+    private val customerIoConfigFetcher: CustomerIoEmailConfigFetcher = mockk()
     private val webhookNotificationSender: WebhookNotificationSender = mockk()
+    private val customerIoNotificationSender: CustomerIoEmailNotificationSender = mockk()
+    private val workspaceNotificationConfigFetcher: WorkspaceNotificationConfigFetcher = mockk()
 
-    private val sendGridEmailConfig: SendGridEmailConfig = SendGridEmailConfig("from@from.com", "to@to.com")
     private val webhookConfig: WebhookConfig = WebhookConfig("http://webhook.com")
+    private val customerIoConfig: CustomerIoEmailConfig = CustomerIoEmailConfig( "to@to.com")
     private val subject: String = "subject"
     private val message: String = "message"
     private val connectionId: UUID = UUID.randomUUID()
 
     @Test
     fun testNoBeanPresent() {
-        val notificationHandler = NotificationHandler(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty())
+        val notificationHandler = NotificationHandler(null, null, null, null, null,)
 
-        notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.email, NotificationType.webhook))
+        notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.webhook))
 
         verify {
-            sendGridEmailConfigFetcher wasNot called
             webhookConfigFetcher wasNot called
-            sendGridEmailNotificationSender wasNot called
             webhookNotificationSender wasNot called
         }
     }
 
     @Test
     fun testAllNotification() {
-        val notificationHandler = NotificationHandler(Optional.of(sendGridEmailConfigFetcher),
-                Optional.of(webhookConfigFetcher),
-                Optional.of(sendGridEmailNotificationSender),
-                Optional.of(webhookNotificationSender))
-
-        every {
-            sendGridEmailConfigFetcher.fetchConfig(connectionId)
-        } answers {
-            sendGridEmailConfig
-        }
+        val notificationHandler = NotificationHandler(webhookConfigFetcher,
+                customerIoConfigFetcher,
+                webhookNotificationSender,
+                customerIoNotificationSender,
+                workspaceNotificationConfigFetcher,)
 
         every {
             webhookConfigFetcher.fetchConfig(connectionId)
@@ -54,41 +47,40 @@ class NotificationHandlerTest {
             webhookConfig
         }
 
-        justRun { sendGridEmailNotificationSender.sendNotification(any(), any(), any()) }
-        justRun { webhookNotificationSender.sendNotification(any(), any(), any()) }
+        every {
+            customerIoConfigFetcher.fetchConfig(connectionId)
+        } answers {
+            customerIoConfig
+        }
 
-        notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.email, NotificationType.webhook))
+        justRun { webhookNotificationSender.sendNotification(any(), any(), any()) }
+        justRun { customerIoNotificationSender.sendNotification(any(), any(), any()) }
+
+        notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.webhook, NotificationType.customerio))
 
         verify {
-            sendGridEmailConfigFetcher.fetchConfig(connectionId)
             webhookConfigFetcher.fetchConfig(connectionId)
-            sendGridEmailNotificationSender.sendNotification(sendGridEmailConfig, subject, message)
+            customerIoConfigFetcher.fetchConfig(connectionId)
             webhookNotificationSender.sendNotification(webhookConfig, subject, message)
+            customerIoNotificationSender.sendNotification(customerIoConfig, subject, message)
         }
     }
 
     @Test
     fun testPartialNotification() {
-        val notificationHandler = NotificationHandler(Optional.of(sendGridEmailConfigFetcher),
-                Optional.of(webhookConfigFetcher),
-                Optional.of(sendGridEmailNotificationSender),
-                Optional.of(webhookNotificationSender))
+        val notificationHandler = NotificationHandler(webhookConfigFetcher,
+                customerIoConfigFetcher,
+                webhookNotificationSender,
+                customerIoNotificationSender,
+                workspaceNotificationConfigFetcher,)
 
-        every {
-            sendGridEmailConfigFetcher.fetchConfig(connectionId)
-        } answers {
-            sendGridEmailConfig
-        }
-
-        justRun { sendGridEmailNotificationSender.sendNotification(any(), any(), any()) }
-
-        notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.email))
+        notificationHandler.sendNotification(connectionId, subject, message, listOf())
 
         verify {
-            sendGridEmailConfigFetcher.fetchConfig(connectionId)
             webhookConfigFetcher wasNot called
-            sendGridEmailNotificationSender.sendNotification(sendGridEmailConfig, subject, message)
+            customerIoConfigFetcher wasNot called
             webhookNotificationSender wasNot called
+            customerIoNotificationSender wasNot called
         }
     }
 }

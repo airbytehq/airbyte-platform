@@ -8,17 +8,18 @@ import { useNavigate } from "react-router-dom";
 import { ConnectorIcon } from "components/common/ConnectorIcon";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
+import { ReleaseStageBadge } from "components/ReleaseStageBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 import { Table } from "components/ui/Table";
 import { SortableTableHeader } from "components/ui/Table";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCurrentWorkspace } from "core/api";
 import { ConnectionScheduleType, ConnectionStatus } from "core/request/AirbyteClient";
 import { useQuery } from "hooks/useQuery";
 import { RoutePaths } from "pages/routePaths";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { ConnectionFreeAndPaidUsage } from "./calculateUsageDataObjects";
 import { useCreditsContext } from "./CreditsUsageContext";
@@ -82,7 +83,7 @@ export const UsagePerConnectionTable: React.FC = () => {
 
   const columnHelper = useMemo(() => createColumnHelper<ConnectionFreeAndPaidUsage>(), []);
 
-  const billingInsightsColumns = React.useMemo(() => {
+  const columns = React.useMemo(() => {
     return [
       columnHelper.accessor("connection.connectionName", {
         header: () => (
@@ -102,7 +103,7 @@ export const UsagePerConnectionTable: React.FC = () => {
             to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${props.row.original.connection.connectionId}`}
           >
             <FlexContainer alignItems="center" gap="xs">
-              <Text
+              <TextWithOverflowTooltip
                 size="sm"
                 color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
                 className={classNames(styles.cellText)}
@@ -113,7 +114,7 @@ export const UsagePerConnectionTable: React.FC = () => {
                     <FormattedMessage id="credits.deleted" />
                   </InfoTooltip>
                 )}
-              </Text>
+              </TextWithOverflowTooltip>
             </FlexContainer>
           </Link>
         ),
@@ -143,13 +144,10 @@ export const UsagePerConnectionTable: React.FC = () => {
               })}
             >
               <ConnectorIcon icon={props.row.original.connection.sourceIcon} />
-              <Text
-                size="sm"
-                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
-                className={styles.cellText}
-              >
+              <TextWithOverflowTooltip size="sm" className={styles.cellText}>
                 {props.cell.getValue()}
-              </Text>
+              </TextWithOverflowTooltip>
+              <ReleaseStageBadge stage={props.row.original.connection.sourceReleaseStage} />
             </FlexContainer>
           </Link>
         ),
@@ -195,12 +193,13 @@ export const UsagePerConnectionTable: React.FC = () => {
               })}
             >
               <ConnectorIcon icon={props.row.original.connection.destinationIcon} />
-              <Text
+              <TextWithOverflowTooltip
                 size="sm"
                 color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
               >
                 {props.cell.getValue()}
-              </Text>
+              </TextWithOverflowTooltip>
+              <ReleaseStageBadge stage={props.row.original.connection.destinationReleaseStage} />
             </FlexContainer>
           </Link>
         ),
@@ -210,12 +209,8 @@ export const UsagePerConnectionTable: React.FC = () => {
 
         header: () => <FormattedMessage id="credits.schedule" />,
         cell: (props) => (
-          <FlexContainer alignItems="center">
-            <Text
-              size="sm"
-              color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
-              className={styles.cellText}
-            >
+          <FlexContainer className={styles.cell} alignItems="center">
+            <TextWithOverflowTooltip size="sm" className={styles.cellText}>
               {props.row.original.connection.connectionScheduleType ===
               (ConnectionScheduleType.manual || ConnectionScheduleType.cron) ? (
                 <FormattedMessage id={`frequency.${props.row.original.connection.connectionScheduleType}`} />
@@ -225,7 +220,7 @@ export const UsagePerConnectionTable: React.FC = () => {
                   values={{ value: props.row.original.connection.connectionScheduleUnits }}
                 />
               )}
-            </Text>
+            </TextWithOverflowTooltip>
           </FlexContainer>
         ),
         meta: {
@@ -280,7 +275,7 @@ export const UsagePerConnectionTable: React.FC = () => {
     <div className={styles.content}>
       <Table
         variant="white"
-        columns={billingInsightsColumns}
+        columns={columns}
         sortedByColumn={sortBy === "totalUsage" ? "totalUsage" : `connection_${sortBy}`}
         data={sortingData}
       />

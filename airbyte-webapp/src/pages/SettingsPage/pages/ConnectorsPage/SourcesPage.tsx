@@ -2,9 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { SourceDefinitionRead } from "core/request/AirbyteClient";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableSourceDefinitions } from "hooks/domain/connector/useAvailableSourceDefinitions";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
-import { useExperiment } from "hooks/services/Experiment";
 import { useSourceList } from "hooks/services/useSourceHook";
 import { useUpdateSourceDefinition } from "services/connector/SourceDefinitionService";
 import { useListProjects } from "services/connectorBuilder/ConnectorBuilderProjectsService";
@@ -21,8 +20,6 @@ const SourcesPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
   const sourceDefinitions = useAvailableSourceDefinitions();
-
-  const showBuilderNavigationLinks = useExperiment("connectorBuilder.showNavigationLinks", false);
 
   const { mutateAsync: updateSourceDefinition } = useUpdateSourceDefinition();
   const [updatingDefinitionId, setUpdatingDefinitionId] = useState<string>();
@@ -61,10 +58,10 @@ const SourcesPage: React.FC = () => {
       }
     });
 
-    return Array.from(sourceDefinitionMap.values());
+    return Array.from(sourceDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [sources, sourceDefinitions]);
 
-  const ConnectorsViewComponent = showBuilderNavigationLinks ? WithBuilderProjects : ConnectorsView;
+  const ConnectorsViewComponent = WithBuilderProjects;
 
   return (
     <ConnectorsViewComponent

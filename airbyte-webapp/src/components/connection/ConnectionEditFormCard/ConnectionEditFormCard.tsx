@@ -1,7 +1,7 @@
+import { useMutation } from "@tanstack/react-query";
 import { Form, Formik, FormikConfig, FormikHelpers } from "formik";
 import React from "react";
 import { useIntl } from "react-intl";
-import { useMutation } from "react-query";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { CollapsibleCardProps, CollapsibleCard } from "components/ui/CollapsibleCard";
@@ -40,7 +40,7 @@ export const ConnectionEditFormCard = <T extends object>({
     <Formik {...form} onSubmit={(values, formikHelpers) => mutateAsync({ values, formikHelpers })}>
       {({ resetForm, isSubmitting, dirty, isValid }) => (
         <CollapsibleCard {...props}>
-          <Form className={styles.formCard}>
+          <Form>
             <FormChangeTracker changed={dirty} />
             {children}
             <div className={styles.editControls}>

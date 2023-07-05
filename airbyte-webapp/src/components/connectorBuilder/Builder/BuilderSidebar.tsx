@@ -1,29 +1,33 @@
 import { faSliders, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classnames from "classnames";
-import { useFormikContext } from "formik";
 import React from "react";
+import { useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import Indicator from "components/Indicator";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
+import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
-import { Action, Namespace } from "core/analytics";
-import { useAnalyticsService } from "hooks/services/Analytics";
+import { Action, Namespace } from "core/services/analytics";
+import { useAnalyticsService } from "core/services/analytics";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { links } from "utils/links";
 
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { SavingIndicator } from "./SavingIndicator";
+import { ReactComponent as SlackIcon } from "./slack-icon.svg";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
-import { CDK_VERSION } from "../cdk";
 import { ConnectorImage } from "../ConnectorImage";
 import { DownloadYamlButton } from "../DownloadYamlButton";
 import { PublishButton } from "../PublishButton";
-import { BuilderFormValues, getInferredInputs } from "../types";
+import { BuilderFormValues } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
+import { useInferredInputs } from "../useInferredInputs";
 
 interface ViewSelectButtonProps {
   className?: string;
@@ -65,10 +69,12 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { yamlManifest, selectedView, setSelectedView, builderFormValues } = useConnectorBuilderFormState();
-  const { values } = useFormikContext<BuilderFormValues>();
+  const values = useWatch<BuilderFormValues>();
   const handleViewSelect = (selectedView: BuilderView) => {
     setSelectedView(selectedView);
   };
+
+  const inferredInputsLength = useInferredInputs().length;
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="xl" className={classnames(className, styles.container)}>
@@ -90,7 +96,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
         <ViewSelectButton
           data-testid="navbutton-global"
           selected={selectedView === "global"}
-          showErrorIndicator={hasErrors(true, ["global"])}
+          showErrorIndicator={hasErrors(["global"])}
           onClick={() => {
             handleViewSelect("global");
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.GLOBAL_CONFIGURATION_SELECT, {
@@ -120,62 +126,87 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = React.memo(({ class
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: values.inputs.length + getInferredInputs(values.global, values.inferredInputOverrides).length,
+                number: (values.inputs?.length ?? 0) + inferredInputsLength,
               }}
             />
           </Text>
         </ViewSelectButton>
       </FlexContainer>
 
-      <FlexContainer direction="column" alignItems="stretch" gap="none" className={styles.streamList}>
-        <div className={styles.streamsHeader}>
-          <Text className={styles.streamsHeading} size="xs" bold>
-            <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams.length }} />
-          </Text>
+      <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
+        <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
+          <FlexContainer alignItems="center" gap="none">
+            <Text className={styles.streamsHeading} size="xs" bold>
+              <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: values.streams?.length }} />
+            </Text>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.streamTooltip" />
+            </InfoTooltip>
+          </FlexContainer>
 
           <AddStreamButton
             onAddStream={(addedStreamNum) => handleViewSelect(addedStreamNum)}
             data-testid="add-stream"
           />
-        </div>
+        </FlexContainer>
 
-        {values.streams.map(({ name, id }, num) => (
-          <ViewSelectButton
-            key={num}
-            data-testid={`navbutton-${String(num)}`}
-            selected={selectedView === num}
-            showErrorIndicator={hasErrors(true, [num])}
-            onClick={() => {
-              handleViewSelect(num);
-              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
-                actionDescription: "Stream view selected",
-                stream_id: id,
-                stream_name: name,
-              });
-            }}
-          >
-            {name && name.trim() ? (
-              <Text className={styles.streamViewText}>{name}</Text>
-            ) : (
-              <Text className={styles.emptyStreamViewText}>
-                <FormattedMessage id="connectorBuilder.emptyName" />
-              </Text>
-            )}
-          </ViewSelectButton>
-        ))}
+        <div className={styles.streamList}>
+          {values.streams?.map(({ name, id }, num) => (
+            <ViewSelectButton
+              key={num}
+              data-testid={`navbutton-${String(num)}`}
+              selected={selectedView === num}
+              showErrorIndicator={hasErrors([num])}
+              onClick={() => {
+                handleViewSelect(num);
+                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
+                  actionDescription: "Stream view selected",
+                  stream_id: id,
+                  stream_name: name,
+                });
+              }}
+            >
+              {name && name.trim() ? (
+                <Text className={styles.streamViewText}>{name}</Text>
+              ) : (
+                <Text className={styles.emptyStreamViewText}>
+                  <FormattedMessage id="connectorBuilder.emptyName" />
+                </Text>
+              )}
+            </ViewSelectButton>
+          ))}
+        </div>
       </FlexContainer>
       <FlexContainer direction="column" alignItems="stretch" gap="md">
         <DownloadYamlButton yamlIsValid yaml={yamlManifest} />
         <PublishButton />
       </FlexContainer>
-      <Text size="sm" color="grey" align="center">
-        <FormattedMessage
-          id="connectorBuilder.cdkVersion"
-          values={{
-            version: CDK_VERSION,
-          }}
-        />
-      </Text>
+      <FlexContainer direction="column" gap="lg">
+        <Tooltip
+          placement="top"
+          control={
+            <Text size="sm" className={styles.slackLink}>
+              <a href="https://airbytehq.slack.com/archives/C027KKE4BCZ" target="_blank" rel="noreferrer">
+                <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start" as="span">
+                  <SlackIcon className={styles.slackIcon} />
+                  <FormattedMessage id="connectorBuilder.slackChannel" />
+                </FlexContainer>
+              </a>
+            </Text>
+          }
+        >
+          <FormattedMessage id="connectorBuilder.slackChannelTooltip" />
+        </Tooltip>
+        <Text size="sm" className={styles.slackLink}>
+          <a href={links.connectorBuilderTutorial} target="_blank" rel="noreferrer">
+            <FlexContainer gap="sm" justifyContent="center" alignItems="flex-start" as="span">
+              <Icon type="docs" />
+              <FormattedMessage id="connectorBuilder.createPage.tutorialPrompt" />
+            </FlexContainer>
+          </a>
+        </Text>
+      </FlexContainer>
     </FlexContainer>
   );
 });
+BuilderSidebar.displayName = "BuilderSidebar";

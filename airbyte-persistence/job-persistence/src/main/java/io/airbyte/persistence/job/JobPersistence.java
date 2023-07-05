@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.version.AirbyteProtocolVersionRange;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AttemptFailureSummary;
@@ -15,7 +14,6 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.NormalizationSummary;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
-import io.airbyte.db.instance.jobs.JobsDatabaseSchema;
 import io.airbyte.persistence.job.models.AttemptNormalizationStatus;
 import io.airbyte.persistence.job.models.AttemptWithJobInfo;
 import io.airbyte.persistence.job.models.Job;
@@ -29,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 /**
  * General interface methods for persistence to the Jobs database. This database is separate from
@@ -77,6 +74,13 @@ public interface JobPersistence {
    * @throws IOException while interacting with the db
    */
   Map<JobAttemptPair, AttemptStats> getAttemptStats(List<Long> jobIds) throws IOException;
+
+  /**
+   * Retrieve only the combined stats for a single attempt.
+   *
+   * @return {@link AttemptStats}
+   */
+  SyncStats getAttemptCombinedStats(long jobId, int attemptNumber) throws IOException;
 
   List<NormalizationSummary> getNormalizationSummary(long jobId, int attemptNumber) throws IOException;
 
@@ -172,7 +176,7 @@ public interface JobPersistence {
   Optional<String> getAttemptTemporalWorkflowId(long jobId, int attemptNumber) throws IOException;
 
   /**
-   * When the output is a StandardSyncOutput, caller of this method should persiste
+   * When the output is a StandardSyncOutput, caller of this method should persist
    * StandardSyncOutput#state in the configs database by calling
    * ConfigRepository#updateConnectionState, which takes care of persisting the connection state.
    */
@@ -228,6 +232,16 @@ public interface JobPersistence {
    * @throws IOException - what you do when you IO
    */
   List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, String configId, int limit, int offset) throws IOException;
+
+  /**
+   * List jobs of a connection. Pageable.
+   *
+   * @param configTypes - type of config, e.g. sync
+   * @param workspaceIds - ids of requested workspaces
+   * @return lists job in descending order by created_at
+   * @throws IOException - what you do when you IO
+   */
+  List<Job> listJobs(Set<JobConfig.ConfigType> configTypes, List<UUID> workspaceIds, int limit, int offset) throws IOException;
 
   /**
    * List jobs of a config type after a certain time.
@@ -299,7 +313,7 @@ public interface JobPersistence {
    *         attempts' endedAt in ascending order
    * @throws IOException while interacting with the db.
    */
-  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp) throws IOException;
+  List<AttemptWithJobInfo> listAttemptsWithJobInfo(ConfigType configType, Instant attemptEndedAtTimestamp, final int limit) throws IOException;
   /// ARCHIVE
 
   /**
@@ -350,34 +364,9 @@ public interface JobPersistence {
   void setDeployment(UUID uuid) throws IOException;
 
   /**
-   * Export all SQL tables from @param schema into streams of JsonNode objects. This returns a Map of
-   * table schemas to the associated streams of records that is being exported.
-   */
-  Map<JobsDatabaseSchema, Stream<JsonNode>> exportDatabase() throws IOException;
-
-  /**
-   * Import all SQL tables from streams of JsonNode objects.
-   *
-   * @param data is a Map of table schemas to the associated streams of records to import.
-   * @param airbyteVersion is the version of the files to be imported and should match the Airbyte
-   *        version in the Database.
-   */
-  void importDatabase(String airbyteVersion, Map<JobsDatabaseSchema, Stream<JsonNode>> data) throws IOException;
-
-  /**
    * Purges job history while ensuring that the latest saved-state information is maintained.
    */
   void purgeJobHistory();
-
-  /**
-   * Check if the secret has been migrated to a new secret store from a plain text values.
-   */
-  boolean isSecretMigrated() throws IOException;
-
-  /**
-   * Set that the secret migration has been performed.
-   */
-  void setSecretMigrationDone() throws IOException;
 
   List<AttemptNormalizationStatus> getAttemptNormalizationStatusesForJob(final Long jobId) throws IOException;
 

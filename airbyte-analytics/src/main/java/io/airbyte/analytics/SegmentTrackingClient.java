@@ -76,7 +76,6 @@ public class SegmentTrackingClient implements TrackingClient {
 
   public SegmentTrackingClient(final Function<UUID, TrackingIdentity> identityFetcher,
                                final Deployment deployment,
-
                                final String airbyteRole) {
     this(identityFetcher, deployment, airbyteRole, Analytics.builder(SEGMENT_WRITE_KEY).build());
   }
@@ -127,6 +126,7 @@ public class SegmentTrackingClient implements TrackingClient {
       LOGGER.error("Could not track action {} due to null workspaceId", action);
       return;
     }
+
     final Map<String, Object> mapCopy = new HashMap<>(metadata);
     final TrackingIdentity trackingIdentity = identityFetcher.apply(workspaceId);
 

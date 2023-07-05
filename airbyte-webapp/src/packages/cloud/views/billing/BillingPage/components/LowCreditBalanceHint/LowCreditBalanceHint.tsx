@@ -1,41 +1,22 @@
-import { faCreditCard, faWarning } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormattedMessage } from "react-intl";
 
-import { Callout } from "components/ui/Callout";
+import { Message } from "components/ui/Message";
 
-import { CreditStatus } from "packages/cloud/lib/domain/cloudWorkspaces/types";
-import { useGetCloudWorkspace } from "packages/cloud/services/workspaces/CloudWorkspacesService";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
-
-import styles from "./LowCreditBalanceHint.module.scss";
+interface LowCreditBalanceHintProps {
+  variant: "info" | "warning" | "error";
+}
 
 export const LOW_BALANCE_CREDIT_THRESHOLD = 20;
 
-export const LowCreditBalanceHint: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const workspace = useCurrentWorkspace();
-  const cloudWorkspace = useGetCloudWorkspace(workspace.workspaceId);
-
-  const isNoBillingAccount =
-    cloudWorkspace.remainingCredits <= 0 && cloudWorkspace.creditStatus === CreditStatus.POSITIVE;
-  if (isNoBillingAccount || cloudWorkspace.remainingCredits > LOW_BALANCE_CREDIT_THRESHOLD) {
+export const LowCreditBalanceHint: React.FC<React.PropsWithChildren<LowCreditBalanceHintProps>> = ({ variant }) => {
+  if (variant === "info") {
     return null;
   }
 
-  const status = cloudWorkspace.remainingCredits <= 0 ? "zeroBalance" : "lowBalance";
-  const variant = status === "zeroBalance" ? "error" : "default";
-
-  const Icons = {
-    lowBalance: faCreditCard,
-    zeroBalance: faWarning,
-  };
   return (
-    <Callout className={styles.container} variant={variant}>
-      <FontAwesomeIcon icon={Icons[status]} size="lg" />
-      <div className={styles.wrapper}>
-        <FormattedMessage id={`credits.${status}`} />
-        {children}
-      </div>
-    </Callout>
+    <Message
+      text={<FormattedMessage id={variant === "error" ? "credits.zeroBalance" : "credits.lowBalance"} />}
+      type={variant}
+    />
   );
 };

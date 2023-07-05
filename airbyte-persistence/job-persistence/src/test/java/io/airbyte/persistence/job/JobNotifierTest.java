@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +20,8 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Notification.NotificationType;
+import io.airbyte.config.NotificationItem;
+import io.airbyte.config.NotificationSettings;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -59,11 +62,17 @@ class JobNotifierTest {
   private WorkspaceHelper workspaceHelper;
   private JobNotifier jobNotifier;
   private NotificationClient notificationClient;
+  private NotificationClient customerIoNotificationClient;
   private TrackingClient trackingClient;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
+  private Job job;
+  private StandardSourceDefinition sourceDefinition;
+  private ActorDefinitionVersion actorDefinitionVersion;
+  private StandardDestinationDefinition destinationDefinition;
+
   @BeforeEach
-  void setup() {
+  void setup() throws Exception {
     configRepository = mock(ConfigRepository.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     trackingClient = mock(TrackingClient.class);
@@ -71,19 +80,21 @@ class JobNotifierTest {
 
     jobNotifier = Mockito.spy(new JobNotifier(webUrlHelper, configRepository, workspaceHelper, trackingClient, actorDefinitionVersionHelper));
     notificationClient = mock(NotificationClient.class);
-    when(jobNotifier.getNotificationClient(getSlackNotification())).thenReturn(notificationClient);
-  }
+    customerIoNotificationClient = mock(NotificationClient.class);
+    when(jobNotifier.getNotificationClientsFromNotificationItem(slackNotificationItem())).thenReturn(List.of(notificationClient));
+    when(jobNotifier.getNotificationClientsFromNotificationItem(customerioAndSlackNotificationItem()))
+        .thenReturn(List.of(notificationClient, customerIoNotificationClient));
+    when(jobNotifier.getNotificationClientsFromNotificationItem(customerioNotificationItem())).thenReturn(List.of(customerIoNotificationClient));
+    when(jobNotifier.getNotificationClientsFromNotificationItem(noNotificationItem())).thenReturn(List.of());
 
-  @Test
-  void testFailJob() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
-    final Job job = createJob();
-    final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
+    job = createJob();
+    sourceDefinition = new StandardSourceDefinition()
         .withName("source-test")
         .withSourceDefinitionId(UUID.randomUUID());
-    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+    destinationDefinition = new StandardDestinationDefinition()
         .withName("destination-test")
         .withDestinationDefinitionId(UUID.randomUUID());
-    final ActorDefinitionVersion actorDefinitionVersion = new ActorDefinitionVersion()
+    actorDefinitionVersion = new ActorDefinitionVersion()
         .withDockerImageTag(TEST_DOCKER_TAG)
         .withDockerRepository(TEST_DOCKER_REPO);
     when(configRepository.getStandardSync(UUID.fromString(job.getScope())))
@@ -94,15 +105,21 @@ class JobNotifierTest {
     when(configRepository.getStandardDestinationDefinition(any())).thenReturn(destinationDefinition);
     when(configRepository.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(getWorkspace());
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId())).thenReturn(WORKSPACE_ID);
-    when(notificationClient.notifyJobFailure(anyString(), anyString(), anyString(), anyString(), anyLong())).thenReturn(true);
+    when(notificationClient.notifyJobFailure(anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyLong()))
+        .thenReturn(true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(actorDefinitionVersion);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)).thenReturn(actorDefinitionVersion);
+  }
 
+  @Test
+  void testFailJob() throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
     jobNotifier.failJob("JobNotifierTest was running", job);
     final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withZone(ZoneId.systemDefault());
     verify(notificationClient).notifyJobFailure(
+        null,
         "source-test",
         "destination-test",
+        null,
         String.format("sync started on %s, running for 1 day 10 hours 17 minutes 36 seconds, as the JobNotifierTest was running.",
             formatter.format(Instant.ofEpochSecond(job.getStartedAtInSecond().get()))),
         String.format("http://localhost:8000/workspaces/%s/connections/%s", WORKSPACE_ID, job.getScope()),
@@ -122,10 +139,66 @@ class JobNotifierTest {
     verify(trackingClient).track(WORKSPACE_ID, JobNotifier.FAILURE_NOTIFICATION, metadata.build());
   }
 
+  @Test
+  void testSuccessfulJobDoNotSendNotificationPerSettings()
+      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+    jobNotifier.successJob(job);
+    verify(notificationClient, never()).notifySuccess(any());
+  }
+
+  @Test
+  void testSendOnSyncDisabledWarning()
+      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+    jobNotifier.autoDisableConnectionWarning(job);
+    verify(notificationClient, never()).notifyConnectionDisableWarning(any(), any(), any(), any(), any(), any());
+    verify(customerIoNotificationClient).notifyConnectionDisableWarning(any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void testSendOnSyncDisabled()
+      throws IOException, InterruptedException, JsonValidationException, ConfigNotFoundException {
+    jobNotifier.autoDisableConnection(job);
+    verify(notificationClient).notifyConnectionDisabled(any(), any(), any(), any(), any(), any());
+    verify(customerIoNotificationClient).notifyConnectionDisabled(any(), any(), any(), any(), any(), any());
+  }
+
   private static StandardWorkspace getWorkspace() {
     return new StandardWorkspace()
         .withCustomerId(UUID.randomUUID())
-        .withNotifications(List.of(getSlackNotification()));
+        .withNotifications(List.of(getSlackNotification()))
+        .withNotificationSettings(new NotificationSettings()
+            .withSendOnFailure(slackNotificationItem())
+            .withSendOnSuccess(noNotificationItem())
+            .withSendOnConnectionUpdate(noNotificationItem())
+            .withSendOnSyncDisabled(customerioAndSlackNotificationItem())
+            .withSendOnSyncDisabledWarning(customerioNotificationItem())
+            .withSendOnConnectionUpdateActionRequired(noNotificationItem()));
+  }
+
+  private static NotificationItem slackNotificationItem() {
+    return new NotificationItem()
+        .withNotificationType(List.of(NotificationType.SLACK))
+        .withSlackConfiguration(
+            new SlackNotificationConfiguration()
+                .withWebhook("http://random.webhook.url/hooks.slack.com/"));
+  }
+
+  private static NotificationItem noNotificationItem() {
+    return new NotificationItem()
+        .withNotificationType(List.of());
+  }
+
+  private static NotificationItem customerioNotificationItem() {
+    return new NotificationItem()
+        .withNotificationType(List.of(NotificationType.CUSTOMERIO));
+  }
+
+  private static NotificationItem customerioAndSlackNotificationItem() {
+    return new NotificationItem()
+        .withNotificationType(List.of(NotificationType.SLACK, NotificationType.CUSTOMERIO))
+        .withSlackConfiguration(
+            new SlackNotificationConfiguration()
+                .withWebhook("http://random.webhook.url/hooks.slack.com/"));
   }
 
   private static Job createJob() {

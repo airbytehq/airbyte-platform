@@ -8,13 +8,14 @@ import { LoadingPage, MainPageWithScroll } from "components";
 import { HeadTitle } from "components/common/HeadTitle";
 import { ConnectionOnboarding } from "components/connection/ConnectionOnboarding";
 import { Button } from "components/ui/Button";
-import { PageHeader } from "components/ui/PageHeader";
+import { Heading } from "components/ui/Heading";
+import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useConnectionList } from "hooks/services/useConnectionHook";
 
 import ConnectionsTable from "./ConnectionsTable";
-import { RoutePaths } from "../../routePaths";
+import { ConnectionRoutePaths } from "../../routePaths";
 
 export const AllConnectionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export const AllConnectionsPage: React.FC = () => {
   const { connections } = useConnectionList();
 
   const onCreateClick = (sourceDefinitionId?: string) =>
-    navigate(`${RoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });
+    navigate(`${ConnectionRoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });
 
   return (
     <Suspense fallback={<LoadingPage />}>
@@ -33,8 +34,12 @@ export const AllConnectionsPage: React.FC = () => {
           <MainPageWithScroll
             softScrollEdge={false}
             pageTitle={
-              <PageHeader
-                title={<FormattedMessage id="sidebar.connections" />}
+              <NextPageHeader
+                leftComponent={
+                  <Heading as="h1" size="lg">
+                    <FormattedMessage id="sidebar.connections" />
+                  </Heading>
+                }
                 endComponent={
                   <Button
                     icon={<FontAwesomeIcon icon={faPlus} />}

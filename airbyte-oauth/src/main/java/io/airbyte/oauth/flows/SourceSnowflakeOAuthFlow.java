@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -32,13 +31,13 @@ public class SourceSnowflakeOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTHORIZE_URL = "https://%s/oauth/authorize";
   private static final String ACCESS_TOKEN_URL = "https://%s/oauth/token-request";
 
-  public SourceSnowflakeOAuthFlow(ConfigRepository configRepository, HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public SourceSnowflakeOAuthFlow(HttpClient httpClient) {
+    super(httpClient);
   }
 
   @VisibleForTesting
-  public SourceSnowflakeOAuthFlow(ConfigRepository configRepository, HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public SourceSnowflakeOAuthFlow(HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   @Override

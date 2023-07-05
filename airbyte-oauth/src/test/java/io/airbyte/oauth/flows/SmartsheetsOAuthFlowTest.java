@@ -19,7 +19,7 @@ class SmartsheetsOAuthFlowTest extends BaseOAuthFlowTest {
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
     final Clock clock = Clock.fixed(Instant.ofEpochSecond(1673464409), ZoneId.of("UTC"));
-    return new SmartsheetsOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState, clock);
+    return new SmartsheetsOAuthFlow(getHttpClient(), this::getConstantState, clock);
   }
 
   @Override

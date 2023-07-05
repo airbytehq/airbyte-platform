@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 
+import { useCurrentWorkspace } from "core/api";
 import { ConnectorHelper } from "core/domain/connector";
 import { ConnectorT } from "core/domain/connector/types";
 import { CheckConnectionRead } from "core/request/AirbyteClient";
 import { CheckConnectorParams, useCheckConnector } from "hooks/services/useConnector";
-import { useCurrentWorkspace } from "services/workspaces/WorkspacesService";
 
 import { ConnectorCardValues } from "../ConnectorForm";
 

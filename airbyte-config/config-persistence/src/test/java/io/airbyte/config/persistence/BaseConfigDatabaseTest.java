@@ -108,24 +108,29 @@ class BaseConfigDatabaseTest {
         .execute(
             """
             TRUNCATE TABLE
+              active_declarative_manifest,
               actor,
               actor_catalog,
               actor_catalog_fetch_event,
               actor_definition,
+              actor_definition_breaking_change,
+              actor_definition_version,
               actor_definition_workspace_grant,
               actor_definition_config_injection,
               actor_oauth_parameter,
               connection,
               connection_operation,
-              notification_configuration,
-              operation,
-              state,
-              stream_reset,
-              workspace,
-              workspace_service_account,
               connector_builder_project,
               declarative_manifest,
-              active_declarative_manifest
+              notification_configuration,
+              operation,
+              permission,
+              schema_management,
+              state,
+              stream_reset,
+              \"user\",
+              workspace,
+              workspace_service_account
             """));
   }
 

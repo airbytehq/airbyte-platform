@@ -5,6 +5,10 @@ global:
   secretName: ""
   credVolumeOverride: ""
   extraContainers: []
+  ## extraSelectorLables [object] - use to specify own additional selector labels for deployment
+  extraSelectorLabels: {}
+  ## extraLabels [object] - use to specify own additional labels for deployment
+  extraLabels: {}
   database:
     secretName: ""
     secretValue: ""
@@ -176,3 +180,7 @@ secrets: {}
 #   AIRBYTE_VERSION: 0.40.4
 
 env_vars: {}
+
+debug:
+  enabled: false
+  remoteDebugPort: 5005

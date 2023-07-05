@@ -25,6 +25,8 @@ import { useQuery } from "../useQuery";
 
 let windowObjectReference: Window | null = null; // global variable
 
+const OAUTH_REDIRECT_URL = `${window.location.protocol}//${window.location.host}`;
+
 function openWindow(url: string): void {
   if (windowObjectReference == null || windowObjectReference.closed) {
     /* if the pointer to the window object in memory does not exist
@@ -59,7 +61,7 @@ export function useConnectorAuth(): {
   const { formatMessage } = useIntl();
   const { trackError } = useAppMonitoringService();
   const { workspaceId } = useCurrentWorkspace();
-  const { apiUrl, oauthRedirectUrl } = useConfig();
+  const { apiUrl } = useConfig();
   const notificationService = useNotificationService();
   const { connectorId } = useConnectorForm();
 
@@ -88,7 +90,7 @@ export function useConnectorAuth(): {
           const payload: SourceOauthConsentRequest = {
             workspaceId,
             sourceDefinitionId: ConnectorSpecification.id(connector),
-            redirectUrl: `${oauthRedirectUrl}/auth_flow`,
+            redirectUrl: `${OAUTH_REDIRECT_URL}/auth_flow`,
             oAuthInputConfiguration,
             sourceId: connectorId,
           };
@@ -99,7 +101,7 @@ export function useConnectorAuth(): {
         const payload: DestinationOauthConsentRequest = {
           workspaceId,
           destinationDefinitionId: ConnectorSpecification.id(connector),
-          redirectUrl: `${oauthRedirectUrl}/auth_flow`,
+          redirectUrl: `${OAUTH_REDIRECT_URL}/auth_flow`,
           oAuthInputConfiguration,
           destinationId: connectorId,
         };

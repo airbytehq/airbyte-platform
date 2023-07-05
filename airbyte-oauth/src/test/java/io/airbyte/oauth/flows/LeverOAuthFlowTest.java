@@ -11,7 +11,7 @@ public class LeverOAuthFlowTest extends BaseOAuthFlowTest {
 
   @Override
   protected BaseOAuthFlow getOAuthFlow() {
-    return new HarvestOAuthFlow(getConfigRepository(), getHttpClient(), this::getConstantState);
+    return new HarvestOAuthFlow(getHttpClient(), this::getConstantState);
   }
 
   @Override

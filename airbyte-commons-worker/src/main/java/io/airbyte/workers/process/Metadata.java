@@ -37,6 +37,8 @@ public final class Metadata {
   public static final String WRITE_STEP = "write";
   public static final String NORMALIZE_STEP = "normalize";
   public static final String CUSTOM_STEP = "custom";
-  public static final String ORCHESTRATOR_STEP = "orchestrator";
+  public static final String ORCHESTRATOR_NORMALIZATION_STEP = "orchestrator-normalization";
+  public static final String ORCHESTRATOR_DBT_NORMALIZATION_STEP = "orchestrator-dbt-normalization";
+  public static final String ORCHESTRATOR_REPLICATION_STEP = "orchestrator-replication";
 
 }

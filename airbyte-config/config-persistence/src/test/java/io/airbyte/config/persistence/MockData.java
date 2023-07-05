@@ -14,6 +14,7 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionResourceRequirements;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
@@ -79,10 +80,18 @@ public class MockData {
   private static final UUID SOURCE_DEFINITION_ID_2 = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_3 = UUID.randomUUID();
   private static final UUID SOURCE_DEFINITION_ID_4 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_1 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_2 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_3 = UUID.randomUUID();
+  private static final UUID SOURCE_DEFINITION_VERSION_ID_4 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_1 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_2 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_3 = UUID.randomUUID();
   private static final UUID DESTINATION_DEFINITION_ID_4 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_1 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_2 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_3 = UUID.randomUUID();
+  private static final UUID DESTINATION_DEFINITION_VERSION_ID_4 = UUID.randomUUID();
   public static final UUID SOURCE_ID_1 = UUID.randomUUID();
   public static final UUID SOURCE_ID_2 = UUID.randomUUID();
   private static final UUID SOURCE_ID_3 = UUID.randomUUID();
@@ -200,14 +209,10 @@ public class MockData {
   public static StandardSourceDefinition publicSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_1)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_1)
         .withSourceType(SourceType.API)
         .withName("random-source-1")
-        .withDockerImageTag("tag-1")
-        .withDockerRepository("repository-1")
-        .withDocumentationUrl("documentation-url-1")
         .withIcon("icon-1")
-        .withSpec(connectorSpecification())
-        .withProtocolVersion("0.2.1")
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
@@ -218,11 +223,9 @@ public class MockData {
   public static StandardSourceDefinition grantableSourceDefinition1() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_2)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-2")
-        .withDockerImageTag("tag-2")
-        .withDockerRepository("repository-2")
-        .withDocumentationUrl("documentation-url-2")
         .withIcon("icon-2")
         .withTombstone(false)
         .withPublic(false)
@@ -233,12 +236,9 @@ public class MockData {
   public static StandardSourceDefinition grantableSourceDefinition2() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_3)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_3)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-3")
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
-        .withProtocolVersion("0.2.2")
         .withIcon("icon-3")
         .withTombstone(false)
         .withPublic(false)
@@ -249,17 +249,22 @@ public class MockData {
   public static StandardSourceDefinition customSourceDefinition() {
     return new StandardSourceDefinition()
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_4)
+        .withDefaultVersionId(SOURCE_DEFINITION_VERSION_ID_4)
         .withSourceType(SourceType.DATABASE)
         .withName("random-source-4")
-        .withDockerImageTag("tag-4")
-        .withDockerRepository("repository-4")
-        .withDocumentationUrl("documentation-url-4")
-        .withProtocolVersion("0.2.4")
         .withIcon("icon-4")
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES);
+  }
+
+  public static ActorDefinitionVersion actorDefinitionVersion() {
+    return new ActorDefinitionVersion()
+        .withDockerImageTag("tag-4")
+        .withDockerRepository("repository-4")
+        .withSpec(connectorSpecification())
+        .withProtocolVersion("0.2.0");
   }
 
   public static List<StandardSourceDefinition> standardSourceDefinitions() {
@@ -286,13 +291,9 @@ public class MockData {
   public static StandardDestinationDefinition publicDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_1)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_1)
         .withName("random-destination-1")
-        .withDockerImageTag("tag-3")
-        .withDockerRepository("repository-3")
-        .withDocumentationUrl("documentation-url-3")
         .withIcon("icon-3")
-        .withSpec(connectorSpecification())
-        .withProtocolVersion("0.3.1")
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
@@ -302,12 +303,9 @@ public class MockData {
   public static StandardDestinationDefinition grantableDestinationDefinition1() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_2)
         .withName("random-destination-2")
-        .withDockerImageTag("tag-4")
-        .withDockerRepository("repository-4")
-        .withDocumentationUrl("documentation-url-4")
         .withIcon("icon-4")
-        .withSpec(connectorSpecification())
         .withTombstone(false)
         .withPublic(false)
         .withCustom(false);
@@ -316,27 +314,20 @@ public class MockData {
   public static StandardDestinationDefinition grantableDestinationDefinition2() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_3)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_3)
         .withName("random-destination-3")
-        .withDockerImageTag("tag-33")
-        .withDockerRepository("repository-33")
-        .withDocumentationUrl("documentation-url-33")
         .withIcon("icon-3")
-        .withSpec(connectorSpecification())
         .withTombstone(false)
         .withPublic(false)
         .withCustom(false);
   }
 
-  public static StandardDestinationDefinition cusstomDestinationDefinition() {
+  public static StandardDestinationDefinition customDestinationDefinition() {
     return new StandardDestinationDefinition()
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_4)
+        .withDefaultVersionId(DESTINATION_DEFINITION_VERSION_ID_4)
         .withName("random-destination-4")
-        .withDockerImageTag("tag-44")
-        .withDockerRepository("repository-44")
-        .withDocumentationUrl("documentation-url-44")
         .withIcon("icon-4")
-        .withSpec(connectorSpecification())
-        .withProtocolVersion("0.3.2")
         .withTombstone(false)
         .withPublic(false)
         .withCustom(true);
@@ -347,7 +338,7 @@ public class MockData {
         publicDestinationDefinition(),
         grantableDestinationDefinition1(),
         grantableDestinationDefinition2(),
-        cusstomDestinationDefinition());
+        customDestinationDefinition());
   }
 
   public static List<SourceConnection> sourceConnections() {

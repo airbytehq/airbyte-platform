@@ -9,5 +9,5 @@ const CompleteOauthRequest: React.FC = React.memo(() => {
 
   return <LoadingPage />;
 });
-
+CompleteOauthRequest.displayName = "CompleteOauthRequest";
 export { CompleteOauthRequest };

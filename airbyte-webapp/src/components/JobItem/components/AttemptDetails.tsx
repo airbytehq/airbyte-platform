@@ -1,7 +1,9 @@
-import classNames from "classnames";
 import dayjs from "dayjs";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
 import { AttemptRead, AttemptStatus } from "core/request/AirbyteClient";
 import { formatBytes } from "utils/numberHelper";
@@ -13,9 +15,10 @@ interface AttemptDetailsProps {
   className?: string;
   attempt: AttemptRead;
   hasMultipleAttempts?: boolean;
+  jobId: string;
 }
 
-export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, className, hasMultipleAttempts }) => {
+export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, hasMultipleAttempts, jobId }) => {
   const { formatMessage } = useIntl();
 
   if (attempt.status !== AttemptStatus.succeeded && attempt.status !== AttemptStatus.failed) {
@@ -49,36 +52,53 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, classNa
   const isFailed = attempt.status === AttemptStatus.failed && !isCancelled;
 
   return (
-    <div className={classNames(styles.container, className)}>
+    <>
       {!isCancelled && (
-        <div className={styles.details}>
+        <FlexContainer gap="xs">
           {hasMultipleAttempts && (
-            <strong className={classNames(styles.lastAttempt, { [styles.failed]: isFailed })}>
+            <Text color={isFailed ? "red" : "darkBlue"} bold as="span" size="sm">
               <FormattedMessage id="sources.lastAttempt" />
-            </strong>
+            </Text>
           )}
-          <span>{formatBytes(attempt?.totalStats?.bytesEmitted)}</span>
-          <span>
+          <Text as="span" color="grey" size="sm">
+            {formatBytes(attempt?.totalStats?.bytesEmitted)}
+          </Text>
+          <Text as="span" color="grey" size="sm">
+            |
+          </Text>
+          <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countEmittedRecords"
               values={{ count: attempt.totalStats?.recordsEmitted || 0 }}
             />
-          </span>
-          <span>
+          </Text>
+          <Text as="span" color="grey" size="sm">
+            |
+          </Text>
+          <Text as="span" color="grey" size="sm">
             <FormattedMessage
               id="sources.countCommittedRecords"
               values={{ count: attempt.totalStats?.recordsCommitted || 0 }}
             />
-          </span>
-          <span>
+          </Text>
+          <Text as="span" color="grey" size="sm">
+            |
+          </Text>
+          <Text as="span" color="grey" size="sm">
+            <FormattedMessage id="jobs.jobId" values={{ id: jobId }} />
+          </Text>
+          <Text as="span" color="grey" size="sm">
+            |
+          </Text>
+          <Text as="span" color="grey" size="sm">
             {hours ? <FormattedMessage id="sources.hour" values={{ hour: hours }} /> : null}
             {hours || minutes ? <FormattedMessage id="sources.minute" values={{ minute: minutes }} /> : null}
             <FormattedMessage id="sources.second" values={{ second: seconds }} />
-          </span>
-        </div>
+          </Text>
+        </FlexContainer>
       )}
       {isFailed && (
-        <div className={styles.failedMessage}>
+        <Text color="red" size="sm" className={styles.failedMessage}>
           {formatMessage(
             {
               id: "ui.keyValuePairV3",
@@ -88,8 +108,8 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({ attempt, classNa
               value: getExternalFailureMessage(attempt),
             }
           )}
-        </div>
+        </Text>
       )}
-    </div>
+    </>
   );
 };

@@ -2,29 +2,17 @@
 @use "scss/colors";
 
 .container {
-  margin-top: variables.$spacing-lg;
   width: 100%;
 }
 
-.withBottomMargin {
+.withMargin {
+  margin-top: variables.$spacing-lg;
   margin-bottom: variables.$spacing-lg;
 }
 
 .enrollLink {
+  all: unset;
   text-decoration: underline;
   cursor: pointer;
-  padding: 0;
-  color: colors.$dark-blue;
-  border: none;
-  background-color: transparent;
-  font-size: inherit;
-
-  &:hover,
-  &:active {
-    color: colors.$blue;
-  }
-}
-
-.freeText {
   color: colors.$blue;
 }

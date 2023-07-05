@@ -66,6 +66,7 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
         variant={INFO_TEXT_VARIANT_BY_PILL_VARIANT[variant]}
         className={styles.streamPathSelect}
         data-testid={testId}
+        withOverflowTooltip
       >
         {SourceDefinedNode}
       </InfoText>
@@ -79,7 +80,7 @@ export const StreamPathSelect: React.FC<PathPopoutProps> = ({
 
   return (
     <PillSelect
-      disabledLabel={<FormattedMessage id="connectionForm.bulkEdit.pillButtonLabel.notAvailable" />}
+      disabledLabel={<FormattedMessage id="connectionForm.pillButtonLabel.notAvailable" />}
       disabled={props.disabled}
       variant={variant}
       options={options}

@@ -1,8 +1,8 @@
-import { useField } from "formik";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { BuilderField } from "./BuilderField";
 import { BuilderFieldWithInputs } from "./BuilderFieldWithInputs";
-import { injectIntoValues, RequestOptionOrPathInject } from "../types";
+import { injectIntoValues } from "../types";
 
 interface RequestOptionFieldsProps {
   path: string;
@@ -11,7 +11,8 @@ interface RequestOptionFieldsProps {
 }
 
 export const RequestOptionFields: React.FC<RequestOptionFieldsProps> = ({ path, descriptor, excludePathInjection }) => {
-  const [field, , helpers] = useField<RequestOptionOrPathInject>(path);
+  const value = useWatch({ name: `${path}.inject_into` });
+  const { setValue } = useFormContext();
 
   return (
     <>
@@ -21,13 +22,13 @@ export const RequestOptionFields: React.FC<RequestOptionFieldsProps> = ({ path, 
         options={excludePathInjection ? injectIntoValues.filter((target) => target !== "path") : injectIntoValues}
         onChange={(newValue) => {
           if (newValue === "path") {
-            helpers.setValue({ inject_into: newValue });
+            setValue(path, { inject_into: newValue });
           }
         }}
         label="Inject into"
         tooltip={`Configures where the ${descriptor} should be set on the HTTP requests`}
       />
-      {field.value.inject_into !== "path" && (
+      {value !== "path" && (
         <BuilderFieldWithInputs
           type="string"
           path={`${path}.field_name`}

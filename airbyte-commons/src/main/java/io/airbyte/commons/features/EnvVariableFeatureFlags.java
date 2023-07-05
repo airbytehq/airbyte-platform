@@ -4,10 +4,7 @@
 
 package io.airbyte.commons.features;
 
-import java.util.Arrays;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,11 +33,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
     log.info("Auto Disable Failing Connections: " + Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS")));
 
     return Boolean.parseBoolean(System.getenv("AUTO_DISABLE_FAILING_CONNECTIONS"));
-  }
-
-  @Override
-  public boolean forceSecretMigration() {
-    return Boolean.parseBoolean(System.getenv("FORCE_MIGRATE_SECRET_STORE"));
   }
 
   @Override
@@ -73,16 +65,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
     return getEnvOrDefault(FIELD_SELECTION_WORKSPACES, "", (arg) -> arg);
   }
 
-  @Override
-  public boolean processInGcpDataPlane(final String workspaceId) {
-    boolean isFlagEnabledForAll = getEnvOrDefault(PROCESS_IN_GCP_DATA_PLANE, false, Boolean::parseBoolean);
-    if (isFlagEnabledForAll) {
-      return true;
-    }
-    Set<String> allowlistedWorkspaceIds = getEnvOrDefault(PROCESS_IN_GCP_DATA_PLANE_WORKSPACE_IDS, Set.of(), this::parseStringToSet);
-    return allowlistedWorkspaceIds.contains(workspaceId);
-  }
-
   /**
    * Get env variable.
    *
@@ -101,10 +83,6 @@ public class EnvVariableFeatureFlags implements FeatureFlags {
       log.debug("Using default value for environment variable {}: '{}'", key, defaultValue);
       return defaultValue;
     }
-  }
-
-  private Set<String> parseStringToSet(String commaSeparatedArg) {
-    return Arrays.stream(commaSeparatedArg.split(",")).collect(Collectors.toSet());
   }
 
 }

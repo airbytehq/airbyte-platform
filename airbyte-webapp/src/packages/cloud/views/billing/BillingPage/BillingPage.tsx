@@ -6,21 +6,20 @@ import { HeadTitle } from "components/common/HeadTitle";
 import { MainPageWithScroll } from "components/common/MainPageWithScroll";
 import { SortOrderEnum } from "components/EntityTable/types";
 import { FlexContainer } from "components/ui/Flex";
-import { PageHeader } from "components/ui/PageHeader";
+import { Heading } from "components/ui/Heading";
+import { NextPageHeader } from "components/ui/PageHeader/NextPageHeader";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
-import { PageTrackingCodes, useTrackPage } from "hooks/services/Analytics";
-import { useFeature, FeatureItem } from "hooks/services/Feature";
-import { LargeEnrollmentCallout } from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
-import { useAuthService } from "packages/cloud/services/auth/AuthService";
+import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
+import LargeEnrollmentCallout from "packages/cloud/components/experiments/FreeConnectorProgram/LargeEnrollmentCallout";
 import { links } from "utils/links";
 
 import styles from "./BillingPage.module.scss";
-import CreditsUsage from "./components/CreditsUsage";
+import { CreditsUsage } from "./components/CreditsUsage";
 import { CreditsUsageContextProvider } from "./components/CreditsUsageContext";
-import { EmailVerificationHint } from "./components/EmailVerificationHint";
-import RemainingCredits from "./components/RemainingCredits";
+import { RemainingCredits } from "./components/RemainingCredits";
 import { ReactComponent as FilesIcon } from "./filesIcon.svg";
 
 export interface BillingPageQueryParams {
@@ -44,18 +43,25 @@ const StripePortalLink: React.FC = () => {
   );
 };
 export const BillingPage: React.FC = () => {
-  const { emailVerified } = useAuthService();
   useTrackPage(PageTrackingCodes.CREDITS);
   const fcpEnabled = useFeature(FeatureItem.FreeConnectorProgram);
 
   return (
     <MainPageWithScroll
       headTitle={<HeadTitle titles={[{ id: "credits.billing" }]} />}
-      pageTitle={<PageHeader title={<FormattedMessage id="credits.billing" />} endComponent={<StripePortalLink />} />}
+      pageTitle={
+        <NextPageHeader
+          leftComponent={
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="credits.billing" />
+            </Heading>
+          }
+          endComponent={<StripePortalLink />}
+        />
+      }
     >
-      <div className={styles.content}>
-        {!emailVerified && <EmailVerificationHint className={styles.emailVerificationHint} />}
-        <RemainingCredits selfServiceCheckoutEnabled={emailVerified} />
+      <FlexContainer direction="column" className={styles.content}>
+        <RemainingCredits />
         {fcpEnabled && <LargeEnrollmentCallout />}
         <React.Suspense
           fallback={
@@ -71,7 +77,7 @@ export const BillingPage: React.FC = () => {
             <CreditsUsage />
           </CreditsUsageContextProvider>
         </React.Suspense>
-      </div>
+      </FlexContainer>
     </MainPageWithScroll>
   );
 };

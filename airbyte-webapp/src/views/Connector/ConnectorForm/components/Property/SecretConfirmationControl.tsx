@@ -1,5 +1,5 @@
-import { useField, useFormikContext } from "formik";
 import React, { useEffect, useRef, useState } from "react";
+import { useController, useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -25,12 +25,14 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
   error,
   onChange,
 }) => {
-  const [field, , helpers] = useField(name);
+  const { field } = useController({
+    name,
+  });
+  const { isDirty: dirty, touchedFields } = useFormState({ name });
+  const touched = Object.keys(touchedFields).length > 0;
   const [previousValue, setPreviousValue] = useState<unknown>(undefined);
   const isEditInProgress = Boolean(previousValue);
   const controlRef = useRef<HTMLInputElement>(null);
-
-  const { dirty, touched } = useFormikContext();
 
   const component =
     multiline && (isEditInProgress || !showButtons) ? (
@@ -44,6 +46,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={showButtons && isEditInProgress}
         disabled={(showButtons && !isEditInProgress) || disabled}
+        onUpload={(val) => field.onChange(val)}
       />
     ) : (
       <Input
@@ -62,7 +65,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
     if (!dirty && !touched && previousValue) {
       setPreviousValue(undefined);
     }
-  }, [dirty, helpers, previousValue, touched]);
+  }, [dirty, previousValue, touched]);
 
   if (!showButtons) {
     return <>{component}</>;
@@ -73,8 +76,8 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
       controlRef.current?.removeAttribute?.("disabled");
       controlRef.current?.focus?.();
     }
+    field.onChange("");
     setPreviousValue(field.value);
-    helpers.setValue("");
   };
 
   const onDone = () => {
@@ -83,7 +86,7 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
 
   const onCancel = () => {
     if (previousValue) {
-      helpers.setValue(previousValue);
+      field.onChange(previousValue);
     }
     setPreviousValue(undefined);
   };

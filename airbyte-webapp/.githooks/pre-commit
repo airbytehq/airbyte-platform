@@ -1,5 +1,10 @@
 # Find the airbyte-webapp folder (which might be either inside oss/ or on the root)
-webappDir="$(dirname "$(find . -wholename '*/airbyte-webapp/package.json')")"
+if [ -d "./oss/airbyte-webapp" ]; then
+  webappDir="./oss/airbyte-webapp"
+else
+  webappDir="./airbyte-webapp"
+fi
+
 if [ -z "$(git diff --stat --staged "$webappDir")" ]; then
   # There are no staged changes in the webapp folder, so we can skip the rest of this hook
   exit 0

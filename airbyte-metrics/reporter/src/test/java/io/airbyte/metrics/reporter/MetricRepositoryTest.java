@@ -23,7 +23,6 @@ import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType;
@@ -75,11 +74,10 @@ class MetricRepositoryTest {
     dbProviders.createNewConfigsDatabase();
     dbProviders.createNewJobsDatabase();
 
-    ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.DOCKER_REPOSITORY,
-        ACTOR_DEFINITION.DOCKER_IMAGE_TAG, ACTOR_DEFINITION.SPEC, ACTOR_DEFINITION.ACTOR_TYPE, ACTOR_DEFINITION.RELEASE_STAGE)
-        .values(SRC_DEF_ID, "srcDef", "repository", "tag", JSONB.valueOf("{}"), ActorType.source, ReleaseStage.beta)
-        .values(DST_DEF_ID, "dstDef", "repository", "tag", JSONB.valueOf("{}"), ActorType.destination, ReleaseStage.generally_available)
-        .values(UUID.randomUUID(), "dstDef", "repository", "tag", JSONB.valueOf("{}"), ActorType.destination, ReleaseStage.alpha)
+    ctx.insertInto(ACTOR_DEFINITION, ACTOR_DEFINITION.ID, ACTOR_DEFINITION.NAME, ACTOR_DEFINITION.ACTOR_TYPE)
+        .values(SRC_DEF_ID, "srcDef", ActorType.source)
+        .values(DST_DEF_ID, "dstDef", ActorType.destination)
+        .values(UUID.randomUUID(), "dstDef", ActorType.destination)
         .execute();
 
     // drop constraints to simplify test set up
@@ -234,7 +232,7 @@ class MetricRepositoryTest {
           .values(4L, connectionUuid.toString(), JobStatus.failed)
           .execute();
 
-      Double result = db.oldestPendingJobAgeSecsByGeography().get(EU_REGION);
+      final Double result = db.oldestPendingJobAgeSecsByGeography().get(EU_REGION);
       // expected age is 1000 seconds, but allow for +/- 1 second to account for timing/rounding errors
       assertTrue(999 < result && result < 1001);
     }

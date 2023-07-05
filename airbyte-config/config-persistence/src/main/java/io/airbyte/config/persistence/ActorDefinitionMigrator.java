@@ -4,35 +4,29 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION;
-import static org.jooq.impl.DSL.asterisk;
-
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Sets;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.util.MoreIterators;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.AirbyteVersion;
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AirbyteConfig;
 import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConnectorRegistryDestinationDefinition;
+import io.airbyte.config.ConnectorRegistrySourceDefinition;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
-import io.airbyte.config.StandardSourceDefinition.SourceType;
-import io.airbyte.db.ExceptionWrappingDatabase;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
-import io.airbyte.db.instance.configs.jooq.generated.enums.ReleaseStage;
+import io.airbyte.config.helpers.ConnectorRegistryConverters;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.validation.json.JsonValidationException;
+import io.micronaut.context.annotation.Requires;
+import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,16 +34,21 @@ import org.slf4j.LoggerFactory;
  * Takes in most up-to-date source and destination definitions from the Airbyte connector catalog
  * and merges them with those already present in the database. See javadocs on methods for rules.
  */
+@Singleton
+@Requires(bean = ConfigRepository.class)
 public class ActorDefinitionMigrator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ActorDefinitionMigrator.class);
 
   private static final String UNKNOWN_CONFIG_TYPE = "Unknown Config Type ";
 
-  private final ExceptionWrappingDatabase database;
+  private final ConfigRepository configRepository;
 
-  public ActorDefinitionMigrator(final ExceptionWrappingDatabase database) {
-    this.database = database;
+  private final FeatureFlagClient featureFlagClient;
+
+  public ActorDefinitionMigrator(final ConfigRepository configRepository, final FeatureFlagClient featureFlagClient) {
+    this.configRepository = configRepository;
+    this.featureFlagClient = featureFlagClient;
   }
 
   /**
@@ -57,105 +56,58 @@ public class ActorDefinitionMigrator {
    *
    * @param latestSources latest sources
    * @param latestDestinations latest destinations
+   * @param updateAll whether to update all definitions regardless of if they are being used
    * @throws IOException exception while interacting with the db.
    */
-  public void migrate(final List<StandardSourceDefinition> latestSources, final List<StandardDestinationDefinition> latestDestinations)
-      throws IOException {
-    database.transaction(ctx -> {
-      try {
-        updateConfigsFromSeed(ctx, latestSources, latestDestinations);
-      } catch (final IOException e) {
-        throw new SQLException(e);
-      }
-      return null;
-    });
-  }
-
-  @VisibleForTesting
-  void updateConfigsFromSeed(final DSLContext ctx,
-                             final List<StandardSourceDefinition> latestSources,
-                             final List<StandardDestinationDefinition> latestDestinations)
-      throws IOException {
+  public void migrate(final List<ConnectorRegistrySourceDefinition> latestSources,
+                      final List<ConnectorRegistryDestinationDefinition> latestDestinations,
+                      final boolean updateAll)
+      throws IOException, JsonValidationException {
     LOGGER.info("Updating connector definitions from the seed if necessary...");
 
-    final Set<String> connectorRepositoriesInUse = ConfigWriter.getConnectorRepositoriesInUse(ctx);
+    final Set<String> connectorRepositoriesInUse = configRepository.getConnectorRepositoriesInUse();
     LOGGER.info("Connectors in use: {}", connectorRepositoriesInUse);
 
-    final Map<String, ConnectorInfo> connectorRepositoryToInfoMap = getConnectorRepositoryToInfoMap(ctx);
+    final Map<String, ConnectorInfo> connectorRepositoryToInfoMap = getConnectorRepositoryToInfoMap();
     LOGGER.info("Current connector versions: {}", connectorRepositoryToInfoMap.values());
 
     int newConnectorCount = 0;
     int updatedConnectorCount = 0;
 
-    final ConnectorCounter sourceConnectorCounter = updateConnectorDefinitions(ctx, ConfigSchema.STANDARD_SOURCE_DEFINITION,
-        latestSources, connectorRepositoriesInUse, connectorRepositoryToInfoMap);
+    final ConnectorCounter sourceConnectorCounter = updateConnectorDefinitions(ConfigSchema.STANDARD_SOURCE_DEFINITION,
+        latestSources, connectorRepositoriesInUse, connectorRepositoryToInfoMap, updateAll);
     newConnectorCount += sourceConnectorCounter.newCount;
     updatedConnectorCount += sourceConnectorCounter.updateCount;
 
-    final ConnectorCounter destinationConnectorCounter = updateConnectorDefinitions(ctx, ConfigSchema.STANDARD_DESTINATION_DEFINITION,
-        latestDestinations, connectorRepositoriesInUse, connectorRepositoryToInfoMap);
+    final ConnectorCounter destinationConnectorCounter = updateConnectorDefinitions(ConfigSchema.STANDARD_DESTINATION_DEFINITION,
+        latestDestinations, connectorRepositoriesInUse, connectorRepositoryToInfoMap, updateAll);
     newConnectorCount += destinationConnectorCounter.newCount;
     updatedConnectorCount += destinationConnectorCounter.updateCount;
 
-    LOGGER.info("Connector definitions have been updated ({} new connectors, and {} updates)", newConnectorCount, updatedConnectorCount);
+    LOGGER.info("Connector definitions have been updated ({} new connectors, and {} version updates)", newConnectorCount, updatedConnectorCount);
   }
 
   /**
    * Get connector docker image to connector definition info.
    *
-   * @param ctx db context
    * @return A map about current connectors (both source and destination). It maps from connector
    *         repository to its definition id and docker image tag. We identify a connector by its
    *         repository name instead of definition id because connectors can be added manually by
    *         users, and are not always the same as those in the seed.
    */
   @VisibleForTesting
-  Map<String, ConnectorInfo> getConnectorRepositoryToInfoMap(final DSLContext ctx) {
-    return ctx.select(asterisk())
-        .from(ACTOR_DEFINITION)
-        .where(ACTOR_DEFINITION.RELEASE_STAGE.isNull()
-            .or(ACTOR_DEFINITION.RELEASE_STAGE.ne(ReleaseStage.custom).or(ACTOR_DEFINITION.CUSTOM)))
-        .fetch()
+  Map<String, ConnectorInfo> getConnectorRepositoryToInfoMap() throws IOException {
+    return configRepository.getCurrentConnectorInfo()
         .stream()
         .collect(Collectors.toMap(
-            row -> row.getValue(ACTOR_DEFINITION.DOCKER_REPOSITORY),
-            row -> {
-              final JsonNode jsonNode;
-              if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.source) {
-                jsonNode = Jsons.jsonNode(new StandardSourceDefinition()
-                    .withSourceDefinitionId(row.get(ACTOR_DEFINITION.ID))
-                    .withDockerImageTag(row.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
-                    .withIcon(row.get(ACTOR_DEFINITION.ICON))
-                    .withDockerRepository(row.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-                    .withDocumentationUrl(row.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
-                    .withName(row.get(ACTOR_DEFINITION.NAME))
-                    .withPublic(row.get(ACTOR_DEFINITION.PUBLIC))
-                    .withCustom(row.get(ACTOR_DEFINITION.CUSTOM))
-                    .withSourceType(row.get(ACTOR_DEFINITION.SOURCE_TYPE) == null ? null
-                        : Enums.toEnum(row.get(ACTOR_DEFINITION.SOURCE_TYPE, String.class), SourceType.class).orElseThrow())
-                    .withSpec(Jsons.deserialize(row.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class)));
-              } else if (row.get(ACTOR_DEFINITION.ACTOR_TYPE) == ActorType.destination) {
-                jsonNode = Jsons.jsonNode(new StandardDestinationDefinition()
-                    .withDestinationDefinitionId(row.get(ACTOR_DEFINITION.ID))
-                    .withDockerImageTag(row.get(ACTOR_DEFINITION.DOCKER_IMAGE_TAG))
-                    .withIcon(row.get(ACTOR_DEFINITION.ICON))
-                    .withDockerRepository(row.get(ACTOR_DEFINITION.DOCKER_REPOSITORY))
-                    .withDocumentationUrl(row.get(ACTOR_DEFINITION.DOCUMENTATION_URL))
-                    .withName(row.get(ACTOR_DEFINITION.NAME))
-                    .withPublic(row.get(ACTOR_DEFINITION.PUBLIC))
-                    .withCustom(row.get(ACTOR_DEFINITION.CUSTOM))
-                    .withSpec(Jsons.deserialize(row.get(ACTOR_DEFINITION.SPEC).data(), ConnectorSpecification.class)));
-              } else {
-                throw new RuntimeException("Unknown Actor Type " + row.get(ACTOR_DEFINITION.ACTOR_TYPE));
-              }
-              return new ConnectorInfo(row.getValue(ACTOR_DEFINITION.ID).toString(), jsonNode);
-            },
+            connectorInfo -> connectorInfo.dockerRepository,
+            connectorInfo -> connectorInfo,
             (c1, c2) -> {
               final AirbyteVersion v1 = new AirbyteVersion(c1.dockerImageTag);
               final AirbyteVersion v2 = new AirbyteVersion(c2.dockerImageTag);
               LOGGER.warn("Duplicated connector version found for {}: {} ({}) vs {} ({})",
                   c1.dockerRepository, c1.dockerImageTag, c1.definitionId, c2.dockerImageTag, c2.definitionId);
-              final int comparison = v1.patchVersionCompareTo(v2);
+              final int comparison = v1.versionCompareTo(v2);
               if (comparison >= 0) {
                 return c1;
               } else {
@@ -165,134 +117,87 @@ public class ActorDefinitionMigrator {
   }
 
   /**
-   * The custom connector are not present in the seed and thus it is not relevant to validate their
-   * latest version. This method allows to filter them out.
-   *
-   * @param connectorRepositoryToIdVersionMap connector docker image to connector info
-   * @param configType airbyte config type
-   * @return map of docker image to connector info
-   */
-  @VisibleForTesting
-  Map<String, ConnectorInfo> filterCustomConnector(final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap,
-                                                   final AirbyteConfig configType) {
-    return connectorRepositoryToIdVersionMap.entrySet().stream()
-        // The validation is based on the of the connector name is based on the seed which doesn't contain
-        // any custom connectors. They can thus be
-        // filtered out.
-        .filter(entry -> {
-          if (configType == ConfigSchema.STANDARD_SOURCE_DEFINITION) {
-            return !Jsons.object(entry.getValue().definition, StandardSourceDefinition.class).getCustom();
-          } else if (configType == ConfigSchema.STANDARD_DESTINATION_DEFINITION) {
-            return !Jsons.object(entry.getValue().definition, StandardDestinationDefinition.class).getCustom();
-          } else {
-            return true;
-          }
-        })
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
-
-  /**
    * Update connector definitions with new batch.
    *
-   * @param ctx db context
    * @param configType airbyte config type
    * @param latestDefinitions latest definitions
    * @param connectorRepositoriesInUse when a connector is used in any standard sync, its definition
    *        will not be updated. This is necessary because the new connector version may not be
    *        backward compatible.
    * @param connectorRepositoryToIdVersionMap map of connector docker image to connector info
-   * @param <T> type of definition Source Definition or Destination Definition
+   * @param <T> type of definition ConnectorRegistrySourceDefinition or
+   *        ConnectorRegistryDestinationDefiniton
    * @return connector counts
    * @throws IOException exception when interacting with the db
    */
   @VisibleForTesting
-  <T> ConnectorCounter updateConnectorDefinitions(final DSLContext ctx,
-                                                  final AirbyteConfig configType,
+  <T> ConnectorCounter updateConnectorDefinitions(final AirbyteConfig configType,
                                                   final List<T> latestDefinitions,
                                                   final Set<String> connectorRepositoriesInUse,
-                                                  final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap)
+                                                  final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMap,
+                                                  final boolean updateAll)
       throws IOException {
     int newCount = 0;
     int updatedCount = 0;
 
-    for (final T definition : latestDefinitions) {
-      final JsonNode latestDefinition = Jsons.jsonNode(definition);
-      final String repository = latestDefinition.get("dockerRepository").asText();
-
-      final Map<String, ConnectorInfo> connectorRepositoryToIdVersionMapWithoutCustom = filterCustomConnector(connectorRepositoryToIdVersionMap,
-          configType);
+    for (final T latestRegistryDefinition : latestDefinitions) {
+      final JsonNode latestRegistryDefinitionJson = Jsons.jsonNode(latestRegistryDefinition);
+      final String repository = latestRegistryDefinitionJson.get("dockerRepository").asText();
 
       // Add new connector
-      if (!connectorRepositoryToIdVersionMapWithoutCustom.containsKey(repository)) {
-        LOGGER.info("Adding new connector {}: {}", repository, latestDefinition);
-        writeOrUpdateStandardDefinition(ctx, configType, latestDefinition);
+      if (!connectorRepositoryToIdVersionMap.containsKey(repository)) {
+        LOGGER.info("Adding new connector {}: {}", repository, latestRegistryDefinitionJson);
+        writeOrUpdateConnectorRegistryDefinition(configType, latestRegistryDefinition);
         newCount++;
         continue;
       }
 
-      final ConnectorInfo connectorInfo = connectorRepositoryToIdVersionMapWithoutCustom.get(repository);
-      final JsonNode currentDefinition = connectorInfo.definition;
+      // Handle existing connectors
+      final ConnectorInfo connectorInfo = connectorRepositoryToIdVersionMap.get(repository);
+      final String latestImageTag = latestRegistryDefinitionJson.get("dockerImageTag").asText();
+      final boolean connectorIsInUse = connectorRepositoriesInUse.contains(repository);
 
-      // todo (lmossman) - this logic to remove the "spec" field is temporary; it is necessary to avoid
-      // breaking users who are actively using an old connector version, otherwise specs from the most
-      // recent connector versions may be inserted into the db which could be incompatible with the
-      // version they are actually using.
-      // Once the faux major version bump has been merged, this "new field" logic will be removed
-      // entirely.
-      final Set<String> newFields = Sets.difference(getNewFields(currentDefinition, latestDefinition), Set.of("spec"));
-
-      // Process connector in use
-      if (connectorRepositoriesInUse.contains(repository)) {
-        final String latestImageTag = latestDefinition.get("dockerImageTag").asText();
-        if (hasNewPatchVersion(connectorInfo.dockerImageTag, latestImageTag)) {
-          // Update connector to the latest patch version
-          LOGGER.info("Connector {} needs update: {} vs {}", repository, connectorInfo.dockerImageTag, latestImageTag);
-          writeOrUpdateStandardDefinition(ctx, configType, latestDefinition);
+      if (updateIsAvailable(connectorInfo.dockerImageTag, latestImageTag)) {
+        if (updateIsPatchOnly(connectorInfo.dockerImageTag, latestImageTag)) {
+          // Always update the connector to a new patch version if available
+          LOGGER.info("Connector {} needs update: {} -> {}", repository, connectorInfo.dockerImageTag, latestImageTag);
+          writeOrUpdateConnectorRegistryDefinition(configType, latestRegistryDefinition);
           updatedCount++;
-        } else if (newFields.isEmpty()) {
-          LOGGER.info("Connector {} is in use and has all fields; skip updating", repository);
-        } else {
-          // Add new fields to the connector definition
-          final JsonNode definitionToUpdate = getDefinitionWithNewFields(currentDefinition, latestDefinition, newFields);
-          LOGGER.info("Connector {} has new fields: {}", repository, String.join(", ", newFields));
-          writeOrUpdateStandardDefinition(ctx, configType, definitionToUpdate);
+        } else if (updateAll || !connectorIsInUse) {
+          // If not update all, only update the connector to new major/minor versions if it's not in use
+          LOGGER.info("Connector {} needs update: {} -> {}", repository, connectorInfo.dockerImageTag, latestImageTag);
+          writeOrUpdateConnectorRegistryDefinition(configType, latestRegistryDefinition);
           updatedCount++;
         }
-        continue;
-      }
-
-      // Process unused connector
-      final String latestImageTag = latestDefinition.get("dockerImageTag").asText();
-      if (hasNewVersion(connectorInfo.dockerImageTag, latestImageTag)) {
-        // Update connector to the latest version
-        LOGGER.info("Connector {} needs update: {} vs {}", repository, connectorInfo.dockerImageTag, latestImageTag);
-        writeOrUpdateStandardDefinition(ctx, configType, latestDefinition);
-        updatedCount++;
-      } else if (!newFields.isEmpty()) {
-        // Add new fields to the connector definition
-        final JsonNode definitionToUpdate = getDefinitionWithNewFields(currentDefinition, latestDefinition, newFields);
-        LOGGER.info("Connector {} has new fields: {}", repository, String.join(", ", newFields));
-        writeOrUpdateStandardDefinition(ctx, configType, definitionToUpdate);
-        updatedCount++;
       } else {
-        LOGGER.info("Connector {} does not need update: {}", repository, connectorInfo.dockerImageTag);
+        // If no new version, still upsert in case something changed in the definition
+        // without the version being updated. We won't count that toward updatedCount though.
+        writeOrUpdateConnectorRegistryDefinition(configType, latestRegistryDefinition);
       }
     }
 
     return new ConnectorCounter(newCount, updatedCount);
   }
 
-  private void writeOrUpdateStandardDefinition(final DSLContext ctx,
-                                               final AirbyteConfig configType,
-                                               final JsonNode definition) {
+  private <T> void writeOrUpdateConnectorRegistryDefinition(final AirbyteConfig configType,
+                                                            final T definition)
+      throws IOException {
     if (configType == ConfigSchema.STANDARD_SOURCE_DEFINITION) {
-      final StandardSourceDefinition sourceDef = Jsons.object(definition, StandardSourceDefinition.class);
-      sourceDef.withProtocolVersion(getProtocolVersion(sourceDef.getSpec()));
-      ConfigWriter.writeStandardSourceDefinition(Collections.singletonList(sourceDef), ctx);
+      final ConnectorRegistrySourceDefinition registryDef = (ConnectorRegistrySourceDefinition) definition;
+      registryDef.withProtocolVersion(getProtocolVersion(registryDef.getSpec()));
+
+      final StandardSourceDefinition stdSourceDef = ConnectorRegistryConverters.toStandardSourceDefinition(registryDef);
+
+      final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+      configRepository.writeSourceDefinitionAndDefaultVersion(stdSourceDef, actorDefinitionVersion);
     } else if (configType == ConfigSchema.STANDARD_DESTINATION_DEFINITION) {
-      final StandardDestinationDefinition destDef = Jsons.object(definition, StandardDestinationDefinition.class);
-      destDef.withProtocolVersion(getProtocolVersion(destDef.getSpec()));
-      ConfigWriter.writeStandardDestinationDefinition(Collections.singletonList(destDef), ctx);
+      final ConnectorRegistryDestinationDefinition registryDef = (ConnectorRegistryDestinationDefinition) definition;
+      registryDef.withProtocolVersion(getProtocolVersion(registryDef.getSpec()));
+
+      final StandardDestinationDefinition stdDestDef = ConnectorRegistryConverters.toStandardDestinationDefinition(registryDef);
+
+      final ActorDefinitionVersion actorDefinitionVersion = ConnectorRegistryConverters.toActorDefinitionVersion(registryDef);
+      configRepository.writeDestinationDefinitionAndDefaultVersion(stdDestDef, actorDefinitionVersion);
     } else {
       throw new IllegalArgumentException(UNKNOWN_CONFIG_TYPE + configType);
     }
@@ -303,32 +208,9 @@ public class ActorDefinitionMigrator {
   }
 
   @VisibleForTesting
-  static Set<String> getNewFields(final JsonNode currentDefinition, final JsonNode latestDefinition) {
-    final Set<String> currentFields = MoreIterators.toSet(currentDefinition.fieldNames());
-    final Set<String> latestFields = MoreIterators.toSet(latestDefinition.fieldNames());
-    return Sets.difference(latestFields, currentFields);
-  }
-
-  /**
-   * Get definition with new fields. Adds new fields to currentDefinition by pulling them out of
-   * latestDefinition.
-   *
-   * @param currentDefinition current definition
-   * @param latestDefinition latest definition
-   * @param newFields fields to add
-   * @return a clone of the current definition with the new fields from the latest definition.
-   */
-  @VisibleForTesting
-  static JsonNode getDefinitionWithNewFields(final JsonNode currentDefinition, final JsonNode latestDefinition, final Set<String> newFields) {
-    final ObjectNode currentClone = (ObjectNode) Jsons.clone(currentDefinition);
-    newFields.forEach(field -> currentClone.set(field, latestDefinition.get(field)));
-    return currentClone;
-  }
-
-  @VisibleForTesting
-  static boolean hasNewVersion(final String currentVersion, final String latestVersion) {
+  static boolean updateIsAvailable(final String currentVersion, final String latestVersion) {
     try {
-      return new AirbyteVersion(latestVersion).patchVersionCompareTo(new AirbyteVersion(currentVersion)) > 0;
+      return new AirbyteVersion(latestVersion).versionCompareTo(new AirbyteVersion(currentVersion)) > 0;
     } catch (final Exception e) {
       LOGGER.error("Failed to check version: {} vs {}", currentVersion, latestVersion);
       return false;
@@ -336,7 +218,7 @@ public class ActorDefinitionMigrator {
   }
 
   @VisibleForTesting
-  static boolean hasNewPatchVersion(final String currentVersion, final String latestVersion) {
+  static boolean updateIsPatchOnly(final String currentVersion, final String latestVersion) {
     try {
       return new AirbyteVersion(latestVersion).checkOnlyPatchVersionIsUpdatedComparedTo(new AirbyteVersion(currentVersion));
     } catch (final Exception e) {
@@ -348,15 +230,13 @@ public class ActorDefinitionMigrator {
   static class ConnectorInfo {
 
     final String definitionId;
-    final JsonNode definition;
     final String dockerRepository;
     final String dockerImageTag;
 
-    ConnectorInfo(final String definitionId, final JsonNode definition) {
+    ConnectorInfo(final String definitionId, final String dockerRepository, final String dockerImageTag) {
       this.definitionId = definitionId;
-      this.definition = definition;
-      dockerRepository = definition.get("dockerRepository").asText();
-      dockerImageTag = definition.get("dockerImageTag").asText();
+      this.dockerRepository = dockerRepository;
+      this.dockerImageTag = dockerImageTag;
     }
 
     @Override

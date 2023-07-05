@@ -1,0 +1,8 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.content {
+  margin: 0;
+  color: colors.$dark-blue;
+  font-size: variables.$font-size-lg;
+}

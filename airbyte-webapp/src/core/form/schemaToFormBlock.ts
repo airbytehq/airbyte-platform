@@ -139,6 +139,7 @@ export const jsonSchemaToFormBlock = (
     format: jsonSchema.format,
     type,
     itemType: itemType || undefined,
+    pattern_descriptor: jsonSchema.pattern_descriptor ?? (jsonSchema.items as AirbyteJSONSchema)?.pattern_descriptor,
   };
 };
 

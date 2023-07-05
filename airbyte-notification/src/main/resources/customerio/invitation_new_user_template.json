@@ -1,0 +1,17 @@
+{
+  "transactional_message_id": "%s",
+  "to": "%s",
+  "identifiers": {
+    "email": "%s"
+  },
+  "message_data": {
+    "name": "%s",
+    "workspace_name": "%s",
+    "invite_url": "%s"
+  },
+  "disable_message_retention": false,
+  "send_to_unsubscribed": true,
+  "tracked": true,
+  "queue_draft": false,
+  "disable_css_preprocessing": true
+}

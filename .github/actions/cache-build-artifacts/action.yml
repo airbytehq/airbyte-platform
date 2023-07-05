@@ -36,6 +36,7 @@ runs:
       with:
         path: |
           ~/.local/share/pnpm/store
+          ~/.cache/Cypress
         key: ${{ inputs.cache-key }}-pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ inputs.cache-key }}-pnpm-${{ runner.os }}-

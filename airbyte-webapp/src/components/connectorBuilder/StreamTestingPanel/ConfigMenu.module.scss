@@ -7,10 +7,11 @@
 
 .formContent {
   max-height: 60vh;
-  overflow: auto;
+  min-height: 500px;
   padding: variables.$spacing-xl;
   background-color: colors.$grey-50;
   border-radius: variables.$border-radius-md;
+  overflow-y: auto;
 }
 
 .inputFormModalFooter {
@@ -30,4 +31,9 @@
   position: absolute;
   top: -1 * variables.$spacing-md;
   right: -1 * variables.$spacing-md;
+}
+
+.container {
+  position: relative;
+  align-self: flex-start;
 }

@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows.facebook;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -31,12 +30,12 @@ public abstract class FacebookOAuthFlow extends BaseOAuth2Flow {
   private static final String AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v12.0/dialog/oauth";
   private static final String ACCESS_TOKEN = "access_token";
 
-  public FacebookOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public FacebookOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
   }
 
-  FacebookOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  FacebookOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
   }
 
   protected abstract String getScopes();

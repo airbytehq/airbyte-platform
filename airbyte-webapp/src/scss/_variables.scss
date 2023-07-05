@@ -22,6 +22,7 @@ $box-shadow-right: var(--box-shadow-right);
 $box-shadow-raised: var(--box-shadow-raised);
 $box-shadow-popup: var(--box-shadow-popup);
 $box-shadow-sidebar: var(--box-shadow-sidebar);
+$box-shadow-inset: var(--box-shadow-inset);
 
 $spacing-xs: 3px;
 $spacing-sm: 5px;
@@ -30,18 +31,23 @@ $spacing-lg: 15px;
 $spacing-xl: 20px;
 $spacing-2xl: 40px;
 $spacing-page-bottom-cloud: 88px;
-$spacing-intercom: 88px;
 
 $width-size-menu: 93px;
-$min-width-main-page-content: 1280px - $width-size-menu;
 $width-wide-menu: 200px;
+$width-extra-wide-menu: 300px;
 $width-max-notification: 600px;
 $width-connection-header: 680px;
+$width-connector-name-placeholder: 120px;
 
 $width-modal-sm: 492px;
 $width-modal-md: 585px;
 $width-modal-lg: 940px;
 $width-modal-xl: 1008px;
+
+// large total width - sidebar width - main layout padding-left - main layout padding-right
+$min-width-wide-table-container: 1280px - $width-size-menu - $spacing-xl - $spacing-xl;
+$height-empty-sync-catalog: 300px;
+$height-connection-header: 167px;
 
 $height-soft-edge: 15px;
 

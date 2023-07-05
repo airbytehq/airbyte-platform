@@ -6,6 +6,7 @@ plugins {
 }
 
 dependencies {
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.1'
     implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 
     // Cloud service dependencies. These are not strictly necessary yet, but likely needed for any full-fledged cloud service
@@ -19,6 +20,7 @@ dependencies {
 
     implementation platform(libs.micronaut.bom)
     implementation libs.bundles.micronaut
+    implementation libs.micronaut.security
 
     implementation project(':airbyte-commons')
 
@@ -106,6 +108,11 @@ sourceSets {
     }
 }
 
+task copyPythonDependencies(type: Copy) {
+    from "${project.projectDir}/requirements.txt"
+    into "build/docker/"
+}
+
 def readValueFromFile(String filePath) {
     return new File(filePath).text.trim()
 }
@@ -117,9 +124,8 @@ tasks.named("buildDockerImage") {
             project.projectDir.parentFile,
             'airbyte-connector-builder-resources/CDK_VERSION').text.trim()
     buildArgs['CDK_VERSION'] = cdkVersion
-    // Current Python version used by the CDK image
-    buildArgs['PYTHON_VERSION'] = System.getenv('PYTHON_VERSION') ?: '3.9.11'
 
+    dependsOn copyPythonDependencies
     dependsOn generateOpenApiServer
     dependsOn copyGeneratedTar
 }

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 
-import { HealthService } from "core/health/HealthService";
-import { useGetService } from "core/servicesProvider";
+import { useHealthCheck } from "core/api";
 import { useNotificationService } from "hooks/services/Notification/NotificationService";
 
 import { Notification } from "../Notification";
@@ -14,7 +13,7 @@ const HEALTHCHECK_INTERVAL = 20000;
 function useApiHealthPoll(): void {
   const [count, setCount] = useState(0);
   const { formatMessage } = useIntl();
-  const healthService = useGetService<HealthService>("HealthService");
+  const healthCheck = useHealthCheck();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
 
   useEffect(() => {
@@ -26,7 +25,7 @@ function useApiHealthPoll(): void {
 
     const interval = setInterval(async () => {
       try {
-        await healthService.health();
+        await healthCheck();
         if (count >= HEALTHCHECK_MAX_COUNT) {
           unregisterNotificationById(HEALTH_NOTIFICATION_ID);
         }
@@ -41,7 +40,7 @@ function useApiHealthPoll(): void {
     }, HEALTHCHECK_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [count, formatMessage, unregisterNotificationById, registerNotification, healthService]);
+  }, [count, formatMessage, unregisterNotificationById, registerNotification, healthCheck]);
 }
 
 export { useApiHealthPoll };

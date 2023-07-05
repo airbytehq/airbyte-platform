@@ -1,5 +1,4 @@
 import {
-  getManifestTemplate,
   listStreams,
   readStream,
   resolveManifest,
@@ -18,10 +17,6 @@ export class ConnectorBuilderServerRequestService extends AirbyteRequestService 
 
   public listStreams(listParams: StreamsListRequestBody): Promise<StreamsListRead> {
     return listStreams(listParams, this.requestOptions);
-  }
-
-  public getManifestTemplate(): Promise<string> {
-    return getManifestTemplate(this.requestOptions);
   }
 
   public resolveManifest(resolveParams: ResolveManifestRequestBody) {

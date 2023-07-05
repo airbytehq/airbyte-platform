@@ -5,10 +5,8 @@
 package io.airbyte.oauth.flows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -20,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
@@ -32,13 +29,8 @@ public class PayPalTransactionOAuthFlow extends BaseOAuth2Flow {
   private static final String ACCESS_TOKEN_URL = "https://api-m.paypal.com/v1/oauth2/token";
   private static final String SCOPES = "openid email profile";
 
-  public PayPalTransactionOAuthFlow(ConfigRepository configRepository, HttpClient httpClient) {
-    super(configRepository, httpClient);
-  }
-
-  @VisibleForTesting
-  public PayPalTransactionOAuthFlow(ConfigRepository configRepository, final HttpClient httpClient, Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public PayPalTransactionOAuthFlow(HttpClient httpClient) {
+    super(httpClient);
   }
 
   @Override

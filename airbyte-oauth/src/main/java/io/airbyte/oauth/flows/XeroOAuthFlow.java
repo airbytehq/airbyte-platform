@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.oauth.BaseOAuth2Flow;
 import java.io.IOException;
 import java.net.URI;
@@ -48,20 +47,15 @@ public class XeroOAuthFlow extends BaseOAuth2Flow {
       "offline_access");
   private final Clock clock;
 
-  public XeroOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient) {
-    super(configRepository, httpClient);
+  public XeroOAuthFlow(final HttpClient httpClient) {
+    super(httpClient);
     this.clock = Clock.systemUTC();
   }
 
   @VisibleForTesting
-  public XeroOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier) {
-    super(configRepository, httpClient, stateSupplier);
+  public XeroOAuthFlow(final HttpClient httpClient, final Supplier<String> stateSupplier) {
+    super(httpClient, stateSupplier);
     this.clock = Clock.systemUTC();
-  }
-
-  public XeroOAuthFlow(final ConfigRepository configRepository, final HttpClient httpClient, final Supplier<String> stateSupplier, Clock clock) {
-    super(configRepository, httpClient, stateSupplier);
-    this.clock = clock;
   }
 
   @Override

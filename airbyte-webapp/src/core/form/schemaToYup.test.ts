@@ -3,7 +3,8 @@ import * as yup from "yup";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
 import { jsonSchemaToFormBlock } from "./schemaToFormBlock";
-import { buildYupFormForJsonSchema, FORM_PATTERN_ERROR } from "./schemaToYup";
+import { buildYupFormForJsonSchema } from "./schemaToYup";
+import { FORM_PATTERN_ERROR } from "./types";
 
 // Note: We have to check yup schema with JSON.stringify
 // as exactly same objects throw now equality due to `Received: serializes to the same string` error
@@ -56,7 +57,7 @@ it("should build schema for simple case", () => {
       .required("form.empty.error")
       .transform((val) => (isNaN(val) ? undefined : val)),
     user: yup.string().trim().required("form.empty.error").transform(String),
-    is_sandbox: yup.boolean().default(false),
+    is_sandbox: yup.boolean(),
     is_field_no_default: yup.boolean().required("form.empty.error"),
     dbname: yup.string().trim().required("form.empty.error").transform(String),
     password: yup.string().trim().transform(String),

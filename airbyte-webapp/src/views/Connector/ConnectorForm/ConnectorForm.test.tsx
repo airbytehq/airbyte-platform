@@ -10,7 +10,7 @@ import { ConnectorDefinition, ConnectorDefinitionSpecification } from "core/doma
 import { SourceAuthService } from "core/domain/connector/SourceAuthService";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { DestinationDefinitionSpecificationRead } from "core/request/AirbyteClient";
-import { FeatureItem } from "hooks/services/Feature";
+import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
 import { ConnectorFormValues } from "./types";
@@ -221,16 +221,6 @@ jest.mock("hooks/services/useWorkspace", () => ({
       workspaceId: "workspaceId",
     },
   }),
-}));
-
-jest.mock("hooks/services/Experiment/ExperimentService", () => ({
-  useExperiment: (id: string) => {
-    if (id === "connector.form.simplifyConfiguration") {
-      return true;
-    }
-    return undefined;
-  },
-  ExperimentProvider: ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>,
 }));
 
 describe("Connector form", () => {
@@ -444,16 +434,113 @@ describe("Connector form", () => {
       });
     });
 
-    it("should load existing values in collapsed fields", async () => {
+    it("should not render entire optional object and oneOf fields as hidden, but render the optional sub-fields as hidden", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, optional_oneof: { const_prop: "FIRST_CHOICE" } },
+        propertiesOverride: {
+          optional_object: {
+            type: "object",
+            required: ["required_obj_subfield"],
+            properties: { required_obj_subfield: { type: "string" }, optional_obj_subfield: { type: "string" } },
+          },
+          optional_oneof: {
+            type: "object",
+            oneOf: [
+              {
+                title: "First choice",
+                required: ["required_oneof_subfield"],
+                properties: {
+                  required_oneof_subfield: { type: "string" },
+                  optional_oneof_subfield: { type: "string" },
+                  const_prop: { type: "string", const: "FIRST_CHOICE" },
+                },
+              },
+              {
+                title: "Second choice",
+                required: ["different_required_oneof_subfield"],
+                properties: {
+                  different_required_oneof_subfield: { type: "integer" },
+                  optional_oneof_subfield: { type: "string" },
+                  const_prop: { type: "string", const: "SECOND_CHOICE" },
+                },
+              },
+            ],
+          },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.optional_object.required_obj_subfield")).toBeVisible();
+      expect(
+        getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield")
+      ).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.optional_oneof.required_oneof_subfield")).toBeVisible();
+      expect(
+        getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield")
+      ).not.toBeVisible();
+
+      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(0)!));
+
+      expect(getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield")).toBeVisible();
+
+      await waitFor(() => userEvent.click(screen.getAllByTestId("optional-fields").at(1)!));
+
+      expect(getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield")).toBeVisible();
+
+      const input1 = getInputByName(container, "connectionConfiguration.optional_object.required_obj_subfield");
+      userEvent.type(input1!, "required obj subfield value");
+      const input2 = getInputByName(container, "connectionConfiguration.optional_object.optional_obj_subfield");
+      userEvent.type(input2!, "optional obj subfield value");
+      const input3 = getInputByName(container, "connectionConfiguration.optional_oneof.required_oneof_subfield");
+      userEvent.type(input3!, "required oneof subfield value");
+      const input4 = getInputByName(container, "connectionConfiguration.optional_oneof.optional_oneof_subfield");
+      userEvent.type(input4!, "optional oneof subfield value");
+
+      await submitForm(container);
+
+      expect(result).toEqual({
+        name: "test-name",
+        connectionConfiguration: {
+          ...filledForm,
+          optional_object: {
+            required_obj_subfield: "required obj subfield value",
+            optional_obj_subfield: "optional obj subfield value",
+          },
+          optional_oneof: {
+            required_oneof_subfield: "required oneof subfield value",
+            optional_oneof_subfield: "optional oneof subfield value",
+            const_prop: "FIRST_CHOICE",
+          },
+        },
+      });
+    });
+
+    it("should load optional fields' default values in collapsed fields", async () => {
+      const container = await renderForm({
+        formValuesOverride: { ...filledForm, additional_separate_group: "additional_separate_group_default" },
+        propertiesOverride: {
+          additional_same_group: { type: "string" },
+          additional_separate_group: { type: "string", group: "abc", default: "additional_separate_group_default" },
+        },
+      });
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")?.getAttribute("value")).toEqual(
+        ""
+      );
+      expect(
+        getInputByName(container, "connectionConfiguration.additional_separate_group")?.getAttribute("value")
+      ).toEqual("additional_separate_group_default");
+    });
+
+    it("should auto-expand optional sections containing a field with an existing non-default value", async () => {
       const container = await renderForm({
         formValuesOverride: { ...filledForm, additional_same_group: "input1", additional_separate_group: "input2" },
         propertiesOverride: {
-          additional_separate_group: { type: "string", group: "abc" },
           additional_same_group: { type: "string" },
+          additional_separate_group: { type: "string", group: "abc", default: "additional_separate_group_default" },
         },
       });
-      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).not.toBeVisible();
-      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).not.toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_same_group")).toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.additional_separate_group")).toBeVisible();
       expect(getInputByName(container, "connectionConfiguration.additional_same_group")?.getAttribute("value")).toEqual(
         "input1"
       );
@@ -559,11 +646,13 @@ describe("Connector form", () => {
 
     it("should not submit with failed validation", async () => {
       const container = await renderForm({
-        formValuesOverride: { ...filledForm, additional_same_group: "inp" },
+        formValuesOverride: { ...filledForm },
         propertiesOverride: {
           additional_same_group: { type: "string", pattern: "input" },
         },
       });
+
+      userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "inp");
 
       await submitForm(container);
 
@@ -572,8 +661,7 @@ describe("Connector form", () => {
 
       expect(screen.getByText("The value must match the pattern input")).toBeInTheDocument();
 
-      const input = getInputByName(container, "connectionConfiguration.additional_same_group");
-      userEvent.type(input!, "ut");
+      userEvent.type(getInputByName(container, "connectionConfiguration.additional_same_group")!, "ut");
 
       await waitFor(() => userEvent.click(getSubmitButton(container)!));
 

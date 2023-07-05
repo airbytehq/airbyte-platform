@@ -12,10 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -25,17 +21,9 @@ import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.AirbyteStream;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
-import io.airbyte.api.client.model.generated.ConnectionCreate;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
-import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionState;
-import io.airbyte.api.client.model.generated.ConnectionStatus;
-import io.airbyte.api.client.model.generated.ConnectorBuilderProjectDetails;
-import io.airbyte.api.client.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
-import io.airbyte.api.client.model.generated.ConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.api.client.model.generated.ConnectorBuilderPublishRequestBody;
-import io.airbyte.api.client.model.generated.DeclarativeSourceManifest;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.client.model.generated.DestinationRead;
@@ -44,22 +32,20 @@ import io.airbyte.api.client.model.generated.JobIdRequestBody;
 import io.airbyte.api.client.model.generated.JobInfoRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
-import io.airbyte.api.client.model.generated.SourceCreate;
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import io.airbyte.api.client.model.generated.SourceRead;
+import io.airbyte.api.client.model.generated.StreamStatusJobType;
+import io.airbyte.api.client.model.generated.StreamStatusRunState;
 import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.MoreBooleans;
-import io.airbyte.db.Database;
 import io.airbyte.test.utils.AirbyteAcceptanceTestHarness;
-import io.airbyte.test.utils.SchemaTableNamePair;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -101,97 +87,6 @@ class AdvancedAcceptanceTests {
   private static AirbyteAcceptanceTestHarness testHarness;
   private static AirbyteApiClient apiClient;
   private static UUID workspaceId;
-  private static final JsonNode A_DECLARATIVE_MANIFEST;
-  private static final JsonNode A_SPEC;
-
-  static {
-    try {
-      A_DECLARATIVE_MANIFEST =
-          new ObjectMapper().readTree("""
-                                      {
-                                        "version": "0.30.3",
-                                        "type": "DeclarativeSource",
-                                        "check": {
-                                          "type": "CheckStream",
-                                          "stream_names": [
-                                            "records"
-                                          ]
-                                        },
-                                        "streams": [
-                                          {
-                                            "type": "DeclarativeStream",
-                                            "name": "records",
-                                            "primary_key": [],
-                                            "schema_loader": {
-                                              "type": "InlineSchemaLoader",
-                                                "schema": {
-                                                  "type": "object",
-                                                  "$schema": "http://json-schema.org/schema#",
-                                                  "properties": {
-                                                    "id": {
-                                                    "type": "string"
-                                                  }
-                                                }
-                                              }
-                                            },
-                                            "retriever": {
-                                              "type": "SimpleRetriever",
-                                              "requester": {
-                                                "type": "HttpRequester",
-                                                "url_base": "<url_base needs to be update in order to work since port is defined only in @BeforeAll>",
-                                                "path": "/",
-                                                "http_method": "GET",
-                                                "request_parameters": {},
-                                                "request_headers": {},
-                                                "request_body_json": "{\\"records\\":[{\\"id\\":1},{\\"id\\":2},{\\"id\\":3}]}",
-                                                "authenticator": {
-                                                  "type": "NoAuth"
-                                                }
-                                              },
-                                              "record_selector": {
-                                                "type": "RecordSelector",
-                                                "extractor": {
-                                                  "type": "DpathExtractor",
-                                                  "field_path": [
-                                                    "json",
-                                                    "records"
-                                                  ]
-                                                }
-                                              },
-                                              "paginator": {
-                                                "type": "NoPagination"
-                                              }
-                                            }
-                                          }
-                                        ],
-                                        "spec": {
-                                          "connection_specification": {
-                                            "$schema": "http://json-schema.org/draft-07/schema#",
-                                            "type": "object",
-                                            "required": [],
-                                            "properties": {},
-                                            "additionalProperties": true
-                                          },
-                                          "documentation_url": "https://example.org",
-                                          "type": "Spec"
-                                        }
-                                      }""");
-      A_SPEC = new ObjectMapper().readTree("""
-                                           {
-                                             "connectionSpecification": {
-                                               "$schema": "http://json-schema.org/draft-07/schema#",
-                                               "type": "object",
-                                               "required": [],
-                                               "properties": {},
-                                               "additionalProperties": true
-                                             },
-                                             "documentationUrl": "https://example.org",
-                                             "type": "Spec"
-                                           }""");
-    } catch (final JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   @SuppressWarnings("UnstableApiUsage")
   @BeforeAll
@@ -243,13 +138,14 @@ class AdvancedAcceptanceTests {
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
     final SyncMode syncMode = SyncMode.FULL_REFRESH;
     final DestinationSyncMode destinationSyncMode = DestinationSyncMode.OVERWRITE;
-    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode));
+    catalog.getStreams().forEach(s -> s.getConfig().syncMode(syncMode).destinationSyncMode(destinationSyncMode).selected(true));
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, List.of(operationId), catalog, ConnectionScheduleType.MANUAL, null)
             .getConnectionId();
     final JobInfoRead connectionSyncRead = apiClient.getConnectionApi().syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
     waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
     testHarness.assertSourceAndDestinationDbInSync(false);
+    testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE, StreamStatusJobType.SYNC);
   }
 
   @RetryingTest(3)
@@ -289,6 +185,7 @@ class AdvancedAcceptanceTests {
     catalog.getStreams().forEach(s -> s.getConfig()
         .syncMode(syncMode)
         .cursorField(List.of(COLUMN_ID))
+        .selected(true)
         .destinationSyncMode(destinationSyncMode));
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
@@ -348,6 +245,7 @@ class AdvancedAcceptanceTests {
     final UUID sourceId = source.getSourceId();
     final UUID destinationId = destination.getDestinationId();
     final AirbyteCatalog catalog = testHarness.discoverSourceSchema(sourceId);
+    catalog.getStreams().forEach(s -> s.getConfig().selected(true));
 
     final UUID connectionId =
         testHarness.createConnection(connectionName, sourceId, destinationId, Collections.emptyList(), catalog, ConnectionScheduleType.MANUAL, null)
@@ -378,70 +276,6 @@ class AdvancedAcceptanceTests {
         expectedMessageNumber++;
       }
     }
-  }
-
-  @Test
-  void testConnectorBuilderPublish() throws Exception {
-    final UUID sourceDefinitionId = publishSourceDefinitionThroughConnectorBuilder();
-    final SourceRead sourceRead = createSource(sourceDefinitionId);
-    try {
-      final UUID destinationId = testHarness.createPostgresDestination().getDestinationId();
-      final ConnectionRead connectionRead = createConnection(sourceRead.getSourceId(), destinationId);
-      runConnection(connectionRead.getConnectionId());
-
-      final Database destination = testHarness.getDestinationDatabase();
-      final Set<SchemaTableNamePair> destinationTables = testHarness.listAllTables(destination);
-      assertEquals(1, destinationTables.size());
-      assertEquals(3, testHarness.retrieveDestinationRecords(destination, destinationTables.iterator().next().getFullyQualifiedTableName()).size());
-    } finally {
-      // clean up
-      apiClient.getSourceDefinitionApi().deleteSourceDefinition(new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId));
-    }
-  }
-
-  private static UUID publishSourceDefinitionThroughConnectorBuilder() throws ApiException {
-    final JsonNode manifest = A_DECLARATIVE_MANIFEST.deepCopy();
-    ((ObjectNode) manifest.at("/streams/0/retriever/requester")).put("url_base", testHarness.getEchoServerUrl());
-
-    final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProject = apiClient.getConnectorBuilderProjectApi()
-        .createConnectorBuilderProject(new ConnectorBuilderProjectWithWorkspaceId()
-            .workspaceId(workspaceId)
-            .builderProject(new ConnectorBuilderProjectDetails().name("A custom declarative source")));
-    return apiClient.getConnectorBuilderProjectApi()
-        .publishConnectorBuilderProject(new ConnectorBuilderPublishRequestBody()
-            .workspaceId(workspaceId)
-            .builderProjectId(connectorBuilderProject.getBuilderProjectId())
-            .name("A custom declarative source")
-            .initialDeclarativeManifest(new DeclarativeSourceManifest()
-                .manifest(manifest)
-                .spec(A_SPEC)
-                .description("A description")
-                .version(1L)))
-        .getSourceDefinitionId();
-  }
-
-  private static SourceRead createSource(final UUID sourceDefinitionId) throws ApiException, JsonProcessingException {
-    return apiClient.getSourceApi().createSource(new SourceCreate()
-        .sourceDefinitionId(sourceDefinitionId)
-        .name("A custom declarative source")
-        .workspaceId(workspaceId)
-        .connectionConfiguration(new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}")));
-  }
-
-  private static ConnectionRead createConnection(final UUID sourceId, final UUID destinationId) throws ApiException {
-    final AirbyteCatalog syncCatalog = testHarness.discoverSourceSchemaWithoutCache(sourceId);
-    return apiClient.getConnectionApi().createConnection(new ConnectionCreate()
-        .name("name")
-        .sourceId(sourceId)
-        .destinationId(destinationId)
-        .status(ConnectionStatus.ACTIVE)
-        .syncCatalog(syncCatalog));
-  }
-
-  private static void runConnection(final UUID connectionId) throws ApiException, InterruptedException {
-    final JobInfoRead connectionSyncRead = apiClient.getConnectionApi()
-        .syncConnection(new ConnectionIdRequestBody().connectionId(connectionId));
-    waitForSuccessfulJob(apiClient.getJobsApi(), connectionSyncRead.getJob());
   }
 
 }

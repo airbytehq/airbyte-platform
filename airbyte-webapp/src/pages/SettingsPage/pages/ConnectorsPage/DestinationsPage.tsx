@@ -2,8 +2,8 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { DestinationDefinitionRead } from "core/request/AirbyteClient";
+import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { useAvailableDestinationDefinitions } from "hooks/domain/connector/useAvailableDestinationDefinitions";
-import { useTrackPage, PageTrackingCodes } from "hooks/services/Analytics";
 import { useUpdateDestinationDefinition } from "services/connector/DestinationDefinitionService";
 
 import ConnectorsView from "./components/ConnectorsView";
@@ -57,7 +57,7 @@ const DestinationsPage: React.FC = () => {
       }
     });
 
-    return Array.from(destinationDefinitionMap.values());
+    return Array.from(destinationDefinitionMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [destinations, destinationDefinitions]);
 
   return (

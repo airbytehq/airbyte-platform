@@ -9,7 +9,7 @@ import { isGdprCountry } from "utils/dataPrivacy";
 import { FieldItem, Form } from "./auth/components/FormComponents";
 import { NameField, EmailField, Disclaimer, PasswordField } from "./auth/components/FormFields/FormFields";
 import { FormTitle } from "./auth/components/FormTitle";
-import { NewsField, SignupButton, SignupFormStatusMessage } from "./auth/SignupPage/components/SignupForm";
+import { SignupButton, SignupFormStatusMessage } from "./auth/SignupPage/components/SignupForm";
 import { FieldError } from "../lib/errors/FieldError";
 import { useAuthService } from "../services/auth/AuthService";
 import { EmailLinkErrorCodes } from "../services/auth/types";
@@ -61,9 +61,6 @@ export const AcceptEmailInvite: React.FC = () => {
           </FieldItem>
           <FieldItem>
             <PasswordField label={<FormattedMessage id="login.createPassword" />} />
-          </FieldItem>
-          <FieldItem>
-            <NewsField />
           </FieldItem>
           <SignupButton
             isLoading={isSubmitting}

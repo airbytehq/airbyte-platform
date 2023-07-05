@@ -43,7 +43,7 @@ public class QuickbooksOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest
 
   @Override
   protected OAuthFlowImplementation getFlowImplementation(final ConfigRepository configRepository, final HttpClient httpClient) {
-    return new QuickbooksOAuthFlow(configRepository, httpClient);
+    return new QuickbooksOAuthFlow(httpClient);
   }
 
   @SuppressWarnings({"BusyWait", "unchecked"})
@@ -54,16 +54,18 @@ public class QuickbooksOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest
     final UUID definitionId = UUID.randomUUID();
     final String fullConfigAsString = Files.readString(CREDENTIALS_PATH);
     final JsonNode credentialsJson = Jsons.deserialize(fullConfigAsString);
-    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(new SourceOAuthParameter()
+    SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
         .withConfiguration(Jsons.jsonNode(Map.of("credentials", ImmutableMap.builder()
             .put("client_id", credentialsJson.get("client_id").asText())
             .put("client_secret", credentialsJson.get("client_secret").asText())
-            .build())))));
+            .build())));
+    when(configRepository.listSourceOAuthParam()).thenReturn(List.of(sourceOAuthParameter));
     final String url =
-        getFlowImplementation(configRepository, httpClient).getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null);
+        getFlowImplementation(configRepository, httpClient).getSourceConsentUrl(workspaceId, definitionId, REDIRECT_URL, Jsons.emptyObject(), null,
+            sourceOAuthParameter.getConfiguration());
     LOGGER.info("Waiting for user consent at: {}", url);
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
@@ -73,7 +75,7 @@ public class QuickbooksOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest
     }
     assertTrue(serverHandler.isSucceeded(), "Failed to get User consent on time");
     final Map<String, Object> params = flow.completeSourceOAuth(workspaceId, definitionId,
-        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL);
+        Map.of("code", serverHandler.getParamValue()), REDIRECT_URL, sourceOAuthParameter.getConfiguration());
 
     LOGGER.info("Response from completing OAuth Flow is: {}", params.toString());
     assertTrue(params.containsKey("credentials"));
@@ -85,6 +87,8 @@ public class QuickbooksOAuthFlowIntegrationTest extends OAuthFlowIntegrationTest
     assertTrue(credentials.get("access_token").toString().length() > 0);
     assertTrue(credentials.containsKey("token_expiry_date"));
     assertTrue(credentials.get("token_expiry_date").toString().length() > 0);
+    assertTrue(credentials.containsKey("realm_id"));
+    assertTrue(credentials.get("realm_id").toString().length() > 0);
   }
 
 }

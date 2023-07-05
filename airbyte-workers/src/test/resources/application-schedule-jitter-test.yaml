@@ -1,0 +1,17 @@
+sanity-check: jitter test
+airbyte:
+  worker:
+    connection:
+      schedule-jitter: # defines 'jitter buckets' depending on job frequency. prefers thresholds at the half-hour mark since most jobs run every X hours.
+        no-jitter-cutoff-minutes: 5 # anything less than every 5 minutes has no jitter
+        high-frequency-bucket:
+          jitter-amount-minutes: 2 # anything between every 5 minutes and 1.5 hours has +/- 2 minutes of jitter
+          threshold-minutes: 90 # 1.5 hours
+        medium-frequency-bucket:
+          jitter-amount-minutes: 5 # anything between every 1.5 hours and 2.5 hours has +/- 5 minutes of jitter
+          threshold-minutes: 150 # 2.5 hours
+        low-frequency-bucket:
+          jitter-amount-minutes: 15 # anything between every 2.5 hours and 6.5 hours has +/- 15 minutes of jitter
+          threshold-minutes: 390 # 6.5 hours
+        very-low-frequency-bucket:
+          jitter-amount-minutes: 25 # anything greater than every 6.5 hours has +/- 25 minutes of jitter

@@ -14,6 +14,7 @@ dependencies {
     implementation project(':airbyte-commons')
     implementation project(':airbyte-commons-protocol')
     implementation project(':airbyte-config:config-models')
+    implementation project(':airbyte-config:specs')
     implementation project(':airbyte-db:db-lib')
     implementation project(':airbyte-db:jooq')
     implementation project(':airbyte-featureflag')
@@ -31,7 +32,7 @@ dependencies {
     testImplementation libs.flyway.core
     testImplementation libs.mockito.inline
     testImplementation project(':airbyte-test-utils')
-    testImplementation "org.testcontainers:vault:1.17.2"
+    testImplementation "org.testcontainers:vault:1.18.3"
     integrationTestJavaImplementation project(':airbyte-config:config-persistence')
 }
 

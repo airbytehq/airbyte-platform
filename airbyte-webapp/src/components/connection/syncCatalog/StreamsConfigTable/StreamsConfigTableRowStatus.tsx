@@ -32,7 +32,7 @@ const getIcon = (statusToDisplay: StatusToDisplay): React.ReactNode | null => {
 const VISIBLE_STATES: readonly StatusToDisplay[] = ["added", "changed", "removed"];
 
 export const StreamsConfigTableRowStatus: React.FC<StreamsConfigTableRowStatusProps> = ({ stream, className }) => {
-  const { statusToDisplay, isSelected } = useStreamsConfigTableRowProps(stream);
+  const { statusToDisplay } = useStreamsConfigTableRowProps(stream);
   const [visibleStatus, setVisibleStatus] = useState(statusToDisplay);
 
   const isVisible = VISIBLE_STATES.includes(statusToDisplay);
@@ -46,9 +46,9 @@ export const StreamsConfigTableRowStatus: React.FC<StreamsConfigTableRowStatusPr
   const computedClassName = classNames(
     styles.icon,
     {
-      [styles.plus]: visibleStatus === "added" && !isSelected,
-      [styles.minus]: visibleStatus === "removed" && !isSelected,
-      [styles.changed]: visibleStatus === "changed" || isSelected,
+      [styles.plus]: visibleStatus === "added",
+      [styles.minus]: visibleStatus === "removed",
+      [styles.changed]: visibleStatus === "changed",
       [styles.visible]: isVisible,
     },
     className

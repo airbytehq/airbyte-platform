@@ -5,8 +5,6 @@ import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { Heading } from "components/ui/Heading";
 
-import { useExperiment } from "hooks/services/Experiment";
-
 import styles from "./CreditsUsage.module.scss";
 import { useCreditsContext } from "./CreditsUsageContext";
 import { CreditsUsageFilters } from "./CreditsUsageFilters";
@@ -14,18 +12,15 @@ import { EmptyState } from "./EmptyState";
 import { UsagePerConnectionTable } from "./UsagePerConnectionTable";
 import { UsagePerDayGraph } from "./UsagePerDayGraph";
 
-const CreditsUsage: React.FC = () => {
-  const { freeAndPaidUsageByTimeframe } = useCreditsContext();
-  const isBillingInsightsEnabled = useExperiment("billing.billingInsights", false);
+export const CreditsUsage: React.FC = () => {
+  const { freeAndPaidUsageByTimeChunk } = useCreditsContext();
 
   return (
     <Card className={styles.card}>
-      {isBillingInsightsEnabled && (
-        <Box pt="xl">
-          <CreditsUsageFilters />
-        </Box>
-      )}
-      {freeAndPaidUsageByTimeframe.length > 0 ? (
+      <Box pt="xl">
+        <CreditsUsageFilters />
+      </Box>
+      {freeAndPaidUsageByTimeChunk.length > 0 ? (
         <>
           <Box pt="xl">
             <Box pl="lg">
@@ -33,7 +28,7 @@ const CreditsUsage: React.FC = () => {
                 <FormattedMessage id="credits.totalCreditsUsage" />
               </Heading>
             </Box>
-            <UsagePerDayGraph chartData={freeAndPaidUsageByTimeframe} />
+            <UsagePerDayGraph chartData={freeAndPaidUsageByTimeChunk} />
           </Box>
           <Box pt="xl">
             <Box pl="lg">
@@ -50,5 +45,3 @@ const CreditsUsage: React.FC = () => {
     </Card>
   );
 };
-
-export default CreditsUsage;

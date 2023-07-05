@@ -4,9 +4,9 @@
 #
 #    pip-compile
 #
-airbyte-cdk==0.33.1
+airbyte-cdk==0.36.4
     # via connector-builder-server (setup.py)
-airbyte-protocol-models==1.0.0
+airbyte-protocol-models==0.3.6
     # via airbyte-cdk
 anyio==3.6.2
     # via starlette
@@ -72,7 +72,7 @@ pytzdata==2020.1
     # via pendulum
 pyyaml==5.4.1
     # via airbyte-cdk
-requests==2.28.2
+requests==2.29.0
     # via
     #   airbyte-cdk
     #   requests-cache

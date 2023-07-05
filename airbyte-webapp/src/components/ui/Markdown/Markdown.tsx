@@ -83,3 +83,4 @@ export const Markdown: React.FC<MarkdownProps> = React.memo(({ content, classNam
     />
   );
 });
+Markdown.displayName = "Markdown";

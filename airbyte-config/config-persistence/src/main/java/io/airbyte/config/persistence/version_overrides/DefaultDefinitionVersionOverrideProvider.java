@@ -4,99 +4,168 @@
 
 package io.airbyte.config.persistence.version_overrides;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.commons.util.MoreIterators;
-import io.airbyte.commons.yaml.Yamls;
+import io.airbyte.commons.version.AirbyteProtocolVersion;
+import io.airbyte.commons.version.AirbyteProtocolVersionRange;
+import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ActorDefinitionVersionOverride;
-import io.airbyte.config.VersionOverride;
-import io.micronaut.core.annotation.Creator;
+import io.airbyte.config.ActorType;
+import io.airbyte.config.persistence.ConfigRepository;
+import io.airbyte.config.specs.GcsBucketSpecFetcher;
+import io.airbyte.featureflag.ConnectorVersionOverride;
+import io.airbyte.featureflag.Context;
+import io.airbyte.featureflag.Destination;
+import io.airbyte.featureflag.DestinationDefinition;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.Source;
+import io.airbyte.featureflag.SourceDefinition;
+import io.airbyte.featureflag.Workspace;
+import io.airbyte.protocol.models.ConnectorSpecification;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Default implementation of {@link LocalDefinitionVersionOverrideProvider} that reads the overrides
- * from a YAML file in the classpath.
+ * Implementation of {@link DefinitionVersionOverrideProvider} that looks up connector version
+ * overrides from the Feature Flag client.
  */
 @Singleton
-public class DefaultDefinitionVersionOverrideProvider implements LocalDefinitionVersionOverrideProvider {
+public class DefaultDefinitionVersionOverrideProvider implements DefinitionVersionOverrideProvider {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultDefinitionVersionOverrideProvider.class);
 
-  private final Map<UUID, ActorDefinitionVersionOverride> overrideMap;
+  private final ConfigRepository configRepository;
+  private final GcsBucketSpecFetcher gcsBucketSpecFetcher;
+  private final FeatureFlagClient featureFlagClient;
+  private final AirbyteProtocolVersionRange protocolVersionRange;
 
-  @Creator
-  public DefaultDefinitionVersionOverrideProvider() {
-    this(DefaultDefinitionVersionOverrideProvider.class, "version_overrides.yml");
-    LOGGER.info("Initialized default definition version overrides");
+  public DefaultDefinitionVersionOverrideProvider(final ConfigRepository configRepository,
+                                                  final GcsBucketSpecFetcher gcsBucketSpecFetcher,
+                                                  final FeatureFlagClient featureFlagClient,
+                                                  final AirbyteProtocolVersionRange protocolVersionRange) {
+    this.configRepository = configRepository;
+    this.gcsBucketSpecFetcher = gcsBucketSpecFetcher;
+    this.featureFlagClient = featureFlagClient;
+    this.protocolVersionRange = protocolVersionRange;
+    LOGGER.info("Initialized feature flag definition version overrides");
   }
 
-  public DefaultDefinitionVersionOverrideProvider(final Class<?> resourceClass, final String resourceName) {
-    this.overrideMap = getLocalOverrides(resourceClass, resourceName);
-  }
+  /**
+   * Returns the contexts that should be passed in the Multi context when evaluating the version
+   * overrides feature flag.
+   */
+  public List<Context> getContexts(final ActorType actorType, final UUID actorDefinitionId, final UUID workspaceId, @Nullable final UUID actorId) {
+    final ArrayList<Context> contexts = new ArrayList<>();
 
-  @VisibleForTesting
-  public DefaultDefinitionVersionOverrideProvider(final Map<UUID, ActorDefinitionVersionOverride> overrideMap) {
-    this.overrideMap = overrideMap;
-  }
+    contexts.add(new Workspace(workspaceId));
 
-  private Map<UUID, ActorDefinitionVersionOverride> getLocalOverrides(final Class<?> resourceClass, final String resourceName) {
-    try {
-      final String overridesStr = MoreResources.readResource(resourceClass, resourceName);
-      final JsonNode overridesList = Yamls.deserialize(overridesStr);
-      return MoreIterators.toList(overridesList.elements()).stream().collect(Collectors.toMap(
-          json -> UUID.fromString(json.get("actorDefinitionId").asText()),
-          json -> Jsons.object(json, ActorDefinitionVersionOverride.class)));
-    } catch (final Exception e) {
-      LOGGER.error("Failed to read local actor definition version overrides file", e);
-      return Map.of();
+    switch (actorType) {
+      case SOURCE -> {
+        contexts.add(new SourceDefinition(actorDefinitionId));
+
+        if (actorId != null) {
+          contexts.add(new Source(actorId));
+        }
+      }
+      case DESTINATION -> {
+        contexts.add(new DestinationDefinition(actorDefinitionId));
+
+        if (actorId != null) {
+          contexts.add(new Destination(actorId));
+        }
+      }
+      default -> throw new IllegalArgumentException("Actor type not supported: " + actorType);
     }
+
+    return contexts;
+  }
+
+  /**
+   * Resolves an ActorDefinitionVersion from the database for a given docker image tag. If the version
+   * is not found in the database, it will attempt to fetch the spec from the remote cache and create
+   * a new ADV.
+   *
+   * @return ActorDefinitionVersion if the version was resolved, otherwise empty optional
+   */
+  private Optional<ActorDefinitionVersion> resolveVersionForTag(final UUID actorDefinitionId,
+                                                                final String dockerImageTag,
+                                                                final ActorDefinitionVersion defaultVersion) {
+    if (StringUtils.isEmpty(dockerImageTag)) {
+      return Optional.empty();
+    }
+
+    try {
+      final Optional<ActorDefinitionVersion> existingVersion =
+          configRepository.getActorDefinitionVersion(actorDefinitionId, dockerImageTag);
+      if (existingVersion.isPresent()) {
+        return existingVersion;
+      }
+
+      final ActorDefinitionVersion newVersion = new ActorDefinitionVersion()
+          .withActorDefinitionId(actorDefinitionId)
+          .withDockerImageTag(dockerImageTag)
+          .withDockerRepository(defaultVersion.getDockerRepository())
+          .withAllowedHosts(defaultVersion.getAllowedHosts())
+          .withDocumentationUrl(defaultVersion.getDocumentationUrl())
+          .withNormalizationConfig(defaultVersion.getNormalizationConfig())
+          .withReleaseDate(defaultVersion.getReleaseDate())
+          .withReleaseStage(defaultVersion.getReleaseStage())
+          .withSuggestedStreams(defaultVersion.getSuggestedStreams())
+          .withSupportsDbt(defaultVersion.getSupportsDbt());
+
+      final Optional<ConnectorSpecification> spec = gcsBucketSpecFetcher.attemptFetch(
+          String.format("%s:%s", newVersion.getDockerRepository(), newVersion.getDockerImageTag()));
+
+      if (spec.isPresent()) {
+        LOGGER.info("Fetched spec from remote cache for {}:{}.", newVersion.getDockerRepository(), newVersion.getDockerImageTag());
+        newVersion.setSpec(spec.get());
+        newVersion.setProtocolVersion(AirbyteProtocolVersion.getWithDefault(spec.get().getProtocolVersion()).serialize());
+      } else {
+        LOGGER.error("Failed to fetch spec from remote cache for version override {}:{}", newVersion.getDockerRepository(),
+            newVersion.getDockerImageTag());
+        return Optional.empty();
+      }
+
+      final ActorDefinitionVersion persistedADV = configRepository.writeActorDefinitionVersion(newVersion);
+      LOGGER.info("Persisted new version {} for definition {} with tag {}", persistedADV.getVersionId(), actorDefinitionId, dockerImageTag);
+
+      return Optional.of(persistedADV);
+    } catch (final IOException e) {
+      LOGGER.error("Failed to read or persist override for definition {} with tag {}", actorDefinitionId, dockerImageTag, e);
+      return Optional.empty();
+    }
+
   }
 
   @Override
-  public Optional<ActorDefinitionVersion> getOverride(final UUID actorDefinitionId,
-                                                      final UUID targetId,
-                                                      final OverrideTargetType targetType,
+  public Optional<ActorDefinitionVersion> getOverride(final ActorType actorType,
+                                                      final UUID actorDefinitionId,
+                                                      final UUID workspaceId,
+                                                      @Nullable final UUID actorId,
                                                       final ActorDefinitionVersion defaultVersion) {
-    if (overrideMap.containsKey(actorDefinitionId)) {
-      final ActorDefinitionVersionOverride override = overrideMap.get(actorDefinitionId);
-      for (final VersionOverride versionOverride : override.getVersionOverrides()) {
-        final List<UUID> targetIds = switch (targetType) {
-          case ACTOR -> versionOverride.getActorIds();
-          case WORKSPACE -> versionOverride.getWorkspaceIds();
-        };
-
-        if (targetIds != null && targetIds.contains(targetId)) {
-          final ActorDefinitionVersion version = versionOverride.getActorDefinitionVersion();
-
-          if (StringUtils.isEmpty(version.getDockerImageTag()) || version.getSpec() == null) {
-            LOGGER.warn("Invalid version override for {} {} with {} id {}. Falling back to default version.", override.getActorType(),
-                actorDefinitionId, targetType.getName(), targetId);
-            return Optional.empty();
-          }
-
-          if (StringUtils.isEmpty(version.getDockerRepository())) {
-            version.setDockerRepository(defaultVersion.getDockerRepository());
-          }
-
-          LOGGER.info("Using version override for {} {} with {} id {}: {}", override.getActorType(), actorDefinitionId, targetType.getName(),
-              targetId, version.getDockerImageTag());
-          return Optional.of(version);
-        }
+    final List<Context> contexts = getContexts(actorType, actorDefinitionId, workspaceId, actorId);
+    final String overrideTag = featureFlagClient.stringVariation(ConnectorVersionOverride.INSTANCE, new Multi(contexts));
+    final Optional<ActorDefinitionVersion> version = resolveVersionForTag(actorDefinitionId, overrideTag, defaultVersion);
+    if (version.isPresent()) {
+      final Version protocolVersion = new Version(version.get().getProtocolVersion());
+      if (!protocolVersionRange.isSupported(protocolVersion)) {
+        throw new RuntimeException(String.format(
+            "Connector version override for definition %s with tag %s is not supported by the current version of Airbyte. "
+                + "Required protocol version: %s. Supported range: %s - %s.",
+            actorDefinitionId, overrideTag, protocolVersion.serialize(),
+            protocolVersionRange.min().serialize(), protocolVersionRange.max().serialize()));
       }
+      LOGGER.info("Using connector version override for definition {} with tag {}", actorDefinitionId, overrideTag);
     }
 
-    return Optional.empty();
+    return version;
   }
 
 }

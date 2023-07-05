@@ -5,18 +5,17 @@ import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
+import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 
-import { AirbyteStream } from "core/request/AirbyteClient";
-
-import { ConnectionRoutePaths } from "../types";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 interface StreamActionsMenuProps {
-  stream?: AirbyteStream;
+  streamState?: StreamWithStatus | undefined;
 }
 
-export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) => {
+export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamState }) => {
   const { formatMessage } = useIntl();
   const navigate = useNavigate();
 
@@ -41,12 +40,12 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ stream }) 
   const onOptionClick = async ({ value }: DropdownMenuOptionType) => {
     if (value === "showInReplicationTable" || value === "openDetails") {
       navigate(`../${ConnectionRoutePaths.Replication}`, {
-        state: { namespace: stream?.namespace, streamName: stream?.name, action: value },
+        state: { namespace: streamState?.streamNamespace, streamName: streamState?.streamName, action: value },
       });
     }
 
-    if (value === "resetThisStream" && stream) {
-      await resetStreams([{ streamNamespace: stream?.namespace ?? "", streamName: stream?.name }]);
+    if (value === "resetThisStream" && streamState) {
+      await resetStreams([{ streamNamespace: streamState.streamNamespace ?? "", streamName: streamState.streamName }]);
     }
   };
 

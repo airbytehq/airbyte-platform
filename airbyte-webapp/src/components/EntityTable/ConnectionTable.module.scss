@@ -1,3 +1,5 @@
+@use "scss/variables";
+
 th.width30 {
   width: 30%;
 }
@@ -11,6 +13,8 @@ th.width30 {
 }
 
 .connectionsTable {
+  min-width: variables.$min-width-wide-table-container;
+
   th:nth-child(1) {
     padding-left: 45px;
   }

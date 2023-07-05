@@ -1,16 +1,27 @@
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React from "react";
 
-import { H5 } from "components/base/Titles";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { Link } from "components/ui/Link";
 
 import styles from "./WorkspaceItem.module.scss";
 
-const WorkspaceItem: React.FC<React.PropsWithChildren<{ onClick: (id: string) => void; id: string }>> = (props) => (
-  <button className={styles.button} onClick={() => props.onClick(props.id)}>
-    <H5 bold>{props.children}</H5>
-    <FontAwesomeIcon className={styles.iconColor} icon={faChevronRight} />
-  </button>
-);
+interface WorkspaceItemProps {
+  workspaceId: string;
+  workspaceName: string;
+  testId: string;
+}
 
-export default WorkspaceItem;
+export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({ workspaceId, workspaceName, testId }) => {
+  return (
+    <Link to={`/workspaces/${workspaceId}`} data-testid={testId} variant="primary">
+      <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.button}>
+        <Heading as="h2" size="sm">
+          {workspaceName}
+        </Heading>
+        <Icon type="chevronRight" size="xl" />
+      </FlexContainer>
+    </Link>
+  );
+};

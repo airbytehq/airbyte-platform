@@ -4,13 +4,13 @@ import React, { HTMLAttributes } from "react";
 import styles from "./Text.module.scss";
 
 type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
-type TextColor = "darkBlue" | "grey" | "grey300" | "green";
+type TextColor = "darkBlue" | "grey" | "grey300" | "green" | "red" | "grey600" | "grey400" | "blue";
 type TextElementType = "p" | "span" | "div";
 type TextHTMLElement = HTMLParagraphElement | HTMLSpanElement | HTMLDivElement;
 
 type TextAlignment = "left" | "center" | "right";
 
-type TextProps = HTMLAttributes<TextHTMLElement> & {
+export type TextProps = HTMLAttributes<TextHTMLElement> & {
   className?: string;
   as?: TextElementType;
   size?: TextSize;
@@ -35,6 +35,10 @@ const colors: Record<TextColor, string> = {
   green: styles.green,
   grey: styles.grey,
   grey300: styles.grey300,
+  red: styles.red,
+  blue: styles.blue,
+  grey400: styles.grey400,
+  grey600: styles.grey600,
 };
 
 const textAlignments: Record<TextAlignment, string> = {
@@ -58,7 +62,7 @@ const getTextClassNames = ({
   });
 
 export const Text = React.memo(
-  React.forwardRef<TextHTMLElement, React.PropsWithChildren<TextProps>>(
+  React.forwardRef<TextHTMLElement, React.PropsWithRef<React.PropsWithChildren<TextProps>>>(
     (
       {
         as = "p",

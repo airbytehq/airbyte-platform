@@ -1,10 +1,10 @@
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useIntl } from "react-intl";
 
 import { useStripeCheckout } from "core/api/cloud";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { useAuthService } from "packages/cloud/services/auth/AuthService";
-import { useCurrentWorkspaceId } from "services/workspaces/WorkspacesService";
 
 import { EnrollmentModalContent } from "./EnrollmentModal";
 

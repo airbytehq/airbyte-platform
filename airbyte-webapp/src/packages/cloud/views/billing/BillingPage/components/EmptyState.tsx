@@ -9,7 +9,7 @@ import styles from "./EmptyState.module.scss";
 export const EmptyState: React.FC = () => {
   return (
     <FlexContainer alignItems="center" justifyContent="center" direction="column" className={styles.container}>
-      <img className={styles.logo} alt="No credits data" src={octavia} width={102} />
+      <img alt="No credits data" src={octavia} width={102} />
       <Text>
         <FormattedMessage id="credits.noData" />
       </Text>

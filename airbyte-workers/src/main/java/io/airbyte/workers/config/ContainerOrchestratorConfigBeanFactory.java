@@ -22,6 +22,7 @@ import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -47,8 +48,8 @@ public class ContainerOrchestratorConfigBeanFactory {
   private static final String AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_NAME";
   private static final String AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR = "AIRBYTE_API_AUTH_HEADER_VALUE";
   private static final String INTERNAL_API_HOST_ENV_VAR = "INTERNAL_API_HOST";
-
   private static final String ACCEPTANCE_TEST_ENABLED_VAR = "ACCEPTANCE_TEST_ENABLED";
+  private static final String DD_INTEGRATION_ENV_VAR_FORMAT = "DD_INTEGRATION_%s_ENABLED";
 
   // IMPORTANT: Changing the storage location will orphan already existing kube pods when the new
   // version is deployed!
@@ -84,7 +85,9 @@ public class ContainerOrchestratorConfigBeanFactory {
                                                                            @Value("${airbyte.data.plane.service-account.credentials-path}") final String dataPlaneServiceAccountCredentialsPath,
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-mount-path}") final String containerOrchestratorDataPlaneCredsSecretMountPath,
                                                                            @Value("${airbyte.container.orchestrator.data-plane-creds.secret-name}") final String containerOrchestratorDataPlaneCredsSecretName,
-                                                                           @Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode) {
+                                                                           @Value("${airbyte.acceptance.test.enabled}") final boolean isInTestMode,
+                                                                           @Value("${datadog.orchestrator.disabled.integrations}") final String disabledIntegrations,
+                                                                           @Value("${airbyte.worker.job.kube.serviceAccount}") final String serviceAccount) {
     final var kubernetesClient = new DefaultKubernetesClient();
 
     final DocumentStoreClient documentStoreClient = StateClients.create(
@@ -108,9 +111,16 @@ public class ContainerOrchestratorConfigBeanFactory {
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath);
     environmentVariables.put(DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR, dataPlaneServiceAccountEmail);
 
+    // Disable DD agent integrations based on the configuration
+    if (StringUtils.isNotEmpty(disabledIntegrations)) {
+      Arrays.asList(disabledIntegrations.split(","))
+          .forEach(e -> environmentVariables.put(String.format(DD_INTEGRATION_ENV_VAR_FORMAT, e.trim()), Boolean.FALSE.toString()));
+    }
+
     final Configs configs = new EnvConfigs();
     environmentVariables.put(EnvConfigs.FEATURE_FLAG_CLIENT, configs.getFeatureFlagClient());
     environmentVariables.put(EnvConfigs.LAUNCHDARKLY_KEY, configs.getLaunchDarklyKey());
+    environmentVariables.put(EnvConfigs.OTEL_COLLECTOR_ENDPOINT, configs.getOtelCollectorEndpoint());
     environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_LIMIT, configs.getSocatSidecarKubeCpuLimit());
     environmentVariables.put(EnvConfigs.SOCAT_KUBE_CPU_REQUEST, configs.getSocatSidecarKubeCpuRequest());
 
@@ -148,7 +158,8 @@ public class ContainerOrchestratorConfigBeanFactory {
         StringUtils.isNotEmpty(containerOrchestratorImage) ? containerOrchestratorImage : "airbyte/container-orchestrator:" + airbyteVersion,
         containerOrchestratorImagePullPolicy,
         googleApplicationCredentials,
-        workerEnvironment);
+        workerEnvironment,
+        serviceAccount);
   }
 
 }

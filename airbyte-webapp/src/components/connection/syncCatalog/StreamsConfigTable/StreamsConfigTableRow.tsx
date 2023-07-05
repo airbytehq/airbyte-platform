@@ -4,13 +4,11 @@ import { FormattedMessage } from "react-intl";
 
 import { ArrowRightIcon } from "components/icons/ArrowRightIcon";
 import { Row } from "components/SimpleTableComponents";
-import { CheckBox } from "components/ui/CheckBox";
 import { DropDownOptionDataItem } from "components/ui/DropDown";
 import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
+import { TextWithOverflowTooltip } from "components/ui/Text";
 
 import { Path, SyncSchemaField, SyncSchemaStream } from "core/domain/catalog";
-import { useBulkEditSelect } from "hooks/services/BulkEdit/BulkEditService";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { FieldSelectionStatus, FieldSelectionStatusVariant } from "./FieldSelectionStatus";
@@ -35,8 +33,7 @@ interface StreamsConfigTableRowProps {
   cursorType: IndexerType;
   onCursorChange: (cursorPath: Path) => void;
   fields: SyncSchemaField[];
-  onExpand: () => void;
-  changedSelected: boolean;
+  openStreamDetailsPanel: () => void;
   hasError: boolean;
   configErrors?: Record<string, string>;
   disabled?: boolean;
@@ -55,11 +52,11 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
   primitiveFields,
   cursorType,
   fields,
-  onExpand,
+  openStreamDetailsPanel,
   disabled,
   configErrors,
 }) => {
-  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", false);
+  const isColumnSelectionEnabled = useExperiment("connection.columnSelection", true);
   const { primaryKey, cursorField, syncMode, destinationSyncMode, selectedFields } = stream.config ?? {};
   const { defaultCursorField } = stream.stream ?? {};
   const syncSchema = useMemo(
@@ -70,12 +67,26 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
     [syncMode, destinationSyncMode]
   );
 
-  const [isSelected, selectForBulkEdit] = useBulkEditSelect(stream.id);
-
   const paths = useMemo(() => primitiveFields.map((field) => field.path), [primitiveFields]);
   const fieldCount = fields?.length ?? 0;
   const selectedFieldCount = selectedFields?.length ?? fieldCount;
-  const onRowClick = fieldCount > 0 ? () => onExpand() : undefined;
+  const onRowClick: React.MouseEventHandler<HTMLElement> | undefined =
+    fieldCount > 0
+      ? (e) => {
+          let target: Element | null = e.target as Element;
+
+          // if the target is or has a *[data-noexpand] ancestor
+          // then exit, otherwise toggle expand
+          while (target) {
+            if (target.hasAttribute("data-noexpand")) {
+              return;
+            }
+            target = target.parentElement;
+          }
+
+          openStreamDetailsPanel();
+        }
+      : undefined;
 
   const { streamHeaderContentStyle, pillButtonVariant } = useStreamsConfigTableRowProps(stream);
 
@@ -116,15 +127,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
       data-testid={`catalog-tree-table-row-${stream.stream?.namespace || "no-namespace"}-${stream.stream?.name}`}
       ref={rowRef}
     >
-      <CellText size="fixed" className={styles.streamRowCheckboxCell}>
-        {!disabled && (
-          <>
-            <StreamsConfigTableRowStatus stream={stream} />
-            <CheckBox checkboxSize="sm" checked={isSelected} onChange={selectForBulkEdit} />
-          </>
-        )}
-      </CellText>
-      <CellText size="fixed" className={styles.syncCell}>
+      <CellText size="fixed" className={styles.syncCell} data-noexpand>
         <Switch
           size="sm"
           checked={stream.config?.selected}
@@ -132,6 +135,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           disabled={disabled}
           data-testid="selected-switch"
         />
+        <StreamsConfigTableRowStatus stream={stream} />
       </CellText>
       {isColumnSelectionEnabled && (
         <CellText size="fixed" className={styles.fieldsCell}>
@@ -142,15 +146,13 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           />
         </CellText>
       )}
-      <CellText withTooltip data-testid="source-namespace-cell">
-        <Text size="md" className={styles.cellText}>
+      <CellText data-testid="source-namespace-cell">
+        <TextWithOverflowTooltip size="md">
           {stream.stream?.namespace || <FormattedMessage id="form.noNamespace" />}
-        </Text>
+        </TextWithOverflowTooltip>
       </CellText>
-      <CellText withTooltip data-testid="source-stream-name-cell">
-        <Text size="md" className={styles.cellText}>
-          {stream.stream?.name}
-        </Text>
+      <CellText data-testid="source-stream-name-cell">
+        <TextWithOverflowTooltip size="md">{stream.stream?.name}</TextWithOverflowTooltip>
       </CellText>
       <CellText size="fixed" className={styles.syncModeCell}>
         <SyncModeSelect
@@ -161,7 +163,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           disabled={disabled}
         />
       </CellText>
-      <CellText withTooltip>
+      <CellText>
         {cursorType && (
           <StreamPathSelect
             type="cursor"
@@ -174,7 +176,7 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
           />
         )}
       </CellText>
-      <CellText withTooltip={pkType === "sourceDefined"}>
+      <CellText>
         {pkType && (
           <StreamPathSelect
             type="primary-key"
@@ -191,15 +193,11 @@ export const StreamsConfigTableRow: React.FC<StreamsConfigTableRowProps> = ({
       <CellText size="fixed" className={styles.arrowCell}>
         <ArrowRightIcon />
       </CellText>
-      <CellText withTooltip data-testid="destination-namespace-cell">
-        <Text size="md" className={styles.cellText}>
-          {destNamespace}
-        </Text>
+      <CellText data-testid="destination-namespace-cell">
+        <TextWithOverflowTooltip size="md">{destNamespace}</TextWithOverflowTooltip>
       </CellText>
-      <CellText withTooltip data-testid="destination-stream-name-cell">
-        <Text size="md" className={styles.cellText}>
-          {destName}
-        </Text>
+      <CellText data-testid="destination-stream-name-cell">
+        <TextWithOverflowTooltip size="md">{destName}</TextWithOverflowTooltip>
       </CellText>
     </Row>
   );

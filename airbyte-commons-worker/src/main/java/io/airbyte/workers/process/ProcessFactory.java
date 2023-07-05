@@ -6,7 +6,9 @@ package io.airbyte.workers.process;
 
 import io.airbyte.config.AllowedHosts;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.workers.config.WorkerConfigsProvider.ResourceType;
 import io.airbyte.workers.exception.WorkerException;
+import io.airbyte.workers.helper.DockerImageNameHelper;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -25,6 +27,8 @@ public interface ProcessFactory {
   /**
    * Creates a ProcessBuilder to run a program in a new Process.
    *
+   * @param resourceType type of the resource. This is used to pull the base configuration from the
+   *        WorkerConfigsProvider.
    * @param jobType type of job to add to name for easier operational processes.
    * @param jobId job Id
    * @param attempt attempt Id
@@ -39,13 +43,15 @@ public interface ProcessFactory {
    * @param labels Labels to assign to the created Kube pod, if any. Ignore for docker.
    * @param jobMetadata Job metadata that will be passed to the created process as environment
    *        variables.
+   * @param additionalEnvironmentVariables Additional Environment Variables to pass into the process
    * @param args Arguments to pass to the docker image being run in the new process.
    * @return ProcessBuilder object to run the process.
    * @throws WorkerException exception thrown from worker
    */
-  Process create(String jobType,
-                 String jobId,
-                 int attempt,
+  Process create(final ResourceType resourceType,
+                 final String jobType,
+                 final String jobId,
+                 final int attempt,
                  final Path jobPath,
                  final String imageName,
                  final boolean usesIsolatedPool,
@@ -57,6 +63,7 @@ public interface ProcessFactory {
                  final Map<String, String> labels,
                  final Map<String, String> jobMetadata,
                  final Map<Integer, Integer> portMapping,
+                 Map<String, String> additionalEnvironmentVariables,
                  final String... args)
       throws WorkerException;
 
@@ -70,7 +77,7 @@ public interface ProcessFactory {
    */
   static String createProcessName(final String fullImagePath, final String jobType, final String jobId, final int attempt, final int lenLimit) {
 
-    var imageName = extractShortImageName(fullImagePath);
+    var imageName = DockerImageNameHelper.extractShortImageName(fullImagePath);
     final var randSuffix = RandomStringUtils.randomAlphabetic(5).toLowerCase();
     final String suffix = jobType + "-" + jobId + "-" + attempt + "-" + randSuffix;
 
@@ -90,22 +97,6 @@ public interface ProcessFactory {
     // If the image name is a no-op, this function should always return `sync-UUID` at the minimum.
     m.find();
     return processName.substring(m.start());
-  }
-
-  /**
-   * Docker image names are by convention separated by slashes. The last portion is the image's name.
-   * This is followed by a colon and a version number. e.g. airbyte/scheduler:v1 or
-   * gcr.io/my-project/my-project:v2.
-   *
-   * @param fullImagePath the image name with repository and version ex
-   *        gcr.io/my-project/image-name:v2
-   * @return the image name without the repo and version, ex. image-name
-   */
-  static String extractShortImageName(final String fullImagePath) {
-    final var noVersion = fullImagePath.split(VERSION_DELIMITER)[0];
-
-    final var nameParts = noVersion.split(DOCKER_DELIMITER);
-    return nameParts[nameParts.length - 1];
   }
 
 }

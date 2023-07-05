@@ -12,8 +12,6 @@ public interface FeatureFlags {
 
   boolean autoDisablesFailingConnections();
 
-  boolean forceSecretMigration();
-
   boolean useStreamCapableState();
 
   boolean autoDetectSchema();
@@ -36,7 +34,5 @@ public interface FeatureFlags {
    * @return a comma-separated list of workspace ids where field selection should be enabled.
    */
   String fieldSelectionWorkspaces();
-
-  boolean processInGcpDataPlane(final String workspaceId);
 
 }

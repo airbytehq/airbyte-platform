@@ -1,0 +1,30 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.beta {
+  overflow: hidden;
+
+  &::before {
+    content: "beta";
+    position: absolute;
+    top: -3px;
+    left: -19px;
+    transform: rotate(-45deg);
+    background-color: colors.$blue-400;
+    color: white;
+    padding: 14px 17px 3px;
+    opacity: 0;
+    transition: all variables.$transition-out;
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+
+  &--active::before {
+    opacity: 1;
+  }
+}

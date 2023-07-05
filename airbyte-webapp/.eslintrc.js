@@ -2,10 +2,10 @@
 const path = require("path");
 
 module.exports = {
+  root: true,
   extends: [
     "react-app",
     "plugin:@typescript-eslint/recommended",
-    "plugin:jest/recommended",
     "prettier",
     "plugin:prettier/recommended",
     "plugin:css-modules/recommended",
@@ -86,6 +86,7 @@ module.exports = {
     "@typescript-eslint/consistent-indexed-object-style": ["warn", "record"],
     "@typescript-eslint/consistent-type-definitions": ["warn", "interface"],
     "@typescript-eslint/no-unused-vars": "warn",
+    "react/display-name": "warn",
     "react/function-component-definition": [
       "warn",
       {
@@ -93,7 +94,6 @@ module.exports = {
         unnamedComponents: "arrow-function",
       },
     ],
-    "jest/consistent-test-it": ["warn", { fn: "it", withinDescribe: "it" }],
     "react/no-danger": "error",
     "react/jsx-boolean-value": "warn",
     "react/jsx-curly-brace-presence": "warn",
@@ -153,6 +153,7 @@ module.exports = {
       // Only applies to files in src. Rules should be in here that are requiring type information
       // and thus require the below parserOptions.
       files: ["src/**/*"],
+      excludedFiles: ["src/.eslintrc.js"],
       parserOptions: {
         tsconfigRootDir: __dirname,
         project: "./tsconfig.json",
@@ -160,6 +161,12 @@ module.exports = {
       rules: {
         "@typescript-eslint/await-thenable": "warn",
         "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      },
+    },
+    {
+      files: ["**/*.test.*", "**/*.stories.tsx"],
+      rules: {
+        "react/display-name": "off",
       },
     },
   ],

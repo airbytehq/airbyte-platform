@@ -7,9 +7,12 @@ import { useUnmount } from "react-use";
 
 import { FormChangeTracker } from "components/common/FormChangeTracker";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
+import { CollapsibleCard } from "components/ui/CollapsibleCard";
+import { FlexContainer } from "components/ui/Flex";
 
+import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { FeatureItem, useFeature } from "hooks/services/Feature";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 
 import { ConnectionConfigurationFormPreview } from "./ConnectionConfigurationFormPreview";
@@ -19,7 +22,6 @@ import { NamespaceDefinitionFieldNext } from "./NamespaceDefinitionFieldNext";
 import { NonBreakingChangesPreferenceField } from "./NonBreakingChangesPreferenceField";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "./refreshSourceSchemaWithConfirmationOnDirty";
 import { ScheduleField } from "./ScheduleField";
-import { Section } from "./Section";
 import { SyncCatalogField } from "./SyncCatalogField";
 
 interface ConnectionFormFieldsProps {
@@ -45,22 +47,24 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSu
     <>
       {/* FormChangeTracker is here as it has access to everything it needs without being repeated */}
       <FormChangeTracker changed={dirty} formId={formId} />
-      <div className={styles.formContainer}>
-        <Section
+      <FlexContainer direction="column">
+        <CollapsibleCard
           title={<FormattedMessage id="form.configuration" />}
           collapsible={isEditMode}
-          collapsedInitially={isEditMode}
+          defaultCollapsedState={isEditMode}
           collapsedPreviewInfo={<ConnectionConfigurationFormPreview />}
           testId="configuration"
         >
-          <ScheduleField />
-          <NamespaceDefinitionFieldNext />
-          <DestinationStreamPrefixName />
-          {allowAutoDetectSchema && (
-            <Field name="nonBreakingChangesPreference" component={NonBreakingChangesPreferenceField} />
-          )}
-        </Section>
-        <Section flush flexHeight>
+          <FlexContainer direction="column" gap="lg">
+            <ScheduleField />
+            <NamespaceDefinitionFieldNext />
+            <DestinationStreamPrefixName />
+            {allowAutoDetectSchema && (
+              <Field name="nonBreakingChangesPreference" component={NonBreakingChangesPreferenceField} />
+            )}
+          </FlexContainer>
+        </CollapsibleCard>
+        <Card>
           <Field
             name="syncCatalog.streams"
             component={SyncCatalogField}
@@ -78,8 +82,8 @@ export const ConnectionFormFields: React.FC<ConnectionFormFieldsProps> = ({ isSu
               </Button>
             }
           />
-        </Section>
-      </div>
+        </Card>
+      </FlexContainer>
     </>
   );
 };

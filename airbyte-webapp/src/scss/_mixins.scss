@@ -18,6 +18,10 @@
   box-shadow: variables.$box-shadow-right;
 }
 
+@mixin shadow-inset {
+  box-shadow: variables.$box-shadow-inset;
+}
+
 $bar-width: 20px;
 $gap-width: 18px;
 $stripes-width: 83px;
@@ -50,4 +54,16 @@ $stripes-width: 83px;
   background-position-y: center;
   background-repeat: repeat-x;
   animation: striped-bg-animation 2s linear infinite;
+}
+
+// For when we want an element to be visually hidden but still accessible to screen readers
+// Taken from: https://www.sarasoueidan.com/blog/inclusively-hiding-and-styling-checkboxes-and-radio-buttons/
+@mixin visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(100%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }

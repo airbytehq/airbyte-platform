@@ -69,7 +69,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
   private final String dataPlaneCredsSecretMountPath;
   private final AtomicReference<Optional<Integer>> cachedExitValue;
   private final Map<String, String> environmentVariables;
+  private final Map<String, String> annotations;
   private final Integer serverPort;
+  private final String serviceAccount;
 
   public AsyncOrchestratorPodProcess(
                                      final KubePodInfo kubePodInfo,
@@ -81,7 +83,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
                                      final String dataPlaneCredsSecretMountPath,
                                      final String googleApplicationCredentials,
                                      final Map<String, String> environmentVariables,
-                                     final Integer serverPort) {
+                                     final Map<String, String> annotations,
+                                     final Integer serverPort,
+                                     final String serviceAccount) {
     this.kubePodInfo = kubePodInfo;
     this.documentStoreClient = documentStoreClient;
     this.kubernetesClient = kubernetesClient;
@@ -92,7 +96,9 @@ public class AsyncOrchestratorPodProcess implements KubePod {
     this.googleApplicationCredentials = googleApplicationCredentials;
     this.cachedExitValue = new AtomicReference<>(Optional.empty());
     this.environmentVariables = environmentVariables;
+    this.annotations = annotations;
     this.serverPort = serverPort;
+    this.serviceAccount = serviceAccount;
   }
 
   /**
@@ -448,9 +454,10 @@ public class AsyncOrchestratorPodProcess implements KubePod {
         .withName(getInfo().name())
         .withNamespace(getInfo().namespace())
         .withLabels(allLabels)
+        .withAnnotations(annotations)
         .endMetadata()
         .withNewSpec()
-        .withServiceAccount("airbyte-admin")
+        .withServiceAccount(serviceAccount)
         .withAutomountServiceAccountToken(true)
         .withRestartPolicy("Never")
         .withContainers(mainContainer)
