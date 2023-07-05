@@ -46,6 +46,7 @@ import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfigSchema;
@@ -3383,6 +3384,41 @@ public class ConfigRepository {
         // Ensure version is set. Needed for connectors not upgraded since we added versioning.
         .map(adv -> adv.withProtocolVersion(AirbyteProtocolVersion.getWithDefault(adv.getProtocolVersion()).serialize()))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Writes a new actor definition breaking change to the database.
+   *
+   * @param breakingChange - ActorDefinitionBreakingChange entry to write
+   * @throws IOException - you never know when you io
+   */
+  public void writeActorDefinitionBreakingChange(final ActorDefinitionBreakingChange breakingChange) throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    database.query(ctx -> ctx.insertInto(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID, breakingChange.getActorDefinitionId())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.VERSION, breakingChange.getVersion().serialize())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPGRADE_DEADLINE, LocalDate.parse(breakingChange.getUpgradeDeadline()))
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MESSAGE, breakingChange.getMessage())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.MIGRATION_DOCUMENTATION_URL, breakingChange.getMigrationDocumentationUrl())
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.CREATED_AT, timestamp)
+        .set(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.UPDATED_AT, timestamp)
+        .execute());
+  }
+
+  /**
+   * Get the list of breaking changes available affecting an actor definition.
+   *
+   * @param actorDefinitionId - actor definition id
+   * @return list of breaking changes
+   * @throws IOException - you never know when you io
+   */
+  public List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(final UUID actorDefinitionId) throws IOException {
+    return database.query(ctx -> ctx.selectFrom(Tables.ACTOR_DEFINITION_BREAKING_CHANGE)
+        .where(Tables.ACTOR_DEFINITION_BREAKING_CHANGE.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
+        .fetch()
+        .stream()
+        .map(DbConverter::buildActorDefinitionBreakingChange)
+        .collect(Collectors.toList()));
   }
 
 }
