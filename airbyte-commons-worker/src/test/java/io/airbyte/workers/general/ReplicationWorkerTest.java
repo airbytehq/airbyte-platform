@@ -18,6 +18,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,6 +73,7 @@ import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
 import io.airbyte.workers.internal.NamespacingMapper;
+import io.airbyte.workers.internal.SimpleAirbyteDestination;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageOrigin;
 import io.airbyte.workers.internal.book_keeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.book_keeping.SyncStatsTracker;
@@ -97,7 +99,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.AfterEach;
@@ -179,7 +180,7 @@ abstract class ReplicationWorkerTest {
 
     source = mock(AirbyteSource.class);
     mapper = mock(NamespacingMapper.class);
-    destination = mock(AirbyteDestination.class);
+    destination = spy(new SimpleAirbyteDestination());
     messageTracker = mock(AirbyteMessageTracker.class);
     syncStatsTracker = mock(SyncStatsTracker.class);
     syncPersistence = mock(SyncPersistence.class);
@@ -197,14 +198,6 @@ abstract class ReplicationWorkerTest {
     when(messageTracker.getSyncStatsTracker()).thenReturn(syncStatsTracker);
     when(source.isFinished()).thenReturn(false, false, false, true);
     when(source.attemptRead()).thenReturn(Optional.of(RECORD_MESSAGE1), Optional.empty(), Optional.of(RECORD_MESSAGE2));
-
-    final AtomicBoolean isDestinationFinished = new AtomicBoolean(false);
-    when(destination.isFinished()).thenAnswer((invocation) -> isDestinationFinished.get());
-    doAnswer((invocation -> {
-      isDestinationFinished.set(true);
-      return null;
-    })).when(destination).notifyEndOfInput();
-    when(destination.attemptRead()).thenReturn(Optional.of(STATE_MESSAGE));
 
     when(mapper.mapCatalog(destinationConfig.getCatalog())).thenReturn(destinationConfig.getCatalog());
     when(mapper.mapMessage(RECORD_MESSAGE1)).thenReturn(RECORD_MESSAGE1);
@@ -694,6 +687,10 @@ abstract class ReplicationWorkerTest {
   @Test
   void testDestinationRunnableWorkerFailure() throws Exception {
     final String workerErrorMessage = "the worker had a failure";
+
+    // Force destination to return STATE messages
+    // TODO: this should come naturally from the source
+    when(destination.attemptRead()).thenReturn(Optional.of(STATE_MESSAGE));
 
     doThrow(new RuntimeException(workerErrorMessage)).when(messageTracker).acceptFromDestination(any());
 
